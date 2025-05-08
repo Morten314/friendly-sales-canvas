@@ -2,147 +2,96 @@
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, PlusCircle } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { UserCircle, Users, Filter, UserPlus, Download, MessageSquare } from "lucide-react";
+import { ICPProfilesList } from "@/components/customers/ICPProfilesList";
+import { ICPBuilder } from "@/components/customers/ICPBuilder";
+import { ICPInsights } from "@/components/customers/ICPInsights";
 
 const Customers = () => {
   return (
     <Layout>
-      <div className="animate-fade-in">
-        <div className="flex justify-between items-center mb-6">
+      <div className="animate-fade-in space-y-6">
+        {/* Header with Agent Introduction */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-2xl font-bold">ICP Profiles (Profiler)</h1>
-            <p className="text-gray-500">Sharpen your targeting with laser precision</p>
-          </div>
-          <Button className="bg-sales-blue hover:bg-blue-700 flex items-center gap-2">
-            <PlusCircle className="h-4 w-4" />
-            Create New ICP
-          </Button>
-        </div>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-          <Card className="hover:shadow-md transition-shadow">
-            <CardHeader className="pb-2">
-              <div className="flex justify-between items-start mb-2">
-                <CardTitle>UK Fintech Ops Director</CardTitle>
-                <span className="bg-blue-100 text-blue-800 text-xs px-2.5 py-0.5 rounded-full">
-                  Primary ICP
-                </span>
-              </div>
-              <CardDescription>Operations leader in mid-size fintech</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div className="text-gray-500">Company Size:</div>
-                  <div>50-200 employees</div>
-                  
-                  <div className="text-gray-500">Industry:</div>
-                  <div>Fintech</div>
-                  
-                  <div className="text-gray-500">Location:</div>
-                  <div>United Kingdom</div>
-                  
-                  <div className="text-gray-500">Pain Points:</div>
-                  <div>Scaling operations, Regulatory compliance</div>
-                </div>
-                
-                <div className="pt-3 border-t">
-                  <Button variant="outline" className="w-full">View Full Profile</Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="hover:shadow-md transition-shadow">
-            <CardHeader className="pb-2">
-              <div className="flex justify-between items-start mb-2">
-                <CardTitle>UK Fintech CTO</CardTitle>
-                <span className="bg-gray-100 text-gray-800 text-xs px-2.5 py-0.5 rounded-full">
-                  Secondary ICP
-                </span>
-              </div>
-              <CardDescription>Technical decision maker</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div className="text-gray-500">Company Size:</div>
-                  <div>50-200 employees</div>
-                  
-                  <div className="text-gray-500">Industry:</div>
-                  <div>Fintech</div>
-                  
-                  <div className="text-gray-500">Location:</div>
-                  <div>United Kingdom</div>
-                  
-                  <div className="text-gray-500">Pain Points:</div>
-                  <div>Integration complexity, Technical debt</div>
-                </div>
-                
-                <div className="pt-3 border-t">
-                  <Button variant="outline" className="w-full">View Full Profile</Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="hover:shadow-md transition-shadow border-dashed border-2 flex flex-col justify-center items-center p-6">
-            <div className="p-3 bg-blue-50 text-blue-500 rounded-full mb-3">
-              <Users className="h-6 w-6" />
-            </div>
-            <h3 className="font-medium text-center mb-2">Create New ICP Profile</h3>
-            <p className="text-sm text-gray-500 text-center mb-4">
-              Define a new target customer segment
+            <h1 className="text-3xl font-bold">ICP Profiles (Profiler)</h1>
+            <p className="text-gray-600 mt-1">
+              "Sharpen your targeting with laser precision."
             </p>
-            <Button variant="outline">Create ICP</Button>
-          </Card>
+          </div>
+          <div className="flex gap-3">
+            <Button variant="outline" className="flex items-center gap-2">
+              <Download className="h-4 w-4" />
+              Export Profiles
+            </Button>
+            <Button className="bg-sales-blue hover:bg-blue-700 flex items-center gap-2">
+              <UserPlus className="h-4 w-4" />
+              Create New ICP
+            </Button>
+          </div>
         </div>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>Messaging Insights</CardTitle>
-            <CardDescription>Tailored communication for each ICP</CardDescription>
+
+        {/* Tabs for Different Profile Views */}
+        <Tabs defaultValue="profiles" className="w-full">
+          <TabsList className="mb-6">
+            <TabsTrigger value="profiles" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              ICP Profiles
+            </TabsTrigger>
+            <TabsTrigger value="builder" className="flex items-center gap-2">
+              <UserPlus className="h-4 w-4" />
+              ICP Builder
+            </TabsTrigger>
+            <TabsTrigger value="insights" className="flex items-center gap-2">
+              <Filter className="h-4 w-4" />
+              Insights & Analysis
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="profiles" className="space-y-6">
+            <ICPProfilesList />
+          </TabsContent>
+          
+          <TabsContent value="builder" className="space-y-6">
+            <ICPBuilder />
+          </TabsContent>
+          
+          <TabsContent value="insights" className="space-y-6">
+            <ICPInsights />
+          </TabsContent>
+        </Tabs>
+
+        {/* AI Interaction Panel */}
+        <Card className="border-blue-200 bg-blue-50/40 mt-8">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <MessageSquare className="h-5 w-5 text-sales-blue" />
+              Profiler Agent Chat
+            </CardTitle>
+            <CardDescription>
+              Ask Profiler to help refine your ICPs or generate new insights
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="p-4 border rounded-md">
-                <h3 className="font-medium mb-2">UK Fintech Ops Director</h3>
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-sm font-medium text-gray-500 mb-1">Value Proposition</p>
-                    <p className="text-sm">
-                      "Streamline your market expansion with AI-powered insights that cut research time by 70% and improve targeting accuracy."
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500 mb-1">Key Pain Points to Address</p>
-                    <ul className="list-disc pl-5 text-sm space-y-1">
-                      <li>Navigating complex regulatory environments</li>
-                      <li>Efficient resource allocation for new markets</li>
-                      <li>Reducing time-to-market for expansion</li>
-                    </ul>
-                  </div>
-                </div>
+            <div className="bg-white rounded-md border border-gray-200 p-4 flex flex-col gap-3">
+              <div className="bg-blue-50 rounded-lg p-3 self-start max-w-[80%]">
+                <p className="text-sm font-medium">Profiler</p>
+                <p className="text-sm">Based on the UK market research, I've identified 3 potential ICP segments. Would you like me to create detailed profiles for each?</p>
               </div>
               
-              <div className="p-4 border rounded-md">
-                <h3 className="font-medium mb-2">UK Fintech CTO</h3>
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-sm font-medium text-gray-500 mb-1">Value Proposition</p>
-                    <p className="text-sm">
-                      "Leverage AI-powered insights to make data-driven expansion decisions with minimal technical integration and immediate ROI."
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500 mb-1">Key Pain Points to Address</p>
-                    <ul className="list-disc pl-5 text-sm space-y-1">
-                      <li>Integration with existing tech stack</li>
-                      <li>Data security and compliance</li>
-                      <li>Technical scalability during expansion</li>
-                    </ul>
-                  </div>
-                </div>
+              <div className="bg-gray-100 rounded-lg p-3 self-end max-w-[80%]">
+                <p className="text-sm font-medium">You</p>
+                <p className="text-sm">Yes, focus on the fintech segment first.</p>
+              </div>
+
+              <div className="flex gap-2">
+                <input 
+                  type="text" 
+                  placeholder="Ask Profiler a question..."
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <Button className="bg-sales-blue hover:bg-blue-700">Send</Button>
               </div>
             </div>
           </CardContent>
