@@ -2,10 +2,11 @@
 import { 
   Home, 
   Users, 
-  DollarSign, 
+  FileText, 
   Calendar, 
   Settings, 
   LogOut, 
+  Search,
   BarChart, 
   Menu 
 } from "lucide-react";
@@ -22,10 +23,12 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { icon: Home, label: "Dashboard", href: "/" },
-  { icon: Users, label: "Customers", href: "/customers" },
-  { icon: DollarSign, label: "Deals", href: "/deals" },
-  { icon: Calendar, label: "Calendar", href: "/calendar" },
-  { icon: BarChart, label: "Reports", href: "/reports" },
+  { icon: Search, label: "Market Research (Scout)", href: "/market-research" },
+  { icon: Users, label: "ICP Profiles (Profiler)", href: "/customers" },
+  { icon: FileText, label: "GTM Strategies (Strategist)", href: "/deals" },
+  { icon: Calendar, label: "Campaigns (Activator)", href: "/calendar" },
+  { icon: BarChart, label: "Demo Prep (Presenter)", href: "/reports" },
+  { icon: BarChart, label: "Reports", href: "/insights" },
   { icon: Settings, label: "Settings", href: "/settings" },
 ];
 
@@ -40,7 +43,7 @@ export function Sidebar() {
       {/* Logo Section */}
       <div className="p-4 border-b border-gray-200 flex items-center justify-between">
         {!collapsed && (
-          <div className="text-xl font-bold text-sales-blue">SalesHub</div>
+          <div className="text-xl font-bold text-sales-blue">Brewra</div>
         )}
         <Button 
           variant="ghost" 
@@ -81,11 +84,11 @@ export function Sidebar() {
         {!collapsed ? (
           <>
             <div className="w-10 h-10 rounded-full bg-sales-blue text-white flex items-center justify-center font-medium">
-              JS
+              AR
             </div>
             <div className="ml-3">
-              <div className="font-medium text-sm">John Smith</div>
-              <div className="text-xs text-gray-500">Sales Manager</div>
+              <div className="font-medium text-sm">Alex Rodriguez</div>
+              <div className="text-xs text-gray-500">Revenue Leader</div>
             </div>
             <Button variant="ghost" size="icon" className="ml-auto">
               <LogOut className="h-4 w-4" />
@@ -94,7 +97,7 @@ export function Sidebar() {
           </>
         ) : (
           <div className="w-10 h-10 rounded-full bg-sales-blue text-white flex items-center justify-center font-medium">
-            JS
+            AR
           </div>
         )}
       </div>

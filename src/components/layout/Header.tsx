@@ -12,10 +12,26 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export function Header() {
+  // Get the current page name from the URL
+  const getPageTitle = () => {
+    const path = window.location.pathname;
+    
+    if (path === '/') return 'Dashboard';
+    if (path === '/market-research') return 'Market Research (Scout)';
+    if (path === '/customers') return 'ICP Profiles (Profiler)';
+    if (path === '/deals') return 'GTM Strategies (Strategist)';
+    if (path === '/calendar') return 'Campaigns (Activator)';
+    if (path === '/reports') return 'Demo Prep (Presenter)';
+    if (path === '/insights') return 'Reports';
+    if (path === '/settings') return 'Settings';
+    
+    return 'Dashboard';
+  };
+
   return (
     <header className="bg-white border-b border-gray-200 p-4 flex items-center justify-between">
       <div className="flex items-center">
-        <h1 className="text-xl font-bold text-gray-800">Dashboard</h1>
+        <h1 className="text-xl font-bold text-gray-800">{getPageTitle()}</h1>
       </div>
 
       <div className="flex items-center space-x-4">
@@ -36,20 +52,20 @@ export function Header() {
             <DropdownMenuSeparator />
             <DropdownMenuItem className="py-2">
               <div>
-                <div className="text-sm font-medium">New Lead: Jane Smith</div>
+                <div className="text-sm font-medium">Scout: Market analysis complete</div>
                 <div className="text-xs text-gray-500">5 minutes ago</div>
               </div>
             </DropdownMenuItem>
             <DropdownMenuItem className="py-2">
               <div>
-                <div className="text-sm font-medium">Deal Closed: Acme Corp</div>
+                <div className="text-sm font-medium">Activator: 3 new meetings booked</div>
                 <div className="text-xs text-gray-500">2 hours ago</div>
               </div>
             </DropdownMenuItem>
             <DropdownMenuItem className="py-2">
               <div>
-                <div className="text-sm font-medium">Meeting Reminder: Tech Bros Inc.</div>
-                <div className="text-xs text-gray-500">Tomorrow at 10:00 AM</div>
+                <div className="text-sm font-medium">Presenter: Demo script ready for review</div>
+                <div className="text-xs text-gray-500">Yesterday at 10:00 AM</div>
               </div>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
@@ -59,7 +75,7 @@ export function Header() {
           </DropdownMenuContent>
         </DropdownMenu>
         
-        <Button className="bg-sales-blue hover:bg-blue-700">+ Add Deal</Button>
+        <Button className="bg-sales-blue hover:bg-blue-700">+ Deploy Agent</Button>
       </div>
     </header>
   );

@@ -1,14 +1,180 @@
 
 import { Layout } from "@/components/layout/Layout";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { BarChart, PlusCircle, ArrowRight, Download } from "lucide-react";
 
 const Reports = () => {
   return (
     <Layout>
       <div className="animate-fade-in">
-        <h1 className="text-2xl font-bold mb-6">Reports</h1>
-        <div className="bg-white rounded-lg shadow p-6">
-          <p>Sales reports and analytics will be implemented here.</p>
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-2xl font-bold">Demo Prep (Presenter)</h1>
+            <p className="text-gray-500">Deliver compelling demos that close deals</p>
+          </div>
+          <Button className="bg-sales-blue hover:bg-blue-700 flex items-center gap-2">
+            <PlusCircle className="h-4 w-4" />
+            Create New Demo
+          </Button>
         </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          <Card className="hover:shadow-md transition-shadow">
+            <CardHeader className="pb-2">
+              <div className="flex justify-between items-start">
+                <CardTitle>UK Fintech Ops Demo</CardTitle>
+                <span className="bg-green-100 text-green-800 text-xs px-2.5 py-0.5 rounded-full">
+                  Ready
+                </span>
+              </div>
+              <CardDescription>Created 2 days ago</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Target ICP:</span>
+                  <span>UK Fintech Ops Director</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Duration:</span>
+                  <span>25 minutes</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Focus:</span>
+                  <span>Operational Efficiency</span>
+                </div>
+                <div className="pt-3 border-t flex space-x-2">
+                  <Button variant="outline" className="flex-1 flex items-center justify-center gap-1">
+                    <Download className="h-4 w-4" /> Slides
+                  </Button>
+                  <Button className="flex-1 bg-sales-blue hover:bg-blue-700 flex items-center justify-center gap-1">
+                    View <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="hover:shadow-md transition-shadow">
+            <CardHeader className="pb-2">
+              <div className="flex justify-between items-start">
+                <CardTitle>UK Fintech CTO Demo</CardTitle>
+                <span className="bg-amber-100 text-amber-800 text-xs px-2.5 py-0.5 rounded-full">
+                  Draft
+                </span>
+              </div>
+              <CardDescription>Created 1 day ago</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Target ICP:</span>
+                  <span>UK Fintech CTO</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Duration:</span>
+                  <span>30 minutes</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Focus:</span>
+                  <span>Technical Integration</span>
+                </div>
+                <div className="pt-3 border-t flex space-x-2">
+                  <Button variant="outline" className="flex-1 flex items-center justify-center gap-1">
+                    <Download className="h-4 w-4" /> Slides
+                  </Button>
+                  <Button className="flex-1 bg-sales-blue hover:bg-blue-700 flex items-center justify-center gap-1">
+                    View <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="hover:shadow-md transition-shadow border-dashed border-2 flex flex-col justify-center items-center p-6">
+            <div className="p-3 bg-blue-50 text-blue-500 rounded-full mb-3">
+              <BarChart className="h-6 w-6" />
+            </div>
+            <h3 className="font-medium text-center mb-2">Create New Demo</h3>
+            <p className="text-sm text-gray-500 text-center mb-4">
+              Prepare for your next presentation
+            </p>
+            <Button variant="outline">Create Demo</Button>
+          </Card>
+        </div>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle>UK Fintech Ops Demo</CardTitle>
+            <CardDescription>Demo script and talking points</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-sm font-medium text-gray-500 mb-2">Demo Structure</h3>
+                <ol className="space-y-4 pl-5 list-decimal">
+                  <li>
+                    <p className="font-medium">Introduction (3 min)</p>
+                    <p className="text-sm text-gray-600">
+                      "Thank you for joining today. We'll show you how Brewra can help fintech operations leaders like yourself enter new markets faster and with greater precision."
+                    </p>
+                  </li>
+                  <li>
+                    <p className="font-medium">Market Research Capabilities (5 min)</p>
+                    <p className="text-sm text-gray-600">
+                      Focus on Scout's ability to analyze UK financial regulations and identify growth opportunities specific to their fintech vertical.
+                    </p>
+                  </li>
+                  <li>
+                    <p className="font-medium">ICP Development (5 min)</p>
+                    <p className="text-sm text-gray-600">
+                      Demonstrate how Profiler builds accurate customer profiles for the UK market, highlighting the regulatory compliance pain points.
+                    </p>
+                  </li>
+                  <li>
+                    <p className="font-medium">Operational Workflow (7 min)</p>
+                    <p className="text-sm text-gray-600">
+                      Show how Activator can automate lead generation while maintaining compliance with UK financial regulations.
+                    </p>
+                  </li>
+                  <li>
+                    <p className="font-medium">Q&A and Next Steps (5 min)</p>
+                    <p className="text-sm text-gray-600">
+                      Address specific questions about implementation timeline and ROI for UK market entry.
+                    </p>
+                  </li>
+                </ol>
+              </div>
+              
+              <div>
+                <h3 className="text-sm font-medium text-gray-500 mb-2">Key Talking Points</h3>
+                <div className="space-y-3">
+                  <div className="bg-gray-50 p-3 rounded-md">
+                    <p className="font-medium mb-1">Regulatory Compliance</p>
+                    <p className="text-sm">
+                      "Our platform reduces compliance overhead by 40% through automated market research and regulatory tracking specific to UK fintech operations."
+                    </p>
+                  </div>
+                  
+                  <div className="bg-gray-50 p-3 rounded-md">
+                    <p className="font-medium mb-1">Operational Efficiency</p>
+                    <p className="text-sm">
+                      "Clients like yours have seen a 30% reduction in time-to-market when expanding to the UK, with 65% less resources required for market analysis."
+                    </p>
+                  </div>
+                  
+                  <div className="bg-gray-50 p-3 rounded-md">
+                    <p className="font-medium mb-1">ROI Metrics</p>
+                    <p className="text-sm">
+                      "On average, our fintech clients see positive ROI within 3 months of UK market entry, with customer acquisition costs reduced by 35%."
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </Layout>
   );
