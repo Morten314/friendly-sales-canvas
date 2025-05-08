@@ -62,7 +62,9 @@ export function DealsPipeline() {
                 <span className="font-medium">{stage.name}</span>
                 <span className="text-gray-500">{stage.count} deals</span>
               </div>
-              <Progress value={stage.percentage} className="h-2" indicatorClassName={stage.color} />
+              <Progress value={stage.percentage} className="h-2">
+                <div className={`h-full ${stage.color}`} style={{ width: `${stage.percentage}%` }}></div>
+              </Progress>
               <div className="text-sm text-gray-500">
                 ${stage.value.toLocaleString()}
               </div>
