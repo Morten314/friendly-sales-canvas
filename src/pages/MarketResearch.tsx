@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,8 +14,8 @@ import {
   DrawerHeader, 
   DrawerTitle 
 } from "@/components/ui/drawer";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const MarketResearch = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -319,7 +320,7 @@ const MarketResearch = () => {
           </Card>
         )}
         
-        <Tabs defaultValue="intelligence" value={activeTab} onValueChange={setActiveTab} className="mb-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
           <TabsList className="w-full bg-gray-100 p-1 mb-2">
             <TabsTrigger value="intelligence" className="flex items-center gap-2 flex-1">
               <Search className="h-4 w-4" />
