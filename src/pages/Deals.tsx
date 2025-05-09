@@ -1,10 +1,34 @@
-
+import { useState } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, PlusCircle, ArrowRight, Download } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { FileText, PlusCircle, ArrowRight, Download, MessageSquare, Send } from "lucide-react";
 
 const Deals = () => {
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [messages, setMessages] = useState([
+    { role: "ai", content: "Hello! I'm Strategist. How can I help with your go-to-market strategy today?" }
+  ]);
+  const [inputValue, setInputValue] = useState("");
+
+  const handleSendMessage = () => {
+    if (!inputValue.trim()) return;
+    
+    // Add user message
+    setMessages([...messages, { role: "user", content: inputValue }]);
+    
+    // Simulate AI response
+    setTimeout(() => {
+      setMessages(current => [...current, { 
+        role: "ai", 
+        content: "I can help with your GTM strategy. Would you like me to focus on messaging, channel strategy, or competitive positioning?"
+      }]);
+    }, 1000);
+    
+    setInputValue("");
+  };
+
   return (
     <Layout>
       <div className="animate-fade-in">
@@ -13,11 +37,75 @@ const Deals = () => {
             <h1 className="text-2xl font-bold">GTM Strategies (Strategist)</h1>
             <p className="text-gray-500">Launch with a plan, not a gamble</p>
           </div>
-          <Button className="bg-sales-blue hover:bg-blue-700 flex items-center gap-2">
-            <PlusCircle className="h-4 w-4" />
-            Create New Strategy
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              className="flex items-center gap-2"
+              onClick={() => setIsChatOpen(!isChatOpen)}
+            >
+              <MessageSquare className="h-4 w-4" />
+              Chat with Strategist
+            </Button>
+            <Button className="bg-sales-blue hover:bg-blue-700 flex items-center gap-2">
+              <PlusCircle className="h-4 w-4" />
+              Create New Strategy
+            </Button>
+          </div>
         </div>
+        
+        {isChatOpen && (
+          <Card className="border-blue-200 bg-blue-50/40 mb-6">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <MessageSquare className="h-5 w-5 text-sales-blue" />
+                Strategist Agent Chat
+              </CardTitle>
+              <CardDescription>
+                Ask Strategist about GTM strategies, market entry plans, or competitive positioning
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="bg-white rounded-md border border-gray-200 p-4 flex flex-col gap-3">
+                <div className="space-y-3 max-h-60 overflow-y-auto">
+                  {messages.map((message, index) => (
+                    <div 
+                      key={index}
+                      className={`${
+                        message.role === "ai" 
+                          ? "bg-blue-50 rounded-lg p-3 self-start max-w-[80%]" 
+                          : "bg-gray-100 rounded-lg p-3 self-end max-w-[80%] ml-auto"
+                      }`}
+                    >
+                      <p className="text-sm font-medium">
+                        {message.role === "ai" ? "Strategist" : "You"}
+                      </p>
+                      <p className="text-sm">{message.content}</p>
+                    </div>
+                  ))}
+                </div>
+                
+                <div className="flex gap-2 mt-2">
+                  <Input
+                    type="text" 
+                    placeholder="Ask Strategist about GTM strategies..."
+                    className="flex-1"
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSendMessage();
+                    }}
+                  />
+                  <Button 
+                    className="bg-sales-blue hover:bg-blue-700 flex items-center gap-2"
+                    onClick={handleSendMessage}
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
           <Card className="hover:shadow-md transition-shadow">
