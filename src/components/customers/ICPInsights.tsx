@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,8 +9,11 @@ import {
   ChartLegend, 
   ChartLegendContent 
 } from "@/components/ui/chart";
-import { BarChart3, Download, RefreshCw } from "lucide-react";
+import { BarChart3, Download, RefreshCw, MessageSquare, Send } from "lucide-react";
 import { Bar, BarChart, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Legend } from "recharts";
+import { useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 const marketFitData = [
   { segment: "UK Fintech", score: 87, potential: 95 },
@@ -31,6 +35,29 @@ const keywordData = [
 ];
 
 export function ICPInsights() {
+  const [isPromptOpen, setIsPromptOpen] = useState(false);
+  const [messages, setMessages] = useState([
+    { role: "ai", content: "Hello! I'm Profiler. How can I help you analyze your ICP insights today?" }
+  ]);
+  const [inputValue, setInputValue] = useState("");
+
+  const handleSendMessage = () => {
+    if (!inputValue.trim()) return;
+    
+    // Add user message
+    setMessages([...messages, { role: "user", content: inputValue }]);
+    
+    // Simulate AI response
+    setTimeout(() => {
+      setMessages(current => [...current, { 
+        role: "ai", 
+        content: "I've analyzed your ICP data and found some interesting patterns. Would you like me to focus on market fit or messaging topics?"
+      }]);
+    }, 1000);
+    
+    setInputValue("");
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -40,11 +67,75 @@ export function ICPInsights() {
             AI-generated insights to improve your customer targeting
           </p>
         </div>
-        <Button variant="outline" className="flex items-center gap-2">
-          <RefreshCw className="h-4 w-4" />
-          Refresh Analysis
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            className="flex items-center gap-2"
+            onClick={() => setIsPromptOpen(!isPromptOpen)}
+          >
+            <MessageSquare className="h-4 w-4" />
+            Chat with Profiler
+          </Button>
+          <Button variant="outline" className="flex items-center gap-2">
+            <RefreshCw className="h-4 w-4" />
+            Refresh Analysis
+          </Button>
+        </div>
       </div>
+
+      {isPromptOpen && (
+        <Card className="border-blue-200 bg-blue-50/40">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <MessageSquare className="h-5 w-5 text-sales-blue" />
+              Profiler Agent Chat
+            </CardTitle>
+            <CardDescription>
+              Ask Profiler about your ICP insights or request additional analysis
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="bg-white rounded-md border border-gray-200 p-4 flex flex-col gap-3">
+              <div className="space-y-3 max-h-60 overflow-y-auto">
+                {messages.map((message, index) => (
+                  <div 
+                    key={index}
+                    className={`${
+                      message.role === "ai" 
+                        ? "bg-blue-50 rounded-lg p-3 self-start max-w-[80%]" 
+                        : "bg-gray-100 rounded-lg p-3 self-end max-w-[80%] ml-auto"
+                    }`}
+                  >
+                    <p className="text-sm font-medium">
+                      {message.role === "ai" ? "Profiler" : "You"}
+                    </p>
+                    <p className="text-sm">{message.content}</p>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="flex gap-2 mt-2">
+                <Input
+                  type="text" 
+                  placeholder="Ask Profiler about your ICP insights..."
+                  className="flex-1"
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSendMessage();
+                  }}
+                />
+                <Button 
+                  className="bg-sales-blue hover:bg-blue-700 flex items-center gap-2"
+                  onClick={handleSendMessage}
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
