@@ -1,17 +1,15 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
-  BarChart, 
   ChartContainer, 
   ChartTooltip, 
   ChartLegend, 
   ChartLegendContent 
 } from "@/components/ui/chart";
 import { BarChart3, Download, RefreshCw } from "lucide-react";
-import { Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Legend } from "recharts";
+import { Bar, BarChart, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Legend } from "recharts";
 
 const marketFitData = [
   { segment: "UK Fintech", score: 87, potential: 95 },
