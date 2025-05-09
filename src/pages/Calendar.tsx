@@ -1,8 +1,9 @@
+
 import { useState } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon, PlusCircle, MessageSquare, Send } from "lucide-react";
+import { Calendar as CalendarIcon, PlusCircle, MessageSquare, Send, Zap } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
 const Calendar = () => {
@@ -33,9 +34,25 @@ const Calendar = () => {
     <Layout>
       <div className="animate-fade-in">
         <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-2xl font-bold">Task & Campaign Automation (Activator)</h1>
-            <p className="text-gray-500">Move fast. Book meetings. Fill your pipeline.</p>
+          <div className="flex items-start gap-4">
+            <div className="p-3 rounded-lg bg-green-50 text-green-600">
+              <Zap className="h-8 w-8" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold">Task & Campaign Automation (Activator)</h1>
+              <p className="text-gray-500">Move fast. Book meetings. Fill your pipeline.</p>
+              <div className="flex gap-2 mt-2">
+                <span className="text-xs bg-green-50 text-green-600 px-2 py-0.5 rounded-full border border-green-200">
+                  Execution & Automation
+                </span>
+                <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+                  Campaign automation
+                </span>
+                <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+                  Task management
+                </span>
+              </div>
+            </div>
           </div>
           <div className="flex gap-2">
             <Button 
@@ -46,7 +63,7 @@ const Calendar = () => {
               <MessageSquare className="h-4 w-4" />
               Chat with Activator
             </Button>
-            <Button className="bg-sales-blue hover:bg-blue-700 flex items-center gap-2">
+            <Button className="bg-green-600 hover:bg-green-700 flex items-center gap-2">
               <PlusCircle className="h-4 w-4" />
               Create New Campaign
             </Button>
