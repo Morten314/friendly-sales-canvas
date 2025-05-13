@@ -1,17 +1,6 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Layout } from "@/components/layout/Layout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { ChevronRight, CalendarIcon } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { TodaysFocus } from "@/components/agent-hub/TodaysFocus";
 import { PipelineSnapshot } from "@/components/agent-hub/PipelineSnapshot";
 import { InsightsAnalytics } from "@/components/agent-hub/InsightsAnalytics";

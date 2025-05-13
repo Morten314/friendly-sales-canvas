@@ -1,8 +1,7 @@
 
-import React, { useRef } from 'react';
+import React from 'react';
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Search, User, Compass, Zap, Presentation, Shield, FileCheck, Target } from "lucide-react";
+import { Search, User, Compass, Zap, Presentation, Shield, FileCheck, Target } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 
 type Agent = {
@@ -73,42 +72,15 @@ export function AgentCards() {
     }
   ];
   
-  const scrollContainer = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   
-  const scroll = (direction: 'left' | 'right') => {
-    if (scrollContainer.current) {
-      const { current } = scrollContainer;
-      const scrollAmount = 300;
-      
-      if (direction === 'left') {
-        current.scrollLeft -= scrollAmount;
-      } else {
-        current.scrollLeft += scrollAmount;
-      }
-    }
-  };
-  
   return (
-    <div className="mb-6 relative">
-      <div className="flex gap-2 absolute -top-12 right-0">
-        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => scroll('left')}>
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
-        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => scroll('right')}>
-          <ChevronRight className="h-4 w-4" />
-        </Button>
-      </div>
-      
-      <div 
-        ref={scrollContainer}
-        className="flex gap-4 overflow-x-auto pb-4 snap-x scrollbar-hide"
-        style={{ scrollBehavior: 'smooth' }}
-      >
+    <div className="mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {agents.map((agent, index) => (
           <Card
             key={index}
-            className="flex-none w-[200px] snap-start cursor-pointer hover:shadow-md transition-all"
+            className="cursor-pointer hover:shadow-md transition-all"
             onClick={() => navigate(agent.path)}
           >
             <CardContent className="p-4">
