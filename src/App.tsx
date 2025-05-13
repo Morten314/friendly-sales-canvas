@@ -24,7 +24,8 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Navigate to="/agent-hub" replace />} />
+          {/* <Route path="/" element={<Navigate to="/agent-hub" replace />} /> */}
+          <Route path="/" element={<Index />} />
           <Route path="/agent-hub" element={<AgentHub />} />
           <Route path="/dashboard" element={<Index />} />
           <Route path="/customers" element={<Customers />} />
