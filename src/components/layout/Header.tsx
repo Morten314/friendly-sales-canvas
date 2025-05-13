@@ -16,7 +16,8 @@ export function Header() {
   const getPageTitle = () => {
     const path = window.location.pathname;
     
-    if (path === '/') return 'Dashboard';
+    if (path === '/agent-hub') return 'Agent Hub';
+    if (path === '/dashboard') return 'Dashboard';
     if (path === '/market-research') return 'Market Research (Scout)';
     if (path === '/customers') return 'ICP Profiles (Profiler)';
     if (path === '/deals') return 'GTM Strategies (Strategist)';
@@ -25,7 +26,7 @@ export function Header() {
     if (path === '/insights') return 'Reports';
     if (path === '/settings') return 'Settings';
     
-    return 'Dashboard';
+    return 'Agent Hub';
   };
 
   return (

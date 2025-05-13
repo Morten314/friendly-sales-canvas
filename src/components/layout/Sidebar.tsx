@@ -8,7 +8,8 @@ import {
   LogOut, 
   Search,
   BarChart, 
-  Menu 
+  Menu,
+  LayoutDashboard
 } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
@@ -22,6 +23,7 @@ type NavItem = {
 };
 
 const navItems: NavItem[] = [
+  { icon: LayoutDashboard, label: "Agent Hub", href: "/agent-hub" },
   { icon: Home, label: "Dashboard", href: "/" },
   { icon: Search, label: "Market Research (Scout)", href: "/market-research" },
   { icon: Users, label: "ICP Profiles (Profiler)", href: "/customers" },
