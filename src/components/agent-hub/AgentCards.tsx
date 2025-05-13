@@ -1,8 +1,8 @@
 
 import React, { useRef } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Search, User, Compass, Zap, Presentation, MessageSquare, FileText, Shield, FileCheck, Target } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, User, Compass, Zap, Presentation, Shield, FileCheck, Target } from "lucide-react";
 import { useNavigate } from 'react-router-dom';
 
 type Agent = {
@@ -18,64 +18,57 @@ export function AgentCards() {
     {
       name: "Scout",
       tagline: "I sniff signals before anyone else does.",
-      icon: <Search className="h-6 w-6" />,
+      icon: <Search className="h-4 w-4" />,
       color: "bg-blue-100 text-blue-600",
       path: "/market-research"
     },
     {
       name: "Profiler",
       tagline: "I study people, so you know who to chase.",
-      icon: <User className="h-6 w-6" />,
+      icon: <User className="h-4 w-4" />,
       color: "bg-purple-100 text-purple-600",
       path: "/customers"
     },
     {
       name: "Strategist",
       tagline: "I craft the perfect GTM game plan.",
-      icon: <Compass className="h-6 w-6" />,
-      color: "bg-amber-100 text-amber-600",
+      icon: <Compass className="h-4 w-4" />,
+      color: "bg-green-100 text-green-600",
       path: "/deals"
     },
     {
       name: "Playmaker",
       tagline: "I design plays that sellers can win with.",
-      icon: <Target className="h-6 w-6" />,
-      color: "bg-green-100 text-green-600",
+      icon: <Target className="h-4 w-4" />,
+      color: "bg-amber-100 text-amber-600",
       path: "/calendar"
     },
     {
       name: "Activator",
       tagline: "I set things in motion—campaigns, cadences, and connections.",
-      icon: <Zap className="h-6 w-6" />,
-      color: "bg-green-100 text-green-600",
+      icon: <Zap className="h-4 w-4" />,
+      color: "bg-red-100 text-red-600",
       path: "/calendar"
     },
     {
       name: "Presenter",
       tagline: "I turn insights into killer decks and talking points.",
-      icon: <Presentation className="h-6 w-6" />,
-      color: "bg-red-100 text-red-600",
+      icon: <Presentation className="h-4 w-4" />,
+      color: "bg-pink-100 text-pink-600",
       path: "/reports"
     },
     {
       name: "Handler",
       tagline: "I manage objections like a pro negotiator.",
-      icon: <Shield className="h-6 w-6" />,
+      icon: <Shield className="h-4 w-4" />,
       color: "bg-indigo-100 text-indigo-600",
       path: "/insights"
     },
     {
       name: "Proposer",
       tagline: "I write proposals that are hard to refuse.",
-      icon: <FileCheck className="h-6 w-6" />,
+      icon: <FileCheck className="h-4 w-4" />,
       color: "bg-teal-100 text-teal-600",
-      path: "/insights"
-    },
-    {
-      name: "Closer",
-      tagline: "I chase, nudge, and close the loop.",
-      icon: <Target className="h-6 w-6" />,
-      color: "bg-rose-100 text-rose-600",
       path: "/insights"
     }
   ];
@@ -97,52 +90,41 @@ export function AgentCards() {
   };
   
   return (
-    <Card className="mb-8 overflow-hidden">
-      <CardHeader className="pb-0">
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle>Meet Your Agents</CardTitle>
-            <CardDescription>AI specialists ready to assist you</CardDescription>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="icon" onClick={() => scroll('left')}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="icon" onClick={() => scroll('right')}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="py-6">
-        <div 
-          ref={scrollContainer}
-          className="flex gap-4 overflow-x-auto pb-4 snap-x scrollbar-hide"
-          style={{ scrollBehavior: 'smooth' }}
-        >
-          {agents.map((agent, index) => (
-            <div
-              key={index}
-              className="flex-none w-[280px] snap-start cursor-pointer hover:shadow-md transition-all"
-              onClick={() => navigate(agent.path)}
-            >
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-3">
-                    <div className={`p-3 rounded-lg ${agent.color}`}>
-                      {agent.icon}
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-lg">{agent.name}</h3>
-                      <p className="text-sm text-gray-600 italic mt-1">"{agent.tagline}"</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+    <div className="mb-6 relative">
+      <div className="flex gap-2 absolute -top-12 right-0">
+        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => scroll('left')}>
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => scroll('right')}>
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+      
+      <div 
+        ref={scrollContainer}
+        className="flex gap-4 overflow-x-auto pb-4 snap-x scrollbar-hide"
+        style={{ scrollBehavior: 'smooth' }}
+      >
+        {agents.map((agent, index) => (
+          <Card
+            key={index}
+            className="flex-none w-[200px] snap-start cursor-pointer hover:shadow-md transition-all"
+            onClick={() => navigate(agent.path)}
+          >
+            <CardContent className="p-4">
+              <div className="flex items-start gap-2">
+                <div className={`p-2 rounded-full ${agent.color} flex-shrink-0`}>
+                  {agent.icon}
+                </div>
+                <div>
+                  <h3 className="font-semibold text-sm">{agent.name}</h3>
+                  <p className="text-xs text-gray-600 mt-1 italic">{agent.tagline}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
   );
 }
