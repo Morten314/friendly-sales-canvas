@@ -46,31 +46,28 @@ export function TodaysFocus() {
   };
 
   return (
-    <div className="mb-6">
-      <h2 className="text-lg font-bold mb-3">Today's Focus</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {taskItems.map((item, index) => (
-          <Card 
-            key={index} 
-            className={`hover:shadow-md transition-shadow cursor-pointer border-l-4 border-l-blue-500`}
-            onClick={() => handleCardClick(item.action, item.title)}
-          >
-            <CardContent className="p-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className={`text-xl p-2 rounded-lg ${item.color}`}>
-                  {item.icon}
-                </div>
-                <div>
-                  <h3 className="font-medium">{item.title}</h3>
-                </div>
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {taskItems.map((item, index) => (
+        <Card 
+          key={index} 
+          className={`hover:shadow-md transition-shadow cursor-pointer border-l-4 border-l-blue-500`}
+          onClick={() => handleCardClick(item.action, item.title)}
+        >
+          <CardContent className="p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className={`text-xl p-2 rounded-lg ${item.color}`}>
+                {item.icon}
               </div>
-              <div className="text-2xl font-bold text-gray-800">
-                {item.count}
+              <div>
+                <h3 className="font-medium">{item.title}</h3>
               </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+            </div>
+            <div className="text-2xl font-bold text-gray-800">
+              {item.count}
+            </div>
+          </CardContent>
+        </Card>
+      ))}
     </div>
   );
 }

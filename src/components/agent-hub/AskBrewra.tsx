@@ -1,9 +1,9 @@
 
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send } from "lucide-react";
+import { Send, MessageSquare } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 
 const suggestionPrompts = [
@@ -35,38 +35,28 @@ export function AskBrewra() {
   };
 
   return (
-    <Card className="bg-slate-800 text-white h-full">
-      <CardHeader className="border-b border-slate-700 pb-4">
-        <CardTitle className="text-lg">Ask Brewra AI</CardTitle>
-      </CardHeader>
-      <CardContent className="pt-4 flex flex-col h-[calc(100%-60px)]">
-        <div className="flex-1 flex flex-col items-center justify-center pb-4">
-          <div className="h-16 w-16 rounded-full bg-slate-700 flex items-center justify-center mb-4">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10" />
-              <path d="M12 16v-4" />
-              <path d="M12 8h.01" />
-            </svg>
+    <Card className="bg-slate-800 text-white">
+      <CardContent className="p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="h-10 w-10 rounded-full bg-slate-700 flex items-center justify-center">
+            <MessageSquare className="h-5 w-5" />
           </div>
-          <h3 className="text-lg font-medium mb-1">How can I help you today?</h3>
-          <p className="text-slate-400 text-sm text-center mb-4">
-            Ask me about your leads, deals, or for help with outreach
-          </p>
+          <div>
+            <h3 className="text-lg font-medium">Ask Brewra AI</h3>
+            <p className="text-slate-400 text-sm">How can I help you today?</p>
+          </div>
         </div>
 
         <div className="space-y-3 mb-4">
-          <p className="text-xs text-slate-400">Try these prompts:</p>
-          <div className="space-y-2">
-            {suggestionPrompts.map((prompt, index) => (
-              <div 
-                key={index}
-                className="bg-slate-700 p-2 rounded-md text-xs cursor-pointer hover:bg-slate-600 transition-colors"
-                onClick={() => handleSubmit(prompt)}
-              >
-                {prompt} →
-              </div>
-            ))}
-          </div>
+          {suggestionPrompts.map((prompt, index) => (
+            <div 
+              key={index}
+              className="bg-slate-700 p-3 rounded-md text-sm cursor-pointer hover:bg-slate-600 transition-colors"
+              onClick={() => handleSubmit(prompt)}
+            >
+              {prompt} →
+            </div>
+          ))}
         </div>
         
         <div className="flex gap-2">

@@ -16,35 +16,37 @@ const AgentHub = () => {
         {/* Welcome Message */}
         <WelcomeMessage />
         
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-2">
-            {/* Section 1: Today's Focus */}
-            <TodaysFocus />
-          </div>
-          
-          <div className="lg:col-span-1">
-            {/* Section 2: Quota Progress Tracker */}
-            <QuotaTracker />
-          </div>
-        </div>
-        
-        {/* Section 3: Pipeline Snapshot */}
-        <PipelineSnapshot />
-        
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            {/* Section 4: Insights / Analytics */}
-            <InsightsAnalytics />
-          </div>
-          
-          <div className="lg:col-span-1">
-            {/* Section 6: Ask Brewra Agentic AI */}
-            <AskBrewra />
-          </div>
-        </div>
-        
-        {/* Section 5: Agentic AI Assist - Meet Your Agents */}
+        {/* Section 1: Today's Focus */}
         <div>
+          <h2 className="text-lg font-bold mb-3">Today's Focus</h2>
+          <TodaysFocus />
+        </div>
+        
+        {/* Section 2: Quota Progress Tracker - Elevated as a primary section */}
+        <div>
+          <h2 className="text-lg font-bold mb-3">Your Monthly Progress</h2>
+          <QuotaTracker />
+        </div>
+        
+        {/* Section 3: Pipeline Snapshot - More compact */}
+        <div>
+          <h2 className="text-lg font-bold mb-3">Pipeline at a Glance</h2>
+          <PipelineSnapshot />
+        </div>
+        
+        {/* Section 4: Insights / Analytics */}
+        <div>
+          <h2 className="text-lg font-bold mb-3">Sales Metrics Over Time</h2>
+          <InsightsAnalytics />
+        </div>
+        
+        {/* Section 5: Ask Brewra Agentic AI */}
+        <div className="mt-8">
+          <AskBrewra />
+        </div>
+        
+        {/* Section 6: Agentic AI Assist - Meet Your Agents */}
+        <div className="mt-8">
           <h2 className="text-2xl font-bold mb-4">Agentic AI Assist</h2>
           <AgentCards />
         </div>

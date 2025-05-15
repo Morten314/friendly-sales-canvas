@@ -112,10 +112,9 @@ export function InsightsAnalytics() {
 
   return (
     <Card className="h-full">
-      <CardHeader className="pb-0">
-        <div className="flex items-center justify-between">
+      <CardContent className="p-6">
+        <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <CardTitle className="text-lg">Sales Analytics</CardTitle>
             <Select value={metric} onValueChange={setMetric}>
               <SelectTrigger className="h-8 w-[180px] text-xs">
                 <SelectValue placeholder="Select metric" />
@@ -160,23 +159,27 @@ export function InsightsAnalytics() {
             </Popover>
           </div>
         </div>
-      </CardHeader>
-      <CardContent className="h-[200px] pt-6">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={getChartData()} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-            <XAxis dataKey="month" axisLine={false} tickLine={false} />
-            <YAxis axisLine={false} tickLine={false} />
-            <Tooltip />
-            <Line 
-              type="monotone" 
-              dataKey="count" 
-              stroke="#4F46E5" 
-              strokeWidth={2} 
-              dot={{ r: 4, fill: "#4F46E5" }} 
-            />
-          </LineChart>
-        </ResponsiveContainer>
+        
+        <div className="h-[250px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart 
+              data={getChartData()} 
+              margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+              <XAxis dataKey="month" axisLine={false} tickLine={false} />
+              <YAxis axisLine={false} tickLine={false} />
+              <Tooltip />
+              <Line 
+                type="monotone" 
+                dataKey="count" 
+                stroke="#4F46E5" 
+                strokeWidth={2} 
+                dot={{ r: 4, fill: "#4F46E5" }} 
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
       </CardContent>
     </Card>
   );

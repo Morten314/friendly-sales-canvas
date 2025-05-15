@@ -1,22 +1,26 @@
 
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 
 export function QuotaTracker() {
   // Simulated data for the quota tracker
   const currentProgress = 42;
   const lastMonthProgress = 52;
+  const difference = lastMonthProgress - currentProgress;
   const targetAmount = "$120,000";
   const currentAmount = "$50,400";
+  
+  // Team progress data
+  const teamProgress = [
+    { name: "Rohan", progress: 58 },
+    { name: "Priya", progress: 66 }
+  ];
 
   return (
     <Card className="mb-6">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-lg">Your Monthly Target</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
+      <CardContent className="p-6">
+        <div className="space-y-5">
           <div className="flex items-end justify-between mb-1">
             <div>
               <span className="text-2xl font-bold">{currentAmount}</span>
@@ -38,10 +42,28 @@ export function QuotaTracker() {
             </div>
           </div>
           
-          <p className="text-sm text-gray-700 mt-3">
-            You're currently at {currentProgress}% of your monthly target. On this day last month, 
-            you were at {lastMonthProgress}% — let's pick up the pace!
+          <p className="text-sm text-gray-700">
+            You're at {currentProgress}% of your monthly quota. On this date last month, 
+            you had achieved {lastMonthProgress}% — you're currently {difference}% behind.
           </p>
+          
+          {/* Team comparison section */}
+          <div className="mt-6">
+            <h3 className="text-sm font-semibold mb-3">How others are tracking</h3>
+            <div className="space-y-3">
+              {teamProgress.map((member, index) => (
+                <div key={index} className="space-y-1">
+                  <div className="flex justify-between text-sm">
+                    <span>{member.name}</span>
+                    <span>{member.progress}% of quota</span>
+                  </div>
+                  <Progress value={member.progress} className="h-2">
+                    <div className="h-full bg-indigo-500" style={{ width: `${member.progress}%` }}></div>
+                  </Progress>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>
