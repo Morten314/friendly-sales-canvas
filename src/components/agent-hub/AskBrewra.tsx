@@ -6,13 +6,20 @@ import { Input } from "@/components/ui/input";
 import { Send } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 
+const suggestionPrompts = [
+  "Show me deals that are stuck in negotiation",
+  "Summarize yesterday's demo with Acme Corp",
+  "Draft a follow-up email for lead in proposal stage"
+];
+
 export function AskBrewra() {
   const [query, setQuery] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
   
-  const handleSubmit = () => {
-    if (!query.trim()) return;
+  const handleSubmit = (promptText?: string) => {
+    const text = promptText || query;
+    if (!text.trim()) return;
     
     setIsProcessing(true);
     
@@ -50,12 +57,15 @@ export function AskBrewra() {
         <div className="space-y-3 mb-4">
           <p className="text-xs text-slate-400">Try these prompts:</p>
           <div className="space-y-2">
-            <div className="bg-slate-700 p-2 rounded-md text-xs">
-              Show me deals that are stuck in negotiation →
-            </div>
-            <div className="bg-slate-700 p-2 rounded-md text-xs">
-              Schedule a product demo with David from Acme →
-            </div>
+            {suggestionPrompts.map((prompt, index) => (
+              <div 
+                key={index}
+                className="bg-slate-700 p-2 rounded-md text-xs cursor-pointer hover:bg-slate-600 transition-colors"
+                onClick={() => handleSubmit(prompt)}
+              >
+                {prompt} →
+              </div>
+            ))}
           </div>
         </div>
         
@@ -68,7 +78,7 @@ export function AskBrewra() {
             onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
           />
           <Button 
-            onClick={handleSubmit} 
+            onClick={() => handleSubmit()} 
             disabled={isProcessing} 
             size="icon" 
             className="bg-blue-500 hover:bg-blue-600"

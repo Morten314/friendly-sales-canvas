@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -64,7 +64,7 @@ export function PipelineSnapshot() {
     <Card className="mb-6">
       <CardHeader className="pb-0">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">Pipeline Snapshot</CardTitle>
+          <CardTitle className="text-lg">Pipeline at a Glance</CardTitle>
           <Select value={timeframe} onValueChange={handleTimeframeChange}>
             <SelectTrigger className="w-[120px] h-8 text-xs">
               <SelectValue placeholder="7 days" />
