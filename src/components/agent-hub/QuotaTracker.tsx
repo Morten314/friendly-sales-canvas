@@ -6,8 +6,8 @@ import { Progress } from "@/components/ui/progress";
 export function QuotaTracker() {
   // Simulated data for the quota tracker
   const currentProgress = 42;
-  const lastMonthProgress = 52;
-  const difference = lastMonthProgress - currentProgress;
+  // const lastMonthProgress = 52;
+  // const difference = lastMonthProgress - currentProgress;
   const targetAmount = "$120,000";
   const currentAmount = "$50,400";
   
@@ -42,10 +42,10 @@ export function QuotaTracker() {
             </div>
           </div>
           
-          <p className="text-sm text-gray-700">
+          {/* <p className="text-sm text-gray-700">
             You're at {currentProgress}% of your monthly quota. On this date last month, 
             you had achieved {lastMonthProgress}% — you're currently {difference}% behind.
-          </p>
+          </p> */}
           
           {/* Team comparison section */}
           <div className="mt-6">

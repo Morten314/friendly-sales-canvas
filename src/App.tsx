@@ -4,7 +4,6 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import Index from "./pages/Index";
 import Customers from "./pages/Customers";
 import Deals from "./pages/Deals";
 import Calendar from "./pages/Calendar";
@@ -26,7 +25,6 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Navigate to="/agent-hub" replace />} />
           <Route path="/agent-hub" element={<AgentHub />} />
-          <Route path="/dashboard" element={<Index />} />
           <Route path="/customers" element={<Customers />} />
           <Route path="/deals" element={<Deals />} />
           <Route path="/calendar" element={<Calendar />} />
