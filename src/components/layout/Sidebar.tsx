@@ -147,7 +147,7 @@ type NavItem = {
 };
 
 const navItems: NavItem[] = [
-  { icon: LayoutDashboard, label: "Agent Hub", href: "/agent-hub" },
+  { icon: LayoutDashboard, label: "Dashboard", href: "/agent-hub" },
   { icon: Search, label: "Market Research (Scout)", href: "/market-research" },
   { icon: Users, label: "ICP Profiles (Profiler)", href: "/customers" },
   { icon: FileText, label: "GTM Strategies (Strategist)", href: "/deals" },
@@ -195,64 +195,78 @@ export function Sidebar() {
               )}
             >
               <LayoutDashboard className="h-5 w-5" />
-              {!collapsed && <span className="ml-3">Agent Hub</span>}
+              {!collapsed && <span className="ml-3">Dashboard</span>}
             </Link>
           </li>
           
           {/* AI Team Collapsible Section */}
-          {!collapsed && (
-            <li>
-              <Collapsible 
-                open={aiTeamOpen}
-                onOpenChange={setAiTeamOpen}
-                className="mx-2"
+{!collapsed && (
+  <li>
+    <Collapsible 
+      open={aiTeamOpen}
+      onOpenChange={setAiTeamOpen}
+      className="mx-2"
+    >
+      <CollapsibleTrigger asChild>
+        <div className={cn(
+          "flex items-center px-4 py-3 text-gray-700 hover:bg-sales-gray hover:text-sales-blue rounded-lg transition-colors cursor-pointer",
+          aiTeamOpen && "bg-blue-50 text-sales-blue"
+        )}>
+          <Users className="h-5 w-5" />
+          <span className="ml-3 flex-1">AI Team</span>
+          {aiTeamOpen ? (
+            <ChevronUp className="h-4 w-4" />
+          ) : (
+            <ChevronDown className="h-4 w-4" />
+          )}
+        </div>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        {/* Exclude Reports from here */}
+        <ul className="space-y-1">
+          {navItems.slice(1, 6).map((item) => (
+            <li key={item.label}>
+              <Link 
+                to={item.href} 
+                className={cn(
+                  "flex items-center px-4 py-2 text-sm text-gray-600 hover:bg-sales-gray hover:text-sales-blue rounded-lg transition-colors ml-9",
+                  window.location.pathname === item.href && "bg-blue-50 text-sales-blue"
+                )}
               >
-                <CollapsibleTrigger asChild>
-                  <div className={cn(
-                    "flex items-center px-4 py-3 text-gray-700 hover:bg-sales-gray hover:text-sales-blue rounded-lg transition-colors cursor-pointer",
-                    aiTeamOpen && "bg-blue-50 text-sales-blue"
-                  )}>
-                    <Users className="h-5 w-5" />
-                    <span className="ml-3 flex-1">AI Team</span>
-                    {aiTeamOpen ? (
-                      <ChevronUp className="h-4 w-4" />
-                    ) : (
-                      <ChevronDown className="h-4 w-4" />
-                    )}
-                  </div>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  {/* Include navigation items from Market Research to Reports */}
-                  <ul className="space-y-1">
-                    {navItems.slice(1, 7).map((item) => (
-                      <li key={item.label}>
-                        <Link 
-                          to={item.href} 
-                          className={cn(
-                            "flex items-center px-4 py-2 text-sm text-gray-600 hover:bg-sales-gray hover:text-sales-blue rounded-lg transition-colors ml-9",
-                            window.location.pathname === item.href && "bg-blue-50 text-sales-blue"
-                          )}
-                        >
-                          <item.icon className="h-4 w-4" />
-                          <span className="ml-3">{item.label}</span>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </CollapsibleContent>
-              </Collapsible>
+                <item.icon className="h-4 w-4" />
+                <span className="ml-3">{item.label}</span>
+              </Link>
             </li>
-          )}
-          
-          {/* Show AI Team icon when collapsed */}
-          {collapsed && (
-            <li>
-              <div className="flex items-center justify-center py-3 text-gray-700">
-                <Users className="h-5 w-5" />
-              </div>
-            </li>
-          )}
-          
+          ))}
+        </ul>
+      </CollapsibleContent>
+    </Collapsible>
+  </li>
+)}
+
+{/* Show AI Team icon when collapsed */}
+{collapsed && (
+  <li>
+    <div className="flex items-center justify-center py-3 text-gray-700">
+      <Users className="h-5 w-5" />
+    </div>
+  </li>
+)}
+
+{/* Reports moved outside AI Team */}
+<li key="reports">
+  <Link 
+    to="/insights" 
+    className={cn(
+      "flex items-center px-4 py-3 text-gray-700 hover:bg-sales-gray hover:text-sales-blue rounded-lg mx-2 transition-colors",
+      window.location.pathname === "/insights" && "bg-blue-50 text-sales-blue"
+    )}
+  >
+    <BarChart className="h-5 w-5" />
+    {!collapsed && <span className="ml-3">Reports</span>}
+  </Link>
+</li>
+
           {/* Settings navigation item */}
           <li key="settings">
             <Link 

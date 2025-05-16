@@ -1,16 +1,23 @@
 import React from 'react';
-import { AgentPersona, AgentPersonaCard } from '@/components/agents/AgentPersonas';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Check, Edit, AlertTriangle, Clock, Search, User, Compass, Zap, Presentation } from 'lucide-react';
+import { AgentPersona } from '@/components/agents/AgentPersonas';
+import {
+  Check,
+  Edit,
+  AlertTriangle,
+  Clock,
+  Search,
+  User,
+  Compass,
+  Zap,
+  Presentation
+} from 'lucide-react';
 
-// Extend the agent persona type with status information
 export interface AgentWithStatus extends AgentPersona {
   status: 'approved' | 'revision' | 'pending' | 'inactive';
   lastActivity?: string;
   priority: number;
 }
 
-// Sample data with status and priority for ordering
 const agentsWithStatus: AgentWithStatus[] = [
   {
     name: "Scout",
@@ -79,11 +86,11 @@ const agentsWithStatus: AgentWithStatus[] = [
     role: "Communication",
     strengths: ["Visual storytelling", "Value articulation", "Objection handling"],
     status: "inactive",
+    lastActivity: "5 days ago",
     priority: 5
   }
 ];
 
-// Helper function to get status icon
 const getStatusIcon = (status: string) => {
   switch (status) {
     case 'approved':
@@ -97,7 +104,6 @@ const getStatusIcon = (status: string) => {
   }
 };
 
-// Helper function to get status text
 const getStatusText = (status: string) => {
   switch (status) {
     case 'approved':
@@ -111,22 +117,7 @@ const getStatusText = (status: string) => {
   }
 };
 
-// Helper function to get status color
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case 'approved':
-      return 'bg-green-50 text-green-600 border-green-200';
-    case 'revision':
-      return 'bg-amber-50 text-amber-600 border-amber-200';
-    case 'pending':
-      return 'bg-blue-50 text-blue-600 border-blue-200';
-    default:
-      return 'bg-gray-50 text-gray-600 border-gray-200';
-  }
-};
-
 export function AgentsByStatus() {
-  // Sort agents by status priority and then by individual priority
   const sortedAgents = [...agentsWithStatus].sort((a, b) => {
     const statusPriority = {
       'approved': 1,
@@ -134,54 +125,64 @@ export function AgentsByStatus() {
       'revision': 3,
       'inactive': 4
     };
-    
     const statusComparison = statusPriority[a.status] - statusPriority[b.status];
-    if (statusComparison !== 0) return statusComparison;
-    
-    // If status is the same, sort by agent priority
-    return a.priority - b.priority;
+    return statusComparison !== 0 ? statusComparison : a.priority - b.priority;
   });
 
-  // Group agents by status
   const groupedAgents = sortedAgents.reduce((acc, agent) => {
-    if (!acc[agent.status]) {
-      acc[agent.status] = [];
-    }
+    if (!acc[agent.status]) acc[agent.status] = [];
     acc[agent.status].push(agent);
     return acc;
   }, {} as Record<string, AgentWithStatus[]>);
 
-  // Define the display order of statuses
   const statusOrder = ['approved', 'pending', 'revision', 'inactive'];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-10">
       {statusOrder.map(status => {
         const agents = groupedAgents[status];
         if (!agents || agents.length === 0) return null;
-        
+
         return (
-          <Card key={status} className={`border-l-4 ${getStatusColor(status)}`}>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                {getStatusIcon(status)}
-                {getStatusText(status)} Agents
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div key={status} className="border rounded-md shadow-sm overflow-x-auto">
+            <div className="px-4 py-2 bg-gray-100 border-b flex items-center gap-2 text-sm font-semibold">
+              {getStatusIcon(status)}
+              {getStatusText(status)} Agents
+            </div>
+            <table className="min-w-full divide-y divide-gray-200 text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-2 text-left">Name</th>
+                  <th className="px-4 py-2 text-left">Description</th>
+                  <th className="px-4 py-2 text-left">Role</th>
+                  <th className="px-4 py-2 text-left">Strengths</th>
+                  <th className="px-4 py-2 text-left">Last Activity</th>
+                  <th className="px-4 py-2 text-left">Status</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-100">
                 {agents.map((agent, index) => (
-                  <div key={index} className="relative">
-                    <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full text-xs border flex items-center gap-1 z-10 bg-white/80 backdrop-blur-sm">
+                  <tr key={index}>
+                    <td className="px-4 py-2 font-medium">{agent.name}</td>
+                    <td className="px-4 py-2">{agent.description}</td>
+                    <td className="px-4 py-2">{agent.role}</td>
+                    <td className="px-4 py-2">
+                      <ul className="list-disc list-inside">
+                        {agent.strengths.map((s, i) => (
+                          <li key={i}>{s}</li>
+                        ))}
+                      </ul>
+                    </td>
+                    <td className="px-4 py-2">{agent.lastActivity || 'No recent activity'}</td>
+                    <td className="px-4 py-2 flex items-center gap-1">
                       {getStatusIcon(agent.status)}
-                      <span>{agent.lastActivity || 'No recent activity'}</span>
-                    </div>
-                    <AgentPersonaCard persona={agent} />
-                  </div>
+                      {getStatusText(agent.status)}
+                    </td>
+                  </tr>
                 ))}
-              </div>
-            </CardContent>
-          </Card>
+              </tbody>
+            </table>
+          </div>
         );
       })}
     </div>

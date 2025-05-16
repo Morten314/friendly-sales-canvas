@@ -98,7 +98,7 @@ const AgentHub: React.FC = () => {
         </div>
 
         <div className="mt-8">
-          <h2 className="text-2xl font-bold mb-4">Agentic AI Assist</h2>
+          <h2 className="text-2xl font-bold mb-4">AI Team Activity</h2>
           <AgentsByStatus />
         </div>
       </div>
