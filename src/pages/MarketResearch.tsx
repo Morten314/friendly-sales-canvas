@@ -1,7 +1,8 @@
+
 import { useState } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
-import { Search, MessageSquare, ChartBar } from "lucide-react";
+import { Search, MessageSquare, ChartBar, Users } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChatWithScout } from "@/components/market-research/ChatWithScout";
 import { RecentMarketResearch } from "@/components/market-research/RecentMarketResearch";
@@ -73,7 +74,7 @@ const MarketResearch = () => {
               Market Intelligence
             </TabsTrigger>
             <TabsTrigger value="analysis" className="flex items-center gap-2 flex-1">
-              <ChartBar className="h-4 w-4" />
+              <Users className="h-4 w-4" />
               Your Lead Stream
             </TabsTrigger>
             <TabsTrigger value="trends" className="flex items-center gap-2 flex-1">
@@ -100,25 +101,17 @@ const MarketResearch = () => {
               
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
                 <EmergingTrends emergingTrends={trendSpottingData.emergingTrends} />
-                <ConsumerTrends consumerTrends={trendSpottingData.consumerTrends} />
+                <TechnologyDrivers technologyDrivers={trendSpottingData.technologyDrivers} />
               </div>
-              
-              <TechnologyDrivers technologyDrivers={trendSpottingData.technologyDrivers} />
             </div>
           </TabsContent>
           
           <TabsContent value="analysis" className="mt-0">
-            {/* Empty content for Prospecting tab */}
-            <div className="p-8 text-center">
-              <p className="text-gray-500">No content in this tab - all content is available under Market Intelligence</p>
-            </div>
+            <ConsumerTrends />
           </TabsContent>
           
           <TabsContent value="trends" className="mt-0">
-            {/* Empty content for Chat with Scout tab */}
-            <div className="p-8 text-center">
-              <p className="text-gray-500">No content in this tab - all content is available under Market Intelligence</p>
-            </div>
+            <ChatWithScout fullPage={true} />
           </TabsContent>
         </Tabs>
       </div>
