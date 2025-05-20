@@ -237,17 +237,6 @@ const MarketResearch = () => {
             <div>
               <h1 className="text-2xl font-bold">Market Research (Scout)</h1>
               <p className="text-gray-500">Find the best markets before your competitors do</p>
-              <div className="flex gap-2 mt-2">
-                <span className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full border border-blue-200">
-                  Market Intelligence
-                </span>
-                <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
-                  Market analysis
-                </span>
-                <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
-                  Trend spotting
-                </span>
-              </div>
             </div>
           </div>
           <div className="flex gap-2">
