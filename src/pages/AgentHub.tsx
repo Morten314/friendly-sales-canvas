@@ -1,102 +1,4 @@
 
-
-// // import React from "react";
-// // import { Layout } from "@/components/layout/Layout";
-// // import { WelcomeMessage } from "@/components/agent-hub/WelcomeMessage";
-// // import { TodaysFocus } from "@/components/agent-hub/TodaysFocus";
-// // import { QuotaTracker } from "@/components/agent-hub/QuotaTracker";
-// // import { PipelineSnapshot } from "@/components/agent-hub/PipelineSnapshot";
-// // import { InsightsAnalytics } from "@/components/agent-hub/InsightsAnalytics";
-// // import { AgentsByStatus } from "@/components/agent-hub/AgentsByStatus";
-// // import FloatingAskBrewra from "@/components/agent-hub/FloatingAskBrewra";
-
-// // const AgentHub: React.FC = () => {
-// //   return (
-// //     <Layout>
-// //       <div className="animate-fade-in space-y-6">
-// //         <WelcomeMessage />
-
-// //         <div>
-// //           <h2 className="text-lg font-bold mb-3">Today's Focus</h2>
-// //           <TodaysFocus />
-// //         </div>
-
-// //         <div>
-// //           <h2 className="text-lg font-bold mb-3">Your Monthly Progress</h2>
-// //           <QuotaTracker />
-// //         </div>
-
-// //         <div>
-// //           <h2 className="text-lg font-bold mb-3">Pipeline at a Glance</h2>
-// //           <PipelineSnapshot />
-// //         </div>
-
-// //         <div>
-// //           <h2 className="text-lg font-bold mb-3">Sales Metrics Over Time</h2>
-// //           <InsightsAnalytics />
-// //         </div>
-
-// //         <div className="mt-8">
-// //           <h2 className="text-2xl font-bold mb-4">AI Team Activity</h2>
-// //           <AgentsByStatus />
-// //         </div>
-// //       </div>
-
-// //       {/* Persistent Floating Ask Brewra Icon */}
-// //       <FloatingAskBrewra />
-// //     </Layout>
-// //   );
-// // };
-
-// // export default AgentHub;
-
-
-// import React from "react";
-// import { Layout } from "@/components/layout/Layout";
-// import { WelcomeMessage } from "@/components/agent-hub/WelcomeMessage";
-// import { TodaysFocus } from "@/components/agent-hub/TodaysFocus";
-// import { QuotaTracker } from "@/components/agent-hub/QuotaTracker";
-// import { PipelineSnapshot } from "@/components/agent-hub/PipelineSnapshot";
-// import { InsightsAnalytics } from "@/components/agent-hub/InsightsAnalytics";
-// import { AgentsByStatus } from "@/components/agent-hub/AgentsByStatus";
-
-// const AgentHub: React.FC = () => {
-//   return (
-//     <Layout>
-//       <div className="animate-fade-in space-y-6">
-//         <WelcomeMessage />
-
-//         <div>
-//           <h2 className="text-lg font-bold mb-3">Today's Focus</h2>
-//           <TodaysFocus />
-//         </div>
-
-//         <div>
-//           <h2 className="text-lg font-bold mb-3">Your Monthly Progress</h2>
-//           <QuotaTracker />
-//         </div>
-
-//         <div>
-//           <h2 className="text-lg font-bold mb-3">Pipeline at a Glance</h2>
-//           <PipelineSnapshot />
-//         </div>
-
-//         <div>
-//           <h2 className="text-lg font-bold mb-3">Sales Metrics Over Time</h2>
-//           <InsightsAnalytics />
-//         </div>
-
-//         <div className="mt-8">
-//           <h2 className="text-2xl font-bold mb-4">AI Team Activity</h2>
-//           <AgentsByStatus />
-//         </div>
-//       </div>
-//     </Layout>
-//   );
-// };
-
-// export default AgentHub;
-
 import React, { useState, useEffect } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { WelcomeMessage } from "@/components/agent-hub/WelcomeMessage";
@@ -107,6 +9,7 @@ import { InsightsAnalytics } from "@/components/agent-hub/InsightsAnalytics";
 import { AgentsByStatus } from "@/components/agent-hub/AgentsByStatus";
 import { AgentTeamOverview } from "@/components/agent-hub/AgentTeamOverview";
 import { useLocation } from "react-router-dom";
+import FloatingAskBrewra from "@/components/agent-hub/FloatingAskBrewra";
 
 const AgentHub: React.FC = () => {
   const [showAITeam, setShowAITeam] = useState(false);
@@ -162,6 +65,9 @@ const AgentHub: React.FC = () => {
           </div>
         </div>
       )}
+      
+      {/* Persistent Floating Ask Brewra Icon */}
+      <FloatingAskBrewra />
     </Layout>
   );
 };

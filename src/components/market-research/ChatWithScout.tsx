@@ -1,181 +1,136 @@
-// import { useState } from "react";
-// import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-// import { Button } from "@/components/ui/button";
-// import { Input } from "@/components/ui/input";
-// import { MessageSquare, Send } from "lucide-react";
 
-// interface Message {
-//   role: "ai" | "user";
-//   content: string;
-// }
-
-// export const ChatWithScout = () => {
-//   const [messages, setMessages] = useState<Message[]>([
-//     { role: "ai", content: "Hello! I'm Scout. How can I help with your market research today?" }
-//   ]);
-//   const [inputValue, setInputValue] = useState("");
-
-//   const handleSendMessage = () => {
-//     if (!inputValue.trim()) return;
-    
-//     // Add user message
-//     setMessages([...messages, { role: "user", content: inputValue }]);
-    
-//     // Simulate AI response
-//     setTimeout(() => {
-//       setMessages(current => [...current, { 
-//         role: "ai", 
-//         content: "I can analyze this market for you. Would you like me to focus on market size, competitor landscape, or growth potential?"
-//       }]);
-//     }, 1000);
-    
-//     setInputValue("");
-//   };
-
-//   return (
-//     <Card className="border-blue-200 bg-blue-50/40 mb-6">
-//       <CardHeader className="pb-3">
-//         <CardTitle className="text-lg flex items-center gap-2">
-//           <MessageSquare className="h-5 w-5 text-sales-blue" />
-//           Scout Agent Chat
-//         </CardTitle>
-//         <CardDescription>
-//           Ask Scout about markets, competitor analysis or request new research
-//         </CardDescription>
-//       </CardHeader>
-//       <CardContent>
-//         <div className="bg-white rounded-md border border-gray-200 p-4 flex flex-col gap-3">
-//           <div className="space-y-3 max-h-60 overflow-y-auto">
-//             {messages.map((message, index) => (
-//               <div 
-//                 key={index}
-//                 className={`${
-//                   message.role === "ai" 
-//                     ? "bg-blue-50 rounded-lg p-3 self-start max-w-[80%]" 
-//                     : "bg-gray-100 rounded-lg p-3 self-end max-w-[80%] ml-auto"
-//                 }`}
-//               >
-//                 <p className="text-sm font-medium">
-//                   {message.role === "ai" ? "Scout" : "You"}
-//                 </p>
-//                 <p className="text-sm">{message.content}</p>
-//               </div>
-//             ))}
-//           </div>
-          
-//           <div className="flex gap-2 mt-2">
-//             <Input
-//               type="text" 
-//               placeholder="Ask Scout about market opportunities..."
-//               className="flex-1"
-//               value={inputValue}
-//               onChange={(e) => setInputValue(e.target.value)}
-//               onKeyDown={(e) => {
-//                 if (e.key === 'Enter') handleSendMessage();
-//               }}
-//             />
-//             <Button 
-//               className="bg-sales-blue hover:bg-blue-700 flex items-center gap-2"
-//               onClick={handleSendMessage}
-//             >
-//               <Send className="h-4 w-4" />
-//             </Button>
-//           </div>
-//         </div>
-//       </CardContent>
-//     </Card>
-//   );
-// };
-
-import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { MessageSquare, Send } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent } from "@/components/ui/card";
+import { MessageSquare, Send, ArrowRight } from "lucide-react";
 
-interface Message {
-  role: "ai" | "user";
+interface ChatMessage {
+  role: "user" | "assistant";
   content: string;
+  timestamp: string;
 }
 
 interface ChatWithScoutProps {
   fullPage?: boolean;
 }
 
-export const ChatWithScout = ({ fullPage }: ChatWithScoutProps) => {
-  const [messages, setMessages] = useState<Message[]>([
-    { role: "ai", content: "Hello! I'm Scout. How can I help with your market research today?" }
+export function ChatWithScout({ fullPage = false }: ChatWithScoutProps) {
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      role: "assistant",
+      content: "Hi there! I'm Scout, your market research assistant. How can I help you find the right markets or leads today?",
+      timestamp: new Date().toLocaleTimeString(),
+    },
   ]);
-  const [inputValue, setInputValue] = useState("");
+  const [input, setInput] = useState("");
 
   const handleSendMessage = () => {
-    if (!inputValue.trim()) return;
-    
+    if (!input.trim()) return;
+
     // Add user message
-    setMessages([...messages, { role: "user", content: inputValue }]);
+    const userMessage: ChatMessage = {
+      role: "user",
+      content: input,
+      timestamp: new Date().toLocaleTimeString(),
+    };
     
-    // Simulate AI response
+    setMessages((prev) => [...prev, userMessage]);
+    setInput("");
+
+    // Simulate Scout's response after a short delay
     setTimeout(() => {
-      setMessages(current => [...current, { 
-        role: "ai", 
-        content: "I can analyze this market for you. Would you like me to focus on market size, competitor landscape, or growth potential?"
-      }]);
+      let response = "";
+      
+      if (input.toLowerCase().includes("market")) {
+        response = "I can help you analyze markets! Would you like me to research specific industries or suggest growing markets based on your ICP?";
+      } else if (input.toLowerCase().includes("competitor")) {
+        response = "I can run a competitive analysis for you. Which company would you like me to research?";
+      } else if (input.toLowerCase().includes("lead") || input.toLowerCase().includes("prospect")) {
+        response = "I can find high-quality leads that match your ideal customer profile. Would you like me to set up a lead stream for you?";
+      } else {
+        response = "I can help you with market research, competitor analysis, and finding qualified leads. What specific information are you looking for today?";
+      }
+
+      const assistantMessage: ChatMessage = {
+        role: "assistant",
+        content: response,
+        timestamp: new Date().toLocaleTimeString(),
+      };
+      
+      setMessages((prev) => [...prev, assistantMessage]);
     }, 1000);
-    
-    setInputValue("");
+  };
+
+  // Handle Enter key press
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
   };
 
   return (
-    <Card className="border-blue-200 bg-blue-50/40 mb-6">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-lg flex items-center gap-2">
-          <MessageSquare className="h-5 w-5 text-sales-blue" />
-          Scout Agent Chat
-        </CardTitle>
-        <CardDescription>
-          Ask Scout about markets, competitor analysis or request new research
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="bg-white rounded-md border border-gray-200 p-4 flex flex-col gap-3">
-          <div className="space-y-3 max-h-60 overflow-y-auto">
-            {messages.map((message, index) => (
-              <div 
-                key={index}
-                className={`${
-                  message.role === "ai" 
-                    ? "bg-blue-50 rounded-lg p-3 self-start max-w-[80%]" 
-                    : "bg-gray-100 rounded-lg p-3 self-end max-w-[80%] ml-auto"
+    <div className={`bg-white border rounded-lg overflow-hidden ${fullPage ? 'h-[80vh]' : 'mb-6'}`}>
+      <div className={`flex flex-col ${fullPage ? 'h-full' : ''}`}>
+        <div className="bg-blue-50 p-3 border-b flex items-center gap-2">
+          <div className="p-1 rounded-full bg-blue-100">
+            <MessageSquare className="h-4 w-4 text-blue-700" />
+          </div>
+          <h3 className="font-medium">Chat with Scout</h3>
+        </div>
+        
+        {/* Messages container */}
+        <div className={`overflow-y-auto p-4 space-y-4 ${fullPage ? 'flex-1' : 'h-64'}`}>
+          {messages.map((message, index) => (
+            <div
+              key={index}
+              className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
+            >
+              <div
+                className={`max-w-[80%] rounded-lg p-3 ${
+                  message.role === "user"
+                    ? "bg-blue-100 text-blue-900"
+                    : "bg-gray-100"
                 }`}
               >
-                <p className="text-sm font-medium">
-                  {message.role === "ai" ? "Scout" : "You"}
-                </p>
-                <p className="text-sm">{message.content}</p>
+                <div className="text-sm">{message.content}</div>
+                <div className="text-xs mt-1 text-gray-500">{message.timestamp}</div>
               </div>
-            ))}
-          </div>
-          
-          <div className="flex gap-2 mt-2">
-            <Input
-              type="text" 
-              placeholder="Ask Scout about market opportunities..."
-              className="flex-1"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleSendMessage();
-              }}
-            />
-            <Button 
-              className="bg-sales-blue hover:bg-blue-700 flex items-center gap-2"
-              onClick={handleSendMessage}
-            >
-              <Send className="h-4 w-4" />
-            </Button>
-          </div>
+            </div>
+          ))}
         </div>
-      </CardContent>
-    </Card>
+
+        {/* Input area */}
+        <div className="border-t p-3 flex gap-2">
+          <Textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyPress}
+            placeholder="Ask Scout about markets, competitors, or leads..."
+            className="resize-none text-sm"
+            rows={2}
+          />
+          <Button
+            onClick={handleSendMessage}
+            className="self-end"
+            disabled={!input.trim()}
+          >
+            <Send className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+      {!fullPage && (
+        <div className="border-t p-3 bg-gray-50 flex justify-between items-center">
+          <div className="text-xs text-gray-500">
+            Scout can analyze markets, identify competitors, and find leads
+          </div>
+          <Button variant="link" size="sm" className="text-blue-600 flex items-center">
+            Open Chat <ArrowRight className="ml-1 h-3 w-3" />
+          </Button>
+        </div>
+      )}
+    </div>
   );
-};
+}
