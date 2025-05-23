@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
@@ -77,6 +78,12 @@ const MarketResearch = () => {
                 >
                   <MessageSquare className="h-4 w-4" />
                   Chat with Scout
+                </Button>
+                <Button 
+                  className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+                >
+                  <Search className="h-4 w-4" />
+                  Deploy Scout
                 </Button>
               </div>
             </div>
