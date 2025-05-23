@@ -8,9 +8,31 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { CompanyProfile } from "@/components/settings/CompanyProfile";
+import { UserProfile } from "@/components/settings/UserProfile";
+import { AgentProfile } from "@/components/settings/AgentProfile";
 
 const Settings = () => {
   const [selectedProfile, setSelectedProfile] = useState<string>("");
+
+  const renderProfileContent = () => {
+    switch (selectedProfile) {
+      case "company":
+        return <CompanyProfile />;
+      case "user":
+        return <UserProfile />;
+      case "agent":
+        return <AgentProfile />;
+      default:
+        return (
+          <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+            <p className="text-sm text-gray-600">
+              Please select a profile type to manage its settings.
+            </p>
+          </div>
+        );
+    }
+  };
 
   return (
     <Layout>
@@ -36,16 +58,7 @@ const Settings = () => {
               </Select>
             </div>
             
-            {selectedProfile && (
-              <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                <p className="text-sm text-gray-600">
-                  Selected: <span className="font-medium">{selectedProfile.charAt(0).toUpperCase() + selectedProfile.slice(1)} Profile</span>
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  Configuration options for this profile will be implemented here.
-                </p>
-              </div>
-            )}
+            {renderProfileContent()}
           </div>
           
           <div className="border-t pt-6">
