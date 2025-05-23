@@ -16,7 +16,6 @@ import { EmergingTrends } from "@/components/market-research/EmergingTrends";
 import { ConsumerTrends } from "@/components/market-research/ConsumerTrends";
 import { TechnologyDrivers } from "@/components/market-research/TechnologyDrivers";
 import { MarketDetailDrawer } from "@/components/market-research/MarketDetailDrawer";
-import { ViewToggle } from "@/components/market-research/ViewToggle";
 import { ScoutDeploymentDetails } from "@/components/market-research/ScoutDeploymentDetails";
 import { marketData, marketAnalysisData, trendSpottingData } from "@/components/market-research/data/marketData";
 import { DeploymentData } from "@/components/layout/Header";
@@ -147,6 +146,14 @@ const MarketResearch = () => {
           </Tabs>
         </ScrollArea>
       </div>
+
+      {/* Market Detail Drawer */}
+      <MarketDetailDrawer
+        isOpen={isDrawerOpen}
+        onOpenChange={setIsDrawerOpen}
+        selectedMarket={selectedMarket}
+        isAIViewActive={isAIViewActive}
+      />
     </Layout>
   );
 };
