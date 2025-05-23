@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ import { ViewToggle } from "@/components/market-research/ViewToggle";
 import { ScoutDeploymentDetails } from "@/components/market-research/ScoutDeploymentDetails";
 import { marketData, marketAnalysisData, trendSpottingData } from "@/components/market-research/data/marketData";
 import { DeploymentData } from "@/components/layout/Header";
+import { ScoutDeploymentModal } from "@/components/deploy/ScoutDeploymentModal";
 
 const MarketResearch = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -26,6 +28,7 @@ const MarketResearch = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isAIViewActive, setIsAIViewActive] = useState(false);
   const [scoutDeploymentData, setScoutDeploymentData] = useState<DeploymentData | null>(null);
+  const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
   const [selectedMarket, setSelectedMarket] = useState<{
     name: string;
     score: string;
@@ -53,6 +56,27 @@ const MarketResearch = () => {
     setIsAIViewActive(isAIView);
   };
 
+  const handleDeployAgent = (values: Omit<DeploymentData, "deployedAt">) => {
+    // Add timestamp to deployment data
+    const deploymentData = {
+      ...values,
+      deployedAt: new Date().toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric',
+        hour12: true
+      })
+    };
+
+    // Store the deployment data
+    setScoutDeploymentData(deploymentData);
+
+    // Save to localStorage for persistence
+    localStorage.setItem('scoutDeploymentData', JSON.stringify(deploymentData));
+  };
+
   return (
     <Layout>
       <div className="flex flex-col h-full">
@@ -78,9 +102,12 @@ const MarketResearch = () => {
                   <MessageSquare className="h-4 w-4" />
                   Chat with Scout
                 </Button>
-                <Button className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2">
+                <Button 
+                  className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+                  onClick={() => setIsDeployModalOpen(true)}
+                >
                   <Search className="h-4 w-4" />
-                  New Research
+                  Deploy Scout
                 </Button>
               </div>
             </div>
@@ -157,6 +184,13 @@ const MarketResearch = () => {
       />
 
       <ViewToggle onViewChange={handleViewModeChange} />
+      
+      {/* Scout Deployment Modal */}
+      <ScoutDeploymentModal 
+        isOpen={isDeployModalOpen}
+        onClose={() => setIsDeployModalOpen(false)}
+        onDeploy={handleDeployAgent}
+      />
     </Layout>
   );
 };

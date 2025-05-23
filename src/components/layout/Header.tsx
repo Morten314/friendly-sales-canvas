@@ -12,7 +12,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { AskBrewra } from "@/components/agent-hub/AskBrewra"; 
-import { ScoutDeploymentModal } from "@/components/deploy/ScoutDeploymentModal";
 
 // Define our deployment data type
 export interface DeploymentData {
@@ -27,8 +26,6 @@ export interface DeploymentData {
 
 export function Header() {
   const [openAsk, setOpenAsk] = useState(false);
-  const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
-  const [scoutDeploymentData, setScoutDeploymentData] = useState<DeploymentData | null>(null);
 
   const getPageTitle = () => {
     const path = window.location.pathname;
@@ -44,27 +41,6 @@ export function Header() {
     if (path === '/settings') return 'Settings';
 
     return 'Agent Hub';
-  };
-
-  const handleDeployAgent = (values: Omit<DeploymentData, "deployedAt">) => {
-    // Add timestamp to deployment data
-    const deploymentData = {
-      ...values,
-      deployedAt: new Date().toLocaleString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-        hour: 'numeric',
-        minute: 'numeric',
-        hour12: true
-      })
-    };
-
-    // Store the deployment data
-    setScoutDeploymentData(deploymentData);
-
-    // Save to localStorage for persistence
-    localStorage.setItem('scoutDeploymentData', JSON.stringify(deploymentData));
   };
 
   return (
@@ -133,22 +109,7 @@ export function Header() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-
-        {/* Deploy Agent Button */}
-        <Button 
-          className="bg-sales-blue hover:bg-blue-700"
-          onClick={() => setIsDeployModalOpen(true)}
-        >
-          + Deploy Agent
-        </Button>
       </div>
-
-      {/* Scout Deployment Modal */}
-      <ScoutDeploymentModal 
-        isOpen={isDeployModalOpen}
-        onClose={() => setIsDeployModalOpen(false)}
-        onDeploy={handleDeployAgent}
-      />
     </header>
   );
 }
