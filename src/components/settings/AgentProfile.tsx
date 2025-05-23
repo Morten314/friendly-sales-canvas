@@ -153,9 +153,7 @@ export function AgentProfile() {
 
         <div className="mt-6 pt-4 border-t border-purple-200">
           <div className="flex justify-between items-center">
-            <div className="text-sm text-purple-600">
-              <strong>Do's and Don'ts:</strong> Configure specific behaviors and limitations
-            </div>
+
             <Button onClick={handleSave} className="bg-purple-600 hover:bg-purple-700">
               Save Agent Profile
             </Button>
@@ -163,13 +161,7 @@ export function AgentProfile() {
         </div>
       </div>
 
-      <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-        <h4 className="font-medium text-blue-800 mb-2">How It Will Be Used</h4>
-        <div className="text-sm text-blue-700 space-y-2">
-          <p><strong>AI Use:</strong> The backend AI engine will consume this structured profile data to generate more relevant outputs, prioritize tasks, and adjust tone or strategy per user/project.</p>
-          <p><strong>UI Use:</strong> The frontend may adjust onboarding flows, agent dashboards, task suggestions, or even microcopy depending on the profile context.</p>
-        </div>
-      </div>
+      
     </div>
   );
 }

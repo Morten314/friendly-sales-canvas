@@ -60,10 +60,6 @@ const Settings = () => {
             
             {renderProfileContent()}
           </div>
-          
-          <div className="border-t pt-6">
-            <p className="text-gray-500">Additional application settings and configuration options will be implemented here.</p>
-          </div>
         </div>
       </div>
     </Layout>

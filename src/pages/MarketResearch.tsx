@@ -36,14 +36,6 @@ const MarketResearch = () => {
     details: any;
   } | null>(null);
 
-  // Load deployment data from localStorage on component mount
-  useEffect(() => {
-    const savedDeploymentData = localStorage.getItem('scoutDeploymentData');
-    if (savedDeploymentData) {
-      setScoutDeploymentData(JSON.parse(savedDeploymentData));
-    }
-  }, []);
-
   const handleViewResults = (marketName: string) => {
     const market = marketData[marketName as keyof typeof marketData];
     setSelectedMarket(market);

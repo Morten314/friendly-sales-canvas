@@ -122,19 +122,6 @@ export function UserProfile() {
           </Button>
         </div>
       </div>
-
-      <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-        <h4 className="font-medium text-yellow-800 mb-2">Behavior Example</h4>
-        <p className="text-sm text-yellow-700">
-          If a user is a VP of Sales working on UK expansion at a Series A SaaS company, the agent might:
-        </p>
-        <ul className="mt-2 text-xs text-yellow-600 space-y-1">
-          <li>• Focus more on outbound tactics for UK SaaS buyers</li>
-          <li>• Use strategic-level language</li>
-          <li>• Ask fewer basic questions</li>
-          <li>• But if the user is a junior SDR, it might offer more guided steps and provide definitions</li>
-        </ul>
-      </div>
     </div>
   );
 }
