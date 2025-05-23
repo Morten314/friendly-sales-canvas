@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,9 +13,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export function AgentProfile() {
+export function ScoutDeployment() {
   const [formData, setFormData] = useState({
-    agentName: "",
     assignedTasks: "",
     domain: "",
     generalInstructions: "",
@@ -39,37 +39,21 @@ export function AgentProfile() {
     setCheckedItems(prev => ({ ...prev, [item]: checked }));
   };
 
-  const handleSave = () => {
-    console.log("Agent Profile saved:", { ...formData, checkedItems });
-    // Implementation for saving agent profile
+  const handleDeploy = () => {
+    console.log("Scout deployed:", { ...formData, checkedItems });
+    // Implementation for deploying scout
   };
 
   return (
-    <div className="mt-6 space-y-6">
-      <div className="p-6 bg-purple-50 rounded-lg border-l-4 border-purple-500">
-        <h3 className="text-lg font-semibold text-purple-900 mb-2">Agent Profile Settings</h3>
-        <p className="text-sm text-purple-700 mb-4">
-          Configure how AI agents should behave and operate within your organization.
+    <div className="space-y-6">
+      <div className="p-6 bg-blue-50 rounded-lg border-l-4 border-blue-500">
+        <h3 className="text-lg font-semibold text-blue-900 mb-2">Deploy Scout Agent</h3>
+        <p className="text-sm text-blue-700 mb-4">
+          Configure Scout for market research and lead generation activities.
         </p>
         
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="agentName">Agent Name</Label>
-              <Select value={formData.agentName} onValueChange={(value) => handleInputChange("agentName", value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select agent" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="scout">Scout</SelectItem>
-                  <SelectItem value="profiler">Profiler</SelectItem>
-                  <SelectItem value="strategist">Strategist</SelectItem>
-                  <SelectItem value="activator">Activator</SelectItem>
-                  <SelectItem value="presenter">Presenter</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
             <div className="space-y-2">
               <Label htmlFor="domain">Domain/Focus Area</Label>
               <Input
@@ -167,10 +151,10 @@ export function AgentProfile() {
           </div>
         </div>
 
-        <div className="mt-6 pt-4 border-t border-purple-200">
+        <div className="mt-6 pt-4 border-t border-blue-200">
           <div className="flex justify-between items-center">
-            <Button onClick={handleSave} className="bg-purple-600 hover:bg-purple-700">
-              Save Agent Profile
+            <Button onClick={handleDeploy} className="bg-blue-600 hover:bg-blue-700">
+              Deploy Scout
             </Button>
           </div>
         </div>

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ import { ViewToggle } from "@/components/market-research/ViewToggle";
 import { ScoutDeploymentDetails } from "@/components/market-research/ScoutDeploymentDetails";
 import { marketData, marketAnalysisData, trendSpottingData } from "@/components/market-research/data/marketData";
 import { DeploymentData } from "@/components/layout/Header";
+import { useNavigate } from "react-router-dom";
 
 const MarketResearch = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -34,11 +36,17 @@ const MarketResearch = () => {
     barriers: string;
     details: any;
   } | null>(null);
+  
+  const navigate = useNavigate();
 
   const handleViewResults = (marketName: string) => {
     const market = marketData[marketName as keyof typeof marketData];
     setSelectedMarket(market);
     setIsDrawerOpen(true);
+  };
+
+  const handleDeployScout = () => {
+    navigate('/scout-deployment');
   };
 
   return (
@@ -68,6 +76,7 @@ const MarketResearch = () => {
                 </Button>
                 <Button 
                   className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+                  onClick={handleDeployScout}
                 >
                   <Search className="h-4 w-4" />
                   Deploy Scout
@@ -138,13 +147,6 @@ const MarketResearch = () => {
           </Tabs>
         </ScrollArea>
       </div>
-
-      <MarketDetailDrawer 
-        isOpen={isDrawerOpen} 
-        onOpenChange={setIsDrawerOpen} 
-        selectedMarket={selectedMarket} 
-        isAIViewActive={isAIViewActive}
-      />
     </Layout>
   );
 };
