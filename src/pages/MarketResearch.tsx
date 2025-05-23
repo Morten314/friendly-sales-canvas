@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
@@ -40,10 +39,6 @@ const MarketResearch = () => {
     const market = marketData[marketName as keyof typeof marketData];
     setSelectedMarket(market);
     setIsDrawerOpen(true);
-  };
-
-  const handleViewModeChange = (isAIView: boolean) => {
-    setIsAIViewActive(isAIView);
   };
 
   return (
@@ -150,8 +145,6 @@ const MarketResearch = () => {
         selectedMarket={selectedMarket} 
         isAIViewActive={isAIViewActive}
       />
-
-      <ViewToggle onViewChange={handleViewModeChange} />
     </Layout>
   );
 };
