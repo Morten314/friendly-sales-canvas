@@ -38,6 +38,19 @@ const MarketResearch = () => {
   
   const navigate = useNavigate();
 
+  // Listen for AI view changes from header
+  useEffect(() => {
+    const handleAIViewChange = (event: CustomEvent) => {
+      setIsAIViewActive(event.detail.isAIView);
+    };
+
+    window.addEventListener('aiViewChanged', handleAIViewChange as EventListener);
+    
+    return () => {
+      window.removeEventListener('aiViewChanged', handleAIViewChange as EventListener);
+    };
+  }, []);
+
   const handleViewResults = (marketName: string) => {
     const market = marketData[marketName as keyof typeof marketData];
     setSelectedMarket(market);

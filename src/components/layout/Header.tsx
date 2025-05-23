@@ -47,6 +47,10 @@ export function Header() {
 
   const handleViewModeChange = (isAIView: boolean) => {
     setIsAIViewActive(isAIView);
+    // Dispatch custom event to communicate with other components
+    window.dispatchEvent(new CustomEvent('aiViewChanged', { 
+      detail: { isAIView } 
+    }));
   };
 
   return (
