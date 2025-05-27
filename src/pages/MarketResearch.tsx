@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
@@ -44,10 +43,16 @@ const MarketResearch = () => {
       setIsAIViewActive(event.detail.isAIView);
     };
 
+    const handleScoutChatToggle = (event: CustomEvent) => {
+      setIsChatOpen(event.detail.isOpen);
+    };
+
     window.addEventListener('aiViewChanged', handleAIViewChange as EventListener);
+    window.addEventListener('toggleScoutChat', handleScoutChatToggle as EventListener);
     
     return () => {
       window.removeEventListener('aiViewChanged', handleAIViewChange as EventListener);
+      window.removeEventListener('toggleScoutChat', handleScoutChatToggle as EventListener);
     };
   }, []);
 
@@ -67,35 +72,6 @@ const MarketResearch = () => {
         {/* Fixed header section */}
         <div className="sticky top-0 bg-white z-10 pb-2">
           <div className="animate-fade-in">
-            <div className="flex justify-between items-center mb-6">
-              <div className="flex items-start gap-4">
-                <div className="p-3 rounded-lg bg-blue-50 text-blue-600">
-                  <Search className="h-8 w-8" />
-                </div>
-                <div>
-                  <h1 className="text-2xl font-bold">Market Research (Scout)</h1>
-                  <p className="text-gray-500">Find the best markets before your competitors do</p>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  className="flex items-center gap-2"
-                  onClick={() => setIsChatOpen(!isChatOpen)}
-                >
-                  <MessageSquare className="h-4 w-4" />
-                  Chat with Scout
-                </Button>
-                <Button 
-                  className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
-                  onClick={handleDeployScout}
-                >
-                  <Search className="h-4 w-4" />
-                  Deploy Scout
-                </Button>
-              </div>
-            </div>
-
             {isChatOpen && <ChatWithScout />}
             
             <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">

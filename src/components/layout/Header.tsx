@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { AskBrewra } from "@/components/agent-hub/AskBrewra";
 import { ViewToggle } from "@/components/market-research/ViewToggle";
+import { useNavigate } from "react-router-dom";
 
 // Define our deployment data type
 export interface DeploymentData {
@@ -27,14 +28,16 @@ export interface DeploymentData {
 
 export function Header() {
   const [openAsk, setOpenAsk] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const [isAIViewActive, setIsAIViewActive] = useState(false);
+  const navigate = useNavigate();
 
   const getPageTitle = () => {
     const path = window.location.pathname;
     
     if (path === '/agent-hub') return 'Agent Hub';
     if (path === '/dashboard') return 'Dashboard';
-    if (path === '/market-research') return 'Market Research (Scout)';
+    if (path === '/market-research') return 'Market Research';
     if (path === '/customers') return 'ICP Profiles (Profiler)';
     if (path === '/deals') return 'GTM Strategies (Strategist)';
     if (path === '/calendar') return 'Campaigns (Activator)';
@@ -53,6 +56,20 @@ export function Header() {
     }));
   };
 
+  const handleChatWithScout = () => {
+    setIsChatOpen(!isChatOpen);
+    // Dispatch event to toggle chat in market research page
+    window.dispatchEvent(new CustomEvent('toggleScoutChat', { 
+      detail: { isOpen: !isChatOpen } 
+    }));
+  };
+
+  const handleDeployScout = () => {
+    navigate('/scout-deployment');
+  };
+
+  const isMarketResearchPage = window.location.pathname === '/market-research';
+
   return (
     <header className="bg-white border-b border-gray-200 p-4 flex items-center justify-between relative z-50">
       <div className="flex items-center">
@@ -69,6 +86,27 @@ export function Header() {
 
         {/* View Toggle */}
         <ViewToggle onViewChange={handleViewModeChange} />
+
+        {/* Market Research specific buttons */}
+        {isMarketResearchPage && (
+          <>
+            <Button 
+              variant="outline" 
+              className="flex items-center gap-2"
+              onClick={handleChatWithScout}
+            >
+              <MessageSquare className="h-4 w-4" />
+              Chat with Scout
+            </Button>
+            <Button 
+              className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+              onClick={handleDeployScout}
+            >
+              <Search className="h-4 w-4" />
+              Deploy Scout
+            </Button>
+          </>
+        )}
 
         {/* Ask Brewra AI Button */}
         <div className="relative">
