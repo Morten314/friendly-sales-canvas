@@ -1,13 +1,11 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
-  ChartLine, Search, Filter, Bookmark, Send, X, 
-  ExternalLink, Briefcase, Building, MapPin, Check
+  ChartLine, Filter, Bookmark, Send, 
+  ExternalLink, Briefcase, Building, MapPin
 } from "lucide-react";
 
 interface Lead {
@@ -26,11 +24,37 @@ interface Lead {
 }
 
 interface ConsumerTrendsProps {
-  consumerTrends?: any[]; // Keep for backward compatibility
+  consumerTrends?: any[];
   leads?: Lead[];
 }
 
 export const ConsumerTrends = ({ leads = mockLeads }: ConsumerTrendsProps) => {
+  // Group leads by status
+  const groupedLeads = leads.reduce((acc, lead) => {
+    if (!acc[lead.status]) {
+      acc[lead.status] = [];
+    }
+    acc[lead.status].push(lead);
+    return acc;
+  }, {} as Record<string, Lead[]>);
+
+  const statusColumns = [
+    { key: 'New', title: 'New Leads', color: 'bg-blue-50 border-blue-200' },
+    { key: 'Contacted', title: 'Contacted', color: 'bg-yellow-50 border-yellow-200' },
+    { key: 'Demo Scheduled', title: 'Demo Scheduled', color: 'bg-green-50 border-green-200' },
+    { key: 'Qualified', title: 'Qualified', color: 'bg-purple-50 border-purple-200' }
+  ];
+
+  const getStatusBadgeVariant = (status: string) => {
+    switch (status) {
+      case 'New': return 'default';
+      case 'Contacted': return 'secondary';
+      case 'Demo Scheduled': return 'outline';
+      case 'Qualified': return 'outline';
+      default: return 'outline';
+    }
+  };
+
   return (
     <Card className="shadow-md">
       <CardHeader className="border-b pb-3">
@@ -130,71 +154,85 @@ export const ConsumerTrends = ({ leads = mockLeads }: ConsumerTrendsProps) => {
         </div>
       </div>
 
-      <CardContent className="p-0">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[200px]">Company</TableHead>
-              <TableHead>Contact</TableHead>
-              <TableHead className="w-[120px]">Status</TableHead>
-              <TableHead className="text-right w-[140px]">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {leads.map((lead, index) => (
-              <TableRow key={index}>
-                <TableCell>
-                  <div className="font-medium">{lead.company}</div>
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    <div className="flex items-center text-xs text-gray-500 mr-2">
-                      <Building className="h-3 w-3 mr-1" /> {lead.industry}
-                    </div>
-                    <div className="flex items-center text-xs text-gray-500 mr-2">
-                      <Briefcase className="h-3 w-3 mr-1" /> {lead.size}
-                    </div>
-                    <div className="flex items-center text-xs text-gray-500">
-                      <MapPin className="h-3 w-3 mr-1" /> {lead.location}
-                    </div>
+      {/* Kanban Board */}
+      <CardContent className="p-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {statusColumns.map((column) => (
+            <div key={column.key} className={`rounded-lg border-2 ${column.color} p-3`}>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold text-sm">{column.title}</h3>
+                <Badge variant="outline" className="text-xs">
+                  {groupedLeads[column.key]?.length || 0}
+                </Badge>
+              </div>
+              
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {groupedLeads[column.key]?.map((lead, index) => (
+                  <Card key={index} className="bg-white shadow-sm hover:shadow-md transition-shadow cursor-pointer">
+                    <CardContent className="p-3">
+                      <div className="flex justify-between items-start mb-2">
+                        <h4 className="font-medium text-sm">{lead.company}</h4>
+                        <Badge 
+                          variant={getStatusBadgeVariant(lead.status)}
+                          className="text-xs"
+                        >
+                          {lead.status}
+                        </Badge>
+                      </div>
+                      
+                      <div className="space-y-1 mb-2">
+                        <div className="flex items-center text-xs text-gray-500">
+                          <Building className="h-3 w-3 mr-1" /> {lead.industry}
+                        </div>
+                        <div className="flex items-center text-xs text-gray-500">
+                          <Briefcase className="h-3 w-3 mr-1" /> {lead.size}
+                        </div>
+                        <div className="flex items-center text-xs text-gray-500">
+                          <MapPin className="h-3 w-3 mr-1" /> {lead.location}
+                        </div>
+                      </div>
+                      
+                      <div className="border-t pt-2 mb-2">
+                        <div className="font-medium text-xs">{lead.contact.name}</div>
+                        <div className="text-xs text-gray-500">{lead.contact.title}</div>
+                        <div className="text-xs text-gray-500 truncate">{lead.contact.email}</div>
+                      </div>
+                      
+                      <div className="flex flex-wrap gap-1 mb-3">
+                        {lead.techStack.slice(0, 2).map((tech, i) => (
+                          <Badge key={i} variant="outline" className="text-xs px-1 py-0">
+                            {tech}
+                          </Badge>
+                        ))}
+                        {lead.techStack.length > 2 && (
+                          <Badge variant="outline" className="text-xs px-1 py-0">
+                            +{lead.techStack.length - 2}
+                          </Badge>
+                        )}
+                      </div>
+                      
+                      <div className="flex justify-between gap-1">
+                        <Button size="icon" variant="ghost" className="h-6 w-6">
+                          <Bookmark className="h-3 w-3" />
+                        </Button>
+                        <Button size="icon" variant="ghost" className="h-6 w-6">
+                          <Send className="h-3 w-3" />
+                        </Button>
+                        <Button size="icon" variant="ghost" className="h-6 w-6">
+                          <ExternalLink className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )) || (
+                  <div className="text-center text-gray-500 text-sm py-4">
+                    No leads in this stage
                   </div>
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {lead.techStack.map((tech, i) => (
-                      <Badge key={i} variant="outline" className="text-xs px-1 py-0">
-                        {tech}
-                      </Badge>
-                    ))}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="font-medium">{lead.contact.name}</div>
-                  <div className="text-sm text-gray-500">{lead.contact.title}</div>
-                  <div className="text-xs text-gray-500">{lead.contact.email}</div>
-                </TableCell>
-                <TableCell>
-                  <Badge 
-                    variant={lead.status === "New" ? "default" : 
-                           (lead.status === "Contacted" ? "secondary" : "outline")}
-                    className="text-xs"
-                  >
-                    {lead.status}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-1">
-                    <Button size="icon" variant="ghost" className="h-8 w-8">
-                      <Bookmark className="h-4 w-4" />
-                    </Button>
-                    <Button size="icon" variant="ghost" className="h-8 w-8">
-                      <Send className="h-4 w-4" />
-                    </Button>
-                    <Button size="icon" variant="ghost" className="h-8 w-8">
-                      <ExternalLink className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
       </CardContent>
       
       <CardFooter className="flex justify-between border-t p-4">
@@ -278,5 +316,33 @@ const mockLeads: Lead[] = [
       email: "sarah@datadrive.com"
     },
     status: "New"
+  },
+  {
+    company: "CloudSync Technologies",
+    industry: "SaaS",
+    size: "Mid-Market",
+    location: "Austin",
+    techStack: ["GCP", "Slack", "Zoom"],
+    contact: {
+      name: "Alex Rodriguez",
+      title: "VP of Sales",
+      department: "Sales",
+      email: "alex@cloudsync.com"
+    },
+    status: "Qualified"
+  },
+  {
+    company: "FinanceFlow",
+    industry: "FinTech",
+    size: "Enterprise",
+    location: "Miami",
+    techStack: ["AWS", "Salesforce", "Stripe"],
+    contact: {
+      name: "Emily Johnson",
+      title: "Chief Revenue Officer",
+      department: "Revenue",
+      email: "emily@financeflow.com"
+    },
+    status: "Demo Scheduled"
   }
 ];
