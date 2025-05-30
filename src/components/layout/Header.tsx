@@ -28,7 +28,6 @@ export interface DeploymentData {
 
 export function Header() {
   const [openAsk, setOpenAsk] = useState(false);
-  const [isChatOpen, setIsChatOpen] = useState(false);
   const [isAIViewActive, setIsAIViewActive] = useState(false);
   const navigate = useNavigate();
 
@@ -53,14 +52,6 @@ export function Header() {
     // Dispatch custom event to communicate with other components
     window.dispatchEvent(new CustomEvent('aiViewChanged', { 
       detail: { isAIView } 
-    }));
-  };
-
-  const handleChatWithScout = () => {
-    setIsChatOpen(!isChatOpen);
-    // Dispatch event to toggle chat in market research page
-    window.dispatchEvent(new CustomEvent('toggleScoutChat', { 
-      detail: { isOpen: !isChatOpen } 
     }));
   };
 
@@ -89,23 +80,13 @@ export function Header() {
 
         {/* Market Research specific buttons */}
         {isMarketResearchPage && (
-          <>
-            <Button 
-              variant="outline" 
-              className="flex items-center gap-2"
-              onClick={handleChatWithScout}
-            >
-              <MessageSquare className="h-4 w-4" />
-              Chat with Scout
-            </Button>
-            <Button 
-              className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
-              onClick={handleDeployScout}
-            >
-              <Search className="h-4 w-4" />
-              Deploy Scout
-            </Button>
-          </>
+          <Button 
+            className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+            onClick={handleDeployScout}
+          >
+            <Search className="h-4 w-4" />
+            Deploy Scout
+          </Button>
         )}
 
         {/* Ask Brewra AI Button */}
