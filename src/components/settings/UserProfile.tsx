@@ -18,7 +18,7 @@ export function UserProfile() {
     role: "",
     department: "",
     experienceLevel: "",
-    background: "",
+    professionalBackground: "",
     personalKPIs: "",
   });
 
@@ -56,7 +56,7 @@ export function UserProfile() {
               id="role"
               value={formData.role}
               onChange={(e) => handleInputChange("role", e.target.value)}
-              placeholder="e.g., VP of Sales, Marketing Manager"
+              placeholder="E.g., Sales Development Representative, Head of Marketing, RevOps Analyst, Founder & CEO"
             />
           </div>
 
@@ -69,12 +69,9 @@ export function UserProfile() {
               <SelectContent>
                 <SelectItem value="sales">Sales</SelectItem>
                 <SelectItem value="marketing">Marketing</SelectItem>
+                <SelectItem value="revops">RevOps</SelectItem>
+                <SelectItem value="founders">Founders</SelectItem>
                 <SelectItem value="product">Product</SelectItem>
-                <SelectItem value="engineering">Engineering</SelectItem>
-                <SelectItem value="operations">Operations</SelectItem>
-                <SelectItem value="finance">Finance</SelectItem>
-                <SelectItem value="hr">Human Resources</SelectItem>
-                <SelectItem value="other">Other</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -86,22 +83,21 @@ export function UserProfile() {
                 <SelectValue placeholder="Select experience level" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="junior">Junior (0-2 years)</SelectItem>
-                <SelectItem value="mid">Mid-level (3-5 years)</SelectItem>
-                <SelectItem value="senior">Senior (6-10 years)</SelectItem>
-                <SelectItem value="expert">Expert (10+ years)</SelectItem>
+                <SelectItem value="beginner">Beginner</SelectItem>
+                <SelectItem value="intermediate">Intermediate</SelectItem>
+                <SelectItem value="expert">Expert</SelectItem>
+                <SelectItem value="c-level">C-level</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="background">Professional Background</Label>
-            <Textarea
-              id="background"
-              value={formData.background}
-              onChange={(e) => handleInputChange("background", e.target.value)}
-              placeholder="Brief description of your professional background and expertise"
-              rows={3}
+            <Label htmlFor="professionalBackground">Professional Background</Label>
+            <Input
+              id="professionalBackground"
+              value={formData.professionalBackground}
+              onChange={(e) => handleInputChange("professionalBackground", e.target.value)}
+              placeholder="Brief, 1-2 sentence description."
             />
           </div>
 
@@ -111,7 +107,7 @@ export function UserProfile() {
               id="personalKPIs"
               value={formData.personalKPIs}
               onChange={(e) => handleInputChange("personalKPIs", e.target.value)}
-              placeholder="e.g., MRR growth, lead conversion rate, customer satisfaction"
+              placeholder="E.g.: SQL (Sales Qualified Lead) generation rate"
             />
           </div>
         </div>
