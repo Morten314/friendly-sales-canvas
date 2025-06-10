@@ -37,30 +37,8 @@ const Customers = () => {
   return (
     <Layout>
       <div className="animate-fade-in space-y-6">
-        {/* Header with Agent Introduction */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div className="flex items-start gap-4">
-            <div className="p-3 rounded-lg bg-purple-50 text-purple-600">
-              <User className="h-8 w-8" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold">ICP Profiles (Profiler)</h1>
-              <p className="text-gray-600 mt-1">
-                "Sharpen your targeting with laser precision."
-              </p>
-              <div className="flex gap-2 mt-2">
-                <span className="text-xs bg-purple-50 text-purple-600 px-2 py-0.5 rounded-full border border-purple-200">
-                  Customer Analysis
-                </span>
-                <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
-                  Behavioral analysis
-                </span>
-                <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
-                  Segmentation
-                </span>
-              </div>
-            </div>
-          </div>
+        {/* Header with buttons only */}
+        <div className="flex flex-col md:flex-row justify-end items-start md:items-center gap-4">
           <div className="flex gap-3">
             <Button 
               variant="outline" 
@@ -165,8 +143,6 @@ const Customers = () => {
             <ICPInsights />
           </TabsContent>
         </Tabs>
-
-        {/* Removing the old AI Interaction Panel since we've replaced it with a togglable one */}
       </div>
     </Layout>
   );
