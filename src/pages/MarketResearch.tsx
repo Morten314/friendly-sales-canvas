@@ -1,7 +1,8 @@
+
 import { useState, useEffect } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
-import { Search, MessageSquare, Users } from "lucide-react";
+import { Search, MessageSquare, Users, Settings } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ChatWithScout } from "@/components/market-research/ChatWithScout";
@@ -16,6 +17,7 @@ import { ConsumerTrends } from "@/components/market-research/ConsumerTrends";
 import { TechnologyDrivers } from "@/components/market-research/TechnologyDrivers";
 import { MarketDetailDrawer } from "@/components/market-research/MarketDetailDrawer";
 import { ScoutDeploymentDetails } from "@/components/market-research/ScoutDeploymentDetails";
+import { ScoutSettingsForm } from "@/components/market-research/ScoutSettingsForm";
 import { marketData, marketAnalysisData, trendSpottingData } from "@/components/market-research/data/marketData";
 import { DeploymentData } from "@/components/layout/Header";
 import { useNavigate } from "react-router-dom";
@@ -25,6 +27,7 @@ const MarketResearch = () => {
   const [activeTab, setActiveTab] = useState("intelligence");
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isAIViewActive, setIsAIViewActive] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [scoutDeploymentData, setScoutDeploymentData] = useState<DeploymentData | null>(null);
   const [selectedMarket, setSelectedMarket] = useState<{
     name: string;
@@ -72,6 +75,20 @@ const MarketResearch = () => {
         {/* Fixed header section */}
         <div className="sticky top-0 bg-white z-10 pb-2">
           <div className="animate-fade-in">
+            {/* Header with Market Research title and settings button */}
+            <div className="flex items-center justify-between mb-4">
+              <h1 className="text-xl font-bold text-gray-800">Market Research</h1>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsSettingsOpen(true)}
+                className="flex items-center gap-2"
+              >
+                <Settings className="h-4 w-4" />
+                Settings
+              </Button>
+            </div>
+
             {isChatOpen && <ChatWithScout />}
             
             <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
@@ -142,6 +159,12 @@ const MarketResearch = () => {
         onOpenChange={setIsDrawerOpen}
         selectedMarket={selectedMarket}
         isAIViewActive={isAIViewActive}
+      />
+
+      {/* Scout Settings Form */}
+      <ScoutSettingsForm
+        isOpen={isSettingsOpen}
+        onOpenChange={setIsSettingsOpen}
       />
     </Layout>
   );
