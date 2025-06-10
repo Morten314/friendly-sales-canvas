@@ -11,21 +11,43 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Plus, X } from "lucide-react";
 
 export function CompanyProfile() {
   const [formData, setFormData] = useState({
     industry: "",
-    size: "",
-    markets: "",
+    companySize: "",
     strategicGoals: "",
+    primaryGTMModel: "",
+    revenueStage: "",
+    keyBuyerPersona: "",
   });
+
+  const [targetMarkets, setTargetMarkets] = useState<string[]>([""]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleTargetMarketChange = (index: number, value: string) => {
+    const newTargetMarkets = [...targetMarkets];
+    newTargetMarkets[index] = value;
+    setTargetMarkets(newTargetMarkets);
+  };
+
+  const addTargetMarket = () => {
+    setTargetMarkets([...targetMarkets, ""]);
+  };
+
+  const removeTargetMarket = (index: number) => {
+    if (targetMarkets.length > 1) {
+      const newTargetMarkets = targetMarkets.filter((_, i) => i !== index);
+      setTargetMarkets(newTargetMarkets);
+    }
+  };
+
   const handleSave = () => {
-    console.log("Company Profile saved:", formData);
+    console.log("Company Profile saved:", { ...formData, targetMarkets });
     // Implementation for saving company profile
   };
 
@@ -45,51 +67,118 @@ export function CompanyProfile() {
                 <SelectValue placeholder="Select your industry" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="technology">Technology</SelectItem>
+                <SelectItem value="saas">SaaS</SelectItem>
+                <SelectItem value="b2b-tech">B2B Tech</SelectItem>
                 <SelectItem value="healthcare">Healthcare</SelectItem>
-                <SelectItem value="finance">Finance</SelectItem>
+                <SelectItem value="fintech">Fintech</SelectItem>
                 <SelectItem value="manufacturing">Manufacturing</SelectItem>
-                <SelectItem value="retail">Retail</SelectItem>
-                <SelectItem value="education">Education</SelectItem>
+                <SelectItem value="e-commerce">E-commerce</SelectItem>
+                <SelectItem value="consulting">Consulting</SelectItem>
                 <SelectItem value="other">Other</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="size">Company Size</Label>
-            <Select value={formData.size} onValueChange={(value) => handleInputChange("size", value)}>
+            <Label htmlFor="companySize">Company Size</Label>
+            <Select value={formData.companySize} onValueChange={(value) => handleInputChange("companySize", value)}>
               <SelectTrigger>
                 <SelectValue placeholder="Select company size" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="startup">Startup (1-10)</SelectItem>
-                <SelectItem value="small">Small (11-50)</SelectItem>
-                <SelectItem value="medium">Medium (51-200)</SelectItem>
-                <SelectItem value="large">Large (201-1000)</SelectItem>
-                <SelectItem value="enterprise">Enterprise (1000+)</SelectItem>
+                <SelectItem value="1-10">1–10</SelectItem>
+                <SelectItem value="11-50">11–50</SelectItem>
+                <SelectItem value="51-200">51–200</SelectItem>
+                <SelectItem value="201-500">201–500</SelectItem>
+                <SelectItem value="500+">500+</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="markets">Target Markets</Label>
-            <Input
-              id="markets"
-              value={formData.markets}
-              onChange={(e) => handleInputChange("markets", e.target.value)}
-              placeholder="e.g., North America, Europe, Asia-Pacific"
-            />
+            <Label htmlFor="targetMarkets">Target Markets</Label>
+            {targetMarkets.map((market, index) => (
+              <div key={index} className="flex gap-2 items-center">
+                <Input
+                  value={market}
+                  onChange={(e) => handleTargetMarketChange(index, e.target.value)}
+                  placeholder="e.g., North America – Mid-Market SaaS companies in cybersecurity and cloud infrastructure"
+                  className="flex-1"
+                />
+                {targetMarkets.length > 1 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => removeTargetMarket(index)}
+                    className="shrink-0"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            ))}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={addTargetMarket}
+              className="flex items-center gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              Add Target Market
+            </Button>
           </div>
 
           <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="strategicGoals">Strategic Goals</Label>
+            <Label htmlFor="strategicGoals">
+              Strategic Goals <span className="text-sm text-gray-500">(Use a SMART format: Specific, Measurable, Achievable, Relevant, Time-bound)</span>
+            </Label>
             <Textarea
               id="strategicGoals"
               value={formData.strategicGoals}
               onChange={(e) => handleInputChange("strategicGoals", e.target.value)}
-              placeholder="e.g., Expand to UK in 3 years, Increase market share by 25%"
+              placeholder="e.g., Expand to the APAC region within 12 months"
               rows={3}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="primaryGTMModel">Primary GTM Model</Label>
+            <Select value={formData.primaryGTMModel} onValueChange={(value) => handleInputChange("primaryGTMModel", value)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select GTM model" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="plg">PLG (Product-Led Growth)</SelectItem>
+                <SelectItem value="sales-led">Sales-led</SelectItem>
+                <SelectItem value="channel-led">Channel-led</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="revenueStage">Revenue Stage</Label>
+            <Select value={formData.revenueStage} onValueChange={(value) => handleInputChange("revenueStage", value)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select revenue stage" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pre-revenue">Pre-revenue</SelectItem>
+                <SelectItem value="under-1m">&lt;$1M</SelectItem>
+                <SelectItem value="1m-10m">$1M–$10M</SelectItem>
+                <SelectItem value="10m-plus">$10M+</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="keyBuyerPersona">Key Buyer Persona</Label>
+            <Input
+              id="keyBuyerPersona"
+              value={formData.keyBuyerPersona}
+              onChange={(e) => handleInputChange("keyBuyerPersona", e.target.value)}
+              placeholder="e.g., IT Director, VP of Marketing"
             />
           </div>
         </div>
