@@ -1,10 +1,9 @@
-
 import { useState } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { BarChart, PlusCircle, ArrowRight, Download, MessageSquare, Send, Presentation } from "lucide-react";
+import { BarChart, PlusCircle, ArrowRight, Download, MessageSquare, Send } from "lucide-react";
 
 const Reports = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -33,27 +32,7 @@ const Reports = () => {
   return (
     <Layout>
       <div className="animate-fade-in">
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-start gap-4">
-            <div className="p-3 rounded-lg bg-red-50 text-red-600">
-              <Presentation className="h-8 w-8" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold">Demo Prep (Presenter)</h1>
-              <p className="text-gray-500">Deliver compelling demos that close deals</p>
-              <div className="flex gap-2 mt-2">
-                <span className="text-xs bg-red-50 text-red-600 px-2 py-0.5 rounded-full border border-red-200">
-                  Communication
-                </span>
-                <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
-                  Visual storytelling
-                </span>
-                <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
-                  Value articulation
-                </span>
-              </div>
-            </div>
-          </div>
+        <div className="flex justify-end items-center mb-6">
           <div className="flex gap-2">
             <Button 
               variant="outline" 

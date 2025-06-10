@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
@@ -75,9 +74,8 @@ const MarketResearch = () => {
         {/* Fixed header section */}
         <div className="sticky top-0 bg-white z-10 pb-2">
           <div className="animate-fade-in">
-            {/* Header with Market Research title and settings button */}
-            <div className="flex items-center justify-between mb-4">
-              <h1 className="text-xl font-bold text-gray-800">Market Research</h1>
+            {/* Settings button aligned to the right */}
+            <div className="flex items-center justify-end mb-4">
               <Button
                 variant="outline"
                 size="sm"

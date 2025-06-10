@@ -32,11 +32,7 @@ const Deals = () => {
   return (
     <Layout>
       <div className="animate-fade-in">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-2xl font-bold">GTM Strategies (Strategist)</h1>
-            <p className="text-gray-500">Launch with a plan, not a gamble</p>
-          </div>
+        <div className="flex justify-end items-center mb-6">
           <div className="flex gap-2">
             <Button 
               variant="outline" 
