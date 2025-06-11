@@ -11,6 +11,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Plus, X } from "lucide-react";
+
+interface SocialMediaUrl {
+  platform: string;
+  url: string;
+}
 
 export function UserProfile() {
   const [formData, setFormData] = useState({
@@ -22,12 +28,44 @@ export function UserProfile() {
     personalKPIs: "",
   });
 
+  const [socialMediaUrls, setSocialMediaUrls] = useState<SocialMediaUrl[]>([]);
+  const [selectedPlatform, setSelectedPlatform] = useState<string>("");
+
+  const socialPlatforms = [
+    { value: "linkedin", label: "LinkedIn" },
+    { value: "instagram", label: "Instagram" },
+    { value: "twitter", label: "Twitter" },
+    { value: "facebook", label: "Facebook" },
+  ];
+
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const addSocialMediaUrl = () => {
+    if (selectedPlatform) {
+      setSocialMediaUrls([...socialMediaUrls, { platform: selectedPlatform, url: "" }]);
+      setSelectedPlatform("");
+    }
+  };
+
+  const removeSocialMediaUrl = (index: number) => {
+    const newSocialMediaUrls = socialMediaUrls.filter((_, i) => i !== index);
+    setSocialMediaUrls(newSocialMediaUrls);
+  };
+
+  const handleSocialMediaUrlChange = (index: number, value: string) => {
+    const newSocialMediaUrls = [...socialMediaUrls];
+    newSocialMediaUrls[index].url = value;
+    setSocialMediaUrls(newSocialMediaUrls);
+  };
+
+  const getPlatformLabel = (platform: string) => {
+    return socialPlatforms.find(p => p.value === platform)?.label || platform;
+  };
+
   const handleSave = () => {
-    console.log("User Profile saved:", formData);
+    console.log("User Profile saved:", { ...formData, socialMediaUrls });
     // Implementation for saving user profile
   };
 
@@ -109,6 +147,59 @@ export function UserProfile() {
               onChange={(e) => handleInputChange("personalKPIs", e.target.value)}
               placeholder="E.g.: SQL (Sales Qualified Lead) generation rate"
             />
+          </div>
+
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="socialMediaUrls">Social Media URLs</Label>
+            {socialMediaUrls.map((socialUrl, index) => (
+              <div key={index} className="flex gap-2 items-center">
+                <div className="w-24 text-sm font-medium text-gray-600">
+                  {getPlatformLabel(socialUrl.platform)}:
+                </div>
+                <Input
+                  value={socialUrl.url}
+                  onChange={(e) => handleSocialMediaUrlChange(index, e.target.value)}
+                  placeholder={`Enter your ${getPlatformLabel(socialUrl.platform)} URL`}
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => removeSocialMediaUrl(index)}
+                  className="shrink-0"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+            <div className="flex gap-2 items-center">
+              <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Select platform" />
+                </SelectTrigger>
+                <SelectContent>
+                  {socialPlatforms
+                    .filter(platform => !socialMediaUrls.some(url => url.platform === platform.value))
+                    .map(platform => (
+                      <SelectItem key={platform.value} value={platform.value}>
+                        {platform.label}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addSocialMediaUrl}
+                disabled={!selectedPlatform}
+                className="flex items-center gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Add URL
+              </Button>
+            </div>
           </div>
         </div>
 
