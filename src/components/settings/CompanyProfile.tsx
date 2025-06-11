@@ -142,41 +142,7 @@ export function CompanyProfile() {
             />
           </div>
 
-          <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="targetMarkets">Target Markets</Label>
-            {targetMarkets.map((market, index) => (
-              <div key={index} className="flex gap-2 items-center">
-                <Input
-                  value={market}
-                  onChange={(e) => handleTargetMarketChange(index, e.target.value)}
-                  placeholder="e.g., North America – Mid-Market SaaS companies in cybersecurity and cloud infrastructure"
-                  className="flex-1"
-                />
-                {targetMarkets.length > 1 && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    onClick={() => removeTargetMarket(index)}
-                    className="shrink-0"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-            ))}
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={addTargetMarket}
-              className="flex items-center gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              Add Target Market
-            </Button>
-          </div>
-
+          
           <div className="space-y-2 md:col-span-2">
             <Label htmlFor="socialMediaUrls">Social Media URLs</Label>
             {socialMediaUrls.map((socialUrl, index) => (
@@ -228,6 +194,41 @@ export function CompanyProfile() {
                 Add URL
               </Button>
             </div>
+          </div>
+
+          <div className="space-y-2 md:col-span-2">
+            <Label htmlFor="targetMarkets">Target Markets</Label>
+            {targetMarkets.map((market, index) => (
+              <div key={index} className="flex gap-2 items-center">
+                <Input
+                  value={market}
+                  onChange={(e) => handleTargetMarketChange(index, e.target.value)}
+                  placeholder="e.g., North America – Mid-Market SaaS companies in cybersecurity and cloud infrastructure"
+                  className="flex-1"
+                />
+                {targetMarkets.length > 1 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => removeTargetMarket(index)}
+                    className="shrink-0"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            ))}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={addTargetMarket}
+              className="flex items-center gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              Add Target Market
+            </Button>
           </div>
 
           <div className="space-y-2 md:col-span-2">
