@@ -64,10 +64,46 @@ export function UserProfile() {
     return socialPlatforms.find(p => p.value === platform)?.label || platform;
   };
 
-  const handleSave = () => {
-    console.log("User Profile saved:", { ...formData, socialMediaUrls });
-    // Implementation for saving user profile
-  };
+  // const handleSave = () => {
+  //   console.log("User Profile saved:", { ...formData, socialMediaUrls });
+  //   // Implementation for saving user profile
+  // };
+
+  const handleSave = async () => {
+  try {
+    const response = await fetch("https://backend-11kr.onrender.com/profile/user", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ ...formData, socialMediaUrls }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    console.log("Profile saved successfully:", result);
+
+    alert("User profile saved successfully!");
+
+    // Reset form fields
+    setFormData({
+      name: "",
+      role: "",
+      department: "",
+      experienceLevel: "",
+      professionalBackground: "",
+      personalKPIs: "",
+    });
+    setSocialMediaUrls([]);
+    setSelectedPlatform("");
+  } catch (error) {
+    console.error("Error saving profile:", error);
+    alert("Failed to save profile. Please try again.");
+  }
+};
 
   return (
     <div className="mt-6 space-y-6">

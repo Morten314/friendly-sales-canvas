@@ -35,11 +35,36 @@ export function ScoutSettingsForm({ isOpen, onOpenChange }: ScoutSettingsFormPro
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSave = () => {
-    console.log("Scout settings saved:", formData);
-    // Implementation for saving Scout settings
-    onOpenChange(false);
-  };
+  // const handleSave = () => {
+  //   console.log("Scout settings saved:", formData);
+  //   // Implementation for saving Scout settings
+  //   onOpenChange(false);
+  // };
+
+  const handleSave = async () => {
+  try {
+    const response = await fetch("https://backend-11kr.onrender.com/profile/agent_name", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(formData),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    console.log("Scout settings saved:", result);
+
+    alert("Scout settings saved successfully!");
+    onOpenChange(false); // Close the dialog
+  } catch (error) {
+    console.error("Error saving Scout settings:", error);
+    alert("Failed to save settings. Please try again.");
+  }
+};
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>

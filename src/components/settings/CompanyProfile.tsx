@@ -83,10 +83,63 @@ export function CompanyProfile() {
     return socialPlatforms.find(p => p.value === platform)?.label || platform;
   };
 
-  const handleSave = () => {
-    console.log("Company Profile saved:", { ...formData, targetMarkets, socialMediaUrls });
-    // Implementation for saving company profile
+  // const handleSave = () => {
+  //   console.log("Company Profile saved:", { ...formData, targetMarkets, socialMediaUrls });
+  //   // Implementation for saving company profile
+  // };
+
+  const handleSave = async () => {
+  const payload = {
+    industry: formData.industry,
+    companySize: formData.companySize,
+    companyUrl: formData.companyUrl,
+    strategicGoals: formData.strategicGoals,
+    primaryGTMModel: formData.primaryGTMModel,
+    revenueStage: formData.revenueStage,
+    keyBuyerPersona: formData.keyBuyerPersona,
+    targetMarkets: targetMarkets.filter(market => market.trim() !== ""),
+    socialMediaUrls: socialMediaUrls.map(url => ({
+      platform: getPlatformLabel(url.platform),
+      url: url.url,
+    })),
   };
+
+  try {
+    const response = await fetch("https://backend-11kr.onrender.com/profile/company", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      throw new Error(`API error: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    console.log("Company profile saved:", result);
+    alert("Company profile saved successfully!");
+
+    // ✅ Reset form fields after success
+    setFormData({
+      industry: "",
+      companySize: "",
+      companyUrl: "",
+      strategicGoals: "",
+      primaryGTMModel: "",
+      revenueStage: "",
+      keyBuyerPersona: "",
+    });
+    setTargetMarkets([""]);
+    setSocialMediaUrls([]);
+    setSelectedPlatform("");
+
+  } catch (error) {
+    console.error("Error saving company profile:", error);
+    alert("Failed to save company profile. Please try again.");
+  }
+};
 
   return (
     <div className="mt-6 space-y-6">
