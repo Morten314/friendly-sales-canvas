@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
-import { Search, MessageSquare, Users, Settings } from "lucide-react";
+import { Search, MessageSquare, Users, Settings, RefreshCw } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ChatWithScout } from "@/components/market-research/ChatWithScout";
@@ -68,14 +68,28 @@ const MarketResearch = () => {
     navigate('/scout-deployment');
   };
 
+  const handleRefresh = () => {
+    // Force a page refresh or trigger data refetch
+    window.location.reload();
+  };
+
   return (
     <Layout>
       <div className="flex flex-col h-full">
         {/* Fixed header section */}
         <div className="sticky top-0 bg-white z-10 pb-2">
           <div className="animate-fade-in">
-            {/* Settings button aligned to the right */}
-            <div className="flex items-center justify-end mb-4">
+            {/* Settings and Refresh buttons aligned to the right */}
+            <div className="flex items-center justify-end gap-2 mb-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefresh}
+                className="flex items-center gap-2"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Refresh
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
