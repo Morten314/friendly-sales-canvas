@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
@@ -17,9 +18,87 @@ import { TechnologyDrivers } from "@/components/market-research/TechnologyDriver
 import { MarketDetailDrawer } from "@/components/market-research/MarketDetailDrawer";
 import { ScoutDeploymentDetails } from "@/components/market-research/ScoutDeploymentDetails";
 import { ScoutSettingsForm } from "@/components/market-research/ScoutSettingsForm";
-import { marketData, marketAnalysisData, trendSpottingData } from "@/components/market-research/data/marketData";
 import { DeploymentData } from "@/components/layout/Header";
 import { useNavigate } from "react-router-dom";
+
+// Define types for the API response
+interface ResearchReport {
+  marketName: string;
+  completedAgo: string;
+  status: string;
+  summary: string;
+  marketScore: string;
+}
+
+interface MarketRanking {
+  marketName: string;
+  score: string;
+  tam: string;
+  competition: string;
+  barriers: string;
+}
+
+interface Market {
+  name: string;
+  score: string;
+  size: string;
+  competition: string;
+  barriers: string;
+  details: {
+    summary: string;
+    subMarkets: Array<{
+      name: string;
+      size: string;
+      growth: string;
+    }>;
+    keyInsights: string[];
+    recommendedActions: string[];
+  };
+}
+
+interface MarketSegment {
+  segment_id: string;
+  segment: string;
+  size: string;
+  growth_potential: string;
+  acquisition_cost: string;
+  needs_match: string;
+}
+
+interface SwotAnalysis {
+  swot_id: string;
+  strengths: string[];
+  weaknesses: string[];
+  opportunities: string[];
+  threats: string[];
+}
+
+interface EmergingTrend {
+  trend_id: string;
+  trend: string;
+  growthRate: string;
+  adoption: string;
+  impact: string;
+  description: string;
+}
+
+interface TechnologyDriver {
+  id: string;
+  technology: string;
+  maturity: string;
+  relevance: string;
+  timeToAdopt: string;
+}
+
+interface MarketIntelligenceData {
+  researchReports: ResearchReport[];
+  rankings: MarketRanking[];
+  markets: Market[];
+  market_segments: MarketSegment[];
+  swot_analysis: SwotAnalysis;
+  emerging_trends: EmergingTrend[];
+  technology_drivers: TechnologyDriver[];
+}
 
 const MarketResearch = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -28,16 +107,41 @@ const MarketResearch = () => {
   const [isAIViewActive, setIsAIViewActive] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [scoutDeploymentData, setScoutDeploymentData] = useState<DeploymentData | null>(null);
-  const [selectedMarket, setSelectedMarket] = useState<{
-    name: string;
-    score: string;
-    size: string;
-    competition: string;
-    barriers: string;
-    details: any;
-  } | null>(null);
+  const [selectedMarket, setSelectedMarket] = useState<Market | null>(null);
+  
+  // API data state
+  const [marketData, setMarketData] = useState<MarketIntelligenceData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
   const navigate = useNavigate();
+
+  // Fetch market intelligence data
+  const fetchMarketData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await fetch('https://backend-11kr.onrender.com/market_intelligence');
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data: MarketIntelligenceData = await response.json();
+      setMarketData(data);
+    } catch (err) {
+      console.error('Error fetching market data:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch market data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initial data fetch
+  useEffect(() => {
+    fetchMarketData();
+  }, []);
 
   // Listen for AI view changes from header
   useEffect(() => {
@@ -58,10 +162,34 @@ const MarketResearch = () => {
     };
   }, []);
 
-  const handleViewResults = (marketName: string) => {
-    const market = marketData[marketName as keyof typeof marketData];
-    setSelectedMarket(market);
-    setIsDrawerOpen(true);
+  // Updated handleViewResults to work with Market object instead of just market name
+  const handleViewResults = (marketData: Market | null) => {
+    if (marketData) {
+      console.log('Selected Market Data:', marketData);
+      console.log('Sub-markets:', marketData.details.subMarkets);
+      console.log('Key Insights:', marketData.details.keyInsights);
+      console.log('Recommended Actions:', marketData.details.recommendedActions);
+      
+      setSelectedMarket(marketData);
+      setIsDrawerOpen(true);
+    } else {
+      console.log('Market data not found');
+      // You might want to show an error message to the user here
+    }
+  };
+
+  // For MarketRankings component - keeping the old signature for compatibility
+  const handleViewResultsFromRankings = (marketName: string) => {
+    if (!marketData) return;
+    
+    const market = marketData.markets.find(m => 
+      m.name === marketName || 
+      m.name.toLowerCase().includes(marketName.toLowerCase().replace(' market', ''))
+    );
+    
+    if (market) {
+      handleViewResults(market);
+    }
   };
 
   const handleDeployScout = () => {
@@ -69,9 +197,56 @@ const MarketResearch = () => {
   };
 
   const handleRefresh = () => {
-    // Force a page refresh or trigger data refetch
-    window.location.reload();
+    fetchMarketData();
   };
+
+  // Loading state
+  if (loading) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center">
+            <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <p>Loading market intelligence data...</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center">
+            <p className="text-red-600 mb-4">Error loading data: {error}</p>
+            <Button onClick={handleRefresh} className="flex items-center gap-2">
+              <RefreshCw className="h-4 w-4" />
+              Retry
+            </Button>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  // No data state
+  if (!marketData) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center">
+            <p className="mb-4">No market data available</p>
+            <Button onClick={handleRefresh} className="flex items-center gap-2">
+              <RefreshCw className="h-4 w-4" />
+              Refresh
+            </Button>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
@@ -86,8 +261,9 @@ const MarketResearch = () => {
                 size="sm"
                 onClick={handleRefresh}
                 className="flex items-center gap-2"
+                disabled={loading}
               >
-                <RefreshCw className="h-4 w-4" />
+                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                 Refresh
               </Button>
               <Button
@@ -124,7 +300,6 @@ const MarketResearch = () => {
         
         {/* Scrollable content area */}
         <ScrollArea className="flex-1">
-          {/* Important: We need to keep the TabsContent components inside the Tabs context */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-0">
             <TabsContent value="intelligence" className="mt-0">
               <div className="space-y-6">
@@ -134,22 +309,29 @@ const MarketResearch = () => {
                 )}
                 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-                  <RecentMarketResearch onViewResults={handleViewResults} />
+                  <RecentMarketResearch 
+                    onViewResults={handleViewResults}
+                    researchReports={marketData.researchReports}
+                    markets={marketData.markets}
+                  />
                   <ScoutCapabilities />
                 </div>
                 
-                <MarketRankings onViewResults={handleViewResults} />
+                <MarketRankings 
+                  onViewResults={handleViewResultsFromRankings}
+                  rankings={marketData.rankings}
+                />
                 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                  <CompetitorAnalysis competitorData={marketAnalysisData.competitorData} />
-                  <MarketSegments marketSegments={marketAnalysisData.marketSegments} />
+                  <CompetitorAnalysis competitorData={marketData.markets} />
+                  <MarketSegments marketSegments={marketData.market_segments} />
                 </div>
                 
-                <SwotAnalysis swotAnalysis={marketAnalysisData.swotAnalysis} />
+                <SwotAnalysis swotAnalysis={marketData.swot_analysis} />
                 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-                  <EmergingTrends emergingTrends={trendSpottingData.emergingTrends} />
-                  <TechnologyDrivers technologyDrivers={trendSpottingData.technologyDrivers} />
+                  <EmergingTrends emergingTrends={marketData.emerging_trends} />
+                  <TechnologyDrivers technologyDrivers={marketData.technology_drivers} />
                 </div>
               </div>
             </TabsContent>

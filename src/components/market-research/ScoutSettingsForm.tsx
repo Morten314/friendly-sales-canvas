@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,12 +33,6 @@ export function ScoutSettingsForm({ isOpen, onOpenChange }: ScoutSettingsFormPro
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
-
-  // const handleSave = () => {
-  //   console.log("Scout settings saved:", formData);
-  //   // Implementation for saving Scout settings
-  //   onOpenChange(false);
-  // };
 
   const handleSave = async () => {
   try {

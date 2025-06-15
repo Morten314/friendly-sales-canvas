@@ -1,13 +1,15 @@
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ChartLine } from "lucide-react";
 
 interface MarketSegment {
+  segment_id: string;
   segment: string;
   size: string;
-  growthPotential: string;
-  acquisitionCost: string;
-  needsMatch: string;
+  growth_potential: string;
+  acquisition_cost: string;
+  needs_match: string;
 }
 
 interface MarketSegmentsProps {
@@ -29,19 +31,19 @@ export const MarketSegments = ({ marketSegments }: MarketSegmentsProps) => {
             <TableRow>
               <TableHead>Segment</TableHead>
               <TableHead>Size</TableHead>
-              <TableHead>Growth</TableHead>
+              <TableHead>Growth Potential</TableHead>
               <TableHead>Acquisition Cost</TableHead>
               <TableHead>Needs Match</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {marketSegments.map((segment, index) => (
-              <TableRow key={index}>
+            {marketSegments.map((segment) => (
+              <TableRow key={segment.segment_id}>
                 <TableCell className="font-medium">{segment.segment}</TableCell>
                 <TableCell>{segment.size}</TableCell>
-                <TableCell>{segment.growthPotential}</TableCell>
-                <TableCell>{segment.acquisitionCost}</TableCell>
-                <TableCell>{segment.needsMatch}</TableCell>
+                <TableCell>{segment.growth_potential}</TableCell>
+                <TableCell>{segment.acquisition_cost}</TableCell>
+                <TableCell>{segment.needs_match}</TableCell>
               </TableRow>
             ))}
           </TableBody>
