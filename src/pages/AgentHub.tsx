@@ -6,7 +6,6 @@ import { TodaysFocus } from "@/components/agent-hub/TodaysFocus";
 import { QuotaTracker } from "@/components/agent-hub/QuotaTracker";
 import { PipelineSnapshot } from "@/components/agent-hub/PipelineSnapshot";
 import { InsightsAnalytics } from "@/components/agent-hub/InsightsAnalytics";
-import { AgentsByStatus } from "@/components/agent-hub/AgentsByStatus";
 import { AgentTeamOverview } from "@/components/agent-hub/AgentTeamOverview";
 import { AgentActivityKanban } from "@/components/agent-hub/AgentActivityKanban";
 import { useLocation } from "react-router-dom";
@@ -64,11 +63,6 @@ const AgentHub: React.FC = () => {
             <h2 className="text-2xl font-bold mb-2">AI Agent Activity</h2>
             <p className="text-gray-600 mb-6">Here's what your agents have been up to this week.</p>
             <AgentActivityKanban />
-          </div>
-
-          <div className="mt-8">
-            <h2 className="text-2xl font-bold mb-4">AI Team Activity</h2>
-            <AgentsByStatus />
           </div>
         </div>
       )}
