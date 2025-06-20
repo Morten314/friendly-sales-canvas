@@ -621,7 +621,7 @@ const MarketResearch = () => {
     return cached;
   });
   
-  // Only show initial loading when NO data exists at all (no cache, no state)
+  // Show loading when either initially loading OR refreshing
   const [isInitialLoading, setIsInitialLoading] = useState(() => {
     const hasData = !!getCachedData();
     console.log('Initial loading state - has cached data:', hasData);
@@ -640,17 +640,11 @@ const MarketResearch = () => {
       console.log('Current marketData exists:', !!marketData);
       console.log('Cached data exists:', !!getCachedData());
       
-      // NEVER show initial loading if ANY data exists (either in state or cache)
-      const hasAnyData = marketData || getCachedData();
-      
-      if (!isRefresh && !hasAnyData) {
-        console.log('Setting initial loading to true - absolutely no data available');
+      // Set loading states appropriately
+      if (!isRefresh) {
         setIsInitialLoading(true);
       } else {
-        console.log('Setting refreshing to true - data exists, showing refresh indicator');
         setIsRefreshing(true);
-        // Ensure we never show initial loading when refreshing
-        setIsInitialLoading(false);
       }
       
       setError(null);
@@ -801,7 +795,6 @@ const MarketResearch = () => {
       setIsDrawerOpen(true);
     } else {
       console.log('Market data not found');
-      // You might want to show an error message to the user here
     }
   };
 
@@ -844,18 +837,13 @@ const MarketResearch = () => {
     );
   }
 
-  // ONLY show initial loading screen when absolutely no data exists anywhere
-  if (isInitialLoading && !marketData && !getCachedData()) {
-    console.log('Showing initial loading screen - no data exists anywhere');
+  // Show ScoutLoadingAnimation when initially loading and no data exists
+  if (isInitialLoading && !marketData) {
+    console.log('Showing ScoutLoadingAnimation - no data exists anywhere');
     return (
       <Layout>
         <div className="flex flex-col h-full">
-          <div className="flex items-center justify-center flex-1">
-            <div className="text-center">
-              <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4" />
-              <p>Loading market intelligence data...</p>
-            </div>
-          </div>
+          <ScoutLoadingAnimation />
         </div>
       </Layout>
     );
@@ -867,15 +855,15 @@ const MarketResearch = () => {
         {/* Fixed header section */}
         <div className="sticky top-0 bg-white z-20 pb-2">
           <div className="animate-fade-in">
-            {/* Scout Loading Animation - Show at top when refreshing */}
-            {isRefreshing && (
+            {/* Scout Loading Animation - Show at top when refreshing with existing data */}
+            {(isRefreshing || isInitialLoading) && (
               <div className="mb-4">
                 <ScoutLoadingAnimation />
               </div>
             )}
             
             {/* Error alert for any operation failures - only show if we have data to fall back to */}
-            {error && marketData && !isRefreshing && (
+            {error && marketData && !isRefreshing && !isInitialLoading && (
               <Alert className="mb-4 border-amber-200 bg-amber-50">
                 <AlertCircle className="h-4 w-4 text-amber-600" />
                 <AlertDescription className="text-amber-800">
@@ -943,15 +931,8 @@ const MarketResearch = () => {
         
         {/* Scrollable content area - ALWAYS show content if data exists */}
         <ScrollArea className="flex-1">
-          {/* Show a subtle overlay when refreshing to indicate updating, but keep content visible */}
-          <div className={`transition-opacity duration-300 ${isRefreshing ? 'opacity-70' : 'opacity-100'} relative`}>
-            {/* Optional: Add a subtle loading indicator overlay when refreshing */}
-            {isRefreshing && marketData && (
-              <div className="absolute top-0 left-0 right-0 bg-blue-50 bg-opacity-50 z-10 p-2 text-center text-sm text-blue-700">
-                Updating market intelligence data...
-              </div>
-            )}
-            
+          {/* Show content with subtle overlay when refreshing */}
+          <div className={`transition-opacity duration-300 ${(isRefreshing || isInitialLoading) && marketData ? 'opacity-70' : 'opacity-100'} relative`}>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-0">
               <TabsContent value="intelligence" className="mt-0">
                 {marketData ? (
