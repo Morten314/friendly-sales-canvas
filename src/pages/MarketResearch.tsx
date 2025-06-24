@@ -168,12 +168,34 @@ const MarketResearch = () => {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
-      const data: MarketIntelligenceData = await response.json();
-      console.log('Successfully fetched new data:', data);
+      const apiResponse = await response.json();
+      console.log('Raw API response:', apiResponse);
+      
+      // Extract the report data from the API response
+      const reportData = apiResponse.report || apiResponse;
+      
+      // Transform the data to match our expected structure
+      const transformedData: MarketIntelligenceData = {
+        researchReports: reportData.researchReports || [],
+        rankings: reportData.rankings || [],
+        markets: reportData.markets || [],
+        market_segments: reportData.market_segments || [],
+        swot_analysis: reportData.swot_analysis || {
+          swot_id: '',
+          strengths: [],
+          weaknesses: [],
+          opportunities: [],
+          threats: []
+        },
+        emerging_trends: reportData.emerging_trends || [],
+        technology_drivers: reportData.technology_drivers || []
+      };
+      
+      console.log('Transformed data:', transformedData);
       
       // Update both state and cache
-      setMarketData(data);
-      cachedMarketData = data;
+      setMarketData(transformedData);
+      cachedMarketData = transformedData;
       cacheTimestamp = Date.now();
       
     } catch (err) {
@@ -223,12 +245,30 @@ const MarketResearch = () => {
         throw new Error(`Market data fetch failed! status: ${marketResponse.status}`);
       }
       
-      const newMarketData = await marketResponse.json();
-      console.log('New market data received:', newMarketData);
+      const apiResponse = await marketResponse.json();
+      console.log('New market data received:', apiResponse);
+      
+      // Extract and transform the data
+      const reportData = apiResponse.report || apiResponse;
+      const transformedData: MarketIntelligenceData = {
+        researchReports: reportData.researchReports || [],
+        rankings: reportData.rankings || [],
+        markets: reportData.markets || [],
+        market_segments: reportData.market_segments || [],
+        swot_analysis: reportData.swot_analysis || {
+          swot_id: '',
+          strengths: [],
+          weaknesses: [],
+          opportunities: [],
+          threats: []
+        },
+        emerging_trends: reportData.emerging_trends || [],
+        technology_drivers: reportData.technology_drivers || []
+      };
       
       // Update both state and cache
-      setMarketData(newMarketData);
-      cachedMarketData = newMarketData;
+      setMarketData(transformedData);
+      cachedMarketData = transformedData;
       cacheTimestamp = Date.now();
       
     } catch (err) {
