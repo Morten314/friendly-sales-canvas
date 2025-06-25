@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -38,10 +37,13 @@ export function ChatWithScout({ fullPage = false }: ChatWithScoutProps) {
       // Remove special characters and symbols
       .replace(/[•◦▪▫■□●○]/g, '-')
       .replace(/[\u2022\u25E6\u25AA\u25AB\u25A0\u25A1\u2B24\u25CB]/g, '-')
-      // Clean up multiple spaces and line breaks
-      .replace(/\s+/g, ' ')
+      // Preserve line breaks by converting multiple spaces to single space but keeping newlines
+      .replace(/ +/g, ' ')
+      // Ensure proper line breaks for lists and structured content
       .replace(/\n\s*\n/g, '\n\n')
-      // Remove leading/trailing whitespace
+      .replace(/\n-/g, '\n• ')
+      .replace(/\n\d+\./g, '\n• ')
+      // Remove leading/trailing whitespace but preserve internal structure
       .trim();
   };
 
@@ -172,7 +174,7 @@ export function ChatWithScout({ fullPage = false }: ChatWithScoutProps) {
                     : "bg-gray-100"
                 }`}
               >
-                <div className="text-sm whitespace-pre-wrap leading-relaxed">{message.content}</div>
+                <div className="text-sm whitespace-pre-line leading-relaxed">{message.content}</div>
                 <div className="text-xs mt-1 text-gray-500">{message.timestamp}</div>
               </div>
             </div>
