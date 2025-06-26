@@ -33,6 +33,7 @@ export const CompetitorAnalysis = ({ competitorData, isAIViewActive = false }: C
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   const handleRowClick = (competitor: Market) => {
+    console.log('CompetitorAnalysis: Row clicked', competitor, 'AI View Active:', isAIViewActive);
     if (isAIViewActive) {
       setSelectedCompetitor(competitor);
       setIsDrawerOpen(true);

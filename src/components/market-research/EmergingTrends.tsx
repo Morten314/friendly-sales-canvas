@@ -22,6 +22,7 @@ export const EmergingTrends = ({ emergingTrends, isAIViewActive = false }: Emerg
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   const handleTrendClick = (trend: EmergingTrend) => {
+    console.log('EmergingTrends: Trend clicked', trend, 'AI View Active:', isAIViewActive);
     if (isAIViewActive) {
       setSelectedTrend(trend);
       setIsDrawerOpen(true);
