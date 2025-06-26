@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Search, PieChart, Layers, BarChart3, Globe, Edit3, Save, X } from "lucide-react";
 import { AIPromptingInterface } from "./AIPromptingInterface";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface SubMarket {
   name: string;
@@ -58,7 +58,7 @@ export const MarketDetailDrawer = ({
   const [marketData, setMarketData] = useState<SelectedMarket | null>(selectedMarket);
 
   // Update local state when selectedMarket changes
-  useState(() => {
+  useEffect(() => {
     setMarketData(selectedMarket);
   }, [selectedMarket]);
 
