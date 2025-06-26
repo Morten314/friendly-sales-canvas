@@ -1,6 +1,9 @@
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Layers } from "lucide-react";
+import { useState } from "react";
+import { TechnologyDriversDrawer } from "./TechnologyDriversDrawer";
 
 interface TechnologyDriver {
   technology: string;
@@ -11,39 +14,67 @@ interface TechnologyDriver {
 
 interface TechnologyDriversProps {
   technologyDrivers: TechnologyDriver[];
+  isAIViewActive?: boolean;
 }
 
-export const TechnologyDrivers = ({ technologyDrivers }: TechnologyDriversProps) => {
+export const TechnologyDrivers = ({ technologyDrivers, isAIViewActive = false }: TechnologyDriversProps) => {
+  const [selectedTechnology, setSelectedTechnology] = useState<TechnologyDriver | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  const handleRowClick = (technology: TechnologyDriver) => {
+    if (isAIViewActive) {
+      setSelectedTechnology(technology);
+      setIsDrawerOpen(true);
+    }
+  };
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Layers className="h-5 w-5 text-blue-600" /> Technology Drivers
-        </CardTitle>
-        <CardDescription>Technologies shaping market evolution</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Technology</TableHead>
-              <TableHead>Maturity Level</TableHead>
-              <TableHead>Business Relevance</TableHead>
-              <TableHead>Time to Adopt</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {technologyDrivers.map((tech, index) => (
-              <TableRow key={index}>
-                <TableCell className="font-medium">{tech.technology}</TableCell>
-                <TableCell>{tech.maturity}</TableCell>
-                <TableCell>{tech.relevance}</TableCell>
-                <TableCell>{tech.timeToAdopt}</TableCell>
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Layers className="h-5 w-5 text-blue-600" /> Technology Drivers
+          </CardTitle>
+          <CardDescription>Technologies shaping market evolution</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Technology</TableHead>
+                <TableHead>Maturity Level</TableHead>
+                <TableHead>Business Relevance</TableHead>
+                <TableHead>Time to Adopt</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
+            </TableHeader>
+            <TableBody>
+              {technologyDrivers.map((tech, index) => (
+                <TableRow 
+                  key={index}
+                  className={`transition-colors ${
+                    isAIViewActive 
+                      ? 'hover:bg-blue-50 cursor-pointer' 
+                      : 'hover:bg-gray-50'
+                  }`}
+                  onClick={() => handleRowClick(tech)}
+                >
+                  <TableCell className="font-medium">{tech.technology}</TableCell>
+                  <TableCell>{tech.maturity}</TableCell>
+                  <TableCell>{tech.relevance}</TableCell>
+                  <TableCell>{tech.timeToAdopt}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      <TechnologyDriversDrawer
+        isOpen={isDrawerOpen}
+        onOpenChange={setIsDrawerOpen}
+        selectedTechnology={selectedTechnology}
+        isAIViewActive={isAIViewActive}
+      />
+    </>
   );
 };
