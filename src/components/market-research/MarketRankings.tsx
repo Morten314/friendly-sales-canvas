@@ -21,6 +21,7 @@ interface MarketRankingsProps {
 export const MarketRankings = ({ onViewResults, rankings, isAIViewActive = false }: MarketRankingsProps) => {
   const [selectedRanking, setSelectedRanking] = useState<MarketRanking | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [localRankings, setLocalRankings] = useState<MarketRanking[]>(rankings);
 
   const getCompetitionColor = (competition: string) => {
     switch (competition.toLowerCase()) {
@@ -71,6 +72,15 @@ export const MarketRankings = ({ onViewResults, rankings, isAIViewActive = false
     }
   };
 
+  const handleUpdateRanking = (updatedRanking: MarketRanking) => {
+    setLocalRankings(prevRankings => 
+      prevRankings.map(ranking => 
+        ranking.marketName === selectedRanking?.marketName ? updatedRanking : ranking
+      )
+    );
+    setSelectedRanking(updatedRanking);
+  };
+
   return (
     <>
       <Card>
@@ -79,7 +89,7 @@ export const MarketRankings = ({ onViewResults, rankings, isAIViewActive = false
           <CardDescription>Comparative analysis of potential markets</CardDescription>
         </CardHeader>
         <CardContent>
-          {rankings.length === 0 ? (
+          {localRankings.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <p>No market rankings available</p>
             </div>
@@ -97,7 +107,7 @@ export const MarketRankings = ({ onViewResults, rankings, isAIViewActive = false
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {rankings.map((ranking, index) => (
+                  {localRankings.map((ranking, index) => (
                     <tr 
                       key={index} 
                       className={`transition-colors ${
@@ -151,6 +161,7 @@ export const MarketRankings = ({ onViewResults, rankings, isAIViewActive = false
         onOpenChange={setIsDrawerOpen}
         selectedRanking={selectedRanking}
         isAIViewActive={isAIViewActive}
+        onUpdateRanking={handleUpdateRanking}
       />
     </>
   );

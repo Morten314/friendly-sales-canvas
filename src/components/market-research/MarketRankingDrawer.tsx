@@ -1,4 +1,3 @@
-
 import { 
   Drawer, 
   DrawerClose, 
@@ -26,13 +25,15 @@ interface MarketRankingDrawerProps {
   onOpenChange: (isOpen: boolean) => void;
   selectedRanking: MarketRanking | null;
   isAIViewActive: boolean;
+  onUpdateRanking?: (updatedRanking: MarketRanking) => void;
 }
 
 export const MarketRankingDrawer = ({ 
   isOpen, 
   onOpenChange, 
   selectedRanking,
-  isAIViewActive
+  isAIViewActive,
+  onUpdateRanking
 }: MarketRankingDrawerProps) => {
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>("");
@@ -74,6 +75,12 @@ export const MarketRankingDrawer = ({
     }
 
     setRankingData(updatedRanking);
+    
+    // Call the update callback to sync with parent component
+    if (onUpdateRanking) {
+      onUpdateRanking(updatedRanking);
+    }
+    
     handleCancel();
   };
 
