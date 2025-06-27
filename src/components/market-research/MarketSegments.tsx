@@ -1,8 +1,9 @@
 
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ChartLine } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MarketSegmentsDrawer } from "./MarketSegmentsDrawer";
 
 interface MarketSegment {
@@ -22,6 +23,12 @@ interface MarketSegmentsProps {
 export const MarketSegments = ({ marketSegments, isAIViewActive = false }: MarketSegmentsProps) => {
   const [selectedSegment, setSelectedSegment] = useState<MarketSegment | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [localSegments, setLocalSegments] = useState<MarketSegment[]>(marketSegments);
+
+  // Update local state when props change
+  useEffect(() => {
+    setLocalSegments(marketSegments);
+  }, [marketSegments]);
 
   const handleRowClick = (segment: MarketSegment) => {
     console.log('MarketSegments: Row clicked', segment, 'AI View Active:', isAIViewActive);
@@ -29,6 +36,16 @@ export const MarketSegments = ({ marketSegments, isAIViewActive = false }: Marke
       setSelectedSegment(segment);
       setIsDrawerOpen(true);
     }
+  };
+
+  const handleUpdateSegment = (updatedSegment: MarketSegment) => {
+    setLocalSegments(prevSegments => 
+      prevSegments.map(segment => 
+        segment.segment_id === selectedSegment?.segment_id ? updatedSegment : segment
+      )
+    );
+    // Also update the selected segment to reflect changes immediately
+    setSelectedSegment(updatedSegment);
   };
 
   return (
@@ -52,7 +69,7 @@ export const MarketSegments = ({ marketSegments, isAIViewActive = false }: Marke
               </TableRow>
             </TableHeader>
             <TableBody>
-              {marketSegments.map((segment) => (
+              {localSegments.map((segment) => (
                 <TableRow 
                   key={segment.segment_id}
                   className={`transition-colors ${
@@ -79,7 +96,9 @@ export const MarketSegments = ({ marketSegments, isAIViewActive = false }: Marke
         onOpenChange={setIsDrawerOpen}
         selectedSegment={selectedSegment}
         isAIViewActive={isAIViewActive}
+        onUpdateSegment={handleUpdateSegment}
       />
     </>
   );
 };
+

@@ -1,8 +1,9 @@
 
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Layers } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { TechnologyDriversDrawer } from "./TechnologyDriversDrawer";
 
 interface TechnologyDriver {
@@ -20,6 +21,12 @@ interface TechnologyDriversProps {
 export const TechnologyDrivers = ({ technologyDrivers, isAIViewActive = false }: TechnologyDriversProps) => {
   const [selectedTechnology, setSelectedTechnology] = useState<TechnologyDriver | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [localDrivers, setLocalDrivers] = useState<TechnologyDriver[]>(technologyDrivers);
+
+  // Update local state when props change
+  useEffect(() => {
+    setLocalDrivers(technologyDrivers);
+  }, [technologyDrivers]);
 
   const handleRowClick = (technology: TechnologyDriver) => {
     console.log('TechnologyDrivers: Row clicked', technology, 'AI View Active:', isAIViewActive);
@@ -27,6 +34,16 @@ export const TechnologyDrivers = ({ technologyDrivers, isAIViewActive = false }:
       setSelectedTechnology(technology);
       setIsDrawerOpen(true);
     }
+  };
+
+  const handleUpdateTechnology = (updatedTechnology: TechnologyDriver) => {
+    setLocalDrivers(prevDrivers => 
+      prevDrivers.map(driver => 
+        driver.technology === selectedTechnology?.technology ? updatedTechnology : driver
+      )
+    );
+    // Also update the selected technology to reflect changes immediately
+    setSelectedTechnology(updatedTechnology);
   };
 
   return (
@@ -49,7 +66,7 @@ export const TechnologyDrivers = ({ technologyDrivers, isAIViewActive = false }:
               </TableRow>
             </TableHeader>
             <TableBody>
-              {technologyDrivers.map((tech, index) => (
+              {localDrivers.map((tech, index) => (
                 <TableRow 
                   key={index}
                   className={`transition-colors ${
@@ -75,7 +92,9 @@ export const TechnologyDrivers = ({ technologyDrivers, isAIViewActive = false }:
         onOpenChange={setIsDrawerOpen}
         selectedTechnology={selectedTechnology}
         isAIViewActive={isAIViewActive}
+        onUpdateTechnology={handleUpdateTechnology}
       />
     </>
   );
 };
+
