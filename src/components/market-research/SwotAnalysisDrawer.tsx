@@ -10,7 +10,8 @@ import {
 } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { PieChart, Edit3, Save, X, Plus, Trash2 } from "lucide-react";
+import { PieChart, Edit3, Save, X } from "lucide-react";
+import { AIPromptingInterface } from "./AIPromptingInterface";
 import { useState, useEffect } from "react";
 
 interface SwotData {
@@ -25,13 +26,15 @@ interface SwotAnalysisDrawerProps {
   onOpenChange: (isOpen: boolean) => void;
   swotData: SwotData;
   isAIViewActive: boolean;
+  onUpdateSwot?: (swot: SwotData) => void;
 }
 
 export const SwotAnalysisDrawer = ({ 
   isOpen, 
   onOpenChange, 
   swotData,
-  isAIViewActive
+  isAIViewActive,
+  onUpdateSwot
 }: SwotAnalysisDrawerProps) => {
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -69,6 +72,11 @@ export const SwotAnalysisDrawer = ({
     }
 
     setSwotAnalysis(updatedSwot);
+    
+    if (onUpdateSwot) {
+      onUpdateSwot(updatedSwot);
+    }
+    
     handleCancel();
   };
 
@@ -101,7 +109,10 @@ export const SwotAnalysisDrawer = ({
           variant="ghost"
           size="sm"
           className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
-          onClick={onEdit}
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit();
+          }}
         >
           <Edit3 className="h-3 w-3" />
         </Button>
@@ -122,8 +133,9 @@ export const SwotAnalysisDrawer = ({
           </DrawerDescription>
         </DrawerHeader>
         
-        <div className={`${isAIViewActive && editingField ? 'grid grid-cols-2 gap-4' : ''} overflow-auto`}>
-          <div className={`p-6 overflow-auto ${isAIViewActive && editingField ? 'border-r' : ''}`}>
+        <div className={`${isAIViewActive ? 'grid grid-cols-3 gap-4' : ''} overflow-auto`}>
+          {/* First Section - SWOT Data */}
+          <div className={`p-6 overflow-auto ${isAIViewActive ? 'border-r' : ''}`}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="bg-green-50 rounded-md p-4 border border-green-100">
                 <h3 className="text-green-700 font-medium mb-2">Strengths</h3>
@@ -195,8 +207,9 @@ export const SwotAnalysisDrawer = ({
             </div>
           </div>
           
+          {/* Second Section - Editing Area */}
           {isAIViewActive && editingField && (
-            <div className="p-6 bg-gray-50">
+            <div className="p-6 border-r bg-gray-50">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-medium">Edit Field</h3>
@@ -236,6 +249,13 @@ export const SwotAnalysisDrawer = ({
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+          
+          {/* Third Section - AI Prompting */}
+          {isAIViewActive && (
+            <div className="h-[70vh]">
+              <AIPromptingInterface marketName="SWOT Analysis" />
             </div>
           )}
         </div>

@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ChartLine, Edit3, Save, X } from "lucide-react";
+import { AIPromptingInterface } from "./AIPromptingInterface";
 import { useState, useEffect } from "react";
 
 interface MarketSegment {
@@ -27,13 +28,15 @@ interface MarketSegmentsDrawerProps {
   onOpenChange: (isOpen: boolean) => void;
   selectedSegment: MarketSegment | null;
   isAIViewActive: boolean;
+  onUpdateSegment?: (segment: MarketSegment) => void;
 }
 
 export const MarketSegmentsDrawer = ({ 
   isOpen, 
   onOpenChange, 
   selectedSegment,
-  isAIViewActive
+  isAIViewActive,
+  onUpdateSegment
 }: MarketSegmentsDrawerProps) => {
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>("");
@@ -74,6 +77,11 @@ export const MarketSegmentsDrawer = ({
     }
 
     setSegmentData(updatedSegment);
+    
+    if (onUpdateSegment) {
+      onUpdateSegment(updatedSegment);
+    }
+    
     handleCancel();
   };
 
@@ -100,7 +108,10 @@ export const MarketSegmentsDrawer = ({
           variant="ghost"
           size="sm"
           className="absolute -right-2 -top-2 opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
-          onClick={onEdit}
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit();
+          }}
         >
           <Edit3 className="h-3 w-3" />
         </Button>
@@ -121,8 +132,9 @@ export const MarketSegmentsDrawer = ({
           </DrawerDescription>
         </DrawerHeader>
         
-        <div className={`${isAIViewActive && editingField ? 'grid grid-cols-2 gap-4' : ''} overflow-auto`}>
-          <div className={`p-6 overflow-auto ${isAIViewActive && editingField ? 'border-r' : ''}`}>
+        <div className={`${isAIViewActive ? 'grid grid-cols-3 gap-4' : ''} overflow-auto`}>
+          {/* First Section - Segment Data */}
+          <div className={`p-6 overflow-auto ${isAIViewActive ? 'border-r' : ''}`}>
             <div className="space-y-6">
               <div>
                 <h3 className="text-sm font-medium text-gray-500 mb-2">Segment Name</h3>
@@ -176,8 +188,9 @@ export const MarketSegmentsDrawer = ({
             </div>
           </div>
           
+          {/* Second Section - Editing Area */}
           {isAIViewActive && editingField && (
-            <div className="p-6 bg-gray-50">
+            <div className="p-6 border-r bg-gray-50">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-medium">Edit Field</h3>
@@ -218,6 +231,13 @@ export const MarketSegmentsDrawer = ({
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+          
+          {/* Third Section - AI Prompting */}
+          {isAIViewActive && (
+            <div className="h-[70vh]">
+              <AIPromptingInterface marketName={segmentData.segment} />
             </div>
           )}
         </div>

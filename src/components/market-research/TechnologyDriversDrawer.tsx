@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Layers, Edit3, Save, X } from "lucide-react";
+import { AIPromptingInterface } from "./AIPromptingInterface";
 import { useState, useEffect } from "react";
 
 interface TechnologyDriver {
@@ -25,13 +26,15 @@ interface TechnologyDriversDrawerProps {
   onOpenChange: (isOpen: boolean) => void;
   selectedTechnology: TechnologyDriver | null;
   isAIViewActive: boolean;
+  onUpdateTechnology?: (technology: TechnologyDriver) => void;
 }
 
 export const TechnologyDriversDrawer = ({ 
   isOpen, 
   onOpenChange, 
   selectedTechnology,
-  isAIViewActive
+  isAIViewActive,
+  onUpdateTechnology
 }: TechnologyDriversDrawerProps) => {
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>("");
@@ -69,6 +72,11 @@ export const TechnologyDriversDrawer = ({
     }
 
     setTechnologyData(updatedTechnology);
+    
+    if (onUpdateTechnology) {
+      onUpdateTechnology(updatedTechnology);
+    }
+    
     handleCancel();
   };
 
@@ -95,7 +103,10 @@ export const TechnologyDriversDrawer = ({
           variant="ghost"
           size="sm"
           className="absolute -right-2 -top-2 opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
-          onClick={onEdit}
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit();
+          }}
         >
           <Edit3 className="h-3 w-3" />
         </Button>
@@ -116,8 +127,9 @@ export const TechnologyDriversDrawer = ({
           </DrawerDescription>
         </DrawerHeader>
         
-        <div className={`${isAIViewActive && editingField ? 'grid grid-cols-2 gap-4' : ''} overflow-auto`}>
-          <div className={`p-6 overflow-auto ${isAIViewActive && editingField ? 'border-r' : ''}`}>
+        <div className={`${isAIViewActive ? 'grid grid-cols-3 gap-4' : ''} overflow-auto`}>
+          {/* First Section - Technology Data */}
+          <div className={`p-6 overflow-auto ${isAIViewActive ? 'border-r' : ''}`}>
             <div className="space-y-6">
               <div>
                 <h3 className="text-sm font-medium text-gray-500 mb-2">Technology Name</h3>
@@ -160,8 +172,9 @@ export const TechnologyDriversDrawer = ({
             </div>
           </div>
           
+          {/* Second Section - Editing Area */}
           {isAIViewActive && editingField && (
-            <div className="p-6 bg-gray-50">
+            <div className="p-6 border-r bg-gray-50">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-medium">Edit Field</h3>
@@ -201,6 +214,13 @@ export const TechnologyDriversDrawer = ({
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+          
+          {/* Third Section - AI Prompting */}
+          {isAIViewActive && (
+            <div className="h-[70vh]">
+              <AIPromptingInterface marketName={technologyData.technology} />
             </div>
           )}
         </div>
