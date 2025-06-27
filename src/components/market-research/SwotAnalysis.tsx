@@ -20,6 +20,7 @@ export const SwotAnalysis = ({ swotAnalysis, isAIViewActive = false }: SwotAnaly
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   const handleCardClick = () => {
+    console.log('SwotAnalysis: Card clicked', 'AI View Active:', isAIViewActive);
     if (isAIViewActive) {
       setIsDrawerOpen(true);
     }

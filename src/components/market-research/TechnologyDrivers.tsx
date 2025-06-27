@@ -22,6 +22,7 @@ export const TechnologyDrivers = ({ technologyDrivers, isAIViewActive = false }:
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   const handleRowClick = (technology: TechnologyDriver) => {
+    console.log('TechnologyDrivers: Row clicked', technology, 'AI View Active:', isAIViewActive);
     if (isAIViewActive) {
       setSelectedTechnology(technology);
       setIsDrawerOpen(true);

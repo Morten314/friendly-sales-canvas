@@ -24,6 +24,7 @@ export const MarketSegments = ({ marketSegments, isAIViewActive = false }: Marke
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   const handleRowClick = (segment: MarketSegment) => {
+    console.log('MarketSegments: Row clicked', segment, 'AI View Active:', isAIViewActive);
     if (isAIViewActive) {
       setSelectedSegment(segment);
       setIsDrawerOpen(true);
