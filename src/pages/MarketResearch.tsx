@@ -58,6 +58,36 @@ export default function MarketResearch() {
     needs_match: segment.needsMatch
   }));
 
+  // Mock research reports data
+  const mockResearchReports = [
+    {
+      marketName: "UK Fintech Analysis",
+      completedAgo: "2 days ago",
+      status: "Completed",
+      summary: "Comprehensive analysis of the UK fintech market showing strong growth potential in digital banking.",
+      marketScore: "8.5/10"
+    },
+    {
+      marketName: "Germany Healthtech Analysis", 
+      completedAgo: "1 week ago",
+      status: "Completed",
+      summary: "Deep dive into German healthcare technology sector with focus on AI-driven solutions.",
+      marketScore: "7.8/10"
+    },
+    {
+      marketName: "France SaaS Analysis",
+      completedAgo: "3 days ago", 
+      status: "In Progress",
+      summary: "Ongoing research into French B2B SaaS opportunities in enterprise automation.",
+      marketScore: "7.2/10"
+    }
+  ];
+
+  const handleViewResults = (marketData: any) => {
+    console.log('Viewing results for market:', marketData);
+    // Handle viewing detailed results
+  };
+
   return (
     <Layout>
       <div className="space-y-6">
@@ -147,14 +177,15 @@ export default function MarketResearch() {
               />
             </div>
             
-            {/* Consumer Trends */}
-            <ConsumerTrends 
-              trends={trendSpottingData.consumerTrends}
-              isAIViewActive={isAIViewActive}
-            />
+            {/* Consumer Trends - This component fetches its own data */}
+            <ConsumerTrends />
             
             {/* Recent Research */}
-            <RecentMarketResearch />
+            <RecentMarketResearch 
+              onViewResults={handleViewResults}
+              researchReports={mockResearchReports}
+              markets={marketsArray}
+            />
           </TabsContent>
           
           <TabsContent value="chat">
