@@ -1,10 +1,12 @@
+
 // import { useState, useEffect } from "react";
 // import { Layout } from "@/components/layout/Layout";
 // import { Button } from "@/components/ui/button";
-// import { Search, MessageSquare, Users, Settings, RefreshCw, AlertCircle } from "lucide-react";
+// import { Search, MessageSquare, Users, Settings, RefreshCw, AlertCircle, History, Calendar } from "lucide-react";
 // import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 // import { ScrollArea } from "@/components/ui/scroll-area";
 // import { Alert, AlertDescription } from "@/components/ui/alert";
+// import { Badge } from "@/components/ui/badge";
 // import { ChatWithScout } from "@/components/market-research/ChatWithScout";
 // import { RecentMarketResearch } from "@/components/market-research/RecentMarketResearch";
 // import { ScoutCapabilities } from "@/components/market-research/ScoutCapabilities";
@@ -100,6 +102,7 @@
 //   swot_analysis: SwotAnalysis;
 //   emerging_trends: EmergingTrend[];
 //   technology_drivers: TechnologyDriver[];
+//   timestamp?: string; // Add timestamp to track which data is loaded
 // }
 
 // // Cache for market data - persists across component re-renders and page refreshes
@@ -127,6 +130,10 @@
 //   const [scoutDeploymentData, setScoutDeploymentData] = useState<DeploymentData | null>(null);
 //   const [selectedMarket, setSelectedMarket] = useState<Market | null>(null);
   
+//   // Track whether we're showing current or historical data
+//   const [isShowingHistoricalData, setIsShowingHistoricalData] = useState(false);
+//   const [historicalDataTimestamp, setHistoricalDataTimestamp] = useState<string | null>(null);
+  
 //   // API data state - Always initialize with any available cached data
 //   const [marketData, setMarketData] = useState<MarketIntelligenceData | null>(() => {
 //     const cached = getCachedData();
@@ -145,6 +152,50 @@
 //   const [error, setError] = useState<string | null>(null);
   
 //   const navigate = useNavigate();
+
+//   // Transform raw report data to our expected structure
+//   const transformReportData = (reportData: any): MarketIntelligenceData => {
+//     return {
+//       researchReports: reportData.researchReports || [],
+//       rankings: reportData.rankings || [],
+//       markets: reportData.markets || [],
+//       market_segments: reportData.market_segments || [],
+//       swot_analysis: reportData.swot_analysis || {
+//         swot_id: '',
+//         strengths: [],
+//         weaknesses: [],
+//         opportunities: [],
+//         threats: []
+//       },
+//       emerging_trends: reportData.emerging_trends || [],
+//       technology_drivers: reportData.technology_drivers || [],
+//       timestamp: reportData.timestamp
+//     };
+//   };
+
+//   // Handle historical report selection
+//   const handleHistoricalReportSelected = (reportData: any) => {
+//     console.log('Historical report selected:', reportData);
+    
+//     const transformedData = transformReportData(reportData);
+    
+//     // Set the market data to the historical data
+//     setMarketData(transformedData);
+//     setIsShowingHistoricalData(true);
+//     setHistoricalDataTimestamp(reportData.timestamp);
+    
+//     // Clear any existing errors
+//     setError(null);
+//   };
+
+//   // Function to return to current data
+//   const returnToCurrentData = async () => {
+//     setIsShowingHistoricalData(false);
+//     setHistoricalDataTimestamp(null);
+    
+//     // Fetch fresh current data
+//     await fetchMarketData(true);
+//   };
 
 //   // Fetch market intelligence data
 //   const fetchMarketData = async (isRefresh = false) => {
@@ -175,28 +226,20 @@
 //       const reportData = apiResponse.report || apiResponse;
       
 //       // Transform the data to match our expected structure
-//       const transformedData: MarketIntelligenceData = {
-//         researchReports: reportData.researchReports || [],
-//         rankings: reportData.rankings || [],
-//         markets: reportData.markets || [],
-//         market_segments: reportData.market_segments || [],
-//         swot_analysis: reportData.swot_analysis || {
-//           swot_id: '',
-//           strengths: [],
-//           weaknesses: [],
-//           opportunities: [],
-//           threats: []
-//         },
-//         emerging_trends: reportData.emerging_trends || [],
-//         technology_drivers: reportData.technology_drivers || []
-//       };
+//       const transformedData = transformReportData(reportData);
       
 //       console.log('Transformed data:', transformedData);
       
-//       // Update both state and cache
+//       // Update both state and cache (only for current data, not historical)
 //       setMarketData(transformedData);
-//       cachedMarketData = transformedData;
-//       cacheTimestamp = Date.now();
+//       if (!isShowingHistoricalData) {
+//         cachedMarketData = transformedData;
+//         cacheTimestamp = Date.now();
+//       }
+      
+//       // Reset historical data flags when fetching current data
+//       setIsShowingHistoricalData(false);
+//       setHistoricalDataTimestamp(null);
       
 //     } catch (err) {
 //       console.error('Error fetching market data:', err);
@@ -250,26 +293,16 @@
       
 //       // Extract and transform the data
 //       const reportData = apiResponse.report || apiResponse;
-//       const transformedData: MarketIntelligenceData = {
-//         researchReports: reportData.researchReports || [],
-//         rankings: reportData.rankings || [],
-//         markets: reportData.markets || [],
-//         market_segments: reportData.market_segments || [],
-//         swot_analysis: reportData.swot_analysis || {
-//           swot_id: '',
-//           strengths: [],
-//           weaknesses: [],
-//           opportunities: [],
-//           threats: []
-//         },
-//         emerging_trends: reportData.emerging_trends || [],
-//         technology_drivers: reportData.technology_drivers || []
-//       };
+//       const transformedData = transformReportData(reportData);
       
 //       // Update both state and cache
 //       setMarketData(transformedData);
 //       cachedMarketData = transformedData;
 //       cacheTimestamp = Date.now();
+      
+//       // Reset historical data flags
+//       setIsShowingHistoricalData(false);
+//       setHistoricalDataTimestamp(null);
       
 //     } catch (err) {
 //       console.error('Error in scout trigger and refresh:', err);
@@ -370,7 +403,29 @@
 //   };
 
 //   const handleRefresh = () => {
-//     triggerScoutAndRefresh();
+//     if (isShowingHistoricalData) {
+//       // If showing historical data, return to current data
+//       returnToCurrentData();
+//     } else {
+//       // If showing current data, refresh it
+//       triggerScoutAndRefresh();
+//     }
+//   };
+
+//   // Format timestamp for display
+//   const formatTimestamp = (timestamp: string) => {
+//     try {
+//       const date = new Date(timestamp);
+//       return date.toLocaleString('en-US', {
+//         year: 'numeric',
+//         month: 'short',
+//         day: 'numeric',
+//         hour: '2-digit',
+//         minute: '2-digit'
+//       });
+//     } catch (error) {
+//       return timestamp;
+//     }
 //   };
 
 //   // Show error state only if we have an error and no existing data AND not initially loading
@@ -415,18 +470,44 @@
 //               </div>
 //             )}
             
-//             {/* Error alert for any operation failures - only show if we have data to fall back to */}
-//             {error && marketData && !isRefreshing && !isInitialLoading && (
+//             {/* Historical data indicator */}
+//             {isShowingHistoricalData && historicalDataTimestamp && (
 //               <Alert className="mb-4 border-amber-200 bg-amber-50">
-//                 <AlertCircle className="h-4 w-4 text-amber-600" />
-//                 <AlertDescription className="text-amber-800">
+//                 <History className="h-4 w-4 text-amber-600" />
+//                 <AlertDescription className="text-amber-800 flex items-center justify-between">
+//                   <div className="flex items-center gap-2">
+//                     <Calendar className="h-4 w-4" />
+//                     <span>
+//                       Viewing historical report from {formatTimestamp(historicalDataTimestamp)}
+//                     </span>
+//                     <Badge variant="outline" className="text-amber-700 border-amber-300">
+//                       Historical Data
+//                     </Badge>
+//                   </div>
+//                   <Button
+//                     variant="outline"
+//                     size="sm"
+//                     onClick={returnToCurrentData}
+//                     className="ml-4 text-amber-700 border-amber-300 hover:bg-amber-100"
+//                   >
+//                     Return to Current
+//                   </Button>
+//                 </AlertDescription>
+//               </Alert>
+//             )}
+            
+//             {/* Error alert for any operation failures - only show if we have data to fall back to */}
+//             {error && marketData && !isRefreshing && !isInitialLoading && !isShowingHistoricalData && (
+//               <Alert className="mb-4 border-red-200 bg-red-50">
+//                 <AlertCircle className="h-4 w-4 text-red-600" />
+//                 <AlertDescription className="text-red-800">
 //                   Operation failed: {error}. Showing previous data.
 //                 </AlertDescription>
 //               </Alert>
 //             )}
             
 //             {/* Cache indicator when showing cached data and not loading */}
-//             {marketData && cachedMarketData === marketData && !isRefreshing && !isInitialLoading && cacheTimestamp && (
+//             {marketData && cachedMarketData === marketData && !isRefreshing && !isInitialLoading && !isShowingHistoricalData && cacheTimestamp && (
 //               <Alert className="mb-4 border-blue-200 bg-blue-50">
 //                 <AlertCircle className="h-4 w-4 text-blue-600" />
 //                 <AlertDescription className="text-blue-800">
@@ -440,7 +521,7 @@
             
 //             {/* Settings, History and Refresh buttons aligned to the right */}
 //             <div className="flex items-center justify-end gap-2 mb-4">
-//               <DataHistoryDialog />
+//               <DataHistoryDialog onReportSelected={handleHistoricalReportSelected} />
 //               <Button
 //                 variant="outline"
 //                 size="sm"
@@ -449,7 +530,10 @@
 //                 disabled={isRefreshing || isInitialLoading}
 //               >
 //                 <RefreshCw className={`h-4 w-4 ${(isRefreshing || isInitialLoading) ? 'animate-spin' : ''}`} />
-//                 {(isRefreshing || isInitialLoading) ? 'Updating...' : 'Refresh'}
+//                 {isShowingHistoricalData 
+//                   ? 'Return to Current' 
+//                   : (isRefreshing || isInitialLoading) ? 'Updating...' : 'Refresh'
+//                 }
 //               </Button>
 //               <Button
 //                 variant="outline"
@@ -566,9 +650,6 @@
 
 // export default MarketResearch;
 
-
-
-// history data updated
 
 import { useState, useEffect } from "react";
 import { Layout } from "@/components/layout/Layout";
@@ -924,6 +1005,7 @@ const MarketResearch = () => {
   // Listen for AI view changes from header
   useEffect(() => {
     const handleAIViewChange = (event: CustomEvent) => {
+      console.log('AI View changed to:', event.detail.isAIView);
       setIsAIViewActive(event.detail.isAIView);
     };
 
@@ -1166,7 +1248,10 @@ const MarketResearch = () => {
                     />
                     
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                      <CompetitorAnalysis competitorData={marketData.markets} />
+                      <CompetitorAnalysis 
+                        competitorData={marketData.markets} 
+                        isAIViewActive={isAIViewActive}
+                      />
                       <MarketSegments marketSegments={marketData.market_segments} />
                     </div>
                     
