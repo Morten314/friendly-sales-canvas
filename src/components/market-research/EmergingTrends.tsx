@@ -1,7 +1,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { EmergingTrendsDrawer } from "./EmergingTrendsDrawer";
 
 interface EmergingTrend {
@@ -20,6 +20,12 @@ interface EmergingTrendsProps {
 export const EmergingTrends = ({ emergingTrends, isAIViewActive = false }: EmergingTrendsProps) => {
   const [selectedTrend, setSelectedTrend] = useState<EmergingTrend | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [localTrends, setLocalTrends] = useState<EmergingTrend[]>(emergingTrends);
+
+  // Update local state when props change
+  useEffect(() => {
+    setLocalTrends(emergingTrends);
+  }, [emergingTrends]);
 
   const handleTrendClick = (trend: EmergingTrend) => {
     console.log('EmergingTrends: Trend clicked', trend, 'AI View Active:', isAIViewActive);
@@ -27,6 +33,16 @@ export const EmergingTrends = ({ emergingTrends, isAIViewActive = false }: Emerg
       setSelectedTrend(trend);
       setIsDrawerOpen(true);
     }
+  };
+
+  const handleUpdateTrend = (updatedTrend: EmergingTrend) => {
+    setLocalTrends(prevTrends => 
+      prevTrends.map(trend => 
+        trend.trend === selectedTrend?.trend ? updatedTrend : trend
+      )
+    );
+    // Also update the selected trend to reflect changes immediately
+    setSelectedTrend(updatedTrend);
   };
 
   return (
@@ -40,7 +56,7 @@ export const EmergingTrends = ({ emergingTrends, isAIViewActive = false }: Emerg
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {emergingTrends.map((trend, index) => (
+            {localTrends.map((trend, index) => (
               <div 
                 key={index} 
                 className={`border rounded-md p-4 transition-colors ${
@@ -78,6 +94,7 @@ export const EmergingTrends = ({ emergingTrends, isAIViewActive = false }: Emerg
         onOpenChange={setIsDrawerOpen}
         selectedTrend={selectedTrend}
         isAIViewActive={isAIViewActive}
+        onUpdateTrend={handleUpdateTrend}
       />
     </>
   );
