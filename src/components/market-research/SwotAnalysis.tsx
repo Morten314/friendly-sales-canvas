@@ -1,6 +1,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { PieChart } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { PieChart, Bot } from "lucide-react";
 import { useState } from "react";
 import { SwotAnalysisDrawer } from "./SwotAnalysisDrawer";
 
@@ -35,6 +36,12 @@ export const SwotAnalysis = ({ swotAnalysis, isAIViewActive = false }: SwotAnaly
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <PieChart className="h-5 w-5 text-blue-600" /> SWOT Analysis
+            {isAIViewActive && (
+              <Badge variant="secondary" className="ml-2 bg-purple-100 text-purple-700 border-purple-200">
+                <Bot className="h-3 w-3 mr-1" />
+                AI Enhanced
+              </Badge>
+            )}
           </CardTitle>
           <CardDescription>Strengths, Weaknesses, Opportunities, and Threats</CardDescription>
         </CardHeader>

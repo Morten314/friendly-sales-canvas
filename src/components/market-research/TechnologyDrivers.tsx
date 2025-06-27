@@ -1,8 +1,8 @@
 
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Layers } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Layers, Bot } from "lucide-react";
 import { useState, useEffect } from "react";
 import { TechnologyDriversDrawer } from "./TechnologyDriversDrawer";
 
@@ -52,6 +52,12 @@ export const TechnologyDrivers = ({ technologyDrivers, isAIViewActive = false }:
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Layers className="h-5 w-5 text-blue-600" /> Technology Drivers
+            {isAIViewActive && (
+              <Badge variant="secondary" className="ml-2 bg-purple-100 text-purple-700 border-purple-200">
+                <Bot className="h-3 w-3 mr-1" />
+                AI Enhanced
+              </Badge>
+            )}
           </CardTitle>
           <CardDescription>Technologies shaping market evolution</CardDescription>
         </CardHeader>
@@ -97,4 +103,3 @@ export const TechnologyDrivers = ({ technologyDrivers, isAIViewActive = false }:
     </>
   );
 };
-

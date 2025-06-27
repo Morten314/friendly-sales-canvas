@@ -1,8 +1,25 @@
-import React from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Search, Brain, Zap, TrendingUp } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
 export const ScoutLoadingAnimation = () => {
+  const [currentStep, setCurrentStep] = useState(0);
+  
+  const steps = [
+    { icon: Brain, text: "Analyzing", color: "text-blue-600" },
+    { icon: Zap, text: "Processing", color: "text-cyan-600" },
+    { icon: TrendingUp, text: "Updating", color: "text-teal-600" }
+  ];
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentStep((prev) => (prev + 1) % steps.length);
+    }, 1000); // Change step every 1 second
+
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <Card className="mb-4 bg-gradient-to-r from-blue-50 to-cyan-50 border-blue-200">
       <CardContent className="p-4">
@@ -23,20 +40,29 @@ export const ScoutLoadingAnimation = () => {
             </div>
           </div>
           
-          {/* Activity indicators */}
+          {/* Progressive activity indicators */}
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-blue-600">
-              <Brain className="h-4 w-4 animate-pulse" />
-              <span className="text-xs font-medium">Analyzing</span>
-            </div>
-            <div className="flex items-center gap-2 text-cyan-600">
-              <Zap className="h-4 w-4 animate-bounce" />
-              <span className="text-xs font-medium">Processing</span>
-            </div>
-            <div className="flex items-center gap-2 text-teal-600">
-              <TrendingUp className="h-4 w-4 animate-pulse" />
-              <span className="text-xs font-medium">Updating</span>
-            </div>
+            {steps.map((step, index) => {
+              const Icon = step.icon;
+              const isActive = index <= currentStep;
+              const isCurrent = index === currentStep;
+              
+              return (
+                <div 
+                  key={index}
+                  className={`flex items-center gap-2 transition-all duration-300 ${
+                    isActive ? step.color : 'text-gray-400'
+                  }`}
+                >
+                  <Icon className={`h-4 w-4 ${isCurrent ? 'animate-bounce' : isActive ? 'animate-pulse' : ''}`} />
+                  <span className={`text-xs font-medium transition-opacity duration-300 ${
+                    isActive ? 'opacity-100' : 'opacity-50'
+                  }`}>
+                    {step.text}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
         
@@ -45,7 +71,7 @@ export const ScoutLoadingAnimation = () => {
           <div className="bg-gradient-to-r from-blue-500 to-cyan-500 h-2 rounded-full animate-pulse" 
                style={{ 
                  width: '100%', 
-                 animation: 'loading-bar 2s ease-in-out infinite' 
+                 animation: 'loading-bar 3s ease-in-out infinite' 
                }}>
           </div>
         </div>
@@ -55,7 +81,8 @@ export const ScoutLoadingAnimation = () => {
           __html: `
             @keyframes loading-bar {
               0% { width: 0%; }
-              50% { width: 70%; }
+              33% { width: 30%; }
+              66% { width: 70%; }
               100% { width: 100%; }
             }
           `

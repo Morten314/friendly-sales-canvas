@@ -1,8 +1,8 @@
 
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ChartLine } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ChartLine, Bot } from "lucide-react";
 import { useState, useEffect } from "react";
 import { MarketSegmentsDrawer } from "./MarketSegmentsDrawer";
 
@@ -54,6 +54,12 @@ export const MarketSegments = ({ marketSegments, isAIViewActive = false }: Marke
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <ChartLine className="h-5 w-5 text-blue-600" /> Market Segments
+            {isAIViewActive && (
+              <Badge variant="secondary" className="ml-2 bg-purple-100 text-purple-700 border-purple-200">
+                <Bot className="h-3 w-3 mr-1" />
+                AI Enhanced
+              </Badge>
+            )}
           </CardTitle>
           <CardDescription>Analysis of key market segments and their potential</CardDescription>
         </CardHeader>
@@ -101,4 +107,3 @@ export const MarketSegments = ({ marketSegments, isAIViewActive = false }: Marke
     </>
   );
 };
-

@@ -1,6 +1,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingUp } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { TrendingUp, Bot } from "lucide-react";
 import { useState, useEffect } from "react";
 import { EmergingTrendsDrawer } from "./EmergingTrendsDrawer";
 
@@ -51,6 +52,12 @@ export const EmergingTrends = ({ emergingTrends, isAIViewActive = false }: Emerg
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-blue-600" /> Emerging Market Trends
+            {isAIViewActive && (
+              <Badge variant="secondary" className="ml-2 bg-purple-100 text-purple-700 border-purple-200">
+                <Bot className="h-3 w-3 mr-1" />
+                AI Enhanced
+              </Badge>
+            )}
           </CardTitle>
           <CardDescription>Key trends shaping the future of the market</CardDescription>
         </CardHeader>
