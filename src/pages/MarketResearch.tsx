@@ -33,13 +33,13 @@ import { ChatWithScout } from "@/components/market-research/ChatWithScout";
 import { ScoutCapabilities } from "@/components/market-research/ScoutCapabilities";
 import { ViewToggle } from "@/components/market-research/ViewToggle";
 
-import { marketData } from "@/components/market-research/data/marketData";
+import { marketData, marketAnalysisData, trendSpottingData } from "@/components/market-research/data/marketData";
 
 export default function MarketResearch() {
   const [isAIViewActive, setIsAIViewActive] = useState(false);
 
-  // Convert marketData.markets object to array format for components
-  const marketsArray = Object.values(marketData.markets);
+  // Convert marketData object to array format for components
+  const marketsArray = Object.values(marketData);
   const rankingsData = marketsArray.map(market => ({
     marketName: market.name,
     score: market.score,
@@ -114,32 +114,32 @@ export default function MarketResearch() {
                 isAIViewActive={isAIViewActive}
               />
               <MarketSegments 
-                marketSegments={marketData.marketSegments}
+                marketSegments={marketAnalysisData.marketSegments}
                 isAIViewActive={isAIViewActive}
               />
             </div>
             
             {/* SWOT Analysis */}
             <SwotAnalysis 
-              swotAnalysis={marketData.swotAnalysis}
+              swotAnalysis={marketAnalysisData.swotAnalysis}
               isAIViewActive={isAIViewActive}
             />
             
             {/* Technology and Trends */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <TechnologyDrivers 
-                technologyDrivers={marketData.technologyDrivers}
+                technologyDrivers={trendSpottingData.technologyDrivers}
                 isAIViewActive={isAIViewActive}
               />
               <EmergingTrends 
-                emergingTrends={marketData.emergingTrends}
+                emergingTrends={trendSpottingData.emergingTrends}
                 isAIViewActive={isAIViewActive}
               />
             </div>
             
             {/* Consumer Trends */}
             <ConsumerTrends 
-              consumerTrends={marketData.consumerTrends}
+              consumerTrends={trendSpottingData.consumerTrends}
               isAIViewActive={isAIViewActive}
             />
             
