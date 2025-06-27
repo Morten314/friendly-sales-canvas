@@ -48,6 +48,16 @@ export default function MarketResearch() {
     barriers: market.barriers
   }));
 
+  // Transform marketSegments data to match expected interface
+  const transformedMarketSegments = marketAnalysisData.marketSegments.map((segment, index) => ({
+    segment_id: `segment-${index}`,
+    segment: segment.segment,
+    size: segment.size,
+    growth_potential: segment.growthPotential,
+    acquisition_cost: segment.acquisitionCost,
+    needs_match: segment.needsMatch
+  }));
+
   return (
     <Layout>
       <div className="space-y-6">
@@ -114,7 +124,7 @@ export default function MarketResearch() {
                 isAIViewActive={isAIViewActive}
               />
               <MarketSegments 
-                marketSegments={marketAnalysisData.marketSegments}
+                marketSegments={transformedMarketSegments}
                 isAIViewActive={isAIViewActive}
               />
             </div>
@@ -139,14 +149,12 @@ export default function MarketResearch() {
             
             {/* Consumer Trends */}
             <ConsumerTrends 
-              consumerTrends={trendSpottingData.consumerTrends}
+              trends={trendSpottingData.consumerTrends}
               isAIViewActive={isAIViewActive}
             />
             
             {/* Recent Research */}
-            <RecentMarketResearch 
-              isAIViewActive={isAIViewActive}
-            />
+            <RecentMarketResearch />
           </TabsContent>
           
           <TabsContent value="chat">
