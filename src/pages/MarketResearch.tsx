@@ -38,6 +38,16 @@ import { marketData } from "@/components/market-research/data/marketData";
 export default function MarketResearch() {
   const [isAIViewActive, setIsAIViewActive] = useState(false);
 
+  // Convert marketData.markets object to array format for components
+  const marketsArray = Object.values(marketData.markets);
+  const rankingsData = marketsArray.map(market => ({
+    marketName: market.name,
+    score: market.score,
+    tam: market.size,
+    competition: market.competition,
+    barriers: market.barriers
+  }));
+
   return (
     <Layout>
       <div className="space-y-6">
@@ -52,8 +62,7 @@ export default function MarketResearch() {
           
           <div className="flex items-center gap-3">
             <ViewToggle 
-              isAIViewActive={isAIViewActive} 
-              onToggle={setIsAIViewActive} 
+              onViewChange={setIsAIViewActive} 
             />
             <Button className="bg-blue-600 hover:bg-blue-700">
               <Search className="mr-2 h-4 w-4" />
@@ -93,48 +102,51 @@ export default function MarketResearch() {
           <TabsContent value="research" className="space-y-6">
             {/* Market Rankings */}
             <MarketRankings 
-              markets={marketData.markets} 
+              rankings={rankingsData}
+              onViewResults={(marketName) => console.log('View results for:', marketName)}
               isAIViewActive={isAIViewActive}
             />
             
             {/* Analysis Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <CompetitorAnalysis 
-                markets={marketData.markets} 
+                competitorData={marketsArray}
                 isAIViewActive={isAIViewActive}
               />
               <MarketSegments 
-                marketSegments={marketData.marketSegments} 
+                marketSegments={marketData.marketSegments}
                 isAIViewActive={isAIViewActive}
               />
             </div>
             
             {/* SWOT Analysis */}
             <SwotAnalysis 
-              swotAnalysis={marketData.swotAnalysis} 
+              swotAnalysis={marketData.swotAnalysis}
               isAIViewActive={isAIViewActive}
             />
             
             {/* Technology and Trends */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <TechnologyDrivers 
-                technologyDrivers={marketData.technologyDrivers} 
+                technologyDrivers={marketData.technologyDrivers}
                 isAIViewActive={isAIViewActive}
               />
               <EmergingTrends 
-                emergingTrends={marketData.emergingTrends} 
+                emergingTrends={marketData.emergingTrends}
                 isAIViewActive={isAIViewActive}
               />
             </div>
             
             {/* Consumer Trends */}
             <ConsumerTrends 
-              consumerTrends={marketData.consumerTrends} 
+              consumerTrends={marketData.consumerTrends}
               isAIViewActive={isAIViewActive}
             />
             
             {/* Recent Research */}
-            <RecentMarketResearch isAIViewActive={isAIViewActive} />
+            <RecentMarketResearch 
+              isAIViewActive={isAIViewActive}
+            />
           </TabsContent>
           
           <TabsContent value="chat">
