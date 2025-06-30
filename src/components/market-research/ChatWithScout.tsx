@@ -73,7 +73,7 @@ export function ChatWithScout({ fullPage = false }: ChatWithScoutProps) {
 
     try {
       // Make API call to your backend using GET with query parameter
-      const response = await fetch(`https://backend-11kr.onrender.com/ask?question=${encodeURIComponent(currentInput)}`, {
+      const response = await fetch(`https://backend-11kr.onrender.com/chat/?question=${encodeURIComponent(currentInput)}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
