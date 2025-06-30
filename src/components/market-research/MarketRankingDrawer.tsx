@@ -1,3 +1,4 @@
+
 import { 
   Drawer, 
   DrawerClose, 
@@ -11,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TrendingUp, Edit3, Save, X } from "lucide-react";
 import { useState, useEffect } from "react";
+import { AIPromptingInterface } from "./AIPromptingInterface";
 
 interface MarketRanking {
   marketName: string;
@@ -18,12 +20,23 @@ interface MarketRanking {
   tam: string;
   competition: string;
   barriers: string;
+  details?: {
+    summary: string;
+    subMarkets: Array<{
+      name: string;
+      size: string;
+      growth: string;
+    }>;
+    keyInsights: string[];
+    recommendedActions: string[];
+  };
 }
 
 interface MarketRankingDrawerProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   selectedRanking: MarketRanking | null;
+  originalRanking: MarketRanking | null;
   isAIViewActive: boolean;
   onUpdateRanking?: (updatedRanking: MarketRanking) => void;
 }
@@ -32,6 +45,7 @@ export const MarketRankingDrawer = ({
   isOpen, 
   onOpenChange, 
   selectedRanking,
+  originalRanking,
   isAIViewActive,
   onUpdateRanking
 }: MarketRankingDrawerProps) => {
@@ -76,7 +90,6 @@ export const MarketRankingDrawer = ({
 
     setRankingData(updatedRanking);
     
-    // Call the update callback to sync with parent component
     if (onUpdateRanking) {
       onUpdateRanking(updatedRanking);
     }
@@ -87,6 +100,13 @@ export const MarketRankingDrawer = ({
   const handleCancel = () => {
     setEditingField(null);
     setEditValue("");
+  };
+
+  const handleAIDataUpdate = (updatedData: MarketRanking) => {
+    setRankingData(updatedData);
+    if (onUpdateRanking) {
+      onUpdateRanking(updatedData);
+    }
   };
 
   const getCompetitionColor = (competition: string) => {
@@ -162,13 +182,13 @@ export const MarketRankingDrawer = ({
             Market Ranking Details
           </DrawerTitle>
           <DrawerDescription>
-            Edit and analyze market ranking data
+            {isAIViewActive ? "Edit market data and get AI insights" : "View and analyze market ranking data"}
           </DrawerDescription>
         </DrawerHeader>
         
-        <div className={`${isAIViewActive && editingField ? 'grid grid-cols-2 gap-4' : ''} overflow-auto`}>
+        <div className={`grid ${isAIViewActive ? (editingField ? 'grid-cols-3' : 'grid-cols-2') : 'grid-cols-1'} gap-4 overflow-hidden`}>
           {/* First Section - Market Ranking Details */}
-          <div className={`p-6 overflow-auto ${isAIViewActive && editingField ? 'border-r' : ''}`}>
+          <div className={`p-6 overflow-auto ${(isAIViewActive && editingField) ? 'border-r' : (isAIViewActive ? 'border-r' : '')}`}>
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-6">
                 <div>
@@ -228,7 +248,7 @@ export const MarketRankingDrawer = ({
           
           {/* Second Section - Editing Area (only shown when AI mode is active and editing) */}
           {isAIViewActive && editingField && (
-            <div className="p-6 bg-gray-50">
+            <div className="p-6 bg-gray-50 border-r">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-medium">Edit Field</h3>
@@ -269,6 +289,18 @@ export const MarketRankingDrawer = ({
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Third Section - AI Assistant (only shown when AI mode is active) */}
+          {isAIViewActive && (
+            <div className="flex flex-col max-h-[600px] min-h-0">
+              <AIPromptingInterface
+                marketName={rankingData.marketName}
+                originalData={originalRanking}
+                modifiedData={rankingData}
+                onDataUpdate={handleAIDataUpdate}
+              />
             </div>
           )}
         </div>

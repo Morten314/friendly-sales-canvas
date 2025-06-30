@@ -10,6 +10,16 @@ interface MarketRanking {
   tam: string;
   competition: string;
   barriers: string;
+  details?: {
+    summary: string;
+    subMarkets: Array<{
+      name: string;
+      size: string;
+      growth: string;
+    }>;
+    keyInsights: string[];
+    recommendedActions: string[];
+  };
 }
 
 interface MarketRankingsProps {
@@ -20,6 +30,7 @@ interface MarketRankingsProps {
 
 export const MarketRankings = ({ onViewResults, rankings, isAIViewActive = false }: MarketRankingsProps) => {
   const [selectedRanking, setSelectedRanking] = useState<MarketRanking | null>(null);
+  const [originalRanking, setOriginalRanking] = useState<MarketRanking | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [localRankings, setLocalRankings] = useState<MarketRanking[]>(rankings);
 
@@ -62,6 +73,7 @@ export const MarketRankings = ({ onViewResults, rankings, isAIViewActive = false
   const handleRowClick = (ranking: MarketRanking) => {
     if (isAIViewActive) {
       setSelectedRanking(ranking);
+      setOriginalRanking(JSON.parse(JSON.stringify(ranking))); // Deep copy for original
       setIsDrawerOpen(true);
     }
   };
@@ -160,6 +172,7 @@ export const MarketRankings = ({ onViewResults, rankings, isAIViewActive = false
         isOpen={isDrawerOpen}
         onOpenChange={setIsDrawerOpen}
         selectedRanking={selectedRanking}
+        originalRanking={originalRanking}
         isAIViewActive={isAIViewActive}
         onUpdateRanking={handleUpdateRanking}
       />
