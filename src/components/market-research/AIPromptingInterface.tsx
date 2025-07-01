@@ -155,6 +155,9 @@ export const AIPromptingInterface = ({
       const data = await response.json();
       console.log('Success! Response data:', data);
       
+      // Debug: Log the actual structure of the response
+      console.log('Response data structure:', JSON.stringify(data, null, 2));
+      
       // Parse the response - handle both direct JSON and string responses
       let responseMessage = '';
       let responseJson = null;
@@ -163,15 +166,29 @@ export const AIPromptingInterface = ({
         // If response is a JSON string, parse it
         try {
           const parsedData = JSON.parse(data);
-          responseMessage = parsedData.response_message || parsedData.message || "Response received";
-          responseJson = parsedData.response_json || null;
+          responseMessage = parsedData.response_message || parsedData.message || parsedData.text || parsedData.answer || JSON.stringify(parsedData);
+          responseJson = parsedData.response_json || parsedData.json || parsedData.data || null;
         } catch (e) {
           responseMessage = data;
         }
       } else {
         // If response is already an object
-        responseMessage = data.response_message || data.message || data.response || "Response received";
-        responseJson = data.response_json || null;
+        // Try multiple possible field names for the message
+        responseMessage = data.response_message || 
+                         data.message || 
+                         data.response || 
+                         data.text || 
+                         data.answer || 
+                         data.content ||
+                         // If none of the expected fields exist, stringify the whole response
+                         JSON.stringify(data, null, 2);
+        
+        // Try multiple possible field names for JSON data
+        responseJson = data.response_json || 
+                      data.json || 
+                      data.data || 
+                      data.market_data ||
+                      null;
       }
       
       // Create AI response message
