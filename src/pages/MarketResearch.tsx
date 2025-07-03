@@ -6,7 +6,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { ChatWithScout } from "@/components/market-research/ChatWithScout";
 import { RecentMarketResearch } from "@/components/market-research/RecentMarketResearch";
 import { ScoutCapabilities } from "@/components/market-research/ScoutCapabilities";
 import { MarketRankings } from "@/components/market-research/MarketRankings";
@@ -24,7 +23,7 @@ import { DataHistoryDialog } from "@/components/market-research/DataHistoryDialo
 import MarketIntelligenceTab from "@/components/market-research/MarketIntelligenceTab";
 import { DeploymentData } from "@/components/layout/Header";
 import { useNavigate } from "react-router-dom";
-import { ScoutChatPanel } from "@/components/market-research/ScoutChatPanel";
+import ScoutChatPanel from "@/components/market-research/ScoutChatPanel";
 
 // Define types for the API response
 interface ResearchReport {
@@ -495,6 +494,10 @@ const MarketResearch = () => {
     console.log('Generate shareable link clicked');
   };
 
+  const handleEditHistoryOpen = () => {
+    console.log('Edit history opened');
+  };
+
   // Show error state only if we have an error and no existing data AND not initially loading
   if (error && !marketData && !isInitialLoading) {
     return (
@@ -612,8 +615,6 @@ const MarketResearch = () => {
                 Settings
               </Button>
             </div>
-
-            {isChatOpen && <ScoutChatPanel />}
             
             <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
               <TabsList className="w-full bg-gray-100 p-1 mb-2">
@@ -647,94 +648,115 @@ const MarketResearch = () => {
                       <ScoutDeploymentDetails deploymentData={scoutDeploymentData} />
                     )}
                     
-                    {/* Market Intelligence Tab */}
-                    <MarketIntelligenceTab
-                      isEditing={isMarketIntelligenceEditing}
-                      isSplitView={false}
-                      isExpanded={isMarketIntelligenceExpanded}
-                      hasEdits={false}
-                      deletedSections={deletedSections}
-                      editHistory={editHistory}
-                      executiveSummary={marketIntelligenceData.executiveSummary}
-                      tamValue={marketIntelligenceData.tamValue}
-                      samValue={marketIntelligenceData.samValue}
-                      apacGrowthRate={marketIntelligenceData.apacGrowthRate}
-                      strategicRecommendations={marketIntelligenceData.strategicRecommendations}
-                      marketEntry={marketIntelligenceData.marketEntry}
-                      marketDrivers={marketIntelligenceData.marketDrivers}
-                      onToggleEdit={handleMarketIntelligenceToggleEdit}
-                      onScoutIconClick={handleMarketIntelligenceScoutClick}
-                      onEditHistoryOpen={() => {}}
-                      onDeleteSection={handleMarketIntelligenceDeleteSection}
-                      onSaveChanges={handleMarketIntelligenceSaveChanges}
-                      onCancelEdit={handleMarketIntelligenceCancelEdit}
-                      onExpandToggle={handleMarketIntelligenceExpandToggle}
-                      onExecutiveSummaryChange={(value) => 
-                        setMarketIntelligenceData(prev => ({ ...prev, executiveSummary: value }))
-                      }
-                      onTamValueChange={(value) => 
-                        setMarketIntelligenceData(prev => ({ ...prev, tamValue: value }))
-                      }
-                      onSamValueChange={(value) => 
-                        setMarketIntelligenceData(prev => ({ ...prev, samValue: value }))
-                      }
-                      onApacGrowthRateChange={(value) => 
-                        setMarketIntelligenceData(prev => ({ ...prev, apacGrowthRate: value }))
-                      }
-                      onStrategicRecommendationsChange={(recommendations) => 
-                        setMarketIntelligenceData(prev => ({ ...prev, strategicRecommendations: recommendations }))
-                      }
-                      onMarketEntryChange={(value) => 
-                        setMarketIntelligenceData(prev => ({ ...prev, marketEntry: value }))
-                      }
-                      onMarketDriversChange={(drivers) => 
-                        setMarketIntelligenceData(prev => ({ ...prev, marketDrivers: drivers }))
-                      }
-                      onExportPDF={handleMarketIntelligenceExportPDF}
-                      onSaveToWorkspace={handleMarketIntelligenceSaveToWorkspace}
-                      onGenerateShareableLink={handleMarketIntelligenceGenerateShareableLink}
-                    />
-                    
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-                      <RecentMarketResearch 
-                        onViewResults={handleViewResults}
-                        researchReports={marketData.researchReports}
-                        markets={marketData.markets}
+                    {/* Split view layout when chat is open */}
+                    <div className={`flex gap-6 ${isChatOpen ? 'flex-row' : 'flex-col'}`}>
+                      {/* Market Intelligence Tab */}
+                      <MarketIntelligenceTab
+                        isEditing={isMarketIntelligenceEditing}
+                        isSplitView={isChatOpen}
+                        isExpanded={isMarketIntelligenceExpanded}
+                        hasEdits={false}
+                        deletedSections={deletedSections}
+                        editHistory={editHistory}
+                        executiveSummary={marketIntelligenceData.executiveSummary}
+                        tamValue={marketIntelligenceData.tamValue}
+                        samValue={marketIntelligenceData.samValue}
+                        apacGrowthRate={marketIntelligenceData.apacGrowthRate}
+                        strategicRecommendations={marketIntelligenceData.strategicRecommendations}
+                        marketEntry={marketIntelligenceData.marketEntry}
+                        marketDrivers={marketIntelligenceData.marketDrivers}
+                        onToggleEdit={handleMarketIntelligenceToggleEdit}
+                        onScoutIconClick={handleMarketIntelligenceScoutClick}
+                        onEditHistoryOpen={handleEditHistoryOpen}
+                        onDeleteSection={handleMarketIntelligenceDeleteSection}
+                        onSaveChanges={handleMarketIntelligenceSaveChanges}
+                        onCancelEdit={handleMarketIntelligenceCancelEdit}
+                        onExpandToggle={handleMarketIntelligenceExpandToggle}
+                        onExecutiveSummaryChange={(value) => 
+                          setMarketIntelligenceData(prev => ({ ...prev, executiveSummary: value }))
+                        }
+                        onTamValueChange={(value) => 
+                          setMarketIntelligenceData(prev => ({ ...prev, tamValue: value }))
+                        }
+                        onSamValueChange={(value) => 
+                          setMarketIntelligenceData(prev => ({ ...prev, samValue: value }))
+                        }
+                        onApacGrowthRateChange={(value) => 
+                          setMarketIntelligenceData(prev => ({ ...prev, apacGrowthRate: value }))
+                        }
+                        onStrategicRecommendationsChange={(recommendations) => 
+                          setMarketIntelligenceData(prev => ({ ...prev, strategicRecommendations: recommendations }))
+                        }
+                        onMarketEntryChange={(value) => 
+                          setMarketIntelligenceData(prev => ({ ...prev, marketEntry: value }))
+                        }
+                        onMarketDriversChange={(drivers) => 
+                          setMarketIntelligenceData(prev => ({ ...prev, marketDrivers: drivers }))
+                        }
+                        onExportPDF={handleMarketIntelligenceExportPDF}
+                        onSaveToWorkspace={handleMarketIntelligenceSaveToWorkspace}
+                        onGenerateShareableLink={handleMarketIntelligenceGenerateShareableLink}
                       />
-                      <ScoutCapabilities />
-                    </div>
-                    
-                    <MarketRankings 
-                      onViewResults={handleViewResultsFromRankings}
-                      rankings={marketData.rankings}
-                    />
-                    
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                      <CompetitorAnalysis 
-                        competitorData={marketData.markets} 
-                        isAIViewActive={isAIViewActive}
-                      />
-                      <MarketSegments
-                         marketSegments={marketData.market_segments}
-                         isAIViewActive={isAIViewActive} 
+                      
+                      {/* Scout Chat Panel */}
+                      {isChatOpen && (
+                        <ScoutChatPanel
+                          showScoutChat={isChatOpen}
+                          isSplitView={isChatOpen}
+                          hasEdits={false}
+                          showEditHistory={false}
+                          editHistory={editHistory}
+                          lastEditedField=""
+                          onClose={() => setIsChatOpen(false)}
                         />
+                      )}
                     </div>
                     
-                    <SwotAnalysis
-                     swotAnalysis={marketData.swot_analysis}
-                     isAIViewActive={isAIViewActive}
-                     />
-                    
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-                      <EmergingTrends
-                        emergingTrends={marketData.emerging_trends}
-                        isAIViewActive={isAIViewActive}
-                       />
-                      <TechnologyDrivers
-                         technologyDrivers={marketData.technology_drivers}
+                    {/* Only show other components when chat is not open */}
+                    {!isChatOpen && (
+                      <>
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                          <RecentMarketResearch 
+                            onViewResults={handleViewResults}
+                            researchReports={marketData.researchReports}
+                            markets={marketData.markets}
+                          />
+                          <ScoutCapabilities />
+                        </div>
+                        
+                        <MarketRankings 
+                          onViewResults={handleViewResultsFromRankings}
+                          rankings={marketData.rankings}
+                        />
+                        
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                          <CompetitorAnalysis 
+                            competitorData={marketData.markets} 
+                            isAIViewActive={isAIViewActive}
+                          />
+                          <MarketSegments
+                             marketSegments={marketData.market_segments}
+                             isAIViewActive={isAIViewActive} 
+                            />
+                        </div>
+                        
+                        <SwotAnalysis
+                         swotAnalysis={marketData.swot_analysis}
                          isAIViewActive={isAIViewActive}
                          />
-                    </div>
+                        
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                          <EmergingTrends
+                            emergingTrends={marketData.emerging_trends}
+                            isAIViewActive={isAIViewActive}
+                           />
+                          <TechnologyDrivers
+                             technologyDrivers={marketData.technology_drivers}
+                             isAIViewActive={isAIViewActive}
+                             />
+                        </div>
+                      </>
+                    )}
                   </div>
                 ) : (
                   <div className="flex items-center justify-center py-12">
@@ -754,7 +776,15 @@ const MarketResearch = () => {
               </TabsContent>
               
               <TabsContent value="trends" className="mt-0">
-                <ScoutChatPanel fullPage={true} />
+                <ScoutChatPanel 
+                  showScoutChat={true}
+                  isSplitView={false}
+                  hasEdits={false}
+                  showEditHistory={false}
+                  editHistory={editHistory}
+                  lastEditedField=""
+                  onClose={() => setActiveTab("intelligence")}
+                />
               </TabsContent>
             </Tabs>
           </div>
