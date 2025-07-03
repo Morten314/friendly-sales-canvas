@@ -426,7 +426,7 @@ export function Sidebar() {
                     onClick={handleAITeamClick}
                   >
                     <Users className="h-5 w-5" />
-                    <span className="ml-3 flex-1">AI Team</span>
+                    <span className="ml-3 flex-1">Your AI Team</span>
                     {aiTeamOpen ? (
                       <ChevronUp className="h-4 w-4" />
                     ) : (
