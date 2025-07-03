@@ -11,7 +11,6 @@ import {
   Save,
   Share,
   Clock,
-  ChessPiece,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -599,7 +598,7 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-            <ChessPiece className="h-5 w-5 text-purple-600" />
+            <BarChart3 className="h-5 w-5 text-purple-600" />
             Competitor Landscape
           </h2>
           <div className="flex items-center gap-3">
