@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import {
   BarChart3,
@@ -102,15 +101,19 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
   const [showScoutChat, setShowScoutChat] = useState(false);
   const [lastEditedField, setLastEditedField] = useState('');
 
-  // Determine if we're in split view (either external or internal)
-  const isSplitView = externalSplitView || showScoutChat;
+  // Determine if we're in split view - prioritize Scout chat over edit history
+  const isSplitView = externalSplitView || showScoutChat || showEditHistory;
 
   const handleEditHistoryOpen = () => {
+    // Close Scout chat if open and open edit history
+    setShowScoutChat(false);
     setShowEditHistory(true);
     onEditHistoryOpen();
   };
 
   const handleScoutIconClick = () => {
+    // Close edit history if open and open Scout chat
+    setShowEditHistory(false);
     setShowScoutChat(true);
     onScoutIconClick();
   };
@@ -135,7 +138,7 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
 
   return (
     <div className="flex gap-6">
-      <div className={`${isSplitView ? 'w-1/2' : 'flex-1'} transition-all duration-500`}>
+      <div className={`${isSplitView ? 'w-1/2' : 'w-full'} transition-all duration-500`}>
         <div className="bg-white rounded-lg border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
@@ -509,7 +512,7 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
                 </Button>
               )}
 
-              {/* Expanded Content */}
+              {/* Expanded Content - Always show in split view or when expanded */}
               {(isExpanded || isSplitView) && (
                 <div className="space-y-8">
                   <div className="border-t pt-6">
