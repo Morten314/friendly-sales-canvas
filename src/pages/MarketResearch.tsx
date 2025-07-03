@@ -21,6 +21,7 @@ import { ScoutDeploymentDetails } from "@/components/market-research/ScoutDeploy
 import { ScoutSettingsForm } from "@/components/market-research/ScoutSettingsForm";
 import { ScoutLoadingAnimation } from "@/components/market-research/ScoutLoadingAnimation";
 import { DataHistoryDialog } from "@/components/market-research/DataHistoryDialog";
+import { MarketIntelligenceTab } from "@/components/market-research/MarketIntelligenceTab";
 import { DeploymentData } from "@/components/layout/Header";
 import { useNavigate } from "react-router-dom";
 
@@ -149,6 +150,30 @@ const MarketResearch = () => {
   
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // MarketIntelligenceTab state
+  const [isMarketIntelligenceEditing, setIsMarketIntelligenceEditing] = useState(false);
+  const [isMarketIntelligenceExpanded, setIsMarketIntelligenceExpanded] = useState(false);
+  const [marketIntelligenceData, setMarketIntelligenceData] = useState({
+    executiveSummary: "The cloud infrastructure market presents a significant opportunity with strong growth potential across all segments. Key drivers include digital transformation, remote work adoption, and increasing data requirements.",
+    tamValue: "$4.2B",
+    samValue: "$2.1B",
+    apacGrowthRate: "25%",
+    strategicRecommendations: [
+      "Focus on mid-market segment for fastest revenue growth",
+      "Invest in APAC expansion to capture high-growth markets",
+      "Develop industry-specific solutions for better differentiation"
+    ],
+    marketEntry: "A phased approach starting with established markets in North America, followed by selective expansion into high-growth APAC regions. Focus on building strategic partnerships with system integrators and cloud providers.",
+    marketDrivers: [
+      "Accelerating digital transformation initiatives across industries",
+      "Increasing demand for scalable cloud infrastructure solutions", 
+      "Growing emphasis on data security and compliance requirements",
+      "Rising adoption of hybrid and multi-cloud architectures"
+    ]
+  });
+  const [deletedSections, setDeletedSections] = useState<Set<string>>(new Set());
+  const [editHistory] = useState<any[]>([]);
   
   const navigate = useNavigate();
 
@@ -428,6 +453,47 @@ const MarketResearch = () => {
     }
   };
 
+  // MarketIntelligenceTab handlers
+  const handleMarketIntelligenceToggleEdit = () => {
+    setIsMarketIntelligenceEditing(!isMarketIntelligenceEditing);
+  };
+
+  const handleMarketIntelligenceScoutClick = () => {
+    setIsChatOpen(true);
+  };
+
+  const handleMarketIntelligenceDeleteSection = (sectionId: string) => {
+    const newDeletedSections = new Set(deletedSections);
+    newDeletedSections.add(sectionId);
+    setDeletedSections(newDeletedSections);
+  };
+
+  const handleMarketIntelligenceSaveChanges = () => {
+    setIsMarketIntelligenceEditing(false);
+    // Add save logic here
+  };
+
+  const handleMarketIntelligenceCancelEdit = () => {
+    setIsMarketIntelligenceEditing(false);
+    // Reset any unsaved changes
+  };
+
+  const handleMarketIntelligenceExpandToggle = (expanded: boolean) => {
+    setIsMarketIntelligenceExpanded(expanded);
+  };
+
+  const handleMarketIntelligenceExportPDF = () => {
+    console.log('Export PDF clicked');
+  };
+
+  const handleMarketIntelligenceSaveToWorkspace = () => {
+    console.log('Save to workspace clicked');
+  };
+
+  const handleMarketIntelligenceGenerateShareableLink = () => {
+    console.log('Generate shareable link clicked');
+  };
+
   // Show error state only if we have an error and no existing data AND not initially loading
   if (error && !marketData && !isInitialLoading) {
     return (
@@ -579,6 +645,54 @@ const MarketResearch = () => {
                     {scoutDeploymentData && (
                       <ScoutDeploymentDetails deploymentData={scoutDeploymentData} />
                     )}
+                    
+                    {/* Market Intelligence Tab */}
+                    <MarketIntelligenceTab
+                      isEditing={isMarketIntelligenceEditing}
+                      isSplitView={false}
+                      isExpanded={isMarketIntelligenceExpanded}
+                      hasEdits={false}
+                      deletedSections={deletedSections}
+                      editHistory={editHistory}
+                      executiveSummary={marketIntelligenceData.executiveSummary}
+                      tamValue={marketIntelligenceData.tamValue}
+                      samValue={marketIntelligenceData.samValue}
+                      apacGrowthRate={marketIntelligenceData.apacGrowthRate}
+                      strategicRecommendations={marketIntelligenceData.strategicRecommendations}
+                      marketEntry={marketIntelligenceData.marketEntry}
+                      marketDrivers={marketIntelligenceData.marketDrivers}
+                      onToggleEdit={handleMarketIntelligenceToggleEdit}
+                      onScoutIconClick={handleMarketIntelligenceScoutClick}
+                      onEditHistoryOpen={() => {}}
+                      onDeleteSection={handleMarketIntelligenceDeleteSection}
+                      onSaveChanges={handleMarketIntelligenceSaveChanges}
+                      onCancelEdit={handleMarketIntelligenceCancelEdit}
+                      onExpandToggle={handleMarketIntelligenceExpandToggle}
+                      onExecutiveSummaryChange={(value) => 
+                        setMarketIntelligenceData(prev => ({ ...prev, executiveSummary: value }))
+                      }
+                      onTamValueChange={(value) => 
+                        setMarketIntelligenceData(prev => ({ ...prev, tamValue: value }))
+                      }
+                      onSamValueChange={(value) => 
+                        setMarketIntelligenceData(prev => ({ ...prev, samValue: value }))
+                      }
+                      onApacGrowthRateChange={(value) => 
+                        setMarketIntelligenceData(prev => ({ ...prev, apacGrowthRate: value }))
+                      }
+                      onStrategicRecommendationsChange={(recommendations) => 
+                        setMarketIntelligenceData(prev => ({ ...prev, strategicRecommendations: recommendations }))
+                      }
+                      onMarketEntryChange={(value) => 
+                        setMarketIntelligenceData(prev => ({ ...prev, marketEntry: value }))
+                      }
+                      onMarketDriversChange={(drivers) => 
+                        setMarketIntelligenceData(prev => ({ ...prev, marketDrivers: drivers }))
+                      }
+                      onExportPDF={handleMarketIntelligenceExportPDF}
+                      onSaveToWorkspace={handleMarketIntelligenceSaveToWorkspace}
+                      onGenerateShareableLink={handleMarketIntelligenceGenerateShareableLink}
+                    />
                     
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
                       <RecentMarketResearch 
