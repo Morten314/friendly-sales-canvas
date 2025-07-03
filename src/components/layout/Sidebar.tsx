@@ -351,11 +351,11 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/agent-hub" },
-  { icon: Search, label: "Market Research (Scout)", href: "/market-research" },
-  { icon: Users, label: "ICP Profiles (Profiler)", href: "/customers" },
-  { icon: FileText, label: "GTM Strategies (Strategist)", href: "/deals" },
-  { icon: Calendar, label: "Campaigns (Activator)", href: "/calendar" },
-  { icon: Presentation, label: "Demo Prep (Presenter)", href: "/reports" },
+  { icon: Search, label: "Scout", href: "/market-research" },
+  { icon: Users, label: "Profiler", href: "/customers" },
+  { icon: FileText, label: "Strategist", href: "/deals" },
+  { icon: Calendar, label: "Activator", href: "/calendar" },
+  { icon: Presentation, label: "Presenter", href: "/reports" },
   { icon: BarChart, label: "Reports", href: "/insights" },
   { icon: Settings, label: "Settings", href: "/settings" },
 ];
