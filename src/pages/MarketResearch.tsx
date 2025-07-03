@@ -21,7 +21,7 @@ import { ScoutDeploymentDetails } from "@/components/market-research/ScoutDeploy
 import { ScoutSettingsForm } from "@/components/market-research/ScoutSettingsForm";
 import { ScoutLoadingAnimation } from "@/components/market-research/ScoutLoadingAnimation";
 import { DataHistoryDialog } from "@/components/market-research/DataHistoryDialog";
-import { MarketIntelligenceTab } from "@/components/market-research/MarketIntelligenceTab";
+import MarketIntelligenceTab from "@/components/market-research/MarketIntelligenceTab";
 import { DeploymentData } from "@/components/layout/Header";
 import { useNavigate } from "react-router-dom";
 
