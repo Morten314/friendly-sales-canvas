@@ -18,6 +18,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import MiniPieChart from '@/components/ui/MiniPieChart';
+import MiniLineChart from '@/components/ui/MiniLineChart';
 
 interface EditRecord {
   id: string;
@@ -491,12 +493,39 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
                     </div>
                   </div>
 
-                  {/* Market Opportunity Breakdown */}
+                                    {/* Market Opportunity Breakdown */}
                   <div className="mb-8">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                       <PieChart className="h-5 w-5 text-purple-600" />
                       Market Opportunity Breakdown
                     </h3>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                      <div className="bg-white border border-gray-200 rounded-lg p-4">
+                        <h4 className="font-medium text-gray-900 mb-3">Market Size by Segment</h4>
+                        <MiniPieChart 
+                          data={[
+                            { name: "Enterprise", value: 45, color: "#3B82F6" },
+                            { name: "Mid-Market", value: 35, color: "#10B981" },
+                            { name: "SMB", value: 20, color: "#8B5CF6" }
+                          ]}
+                          title=""
+                        />
+                      </div>
+                      <div className="bg-white border border-gray-200 rounded-lg p-4">
+                        <h4 className="font-medium text-gray-900 mb-3">Growth Projections</h4>
+                        <MiniLineChart 
+                          data={[
+                            { name: "2023", value: 100 },
+                            { name: "2024", value: 115 },
+                            { name: "2025", value: 132 },
+                            { name: "2026", value: 152 }
+                          ]}
+                          title=""
+                          color="#3B82F6"
+                        />
+                      </div>
+                    </div>
 
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <h4 className="font-medium text-gray-900 mb-3">Key Market Drivers</h4>

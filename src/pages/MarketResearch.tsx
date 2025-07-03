@@ -24,6 +24,7 @@ import { DataHistoryDialog } from "@/components/market-research/DataHistoryDialo
 import MarketIntelligenceTab from "@/components/market-research/MarketIntelligenceTab";
 import { DeploymentData } from "@/components/layout/Header";
 import { useNavigate } from "react-router-dom";
+import { ScoutChatPanel } from "@/components/market-research/ScoutChatPanel";
 
 // Define types for the API response
 interface ResearchReport {
@@ -612,7 +613,7 @@ const MarketResearch = () => {
               </Button>
             </div>
 
-            {isChatOpen && <ChatWithScout />}
+            {isChatOpen && <ScoutChatPanel />}
             
             <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
               <TabsList className="w-full bg-gray-100 p-1 mb-2">
@@ -753,7 +754,7 @@ const MarketResearch = () => {
               </TabsContent>
               
               <TabsContent value="trends" className="mt-0">
-                <ChatWithScout fullPage={true} />
+                <ScoutChatPanel fullPage={true} />
               </TabsContent>
             </Tabs>
           </div>
