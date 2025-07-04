@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // import React from 'react';
 // import {
 //   BarChart3,
@@ -749,6 +750,8 @@
 
 // export default MarketIntelligenceTab;
 
+=======
+>>>>>>> 0190208b3f980fcae5e751b542efc063a9ab3676
 
 import React from 'react';
 import {
@@ -930,7 +933,7 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={onScoutIconClick}
+                    onClick={() => onScoutIconClick('market-size')}
                     className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-all duration-200 hover:shadow-md hover:shadow-blue-200/50 relative"
                   >
                     <div className="absolute inset-0 rounded-md bg-gradient-to-r from-blue-400/20 to-green-400/20 animate-pulse opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
@@ -1179,7 +1182,7 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={onScoutIconClick}
+                    onClick={() => onScoutIconClick('market-size')}
                     className="text-blue-600 hover:text-blue-700 bg-blue-50 border border-blue-200 hover:shadow-md hover:shadow-blue-200/50 transition-all duration-200 relative"
                   >
                     <div className="absolute inset-0 rounded-md bg-gradient-to-r from-blue-400/20 to-green-400/20 opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
@@ -1756,7 +1759,7 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={onScoutIconClick}
+                  onClick={() => onScoutIconClick('competitor-landscape')}
                   className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-all duration-200 hover:shadow-md hover:shadow-blue-200/50 relative"
                 >
                   <div className="absolute inset-0 rounded-md bg-gradient-to-r from-blue-400/20 to-green-400/20 animate-pulse opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
