@@ -1,4 +1,3 @@
-
 import React from 'react';
 import MarketIntelligenceTab from '@/components/market-research/MarketIntelligenceTab';
 import ScoutChatPanel from '@/components/market-research/ScoutChatPanel';
@@ -40,6 +39,11 @@ const MarketResearch = () => {
 
   const handleScoutIconClick = () => {
     setIsSplitView(!isSplitView);
+  };
+
+  const handleEditHistoryOpen = () => {
+    // Placeholder for edit history functionality
+    console.log('Edit history opened');
   };
 
   const handleDeleteSection = (sectionId: string) => {
@@ -160,6 +164,7 @@ const MarketResearch = () => {
             marketDrivers={marketDrivers}
             onToggleEdit={handleToggleEdit}
             onScoutIconClick={handleScoutIconClick}
+            onEditHistoryOpen={handleEditHistoryOpen}
             onDeleteSection={handleDeleteSection}
             onSaveChanges={handleSaveChanges}
             onCancelEdit={handleCancelEdit}
