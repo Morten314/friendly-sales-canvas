@@ -117,6 +117,18 @@ interface EditRecord {
   newValue: string;
 }
 
+// Add new interfaces for Industry Trends
+interface TrendSnapshot {
+  title: string;
+  metric: string;
+  type: 'growth' | 'performance' | 'adoption';
+}
+
+interface IndustryTrendsRecommendations {
+  primaryFocus: string;
+  marketEntry: string;
+}
+
 // Cache for market data - persists across component re-renders and page refreshes
 let cachedMarketData: MarketIntelligenceData | null = null;
 let cacheTimestamp: number | null = null;
@@ -190,7 +202,35 @@ const MarketResearch = () => {
   const [editHistory, setEditHistory] = useState<EditRecord[]>([]);
   const [isEditHistoryOpen, setIsEditHistoryOpen] = useState(false);
   const [hasEdits, setHasEdits] = useState(false);
-  
+
+  // Industry Trends state - Add these new state variables
+  const [isIndustryTrendsEditing, setIsIndustryTrendsEditing] = useState(false);
+  const [industryTrendsExpanded, setIndustryTrendsExpanded] = useState(false);
+  const [industryTrendsHasEdits, setIndustryTrendsHasEdits] = useState(false);
+  const [industryTrendsDeletedSections, setIndustryTrendsDeletedSections] = useState<Set<string>>(new Set());
+  const [industryTrendsEditHistory, setIndustryTrendsEditHistory] = useState<EditRecord[]>([]);
+  const [industryTrendsData, setIndustryTrendsData] = useState({
+    executiveSummary: "The enterprise software industry is experiencing rapid transformation driven by AI adoption, cloud migration, and regulatory changes. Key trends indicate accelerated digital transformation with 78% of companies prioritizing AI integration.",
+    aiAdoption: "78%",
+    cloudMigration: "45%",
+    regulatory: "12",
+    trendSnapshots: [
+      { title: "AI Integration", metric: "78% adoption rate", type: 'adoption' as const },
+      { title: "Cloud Migration", metric: "45% increase YoY", type: 'growth' as const },
+      { title: "Regulatory Impact", metric: "12 new policies", type: 'performance' as const }
+    ],
+    recommendations: {
+      primaryFocus: "Prioritize AI-driven solutions and cloud-native architecture to capture the growing market demand for intelligent automation.",
+      marketEntry: "Target mid-market enterprises in APAC and Europe where regulatory compliance and AI adoption create the strongest business case."
+    },
+    risks: [
+      "Regulatory uncertainty in AI governance could slow enterprise adoption",
+      "Cloud vendor lock-in risks may drive customers toward multi-cloud strategies",
+      "Skills shortage in AI/ML talent could limit implementation speed"
+    ]
+  });
+  const [industryTrendsLastEditedField, setIndustryTrendsLastEditedField] = useState("");
+
   const navigate = useNavigate();
 
   // Transform raw report data to our expected structure
@@ -474,7 +514,9 @@ const MarketResearch = () => {
     setIsMarketIntelligenceEditing(!isMarketIntelligenceEditing);
   };
 
-  const handleMarketIntelligenceScoutClick = () => {
+  // Update the Scout icon click handler to accept context
+  const handleMarketIntelligenceScoutClick = (context?: 'market-size' | 'industry-trends' | 'competitor-landscape') => {
+    console.log('Scout clicked with context:', context);
     setIsChatOpen(true);
   };
 
@@ -522,6 +564,54 @@ const MarketResearch = () => {
 
   const handleMarketIntelligenceGenerateShareableLink = () => {
     console.log('Generate shareable link clicked');
+  };
+
+  // Industry Trends handlers - Add these new handlers
+  const handleIndustryTrendsToggleEdit = () => {
+    setIsIndustryTrendsEditing(!isIndustryTrendsEditing);
+  };
+
+  const handleIndustryTrendsSaveChanges = () => {
+    setIsIndustryTrendsEditing(false);
+    setIndustryTrendsHasEdits(true);
+
+    // Create a new edit record
+    const newEdit: EditRecord = {
+      id: Date.now().toString(),
+      timestamp: new Date().toISOString(),
+      user: 'John Doe',
+      summary: 'Updated industry trends analysis',
+      field: 'Industry Trends',
+      oldValue: 'Previous values',
+      newValue: 'Updated values',
+    };
+
+    // Add the new edit record to the industry trends edit history
+    setIndustryTrendsEditHistory(prevHistory => [...prevHistory, newEdit]);
+  };
+
+  const handleIndustryTrendsCancelEdit = () => {
+    setIsIndustryTrendsEditing(false);
+    // Reset any unsaved changes
+  };
+
+  const handleIndustryTrendsDeleteSection = (sectionId: string) => {
+    const newDeletedSections = new Set(industryTrendsDeletedSections);
+    newDeletedSections.add(sectionId);
+    setIndustryTrendsDeletedSections(newDeletedSections);
+  };
+
+  const handleIndustryTrendsEditHistoryOpen = () => {
+    setIsEditHistoryOpen(true);
+  };
+
+  const handleIndustryTrendsExpandToggle = (expanded: boolean) => {
+    setIndustryTrendsExpanded(expanded);
+  };
+
+  const handleIndustryTrendsExecutiveSummaryChange = (value: string) => {
+    setIndustryTrendsData(prev => ({ ...prev, executiveSummary: value }));
+    setIndustryTrendsLastEditedField('executiveSummary');
   };
 
   // Edit history handlers
@@ -710,6 +800,20 @@ const MarketResearch = () => {
                         strategicRecommendations={marketIntelligenceData.strategicRecommendations}
                         marketEntry={marketIntelligenceData.marketEntry}
                         marketDrivers={marketIntelligenceData.marketDrivers}
+                        // Industry Trends props
+                        isIndustryTrendsEditing={isIndustryTrendsEditing}
+                        industryTrendsExpanded={industryTrendsExpanded}
+                        industryTrendsHasEdits={industryTrendsHasEdits}
+                        industryTrendsDeletedSections={industryTrendsDeletedSections}
+                        industryTrendsEditHistory={industryTrendsEditHistory}
+                        industryTrendsExecutiveSummary={industryTrendsData.executiveSummary}
+                        industryTrendsAiAdoption={industryTrendsData.aiAdoption}
+                        industryTrendsCloudMigration={industryTrendsData.cloudMigration}
+                        industryTrendsRegulatory={industryTrendsData.regulatory}
+                        industryTrendSnapshots={industryTrendsData.trendSnapshots}
+                        industryTrendsRecommendations={industryTrendsData.recommendations}
+                        industryTrendsRisks={industryTrendsData.risks}
+                        industryTrendsLastEditedField={industryTrendsLastEditedField}
                         onToggleEdit={handleMarketIntelligenceToggleEdit}
                         onScoutIconClick={handleMarketIntelligenceScoutClick}
                         onEditHistoryOpen={handleEditHistoryOpen}
@@ -738,6 +842,14 @@ const MarketResearch = () => {
                         onMarketDriversChange={(drivers) => 
                           setMarketIntelligenceData(prev => ({ ...prev, marketDrivers: drivers }))
                         }
+                        // Industry Trends handlers
+                        onIndustryTrendsToggleEdit={handleIndustryTrendsToggleEdit}
+                        onIndustryTrendsSaveChanges={handleIndustryTrendsSaveChanges}
+                        onIndustryTrendsCancelEdit={handleIndustryTrendsCancelEdit}
+                        onIndustryTrendsDeleteSection={handleIndustryTrendsDeleteSection}
+                        onIndustryTrendsEditHistoryOpen={handleIndustryTrendsEditHistoryOpen}
+                        onIndustryTrendsExpandToggle={handleIndustryTrendsExpandToggle}
+                        onIndustryTrendsExecutiveSummaryChange={handleIndustryTrendsExecutiveSummaryChange}
                         onExportPDF={handleMarketIntelligenceExportPDF}
                         onSaveToWorkspace={handleMarketIntelligenceSaveToWorkspace}
                         onGenerateShareableLink={handleMarketIntelligenceGenerateShareableLink}
