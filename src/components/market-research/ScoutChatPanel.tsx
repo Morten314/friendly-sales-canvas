@@ -5,70 +5,32 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 interface ScoutChatPanelProps {
-  showScoutChat: boolean;
-  isSplitView: boolean;
-  hasEdits: boolean;
-  showEditHistory: boolean;
-  editHistory: any[];
-  lastEditedField: string;
   onClose: () => void;
+  isVisible: boolean;
 }
 
 const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
-  showScoutChat,
-  isSplitView,
-  hasEdits,
-  showEditHistory,
-  editHistory,
-  lastEditedField,
-  onClose
+  onClose,
+  isVisible
 }) => {
   const getContextualScoutMessage = () => {
-    if (showEditHistory && editHistory.length > 0) {
-      return "Hi Alex! Reviewing your changes? Let me know if you'd like to validate data or explore why market estimates shifted.";
-    }
-    
-    if (!hasEdits) {
-      return "Hi there! 👋 I'm Scout. Want to dive deeper into your market size and opportunities? Here are some questions I can help answer.";
-    }
-    
-    if (lastEditedField.includes("APAC") || lastEditedField.includes("apac")) {
-      return "I noticed you updated the APAC growth rate. Would you like deeper insights on regional trends or competitor presence in APAC?";
-    }
-    if (lastEditedField.includes("TAM") || lastEditedField.includes("tam")) {
-      return "I see you modified the TAM estimate. Should we explore the key drivers behind this market size or break down by industry verticals?";
-    }
-    if (hasEdits) {
-      return "I noticed you updated the market analysis. Would you like me to provide additional insights based on your changes?";
-    }
-    return "Hi there! I'm here to help you dive deeper into Market Size & Opportunity insights. What would you like to explore?";
+    return "Hi there! 👋 I'm Scout. Want to dive deeper into your market size and opportunities? Here are some questions I can help answer.";
   };
 
   const getContextualQuestions = () => {
-    if (!hasEdits) {
-      return [
-        "Show TAM breakdown by region",
-        "What's driving mid-market growth?",
-        "Any emerging competitors to watch?",
-        "How fast is the market growing YoY?",
-        "Break down opportunity by vertical"
-      ];
-    }
-
     return [
-      "Show me drivers of TAM growth",
-      "Break down mid-market vs enterprise TAM", 
-      "Which segments are fastest growing?",
-      "Analyze competitor presence in APAC",
-      "Update regional market breakdown",
-      "Identify emerging tech impacts on TAM"
+      "Show TAM breakdown by region",
+      "What's driving mid-market growth?",
+      "Any emerging competitors to watch?",
+      "How fast is the market growing YoY?",
+      "Break down opportunity by vertical"
     ];
   };
 
-  if (!showScoutChat) return null;
+  if (!isVisible) return null;
 
   return (
-    <div className={`${isSplitView ? 'w-2/5' : 'w-1/2'} bg-white rounded-lg border border-gray-200 p-6 transition-all duration-500 animate-slide-in-right`}>
+    <div className="w-2/5 bg-white rounded-lg border border-gray-200 p-6 transition-all duration-500 animate-slide-in-right">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className="relative">
