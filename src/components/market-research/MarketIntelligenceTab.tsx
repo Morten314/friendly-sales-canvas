@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   BarChart3,
@@ -474,8 +475,6 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
               </div>
             </div>   
           </div>
-
-
         ) : (
           <div className="space-y-6">
             {/* Executive Summary - Always Visible */}
@@ -650,6 +649,7 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
             )}
           </div>
         )}
+      </div>
 
       {/* Industry Trends Section */}
       <div className="bg-white rounded-lg border border-gray-200 p-6">
@@ -981,6 +981,7 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
             )}
           </div>
         )}
+      </div>
 
       {/* Competitor Landscape Section */}
       <div className="bg-white rounded-lg border border-gray-200 p-6">
