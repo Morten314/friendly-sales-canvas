@@ -1,7 +1,7 @@
+
 import React from 'react';
 import MarketIntelligenceTab from '@/components/market-research/MarketIntelligenceTab';
 import ScoutChatPanel from '@/components/market-research/ScoutChatPanel';
-import EditHistoryPanel from '@/components/market-research/EditHistoryPanel';
 
 interface EditRecord {
   id: string;
@@ -89,28 +89,6 @@ const MarketResearch = () => {
     alert('Generating shareable link...');
   };
 
-  // Add edit history panel state
-  const [isEditHistoryOpen, setIsEditHistoryOpen] = React.useState(false);
-
-  // Add edit history handlers
-  const handleEditHistoryOpen = () => {
-    setIsEditHistoryOpen(true);
-  };
-
-  const handleEditHistoryClose = () => {
-    setIsEditHistoryOpen(false);
-  };
-
-  const handleRevertEdit = (editId: string) => {
-    // TODO: Implement revert functionality
-    console.log('Reverting edit:', editId);
-  };
-
-  const handleViewEditDetails = (editId: string) => {
-    // TODO: Implement view details functionality
-    console.log('Viewing edit details:', editId);
-  };
-
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white py-6 shadow">
@@ -182,7 +160,6 @@ const MarketResearch = () => {
             marketDrivers={marketDrivers}
             onToggleEdit={handleToggleEdit}
             onScoutIconClick={handleScoutIconClick}
-            onEditHistoryOpen={handleEditHistoryOpen}
             onDeleteSection={handleDeleteSection}
             onSaveChanges={handleSaveChanges}
             onCancelEdit={handleCancelEdit}
@@ -201,21 +178,17 @@ const MarketResearch = () => {
 
           {isSplitView && (
             <ScoutChatPanel 
+              showScoutChat={isSplitView}
+              isSplitView={isSplitView}
+              hasEdits={hasEdits}
+              showEditHistory={false}
+              editHistory={editHistory}
+              lastEditedField=""
               onClose={() => setIsSplitView(false)}
-              isVisible={isSplitView}
             />
           )}
         </div>
       </div>
-
-      {/* Edit History Panel */}
-      <EditHistoryPanel
-        isOpen={isEditHistoryOpen}
-        onClose={handleEditHistoryClose}
-        editHistory={editHistory}
-        onRevert={handleRevertEdit}
-        onViewDetails={handleViewEditDetails}
-      />
     </div>
   );
 };
