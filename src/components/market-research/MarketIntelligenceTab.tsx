@@ -789,7 +789,7 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
                   <ArrowUp className="h-4 w-4 text-green-500" />
                 </div>
               </div>
-              <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
+              <div className="border border-green-200 p-4 rounded-lg bg-amber-100">
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="text-lg font-bold text-green-600">2</div>
