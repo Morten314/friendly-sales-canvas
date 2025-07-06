@@ -11,6 +11,7 @@ interface ScoutChatPanelProps {
   showEditHistory: boolean;
   editHistory: any[];
   lastEditedField: string;
+  context?: 'market-size' | 'industry-trends' | 'competitor-landscape';
   onClose: () => void;
 }
 
@@ -21,9 +22,56 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
   showEditHistory,
   editHistory,
   lastEditedField,
+  context = 'market-size',
   onClose
 }) => {
   const getContextualScoutMessage = () => {
+    if (context === 'competitor-landscape') {
+      if (showEditHistory && editHistory.length > 0) {
+        return "Hi Alex! Reviewing your competitor changes? Let me know if you'd like me to pull latest funding news or analyze market positioning shifts.";
+      }
+      
+      if (!hasEdits) {
+        return "Hi there! 👋 I'm Scout. Ready to dive deeper into competitor analysis? I can help with market share trends, funding rounds, and competitive positioning.";
+      }
+      
+      if (lastEditedField.includes("market share") || lastEditedField.includes("share")) {
+        return "I noticed you updated market share figures for Slack. Want me to pull the latest news or analysis?";
+      }
+      if (lastEditedField.includes("Notion") && lastEditedField.includes("removed")) {
+        return "You removed Notion from the list. Should I suggest alternatives or analyze why they might be losing ground?";
+      }
+      if (lastEditedField.includes("funding") || lastEditedField.includes("news")) {
+        return "Would you like me to analyze new funding rounds for these competitors or check for recent M&A activity?";
+      }
+      if (hasEdits) {
+        return "I noticed you updated the competitor analysis. Would you like me to provide additional insights on competitive positioning or recent market moves?";
+      }
+      return "Hi there! I'm here to help you dive deeper into Competitor Landscape insights. What would you like to explore?";
+    }
+
+    if (context === 'industry-trends') {
+      if (showEditHistory && editHistory.length > 0) {
+        return "Hi Alex! Reviewing your changes? Let me know if you'd like to validate data or explore why market estimates shifted.";
+      }
+      
+      if (!hasEdits) {
+        return "Hi there! 👋 I'm Scout. Want to dive deeper into industry trends and emerging technologies? Here are some questions I can help answer.";
+      }
+      
+      if (lastEditedField.includes("AI") || lastEditedField.includes("ai")) {
+        return "I noticed you updated AI adoption metrics. Would you like deeper insights on AI implementation trends or regulatory impacts?";
+      }
+      if (lastEditedField.includes("cloud") || lastEditedField.includes("migration")) {
+        return "I see you modified cloud migration data. Should we explore the key drivers behind this trend or regional variations?";
+      }
+      if (hasEdits) {
+        return "I noticed you updated the industry trends analysis. Would you like me to provide additional insights based on your changes?";
+      }
+      return "Hi there! I'm here to help you dive deeper into Industry Trends insights. What would you like to explore?";
+    }
+
+    // Default market-size context
     if (showEditHistory && editHistory.length > 0) {
       return "Hi Alex! Reviewing your changes? Let me know if you'd like to validate data or explore why market estimates shifted.";
     }
@@ -45,6 +93,49 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
   };
 
   const getContextualQuestions = () => {
+    if (context === 'competitor-landscape') {
+      if (!hasEdits) {
+        return [
+          "Show latest funding rounds",
+          "Analyze market share shifts",
+          "Compare feature roadmaps",
+          "Identify acquisition targets",
+          "Track competitive pricing"
+        ];
+      }
+
+      return [
+        "Pull latest competitor news",
+        "Analyze funding impact on market",
+        "Compare competitive positioning", 
+        "Identify emerging threats",
+        "Track M&A activity",
+        "Benchmark feature capabilities"
+      ];
+    }
+
+    if (context === 'industry-trends') {
+      if (!hasEdits) {
+        return [
+          "Show AI adoption trends",
+          "Analyze cloud migration drivers",
+          "Track regulatory changes",
+          "Identify emerging technologies",
+          "Compare regional variations"
+        ];
+      }
+
+      return [
+        "Validate trend data sources",
+        "Explore technology drivers",
+        "Analyze regional differences", 
+        "Track regulatory impacts",
+        "Identify disruption signals",
+        "Compare adoption timelines"
+      ];
+    }
+
+    // Default market-size questions
     if (!hasEdits) {
       return [
         "Show TAM breakdown by region",
@@ -65,6 +156,17 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
     ];
   };
 
+  const getScoutTitle = () => {
+    switch (context) {
+      case 'competitor-landscape':
+        return 'Scout — Competitor Landscape';
+      case 'industry-trends':
+        return 'Scout — Industry Trends';
+      default:
+        return 'Scout — Market Size & Opportunity';
+    }
+  };
+
   if (!showScoutChat) return null;
 
   return (
@@ -78,7 +180,7 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
             <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-400/30 to-green-400/30 animate-pulse"></div>
           </div>
           <h3 className="text-lg font-semibold text-gray-900">
-            Scout — Market Size & Opportunity
+            {getScoutTitle()}
           </h3>
         </div>
         <Button
