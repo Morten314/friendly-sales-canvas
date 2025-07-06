@@ -15,7 +15,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { EditRecord } from '@/types';
+import { EditRecord, TrendSnapshot, IndustryTrendsRecommendations } from '@/types';
 import MarketIntelligenceTab from '@/components/market-research/MarketIntelligenceTab';
 import { ExportPDF } from '@/components/modals/ExportPDF';
 import { SaveToWorkspace } from '@/components/modals/SaveToWorkspace';
@@ -55,12 +55,12 @@ const MarketResearch = () => {
   const [industryTrendsAiAdoption, setIndustryTrendsAiAdoption] = useState("75%");
   const [industryTrendsCloudMigration, setIndustryTrendsCloudMigration] = useState("60%");
   const [industryTrendsRegulatory, setIndustryTrendsRegulatory] = useState("High");
-  const [industryTrendSnapshots, setIndustryTrendSnapshots] = useState([
+  const [industryTrendSnapshots, setIndustryTrendSnapshots] = useState<TrendSnapshot[]>([
     { title: "AI Adoption", metric: "75% increase", type: "adoption" },
     { title: "Cloud Migration", metric: "60% growth", type: "growth" },
     { title: "Market Performance", metric: "+15% YoY", type: "performance" }
   ]);
-  const [industryTrendsRecommendations, setIndustryTrendsRecommendations] = useState({
+  const [industryTrendsRecommendations, setIndustryTrendsRecommendations] = useState<IndustryTrendsRecommendations>({
     primaryFocus: "Invest in AI-driven solutions",
     marketEntry: "Focus on cloud-based offerings"
   });
