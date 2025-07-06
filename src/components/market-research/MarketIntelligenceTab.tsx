@@ -1,22 +1,5 @@
-
 import React from 'react';
-import {
-  BarChart3,
-  Bot,
-  Edit,
-  Target,
-  TrendingUp,
-  PieChart,
-  X,
-  FileText,
-  Save,
-  Share,
-  Clock,
-  Zap,
-  Crown,
-  ArrowUp,
-  ArrowDown,
-} from 'lucide-react';
+import { BarChart3, Bot, Edit, Target, TrendingUp, PieChart, X, FileText, Save, Share, Clock, Zap, Crown, ArrowUp, ArrowDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -25,7 +8,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { Badge } from '@/components/ui/badge';
 import MiniPieChart from '@/components/ui/MiniPieChart';
 import MiniLineChart from '@/components/ui/MiniLineChart';
-
 interface EditRecord {
   id: string;
   timestamp: string;
@@ -35,18 +17,15 @@ interface EditRecord {
   oldValue: string;
   newValue: string;
 }
-
 interface TrendSnapshot {
   title: string;
   metric: string;
   type: 'growth' | 'performance' | 'adoption';
 }
-
 interface IndustryTrendsRecommendations {
   primaryFocus: string;
   marketEntry: string;
 }
-
 interface MarketIntelligenceTabProps {
   isEditing: boolean;
   isSplitView: boolean;
@@ -101,7 +80,6 @@ interface MarketIntelligenceTabProps {
   onSaveToWorkspace: () => void;
   onGenerateShareableLink: () => void;
 }
-
 const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
   isEditing,
   isSplitView,
@@ -157,16 +135,13 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
   onGenerateShareableLink
 }) => {
   const [competitorExpanded, setCompetitorExpanded] = React.useState(false);
-
   const handleMarketSizeSaveChanges = () => {
     // Save the changes first
     onSaveChanges();
     // Then trigger the Scout chat panel
     onScoutIconClick('market-size');
   };
-
-  return (
-    <div className={`${isSplitView ? 'w-3/5' : 'flex-1'} transition-all duration-500 space-y-6`}>
+  return <div className={`${isSplitView ? 'w-3/5' : 'flex-1'} transition-all duration-500 space-y-6`}>
       {/* Market Size & Opportunity Section */}
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-6">
@@ -175,23 +150,12 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
             Market Size & Opportunity
           </h2>
           <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onToggleEdit}
-              className="text-blue-800 hover:text-blue-900"
-            >
+            <Button variant="ghost" size="sm" onClick={onToggleEdit} className="text-blue-800 hover:text-blue-900">
               <Edit className="h-4 w-4" />
             </Button>
-            {!isSplitView && (
-              <Tooltip>
+            {!isSplitView && <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onScoutIconClick('market-size')}
-                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-all duration-200 hover:shadow-md hover:shadow-blue-200/50 relative"
-                  >
+                  <Button variant="ghost" size="sm" onClick={() => onScoutIconClick('market-size')} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-all duration-200 hover:shadow-md hover:shadow-blue-200/50 relative">
                     <div className="absolute inset-0 rounded-md bg-gradient-to-r from-blue-400/20 to-green-400/20 animate-pulse opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
                     <Bot className="h-5 w-5 relative z-10" />
                   </Button>
@@ -199,24 +163,16 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
                 <TooltipContent>
                   <p>Explore More with Scout</p>
                 </TooltipContent>
-              </Tooltip>
-            )}
+              </Tooltip>}
           </div>
         </div>
 
-        {isEditing ? (
-          <div className="space-y-8">
+        {isEditing ? <div className="space-y-8">
             {/* Executive Summary Edit */}
-            {!deletedSections.has('executive-summary') && (
-              <div className="relative group">
+            {!deletedSections.has('executive-summary') && <div className="relative group">
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onDeleteSection('executive-summary')}
-                      className="absolute -top-2 -right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50"
-                    >
+                    <Button variant="ghost" size="sm" onClick={() => onDeleteSection('executive-summary')} className="absolute -top-2 -right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50">
                       <X className="h-4 w-4" />
                     </Button>
                   </TooltipTrigger>
@@ -228,28 +184,15 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
                   <Label htmlFor="executiveSummary" className="text-sm font-medium text-gray-700 mb-2 block">
                     Executive Summary
                   </Label>
-                  <Textarea
-                    id="executiveSummary"
-                    value={executiveSummary}
-                    onChange={(e) => onExecutiveSummaryChange(e.target.value)}
-                    className="w-full h-32 resize-none"
-                    placeholder="Enter executive summary..."
-                  />
+                  <Textarea id="executiveSummary" value={executiveSummary} onChange={e => onExecutiveSummaryChange(e.target.value)} className="w-full h-32 resize-none" placeholder="Enter executive summary..." />
                 </div>
-              </div>
-            )}
+              </div>}
 
             {/* Key Metrics Edit */}
-            {!deletedSections.has('key-metrics') && (
-              <div className="relative group">
+            {!deletedSections.has('key-metrics') && <div className="relative group">
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onDeleteSection('key-metrics')}
-                      className="absolute -top-2 -right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50"
-                    >
+                    <Button variant="ghost" size="sm" onClick={() => onDeleteSection('key-metrics')} className="absolute -top-2 -right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50">
                       <X className="h-4 w-4" />
                     </Button>
                   </TooltipTrigger>
@@ -264,51 +207,29 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
                       <Label htmlFor="tamValue" className="text-sm font-medium text-gray-700 mb-2 block">
                         Total Addressable Market
                       </Label>
-                      <Input
-                        id="tamValue"
-                        value={tamValue}
-                        onChange={(e) => onTamValueChange(e.target.value)}
-                        placeholder="e.g., $4.2B"
-                      />
+                      <Input id="tamValue" value={tamValue} onChange={e => onTamValueChange(e.target.value)} placeholder="e.g., $4.2B" />
                     </div>
                     <div>
                       <Label htmlFor="samValue" className="text-sm font-medium text-gray-700 mb-2 block">
                         Serviceable Addressable Market
                       </Label>
-                      <Input
-                        id="samValue"
-                        value={samValue}
-                        onChange={(e) => onSamValueChange(e.target.value)}
-                        placeholder="e.g., $2.1B"
-                      />
+                      <Input id="samValue" value={samValue} onChange={e => onSamValueChange(e.target.value)} placeholder="e.g., $2.1B" />
                     </div>
                     <div>
                       <Label htmlFor="apacGrowthRate" className="text-sm font-medium text-gray-700 mb-2 block">
                         APAC Growth Rate
                       </Label>
-                      <Input
-                        id="apacGrowthRate"
-                        value={apacGrowthRate}
-                        onChange={(e) => onApacGrowthRateChange(e.target.value)}
-                        placeholder="e.g., 25%"
-                      />
+                      <Input id="apacGrowthRate" value={apacGrowthRate} onChange={e => onApacGrowthRateChange(e.target.value)} placeholder="e.g., 25%" />
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
+              </div>}
 
             {/* Strategic Recommendations Edit */}
-            {!deletedSections.has('strategic-recommendations') && (
-              <div className="relative group">
+            {!deletedSections.has('strategic-recommendations') && <div className="relative group">
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onDeleteSection('strategic-recommendations')}
-                      className="absolute -top-2 -right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50"
-                    >
+                    <Button variant="ghost" size="sm" onClick={() => onDeleteSection('strategic-recommendations')} className="absolute -top-2 -right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50">
                       <X className="h-4 w-4" />
                     </Button>
                   </TooltipTrigger>
@@ -320,34 +241,19 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
                   <Label className="text-sm font-medium text-gray-700 mb-2 block">
                     Strategic Recommendations
                   </Label>
-                  {strategicRecommendations.map((rec, index) => (
-                    <Textarea
-                      key={index}
-                      value={rec}
-                      onChange={(e) => {
-                        const newRecs = [...strategicRecommendations];
-                        newRecs[index] = e.target.value;
-                        onStrategicRecommendationsChange(newRecs);
-                      }}
-                      className="w-full h-20 resize-none mb-3"
-                      placeholder={`Strategic recommendation ${index + 1}...`}
-                    />
-                  ))}
+                  {strategicRecommendations.map((rec, index) => <Textarea key={index} value={rec} onChange={e => {
+              const newRecs = [...strategicRecommendations];
+              newRecs[index] = e.target.value;
+              onStrategicRecommendationsChange(newRecs);
+            }} className="w-full h-20 resize-none mb-3" placeholder={`Strategic recommendation ${index + 1}...`} />)}
                 </div>
-              </div>
-            )}
+              </div>}
 
             {/* Market Entry Edit */}
-            {!deletedSections.has('market-entry') && (
-              <div className="relative group">
+            {!deletedSections.has('market-entry') && <div className="relative group">
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onDeleteSection('market-entry')}
-                      className="absolute -top-2 -right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50"
-                    >
+                    <Button variant="ghost" size="sm" onClick={() => onDeleteSection('market-entry')} className="absolute -top-2 -right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50">
                       <X className="h-4 w-4" />
                     </Button>
                   </TooltipTrigger>
@@ -359,28 +265,15 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
                   <Label htmlFor="marketEntry" className="text-sm font-medium text-gray-700 mb-2 block">
                     Market Entry Strategy
                   </Label>
-                  <Textarea
-                    id="marketEntry"
-                    value={marketEntry}
-                    onChange={(e) => onMarketEntryChange(e.target.value)}
-                    className="w-full h-32 resize-none"
-                    placeholder="Enter market entry strategy..."
-                  />
+                  <Textarea id="marketEntry" value={marketEntry} onChange={e => onMarketEntryChange(e.target.value)} className="w-full h-32 resize-none" placeholder="Enter market entry strategy..." />
                 </div>
-              </div>
-            )}
+              </div>}
 
             {/* Market Drivers Edit */}
-            {!deletedSections.has('market-drivers') && (
-              <div className="relative group">
+            {!deletedSections.has('market-drivers') && <div className="relative group">
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onDeleteSection('market-drivers')}
-                      className="absolute -top-2 -right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50"
-                    >
+                    <Button variant="ghost" size="sm" onClick={() => onDeleteSection('market-drivers')} className="absolute -top-2 -right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50">
                       <X className="h-4 w-4" />
                     </Button>
                   </TooltipTrigger>
@@ -392,22 +285,13 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
                   <Label className="text-sm font-medium text-gray-700 mb-2 block">
                     Key Market Drivers
                   </Label>
-                  {marketDrivers.map((driver, index) => (
-                    <Textarea
-                      key={index}
-                      value={driver}
-                      onChange={(e) => {
-                        const newDrivers = [...marketDrivers];
-                        newDrivers[index] = e.target.value;
-                        onMarketDriversChange(newDrivers);
-                      }}
-                      className="w-full h-16 resize-none mb-3"
-                      placeholder={`Market driver ${index + 1}...`}
-                    />
-                  ))}
+                  {marketDrivers.map((driver, index) => <Textarea key={index} value={driver} onChange={e => {
+              const newDrivers = [...marketDrivers];
+              newDrivers[index] = e.target.value;
+              onMarketDriversChange(newDrivers);
+            }} className="w-full h-16 resize-none mb-3" placeholder={`Market driver ${index + 1}...`} />)}
                 </div>
-              </div>
-            )}
+              </div>}
 
             {/* Save/Cancel Buttons */}
             <div className="flex items-center gap-3 pt-6 border-t">
@@ -417,13 +301,7 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
               
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={onEditHistoryOpen}
-                    className={`text-gray-600 hover:text-gray-700 hover:bg-gray-50 transition-all duration-200 ${editHistory.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    disabled={editHistory.length === 0}
-                  >
+                  <Button variant="ghost" size="sm" onClick={onEditHistoryOpen} className={`text-gray-600 hover:text-gray-700 hover:bg-gray-50 transition-all duration-200 ${editHistory.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={editHistory.length === 0}>
                     <Clock className="h-4 w-4" />
                     Edit History
                   </Button>
@@ -435,12 +313,7 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
 
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onScoutIconClick('market-size')}
-                    className="text-blue-600 hover:text-blue-700 bg-blue-50 border border-blue-200 hover:shadow-md hover:shadow-blue-200/50 transition-all duration-200 relative"
-                  >
+                  <Button variant="ghost" size="sm" onClick={() => onScoutIconClick('market-size')} className="text-blue-600 hover:text-blue-700 bg-blue-50 border border-blue-200 hover:shadow-md hover:shadow-blue-200/50 transition-all duration-200 relative">
                     <div className="absolute inset-0 rounded-md bg-gradient-to-r from-blue-400/20 to-green-400/20 opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
                     <Bot className="h-4 w-4 relative z-10" />
                   </Button>
@@ -455,38 +328,21 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
             <div className="border-t pt-6">
               <h4 className="text-sm font-medium text-gray-900 mb-3">Export Options</h4>
               <div className="flex flex-wrap gap-3">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={onExportPDF}
-                  className="flex items-center gap-2"
-                >
+                <Button variant="outline" size="sm" onClick={onExportPDF} className="flex items-center gap-2">
                   <FileText className="h-4 w-4" />
                   Save PDF
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={onSaveToWorkspace}
-                  className="flex items-center gap-2"
-                >
+                <Button variant="outline" size="sm" onClick={onSaveToWorkspace} className="flex items-center gap-2">
                   <Save className="h-4 w-4" />
                   Save to Workspace
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={onGenerateShareableLink}
-                  className="flex items-center gap-2"
-                >
+                <Button variant="outline" size="sm" onClick={onGenerateShareableLink} className="flex items-center gap-2">
                   <Share className="h-4 w-4" />
                   Shareable Link
                 </Button>
               </div>
             </div>   
-          </div>
-        ) : (
-          <div className="space-y-6">
+          </div> : <div className="space-y-6">
             {/* Executive Summary - Always Visible */}
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -516,19 +372,12 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
             </div>
 
             {/* Read More Button - Only show when not expanded and not in split view */}
-            {!isExpanded && !isSplitView && (
-              <Button
-                variant="secondary"
-                onClick={() => onExpandToggle(true)}
-                className="w-full"
-              >
+            {!isExpanded && !isSplitView && <Button variant="secondary" onClick={() => onExpandToggle(true)} className="w-full">
                 Read More
-              </Button>
-            )}
+              </Button>}
 
             {/* Expanded Content */}
-            {(isExpanded || isSplitView) && (
-              <div className="animate-fade-in space-y-8">
+            {(isExpanded || isSplitView) && <div className="animate-fade-in space-y-8">
                 <div className="border-t pt-6">
                   <h2 className="text-2xl font-bold text-gray-900 mb-8">
                     Market Size & Opportunity Report
@@ -542,12 +391,10 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
                     </h3>
                     <div className="bg-green-50 p-4 rounded-lg border border-green-200">
                       <ul className="space-y-2 text-gray-700">
-                        {strategicRecommendations.map((rec, index) => (
-                          <li key={index} className="flex items-start gap-2">
+                        {strategicRecommendations.map((rec, index) => <li key={index} className="flex items-start gap-2">
                             <div className="w-2 h-2 rounded-full bg-green-500 mt-2 flex-shrink-0"></div>
                             {rec}
-                          </li>
-                        ))}
+                          </li>)}
                       </ul>
                     </div>
                   </div>
@@ -573,39 +420,45 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                       <div className="bg-white border border-gray-200 rounded-lg p-4">
                         <h4 className="font-medium text-gray-900 mb-3">Market Size by Segment</h4>
-                        <MiniPieChart 
-                          data={[
-                            { name: "Enterprise", value: 45, color: "#3B82F6" },
-                            { name: "Mid-Market", value: 35, color: "#10B981" },
-                            { name: "SMB", value: 20, color: "#8B5CF6" }
-                          ]}
-                          title=""
-                        />
+                        <MiniPieChart data={[{
+                    name: "Enterprise",
+                    value: 45,
+                    color: "#3B82F6"
+                  }, {
+                    name: "Mid-Market",
+                    value: 35,
+                    color: "#10B981"
+                  }, {
+                    name: "SMB",
+                    value: 20,
+                    color: "#8B5CF6"
+                  }]} title="" />
                       </div>
                       <div className="bg-white border border-gray-200 rounded-lg p-4">
                         <h4 className="font-medium text-gray-900 mb-3">Growth Projections</h4>
-                        <MiniLineChart 
-                          data={[
-                            { name: "2023", value: 100 },
-                            { name: "2024", value: 115 },
-                            { name: "2025", value: 132 },
-                            { name: "2026", value: 152 }
-                          ]}
-                          title=""
-                          color="#3B82F6"
-                        />
+                        <MiniLineChart data={[{
+                    name: "2023",
+                    value: 100
+                  }, {
+                    name: "2024",
+                    value: 115
+                  }, {
+                    name: "2025",
+                    value: 132
+                  }, {
+                    name: "2026",
+                    value: 152
+                  }]} title="" color="#3B82F6" />
                       </div>
                     </div>
 
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <h4 className="font-medium text-gray-900 mb-3">Key Market Drivers</h4>
                       <ul className="space-y-2 text-gray-700">
-                        {marketDrivers.map((driver, index) => (
-                          <li key={index} className="flex items-start gap-2">
+                        {marketDrivers.map((driver, index) => <li key={index} className="flex items-start gap-2">
                             <div className="w-2 h-2 rounded-full bg-purple-500 mt-2 flex-shrink-0"></div>
                             {driver}
-                          </li>
-                        ))}
+                          </li>)}
                       </ul>
                     </div>
                   </div>
@@ -614,30 +467,15 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
                   <div className="border-t pt-6">
                     <h4 className="text-sm font-medium text-gray-900 mb-3">Export Options</h4>
                     <div className="flex flex-wrap gap-3">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={onExportPDF}
-                        className="flex items-center gap-2"
-                      >
+                      <Button variant="outline" size="sm" onClick={onExportPDF} className="flex items-center gap-2">
                         <FileText className="h-4 w-4" />
                         Save PDF
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={onSaveToWorkspace}
-                        className="flex items-center gap-2"
-                      >
+                      <Button variant="outline" size="sm" onClick={onSaveToWorkspace} className="flex items-center gap-2">
                         <Save className="h-4 w-4" />
                         Save to Workspace
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={onGenerateShareableLink}
-                        className="flex items-center gap-2"
-                      >
+                      <Button variant="outline" size="sm" onClick={onGenerateShareableLink} className="flex items-center gap-2">
                         <Share className="h-4 w-4" />
                         Shareable Link
                       </Button>
@@ -645,20 +483,12 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
                   </div>
 
                   {/* Show Less Button - Only when not in split view */}
-                  {!isSplitView && (
-                    <Button
-                      variant="secondary"
-                      onClick={() => onExpandToggle(false)}
-                      className="w-full"
-                    >
+                  {!isSplitView && <Button variant="secondary" onClick={() => onExpandToggle(false)} className="w-full">
                       Show Less
-                    </Button>
-                  )}
+                    </Button>}
                 </div>
-              </div>
-            )}
-          </div>
-        )}
+              </div>}
+          </div>}
       </div>
 
       {/* Industry Trends Section */}
@@ -669,23 +499,12 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
             Industry Trends
           </h2>
           <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onIndustryTrendsToggleEdit}
-              className="text-purple-800 hover:text-purple-900"
-            >
+            <Button variant="ghost" size="sm" onClick={onIndustryTrendsToggleEdit} className="text-purple-800 hover:text-purple-900">
               <Edit className="h-4 w-4" />
             </Button>
-            {!isSplitView && (
-              <Tooltip>
+            {!isSplitView && <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onScoutIconClick('industry-trends')}
-                    className="text-purple-600 hover:text-purple-700 hover:bg-purple-50 transition-all duration-200 hover:shadow-md hover:shadow-purple-200/50 relative"
-                  >
+                  <Button variant="ghost" size="sm" onClick={() => onScoutIconClick('industry-trends')} className="text-purple-600 hover:text-purple-700 hover:bg-purple-50 transition-all duration-200 hover:shadow-md hover:shadow-purple-200/50 relative">
                     <div className="absolute inset-0 rounded-md bg-gradient-to-r from-purple-400/20 to-blue-400/20 animate-pulse opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
                     <Bot className="h-5 w-5 relative z-10" />
                   </Button>
@@ -693,24 +512,16 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
                 <TooltipContent>
                   <p>Explore More with Scout</p>
                 </TooltipContent>
-              </Tooltip>
-            )}
+              </Tooltip>}
           </div>
         </div>
 
-        {isIndustryTrendsEditing ? (
-          <div className="space-y-8">
+        {isIndustryTrendsEditing ? <div className="space-y-8">
             {/* Executive Summary Edit */}
-            {!industryTrendsDeletedSections.has('executive-summary') && (
-              <div className="relative group">
+            {!industryTrendsDeletedSections.has('executive-summary') && <div className="relative group">
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onIndustryTrendsDeleteSection('executive-summary')}
-                      className="absolute -top-2 -right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50"
-                    >
+                    <Button variant="ghost" size="sm" onClick={() => onIndustryTrendsDeleteSection('executive-summary')} className="absolute -top-2 -right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50">
                       <X className="h-4 w-4" />
                     </Button>
                   </TooltipTrigger>
@@ -722,16 +533,9 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
                   <Label htmlFor="industryTrendsExecutiveSummary" className="text-sm font-medium text-gray-700 mb-2 block">
                     Executive Summary
                   </Label>
-                  <Textarea
-                    id="industryTrendsExecutiveSummary"
-                    value={industryTrendsExecutiveSummary}
-                    onChange={(e) => onIndustryTrendsExecutiveSummaryChange(e.target.value)}
-                    className="w-full h-32 resize-none"
-                    placeholder="Enter executive summary..."
-                  />
+                  <Textarea id="industryTrendsExecutiveSummary" value={industryTrendsExecutiveSummary} onChange={e => onIndustryTrendsExecutiveSummaryChange(e.target.value)} className="w-full h-32 resize-none" placeholder="Enter executive summary..." />
                 </div>
-              </div>
-            )}
+              </div>}
 
             {/* Save/Cancel Buttons */}
             <div className="flex items-center gap-3 pt-6 border-t">
@@ -741,13 +545,7 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
               
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={onIndustryTrendsEditHistoryOpen}
-                    className={`text-gray-600 hover:text-gray-700 hover:bg-gray-50 transition-all duration-200 ${industryTrendsEditHistory.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    disabled={industryTrendsEditHistory.length === 0}
-                  >
+                  <Button variant="ghost" size="sm" onClick={onIndustryTrendsEditHistoryOpen} className={`text-gray-600 hover:text-gray-700 hover:bg-gray-50 transition-all duration-200 ${industryTrendsEditHistory.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={industryTrendsEditHistory.length === 0}>
                     <Clock className="h-4 w-4" />
                     Edit History
                   </Button>
@@ -759,12 +557,7 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
 
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onScoutIconClick('industry-trends')}
-                    className="text-purple-600 hover:text-purple-700 bg-purple-50 border border-purple-200 hover:shadow-md hover:shadow-purple-200/50 transition-all duration-200 relative"
-                  >
+                  <Button variant="ghost" size="sm" onClick={() => onScoutIconClick('industry-trends')} className="text-purple-600 hover:text-purple-700 bg-purple-50 border border-purple-200 hover:shadow-md hover:shadow-purple-200/50 transition-all duration-200 relative">
                     <div className="absolute inset-0 rounded-md bg-gradient-to-r from-purple-400/20 to-blue-400/20 opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
                     <Bot className="h-4 w-4 relative z-10" />
                   </Button>
@@ -779,38 +572,21 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
             <div className="border-t pt-6">
               <h4 className="text-sm font-medium text-gray-900 mb-3">Export Options</h4>
               <div className="flex flex-wrap gap-3">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={onExportPDF}
-                  className="flex items-center gap-2"
-                >
+                <Button variant="outline" size="sm" onClick={onExportPDF} className="flex items-center gap-2">
                   <FileText className="h-4 w-4" />
                   Save PDF
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={onSaveToWorkspace}
-                  className="flex items-center gap-2"
-                >
+                <Button variant="outline" size="sm" onClick={onSaveToWorkspace} className="flex items-center gap-2">
                   <Save className="h-4 w-4" />
                   Save to Workspace
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={onGenerateShareableLink}
-                  className="flex items-center gap-2"
-                >
+                <Button variant="outline" size="sm" onClick={onGenerateShareableLink} className="flex items-center gap-2">
                   <Share className="h-4 w-4" />
                   Shareable Link
                 </Button>
               </div>
             </div>
-          </div>
-        ) : (
-          <div className="space-y-6">
+          </div> : <div className="space-y-6">
             {/* Default View */}
             <div>
               <p className="text-gray-700 mb-6">{industryTrendsExecutiveSummary}</p>
@@ -836,19 +612,12 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
             </div>
 
             {/* Read More Button */}
-            {!industryTrendsExpanded && !isSplitView && (
-              <Button
-                variant="secondary"
-                onClick={() => onIndustryTrendsExpandToggle(true)}
-                className="w-full"
-              >
+            {!industryTrendsExpanded && !isSplitView && <Button variant="secondary" onClick={() => onIndustryTrendsExpandToggle(true)} className="w-full">
                 Read More
-              </Button>
-            )}
+              </Button>}
 
             {/* Expanded Content */}
-            {(industryTrendsExpanded || isSplitView) && (
-              <div className="animate-fade-in space-y-8">
+            {(industryTrendsExpanded || isSplitView) && <div className="animate-fade-in space-y-8">
                 <div className="border-t pt-6">
                   <h2 className="text-2xl font-bold text-gray-900 mb-8">
                     Industry Trends Report
@@ -864,13 +633,11 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
                   <div className="mb-8">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">Key Trend Snapshots</h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      {industryTrendSnapshots.map((trend, index) => (
-                        <div key={index} className="bg-white border border-gray-200 rounded-lg p-4">
+                      {industryTrendSnapshots.map((trend, index) => <div key={index} className="bg-white border border-gray-200 rounded-lg p-4">
                           <h4 className="font-medium text-gray-900 mb-2">{trend.title}</h4>
                           <p className="text-sm text-gray-600 mb-3">{trend.metric}</p>
                           <div className="h-8 bg-gradient-to-r from-purple-100 to-blue-100 rounded"></div>
-                        </div>
-                      ))}
+                        </div>)}
                     </div>
                   </div>
 
@@ -902,12 +669,10 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">Risks & Watchouts</h3>
                     <div className="bg-red-50 p-4 rounded-lg border border-red-200">
                       <ul className="space-y-2">
-                        {industryTrendsRisks.map((risk, index) => (
-                          <li key={index} className="flex items-start gap-2 text-red-700 text-sm">
+                        {industryTrendsRisks.map((risk, index) => <li key={index} className="flex items-start gap-2 text-red-700 text-sm">
                             <div className="w-2 h-2 rounded-full bg-red-500 mt-2 flex-shrink-0"></div>
                             {risk}
-                          </li>
-                        ))}
+                          </li>)}
                       </ul>
                     </div>
                   </div>
@@ -918,27 +683,35 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                       <div className="bg-white border border-gray-200 rounded-lg p-4">
                         <h4 className="font-medium text-gray-900 mb-3">AI Adoption Trends</h4>
-                        <MiniLineChart 
-                          data={[
-                            { name: "Q1", value: 45 },
-                            { name: "Q2", value: 58 },
-                            { name: "Q3", value: 67 },
-                            { name: "Q4", value: 78 }
-                          ]}
-                          title=""
-                          color="#8B5CF6"
-                        />
+                        <MiniLineChart data={[{
+                    name: "Q1",
+                    value: 45
+                  }, {
+                    name: "Q2",
+                    value: 58
+                  }, {
+                    name: "Q3",
+                    value: 67
+                  }, {
+                    name: "Q4",
+                    value: 78
+                  }]} title="" color="#8B5CF6" />
                       </div>
                       <div className="bg-white border border-gray-200 rounded-lg p-4">
                         <h4 className="font-medium text-gray-900 mb-3">Technology Budget Allocation</h4>
-                        <MiniPieChart 
-                          data={[
-                            { name: "AI/ML", value: 35, color: "#8B5CF6" },
-                            { name: "Cloud", value: 40, color: "#3B82F6" },
-                            { name: "Security", value: 25, color: "#10B981" }
-                          ]}
-                          title=""
-                        />
+                        <MiniPieChart data={[{
+                    name: "AI/ML",
+                    value: 35,
+                    color: "#8B5CF6"
+                  }, {
+                    name: "Cloud",
+                    value: 40,
+                    color: "#3B82F6"
+                  }, {
+                    name: "Security",
+                    value: 25,
+                    color: "#10B981"
+                  }]} title="" />
                       </div>
                     </div>
                   </div>
@@ -946,30 +719,15 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
                   {/* Export Footer */}
                   <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4 -mx-6 -mb-6 rounded-b-lg">
                     <div className="flex flex-wrap gap-3 justify-center">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={onExportPDF}
-                        className="flex items-center gap-2"
-                      >
+                      <Button variant="outline" size="sm" onClick={onExportPDF} className="flex items-center gap-2">
                         <FileText className="h-4 w-4" />
                         Save PDF
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={onSaveToWorkspace}
-                        className="flex items-center gap-2"
-                      >
+                      <Button variant="outline" size="sm" onClick={onSaveToWorkspace} className="flex items-center gap-2">
                         <Save className="h-4 w-4" />
                         Save to Workspace
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={onGenerateShareableLink}
-                        className="flex items-center gap-2"
-                      >
+                      <Button variant="outline" size="sm" onClick={onGenerateShareableLink} className="flex items-center gap-2">
                         <Share className="h-4 w-4" />
                         Shareable Link
                       </Button>
@@ -977,20 +735,12 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
                   </div>
 
                   {/* Show Less Button - Only when not in split view */}
-                  {!isSplitView && (
-                    <Button
-                      variant="secondary"
-                      onClick={() => onIndustryTrendsExpandToggle(false)}
-                      className="w-full mt-6"
-                    >
+                  {!isSplitView && <Button variant="secondary" onClick={() => onIndustryTrendsExpandToggle(false)} className="w-full mt-6">
                       Show Less
-                    </Button>
-                  )}
+                    </Button>}
                 </div>
-              </div>
-            )}
-          </div>
-        )}
+              </div>}
+          </div>}
       </div>
 
       {/* Competitor Landscape Section */}
@@ -1004,22 +754,12 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
             <p className="text-sm text-gray-600 mt-1">Analyze your competitive environment & market dynamics.</p>
           </div>
           <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-blue-800 hover:text-blue-900"
-            >
+            <Button variant="ghost" size="sm" className="text-blue-800 hover:text-blue-900">
               <Edit className="h-4 w-4" />
             </Button>
-            {!isSplitView && (
-              <Tooltip>
+            {!isSplitView && <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onScoutIconClick('competitor-landscape')}
-                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-all duration-200 hover:shadow-md hover:shadow-blue-200/50 relative"
-                  >
+                  <Button variant="ghost" size="sm" onClick={() => onScoutIconClick('competitor-landscape')} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-all duration-200 hover:shadow-md hover:shadow-blue-200/50 relative">
                     <div className="absolute inset-0 rounded-md bg-gradient-to-r from-blue-400/20 to-green-400/20 animate-pulse opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
                     <Bot className="h-5 w-5 relative z-10" />
                   </Button>
@@ -1027,8 +767,7 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
                 <TooltipContent>
                   <p>Explore More with Scout</p>
                 </TooltipContent>
-              </Tooltip>
-            )}
+              </Tooltip>}
           </div>
         </div>
 
@@ -1065,9 +804,7 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
             <div className="flex flex-wrap gap-2 mb-6">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Badge variant="secondary" className="bg-blue-100 text-blue-800 cursor-pointer hover:bg-blue-200 transition-colors">
-                    Slack
-                  </Badge>
+                  
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Click for details</p>
@@ -1075,9 +812,7 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Badge variant="secondary" className="bg-blue-100 text-blue-800 cursor-pointer hover:bg-blue-200 transition-colors">
-                    Microsoft Teams
-                  </Badge>
+                  
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Click for details</p>
@@ -1085,9 +820,7 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Badge variant="secondary" className="bg-blue-100 text-blue-800 cursor-pointer hover:bg-blue-200 transition-colors">
-                    Zoom
-                  </Badge>
+                  
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Click for details</p>
@@ -1095,9 +828,7 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Badge variant="outline" className="border-green-300 text-green-700 cursor-pointer hover:bg-green-50 transition-colors">
-                    Asana
-                  </Badge>
+                  
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Click for details</p>
@@ -1105,9 +836,7 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
               </Tooltip>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Badge variant="outline" className="border-green-300 text-green-700 cursor-pointer hover:bg-green-50 transition-colors">
-                    Notion
-                  </Badge>
+                  
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Click for details</p>
@@ -1117,19 +846,12 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
           </div>
 
           {/* Read More Button */}
-          {!competitorExpanded && (
-            <Button
-              variant="secondary"
-              onClick={() => setCompetitorExpanded(true)}
-              className="w-full"
-            >
+          {!competitorExpanded && <Button variant="secondary" onClick={() => setCompetitorExpanded(true)} className="w-full">
               Read More
-            </Button>
-          )}
+            </Button>}
 
           {/* Expanded Content - Full Report */}
-          {competitorExpanded && (
-            <div className="animate-fade-in border-t pt-6 space-y-8">
+          {competitorExpanded && <div className="animate-fade-in border-t pt-6 space-y-8">
               <h2 className="text-2xl font-bold text-gray-900 mb-6">
                 Competitor Landscape Report
               </h2>
@@ -1239,27 +961,43 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div className="bg-white border border-gray-200 rounded-lg p-4">
                     <h4 className="font-medium text-gray-900 mb-3">North America</h4>
-                    <MiniPieChart 
-                      data={[
-                        { name: "Microsoft Teams", value: 40, color: "#3B82F6" },
-                        { name: "Slack", value: 32, color: "#8B5CF6" },
-                        { name: "Zoom", value: 18, color: "#10B981" },
-                        { name: "Others", value: 10, color: "#6B7280" }
-                      ]}
-                      title=""
-                    />
+                    <MiniPieChart data={[{
+                  name: "Microsoft Teams",
+                  value: 40,
+                  color: "#3B82F6"
+                }, {
+                  name: "Slack",
+                  value: 32,
+                  color: "#8B5CF6"
+                }, {
+                  name: "Zoom",
+                  value: 18,
+                  color: "#10B981"
+                }, {
+                  name: "Others",
+                  value: 10,
+                  color: "#6B7280"
+                }]} title="" />
                   </div>
                   <div className="bg-white border border-gray-200 rounded-lg p-4">
                     <h4 className="font-medium text-gray-900 mb-3">APAC Region</h4>
-                    <MiniPieChart 
-                      data={[
-                        { name: "Microsoft Teams", value: 30, color: "#3B82F6" },
-                        { name: "Zoom", value: 28, color: "#10B981" },
-                        { name: "Slack", value: 22, color: "#8B5CF6" },
-                        { name: "Others", value: 20, color: "#6B7280" }
-                      ]}
-                      title=""
-                    />
+                    <MiniPieChart data={[{
+                  name: "Microsoft Teams",
+                  value: 30,
+                  color: "#3B82F6"
+                }, {
+                  name: "Zoom",
+                  value: 28,
+                  color: "#10B981"
+                }, {
+                  name: "Slack",
+                  value: 22,
+                  color: "#8B5CF6"
+                }, {
+                  name: "Others",
+                  value: 20,
+                  color: "#6B7280"
+                }]} title="" />
                   </div>
                 </div>
               </div>
@@ -1348,29 +1086,35 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div className="bg-white border border-gray-200 rounded-lg p-4">
                     <h4 className="font-medium text-gray-900 mb-3">Market Share Growth</h4>
-                    <MiniLineChart 
-                      data={[
-                        { name: "Q1", value: 25 },
-                        { name: "Q2", value: 32 },
-                        { name: "Q3", value: 38 },
-                        { name: "Q4", value: 48 }
-                      ]}
-                      title=""
-                      color="#3B82F6"
-                    />
+                    <MiniLineChart data={[{
+                  name: "Q1",
+                  value: 25
+                }, {
+                  name: "Q2",
+                  value: 32
+                }, {
+                  name: "Q3",
+                  value: 38
+                }, {
+                  name: "Q4",
+                  value: 48
+                }]} title="" color="#3B82F6" />
                   </div>
                   <div className="bg-white border border-gray-200 rounded-lg p-4">
                     <h4 className="font-medium text-gray-900 mb-3">Feature Adoption Rate</h4>
-                    <MiniLineChart 
-                      data={[
-                        { name: "AI Tools", value: 78 },
-                        { name: "Video", value: 92 },
-                        { name: "Automation", value: 65 },
-                        { name: "Integration", value: 84 }
-                      ]}
-                      title=""
-                      color="#8B5CF6"
-                    />
+                    <MiniLineChart data={[{
+                  name: "AI Tools",
+                  value: 78
+                }, {
+                  name: "Video",
+                  value: 92
+                }, {
+                  name: "Automation",
+                  value: 65
+                }, {
+                  name: "Integration",
+                  value: 84
+                }]} title="" color="#8B5CF6" />
                   </div>
                 </div>
               </div>
@@ -1378,30 +1122,15 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
               {/* Export/Share Actions */}
               <div className="border-t pt-6">
                 <div className="flex flex-wrap gap-3 justify-center">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={onExportPDF}
-                    className="flex items-center gap-2"
-                  >
+                  <Button variant="outline" size="sm" onClick={onExportPDF} className="flex items-center gap-2">
                     <FileText className="h-4 w-4" />
                     Save PDF
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={onSaveToWorkspace}
-                    className="flex items-center gap-2"
-                  >
+                  <Button variant="outline" size="sm" onClick={onSaveToWorkspace} className="flex items-center gap-2">
                     <Save className="h-4 w-4" />
                     Save to Workspace
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={onGenerateShareableLink}
-                    className="flex items-center gap-2"
-                  >
+                  <Button variant="outline" size="sm" onClick={onGenerateShareableLink} className="flex items-center gap-2">
                     <Share className="h-4 w-4" />
                     Shareable Link
                   </Button>
@@ -1409,27 +1138,17 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
               </div>
 
               {/* Show Less Button */}
-              <Button
-                variant="secondary"
-                onClick={() => setCompetitorExpanded(false)}
-                className="w-full"
-              >
+              <Button variant="secondary" onClick={() => setCompetitorExpanded(false)} className="w-full">
                 Show Less
               </Button>
-            </div>
-          )}
+            </div>}
         </div>
 
         {/* Persistent Scout Agent Icon */}
         <div className="absolute bottom-4 right-4">
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onScoutIconClick('competitor-landscape')}
-                className="bg-blue-600 text-white hover:bg-blue-700 rounded-full p-2 shadow-lg hover:shadow-xl transition-all duration-200"
-              >
+              <Button variant="ghost" size="sm" onClick={() => onScoutIconClick('competitor-landscape')} className="bg-blue-600 text-white hover:bg-blue-700 rounded-full p-2 shadow-lg hover:shadow-xl transition-all duration-200">
                 <Bot className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
@@ -1439,8 +1158,6 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
           </Tooltip>
         </div>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default MarketIntelligenceTab;
