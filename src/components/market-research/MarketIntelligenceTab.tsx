@@ -155,6 +155,13 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
 }) => {
   const [competitorExpanded, setCompetitorExpanded] = React.useState(true);
 
+  const handleMarketSizeSaveChanges = () => {
+    // Save the changes first
+    onSaveChanges();
+    // Then trigger the Scout chat panel
+    onScoutIconClick('market-size');
+  };
+
   return (
     <div className={`${isSplitView ? 'w-3/5' : 'flex-1'} transition-all duration-500 space-y-6`}>
       {/* Market Size & Opportunity Section */}
@@ -401,7 +408,7 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
 
             {/* Save/Cancel Buttons */}
             <div className="flex items-center gap-3 pt-6 border-t">
-              <Button onClick={onSaveChanges}>Save Changes</Button>
+              <Button onClick={handleMarketSizeSaveChanges}>Save Changes</Button>
               <Button variant="outline" onClick={onCancelEdit}>Cancel</Button>
               <div className="flex-1"></div>
               
@@ -475,7 +482,6 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
               </div>
             </div>   
           </div>
-
 
         ) : (
           <div className="space-y-6">
