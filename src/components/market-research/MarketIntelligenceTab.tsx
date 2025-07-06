@@ -1148,9 +1148,7 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
         <div className="absolute bottom-4 right-4">
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="sm" onClick={() => onScoutIconClick('competitor-landscape')} className="bg-blue-600 text-white hover:bg-blue-700 rounded-full p-2 shadow-lg hover:shadow-xl transition-all duration-200">
-                <Bot className="h-4 w-4" />
-              </Button>
+              
             </TooltipTrigger>
             <TooltipContent>
               <p>Explore More with Scout</p>
