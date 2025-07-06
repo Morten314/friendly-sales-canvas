@@ -8,8 +8,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { Badge } from '@/components/ui/badge';
 import MiniPieChart from '@/components/ui/MiniPieChart';
 import MiniLineChart from '@/components/ui/MiniLineChart';
-import ScoutChatPanel from './ScoutChatPanel';
-
 interface EditRecord {
   id: string;
   timestamp: string;
@@ -19,18 +17,15 @@ interface EditRecord {
   oldValue: string;
   newValue: string;
 }
-
 interface TrendSnapshot {
   title: string;
   metric: string;
   type: 'growth' | 'performance' | 'adoption';
 }
-
 interface IndustryTrendsRecommendations {
   primaryFocus: string;
   marketEntry: string;
 }
-
 interface MarketIntelligenceTabProps {
   isEditing: boolean;
   isSplitView: boolean;
@@ -59,14 +54,6 @@ interface MarketIntelligenceTabProps {
   industryTrendsRecommendations: IndustryTrendsRecommendations;
   industryTrendsRisks: string[];
   industryTrendsLastEditedField: string;
-  // Competitor Landscape props
-  isCompetitorEditing: boolean;
-  competitorHasEdits: boolean;
-  competitorDeletedSections: Set<string>;
-  competitorEditHistory: EditRecord[];
-  competitorExecutiveSummary: string;
-  competitorLastEditedField: string;
-  showCompetitorScoutChat: boolean;
   onToggleEdit: () => void;
   onScoutIconClick: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape') => void;
   onEditHistoryOpen: () => void;
@@ -89,18 +76,10 @@ interface MarketIntelligenceTabProps {
   onIndustryTrendsEditHistoryOpen: () => void;
   onIndustryTrendsExpandToggle: (expanded: boolean) => void;
   onIndustryTrendsExecutiveSummaryChange: (value: string) => void;
-  // Competitor Landscape handlers
-  onCompetitorToggleEdit: () => void;
-  onCompetitorSaveChanges: () => void;
-  onCompetitorCancelEdit: () => void;
-  onCompetitorDeleteSection: (sectionId: string) => void;
-  onCompetitorExecutiveSummaryChange: (value: string) => void;
-  onCompetitorScoutChatClose: () => void;
   onExportPDF: () => void;
   onSaveToWorkspace: () => void;
   onGenerateShareableLink: () => void;
 }
-
 const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
   isEditing,
   isSplitView,
@@ -129,14 +108,6 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
   industryTrendsRecommendations,
   industryTrendsRisks,
   industryTrendsLastEditedField,
-  // Competitor Landscape props
-  isCompetitorEditing,
-  competitorHasEdits,
-  competitorDeletedSections,
-  competitorEditHistory,
-  competitorExecutiveSummary,
-  competitorLastEditedField,
-  showCompetitorScoutChat,
   onToggleEdit,
   onScoutIconClick,
   onEditHistoryOpen,
@@ -159,60 +130,44 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
   onIndustryTrendsEditHistoryOpen,
   onIndustryTrendsExpandToggle,
   onIndustryTrendsExecutiveSummaryChange,
-  // Competitor Landscape handlers
-  onCompetitorToggleEdit,
-  onCompetitorSaveChanges,
-  onCompetitorCancelEdit,
-  onCompetitorDeleteSection,
-  onCompetitorExecutiveSummaryChange,
-  onCompetitorScoutChatClose,
   onExportPDF,
   onSaveToWorkspace,
   onGenerateShareableLink
 }) => {
   const [competitorExpanded, setCompetitorExpanded] = React.useState(false);
-
   const handleMarketSizeSaveChanges = () => {
     // Save the changes first
     onSaveChanges();
     // Then trigger the Scout chat panel
     onScoutIconClick('market-size');
   };
-
-  const handleCompetitorSaveChanges = () => {
-    // Save the changes first
-    onCompetitorSaveChanges();
-  };
-
-  return (
-    <div className="flex gap-6">
-      <div className={`${showCompetitorScoutChat ? 'w-3/5' : 'flex-1'} transition-all duration-500 space-y-6`}>
-        {/* Market Size & Opportunity Section */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-blue-600" />
-              Market Size & Opportunity
-            </h2>
-            <div className="flex items-center gap-3">
-              <Button variant="ghost" size="sm" onClick={onToggleEdit} className="text-blue-800 hover:text-blue-900">
-                <Edit className="h-4 w-4" />
-              </Button>
-              {!isSplitView && <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="sm" onClick={() => onScoutIconClick('market-size')} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-all duration-200 hover:shadow-md hover:shadow-blue-200/50 relative">
-                      <div className="absolute inset-0 rounded-md bg-gradient-to-r from-blue-400/20 to-green-400/20 animate-pulse opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
-                      <Bot className="h-5 w-5 relative z-10" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Explore More with Scout</p>
-                  </TooltipContent>
-                </Tooltip>}
-            </div>
+  return <div className={`${isSplitView ? 'w-3/5' : 'flex-1'} transition-all duration-500 space-y-6`}>
+      {/* Market Size & Opportunity Section */}
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+            <BarChart3 className="h-5 w-5 text-blue-600" />
+            Market Size & Opportunity
+          </h2>
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="sm" onClick={onToggleEdit} className="text-blue-800 hover:text-blue-900">
+              <Edit className="h-4 w-4" />
+            </Button>
+            {!isSplitView && <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="sm" onClick={() => onScoutIconClick('market-size')} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-all duration-200 hover:shadow-md hover:shadow-blue-200/50 relative">
+                    <div className="absolute inset-0 rounded-md bg-gradient-to-r from-blue-400/20 to-green-400/20 animate-pulse opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
+                    <Bot className="h-5 w-5 relative z-10" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Explore More with Scout</p>
+                </TooltipContent>
+              </Tooltip>}
           </div>
+        </div>
 
-          {isEditing ? <div className="space-y-8">
+        {isEditing ? <div className="space-y-8">
             {/* Executive Summary Edit */}
             {!deletedSections.has('executive-summary') && <div className="relative group">
                 <Tooltip>
@@ -534,34 +489,34 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
                 </div>
               </div>}
           </div>}
+      </div>
+
+      {/* Industry Trends Section */}
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+            <Zap className="h-5 w-5 text-purple-600" />
+            Industry Trends
+          </h2>
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="sm" onClick={onIndustryTrendsToggleEdit} className="text-purple-800 hover:text-purple-900">
+              <Edit className="h-4 w-4" />
+            </Button>
+            {!isSplitView && <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="sm" onClick={() => onScoutIconClick('industry-trends')} className="text-purple-600 hover:text-purple-700 hover:bg-purple-50 transition-all duration-200 hover:shadow-md hover:shadow-purple-200/50 relative">
+                    <div className="absolute inset-0 rounded-md bg-gradient-to-r from-purple-400/20 to-blue-400/20 animate-pulse opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
+                    <Bot className="h-5 w-5 relative z-10" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Explore More with Scout</p>
+                </TooltipContent>
+              </Tooltip>}
+          </div>
         </div>
 
-        {/* Industry Trends Section */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-              <Zap className="h-5 w-5 text-purple-600" />
-              Industry Trends
-            </h2>
-            <div className="flex items-center gap-3">
-              <Button variant="ghost" size="sm" onClick={onIndustryTrendsToggleEdit} className="text-purple-800 hover:text-purple-900">
-                <Edit className="h-4 w-4" />
-              </Button>
-              {!isSplitView && <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="sm" onClick={() => onScoutIconClick('industry-trends')} className="text-purple-600 hover:text-purple-700 hover:bg-purple-50 transition-all duration-200 hover:shadow-md hover:shadow-purple-200/50 relative">
-                      <div className="absolute inset-0 rounded-md bg-gradient-to-r from-purple-400/20 to-blue-400/20 animate-pulse opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
-                      <Bot className="h-5 w-5 relative z-10" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Explore More with Scout</p>
-                  </TooltipContent>
-                </Tooltip>}
-            </div>
-          </div>
-
-          {isIndustryTrendsEditing ? <div className="space-y-8">
+        {isIndustryTrendsEditing ? <div className="space-y-8">
             {/* Executive Summary Edit */}
             {!industryTrendsDeletedSections.has('executive-summary') && <div className="relative group">
                 <Tooltip>
@@ -786,237 +741,227 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
                 </div>
               </div>}
           </div>}
+      </div>
+
+      {/* Competitor Landscape Section */}
+      <div className="bg-white rounded-lg border border-gray-200 p-6 relative">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+              <Crown className="h-5 w-5 text-purple-600" />
+              Competitor Landscape
+            </h2>
+            <p className="text-sm text-gray-600 mt-1">Analyze your competitive environment & market dynamics.</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="sm" className="text-blue-800 hover:text-blue-900">
+              <Edit className="h-4 w-4" />
+            </Button>
+            {!isSplitView && <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="sm" onClick={() => onScoutIconClick('competitor-landscape')} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-all duration-200 hover:shadow-md hover:shadow-blue-200/50 relative">
+                    <div className="absolute inset-0 rounded-md bg-gradient-to-r from-blue-400/20 to-green-400/20 animate-pulse opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
+                    <Bot className="h-5 w-5 relative z-10" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Explore More with Scout</p>
+                </TooltipContent>
+              </Tooltip>}
+          </div>
         </div>
 
-        {/* Competitor Landscape Section */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6 relative">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-                <Crown className="h-5 w-5 text-purple-600" />
-                Competitor Landscape
-              </h2>
-              <p className="text-sm text-gray-600 mt-1">Analyze your competitive environment & market dynamics.</p>
+        <div className="space-y-6">
+          {/* Executive Summary - Collapsed */}
+          <div>
+            <p className="text-gray-700 mb-4">
+              The enterprise collaboration tools market is increasingly competitive, with several dominant players holding significant market share.
+            </p>
+            
+            {/* Metric Tiles */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-lg font-bold text-blue-600">48%</div>
+                    <div className="text-sm text-gray-700">Top Player Market Share</div>
+                  </div>
+                  <ArrowUp className="h-4 w-4 text-green-500" />
+                </div>
+              </div>
+              <div className="border border-green-200 p-4 rounded-lg bg-amber-100">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-lg font-bold text-green-600">2</div>
+                    <div className="text-sm text-gray-700">Emerging Players Added</div>
+                  </div>
+                  <ArrowDown className="h-4 w-4 text-red-500" />
+                </div>
+              </div>
             </div>
-            <div className="flex items-center gap-3">
-              <Button variant="ghost" size="sm" className="text-blue-800 hover:text-blue-900">
-                <Edit className="h-4 w-4" />
-              </Button>
-              {!showCompetitorScoutChat && <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="sm" onClick={() => onScoutIconClick('competitor-landscape')} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-all duration-200 hover:shadow-md hover:shadow-blue-200/50 relative">
-                      <div className="absolute inset-0 rounded-md bg-gradient-to-r from-blue-400/20 to-green-400/20 animate-pulse opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
-                      <Bot className="h-5 w-5 relative z-10" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Explore More with Scout</p>
-                  </TooltipContent>
-                </Tooltip>}
+
+            {/* Competitor Chips */}
+            <div className="flex flex-wrap gap-2 mb-6">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Click for details</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Click for details</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Click for details</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Click for details</p>
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Click for details</p>
+                </TooltipContent>
+              </Tooltip>
             </div>
           </div>
 
-          <div className="space-y-6">
-            {/* Executive Summary - Collapsed */}
-            <div>
-              <p className="text-gray-700 mb-4">
-                The enterprise collaboration tools market is increasingly competitive, with several dominant players holding significant market share.
-              </p>
-              
-              {/* Metric Tiles */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-lg font-bold text-blue-600">48%</div>
-                      <div className="text-sm text-gray-700">Top Player Market Share</div>
+          {/* Read More Button */}
+          {!competitorExpanded && <Button variant="secondary" onClick={() => setCompetitorExpanded(true)} className="w-full">
+              Read More
+            </Button>}
+
+          {/* Expanded Content - Full Report */}
+          {competitorExpanded && <div className="animate-fade-in border-t pt-6 space-y-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">
+                Competitor Landscape Report
+              </h2>
+
+              {/* Executive Summary - Expanded */}
+              <div className="mb-8">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Executive Summary</h3>
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="text-gray-700 mb-4">
+                    The enterprise collaboration tools market is increasingly competitive, with several dominant players holding significant market share. However, emerging startups are introducing disruptive features, shifting the landscape rapidly.
+                  </p>
+                  <div className="space-y-2">
+                    <div className="flex items-start gap-2">
+                      <div className="w-2 h-2 rounded-full bg-blue-500 mt-2 flex-shrink-0"></div>
+                      <span className="text-gray-700">Top 3 Players: Microsoft Teams (35%), Slack (28%), Zoom (22%)</span>
                     </div>
-                    <ArrowUp className="h-4 w-4 text-green-500" />
-                  </div>
-                </div>
-                <div className="border border-green-200 p-4 rounded-lg bg-amber-100">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-lg font-bold text-green-600">2</div>
-                      <div className="text-sm text-gray-700">Emerging Players Added</div>
+                    <div className="flex items-start gap-2">
+                      <div className="w-2 h-2 rounded-full bg-green-500 mt-2 flex-shrink-0"></div>
+                      <span className="text-gray-700">Emerging Players: Asana (8%), Notion (7%)</span>
                     </div>
-                    <ArrowDown className="h-4 w-4 text-red-500" />
+                    <div className="flex items-start gap-2">
+                      <div className="w-2 h-2 rounded-full bg-purple-500 mt-2 flex-shrink-0"></div>
+                      <span className="text-gray-700">Key Moves: $300M funding round by Notion; new AI feature launch by Teams</span>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Competitor Chips */}
-              <div className="flex flex-wrap gap-2 mb-6">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Badge variant="secondary" className="px-3 py-1 cursor-pointer hover:bg-blue-100 transition-colors">
-                      Microsoft Teams
-                    </Badge>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Click for details</p>
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Badge variant="secondary" className="px-3 py-1 cursor-pointer hover:bg-purple-100 transition-colors">
-                      Slack
-                    </Badge>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Click for details</p>
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Badge variant="secondary" className="px-3 py-1 cursor-pointer hover:bg-green-100 transition-colors">
-                      Zoom
-                    </Badge>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Click for details</p>
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Badge variant="secondary" className="px-3 py-1 cursor-pointer hover:bg-yellow-100 transition-colors">
-                      Notion
-                    </Badge>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Click for details</p>
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Badge variant="secondary" className="px-3 py-1 cursor-pointer hover:bg-pink-100 transition-colors">
-                      Asana
-                    </Badge>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Click for details</p>
-                  </TooltipContent>
-                </Tooltip>
+              {/* Competitive SWOT Analyses */}
+              <div className="mb-8">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Competitive SWOT Analyses</h3>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="bg-white border border-gray-200 rounded-lg p-4">
+                    <h4 className="font-medium text-gray-900 mb-3">Microsoft Teams</h4>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <h5 className="font-medium text-green-700 mb-1">Strengths</h5>
+                        <ul className="text-gray-600 space-y-1">
+                          <li>• Office 365 integration</li>
+                          <li>• Enterprise adoption</li>
+                        </ul>
+                      </div>
+                      <div>
+                        <h5 className="font-medium text-red-700 mb-1">Weaknesses</h5>
+                        <ul className="text-gray-600 space-y-1">
+                          <li>• Complex interface</li>
+                          <li>• Resource heavy</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-white border border-gray-200 rounded-lg p-4">
+                    <h4 className="font-medium text-gray-900 mb-3">Slack</h4>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <h5 className="font-medium text-green-700 mb-1">Strengths</h5>
+                        <ul className="text-gray-600 space-y-1">
+                          <li>• Developer-friendly</li>
+                          <li>• Third-party apps</li>
+                        </ul>
+                      </div>
+                      <div>
+                        <h5 className="font-medium text-red-700 mb-1">Weaknesses</h5>
+                        <ul className="text-gray-600 space-y-1">
+                          <li>• Limited video features</li>
+                          <li>• Premium pricing</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
 
-            {/* Read More Button */}
-            {!competitorExpanded && <Button variant="secondary" onClick={() => setCompetitorExpanded(true)} className="w-full">
-                Read More
-              </Button>}
-
-            {/* Expanded Content - Full Report */}
-            {competitorExpanded && <div className="animate-fade-in border-t pt-6 space-y-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                  Competitor Landscape Report
-                </h2>
-
-                {/* Executive Summary - Expanded */}
-                <div className="mb-8">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Executive Summary</h3>
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <p className="text-gray-700 mb-4">
-                      The enterprise collaboration tools market is increasingly competitive, with several dominant players holding significant market share. However, emerging startups are introducing disruptive features, shifting the landscape rapidly.
-                    </p>
-                    <div className="space-y-2">
-                      <div className="flex items-start gap-2">
-                        <div className="w-2 h-2 rounded-full bg-blue-500 mt-2 flex-shrink-0"></div>
-                        <span className="text-gray-700">Top 3 Players: Microsoft Teams (35%), Slack (28%), Zoom (22%)</span>
+              {/* Funding Rounds & News Headlines */}
+              <div className="mb-8">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Funding Rounds & News Headlines</h3>
+                <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-3">
+                      <div className="w-2 h-2 rounded-full bg-yellow-500 mt-2 flex-shrink-0"></div>
+                      <div>
+                        <h4 className="font-medium text-gray-900">Notion raises $300M Series C</h4>
+                        <p className="text-sm text-gray-600">Valuation reaches $10B as workspace tools gain traction</p>
                       </div>
-                      <div className="flex items-start gap-2">
-                        <div className="w-2 h-2 rounded-full bg-green-500 mt-2 flex-shrink-0"></div>
-                        <span className="text-gray-700">Emerging Players: Asana (8%), Notion (7%)</span>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-2 h-2 rounded-full bg-blue-500 mt-2 flex-shrink-0"></div>
+                      <div>
+                        <h4 className="font-medium text-gray-900">Microsoft Teams launches AI Copilot</h4>
+                        <p className="text-sm text-gray-600">New AI features for meeting summaries and task automation</p>
                       </div>
-                      <div className="flex items-start gap-2">
-                        <div className="w-2 h-2 rounded-full bg-purple-500 mt-2 flex-shrink-0"></div>
-                        <span className="text-gray-700">Key Moves: $300M funding round by Notion; new AI feature launch by Teams</span>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-2 h-2 rounded-full bg-purple-500 mt-2 flex-shrink-0"></div>
+                      <div>
+                        <h4 className="font-medium text-gray-900">Slack introduces Workflow Builder 2.0</h4>
+                        <p className="text-sm text-gray-600">Enhanced automation capabilities for enterprise customers</p>
                       </div>
                     </div>
                   </div>
                 </div>
+              </div>
 
-                {/* Competitive SWOT Analyses */}
-                <div className="mb-8">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Competitive SWOT Analyses</h3>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="bg-white border border-gray-200 rounded-lg p-4">
-                      <h4 className="font-medium text-gray-900 mb-3">Microsoft Teams</h4>
-                      <div className="grid grid-cols-2 gap-3 text-sm">
-                        <div>
-                          <h5 className="font-medium text-green-700 mb-1">Strengths</h5>
-                          <ul className="text-gray-600 space-y-1">
-                            <li>• Office 365 integration</li>
-                            <li>• Enterprise adoption</li>
-                          </ul>
-                        </div>
-                        <div>
-                          <h5 className="font-medium text-red-700 mb-1">Weaknesses</h5>
-                          <ul className="text-gray-600 space-y-1">
-                            <li>• Complex interface</li>
-                            <li>• Resource heavy</li>
-                          </ul>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="bg-white border border-gray-200 rounded-lg p-4">
-                      <h4 className="font-medium text-gray-900 mb-3">Slack</h4>
-                      <div className="grid grid-cols-2 gap-3 text-sm">
-                        <div>
-                          <h5 className="font-medium text-green-700 mb-1">Strengths</h5>
-                          <ul className="text-gray-600 space-y-1">
-                            <li>• Developer-friendly</li>
-                            <li>• Third-party apps</li>
-                          </ul>
-                        </div>
-                        <div>
-                          <h5 className="font-medium text-red-700 mb-1">Weaknesses</h5>
-                          <ul className="text-gray-600 space-y-1">
-                            <li>• Limited video features</li>
-                            <li>• Premium pricing</li>
-                          </ul>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Funding Rounds & News Headlines */}
-                <div className="mb-8">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Funding Rounds & News Headlines</h3>
-                  <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
-                    <div className="space-y-3">
-                      <div className="flex items-start gap-3">
-                        <div className="w-2 h-2 rounded-full bg-yellow-500 mt-2 flex-shrink-0"></div>
-                        <div>
-                          <h4 className="font-medium text-gray-900">Notion raises $300M Series C</h4>
-                          <p className="text-sm text-gray-600">Valuation reaches $10B as workspace tools gain traction</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <div className="w-2 h-2 rounded-full bg-blue-500 mt-2 flex-shrink-0"></div>
-                        <div>
-                          <h4 className="font-medium text-gray-900">Microsoft Teams launches AI Copilot</h4>
-                          <p className="text-sm text-gray-600">New AI features for meeting summaries and task automation</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <div className="w-2 h-2 rounded-full bg-purple-500 mt-2 flex-shrink-0"></div>
-                        <div>
-                          <h4 className="font-medium text-gray-900">Slack introduces Workflow Builder 2.0</h4>
-                          <p className="text-sm text-gray-600">Enhanced automation capabilities for enterprise customers</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Market Share by Region */}
-                <div className="mb-8">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Market Share % by Region</h3>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="bg-white border border-gray-200 rounded-lg p-4">
-                      <h4 className="font-medium text-gray-900 mb-3">North America</h4>
-                      <MiniPieChart data={[{
+              {/* Market Share by Region */}
+              <div className="mb-8">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Market Share % by Region</h3>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="bg-white border border-gray-200 rounded-lg p-4">
+                    <h4 className="font-medium text-gray-900 mb-3">North America</h4>
+                    <MiniPieChart data={[{
                   name: "Microsoft Teams",
                   value: 40,
                   color: "#3B82F6"
@@ -1033,10 +978,10 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
                   value: 10,
                   color: "#6B7280"
                 }]} title="" />
-                    </div>
-                    <div className="bg-white border border-gray-200 rounded-lg p-4">
-                      <h4 className="font-medium text-gray-900 mb-3">APAC Region</h4>
-                      <MiniPieChart data={[{
+                  </div>
+                  <div className="bg-white border border-gray-200 rounded-lg p-4">
+                    <h4 className="font-medium text-gray-900 mb-3">APAC Region</h4>
+                    <MiniPieChart data={[{
                   name: "Microsoft Teams",
                   value: 30,
                   color: "#3B82F6"
@@ -1053,95 +998,95 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
                   value: 20,
                   color: "#6B7280"
                 }]} title="" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Feature Comparison Tables */}
+              <div className="mb-8">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Feature Comparison Tables</h3>
+                <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                  <table className="w-full">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Feature</th>
+                        <th className="px-4 py-3 text-center text-sm font-medium text-gray-700">Teams</th>
+                        <th className="px-4 py-3 text-center text-sm font-medium text-gray-700">Slack</th>
+                        <th className="px-4 py-3 text-center text-sm font-medium text-gray-700">Zoom</th>
+                        <th className="px-4 py-3 text-center text-sm font-medium text-gray-700">Notion</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      <tr>
+                        <td className="px-4 py-3 text-sm text-gray-900">Video Conferencing</td>
+                        <td className="px-4 py-3 text-center">✓</td>
+                        <td className="px-4 py-3 text-center">Limited</td>
+                        <td className="px-4 py-3 text-center">✓✓</td>
+                        <td className="px-4 py-3 text-center">✗</td>
+                      </tr>
+                      <tr className="bg-gray-50">
+                        <td className="px-4 py-3 text-sm text-gray-900">File Sharing</td>
+                        <td className="px-4 py-3 text-center">✓✓</td>
+                        <td className="px-4 py-3 text-center">✓</td>
+                        <td className="px-4 py-3 text-center">✓</td>
+                        <td className="px-4 py-3 text-center">✓✓</td>
+                      </tr>
+                      <tr>
+                        <td className="px-4 py-3 text-sm text-gray-900">Third-party Integrations</td>
+                        <td className="px-4 py-3 text-center">✓</td>
+                        <td className="px-4 py-3 text-center">✓✓</td>
+                        <td className="px-4 py-3 text-center">✓</td>
+                        <td className="px-4 py-3 text-center">✓</td>
+                      </tr>
+                      <tr className="bg-gray-50">
+                        <td className="px-4 py-3 text-sm text-gray-900">AI Features</td>
+                        <td className="px-4 py-3 text-center">✓✓</td>
+                        <td className="px-4 py-3 text-center">✓</td>
+                        <td className="px-4 py-3 text-center">✓</td>
+                        <td className="px-4 py-3 text-center">✓</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* M&A Potential Insights */}
+              <div className="mb-8">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">M&A Potential Insights</h3>
+                <div className="bg-orange-50 border border-orange-200 p-4 rounded-lg">
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-3">
+                      <div className="w-2 h-2 rounded-full bg-orange-500 mt-2 flex-shrink-0"></div>
+                      <div>
+                        <h4 className="font-medium text-gray-900">High Acquisition Likelihood</h4>
+                        <p className="text-sm text-gray-600">Notion and Asana showing strong growth metrics attractive to tech giants</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-2 h-2 rounded-full bg-red-500 mt-2 flex-shrink-0"></div>
+                      <div>
+                        <h4 className="font-medium text-gray-900">Potential Acquirers</h4>
+                        <p className="text-sm text-gray-600">Google, Meta, and Salesforce actively seeking collaboration tool acquisitions</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-2 h-2 rounded-full bg-blue-500 mt-2 flex-shrink-0"></div>
+                      <div>
+                        <h4 className="font-medium text-gray-900">Market Consolidation Risk</h4>
+                        <p className="text-sm text-gray-600">Smaller players may struggle to compete with integrated enterprise suites</p>
+                      </div>
                     </div>
                   </div>
                 </div>
+              </div>
 
-                {/* Feature Comparison Tables */}
-                <div className="mb-8">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Feature Comparison Tables</h3>
-                  <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                    <table className="w-full">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Feature</th>
-                          <th className="px-4 py-3 text-center text-sm font-medium text-gray-700">Teams</th>
-                          <th className="px-4 py-3 text-center text-sm font-medium text-gray-700">Slack</th>
-                          <th className="px-4 py-3 text-center text-sm font-medium text-gray-700">Zoom</th>
-                          <th className="px-4 py-3 text-center text-sm font-medium text-gray-700">Notion</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-200">
-                        <tr>
-                          <td className="px-4 py-3 text-sm text-gray-900">Video Conferencing</td>
-                          <td className="px-4 py-3 text-center">✓</td>
-                          <td className="px-4 py-3 text-center">Limited</td>
-                          <td className="px-4 py-3 text-center">✓✓</td>
-                          <td className="px-4 py-3 text-center">✗</td>
-                        </tr>
-                        <tr className="bg-gray-50">
-                          <td className="px-4 py-3 text-sm text-gray-900">File Sharing</td>
-                          <td className="px-4 py-3 text-center">✓✓</td>
-                          <td className="px-4 py-3 text-center">✓</td>
-                          <td className="px-4 py-3 text-center">✓</td>
-                          <td className="px-4 py-3 text-center">✓✓</td>
-                        </tr>
-                        <tr>
-                          <td className="px-4 py-3 text-sm text-gray-900">Third-party Integrations</td>
-                          <td className="px-4 py-3 text-center">✓</td>
-                          <td className="px-4 py-3 text-center">✓✓</td>
-                          <td className="px-4 py-3 text-center">✓</td>
-                          <td className="px-4 py-3 text-center">✓</td>
-                        </tr>
-                        <tr className="bg-gray-50">
-                          <td className="px-4 py-3 text-sm text-gray-900">AI Features</td>
-                          <td className="px-4 py-3 text-center">✓✓</td>
-                          <td className="px-4 py-3 text-center">✓</td>
-                          <td className="px-4 py-3 text-center">✓</td>
-                          <td className="px-4 py-3 text-center">✓</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                {/* M&A Potential Insights */}
-                <div className="mb-8">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">M&A Potential Insights</h3>
-                  <div className="bg-orange-50 border border-orange-200 p-4 rounded-lg">
-                    <div className="space-y-3">
-                      <div className="flex items-start gap-3">
-                        <div className="w-2 h-2 rounded-full bg-orange-500 mt-2 flex-shrink-0"></div>
-                        <div>
-                          <h4 className="font-medium text-gray-900">High Acquisition Likelihood</h4>
-                          <p className="text-sm text-gray-600">Notion and Asana showing strong growth metrics attractive to tech giants</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <div className="w-2 h-2 rounded-full bg-red-500 mt-2 flex-shrink-0"></div>
-                        <div>
-                          <h4 className="font-medium text-gray-900">Potential Acquirers</h4>
-                          <p className="text-sm text-gray-600">Google, Meta, and Salesforce actively seeking collaboration tool acquisitions</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <div className="w-2 h-2 rounded-full bg-blue-500 mt-2 flex-shrink-0"></div>
-                        <div>
-                          <h4 className="font-medium text-gray-900">Market Consolidation Risk</h4>
-                          <p className="text-sm text-gray-600">Smaller players may struggle to compete with integrated enterprise suites</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Charts Section */}
-                <div className="mb-8">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Market Trends</h3>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="bg-white border border-gray-200 rounded-lg p-4">
-                      <h4 className="font-medium text-gray-900 mb-3">Market Share Growth</h4>
-                      <MiniLineChart data={[{
+              {/* Charts Section */}
+              <div className="mb-8">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Market Trends</h3>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="bg-white border border-gray-200 rounded-lg p-4">
+                    <h4 className="font-medium text-gray-900 mb-3">Market Share Growth</h4>
+                    <MiniLineChart data={[{
                   name: "Q1",
                   value: 25
                 }, {
@@ -1154,10 +1099,10 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
                   name: "Q4",
                   value: 48
                 }]} title="" color="#3B82F6" />
-                    </div>
-                    <div className="bg-white border border-gray-200 rounded-lg p-4">
-                      <h4 className="font-medium text-gray-900 mb-3">Feature Adoption Rate</h4>
-                      <MiniLineChart data={[{
+                  </div>
+                  <div className="bg-white border border-gray-200 rounded-lg p-4">
+                    <h4 className="font-medium text-gray-900 mb-3">Feature Adoption Rate</h4>
+                    <MiniLineChart data={[{
                   name: "AI Tools",
                   value: 78
                 }, {
@@ -1170,67 +1115,47 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
                   name: "Integration",
                   value: 84
                 }]} title="" color="#8B5CF6" />
-                    </div>
                   </div>
                 </div>
+              </div>
 
-                {/* Export/Share Actions */}
-                <div className="border-t pt-6">
-                  <div className="flex flex-wrap gap-3 justify-center">
-                    <Button variant="outline" size="sm" onClick={onExportPDF} className="flex items-center gap-2">
-                      <FileText className="h-4 w-4" />
-                      Save PDF
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={onSaveToWorkspace} className="flex items-center gap-2">
-                      <Save className="h-4 w-4" />
-                      Save to Workspace
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={onGenerateShareableLink} className="flex items-center gap-2">
-                      <Share className="h-4 w-4" />
-                      Shareable Link
-                    </Button>
-                  </div>
+              {/* Export/Share Actions */}
+              <div className="border-t pt-6">
+                <div className="flex flex-wrap gap-3 justify-center">
+                  <Button variant="outline" size="sm" onClick={onExportPDF} className="flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Save PDF
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={onSaveToWorkspace} className="flex items-center gap-2">
+                    <Save className="h-4 w-4" />
+                    Save to Workspace
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={onGenerateShareableLink} className="flex items-center gap-2">
+                    <Share className="h-4 w-4" />
+                    Shareable Link
+                  </Button>
                 </div>
+              </div>
 
-                {/* Show Less Button */}
-                <Button variant="secondary" onClick={() => setCompetitorExpanded(false)} className="w-full">
-                  Show Less
-                </Button>
-              </div>}
-          </div>
+              {/* Show Less Button */}
+              <Button variant="secondary" onClick={() => setCompetitorExpanded(false)} className="w-full">
+                Show Less
+              </Button>
+            </div>}
+        </div>
 
-          {/* Persistent Scout Agent Icon */}
-          <div className="absolute bottom-4 right-4">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="sm" onClick={() => onScoutIconClick('competitor-landscape')} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-all duration-200 hover:shadow-md hover:shadow-blue-200/50 relative rounded-full p-2">
-                  <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-400/20 to-green-400/20 animate-pulse opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
-                  <Bot className="h-5 w-5 relative z-10" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Explore More with Scout</p>
-              </TooltipContent>
-            </Tooltip>
-          </div>
+        {/* Persistent Scout Agent Icon */}
+        <div className="absolute bottom-4 right-4">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Explore More with Scout</p>
+            </TooltipContent>
+          </Tooltip>
         </div>
       </div>
-
-      {/* Scout Chat Panel for Competitor Landscape */}
-      {showCompetitorScoutChat && (
-        <ScoutChatPanel
-          showScoutChat={showCompetitorScoutChat}
-          isSplitView={true}
-          hasEdits={competitorHasEdits}
-          showEditHistory={false}
-          editHistory={competitorEditHistory}
-          lastEditedField={competitorLastEditedField}
-          onClose={onCompetitorScoutChatClose}
-          context="competitor-landscape"
-        />
-      )}
-    </div>
-  );
+    </div>;
 };
-
 export default MarketIntelligenceTab;
