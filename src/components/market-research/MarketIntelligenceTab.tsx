@@ -205,7 +205,8 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
             <Button variant="ghost" size="sm" onClick={onToggleEdit} className="text-blue-800 hover:text-blue-900">
               <Edit className="h-4 w-4" />
             </Button>
-            {!isSplitView && <Tooltip>
+            {!isSplitView && (
+              <Tooltip>
                 <TooltipTrigger asChild>
                   <Button variant="ghost" size="sm" onClick={() => onScoutIconClick('market-size')} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-all duration-200 hover:shadow-md hover:shadow-blue-200/50 relative">
                     <div className="absolute inset-0 rounded-md bg-gradient-to-r from-blue-400/20 to-green-400/20 animate-pulse opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
@@ -215,7 +216,8 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
                 <TooltipContent>
                   <p>Explore More with Scout</p>
                 </TooltipContent>
-              </Tooltip>}
+              </Tooltip>
+            )}
           </div>
         </div>
 
@@ -236,7 +238,13 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
                   <Label htmlFor="executiveSummary" className="text-sm font-medium text-gray-700 mb-2 block">
                     Executive Summary
                   </Label>
-                  <Textarea id="executiveSummary" value={executiveSummary} onChange={e => onExecutiveSummaryChange(e.target.value)} className="w-full h-32 resize-none" placeholder="Enter executive summary..." />
+                  <Textarea 
+                    id="executiveSummary" 
+                    value={executiveSummary} 
+                    onChange={(e) => onExecutiveSummaryChange(e.target.value)} 
+                    className="w-full h-32 resize-none" 
+                    placeholder="Enter executive summary..." 
+                  />
                 </div>
               </div>}
 
@@ -259,19 +267,34 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
                       <Label htmlFor="tamValue" className="text-sm font-medium text-gray-700 mb-2 block">
                         Total Addressable Market
                       </Label>
-                      <Input id="tamValue" value={tamValue} onChange={e => onTamValueChange(e.target.value)} placeholder="e.g., $4.2B" />
+                      <Input 
+                        id="tamValue" 
+                        value={tamValue} 
+                        onChange={(e) => onTamValueChange(e.target.value)} 
+                        placeholder="e.g., $4.2B" 
+                      />
                     </div>
                     <div>
                       <Label htmlFor="samValue" className="text-sm font-medium text-gray-700 mb-2 block">
                         Serviceable Addressable Market
                       </Label>
-                      <Input id="samValue" value={samValue} onChange={e => onSamValueChange(e.target.value)} placeholder="e.g., $2.1B" />
+                      <Input 
+                        id="samValue" 
+                        value={samValue} 
+                        onChange={(e) => onSamValueChange(e.target.value)} 
+                        placeholder="e.g., $2.1B" 
+                      />
                     </div>
                     <div>
                       <Label htmlFor="apacGrowthRate" className="text-sm font-medium text-gray-700 mb-2 block">
                         APAC Growth Rate
                       </Label>
-                      <Input id="apacGrowthRate" value={apacGrowthRate} onChange={e => onApacGrowthRateChange(e.target.value)} placeholder="e.g., 25%" />
+                      <Input 
+                        id="apacGrowthRate" 
+                        value={apacGrowthRate} 
+                        onChange={(e) => onApacGrowthRateChange(e.target.value)} 
+                        placeholder="e.g., 25%" 
+                      />
                     </div>
                   </div>
                 </div>
