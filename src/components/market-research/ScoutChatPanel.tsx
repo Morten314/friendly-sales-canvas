@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Bot, X, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -32,13 +33,19 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
       
       if (hasEdits) {
         if (lastEditedField.includes("market share") || lastEditedField.includes("share")) {
-          return "I noticed you updated market share figures for Slack. Want me to pull the latest news or analysis?";
+          return "I noticed you updated market share figures for competitors. Want me to pull the latest news or analysis?";
         }
-        if (lastEditedField.includes("Notion") && lastEditedField.includes("removed")) {
-          return "You removed Notion from the list. Should I suggest alternatives or analyze why they might be losing ground?";
+        if (lastEditedField.includes("executive summary")) {
+          return "You updated the executive summary for competitor analysis. Should I provide additional market intelligence or competitive insights?";
         }
         if (lastEditedField.includes("funding") || lastEditedField.includes("news")) {
           return "Would you like me to analyze new funding rounds for these competitors or check for recent M&A activity?";
+        }
+        if (lastEditedField.includes("emerging players")) {
+          return "I see you updated emerging players data. Should I research these companies or identify additional rising competitors?";
+        }
+        if (lastEditedField.includes("deleted")) {
+          return "You removed a section from the competitor analysis. Would you like me to suggest alternative content or analyze why that section might not be relevant?";
         }
         return "I noticed you updated the competitor analysis. Would you like me to provide additional insights on competitive positioning or recent market moves?";
       }

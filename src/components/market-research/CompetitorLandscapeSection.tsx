@@ -48,6 +48,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
     "Slack introduces Workflow Builder 2.0"
   ]);
   const [competitorExpanded, setCompetitorExpanded] = React.useState(false);
+  const [competitorLastEditedField, setCompetitorLastEditedField] = React.useState("");
 
   const handleCompetitorToggleEdit = () => {
     setIsCompetitorEditing(!isCompetitorEditing);
@@ -72,6 +73,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
     newDeletedSections.add(sectionId);
     setCompetitorDeletedSections(newDeletedSections);
     setCompetitorHasEdits(true);
+    setCompetitorLastEditedField(`${sectionId} section deleted`);
   };
 
   const handleCompetitorEditHistoryOpen = () => {
@@ -82,16 +84,19 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   const handleCompetitorExecutiveSummaryChange = (value: string) => {
     setCompetitorExecutiveSummary(value);
     setCompetitorHasEdits(true);
+    setCompetitorLastEditedField("executive summary");
   };
 
   const handleTopPlayerShareChange = (value: string) => {
     setCompetitorTopPlayerShare(value);
     setCompetitorHasEdits(true);
+    setCompetitorLastEditedField("market share");
   };
 
   const handleEmergingPlayersChange = (value: string) => {
     setCompetitorEmergingPlayers(value);
     setCompetitorHasEdits(true);
+    setCompetitorLastEditedField("emerging players");
   };
 
   const handleFundingNewsChange = (index: number, value: string) => {
@@ -99,6 +104,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
     newNews[index] = value;
     setCompetitorFundingNews(newNews);
     setCompetitorHasEdits(true);
+    setCompetitorLastEditedField("funding news");
   };
 
   return (
