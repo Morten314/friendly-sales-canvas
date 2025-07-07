@@ -1,3 +1,4 @@
+
 import React from 'react';
 import MarketSizeSection from './MarketSizeSection';
 import IndustryTrendsSection from './IndustryTrendsSection';
@@ -52,6 +53,16 @@ interface MarketIntelligenceTabProps {
   industryTrendsRecommendations: IndustryTrendsRecommendations;
   industryTrendsRisks: string[];
   industryTrendsLastEditedField: string;
+  // Competitor Landscape props
+  isCompetitorEditing: boolean;
+  competitorExpanded: boolean;
+  competitorHasEdits: boolean;
+  competitorDeletedSections: Set<string>;
+  competitorEditHistory: EditRecord[];
+  competitorExecutiveSummary: string;
+  competitorTopPlayerShare: string;
+  competitorEmergingPlayers: string;
+  competitorFundingNews: string[];
   onToggleEdit: () => void;
   onScoutIconClick: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape', hasEdits?: boolean, lastEditedField?: string) => void;
   onEditHistoryOpen: () => void;
@@ -74,6 +85,17 @@ interface MarketIntelligenceTabProps {
   onIndustryTrendsEditHistoryOpen: () => void;
   onIndustryTrendsExpandToggle: (expanded: boolean) => void;
   onIndustryTrendsExecutiveSummaryChange: (value: string) => void;
+  // Competitor Landscape handlers
+  onCompetitorToggleEdit: () => void;
+  onCompetitorSaveChanges: () => void;
+  onCompetitorCancelEdit: () => void;
+  onCompetitorDeleteSection: (sectionId: string) => void;
+  onCompetitorEditHistoryOpen: () => void;
+  onCompetitorExpandToggle: (expanded: boolean) => void;
+  onCompetitorExecutiveSummaryChange: (value: string) => void;
+  onCompetitorTopPlayerShareChange: (value: string) => void;
+  onCompetitorEmergingPlayersChange: (value: string) => void;
+  onCompetitorFundingNewsChange: (news: string[]) => void;
   onExportPDF: () => void;
   onSaveToWorkspace: () => void;
   onGenerateShareableLink: () => void;
@@ -146,8 +168,27 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = (props) => {
 
       {/* Competitor Landscape Section */}
       <CompetitorLandscapeSection
+        isEditing={props.isCompetitorEditing}
         isSplitView={props.isSplitView}
+        isExpanded={props.competitorExpanded}
+        hasEdits={props.competitorHasEdits}
+        deletedSections={props.competitorDeletedSections}
+        editHistory={props.competitorEditHistory}
+        executiveSummary={props.competitorExecutiveSummary}
+        topPlayerShare={props.competitorTopPlayerShare}
+        emergingPlayers={props.competitorEmergingPlayers}
+        fundingNews={props.competitorFundingNews}
+        onToggleEdit={props.onCompetitorToggleEdit}
         onScoutIconClick={props.onScoutIconClick}
+        onEditHistoryOpen={props.onCompetitorEditHistoryOpen}
+        onDeleteSection={props.onCompetitorDeleteSection}
+        onSaveChanges={props.onCompetitorSaveChanges}
+        onCancelEdit={props.onCompetitorCancelEdit}
+        onExpandToggle={props.onCompetitorExpandToggle}
+        onExecutiveSummaryChange={props.onCompetitorExecutiveSummaryChange}
+        onTopPlayerShareChange={props.onCompetitorTopPlayerShareChange}
+        onEmergingPlayersChange={props.onCompetitorEmergingPlayersChange}
+        onFundingNewsChange={props.onCompetitorFundingNewsChange}
         onExportPDF={props.onExportPDF}
         onSaveToWorkspace={props.onSaveToWorkspace}
         onGenerateShareableLink={props.onGenerateShareableLink}
