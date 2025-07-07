@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { BarChart3, Bot, Edit, Target, TrendingUp, PieChart, X, FileText, Save, Share, Clock, Zap, Crown, ArrowUp, ArrowDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -193,7 +194,8 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
     onScoutIconClick('competitor-landscape');
   };
 
-  return <div className={`${isSplitView ? 'w-3/5' : 'flex-1'} transition-all duration-500 space-y-6`}>
+  return (
+    <div className={`${isSplitView ? 'w-3/5' : 'flex-1'} transition-all duration-500 space-y-6`}>
       {/* Market Size & Opportunity Section */}
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-6">
@@ -1413,7 +1415,8 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
           </Tooltip>
         </div>
       </div>
-    </div>;
+    </div>
+  );
 };
 
 export default MarketIntelligenceTab;
