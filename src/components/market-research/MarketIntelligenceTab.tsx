@@ -53,18 +53,6 @@ interface MarketIntelligenceTabProps {
   industryTrendsRecommendations: IndustryTrendsRecommendations;
   industryTrendsRisks: string[];
   industryTrendsLastEditedField: string;
-  // Competitor Landscape props
-  isCompetitorEditing: boolean;
-  competitorHasEdits: boolean;
-  competitorDeletedSections: Set<string>;
-  competitorEditHistory: EditRecord[];
-  competitorExecutiveSummary: string;
-  competitorTopPlayerShare: string;
-  competitorEmergingPlayers: string;
-  competitorFundingNews: string[];
-  competitorMarketShare: any[];
-  competitorFeatureComparison: any[];
-  competitorLastEditedField: string;
   onToggleEdit: () => void;
   onScoutIconClick: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape') => void;
   onEditHistoryOpen: () => void;
@@ -87,13 +75,6 @@ interface MarketIntelligenceTabProps {
   onIndustryTrendsEditHistoryOpen: () => void;
   onIndustryTrendsExpandToggle: (expanded: boolean) => void;
   onIndustryTrendsExecutiveSummaryChange: (value: string) => void;
-  // Competitor Landscape handlers
-  onCompetitorToggleEdit: () => void;
-  onCompetitorSaveChanges: () => void;
-  onCompetitorCancelEdit: () => void;
-  onCompetitorDeleteSection: (sectionId: string) => void;
-  onCompetitorEditHistoryOpen: () => void;
-  onCompetitorExecutiveSummaryChange: (value: string) => void;
   onExportPDF: () => void;
   onSaveToWorkspace: () => void;
   onGenerateShareableLink: () => void;
@@ -166,24 +147,7 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = (props) => {
 
       {/* Competitor Landscape Section */}
       <CompetitorLandscapeSection
-        isCompetitorEditing={props.isCompetitorEditing}
         isSplitView={props.isSplitView}
-        competitorHasEdits={props.competitorHasEdits}
-        competitorDeletedSections={props.competitorDeletedSections}
-        competitorEditHistory={props.competitorEditHistory}
-        competitorExecutiveSummary={props.competitorExecutiveSummary}
-        competitorTopPlayerShare={props.competitorTopPlayerShare}
-        competitorEmergingPlayers={props.competitorEmergingPlayers}
-        competitorFundingNews={props.competitorFundingNews}
-        competitorMarketShare={props.competitorMarketShare}
-        competitorFeatureComparison={props.competitorFeatureComparison}
-        competitorLastEditedField={props.competitorLastEditedField}
-        onCompetitorToggleEdit={props.onCompetitorToggleEdit}
-        onCompetitorSaveChanges={props.onCompetitorSaveChanges}
-        onCompetitorCancelEdit={props.onCompetitorCancelEdit}
-        onCompetitorDeleteSection={props.onCompetitorDeleteSection}
-        onCompetitorEditHistoryOpen={props.onCompetitorEditHistoryOpen}
-        onCompetitorExecutiveSummaryChange={props.onCompetitorExecutiveSummaryChange}
         onScoutIconClick={props.onScoutIconClick}
         onExportPDF={props.onExportPDF}
         onSaveToWorkspace={props.onSaveToWorkspace}
