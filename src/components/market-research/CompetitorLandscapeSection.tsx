@@ -55,13 +55,14 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   };
 
   const handleCompetitorSaveChanges = () => {
-    setIsCompetitorEditing(false);
-    setCompetitorHasEdits(true); // Keep hasEdits as true after saving
-    // Add a small delay to ensure state is updated before opening Scout
-    setTimeout(() => {
-      onScoutIconClick('competitor-landscape', competitorHasEdits, competitorLastEditedField);
-    }, 100);
-  };
+  setIsCompetitorEditing(false);
+  setCompetitorHasEdits(true); // Keep hasEdits as true after saving
+  
+  // Use a longer delay to ensure state updates are properly propagated
+  setTimeout(() => {
+    onScoutIconClick('competitor-landscape', true, competitorLastEditedField);
+  }, 200);
+};
 
   const handleCompetitorCancelEdit = () => {
     setIsCompetitorEditing(false);
