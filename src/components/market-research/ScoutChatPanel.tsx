@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Bot, X, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -31,23 +30,20 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
         return "Hi Alex! Reviewing your competitor changes? Let me know if you'd like me to pull latest funding news or analyze market positioning shifts.";
       }
       
-      if (!hasEdits) {
-        return "Hi there! 👋 I'm Scout. Ready to dive deeper into competitor analysis? I can help with market share trends, funding rounds, and competitive positioning.";
-      }
-      
-      if (lastEditedField.includes("market share") || lastEditedField.includes("share")) {
-        return "I noticed you updated market share figures for Slack. Want me to pull the latest news or analysis?";
-      }
-      if (lastEditedField.includes("Notion") && lastEditedField.includes("removed")) {
-        return "You removed Notion from the list. Should I suggest alternatives or analyze why they might be losing ground?";
-      }
-      if (lastEditedField.includes("funding") || lastEditedField.includes("news")) {
-        return "Would you like me to analyze new funding rounds for these competitors or check for recent M&A activity?";
-      }
       if (hasEdits) {
+        if (lastEditedField.includes("market share") || lastEditedField.includes("share")) {
+          return "I noticed you updated market share figures for Slack. Want me to pull the latest news or analysis?";
+        }
+        if (lastEditedField.includes("Notion") && lastEditedField.includes("removed")) {
+          return "You removed Notion from the list. Should I suggest alternatives or analyze why they might be losing ground?";
+        }
+        if (lastEditedField.includes("funding") || lastEditedField.includes("news")) {
+          return "Would you like me to analyze new funding rounds for these competitors or check for recent M&A activity?";
+        }
         return "I noticed you updated the competitor analysis. Would you like me to provide additional insights on competitive positioning or recent market moves?";
       }
-      return "Hi there! I'm here to help you dive deeper into Competitor Landscape insights. What would you like to explore?";
+      
+      return "Hi there! 👋 I'm Scout. Ready to dive deeper into competitor analysis? I can help with market share trends, funding rounds, and competitive positioning.";
     }
 
     if (context === 'industry-trends') {
@@ -55,20 +51,17 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
         return "Hi Alex! Reviewing your changes? Let me know if you'd like to validate data or explore why market estimates shifted.";
       }
       
-      if (!hasEdits) {
-        return "Hi there! 👋 I'm Scout. Want to dive deeper into industry trends and emerging technologies? Here are some questions I can help answer.";
-      }
-      
-      if (lastEditedField.includes("AI") || lastEditedField.includes("ai")) {
-        return "I noticed you updated AI adoption metrics. Would you like deeper insights on AI implementation trends or regulatory impacts?";
-      }
-      if (lastEditedField.includes("cloud") || lastEditedField.includes("migration")) {
-        return "I see you modified cloud migration data. Should we explore the key drivers behind this trend or regional variations?";
-      }
       if (hasEdits) {
+        if (lastEditedField.includes("AI") || lastEditedField.includes("ai")) {
+          return "I noticed you updated AI adoption metrics. Would you like deeper insights on AI implementation trends or regulatory impacts?";
+        }
+        if (lastEditedField.includes("cloud") || lastEditedField.includes("migration")) {
+          return "I see you modified cloud migration data. Should we explore the key drivers behind this trend or regional variations?";
+        }
         return "I noticed you updated the industry trends analysis. Would you like me to provide additional insights based on your changes?";
       }
-      return "Hi there! I'm here to help you dive deeper into Industry Trends insights. What would you like to explore?";
+      
+      return "Hi there! 👋 I'm Scout. Want to dive deeper into industry trends and emerging technologies? Here are some questions I can help answer.";
     }
 
     // Default market-size context
@@ -76,83 +69,80 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
       return "Hi Alex! Reviewing your changes? Let me know if you'd like to validate data or explore why market estimates shifted.";
     }
     
-    if (!hasEdits) {
-      return "Hi there! 👋 I'm Scout. Want to dive deeper into your market size and opportunities? Here are some questions I can help answer.";
-    }
-    
-    if (lastEditedField.includes("APAC") || lastEditedField.includes("apac")) {
-      return "I noticed you updated the APAC growth rate. Would you like deeper insights on regional trends or competitor presence in APAC?";
-    }
-    if (lastEditedField.includes("TAM") || lastEditedField.includes("tam")) {
-      return "I see you modified the TAM estimate. Should we explore the key drivers behind this market size or break down by industry verticals?";
-    }
     if (hasEdits) {
+      if (lastEditedField.includes("APAC") || lastEditedField.includes("apac")) {
+        return "I noticed you updated the APAC growth rate. Would you like deeper insights on regional trends or competitor presence in APAC?";
+      }
+      if (lastEditedField.includes("TAM") || lastEditedField.includes("tam")) {
+        return "I see you modified the TAM estimate. Should we explore the key drivers behind this market size or break down by industry verticals?";
+      }
       return "I noticed you updated the market analysis. Would you like me to provide additional insights based on your changes?";
     }
-    return "Hi there! I'm here to help you dive deeper into Market Size & Opportunity insights. What would you like to explore?";
+    
+    return "Hi there! 👋 I'm Scout. Want to dive deeper into your market size and opportunities? Here are some questions I can help answer.";
   };
 
   const getContextualQuestions = () => {
     if (context === 'competitor-landscape') {
-      if (!hasEdits) {
+      if (hasEdits) {
         return [
-          "Show latest funding rounds",
-          "Analyze market share shifts",
-          "Compare feature roadmaps",
-          "Identify acquisition targets",
-          "Track competitive pricing"
+          "Pull latest competitor news",
+          "Analyze funding impact on market",
+          "Compare competitive positioning", 
+          "Identify emerging threats",
+          "Track M&A activity",
+          "Benchmark feature capabilities"
         ];
       }
 
       return [
-        "Pull latest competitor news",
-        "Analyze funding impact on market",
-        "Compare competitive positioning", 
-        "Identify emerging threats",
-        "Track M&A activity",
-        "Benchmark feature capabilities"
+        "Show latest funding rounds",
+        "Analyze market share shifts",
+        "Compare feature roadmaps",
+        "Identify acquisition targets",
+        "Track competitive pricing"
       ];
     }
 
     if (context === 'industry-trends') {
-      if (!hasEdits) {
+      if (hasEdits) {
         return [
-          "Show AI adoption trends",
-          "Analyze cloud migration drivers",
-          "Track regulatory changes",
-          "Identify emerging technologies",
-          "Compare regional variations"
+          "Validate trend data sources",
+          "Explore technology drivers",
+          "Analyze regional differences", 
+          "Track regulatory impacts",
+          "Identify disruption signals",
+          "Compare adoption timelines"
         ];
       }
 
       return [
-        "Validate trend data sources",
-        "Explore technology drivers",
-        "Analyze regional differences", 
-        "Track regulatory impacts",
-        "Identify disruption signals",
-        "Compare adoption timelines"
+        "Show AI adoption trends",
+        "Analyze cloud migration drivers",
+        "Track regulatory changes",
+        "Identify emerging technologies",
+        "Compare regional variations"
       ];
     }
 
     // Default market-size questions
-    if (!hasEdits) {
+    if (hasEdits) {
       return [
-        "Show TAM breakdown by region",
-        "What's driving mid-market growth?",
-        "Any emerging competitors to watch?",
-        "How fast is the market growing YoY?",
-        "Break down opportunity by vertical"
+        "Show me drivers of TAM growth",
+        "Break down mid-market vs enterprise TAM", 
+        "Which segments are fastest growing?",
+        "Analyze competitor presence in APAC",
+        "Update regional market breakdown",
+        "Identify emerging tech impacts on TAM"
       ];
     }
 
     return [
-      "Show me drivers of TAM growth",
-      "Break down mid-market vs enterprise TAM", 
-      "Which segments are fastest growing?",
-      "Analyze competitor presence in APAC",
-      "Update regional market breakdown",
-      "Identify emerging tech impacts on TAM"
+      "Show TAM breakdown by region",
+      "What's driving mid-market growth?",
+      "Any emerging competitors to watch?",
+      "How fast is the market growing YoY?",
+      "Break down opportunity by vertical"
     ];
   };
 
