@@ -1,4 +1,3 @@
-
 import React from 'react';
 import MarketSizeSection from './MarketSizeSection';
 import IndustryTrendsSection from './IndustryTrendsSection';
@@ -54,7 +53,7 @@ interface MarketIntelligenceTabProps {
   industryTrendsRisks: string[];
   industryTrendsLastEditedField: string;
   onToggleEdit: () => void;
-  onScoutIconClick: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape') => void;
+  onScoutIconClick: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape', hasEdits?: boolean, lastEditedField?: string) => void;
   onEditHistoryOpen: () => void;
   onDeleteSection: (sectionId: string) => void;
   onSaveChanges: () => void;

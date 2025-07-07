@@ -21,7 +21,7 @@ interface EditRecord {
 
 interface CompetitorLandscapeSectionProps {
   isSplitView: boolean;
-  onScoutIconClick: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape') => void;
+  onScoutIconClick: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape', hasEdits?: boolean, lastEditedField?: string) => void;
   onExportPDF: () => void;
   onSaveToWorkspace: () => void;
   onGenerateShareableLink: () => void;
@@ -59,7 +59,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
     setCompetitorHasEdits(true); // Keep hasEdits as true after saving
     // Add a small delay to ensure state is updated before opening Scout
     setTimeout(() => {
-      onScoutIconClick('competitor-landscape');
+      onScoutIconClick('competitor-landscape', competitorHasEdits, competitorLastEditedField);
     }, 100);
   };
 
@@ -127,7 +127,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => onScoutIconClick('competitor-landscape')}
+                  onClick={() => onScoutIconClick('competitor-landscape', competitorHasEdits, competitorLastEditedField)}
                   className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-all duration-200 hover:shadow-md hover:shadow-blue-200/50 relative"
                 >
                   <div className="absolute inset-0 rounded-md bg-gradient-to-r from-blue-400/20 to-green-400/20 animate-pulse opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
@@ -291,7 +291,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => onScoutIconClick('competitor-landscape')}
+                  onClick={() => onScoutIconClick('competitor-landscape', competitorHasEdits, competitorLastEditedField)}
                   className="text-blue-600 hover:text-blue-700 bg-blue-50 border border-blue-200 hover:shadow-md hover:shadow-blue-200/50 transition-all duration-200 relative"
                 >
                   <div className="absolute inset-0 rounded-md bg-gradient-to-r from-blue-400/20 to-green-400/20 opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
@@ -684,7 +684,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => onScoutIconClick('competitor-landscape')}
+              onClick={() => onScoutIconClick('competitor-landscape', competitorHasEdits, competitorLastEditedField)}
               className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white hover:shadow-lg hover:shadow-blue-300/50 transition-all duration-200"
             >
               <Bot className="h-5 w-5" />
