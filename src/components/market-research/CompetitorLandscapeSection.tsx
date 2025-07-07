@@ -55,14 +55,14 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   };
 
   const handleCompetitorSaveChanges = () => {
-  setIsCompetitorEditing(false);
-  setCompetitorHasEdits(true); // Keep hasEdits as true after saving
-  
-  // Use a longer delay to ensure state updates are properly propagated
-  setTimeout(() => {
-    onScoutIconClick('competitor-landscape', true, competitorLastEditedField);
-  }, 200);
-};
+    setIsCompetitorEditing(false);
+    setCompetitorHasEdits(true);
+    
+    // Automatically open Scout panel after saving changes - similar to Market Size section
+    setTimeout(() => {
+      onScoutIconClick('competitor-landscape', true, competitorLastEditedField);
+    }, 100);
+  };
 
   const handleCompetitorCancelEdit = () => {
     setIsCompetitorEditing(false);
