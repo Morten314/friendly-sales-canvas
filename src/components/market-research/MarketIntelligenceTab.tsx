@@ -577,7 +577,8 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
             <Button variant="ghost" size="sm" onClick={onIndustryTrendsToggleEdit} className="text-purple-800 hover:text-purple-900">
               <Edit className="h-4 w-4" />
             </Button>
-            {!isSplitView && <Tooltip>
+            {!isSplitView && (
+              <Tooltip>
                 <TooltipTrigger asChild>
                   <Button variant="ghost" size="sm" onClick={() => onScoutIconClick('industry-trends')} className="text-purple-600 hover:text-purple-700 hover:bg-purple-50 transition-all duration-200 hover:shadow-md hover:shadow-purple-200/50 relative">
                     <div className="absolute inset-0 rounded-md bg-gradient-to-r from-purple-400/20 to-blue-400/20 animate-pulse opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
@@ -587,7 +588,8 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
                 <TooltipContent>
                   <p>Explore More with Scout</p>
                 </TooltipContent>
-              </Tooltip>}
+              </Tooltip>
+            )}
           </div>
         </div>
 
@@ -1413,4 +1415,5 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = ({
       </div>
     </div>;
 };
+
 export default MarketIntelligenceTab;
