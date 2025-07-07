@@ -20,24 +20,7 @@ interface EditRecord {
 }
 
 interface CompetitorLandscapeSectionProps {
-  isCompetitorEditing: boolean;
   isSplitView: boolean;
-  competitorHasEdits: boolean;
-  competitorDeletedSections: Set<string>;
-  competitorEditHistory: EditRecord[];
-  competitorExecutiveSummary: string;
-  competitorTopPlayerShare: string;
-  competitorEmergingPlayers: string;
-  competitorFundingNews: string[];
-  competitorMarketShare: any[];
-  competitorFeatureComparison: any[];
-  competitorLastEditedField: string;
-  onCompetitorToggleEdit: () => void;
-  onCompetitorSaveChanges: () => void;
-  onCompetitorCancelEdit: () => void;
-  onCompetitorDeleteSection: (sectionId: string) => void;
-  onCompetitorEditHistoryOpen: () => void;
-  onCompetitorExecutiveSummaryChange: (value: string) => void;
   onScoutIconClick: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape') => void;
   onExportPDF: () => void;
   onSaveToWorkspace: () => void;
@@ -45,34 +28,74 @@ interface CompetitorLandscapeSectionProps {
 }
 
 const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
-  isCompetitorEditing,
   isSplitView,
-  competitorHasEdits,
-  competitorDeletedSections,
-  competitorEditHistory,
-  competitorExecutiveSummary,
-  competitorTopPlayerShare,
-  competitorEmergingPlayers,
-  competitorFundingNews,
-  competitorMarketShare,
-  competitorFeatureComparison,
-  competitorLastEditedField,
-  onCompetitorToggleEdit,
-  onCompetitorSaveChanges,
-  onCompetitorCancelEdit,
-  onCompetitorDeleteSection,
-  onCompetitorEditHistoryOpen,
-  onCompetitorExecutiveSummaryChange,
   onScoutIconClick,
   onExportPDF,
   onSaveToWorkspace,
   onGenerateShareableLink
 }) => {
+  // Internal state management
+  const [isCompetitorEditing, setIsCompetitorEditing] = React.useState(false);
+  const [competitorHasEdits, setCompetitorHasEdits] = React.useState(false);
+  const [competitorDeletedSections, setCompetitorDeletedSections] = React.useState<Set<string>>(new Set());
+  const [competitorEditHistory, setCompetitorEditHistory] = React.useState<EditRecord[]>([]);
+  const [competitorExecutiveSummary, setCompetitorExecutiveSummary] = React.useState("The enterprise collaboration tools market is increasingly competitive, with several dominant players holding significant market share.");
+  const [competitorTopPlayerShare, setCompetitorTopPlayerShare] = React.useState("48%");
+  const [competitorEmergingPlayers, setCompetitorEmergingPlayers] = React.useState("2");
+  const [competitorFundingNews, setCompetitorFundingNews] = React.useState([
+    "Notion raises $300M Series C",
+    "Microsoft Teams launches AI Copilot", 
+    "Slack introduces Workflow Builder 2.0"
+  ]);
   const [competitorExpanded, setCompetitorExpanded] = React.useState(false);
 
+  const handleCompetitorToggleEdit = () => {
+    setIsCompetitorEditing(!isCompetitorEditing);
+  };
+
   const handleCompetitorSaveChanges = () => {
-    onCompetitorSaveChanges();
+    setIsCompetitorEditing(false);
+    setCompetitorHasEdits(false);
     onScoutIconClick('competitor-landscape');
+  };
+
+  const handleCompetitorCancelEdit = () => {
+    setIsCompetitorEditing(false);
+    // Reset any unsaved changes here if needed
+  };
+
+  const handleCompetitorDeleteSection = (sectionId: string) => {
+    const newDeletedSections = new Set(competitorDeletedSections);
+    newDeletedSections.add(sectionId);
+    setCompetitorDeletedSections(newDeletedSections);
+    setCompetitorHasEdits(true);
+  };
+
+  const handleCompetitorEditHistoryOpen = () => {
+    // Implementation for opening edit history
+    console.log('Opening competitor edit history');
+  };
+
+  const handleCompetitorExecutiveSummaryChange = (value: string) => {
+    setCompetitorExecutiveSummary(value);
+    setCompetitorHasEdits(true);
+  };
+
+  const handleTopPlayerShareChange = (value: string) => {
+    setCompetitorTopPlayerShare(value);
+    setCompetitorHasEdits(true);
+  };
+
+  const handleEmergingPlayersChange = (value: string) => {
+    setCompetitorEmergingPlayers(value);
+    setCompetitorHasEdits(true);
+  };
+
+  const handleFundingNewsChange = (index: number, value: string) => {
+    const newNews = [...competitorFundingNews];
+    newNews[index] = value;
+    setCompetitorFundingNews(newNews);
+    setCompetitorHasEdits(true);
   };
 
   return (
@@ -86,7 +109,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
           <p className="text-sm text-gray-600 mt-1">Analyze your competitive environment & market dynamics.</p>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={onCompetitorToggleEdit} className="text-blue-800 hover:text-blue-900">
+          <Button variant="ghost" size="sm" onClick={handleCompetitorToggleEdit} className="text-blue-800 hover:text-blue-900">
             <Edit className="h-4 w-4" />
           </Button>
           {!isSplitView && (
@@ -120,7 +143,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => onCompetitorDeleteSection('executive-summary')}
+                    onClick={() => handleCompetitorDeleteSection('executive-summary')}
                     className="absolute -top-2 -right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50"
                   >
                     <X className="h-4 w-4" />
@@ -137,7 +160,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                 <Textarea
                   id="competitorExecutiveSummary"
                   value={competitorExecutiveSummary}
-                  onChange={(e) => onCompetitorExecutiveSummaryChange(e.target.value)}
+                  onChange={(e) => handleCompetitorExecutiveSummaryChange(e.target.value)}
                   className="w-full h-32 resize-none"
                   placeholder="Enter executive summary..."
                 />
@@ -153,7 +176,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => onCompetitorDeleteSection('key-metrics')}
+                    onClick={() => handleCompetitorDeleteSection('key-metrics')}
                     className="absolute -top-2 -right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50"
                   >
                     <X className="h-4 w-4" />
@@ -173,7 +196,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                     <Input
                       id="topPlayerShare"
                       value={competitorTopPlayerShare}
-                      onChange={(e) => onCompetitorExecutiveSummaryChange(e.target.value)}
+                      onChange={(e) => handleTopPlayerShareChange(e.target.value)}
                       placeholder="e.g., 48%"
                     />
                   </div>
@@ -184,7 +207,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                     <Input
                       id="emergingPlayers"
                       value={competitorEmergingPlayers}
-                      onChange={(e) => onCompetitorExecutiveSummaryChange(e.target.value)}
+                      onChange={(e) => handleEmergingPlayersChange(e.target.value)}
                       placeholder="e.g., 2"
                     />
                   </div>
@@ -201,7 +224,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => onCompetitorDeleteSection('funding-news')}
+                    onClick={() => handleCompetitorDeleteSection('funding-news')}
                     className="absolute -top-2 -right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50"
                   >
                     <X className="h-4 w-4" />
@@ -219,11 +242,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                   <Textarea
                     key={index}
                     value={news}
-                    onChange={(e) => {
-                      const newNews = [...competitorFundingNews];
-                      newNews[index] = e.target.value;
-                      // Update funding news handler would go here
-                    }}
+                    onChange={(e) => handleFundingNewsChange(index, e.target.value)}
                     className="w-full h-16 resize-none mb-3"
                     placeholder={`News headline ${index + 1}...`}
                   />
@@ -235,7 +254,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
           {/* Save/Cancel Buttons */}
           <div className="flex items-center gap-3 pt-6 border-t">
             <Button onClick={handleCompetitorSaveChanges}>Save Changes</Button>
-            <Button variant="outline" onClick={onCompetitorCancelEdit}>Cancel</Button>
+            <Button variant="outline" onClick={handleCompetitorCancelEdit}>Cancel</Button>
             <div className="flex-1"></div>
             
             <Tooltip>
@@ -243,7 +262,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={onCompetitorEditHistoryOpen}
+                  onClick={handleCompetitorEditHistoryOpen}
                   className={`text-gray-600 hover:text-gray-700 hover:bg-gray-50 transition-all duration-200 ${
                     competitorEditHistory.length === 0 ? 'opacity-50 cursor-not-allowed' : ''
                   }`}
@@ -300,7 +319,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
           {/* Executive Summary - Collapsed */}
           <div>
             <p className="text-gray-700 mb-4">
-              {competitorExecutiveSummary || "The enterprise collaboration tools market is increasingly competitive, with several dominant players holding significant market share."}
+              {competitorExecutiveSummary}
             </p>
             
             {/* Metric Tiles */}
@@ -308,7 +327,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
               <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="text-lg font-bold text-blue-600">{competitorTopPlayerShare || "48%"}</div>
+                    <div className="text-lg font-bold text-blue-600">{competitorTopPlayerShare}</div>
                     <div className="text-sm text-gray-700">Top Player Market Share</div>
                   </div>
                   <ArrowUp className="h-4 w-4 text-green-500" />
@@ -317,7 +336,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
               <div className="border border-green-200 p-4 rounded-lg bg-amber-100">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="text-lg font-bold text-green-600">{competitorEmergingPlayers || "2"}</div>
+                    <div className="text-lg font-bold text-green-600">{competitorEmergingPlayers}</div>
                     <div className="text-sm text-gray-700">Emerging Players Added</div>
                   </div>
                   <ArrowDown className="h-4 w-4 text-red-500" />
