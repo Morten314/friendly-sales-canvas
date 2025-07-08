@@ -3,6 +3,7 @@ import React from 'react';
 import MarketSizeSection from './MarketSizeSection';
 import IndustryTrendsSection from './IndustryTrendsSection';
 import CompetitorLandscapeSection from './CompetitorLandscapeSection';
+import RegulatoryComplianceSection from './RegulatoryComplianceSection';
 
 interface EditRecord {
   id: string;
@@ -63,10 +64,22 @@ interface MarketIntelligenceTabProps {
   competitorTopPlayerShare?: string;
   competitorEmergingPlayers?: string;
   competitorFundingNews?: string[];
+  // Regulatory Compliance props
+  isRegulatoryEditing?: boolean;
+  regulatoryExpanded?: boolean;
+  regulatoryHasEdits?: boolean;
+  regulatoryDeletedSections?: Set<string>;
+  regulatoryEditHistory?: EditRecord[];
+  regulatoryExecutiveSummary?: string;
+  regulatoryEuAiActDeadline?: string;
+  regulatoryGdprCompliance?: string;
+  regulatoryPotentialFines?: string;
+  regulatoryDataLocalization?: string;
   onToggleEdit: () => void;
-  onMarketSizeScoutIconClick: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape', hasEdits?: boolean, lastEditedField?: string) => void;
-  onIndustryTrendsScoutIconClick: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape', hasEdits?: boolean, lastEditedField?: string) => void;
-  onCompetitorScoutIconClick: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape', hasEdits?: boolean, lastEditedField?: string) => void;
+  onMarketSizeScoutIconClick: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance', hasEdits?: boolean, lastEditedField?: string) => void;
+  onIndustryTrendsScoutIconClick: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance', hasEdits?: boolean, lastEditedField?: string) => void;
+  onCompetitorScoutIconClick: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance', hasEdits?: boolean, lastEditedField?: string) => void;
+  onRegulatoryScoutIconClick?: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance', hasEdits?: boolean, lastEditedField?: string) => void;
   onEditHistoryOpen: () => void;
   onDeleteSection: (sectionId: string) => void;
   onSaveChanges: () => void;
@@ -98,6 +111,18 @@ interface MarketIntelligenceTabProps {
   onCompetitorTopPlayerShareChange?: (value: string) => void;
   onCompetitorEmergingPlayersChange?: (value: string) => void;
   onCompetitorFundingNewsChange?: (news: string[]) => void;
+  // Regulatory Compliance handlers
+  onRegulatoryToggleEdit?: () => void;
+  onRegulatorySaveChanges?: () => void;
+  onRegulatoryCancelEdit?: () => void;
+  onRegulatoryDeleteSection?: (sectionId: string) => void;
+  onRegulatoryEditHistoryOpen?: () => void;
+  onRegulatoryExpandToggle?: (expanded: boolean) => void;
+  onRegulatoryExecutiveSummaryChange?: (value: string) => void;
+  onRegulatoryEuAiActDeadlineChange?: (value: string) => void;
+  onRegulatoryGdprComplianceChange?: (value: string) => void;
+  onRegulatoryPotentialFinesChange?: (value: string) => void;
+  onRegulatoryDataLocalizationChange?: (value: string) => void;
   onExportPDF: () => void;
   onSaveToWorkspace: () => void;
   onGenerateShareableLink: () => void;
@@ -191,6 +216,36 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = (props) => {
         onTopPlayerShareChange={props.onCompetitorTopPlayerShareChange || (() => {})}
         onEmergingPlayersChange={props.onCompetitorEmergingPlayersChange || (() => {})}
         onFundingNewsChange={props.onCompetitorFundingNewsChange || (() => {})}
+        onExportPDF={props.onExportPDF}
+        onSaveToWorkspace={props.onSaveToWorkspace}
+        onGenerateShareableLink={props.onGenerateShareableLink}
+      />
+
+      {/* Regulatory & Compliance Highlights Section */}
+      <RegulatoryComplianceSection
+        isEditing={props.isRegulatoryEditing || false}
+        isSplitView={props.isSplitView}
+        isExpanded={props.regulatoryExpanded || false}
+        hasEdits={props.regulatoryHasEdits || false}
+        deletedSections={props.regulatoryDeletedSections || new Set()}
+        editHistory={props.regulatoryEditHistory || []}
+        executiveSummary={props.regulatoryExecutiveSummary || 'The regulatory landscape for SaaS companies continues to evolve rapidly, with new compliance requirements emerging across multiple jurisdictions. Organizations must navigate an increasingly complex web of data protection, AI governance, and industry-specific regulations.'}
+        euAiActDeadline={props.regulatoryEuAiActDeadline || 'February 2, 2025'}
+        gdprCompliance={props.regulatoryGdprCompliance || '68%'}
+        potentialFines={props.regulatoryPotentialFines || 'Up to 6% of annual revenue'}
+        dataLocalization={props.regulatoryDataLocalization || 'Mandatory for customer data'}
+        onToggleEdit={props.onRegulatoryToggleEdit || (() => {})}
+        onScoutIconClick={props.onRegulatoryScoutIconClick || props.onMarketSizeScoutIconClick}
+        onEditHistoryOpen={props.onRegulatoryEditHistoryOpen || (() => {})}
+        onDeleteSection={props.onRegulatoryDeleteSection || (() => {})}
+        onSaveChanges={props.onRegulatorySaveChanges || (() => {})}
+        onCancelEdit={props.onRegulatoryCancelEdit || (() => {})}
+        onExpandToggle={props.onRegulatoryExpandToggle || (() => {})}
+        onExecutiveSummaryChange={props.onRegulatoryExecutiveSummaryChange || (() => {})}
+        onEuAiActDeadlineChange={props.onRegulatoryEuAiActDeadlineChange || (() => {})}
+        onGdprComplianceChange={props.onRegulatoryGdprComplianceChange || (() => {})}
+        onPotentialFinesChange={props.onRegulatoryPotentialFinesChange || (() => {})}
+        onDataLocalizationChange={props.onRegulatoryDataLocalizationChange || (() => {})}
         onExportPDF={props.onExportPDF}
         onSaveToWorkspace={props.onSaveToWorkspace}
         onGenerateShareableLink={props.onGenerateShareableLink}
