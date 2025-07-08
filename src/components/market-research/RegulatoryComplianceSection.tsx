@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -27,16 +26,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-
-interface EditRecord {
-  id: string;
-  timestamp: string;
-  user: string;
-  summary: string;
-  field: string;
-  oldValue: string;
-  newValue: string;
-}
+import { EditRecord } from './types';
 
 interface RegulatoryComplianceSectionProps {
   isEditing: boolean;

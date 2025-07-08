@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { BarChart3, Bot, Edit, Target, TrendingUp, PieChart, X, FileText, Save, Share, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,16 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import MiniPieChart from '@/components/ui/MiniPieChart';
 import MiniLineChart from '@/components/ui/MiniLineChart';
-
-interface EditRecord {
-  id: string;
-  timestamp: string;
-  user: string;
-  summary: string;
-  field: string;
-  oldValue: string;
-  newValue: string;
-}
+import { EditRecord } from './types';
 
 interface MarketSizeSectionProps {
   isEditing: boolean;
