@@ -1743,51 +1743,6 @@ const MarketResearch = () => {
                       onViewDetails={handleViewEditDetails}
                     />
 
-                    {/* Only show other components when chat is not open */}
-                    {!isChatOpen && (
-                      <>
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-                          <RecentMarketResearch 
-                            onViewResults={handleViewResults}
-                            researchReports={marketData.researchReports}
-                            markets={marketData.markets}
-                          />
-                          <ScoutCapabilities />
-                        </div>
-                        
-                        <MarketRankings 
-                          onViewResults={handleViewResultsFromRankings}
-                          rankings={marketData.rankings}
-                        />
-                        
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                          <CompetitorAnalysis 
-                            competitorData={marketData.markets} 
-                            isAIViewActive={isAIViewActive}
-                          />
-                          <MarketSegments
-                             marketSegments={marketData.market_segments}
-                             isAIViewActive={isAIViewActive} 
-                            />
-                        </div>
-                        
-                        <SwotAnalysis
-                         swotAnalysis={marketData.swot_analysis}
-                         isAIViewActive={isAIViewActive}
-                         />
-                        
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-                          <EmergingTrends
-                            emergingTrends={marketData.emerging_trends}
-                            isAIViewActive={isAIViewActive}
-                           />
-                          <TechnologyDrivers
-                             technologyDrivers={marketData.technology_drivers}
-                             isAIViewActive={isAIViewActive}
-                             />
-                        </div>
-                      </>
-                    )}
                   </div>
                 ) : (
                   <div className="flex items-center justify-center py-12">
