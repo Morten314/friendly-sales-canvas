@@ -64,7 +64,8 @@ interface MarketIntelligenceTabProps {
   competitorEmergingPlayers?: string;
   competitorFundingNews?: string[];
   onToggleEdit: () => void;
-  onScoutIconClick: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape', hasEdits?: boolean, lastEditedField?: string) => void;
+  onMarketSizeScoutIconClick: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape', hasEdits?: boolean, lastEditedField?: string) => void;
+  onIndustryTrendsScoutIconClick: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape', hasEdits?: boolean, lastEditedField?: string) => void;
   onEditHistoryOpen: () => void;
   onDeleteSection: (sectionId: string) => void;
   onSaveChanges: () => void;
@@ -120,7 +121,7 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = (props) => {
         marketEntry={props.marketEntry}
         marketDrivers={props.marketDrivers}
         onToggleEdit={props.onToggleEdit}
-        onScoutIconClick={props.onScoutIconClick}
+        onScoutIconClick={props.onMarketSizeScoutIconClick}
         onEditHistoryOpen={props.onEditHistoryOpen}
         onDeleteSection={props.onDeleteSection}
         onSaveChanges={props.onSaveChanges}
@@ -160,7 +161,7 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = (props) => {
         onIndustryTrendsEditHistoryOpen={props.onIndustryTrendsEditHistoryOpen}
         onIndustryTrendsExpandToggle={props.onIndustryTrendsExpandToggle}
         onIndustryTrendsExecutiveSummaryChange={props.onIndustryTrendsExecutiveSummaryChange}
-        onScoutIconClick={props.onScoutIconClick}
+        onScoutIconClick={props.onIndustryTrendsScoutIconClick}
         onExportPDF={props.onExportPDF}
         onSaveToWorkspace={props.onSaveToWorkspace}
         onGenerateShareableLink={props.onGenerateShareableLink}
@@ -179,7 +180,7 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = (props) => {
         emergingPlayers={props.competitorEmergingPlayers || ''}
         fundingNews={props.competitorFundingNews || []}
         onToggleEdit={props.onCompetitorToggleEdit || (() => {})}
-        onScoutIconClick={props.onScoutIconClick}
+        onScoutIconClick={props.onMarketSizeScoutIconClick}
         onEditHistoryOpen={props.onCompetitorEditHistoryOpen || (() => {})}
         onDeleteSection={props.onCompetitorDeleteSection || (() => {})}
         onSaveChanges={props.onCompetitorSaveChanges || (() => {})}

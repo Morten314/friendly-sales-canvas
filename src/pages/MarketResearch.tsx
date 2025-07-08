@@ -1097,6 +1097,14 @@ const MarketResearch = () => {
   });
   const [industryTrendsLastEditedField, setIndustryTrendsLastEditedField] = useState("");
 
+  // Market Size Scout Chat states (separate from Industry Trends)
+  const [showMarketSizeScoutChat, setShowMarketSizeScoutChat] = useState(false);
+  const [marketSizeHasEdits, setMarketSizeHasEdits] = useState(false);
+  const [marketSizeLastEditedField, setMarketSizeLastEditedField] = useState('');
+
+  // Industry Trends Scout Chat states (separate from Market Size)
+  const [showIndustryTrendsScoutChat, setShowIndustryTrendsScoutChat] = useState(false);
+
   const navigate = useNavigate();
 
   // Transform raw report data to our expected structure
@@ -1380,9 +1388,17 @@ const MarketResearch = () => {
     setIsMarketIntelligenceEditing(!isMarketIntelligenceEditing);
   };
 
-  // Update the Scout icon click handler to accept context
-  const handleMarketIntelligenceScoutClick = (context?: 'market-size' | 'industry-trends' | 'competitor-landscape') => {
-    console.log('Scout clicked with context:', context);
+  // Market Size Scout icon click handler
+  const handleMarketSizeScoutClick = (context?: 'market-size' | 'industry-trends' | 'competitor-landscape') => {
+    console.log('Market Size Scout clicked with context:', context);
+    setShowMarketSizeScoutChat(true);
+    setIsChatOpen(true);
+  };
+
+  // Industry Trends Scout icon click handler  
+  const handleIndustryTrendsScoutClick = (context?: 'market-size' | 'industry-trends' | 'competitor-landscape') => {
+    console.log('Industry Trends Scout clicked with context:', context);
+    setShowIndustryTrendsScoutChat(true);
     setIsChatOpen(true);
   };
 
@@ -1395,6 +1411,7 @@ const MarketResearch = () => {
   const handleMarketIntelligenceSaveChanges = () => {
     setIsMarketIntelligenceEditing(false);
     setHasEdits(true);
+    setMarketSizeHasEdits(true);
 
     // Create a new edit record
     const newEdit: EditRecord = {
@@ -1409,6 +1426,9 @@ const MarketResearch = () => {
 
     // Add the new edit record to the edit history
     setEditHistory(prevHistory => [...prevHistory, newEdit]);
+    
+    // Automatically open Market Size Scout chat panel
+    handleMarketSizeScoutClick('market-size');
   };
 
   const handleMarketIntelligenceCancelEdit = () => {
@@ -1455,8 +1475,8 @@ const MarketResearch = () => {
     // Add the new edit record to the industry trends edit history
     setIndustryTrendsEditHistory(prevHistory => [...prevHistory, newEdit]);
     
-    // Automatically open Scout chat panel with industry-trends context
-    handleMarketIntelligenceScoutClick('industry-trends');
+    // Automatically open Industry Trends Scout chat panel
+    handleIndustryTrendsScoutClick('industry-trends');
   };
 
   const handleIndustryTrendsCancelEdit = () => {
@@ -1684,7 +1704,8 @@ const MarketResearch = () => {
                         industryTrendsRisks={industryTrendsData.risks}
                         industryTrendsLastEditedField={industryTrendsLastEditedField}
                         onToggleEdit={handleMarketIntelligenceToggleEdit}
-                        onScoutIconClick={handleMarketIntelligenceScoutClick}
+                        onMarketSizeScoutIconClick={handleMarketSizeScoutClick}
+                        onIndustryTrendsScoutIconClick={handleIndustryTrendsScoutClick}
                         onEditHistoryOpen={handleEditHistoryOpen}
                         onDeleteSection={handleMarketIntelligenceDeleteSection}
                         onSaveChanges={handleMarketIntelligenceSaveChanges}
@@ -1724,16 +1745,37 @@ const MarketResearch = () => {
                         onGenerateShareableLink={handleMarketIntelligenceGenerateShareableLink}
                       />
                       
-                      {/* Scout Chat Panel */}
-                      {isChatOpen && (
+                      {/* Market Size Scout Chat Panel */}
+                      {showMarketSizeScoutChat && (
                         <ScoutChatPanel
-                          showScoutChat={isChatOpen}
-                          isSplitView={isChatOpen}
-                          hasEdits={hasEdits}
+                          showScoutChat={showMarketSizeScoutChat}
+                          isSplitView={showMarketSizeScoutChat}
+                          hasEdits={marketSizeHasEdits}
                           showEditHistory={false}
                           editHistory={editHistory}
-                          lastEditedField=""
-                          onClose={() => setIsChatOpen(false)}
+                          lastEditedField={marketSizeLastEditedField}
+                          context="market-size"
+                          onClose={() => {
+                            setShowMarketSizeScoutChat(false);
+                            setIsChatOpen(false);
+                          }}
+                        />
+                      )}
+
+                      {/* Industry Trends Scout Chat Panel */}
+                      {showIndustryTrendsScoutChat && (
+                        <ScoutChatPanel
+                          showScoutChat={showIndustryTrendsScoutChat}
+                          isSplitView={showIndustryTrendsScoutChat}
+                          hasEdits={industryTrendsHasEdits}
+                          showEditHistory={false}
+                          editHistory={industryTrendsEditHistory}
+                          lastEditedField={industryTrendsLastEditedField}
+                          context="industry-trends"
+                          onClose={() => {
+                            setShowIndustryTrendsScoutChat(false);
+                            setIsChatOpen(false);
+                          }}
                         />
                       )}
                     </div>
