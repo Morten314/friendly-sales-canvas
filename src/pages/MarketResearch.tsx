@@ -1122,6 +1122,9 @@ const MarketResearch = () => {
   // Industry Trends Scout Chat states (separate from Market Size)
   const [showIndustryTrendsScoutChat, setShowIndustryTrendsScoutChat] = useState(false);
 
+  // Competitor Landscape Scout Chat states (separate from others)
+  const [showCompetitorScoutChat, setShowCompetitorScoutChat] = useState(false);
+
   const navigate = useNavigate();
 
   // Transform raw report data to our expected structure
@@ -1425,6 +1428,15 @@ const MarketResearch = () => {
     setIsChatOpen(true);
   };
 
+  // Competitor Landscape Scout icon click handler  
+  const handleCompetitorScoutClick = (context?: 'market-size' | 'industry-trends' | 'competitor-landscape') => {
+    console.log('Competitor Scout clicked with context:', context);
+    // Always show welcome message when bot icon is clicked - reset states
+    setCompetitorHasEdits(false);
+    setShowCompetitorScoutChat(true);
+    setIsChatOpen(true);
+  };
+
   const handleMarketIntelligenceDeleteSection = (sectionId: string) => {
     const newDeletedSections = new Set(deletedSections);
     newDeletedSections.add(sectionId);
@@ -1558,6 +1570,10 @@ const MarketResearch = () => {
     
     setCompetitorEditHistory(prev => [newEdit, ...prev]);
     setHasEdits(true);
+    
+    // Automatically open Competitor Landscape Scout chat panel with contextual message
+    setShowCompetitorScoutChat(true);
+    setIsChatOpen(true);
   };
 
   const handleCompetitorCancelEdit = () => {
@@ -1807,6 +1823,7 @@ const MarketResearch = () => {
                         onToggleEdit={handleMarketIntelligenceToggleEdit}
                         onMarketSizeScoutIconClick={handleMarketSizeScoutClick}
                         onIndustryTrendsScoutIconClick={handleIndustryTrendsScoutClick}
+                        onCompetitorScoutIconClick={handleCompetitorScoutClick}
                         onEditHistoryOpen={handleEditHistoryOpen}
                         onDeleteSection={handleMarketIntelligenceDeleteSection}
                         onSaveChanges={handleMarketIntelligenceSaveChanges}
@@ -1886,6 +1903,23 @@ const MarketResearch = () => {
                           context="industry-trends"
                           onClose={() => {
                             setShowIndustryTrendsScoutChat(false);
+                            setIsChatOpen(false);
+                          }}
+                        />
+                      )}
+
+                      {/* Competitor Landscape Scout Chat Panel */}
+                      {showCompetitorScoutChat && (
+                        <ScoutChatPanel
+                          showScoutChat={showCompetitorScoutChat}
+                          isSplitView={showCompetitorScoutChat}
+                          hasEdits={competitorHasEdits}
+                          showEditHistory={false}
+                          editHistory={competitorEditHistory}
+                          lastEditedField=""
+                          context="competitor-landscape"
+                          onClose={() => {
+                            setShowCompetitorScoutChat(false);
                             setIsChatOpen(false);
                           }}
                         />

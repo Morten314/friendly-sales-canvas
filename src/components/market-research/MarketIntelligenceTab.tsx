@@ -66,6 +66,7 @@ interface MarketIntelligenceTabProps {
   onToggleEdit: () => void;
   onMarketSizeScoutIconClick: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape', hasEdits?: boolean, lastEditedField?: string) => void;
   onIndustryTrendsScoutIconClick: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape', hasEdits?: boolean, lastEditedField?: string) => void;
+  onCompetitorScoutIconClick: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape', hasEdits?: boolean, lastEditedField?: string) => void;
   onEditHistoryOpen: () => void;
   onDeleteSection: (sectionId: string) => void;
   onSaveChanges: () => void;
@@ -180,7 +181,7 @@ const MarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = (props) => {
         emergingPlayers={props.competitorEmergingPlayers || ''}
         fundingNews={props.competitorFundingNews || []}
         onToggleEdit={props.onCompetitorToggleEdit || (() => {})}
-        onScoutIconClick={props.onMarketSizeScoutIconClick}
+        onScoutIconClick={props.onCompetitorScoutIconClick}
         onEditHistoryOpen={props.onCompetitorEditHistoryOpen || (() => {})}
         onDeleteSection={props.onCompetitorDeleteSection || (() => {})}
         onSaveChanges={props.onCompetitorSaveChanges || (() => {})}
