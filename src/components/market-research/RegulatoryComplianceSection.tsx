@@ -18,7 +18,11 @@ import {
   History,
   Trash2,
   Save,
-  X
+  X,
+  Clock,
+  Target,
+  Users,
+  Building
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -26,6 +30,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { EditRecord } from './types';
 
 interface RegulatoryComplianceSectionProps {
@@ -127,6 +139,72 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
       badge: 'High Priority',
       badgeColor: 'bg-purple-100 text-purple-800',
       tooltip: 'New data residency requirements affecting international SaaS deployment strategies.'
+    }
+  ];
+
+  const visualDataCards = [
+    {
+      title: 'Compliance Adoption Rates',
+      type: 'bar-chart',
+      data: [
+        { name: 'GDPR', value: 68, color: '#10b981' },
+        { name: 'CCPA', value: 45, color: '#3b82f6' },
+        { name: 'SOC 2', value: 72, color: '#8b5cf6' },
+        { name: 'ISO 27001', value: 38, color: '#f59e0b' }
+      ]
+    },
+    {
+      title: 'Regulatory Timeline',
+      type: 'timeline',
+      data: [
+        { date: 'Q1 2025', event: 'EU AI Act Phase 1', status: 'upcoming' },
+        { date: 'Q3 2025', event: 'GDPR Updates', status: 'upcoming' },
+        { date: 'Q1 2026', event: 'EU AI Act Full Enforcement', status: 'critical' }
+      ]
+    },
+    {
+      title: 'Risk Indicators',
+      type: 'percentage',
+      data: [
+        { metric: 'Data Breach Risk', value: 23, trend: 'down' },
+        { metric: 'Non-compliance Penalties', value: 15, trend: 'up' },
+        { metric: 'Audit Readiness', value: 67, trend: 'up' }
+      ]
+    }
+  ];
+
+  const regionalData = [
+    {
+      region: 'European Union',
+      framework: 'GDPR + AI Act',
+      deadline: 'Q1 2026',
+      impact: 'High',
+      status: 'Active',
+      requirements: 'Data protection, AI governance'
+    },
+    {
+      region: 'United States',
+      framework: 'CCPA + State Laws',
+      deadline: 'Ongoing',
+      impact: 'Medium',
+      status: 'Evolving',
+      requirements: 'Privacy rights, data handling'
+    },
+    {
+      region: 'China',
+      framework: 'PIPL + Cybersecurity Law',
+      deadline: 'Active',
+      impact: 'High',
+      status: 'Mandatory',
+      requirements: 'Data localization, security'
+    },
+    {
+      region: 'United Kingdom',
+      framework: 'UK GDPR + DPA',
+      deadline: 'Active',
+      impact: 'Medium',
+      status: 'Active',
+      requirements: 'Data protection, transfers'
     }
   ];
 
@@ -307,60 +385,177 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
           </Button>
         </div>
 
-        {/* Expanded Content */}
+        {/* Enhanced Expanded Content */}
         {isExpanded && (
-          <div className="space-y-6 pt-6 border-t border-gray-200">
-            {/* Regional Breakdown */}
+          <div className="space-y-8 pt-6 border-t border-gray-200">
+            {/* Visual Data Cards */}
             <div>
-              <h4 className="text-sm font-medium text-gray-700 mb-3">Regional Compliance Overview</h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-4 bg-blue-50 rounded-lg">
-                  <h5 className="font-medium text-blue-900 mb-2">Europe (GDPR)</h5>
-                  <p className="text-sm text-blue-700">Strict data protection with hefty fines</p>
-                  <div className="mt-2">
-                    <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded">Active</span>
+              <h4 className="text-sm font-medium text-gray-700 mb-4">Compliance Analytics</h4>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Compliance Adoption Rates - Bar Chart */}
+                <div className="bg-white border border-gray-200 rounded-lg p-4">
+                  <h5 className="font-medium text-gray-900 mb-3 flex items-center">
+                    <Users className="h-4 w-4 mr-2 text-blue-600" />
+                    Compliance Adoption Rates
+                  </h5>
+                  <div className="space-y-3">
+                    {visualDataCards[0].data.map((item, index) => (
+                      <div key={index} className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">{item.name}</span>
+                        <div className="flex items-center space-x-2">
+                          <div className="w-16 h-2 bg-gray-200 rounded-full">
+                            <div 
+                              className="h-2 rounded-full" 
+                              style={{ 
+                                width: `${item.value}%`, 
+                                backgroundColor: item.color 
+                              }}
+                            />
+                          </div>
+                          <span className="text-sm font-medium text-gray-900">{item.value}%</span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-                <div className="p-4 bg-green-50 rounded-lg">
-                  <h5 className="font-medium text-green-900 mb-2">US (CCPA)</h5>
-                  <p className="text-sm text-green-700">California privacy rights expansion</p>
-                  <div className="mt-2">
-                    <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded">Evolving</span>
+
+                {/* Regulatory Timeline */}
+                <div className="bg-white border border-gray-200 rounded-lg p-4">
+                  <h5 className="font-medium text-gray-900 mb-3 flex items-center">
+                    <Clock className="h-4 w-4 mr-2 text-orange-600" />
+                    Regulatory Timeline
+                  </h5>
+                  <div className="space-y-3">
+                    {visualDataCards[1].data.map((item, index) => (
+                      <div key={index} className="flex items-start space-x-3">
+                        <div className={`w-2 h-2 rounded-full mt-2 ${
+                          item.status === 'critical' ? 'bg-red-500' : 'bg-blue-500'
+                        }`} />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900">{item.event}</p>
+                          <p className="text-xs text-gray-500">{item.date}</p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-                <div className="p-4 bg-purple-50 rounded-lg">
-                  <h5 className="font-medium text-purple-900 mb-2">China</h5>
-                  <p className="text-sm text-purple-700">Data localization requirements</p>
-                  <div className="mt-2">
-                    <span className="text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded">Mandatory</span>
+
+                {/* Risk Indicators */}
+                <div className="bg-white border border-gray-200 rounded-lg p-4">
+                  <h5 className="font-medium text-gray-900 mb-3 flex items-center">
+                    <AlertTriangle className="h-4 w-4 mr-2 text-red-600" />
+                    Risk Indicators
+                  </h5>
+                  <div className="space-y-3">
+                    {visualDataCards[2].data.map((item, index) => (
+                      <div key={index} className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">{item.metric}</span>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-sm font-medium text-gray-900">{item.value}%</span>
+                          <TrendingUp className={`h-3 w-3 ${
+                            item.trend === 'up' ? 'text-green-600' : 'text-red-600'
+                          } ${item.trend === 'down' ? 'rotate-180' : ''}`} />
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
             </div>
 
+            {/* Regional Breakdown */}
+            <div>
+              <h4 className="text-sm font-medium text-gray-700 mb-4">Regional Compliance Overview</h4>
+              <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-gray-50">
+                      <TableHead className="font-medium">Region</TableHead>
+                      <TableHead className="font-medium">Framework</TableHead>
+                      <TableHead className="font-medium">Deadline</TableHead>
+                      <TableHead className="font-medium">Impact</TableHead>
+                      <TableHead className="font-medium">Status</TableHead>
+                      <TableHead className="font-medium">Key Requirements</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {regionalData.map((region, index) => (
+                      <TableRow key={index}>
+                        <TableCell className="font-medium">{region.region}</TableCell>
+                        <TableCell>{region.framework}</TableCell>
+                        <TableCell>{region.deadline}</TableCell>
+                        <TableCell>
+                          <Badge className={`${
+                            region.impact === 'High' ? 'bg-red-100 text-red-800' :
+                            region.impact === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-green-100 text-green-800'
+                          }`}>
+                            {region.impact}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={`${
+                            region.status === 'Active' || region.status === 'Mandatory' 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-blue-100 text-blue-800'
+                          }`}>
+                            {region.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm text-gray-600">{region.requirements}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+
             {/* Strategic Recommendations */}
             <div>
-              <h4 className="text-sm font-medium text-gray-700 mb-3">Strategic Recommendations</h4>
-              <div className="space-y-3">
-                <div className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
-                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
-                  <div>
-                    <h5 className="font-medium text-gray-900">Implement Privacy by Design</h5>
-                    <p className="text-sm text-gray-600">Build compliance into your product architecture from the ground up</p>
+              <h4 className="text-sm font-medium text-gray-700 mb-4">Strategic Recommendations</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-start space-x-3">
+                    <Shield className="h-5 w-5 text-blue-600 mt-0.5" />
+                    <div>
+                      <h5 className="font-medium text-blue-900 mb-2">Mitigate Regulatory Risks</h5>
+                      <ul className="text-sm text-blue-700 space-y-1">
+                        <li>• Implement privacy by design principles</li>
+                        <li>• Establish automated compliance monitoring</li>
+                        <li>• Regular risk assessments and audits</li>
+                        <li>• Cross-functional compliance team</li>
+                      </ul>
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
-                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
-                  <div>
-                    <h5 className="font-medium text-gray-900">Regional Data Strategy</h5>
-                    <p className="text-sm text-gray-600">Develop multi-region deployment capabilities for data residency requirements</p>
+                
+                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-start space-x-3">
+                    <Target className="h-5 w-5 text-green-600 mt-0.5" />
+                    <div>
+                      <h5 className="font-medium text-green-900 mb-2">Competitive Positioning</h5>
+                      <ul className="text-sm text-green-700 space-y-1">
+                        <li>• Market compliance as differentiator</li>
+                        <li>• Showcase security certifications</li>
+                        <li>• Transparent data handling practices</li>
+                        <li>• Industry-leading privacy standards</li>
+                      </ul>
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
-                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
-                  <div>
-                    <h5 className="font-medium text-gray-900">Compliance Monitoring</h5>
-                    <p className="text-sm text-gray-600">Establish automated monitoring for regulatory changes and compliance status</p>
+                
+                <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                  <div className="flex items-start space-x-3">
+                    <Building className="h-5 w-5 text-purple-600 mt-0.5" />
+                    <div>
+                      <h5 className="font-medium text-purple-900 mb-2">Go-to-Market Strategy</h5>
+                      <ul className="text-sm text-purple-700 space-y-1">
+                        <li>• Regional deployment capabilities</li>
+                        <li>• Compliance-ready product offerings</li>
+                        <li>• Legal-friendly contract templates</li>
+                        <li>• Enterprise-grade data residency</li>
+                      </ul>
+                    </div>
                   </div>
                 </div>
               </div>
