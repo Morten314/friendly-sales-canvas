@@ -1454,6 +1454,9 @@ const MarketResearch = () => {
 
     // Add the new edit record to the industry trends edit history
     setIndustryTrendsEditHistory(prevHistory => [...prevHistory, newEdit]);
+    
+    // Automatically open Scout chat panel with industry-trends context
+    handleMarketIntelligenceScoutClick('industry-trends');
   };
 
   const handleIndustryTrendsCancelEdit = () => {
