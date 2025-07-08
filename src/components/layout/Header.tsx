@@ -36,7 +36,7 @@ export function Header() {
     
     if (path === '/agent-hub') return 'Agent Hub';
     if (path === '/dashboard') return 'Dashboard';
-    if (path === '/market-research') return 'Scout';
+    if (path === '/market-research') return 'Scout - Find your best markets before your competitors do';
     if (path === '/customers') return 'ICP Profiles (Profiler)';
     if (path === '/deals') return 'GTM Strategies (Strategist)';
     if (path === '/calendar') return 'Campaigns (Activator)';
@@ -77,17 +77,6 @@ export function Header() {
 
         {/* View Toggle */}
         <ViewToggle onViewChange={handleViewModeChange} />
-
-        {/* Market Research specific buttons */}
-        {isMarketResearchPage && (
-          <Button 
-            className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
-            onClick={handleDeployScout}
-          >
-            <Search className="h-4 w-4" />
-            Deploy Scout
-          </Button>
-        )}
 
         {/* Ask Brewra AI Button */}
         <div className="relative">

@@ -9,11 +9,12 @@ interface ViewToggleProps {
 }
 
 export const ViewToggle = ({ onViewChange }: ViewToggleProps) => {
-  const [isAIView, setIsAIView] = useState(false);
+  const [isAIView, setIsAIView] = useState(true);
 
   const handleToggleChange = (checked: boolean) => {
-    setIsAIView(checked);
-    onViewChange(checked);
+    // Always keep AI mode enabled
+    setIsAIView(true);
+    onViewChange(true);
   };
 
   return (
@@ -25,8 +26,8 @@ export const ViewToggle = ({ onViewChange }: ViewToggleProps) => {
       
       <Switch
         id="view-mode"
-        checked={isAIView}
-        onCheckedChange={handleToggleChange}
+        checked={true}
+        disabled={true}
       />
       
       <div className="flex items-center gap-2 px-2">
