@@ -1097,6 +1097,23 @@ const MarketResearch = () => {
   });
   const [industryTrendsLastEditedField, setIndustryTrendsLastEditedField] = useState("");
 
+  // Competitor Landscape state - Add these new state variables
+  const [isCompetitorEditing, setIsCompetitorEditing] = useState(false);
+  const [competitorExpanded, setCompetitorExpanded] = useState(false);
+  const [competitorHasEdits, setCompetitorHasEdits] = useState(false);
+  const [competitorDeletedSections, setCompetitorDeletedSections] = useState<Set<string>>(new Set());
+  const [competitorEditHistory, setCompetitorEditHistory] = useState<EditRecord[]>([]);
+  const [competitorData, setCompetitorData] = useState({
+    executiveSummary: "The enterprise collaboration tools market is increasingly competitive, with several dominant players holding significant market share. However, emerging startups are introducing disruptive features, shifting the landscape rapidly.",
+    topPlayerShare: "48%",
+    emergingPlayers: "2",
+    fundingNews: [
+      "Notion raises $300M Series C - Valuation reaches $10B as workspace tools gain traction",
+      "Microsoft Teams launches AI Copilot - New AI features for meeting summaries and task automation",
+      "Slack introduces Workflow Builder 2.0 - Enhanced automation capabilities for enterprise customers"
+    ]
+  });
+
   // Market Size Scout Chat states (separate from Industry Trends)
   const [showMarketSizeScoutChat, setShowMarketSizeScoutChat] = useState(false);
   const [marketSizeHasEdits, setMarketSizeHasEdits] = useState(false);
@@ -1517,6 +1534,66 @@ const MarketResearch = () => {
     setIndustryTrendsLastEditedField('executiveSummary');
   };
 
+  // Competitor Landscape handlers - Add these new handlers
+  const handleCompetitorToggleEdit = () => {
+    setIsCompetitorEditing(!isCompetitorEditing);
+  };
+
+  const handleCompetitorSaveChanges = () => {
+    setIsCompetitorEditing(false);
+    
+    // Force contextual message state for Competitor Landscape Scout
+    setCompetitorHasEdits(true);
+
+    // Create a new edit record
+    const newEdit: EditRecord = {
+      id: Date.now().toString(),
+      timestamp: new Date().toLocaleString(),
+      user: 'Current User',
+      summary: 'Updated competitor landscape content',
+      field: 'Competitor Landscape',
+      oldValue: 'Previous content',
+      newValue: 'Updated content'
+    };
+    
+    setCompetitorEditHistory(prev => [newEdit, ...prev]);
+    setHasEdits(true);
+  };
+
+  const handleCompetitorCancelEdit = () => {
+    setIsCompetitorEditing(false);
+  };
+
+  const handleCompetitorDeleteSection = (sectionId: string) => {
+    const newDeletedSections = new Set(competitorDeletedSections);
+    newDeletedSections.add(sectionId);
+    setCompetitorDeletedSections(newDeletedSections);
+  };
+
+  const handleCompetitorEditHistoryOpen = () => {
+    setIsEditHistoryOpen(true);
+  };
+
+  const handleCompetitorExpandToggle = (expanded: boolean) => {
+    setCompetitorExpanded(expanded);
+  };
+
+  const handleCompetitorExecutiveSummaryChange = (value: string) => {
+    setCompetitorData(prev => ({ ...prev, executiveSummary: value }));
+  };
+
+  const handleCompetitorTopPlayerShareChange = (value: string) => {
+    setCompetitorData(prev => ({ ...prev, topPlayerShare: value }));
+  };
+
+  const handleCompetitorEmergingPlayersChange = (value: string) => {
+    setCompetitorData(prev => ({ ...prev, emergingPlayers: value }));
+  };
+
+  const handleCompetitorFundingNewsChange = (news: string[]) => {
+    setCompetitorData(prev => ({ ...prev, fundingNews: news }));
+  };
+
   // Edit history handlers
   const handleEditHistoryOpen = () => {
     setIsEditHistoryOpen(true);
@@ -1717,6 +1794,16 @@ const MarketResearch = () => {
                         industryTrendsRecommendations={industryTrendsData.recommendations}
                         industryTrendsRisks={industryTrendsData.risks}
                         industryTrendsLastEditedField={industryTrendsLastEditedField}
+                        // Competitor Landscape props
+                        isCompetitorEditing={isCompetitorEditing}
+                        competitorExpanded={competitorExpanded}
+                        competitorHasEdits={competitorHasEdits}
+                        competitorDeletedSections={competitorDeletedSections}
+                        competitorEditHistory={competitorEditHistory}
+                        competitorExecutiveSummary={competitorData.executiveSummary}
+                        competitorTopPlayerShare={competitorData.topPlayerShare}
+                        competitorEmergingPlayers={competitorData.emergingPlayers}
+                        competitorFundingNews={competitorData.fundingNews}
                         onToggleEdit={handleMarketIntelligenceToggleEdit}
                         onMarketSizeScoutIconClick={handleMarketSizeScoutClick}
                         onIndustryTrendsScoutIconClick={handleIndustryTrendsScoutClick}
@@ -1754,6 +1841,17 @@ const MarketResearch = () => {
                         onIndustryTrendsEditHistoryOpen={handleIndustryTrendsEditHistoryOpen}
                         onIndustryTrendsExpandToggle={handleIndustryTrendsExpandToggle}
                         onIndustryTrendsExecutiveSummaryChange={handleIndustryTrendsExecutiveSummaryChange}
+                        // Competitor Landscape handlers
+                        onCompetitorToggleEdit={handleCompetitorToggleEdit}
+                        onCompetitorSaveChanges={handleCompetitorSaveChanges}
+                        onCompetitorCancelEdit={handleCompetitorCancelEdit}
+                        onCompetitorDeleteSection={handleCompetitorDeleteSection}
+                        onCompetitorEditHistoryOpen={handleCompetitorEditHistoryOpen}
+                        onCompetitorExpandToggle={handleCompetitorExpandToggle}
+                        onCompetitorExecutiveSummaryChange={handleCompetitorExecutiveSummaryChange}
+                        onCompetitorTopPlayerShareChange={handleCompetitorTopPlayerShareChange}
+                        onCompetitorEmergingPlayersChange={handleCompetitorEmergingPlayersChange}
+                        onCompetitorFundingNewsChange={handleCompetitorFundingNewsChange}
                         onExportPDF={handleMarketIntelligenceExportPDF}
                         onSaveToWorkspace={handleMarketIntelligenceSaveToWorkspace}
                         onGenerateShareableLink={handleMarketIntelligenceGenerateShareableLink}
