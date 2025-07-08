@@ -1391,6 +1391,9 @@ const MarketResearch = () => {
   // Market Size Scout icon click handler
   const handleMarketSizeScoutClick = (context?: 'market-size' | 'industry-trends' | 'competitor-landscape') => {
     console.log('Market Size Scout clicked with context:', context);
+    // Always show welcome message when bot icon is clicked - reset states
+    setMarketSizeHasEdits(false);
+    setMarketSizeLastEditedField('');
     setShowMarketSizeScoutChat(true);
     setIsChatOpen(true);
   };
@@ -1398,6 +1401,9 @@ const MarketResearch = () => {
   // Industry Trends Scout icon click handler  
   const handleIndustryTrendsScoutClick = (context?: 'market-size' | 'industry-trends' | 'competitor-landscape') => {
     console.log('Industry Trends Scout clicked with context:', context);
+    // Always show welcome message when bot icon is clicked - reset states
+    setIndustryTrendsHasEdits(false);
+    setIndustryTrendsLastEditedField('');
     setShowIndustryTrendsScoutChat(true);
     setIsChatOpen(true);
   };
@@ -1411,7 +1417,10 @@ const MarketResearch = () => {
   const handleMarketIntelligenceSaveChanges = () => {
     setIsMarketIntelligenceEditing(false);
     setHasEdits(true);
+    
+    // Force contextual message state for Market Size Scout
     setMarketSizeHasEdits(true);
+    setMarketSizeLastEditedField('Market Intelligence');
 
     // Create a new edit record
     const newEdit: EditRecord = {
@@ -1427,8 +1436,9 @@ const MarketResearch = () => {
     // Add the new edit record to the edit history
     setEditHistory(prevHistory => [...prevHistory, newEdit]);
     
-    // Automatically open Market Size Scout chat panel
-    handleMarketSizeScoutClick('market-size');
+    // Automatically open Market Size Scout chat panel with contextual message
+    setShowMarketSizeScoutChat(true);
+    setIsChatOpen(true);
   };
 
   const handleMarketIntelligenceCancelEdit = () => {
@@ -1459,7 +1469,10 @@ const MarketResearch = () => {
 
   const handleIndustryTrendsSaveChanges = () => {
     setIsIndustryTrendsEditing(false);
+    
+    // Force contextual message state for Industry Trends Scout
     setIndustryTrendsHasEdits(true);
+    setIndustryTrendsLastEditedField('Industry Trends');
 
     // Create a new edit record
     const newEdit: EditRecord = {
@@ -1475,8 +1488,9 @@ const MarketResearch = () => {
     // Add the new edit record to the industry trends edit history
     setIndustryTrendsEditHistory(prevHistory => [...prevHistory, newEdit]);
     
-    // Automatically open Industry Trends Scout chat panel
-    handleIndustryTrendsScoutClick('industry-trends');
+    // Automatically open Industry Trends Scout chat panel with contextual message
+    setShowIndustryTrendsScoutChat(true);
+    setIsChatOpen(true);
   };
 
   const handleIndustryTrendsCancelEdit = () => {
