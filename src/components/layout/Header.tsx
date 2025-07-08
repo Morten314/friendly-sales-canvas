@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Search, Bell, MessageSquare } from "lucide-react";
+import { Search, Bell, MessageSquare, Info } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
@@ -65,6 +65,44 @@ export function Header() {
     <header className="bg-white border-b border-gray-200 p-4 flex items-center justify-between relative z-50">
       <div className="flex items-center">
         <h1 className="text-xl font-bold text-gray-800">{getPageTitle()}</h1>
+        {isMarketResearchPage && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="ml-3 h-6 w-6 p-0 hover:bg-gray-100">
+                <Info className="h-4 w-4 text-gray-500 hover:text-gray-700" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-80 bg-white border border-gray-200 shadow-lg z-50">
+              <DropdownMenuLabel className="text-sm font-semibold text-gray-800 pb-2">
+                What can this agent do for you?
+              </DropdownMenuLabel>
+              <div className="px-2 pb-2">
+                <ul className="text-sm text-gray-700 space-y-1">
+                  <li className="flex items-start">
+                    <span className="inline-block w-2 h-2 bg-gray-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                    <span>Market size estimation & TAM analysis</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="inline-block w-2 h-2 bg-gray-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                    <span>Competitor research & positioning</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="inline-block w-2 h-2 bg-gray-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                    <span>Industry trends & growth forecasts</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="inline-block w-2 h-2 bg-gray-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                    <span>Regulatory & compliance landscape</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="inline-block w-2 h-2 bg-gray-400 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                    <span>Market entry barriers analysis</span>
+                  </li>
+                </ul>
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
 
       <div className="flex items-center space-x-4">
