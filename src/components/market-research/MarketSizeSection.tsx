@@ -86,7 +86,6 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
 }) => {
   const handleMarketSizeSaveChanges = () => {
     onSaveChanges();
-    onScoutIconClick('market-size');
   };
 
   return (
