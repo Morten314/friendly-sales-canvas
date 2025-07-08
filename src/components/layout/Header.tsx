@@ -78,6 +78,16 @@ export function Header() {
         {/* View Toggle */}
         <ViewToggle onViewChange={handleViewModeChange} />
 
+        {/* Market Research specific buttons */}
+        {isMarketResearchPage && (
+          <Button 
+            className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+            onClick={handleDeployScout}
+          >
+            Deploy Scout
+          </Button>
+        )}
+
         {/* Ask Brewra AI Button */}
         <div className="relative">
           <Button
