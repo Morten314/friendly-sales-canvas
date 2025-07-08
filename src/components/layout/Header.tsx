@@ -69,12 +69,6 @@ export function Header() {
 
       <div className="flex items-center space-x-4">
         
-        {/* Search Box */}
-        <div className="relative w-64">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
-          <Input className="pl-8" placeholder="Search..." />
-        </div>
-
         {/* View Toggle */}
         <ViewToggle onViewChange={handleViewModeChange} />
 
