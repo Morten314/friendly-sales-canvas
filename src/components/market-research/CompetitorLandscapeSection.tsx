@@ -74,7 +74,6 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
 }) => {
   const handleCompetitorSaveChanges = () => {
     onSaveChanges();
-    onScoutIconClick('competitor-landscape');
   };
 
   const handleFundingNewsChange = (index: number, value: string) => {
