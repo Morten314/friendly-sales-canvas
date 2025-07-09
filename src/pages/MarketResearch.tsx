@@ -1638,10 +1638,11 @@ const MarketResearch = () => {
     const sectionName = sectionNames[sectionId] || sectionId;
     setIndustryTrendsDeletedSections(prev => new Set([...prev, sectionId]));
     
-    // Set custom message and trigger Scout with deletion message
-    setIndustryTrendsCustomMessage(`I noticed you removed the ${sectionName}. Want me to help refine or replace it?`);
+    // Create custom message and trigger Scout with deletion message
+    const customMessage = `I noticed you removed the ${sectionName}. Want me to help refine or replace it?`;
+    setIndustryTrendsCustomMessage(customMessage);
     setTimeout(() => {
-      handleIndustryTrendsScoutClick('industry-trends', false);
+      handleIndustryTrendsScoutClick('industry-trends', false, customMessage);
     }, 300);
   };
 
@@ -1744,10 +1745,11 @@ const MarketResearch = () => {
     const sectionName = sectionNames[sectionId] || sectionId;
     setCompetitorDeletedSections(prev => new Set([...prev, sectionId]));
     
-    // Set custom message and trigger Scout with deletion message  
-    setCompetitorCustomMessage(`I noticed you removed the ${sectionName}. Want me to help refine or replace it?`);
+    // Create custom message and trigger Scout with deletion message  
+    const customMessage = `I noticed you removed the ${sectionName}. Want me to help refine or replace it?`;
+    setCompetitorCustomMessage(customMessage);
     setTimeout(() => {
-      handleCompetitorScoutClick('competitor-landscape', false);
+      handleCompetitorScoutClick('competitor-landscape', false, customMessage);
     }, 300);
   };
 
@@ -1764,10 +1766,11 @@ const MarketResearch = () => {
     const sectionName = sectionNames[sectionId] || sectionId;
     setMarketSizeDeletedSections(prev => new Set([...prev, sectionId]));
     
-    // Set custom message and trigger Scout with deletion message
-    setMarketSizeCustomMessage(`I noticed you removed the ${sectionName}. Want me to help refine or replace it?`);
+    // Create custom message and trigger Scout with deletion message
+    const customMessage = `I noticed you removed the ${sectionName}. Want me to help refine or replace it?`;
+    setMarketSizeCustomMessage(customMessage);
     setTimeout(() => {
-      handleMarketSizeScoutClick('market-size', false);
+      handleMarketSizeScoutClick('market-size', false, customMessage);
     }, 300);
   };
 
