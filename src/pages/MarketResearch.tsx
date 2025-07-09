@@ -1097,6 +1097,20 @@ const MarketResearch = () => {
   });
   const [industryTrendsLastEditedField, setIndustryTrendsLastEditedField] = useState("");
 
+  // Regulatory Compliance state - Add these new state variables
+  const [isRegulatoryEditing, setIsRegulatoryEditing] = useState(false);
+  const [regulatoryExpanded, setRegulatoryExpanded] = useState(false);
+  const [regulatoryHasEdits, setRegulatoryHasEdits] = useState(false);
+  const [regulatoryDeletedSections, setRegulatoryDeletedSections] = useState<Set<string>>(new Set());
+  const [regulatoryEditHistory, setRegulatoryEditHistory] = useState<EditRecord[]>([]);
+  const [regulatoryData, setRegulatoryData] = useState({
+    executiveSummary: 'The regulatory landscape for SaaS companies continues to evolve rapidly, with new compliance requirements emerging across multiple jurisdictions. Organizations must navigate an increasingly complex web of data protection, AI governance, and industry-specific regulations.',
+    euAiActDeadline: 'February 2, 2025',
+    gdprCompliance: '68%',
+    potentialFines: 'Up to 6% of annual revenue',
+    dataLocalization: 'Mandatory for customer data'
+  });
+
   // Competitor Landscape state - Add these new state variables
   const [isCompetitorEditing, setIsCompetitorEditing] = useState(false);
   const [competitorExpanded, setCompetitorExpanded] = useState(false);
@@ -1610,6 +1624,57 @@ const MarketResearch = () => {
     setCompetitorData(prev => ({ ...prev, fundingNews: news }));
   };
 
+  // Regulatory Compliance handlers - Add these new handlers
+  const handleRegulatoryToggleEdit = () => {
+    setIsRegulatoryEditing(!isRegulatoryEditing);
+  };
+
+  const handleRegulatorySaveChanges = () => {
+    setIsRegulatoryEditing(false);
+    setRegulatoryHasEdits(true);
+  };
+
+  const handleRegulatoryCancelEdit = () => {
+    setIsRegulatoryEditing(false);
+  };
+
+  const handleRegulatoryDeleteSection = (sectionId: string) => {
+    setRegulatoryDeletedSections(prev => new Set([...prev, sectionId]));
+  };
+
+  const handleRegulatoryEditHistoryOpen = () => {
+    setIsEditHistoryOpen(true);
+  };
+
+  const handleRegulatoryExpandToggle = (expanded: boolean) => {
+    setRegulatoryExpanded(expanded);
+  };
+
+  const handleRegulatoryExecutiveSummaryChange = (value: string) => {
+    setRegulatoryData(prev => ({ ...prev, executiveSummary: value }));
+  };
+
+  const handleRegulatoryEuAiActDeadlineChange = (value: string) => {
+    setRegulatoryData(prev => ({ ...prev, euAiActDeadline: value }));
+  };
+
+  const handleRegulatoryGdprComplianceChange = (value: string) => {
+    setRegulatoryData(prev => ({ ...prev, gdprCompliance: value }));
+  };
+
+  const handleRegulatoryPotentialFinesChange = (value: string) => {
+    setRegulatoryData(prev => ({ ...prev, potentialFines: value }));
+  };
+
+  const handleRegulatoryDataLocalizationChange = (value: string) => {
+    setRegulatoryData(prev => ({ ...prev, dataLocalization: value }));
+  };
+
+  const handleRegulatoryScoutClick = (context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance', hasEdits?: boolean, lastEditedField?: string) => {
+    console.log('Regulatory scout clicked with context:', context, 'hasEdits:', hasEdits, 'lastEditedField:', lastEditedField);
+    setIsChatOpen(true);
+  };
+
   // Edit history handlers
   const handleEditHistoryOpen = () => {
     setIsEditHistoryOpen(true);
@@ -1820,6 +1885,17 @@ const MarketResearch = () => {
                         competitorTopPlayerShare={competitorData.topPlayerShare}
                         competitorEmergingPlayers={competitorData.emergingPlayers}
                         competitorFundingNews={competitorData.fundingNews}
+                        // Regulatory Compliance props
+                        isRegulatoryEditing={isRegulatoryEditing}
+                        regulatoryExpanded={regulatoryExpanded}
+                        regulatoryHasEdits={regulatoryHasEdits}
+                        regulatoryDeletedSections={regulatoryDeletedSections}
+                        regulatoryEditHistory={regulatoryEditHistory}
+                        regulatoryExecutiveSummary={regulatoryData.executiveSummary}
+                        regulatoryEuAiActDeadline={regulatoryData.euAiActDeadline}
+                        regulatoryGdprCompliance={regulatoryData.gdprCompliance}
+                        regulatoryPotentialFines={regulatoryData.potentialFines}
+                        regulatoryDataLocalization={regulatoryData.dataLocalization}
                         onToggleEdit={handleMarketIntelligenceToggleEdit}
                         onMarketSizeScoutIconClick={handleMarketSizeScoutClick}
                         onIndustryTrendsScoutIconClick={handleIndustryTrendsScoutClick}
@@ -1869,6 +1945,19 @@ const MarketResearch = () => {
                         onCompetitorTopPlayerShareChange={handleCompetitorTopPlayerShareChange}
                         onCompetitorEmergingPlayersChange={handleCompetitorEmergingPlayersChange}
                         onCompetitorFundingNewsChange={handleCompetitorFundingNewsChange}
+                        // Regulatory Compliance handlers
+                        onRegulatoryToggleEdit={handleRegulatoryToggleEdit}
+                        onRegulatorySaveChanges={handleRegulatorySaveChanges}
+                        onRegulatoryCancelEdit={handleRegulatoryCancelEdit}
+                        onRegulatoryDeleteSection={handleRegulatoryDeleteSection}
+                        onRegulatoryEditHistoryOpen={handleRegulatoryEditHistoryOpen}
+                        onRegulatoryExpandToggle={handleRegulatoryExpandToggle}
+                        onRegulatoryExecutiveSummaryChange={handleRegulatoryExecutiveSummaryChange}
+                        onRegulatoryEuAiActDeadlineChange={handleRegulatoryEuAiActDeadlineChange}
+                        onRegulatoryGdprComplianceChange={handleRegulatoryGdprComplianceChange}
+                        onRegulatoryPotentialFinesChange={handleRegulatoryPotentialFinesChange}
+                        onRegulatoryDataLocalizationChange={handleRegulatoryDataLocalizationChange}
+                        onRegulatoryScoutIconClick={handleRegulatoryScoutClick}
                         onExportPDF={handleMarketIntelligenceExportPDF}
                         onSaveToWorkspace={handleMarketIntelligenceSaveToWorkspace}
                         onGenerateShareableLink={handleMarketIntelligenceGenerateShareableLink}
