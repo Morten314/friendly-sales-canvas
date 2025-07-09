@@ -551,18 +551,36 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
               </div>
             )}
 
-            {/* Save Button at Bottom */}
-            <div className="flex justify-center pt-6 border-t">
-              <div className="flex space-x-3">
-                <Button onClick={onSaveChanges} className="bg-blue-600 hover:bg-blue-700">
+            {/* Save/Cancel buttons and Edit History - positioned at bottom */}
+            <div className="flex justify-between items-center pt-6 border-t border-gray-200">
+              <div className="flex gap-3">
+                <Button 
+                  onClick={onSaveChanges}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
                   <Save className="h-4 w-4 mr-2" />
                   Save Changes
                 </Button>
-                <Button onClick={onCancelEdit} variant="outline">
+                <Button 
+                  variant="outline" 
+                  onClick={onCancelEdit}
+                >
                   <X className="h-4 w-4 mr-2" />
                   Cancel
                 </Button>
               </div>
+              
+              {/* Edit History Button */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onEditHistoryOpen}
+                className="flex items-center gap-2 hover:bg-gray-50"
+                title="View changes made to this report"
+              >
+                <Clock className="h-4 w-4" />
+                Edit History
+              </Button>
             </div>
           </div>
         ) : (

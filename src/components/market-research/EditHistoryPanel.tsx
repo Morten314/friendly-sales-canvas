@@ -20,6 +20,7 @@ interface EditHistoryPanelProps {
   editHistory: EditRecord[];
   onRevert: (editId: string) => void;
   onViewDetails: (editId: string) => void;
+  context?: string;
 }
 
 const EditHistoryPanel: React.FC<EditHistoryPanelProps> = ({
@@ -27,7 +28,8 @@ const EditHistoryPanel: React.FC<EditHistoryPanelProps> = ({
   onClose,
   editHistory,
   onRevert,
-  onViewDetails
+  onViewDetails,
+  context = 'Market Size & Opportunity'
 }) => {
   if (!isOpen) return null;
 
@@ -61,7 +63,7 @@ const EditHistoryPanel: React.FC<EditHistoryPanelProps> = ({
               </div>
               <div>
                 <h3 className="font-semibold text-gray-900">Edit History</h3>
-                <p className="text-sm text-gray-600">Market Size & Opportunity</p>
+                <p className="text-sm text-gray-600">{context}</p>
               </div>
             </div>
             <Button

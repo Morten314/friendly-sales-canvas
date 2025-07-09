@@ -1067,6 +1067,7 @@ const MarketResearch = () => {
   // Edit history state
   const [editHistory, setEditHistory] = useState<EditRecord[]>([]);
   const [isEditHistoryOpen, setIsEditHistoryOpen] = useState(false);
+  const [editHistoryContext, setEditHistoryContext] = useState<string>('');
   const [hasEdits, setHasEdits] = useState(false);
 
   // Industry Trends state - Add these new state variables
@@ -1660,6 +1661,7 @@ const MarketResearch = () => {
   };
 
   const handleRegulatoryEditHistoryOpen = () => {
+    setEditHistoryContext('Regulatory & Compliance Highlights');
     setIsEditHistoryOpen(true);
   };
 
@@ -1711,6 +1713,7 @@ const MarketResearch = () => {
 
   const handleEditHistoryClose = () => {
     setIsEditHistoryOpen(false);
+    setEditHistoryContext('');
   };
 
   const handleRevertEdit = (editId: string) => {
@@ -2070,6 +2073,7 @@ const MarketResearch = () => {
                       editHistory={editHistory}
                       onRevert={handleRevertEdit}
                       onViewDetails={handleViewEditDetails}
+                      context={editHistoryContext}
                     />
 
                   </div>
