@@ -381,16 +381,46 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
             </Button>
           </div>
 
-          <div className="flex gap-3 pt-4 border-t">
-            <Button onClick={handleMarketEntrySaveChanges} className="bg-green-600 hover:bg-green-700">
-              Save Changes
-            </Button>
-            <Button variant="outline" onClick={onCancelEdit}>
-              Cancel
-            </Button>
+          {/* Save/Cancel Buttons */}
+          <div className="flex items-center gap-3 pt-6 border-t">
+            <Button onClick={handleMarketEntrySaveChanges}>Save Changes</Button>
+            <Button variant="outline" onClick={onCancelEdit}>Cancel</Button>
             <Button variant="destructive" onClick={() => onDeleteSection('market-entry')}>
               Delete Section
             </Button>
+            <div className="flex-1"></div>
+            
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onEditHistoryOpen}
+                  className={`text-gray-600 hover:text-gray-700 hover:bg-gray-50 transition-all duration-200 ${
+                    editHistory.length === 0 ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                  disabled={editHistory.length === 0}
+                >
+                  <Clock className="h-4 w-4" />
+                  Edit History
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>View changes made to this report</p>
+              </TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="sm" onClick={() => onScoutIconClick('market-entry')} className="text-purple-600 hover:text-purple-700 bg-purple-50 border border-purple-200 hover:shadow-md hover:shadow-purple-200/50 transition-all duration-200 relative">
+                  <div className="absolute inset-0 rounded-md bg-gradient-to-r from-purple-400/20 to-blue-400/20 opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
+                  <Bot className="h-4 w-4 relative z-10" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Get Scout's help with market entry strategy</p>
+              </TooltipContent>
+            </Tooltip>
           </div>
         </div>
       )}
