@@ -1554,6 +1554,7 @@ const MarketResearch = () => {
   };
 
   const handleIndustryTrendsEditHistoryOpen = () => {
+    setEditHistoryContext('Industry Trends');
     setIsEditHistoryOpen(true);
   };
 
@@ -1562,6 +1563,13 @@ const MarketResearch = () => {
   };
 
   const handleIndustryTrendsExecutiveSummaryChange = (value: string) => {
+    const oldValue = industryTrendsData.executiveSummary;
+    addEditRecord(
+      'Industry Trends Executive Summary',
+      oldValue,
+      value,
+      'Updated executive summary for industry trends'
+    );
     setIndustryTrendsData(prev => ({ ...prev, executiveSummary: value }));
     setIndustryTrendsLastEditedField('executiveSummary');
   };
@@ -1569,6 +1577,40 @@ const MarketResearch = () => {
   // Competitor Landscape handlers - Add these new handlers
   const handleCompetitorToggleEdit = () => {
     setIsCompetitorEditing(!isCompetitorEditing);
+  };
+
+  // Add more Industry Trends change handlers
+  const handleIndustryTrendsAiAdoptionChange = (value: string) => {
+    const oldValue = industryTrendsData.aiAdoption;
+    addEditRecord(
+      'AI Adoption Rate',
+      oldValue,
+      value,
+      'Updated AI adoption rate percentage'
+    );
+    setIndustryTrendsData(prev => ({ ...prev, aiAdoption: value }));
+  };
+
+  const handleIndustryTrendsCloudMigrationChange = (value: string) => {
+    const oldValue = industryTrendsData.cloudMigration;
+    addEditRecord(
+      'Cloud Migration',
+      oldValue,
+      value,
+      'Updated cloud migration statistics'
+    );
+    setIndustryTrendsData(prev => ({ ...prev, cloudMigration: value }));
+  };
+
+  const handleIndustryTrendsRegulatoryChange = (value: string) => {
+    const oldValue = industryTrendsData.regulatory;
+    addEditRecord(
+      'Regulatory Policies',
+      oldValue,
+      value,
+      'Updated regulatory policies count'
+    );
+    setIndustryTrendsData(prev => ({ ...prev, regulatory: value }));
   };
 
   const handleCompetitorSaveChanges = () => {
@@ -1607,6 +1649,7 @@ const MarketResearch = () => {
   };
 
   const handleCompetitorEditHistoryOpen = () => {
+    setEditHistoryContext('Competitor Landscape');
     setIsEditHistoryOpen(true);
   };
 
@@ -1615,19 +1658,92 @@ const MarketResearch = () => {
   };
 
   const handleCompetitorExecutiveSummaryChange = (value: string) => {
+    const oldValue = competitorData.executiveSummary;
+    addEditRecord(
+      'Competitor Executive Summary',
+      oldValue,
+      value,
+      'Updated executive summary for competitor analysis'
+    );
     setCompetitorData(prev => ({ ...prev, executiveSummary: value }));
   };
 
   const handleCompetitorTopPlayerShareChange = (value: string) => {
+    const oldValue = competitorData.topPlayerShare;
+    addEditRecord(
+      'Top Player Market Share',
+      oldValue,
+      value,
+      'Updated top player market share percentage'
+    );
     setCompetitorData(prev => ({ ...prev, topPlayerShare: value }));
   };
 
   const handleCompetitorEmergingPlayersChange = (value: string) => {
+    const oldValue = competitorData.emergingPlayers;
+    addEditRecord(
+      'Emerging Players',
+      oldValue,
+      value,
+      'Updated emerging players count'
+    );
     setCompetitorData(prev => ({ ...prev, emergingPlayers: value }));
   };
 
   const handleCompetitorFundingNewsChange = (news: string[]) => {
+    const oldValue = JSON.stringify(competitorData.fundingNews);
+    addEditRecord(
+      'Funding News',
+      oldValue,
+      JSON.stringify(news),
+      'Updated funding news items'
+    );
     setCompetitorData(prev => ({ ...prev, fundingNews: news }));
+  };
+
+  // Market Intelligence handlers with edit tracking
+  const handleMarketIntelligenceExecutiveSummaryChange = (value: string) => {
+    const oldValue = marketIntelligenceData.executiveSummary;
+    addEditRecord(
+      'Market Executive Summary',
+      oldValue,
+      value,
+      'Updated executive summary for market analysis'
+    );
+    setMarketIntelligenceData(prev => ({ ...prev, executiveSummary: value }));
+  };
+
+  const handleMarketIntelligenceTamValueChange = (value: string) => {
+    const oldValue = marketIntelligenceData.tamValue;
+    addEditRecord(
+      'Market TAM',
+      oldValue,
+      value,
+      'Updated Total Addressable Market (TAM) value'
+    );
+    setMarketIntelligenceData(prev => ({ ...prev, tamValue: value }));
+  };
+
+  const handleMarketIntelligenceSamValueChange = (value: string) => {
+    const oldValue = marketIntelligenceData.samValue;
+    addEditRecord(
+      'Market SAM',
+      oldValue,
+      value,
+      'Updated Serviceable Addressable Market (SAM) value'
+    );
+    setMarketIntelligenceData(prev => ({ ...prev, samValue: value }));
+  };
+
+  const handleMarketIntelligenceApacGrowthRateChange = (value: string) => {
+    const oldValue = marketIntelligenceData.apacGrowthRate;
+    addEditRecord(
+      'APAC Growth',
+      oldValue,
+      value,
+      'Updated APAC region growth rate'
+    );
+    setMarketIntelligenceData(prev => ({ ...prev, apacGrowthRate: value }));
   };
 
   // Regulatory Compliance handlers - Add these new handlers
@@ -1779,6 +1895,7 @@ const MarketResearch = () => {
 
   // Edit history handlers
   const handleEditHistoryOpen = () => {
+    setEditHistoryContext('Market Size & Opportunity');
     setIsEditHistoryOpen(true);
   };
 
@@ -1788,8 +1905,122 @@ const MarketResearch = () => {
   };
 
   const handleRevertEdit = (editId: string) => {
-    // TODO: Implement revert functionality
-    console.log('Reverting edit:', editId);
+    const edit = editHistory.find(e => e.id === editId);
+    if (!edit) return;
+
+    // Revert the change based on the field
+    switch (edit.field) {
+      // Regulatory fields
+      case 'Executive Summary':
+        setRegulatoryData(prev => ({ ...prev, executiveSummary: edit.oldValue }));
+        break;
+      case 'EU AI Act Deadline':
+        setRegulatoryData(prev => ({ ...prev, euAiActDeadline: edit.oldValue }));
+        break;
+      case 'GDPR Compliance':
+        setRegulatoryData(prev => ({ ...prev, gdprCompliance: edit.oldValue }));
+        break;
+      case 'Potential Fines':
+        setRegulatoryData(prev => ({ ...prev, potentialFines: edit.oldValue }));
+        break;
+      case 'Data Localization':
+        setRegulatoryData(prev => ({ ...prev, dataLocalization: edit.oldValue }));
+        break;
+      
+      // Market Size fields
+      case 'Market TAM':
+        setMarketData(prev => ({ ...prev, tam: edit.oldValue }));
+        break;
+      case 'Market SAM':
+        setMarketData(prev => ({ ...prev, sam: edit.oldValue }));
+        break;
+      case 'Market SOM':
+        setMarketData(prev => ({ ...prev, som: edit.oldValue }));
+        break;
+      case 'APAC Growth':
+        setMarketData(prev => ({ ...prev, apacGrowth: edit.oldValue }));
+        break;
+      case 'North America Growth':
+        setMarketData(prev => ({ ...prev, northAmericaGrowth: edit.oldValue }));
+        break;
+      case 'Europe Growth':
+        setMarketData(prev => ({ ...prev, europeGrowth: edit.oldValue }));
+        break;
+      
+      // Industry Trends fields  
+      case 'AI Adoption Rate':
+        setIndustryTrendsData(prev => ({ ...prev, aiAdoptionRate: edit.oldValue }));
+        break;
+      case 'Cloud Migration':
+        setIndustryTrendsData(prev => ({ ...prev, cloudMigration: edit.oldValue }));
+        break;
+      case 'Digital Transformation':
+        setIndustryTrendsData(prev => ({ ...prev, digitalTransformation: edit.oldValue }));
+        break;
+      case 'Remote Work':
+        setIndustryTrendsData(prev => ({ ...prev, remoteWork: edit.oldValue }));
+        break;
+      
+      // Competitor fields
+      case 'Top Player Market Share':
+        setCompetitorData(prev => ({ ...prev, topPlayerShare: edit.oldValue }));
+        break;
+      case 'Emerging Players':
+        setCompetitorData(prev => ({ ...prev, emergingPlayers: edit.oldValue }));
+        break;
+      case 'Funding News':
+        // Parse the old value back to array if it was stringified
+        const fundingArray = typeof edit.oldValue === 'string' && edit.oldValue.startsWith('[') 
+          ? JSON.parse(edit.oldValue) 
+          : [edit.oldValue];
+        setCompetitorData(prev => ({ ...prev, fundingNews: fundingArray }));
+        break;
+      case 'Competitor Executive Summary':
+        setCompetitorData(prev => ({ ...prev, executiveSummary: edit.oldValue }));
+        break;
+        
+      // Section deletions - restore section
+      default:
+        if (edit.newValue === 'Section deleted') {
+          // Restore deleted sections
+          if (edit.field.includes('Executive Summary') || edit.field.includes('Key Regulatory') || 
+              edit.field.includes('Compliance Analytics') || edit.field.includes('Regional') || 
+              edit.field.includes('Strategic')) {
+            setRegulatoryDeletedSections(prev => {
+              const newSet = new Set(prev);
+              const sectionMap: Record<string, string> = {
+                'Executive Summary': 'executive-summary',
+                'Key Regulatory Updates': 'key-updates',
+                'Compliance Analytics': 'compliance-analytics',
+                'Regional Compliance Overview': 'regional-breakdown',
+                'Strategic Recommendations': 'strategic-recommendations'
+              };
+              const sectionId = sectionMap[edit.field];
+              if (sectionId) newSet.delete(sectionId);
+              return newSet;
+            });
+          }
+        }
+        break;
+    }
+
+    // Remove this edit and all subsequent edits from history
+    const editIndex = editHistory.findIndex(e => e.id === editId);
+    if (editIndex !== -1) {
+      setEditHistory(prev => prev.slice(editIndex + 1));
+      
+      // Add a new edit record for the revert action
+      const revertRecord: EditRecord = {
+        id: `revert-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        timestamp: new Date().toISOString(),
+        user: 'Alex',
+        summary: `Reverted ${edit.field} to previous value`,
+        field: edit.field,
+        oldValue: edit.newValue,
+        newValue: edit.oldValue
+      };
+      setEditHistory(prev => [revertRecord, ...prev]);
+    }
   };
 
   const handleViewEditDetails = (editId: string) => {
@@ -2008,18 +2239,10 @@ const MarketResearch = () => {
                         onSaveChanges={handleMarketIntelligenceSaveChanges}
                         onCancelEdit={handleMarketIntelligenceCancelEdit}
                         onExpandToggle={handleMarketIntelligenceExpandToggle}
-                        onExecutiveSummaryChange={(value) => 
-                          setMarketIntelligenceData(prev => ({ ...prev, executiveSummary: value }))
-                        }
-                        onTamValueChange={(value) => 
-                          setMarketIntelligenceData(prev => ({ ...prev, tamValue: value }))
-                        }
-                        onSamValueChange={(value) => 
-                          setMarketIntelligenceData(prev => ({ ...prev, samValue: value }))
-                        }
-                        onApacGrowthRateChange={(value) => 
-                          setMarketIntelligenceData(prev => ({ ...prev, apacGrowthRate: value }))
-                        }
+                        onExecutiveSummaryChange={handleMarketIntelligenceExecutiveSummaryChange}
+                        onTamValueChange={handleMarketIntelligenceTamValueChange}
+                        onSamValueChange={handleMarketIntelligenceSamValueChange}
+                        onApacGrowthRateChange={handleMarketIntelligenceApacGrowthRateChange}
                         onStrategicRecommendationsChange={(recommendations) => 
                           setMarketIntelligenceData(prev => ({ ...prev, strategicRecommendations: recommendations }))
                         }
