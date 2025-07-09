@@ -270,6 +270,9 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
           </div>
 
           <div className="flex flex-wrap gap-2 pt-4 border-t">
+            <Button variant="ghost" size="sm" onClick={() => onExpandToggle(false)}>
+              Show Less
+            </Button>
             <Button variant="outline" size="sm" onClick={onExportPDF}>
               <FileText className="h-4 w-4 mr-1" />
               Save as PDF
@@ -281,9 +284,6 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
             <Button variant="outline" size="sm" onClick={onGenerateShareableLink}>
               <Share className="h-4 w-4 mr-1" />
               Shareable Link
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => onExpandToggle(false)}>
-              Collapse
             </Button>
           </div>
         </div>
