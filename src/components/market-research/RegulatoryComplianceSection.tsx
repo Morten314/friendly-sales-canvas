@@ -13,9 +13,7 @@ import {
   TrendingUp,
   ChevronDown,
   ChevronUp,
-  MoreHorizontal,
   Edit,
-  History,
   Trash2,
   Save,
   X,
@@ -23,14 +21,10 @@ import {
   Target,
   Users,
   Building,
-  Share
+  Share,
+  Bot,
+  MessageSquare
 } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import {
   Table,
   TableBody,
@@ -39,6 +33,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { EditRecord } from './types';
 
 interface RegulatoryComplianceSectionProps {
@@ -99,6 +98,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   onGenerateShareableLink
 }) => {
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
+  const [scoutChatOpen, setScoutChatOpen] = useState(false);
 
   if (deletedSections.has('regulatory-compliance')) {
     return null;
@@ -209,9 +209,100 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     }
   ];
 
+  // Scout Chat Panel Component
+  const ScoutChatPanel = () => (
+    <div className="fixed right-0 top-0 h-full w-96 bg-white border-l border-gray-200 shadow-xl z-50 flex flex-col">
+      {/* Header */}
+      <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-purple-50">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="relative">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                <Bot className="h-6 w-6 text-white" />
+              </div>
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-400/30 to-purple-400/30 rounded-full animate-pulse"></div>
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-900">Scout</h3>
+              <p className="text-sm text-gray-600">Regulatory & Compliance Highlights</p>
+            </div>
+          </div>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => setScoutChatOpen(false)}
+            className="h-8 w-8"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Chat Content */}
+      <div className="flex-1 p-4 space-y-4 overflow-y-auto">
+        {/* Scout Greeting */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-start space-x-3">
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
+              <Bot className="h-4 w-4 text-white" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-900 mb-2">Hi there! 👋</p>
+              <p className="text-sm text-gray-700">I'm here to help you explore regulatory and compliance insights. What would you like to know?</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Scout Suggestions */}
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-gray-600 uppercase tracking-wide">Suggested Questions</p>
+          {[
+            "Would you like updates on EU AI Act timelines?",
+            "Need a regional compliance comparison?",
+            "Want a summary of regulatory risks for SaaS deployment?",
+            "Should I analyze the business impact of new regulations?"
+          ].map((suggestion, index) => (
+            <button
+              key={index}
+              className="w-full text-left p-3 bg-gray-50 hover:bg-gray-100 rounded-lg text-sm text-gray-700 transition-colors"
+            >
+              {suggestion}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Chat Input */}
+      <div className="p-4 border-t border-gray-200">
+        <div className="flex space-x-2">
+          <input
+            type="text"
+            placeholder="Ask Scout about regulatory compliance..."
+            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+            <MessageSquare className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
-    <Card className="border border-gray-200 shadow-sm">
-      <CardHeader className="pb-4">
+    <div className="relative">
+      {/* Scout Chat Panel Overlay */}
+      {scoutChatOpen && (
+        <>
+          <div 
+            className="fixed inset-0 bg-black/20 z-40"
+            onClick={() => setScoutChatOpen(false)}
+          />
+          <ScoutChatPanel />
+        </>
+      )}
+
+      <Card className="border border-gray-200 shadow-sm">
+        <CardHeader className="pb-4">
         <div className="flex items-start justify-between">
           <div className="flex items-center space-x-3">
             <div className="p-2 bg-teal-100 rounded-lg">
@@ -235,37 +326,40 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
               </div>
             )}
             
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <MoreHorizontal className="h-4 w-4" />
+            {/* Edit Icon */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8"
+                  onClick={onToggleEdit}
+                >
+                  <Edit className="h-4 w-4" />
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onClick={onToggleEdit} className="flex items-center">
-                  <Edit className="h-4 w-4 mr-2" />
-                  {isEditing ? 'Exit Edit Mode' : 'Edit Section'}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={onEditHistoryOpen} className="flex items-center">
-                  <History className="h-4 w-4 mr-2" />
-                  Edit History ({editHistory.length})
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={() => onScoutIconClick('regulatory-compliance', hasEdits)}
-                  className="flex items-center"
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{isEditing ? 'Exit Edit Mode' : 'Edit Section'}</p>
+              </TooltipContent>
+            </Tooltip>
+
+            {/* Scout Chat Icon */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8 relative hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 transition-all duration-200"
+                  onClick={() => setScoutChatOpen(true)}
                 >
-                  <TrendingUp className="h-4 w-4 mr-2" />
-                  Re-analyze with Scout
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={() => onDeleteSection('regulatory-compliance')}
-                  className="flex items-center text-red-600"
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete Section
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  <div className="absolute inset-0 rounded-md bg-gradient-to-r from-blue-400/20 to-purple-400/20 animate-pulse opacity-75"></div>
+                  <Bot className="h-4 w-4 relative z-10 text-blue-600" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Explore More with Scout</p>
+              </TooltipContent>
+            </Tooltip>
           </div>
         </div>
 
@@ -585,6 +679,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
         )}
       </CardContent>
     </Card>
+    </div>
   );
 };
 
