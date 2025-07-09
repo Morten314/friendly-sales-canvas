@@ -1141,6 +1141,7 @@ const MarketResearch = () => {
 
   // Regulatory Compliance Scout Chat states
   const [showRegulatoryScoutChat, setShowRegulatoryScoutChat] = useState(false);
+  const [isRegulatoryPostSave, setIsRegulatoryPostSave] = useState(false);
 
   const navigate = useNavigate();
 
@@ -1634,7 +1635,19 @@ const MarketResearch = () => {
 
   const handleRegulatorySaveChanges = () => {
     setIsRegulatoryEditing(false);
-    setRegulatoryHasEdits(true);
+    setRegulatoryHasEdits(false);
+    
+    // Close all other scout chats and open regulatory scout with specific contextual messages
+    setShowMarketSizeScoutChat(false);
+    setShowIndustryTrendsScoutChat(false);
+    setShowCompetitorScoutChat(false);
+    setIsChatOpen(false);
+    
+    // Open regulatory scout chat with post-save contextual messages
+    setTimeout(() => {
+      setIsRegulatoryPostSave(true);
+      setShowRegulatoryScoutChat(true);
+    }, 100);
   };
 
   const handleRegulatoryCancelEdit = () => {
@@ -1684,6 +1697,7 @@ const MarketResearch = () => {
     
     // Reset any previous chat states to ensure clean start
     setTimeout(() => {
+      setIsRegulatoryPostSave(false); // Reset post-save state when manually clicking scout
       setShowRegulatoryScoutChat(true);
     }, 100);
   };
@@ -2037,8 +2051,10 @@ const MarketResearch = () => {
                           editHistory={[]}
                           lastEditedField=""
                           context="regulatory-compliance"
+                          isPostSave={isRegulatoryPostSave}
                           onClose={() => {
                             setShowRegulatoryScoutChat(false);
+                            setIsRegulatoryPostSave(false); // Reset post-save state when closing
                           }}
                         />
                       )}

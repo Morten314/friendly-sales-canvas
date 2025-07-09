@@ -12,6 +12,7 @@ interface ScoutChatPanelProps {
   editHistory: any[];
   lastEditedField: string;
   context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance';
+  isPostSave?: boolean;
   onClose: () => void;
 }
 
@@ -23,6 +24,7 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
   editHistory,
   lastEditedField,
   context = 'market-size',
+  isPostSave = false,
   onClose
 }) => {
   // const getContextualScoutMessage = () => {
@@ -139,6 +141,11 @@ const getContextualScoutMessage = () => {
   }
 
   if (context === 'regulatory-compliance') {
+    // Post-save specific message
+    if (isPostSave) {
+      return "Great work saving your regulatory updates! 🎉 Now that your compliance analysis is saved, I can help you take it further. What would you like to explore next?";
+    }
+    
     if (showEditHistory && editHistory.length > 0) {
       return "Hi Alex! Reviewing your compliance changes? Let me know if you'd like me to analyze regulatory impacts or track upcoming deadlines.";
     }
@@ -221,6 +228,17 @@ const getContextualScoutMessage = () => {
     }
 
     if (context === 'regulatory-compliance') {
+      // Post-save specific questions
+      if (isPostSave) {
+        return [
+          "Would you like to analyze the business impact of new EU regulations?",
+          "Need help drafting updated compliance messaging?",
+          "Should I generate a comparison chart for regional laws?",
+          "Want to track upcoming compliance deadlines?",
+          "Analyze competitive compliance advantages?"
+        ];
+      }
+      
       if (hasEdits) {
         return [
           "Analyze compliance impact",

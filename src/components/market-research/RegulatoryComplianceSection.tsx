@@ -227,12 +227,6 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
           </div>
           
           <div className="flex items-center space-x-2">
-            {hasEdits && (
-              <div className="flex items-center space-x-1 text-amber-600 bg-amber-50 px-2 py-1 rounded-md text-xs">
-                <div className="w-1.5 h-1.5 bg-amber-500 rounded-full"></div>
-                <span>Unsaved changes</span>
-              </div>
-            )}
             
             {/* Edit Icon */}
             <Tooltip>
@@ -272,20 +266,10 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
         </div>
 
         {isEditing && (
-          <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg p-3 mt-4">
+          <div className="flex items-center bg-blue-50 border border-blue-200 rounded-lg p-3 mt-4">
             <div className="flex items-center space-x-2">
               <Edit className="h-4 w-4 text-blue-600" />
               <span className="text-sm font-medium text-blue-800">Edit Mode Active</span>
-            </div>
-            <div className="flex space-x-2">
-              <Button onClick={onSaveChanges} size="sm" className="bg-blue-600 hover:bg-blue-700">
-                <Save className="h-3 w-3 mr-1" />
-                Save Changes
-              </Button>
-              <Button onClick={onCancelEdit} variant="outline" size="sm">
-                <X className="h-3 w-3 mr-1" />
-                Cancel
-              </Button>
             </div>
           </div>
         )}
