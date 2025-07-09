@@ -1145,6 +1145,26 @@ const MarketResearch = () => {
   const [isRegulatoryPostSave, setIsRegulatoryPostSave] = useState(false);
   const [regulatoryCustomMessage, setRegulatoryCustomMessage] = useState<string | undefined>(undefined);
 
+  // Market Entry & Growth Strategy state
+  const [isMarketEntryEditing, setIsMarketEntryEditing] = useState(false);
+  const [marketEntryExpanded, setMarketEntryExpanded] = useState(false);
+  const [marketEntryHasEdits, setMarketEntryHasEdits] = useState(false);
+  const [marketEntryDeletedSections, setMarketEntryDeletedSections] = useState<Set<string>>(new Set());
+  const [marketEntryEditHistory, setMarketEntryEditHistory] = useState<EditRecord[]>([]);
+  const [marketEntryData, setMarketEntryData] = useState({
+    executiveSummary: 'The Indian SaaS market offers significant growth potential for mid-size players, but entry barriers exist due to regulatory compliance and entrenched competitors. Strategic partnerships and phased market entry approaches can help mitigate risks while maximizing opportunities.',
+    entryBarriers: ['Data residency regulations', 'Established local competitors', 'Complex compliance requirements', 'Cultural adaptation needs'],
+    recommendedChannel: 'Local partnerships',
+    timeToMarket: '12-18 months',
+    topBarrier: 'Data residency laws',
+    competitiveDifferentiation: ['Advanced AI capabilities', 'Robust security framework', 'Flexible deployment options', 'Strong API ecosystem'],
+    strategicRecommendations: ['Partner with local system integrators', 'Establish regional data centers', 'Develop compliance automation tools', 'Create localized go-to-market strategy'],
+    riskAssessment: ['Regulatory changes could impact timeline', 'Competition intensifying rapidly', 'Economic uncertainty affecting IT spending']
+  });
+
+  // Market Entry Scout Chat states
+  const [showMarketEntryScoutChat, setShowMarketEntryScoutChat] = useState(false);
+
   const navigate = useNavigate();
 
   // Transform raw report data to our expected structure
@@ -1899,6 +1919,52 @@ const MarketResearch = () => {
     setIsEditHistoryOpen(true);
   };
 
+  // Market Entry handlers
+  const handleMarketEntryToggleEdit = () => setIsMarketEntryEditing(!isMarketEntryEditing);
+  const handleMarketEntryExpandToggle = (expanded: boolean) => setMarketEntryExpanded(expanded);
+  const handleMarketEntrySaveChanges = () => {
+    setIsMarketEntryEditing(false);
+    setMarketEntryHasEdits(false);
+  };
+  const handleMarketEntryCancelEdit = () => setIsMarketEntryEditing(false);
+  const handleMarketEntryDeleteSection = (sectionId: string) => {
+    setMarketEntryDeletedSections(prev => new Set([...prev, sectionId]));
+  };
+  const handleMarketEntryEditHistoryOpen = () => {
+    // Edit history functionality
+  };
+  const handleMarketEntryExecutiveSummaryChange = (value: string) => {
+    const oldValue = marketEntryData.executiveSummary;
+    if (oldValue !== value) {
+      setMarketEntryHasEdits(true);
+      const record: EditRecord = {
+        id: Date.now().toString(),
+        timestamp: new Date().toISOString(),
+        user: 'Alex',
+        summary: 'Updated executive summary',
+        field: 'Executive Summary',
+        oldValue,
+        newValue: value
+      };
+      setMarketEntryEditHistory(prev => [record, ...prev]);
+    }
+    setMarketEntryData(prev => ({ ...prev, executiveSummary: value }));
+  };
+
+  const handleMarketEntryScoutClick = (context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance' | 'market-entry', hasEdits?: boolean) => {
+    console.log('Market Entry scout clicked with context:', context);
+    
+    // Close all other scout chats first
+    setShowMarketSizeScoutChat(false);
+    setShowIndustryTrendsScoutChat(false);
+    setShowCompetitorScoutChat(false);
+    setShowRegulatoryScoutChat(false);
+    setIsChatOpen(false);
+    
+    // Open Market Entry scout chat
+    setShowMarketEntryScoutChat(true);
+  };
+
   const handleEditHistoryClose = () => {
     setIsEditHistoryOpen(false);
     setEditHistoryContext('');
@@ -2204,11 +2270,11 @@ const MarketResearch = () => {
                     )}
                     
                     {/* Split view layout when chat is open */}
-                    <div className={`flex gap-6 ${(isChatOpen || showMarketSizeScoutChat || showIndustryTrendsScoutChat || showCompetitorScoutChat || showRegulatoryScoutChat) ? 'flex-row' : 'flex-col'}`}>
+                    <div className={`flex gap-6 ${(isChatOpen || showMarketSizeScoutChat || showIndustryTrendsScoutChat || showCompetitorScoutChat || showRegulatoryScoutChat || showMarketEntryScoutChat) ? 'flex-row' : 'flex-col'}`}>
                       {/* Market Intelligence Tab */}
                       <MarketIntelligenceTab
                         isEditing={isMarketIntelligenceEditing}
-                        isSplitView={isChatOpen || showMarketSizeScoutChat || showIndustryTrendsScoutChat || showCompetitorScoutChat || showRegulatoryScoutChat}
+                        isSplitView={isChatOpen || showMarketSizeScoutChat || showIndustryTrendsScoutChat || showCompetitorScoutChat || showRegulatoryScoutChat || showMarketEntryScoutChat}
                         isExpanded={isMarketIntelligenceExpanded}
                         hasEdits={hasEdits}
                         deletedSections={deletedSections}
@@ -2255,6 +2321,20 @@ const MarketResearch = () => {
                         regulatoryGdprCompliance={regulatoryData.gdprCompliance}
                         regulatoryPotentialFines={regulatoryData.potentialFines}
                         regulatoryDataLocalization={regulatoryData.dataLocalization}
+                        // Market Entry props
+                        isMarketEntryEditing={isMarketEntryEditing}
+                        marketEntryExpanded={marketEntryExpanded}
+                        marketEntryHasEdits={marketEntryHasEdits}
+                        marketEntryDeletedSections={marketEntryDeletedSections}
+                        marketEntryEditHistory={marketEntryEditHistory}
+                        marketEntryExecutiveSummary={marketEntryData.executiveSummary}
+                        marketEntryBarriers={marketEntryData.entryBarriers}
+                        marketEntryRecommendedChannel={marketEntryData.recommendedChannel}
+                        marketEntryTimeToMarket={marketEntryData.timeToMarket}
+                        marketEntryTopBarrier={marketEntryData.topBarrier}
+                        marketEntryCompetitiveDifferentiation={marketEntryData.competitiveDifferentiation}
+                        marketEntryStrategicRecommendations={marketEntryData.strategicRecommendations}
+                        marketEntryRiskAssessment={marketEntryData.riskAssessment}
                         onToggleEdit={handleMarketIntelligenceToggleEdit}
                         onMarketSizeScoutIconClick={handleMarketSizeScoutClick}
                         onIndustryTrendsScoutIconClick={handleIndustryTrendsScoutClick}
@@ -2309,6 +2389,21 @@ const MarketResearch = () => {
                         onRegulatoryPotentialFinesChange={handleRegulatoryPotentialFinesChange}
                         onRegulatoryDataLocalizationChange={handleRegulatoryDataLocalizationChange}
                         onRegulatoryScoutIconClick={handleRegulatoryScoutClick}
+                        // Market Entry handlers
+                        onMarketEntryToggleEdit={handleMarketEntryToggleEdit}
+                        onMarketEntrySaveChanges={handleMarketEntrySaveChanges}
+                        onMarketEntryCancelEdit={handleMarketEntryCancelEdit}
+                        onMarketEntryDeleteSection={handleMarketEntryDeleteSection}
+                        onMarketEntryEditHistoryOpen={handleMarketEntryEditHistoryOpen}
+                        onMarketEntryExpandToggle={handleMarketEntryExpandToggle}
+                        onMarketEntryExecutiveSummaryChange={handleMarketEntryExecutiveSummaryChange}
+                        onMarketEntryBarriersChange={(barriers) => setMarketEntryData(prev => ({ ...prev, entryBarriers: barriers }))}
+                        onMarketEntryRecommendedChannelChange={(value) => setMarketEntryData(prev => ({ ...prev, recommendedChannel: value }))}
+                        onMarketEntryTimeToMarketChange={(value) => setMarketEntryData(prev => ({ ...prev, timeToMarket: value }))}
+                        onMarketEntryTopBarrierChange={(value) => setMarketEntryData(prev => ({ ...prev, topBarrier: value }))}
+                        onMarketEntryCompetitiveDifferentiationChange={(diff) => setMarketEntryData(prev => ({ ...prev, competitiveDifferentiation: diff }))}
+                        onMarketEntryStrategicRecommendationsChange={(recs) => setMarketEntryData(prev => ({ ...prev, strategicRecommendations: recs }))}
+                        onMarketEntryRiskAssessmentChange={(risks) => setMarketEntryData(prev => ({ ...prev, riskAssessment: risks }))}
                         onExportPDF={handleMarketIntelligenceExportPDF}
                         onSaveToWorkspace={handleMarketIntelligenceSaveToWorkspace}
                         onGenerateShareableLink={handleMarketIntelligenceGenerateShareableLink}
@@ -2381,6 +2476,23 @@ const MarketResearch = () => {
                             setShowRegulatoryScoutChat(false);
                             setIsRegulatoryPostSave(false); // Reset post-save state when closing
                             setRegulatoryCustomMessage(undefined); // Reset custom message when closing
+                          }}
+                        />
+                       )}
+
+                      {/* Market Entry Scout Chat Panel */}
+                      {showMarketEntryScoutChat && (
+                        <ScoutChatPanel
+                          showScoutChat={showMarketEntryScoutChat}
+                          isSplitView={showMarketEntryScoutChat}
+                          hasEdits={marketEntryHasEdits}
+                          showEditHistory={false}
+                          editHistory={marketEntryEditHistory}
+                          lastEditedField=""
+                          context="market-entry"
+                          onClose={() => {
+                            setShowMarketEntryScoutChat(false);
+                            setIsChatOpen(false);
                           }}
                         />
                       )}
