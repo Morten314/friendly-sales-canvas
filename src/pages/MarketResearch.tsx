@@ -1657,6 +1657,23 @@ const MarketResearch = () => {
   };
 
   const handleRegulatoryDeleteSection = (sectionId: string) => {
+    // Add edit record for section deletion
+    const sectionNames: Record<string, string> = {
+      'executive-summary': 'Executive Summary',
+      'key-updates': 'Key Regulatory Updates',
+      'compliance-analytics': 'Compliance Analytics',
+      'regional-breakdown': 'Regional Compliance Overview',
+      'strategic-recommendations': 'Strategic Recommendations'
+    };
+    
+    const sectionName = sectionNames[sectionId] || sectionId;
+    addEditRecord(
+      sectionName,
+      'Section visible',
+      'Section deleted',
+      `Removed ${sectionName} section`
+    );
+    
     setRegulatoryDeletedSections(prev => new Set([...prev, sectionId]));
   };
 
@@ -1669,23 +1686,76 @@ const MarketResearch = () => {
     setRegulatoryExpanded(expanded);
   };
 
+  // Helper function to add edit record
+  const addEditRecord = (field: string, oldValue: string, newValue: string, summary: string) => {
+    if (oldValue !== newValue) {
+      const editRecord: EditRecord = {
+        id: `edit-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        timestamp: new Date().toISOString(),
+        user: 'Alex',
+        summary,
+        field,
+        oldValue,
+        newValue
+      };
+      console.log('Adding edit record:', editRecord);
+      setEditHistory(prev => [editRecord, ...prev]);
+      setHasEdits(true);
+    }
+  };
+
   const handleRegulatoryExecutiveSummaryChange = (value: string) => {
+    const oldValue = regulatoryData.executiveSummary;
+    addEditRecord(
+      'Executive Summary',
+      oldValue,
+      value,
+      'Updated executive summary for regulatory compliance'
+    );
     setRegulatoryData(prev => ({ ...prev, executiveSummary: value }));
   };
 
   const handleRegulatoryEuAiActDeadlineChange = (value: string) => {
+    const oldValue = regulatoryData.euAiActDeadline;
+    addEditRecord(
+      'EU AI Act Deadline',
+      oldValue,
+      value,
+      'Updated EU AI Act enforcement timeline'
+    );
     setRegulatoryData(prev => ({ ...prev, euAiActDeadline: value }));
   };
 
   const handleRegulatoryGdprComplianceChange = (value: string) => {
+    const oldValue = regulatoryData.gdprCompliance;
+    addEditRecord(
+      'GDPR Compliance',
+      oldValue,
+      value,
+      'Updated GDPR compliance statistics'
+    );
     setRegulatoryData(prev => ({ ...prev, gdprCompliance: value }));
   };
 
   const handleRegulatoryPotentialFinesChange = (value: string) => {
+    const oldValue = regulatoryData.potentialFines;
+    addEditRecord(
+      'Potential Fines',
+      oldValue,
+      value,
+      'Updated potential fine information'
+    );
     setRegulatoryData(prev => ({ ...prev, potentialFines: value }));
   };
 
   const handleRegulatoryDataLocalizationChange = (value: string) => {
+    const oldValue = regulatoryData.dataLocalization;
+    addEditRecord(
+      'Data Localization',
+      oldValue,
+      value,
+      'Updated data localization requirements'
+    );
     setRegulatoryData(prev => ({ ...prev, dataLocalization: value }));
   };
 
@@ -1705,6 +1775,7 @@ const MarketResearch = () => {
       setShowRegulatoryScoutChat(true);
     }, 100);
   };
+
 
   // Edit history handlers
   const handleEditHistoryOpen = () => {
