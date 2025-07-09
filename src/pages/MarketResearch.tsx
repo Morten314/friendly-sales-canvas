@@ -1911,7 +1911,7 @@ const MarketResearch = () => {
     // Revert the change based on the field
     switch (edit.field) {
       // Regulatory fields
-      case 'Executive Summary':
+      case 'Regulatory Executive Summary':
         setRegulatoryData(prev => ({ ...prev, executiveSummary: edit.oldValue }));
         break;
       case 'EU AI Act Deadline':
@@ -1927,41 +1927,47 @@ const MarketResearch = () => {
         setRegulatoryData(prev => ({ ...prev, dataLocalization: edit.oldValue }));
         break;
       
-      // Market Size fields
+      // Market Size fields - using the correct API data structure
+      case 'Market Executive Summary':
+        setMarketIntelligenceData(prev => ({ ...prev, executiveSummary: edit.oldValue }));
+        break;
       case 'Market TAM':
-        setMarketData(prev => ({ ...prev, tam: edit.oldValue }));
+        setMarketIntelligenceData(prev => ({ ...prev, tamValue: edit.oldValue }));
         break;
       case 'Market SAM':
-        setMarketData(prev => ({ ...prev, sam: edit.oldValue }));
+        setMarketIntelligenceData(prev => ({ ...prev, samValue: edit.oldValue }));
         break;
       case 'Market SOM':
-        setMarketData(prev => ({ ...prev, som: edit.oldValue }));
+        setMarketIntelligenceData(prev => ({ ...prev, somValue: edit.oldValue }));
         break;
       case 'APAC Growth':
-        setMarketData(prev => ({ ...prev, apacGrowth: edit.oldValue }));
+        setMarketIntelligenceData(prev => ({ ...prev, apacGrowthRate: edit.oldValue }));
         break;
       case 'North America Growth':
-        setMarketData(prev => ({ ...prev, northAmericaGrowth: edit.oldValue }));
+        setMarketIntelligenceData(prev => ({ ...prev, northAmericaGrowthRate: edit.oldValue }));
         break;
       case 'Europe Growth':
-        setMarketData(prev => ({ ...prev, europeGrowth: edit.oldValue }));
+        setMarketIntelligenceData(prev => ({ ...prev, europeGrowthRate: edit.oldValue }));
         break;
       
       // Industry Trends fields  
+      case 'Industry Trends Executive Summary':
+        setIndustryTrendsData(prev => ({ ...prev, executiveSummary: edit.oldValue }));
+        break;
       case 'AI Adoption Rate':
-        setIndustryTrendsData(prev => ({ ...prev, aiAdoptionRate: edit.oldValue }));
+        setIndustryTrendsData(prev => ({ ...prev, aiAdoption: edit.oldValue }));
         break;
       case 'Cloud Migration':
         setIndustryTrendsData(prev => ({ ...prev, cloudMigration: edit.oldValue }));
         break;
-      case 'Digital Transformation':
-        setIndustryTrendsData(prev => ({ ...prev, digitalTransformation: edit.oldValue }));
-        break;
-      case 'Remote Work':
-        setIndustryTrendsData(prev => ({ ...prev, remoteWork: edit.oldValue }));
+      case 'Regulatory Changes':
+        setIndustryTrendsData(prev => ({ ...prev, regulatory: edit.oldValue }));
         break;
       
       // Competitor fields
+      case 'Competitor Executive Summary':
+        setCompetitorData(prev => ({ ...prev, executiveSummary: edit.oldValue }));
+        break;
       case 'Top Player Market Share':
         setCompetitorData(prev => ({ ...prev, topPlayerShare: edit.oldValue }));
         break;
@@ -1975,25 +1981,44 @@ const MarketResearch = () => {
           : [edit.oldValue];
         setCompetitorData(prev => ({ ...prev, fundingNews: fundingArray }));
         break;
-      case 'Competitor Executive Summary':
-        setCompetitorData(prev => ({ ...prev, executiveSummary: edit.oldValue }));
-        break;
         
       // Section deletions - restore section
       default:
         if (edit.newValue === 'Section deleted') {
-          // Restore deleted sections
-          if (edit.field.includes('Executive Summary') || edit.field.includes('Key Regulatory') || 
-              edit.field.includes('Compliance Analytics') || edit.field.includes('Regional') || 
-              edit.field.includes('Strategic')) {
+          // Restore deleted sections for regulatory
+          if (edit.field.includes('Regulatory') && edit.field.includes('Section')) {
             setRegulatoryDeletedSections(prev => {
               const newSet = new Set(prev);
               const sectionMap: Record<string, string> = {
-                'Executive Summary': 'executive-summary',
-                'Key Regulatory Updates': 'key-updates',
-                'Compliance Analytics': 'compliance-analytics',
-                'Regional Compliance Overview': 'regional-breakdown',
-                'Strategic Recommendations': 'strategic-recommendations'
+                'Executive Summary Section': 'executive-summary',
+                'Key Regulatory Updates Section': 'key-updates',
+                'Compliance Analytics Section': 'compliance-analytics',
+                'Regional Compliance Overview Section': 'regional-breakdown',
+                'Strategic Recommendations Section': 'strategic-recommendations'
+              };
+              const sectionId = sectionMap[edit.field];
+              if (sectionId) newSet.delete(sectionId);
+              return newSet;
+            });
+          }
+          // Restore deleted sections for industry trends
+          else if (edit.field.includes('Industry Trends') && edit.field.includes('Section')) {
+            setIndustryTrendsDeletedSections(prev => {
+              const newSet = new Set(prev);
+              const sectionMap: Record<string, string> = {
+                'Industry Trends Executive Summary Section': 'executive-summary'
+              };
+              const sectionId = sectionMap[edit.field];
+              if (sectionId) newSet.delete(sectionId);
+              return newSet;
+            });
+          }
+          // Restore deleted sections for competitor landscape
+          else if (edit.field.includes('Competitor') && edit.field.includes('Section')) {
+            setCompetitorDeletedSections(prev => {
+              const newSet = new Set(prev);
+              const sectionMap: Record<string, string> = {
+                'Competitor Executive Summary Section': 'executive-summary'
               };
               const sectionId = sectionMap[edit.field];
               if (sectionId) newSet.delete(sectionId);
