@@ -176,7 +176,7 @@ const getContextualScoutMessage = () => {
   if (context === 'market-entry') {
     // Post-save specific message
     if (isPostSave) {
-      return "Excellent work on your market entry strategy! 🎉 Your plan is now saved. I can help you dig deeper into entry barriers, timelines, or competitive positioning. What would you like to explore next?";
+      return "Hi Alex! I noticed you adjusted the Market Pathways. Want help exploring alternatives?";
     }
     
     if (showEditHistory && editHistory.length > 0) {
@@ -194,7 +194,7 @@ const getContextualScoutMessage = () => {
         return "You updated the market entry timeline. Would you like me to validate these timelines or suggest ways to accelerate market entry?";
       }
       if (lastEditedField.includes("deleted")) {
-        return "You removed a market entry section. Would you like me to suggest alternative content or analyze why that section might not be relevant to your strategy?";
+        return "I noticed you removed the Market Entry & Growth Strategy section. Want me to help refine or replace it?";
       }
       return "I noticed you updated the market entry strategy. Would you like me to provide additional insights on go-to-market approaches or competitive positioning?";
     }
@@ -299,11 +299,11 @@ const getContextualScoutMessage = () => {
       // Post-save specific questions
       if (isPostSave) {
         return [
-          "Would you like to analyze competitive entry strategies?",
-          "Need help refining your go-to-market timeline?", 
-          "Should I research local partnership opportunities?",
-          "Want to validate regulatory compliance requirements?",
-          "Analyze competitive positioning strategies?"
+          "Analyze regulatory impact on partnerships",
+          "Suggest fastest go-to-market path",
+          "Research local partnership opportunities",
+          "Compare direct entry vs. partnership models",
+          "Validate regulatory compliance requirements"
         ];
       }
       

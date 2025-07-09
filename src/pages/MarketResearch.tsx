@@ -1164,6 +1164,8 @@ const MarketResearch = () => {
 
   // Market Entry Scout Chat states
   const [showMarketEntryScoutChat, setShowMarketEntryScoutChat] = useState(false);
+  const [isMarketEntryPostSave, setIsMarketEntryPostSave] = useState(false);
+  const [marketEntryCustomMessage, setMarketEntryCustomMessage] = useState<string | undefined>(undefined);
 
   const navigate = useNavigate();
 
@@ -1925,10 +1927,16 @@ const MarketResearch = () => {
   const handleMarketEntrySaveChanges = () => {
     setIsMarketEntryEditing(false);
     setMarketEntryHasEdits(false);
+    // Set post-save state and trigger Scout chat
+    setIsMarketEntryPostSave(true);
+    handleMarketEntryScoutClick('market-entry', true);
   };
   const handleMarketEntryCancelEdit = () => setIsMarketEntryEditing(false);
   const handleMarketEntryDeleteSection = (sectionId: string) => {
     setMarketEntryDeletedSections(prev => new Set([...prev, sectionId]));
+    // Trigger Scout chat with deletion context
+    setMarketEntryCustomMessage("I noticed you removed the Market Entry & Growth Strategy section. Want me to help refine or replace it?");
+    handleMarketEntryScoutClick('market-entry');
   };
   const handleMarketEntryEditHistoryOpen = () => {
     // Edit history functionality
@@ -2481,22 +2489,26 @@ const MarketResearch = () => {
                         />
                        )}
 
-                      {/* Market Entry Scout Chat Panel */}
-                      {showMarketEntryScoutChat && (
-                        <ScoutChatPanel
-                          showScoutChat={showMarketEntryScoutChat}
-                          isSplitView={showMarketEntryScoutChat}
-                          hasEdits={marketEntryHasEdits}
-                          showEditHistory={false}
-                          editHistory={marketEntryEditHistory}
-                          lastEditedField=""
-                          context="market-entry"
-                          onClose={() => {
-                            setShowMarketEntryScoutChat(false);
-                            setIsChatOpen(false);
-                          }}
-                        />
-                      )}
+                       {/* Market Entry Scout Chat Panel */}
+                       {showMarketEntryScoutChat && (
+                         <ScoutChatPanel
+                           showScoutChat={showMarketEntryScoutChat}
+                           isSplitView={showMarketEntryScoutChat}
+                           hasEdits={marketEntryHasEdits}
+                           showEditHistory={false}
+                           editHistory={marketEntryEditHistory}
+                           lastEditedField=""
+                           context="market-entry"
+                           isPostSave={isMarketEntryPostSave}
+                           customMessage={marketEntryCustomMessage}
+                           onClose={() => {
+                             setShowMarketEntryScoutChat(false);
+                             setIsMarketEntryPostSave(false); // Reset post-save state when closing
+                             setMarketEntryCustomMessage(undefined); // Reset custom message when closing
+                             setIsChatOpen(false);
+                           }}
+                         />
+                       )}
                     </div>
                     
                     <EditHistoryPanel
