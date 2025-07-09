@@ -2,6 +2,7 @@
 import { EditRecord, TrendSnapshot, IndustryTrendsRecommendations } from './types';
 
 export interface MarketIntelligenceTabProps {
+  // Market Size Section
   isEditing: boolean;
   isSplitView: boolean;
   isExpanded: boolean;
@@ -15,7 +16,8 @@ export interface MarketIntelligenceTabProps {
   strategicRecommendations: string[];
   marketEntry: string;
   marketDrivers: string[];
-  // Industry Trends props
+  
+  // Industry Trends Section
   isIndustryTrendsEditing: boolean;
   industryTrendsExpanded: boolean;
   industryTrendsHasEdits: boolean;
@@ -29,16 +31,17 @@ export interface MarketIntelligenceTabProps {
   industryTrendsRecommendations: IndustryTrendsRecommendations;
   industryTrendsRisks: string[];
   industryTrendsLastEditedField: string;
-  // Competitor Landscape props (optional to maintain backward compatibility)
-  isCompetitorEditing?: boolean;
-  competitorExpanded?: boolean;
-  competitorHasEdits?: boolean;
-  competitorDeletedSections?: Set<string>;
-  competitorEditHistory?: EditRecord[];
-  competitorExecutiveSummary?: string;
-  competitorTopPlayerShare?: string;
-  competitorEmergingPlayers?: string;
-  competitorFundingNews?: string[];
+  
+  // Competitor Landscape Section
+  isCompetitorEditing: boolean;
+  competitorExpanded: boolean;
+  competitorHasEdits: boolean;
+  competitorDeletedSections: Set<string>;
+  competitorEditHistory: EditRecord[];
+  competitorExecutiveSummary: string;
+  competitorTopPlayerShare: string;
+  competitorEmergingPlayers: string;
+  competitorFundingNews: string[];
   // Regulatory Compliance props
   isRegulatoryEditing?: boolean;
   regulatoryExpanded?: boolean;

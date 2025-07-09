@@ -1452,32 +1452,80 @@ const MarketResearch = () => {
   };
 
   // Market Size Scout icon click handler
-  const handleMarketSizeScoutClick = (context?: 'market-size' | 'industry-trends' | 'competitor-landscape') => {
-    console.log('Market Size Scout clicked with context:', context);
-    // Always show welcome message when bot icon is clicked - reset states
-    setMarketSizeHasEdits(false);
-    setMarketSizeLastEditedField('');
-    setShowMarketSizeScoutChat(true);
-    setIsChatOpen(true);
+  const handleMarketSizeScoutClick = (context?: 'market-size' | 'industry-trends' | 'competitor-landscape', hasEdits?: boolean, customMessage?: string) => {
+    console.log('Market Size Scout clicked with context:', context, 'hasEdits:', hasEdits, 'customMessage:', customMessage);
+    
+    // Close all other scout chats first
+    setShowIndustryTrendsScoutChat(false);
+    setShowCompetitorScoutChat(false);
+    setShowRegulatoryScoutChat(false);
+    setShowMarketEntryScoutChat(false);
+    setIsChatOpen(false);
+    
+    // Set up state based on the context
+    if (customMessage) {
+      // For deletion scenarios, use custom message
+      setMarketSizeHasEdits(true);
+    } else {
+      // For normal bot icon clicks, reset states
+      setMarketSizeHasEdits(false);
+      setMarketSizeLastEditedField('');
+    }
+    
+    setTimeout(() => {
+      setShowMarketSizeScoutChat(true);
+    }, 100);
   };
 
   // Industry Trends Scout icon click handler  
-  const handleIndustryTrendsScoutClick = (context?: 'market-size' | 'industry-trends' | 'competitor-landscape') => {
-    console.log('Industry Trends Scout clicked with context:', context);
-    // Always show welcome message when bot icon is clicked - reset states
-    setIndustryTrendsHasEdits(false);
-    setIndustryTrendsLastEditedField('');
-    setShowIndustryTrendsScoutChat(true);
-    setIsChatOpen(true);
+  const handleIndustryTrendsScoutClick = (context?: 'market-size' | 'industry-trends' | 'competitor-landscape', hasEdits?: boolean, customMessage?: string) => {
+    console.log('Industry Trends Scout clicked with context:', context, 'hasEdits:', hasEdits, 'customMessage:', customMessage);
+    
+    // Close all other scout chats first
+    setShowMarketSizeScoutChat(false);
+    setShowCompetitorScoutChat(false);
+    setShowRegulatoryScoutChat(false);
+    setShowMarketEntryScoutChat(false);
+    setIsChatOpen(false);
+    
+    // Set up state based on the context
+    if (customMessage) {
+      // For deletion scenarios, use custom message
+      setIndustryTrendsHasEdits(true);
+    } else {
+      // For normal bot icon clicks, reset states
+      setIndustryTrendsHasEdits(false);
+      setIndustryTrendsLastEditedField('');
+    }
+    
+    setTimeout(() => {
+      setShowIndustryTrendsScoutChat(true);
+    }, 100);
   };
 
   // Competitor Landscape Scout icon click handler  
-  const handleCompetitorScoutClick = (context?: 'market-size' | 'industry-trends' | 'competitor-landscape') => {
-    console.log('Competitor Scout clicked with context:', context);
-    // Always show welcome message when bot icon is clicked - reset states
-    setCompetitorHasEdits(false);
-    setShowCompetitorScoutChat(true);
-    setIsChatOpen(true);
+  const handleCompetitorScoutClick = (context?: 'market-size' | 'industry-trends' | 'competitor-landscape', hasEdits?: boolean, customMessage?: string) => {
+    console.log('Competitor Scout clicked with context:', context, 'hasEdits:', hasEdits, 'customMessage:', customMessage);
+    
+    // Close all other scout chats first
+    setShowMarketSizeScoutChat(false);
+    setShowIndustryTrendsScoutChat(false);
+    setShowRegulatoryScoutChat(false);
+    setShowMarketEntryScoutChat(false);
+    setIsChatOpen(false);
+    
+    // Set up state based on the context
+    if (customMessage) {
+      // For deletion scenarios, use custom message
+      setCompetitorHasEdits(true);
+    } else {
+      // For normal bot icon clicks, reset states
+      setCompetitorHasEdits(false);
+    }
+    
+    setTimeout(() => {
+      setShowCompetitorScoutChat(true);
+    }, 100);
   };
 
   const handleMarketIntelligenceDeleteSection = (sectionId: string) => {
@@ -1571,9 +1619,19 @@ const MarketResearch = () => {
   };
 
   const handleIndustryTrendsDeleteSection = (sectionId: string) => {
-    const newDeletedSections = new Set(industryTrendsDeletedSections);
-    newDeletedSections.add(sectionId);
-    setIndustryTrendsDeletedSections(newDeletedSections);
+    const sectionNames: Record<string, string> = {
+      'executive-summary': 'Executive Summary',
+      'key-metrics': 'Key Metrics',
+      'trend-snapshots': 'Key Trend Snapshots'
+    };
+    
+    const sectionName = sectionNames[sectionId] || sectionId;
+    setIndustryTrendsDeletedSections(prev => new Set([...prev, sectionId]));
+    
+    // Trigger Scout with deletion message
+    setTimeout(() => {
+      handleIndustryTrendsScoutClick('industry-trends', false, `I noticed you removed the ${sectionName}. Want me to help refine or replace it?`);
+    }, 300);
   };
 
   const handleIndustryTrendsEditHistoryOpen = () => {
@@ -1666,9 +1724,19 @@ const MarketResearch = () => {
   };
 
   const handleCompetitorDeleteSection = (sectionId: string) => {
-    const newDeletedSections = new Set(competitorDeletedSections);
-    newDeletedSections.add(sectionId);
-    setCompetitorDeletedSections(newDeletedSections);
+    const sectionNames: Record<string, string> = {
+      'executive-summary': 'Executive Summary',
+      'key-metrics': 'Key Metrics',
+      'funding-news': 'Funding News & Headlines'
+    };
+    
+    const sectionName = sectionNames[sectionId] || sectionId;
+    setCompetitorDeletedSections(prev => new Set([...prev, sectionId]));
+    
+    // Trigger Scout with deletion message
+    setTimeout(() => {
+      handleCompetitorScoutClick('competitor-landscape', false, `I noticed you removed the ${sectionName}. Want me to help refine or replace it?`);
+    }, 300);
   };
 
   const handleCompetitorEditHistoryOpen = () => {
@@ -1823,6 +1891,25 @@ const MarketResearch = () => {
 
   const handleRegulatoryExpandToggle = (expanded: boolean) => {
     setRegulatoryExpanded(expanded);
+  };
+
+  // Market Size delete section handler
+  const handleDeleteSection = (sectionId: string) => {
+    const sectionNames: Record<string, string> = {
+      'executive-summary': 'Executive Summary',
+      'key-metrics': 'Key Metrics',
+      'strategic-recommendations': 'Strategic Recommendations', 
+      'market-entry': 'Market Entry Strategy',
+      'market-drivers': 'Key Market Drivers'
+    };
+    
+    const sectionName = sectionNames[sectionId] || sectionId;
+    setDeletedSections(prev => new Set([...prev, sectionId]));
+    
+    // Trigger Scout with deletion message
+    setTimeout(() => {
+      handleMarketSizeScoutClick('market-size', false, `I noticed you removed the ${sectionName}. Want me to help refine or replace it?`);
+    }, 300);
   };
 
   // Helper function to add edit record

@@ -139,6 +139,72 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
             </div>
           )}
 
+          {/* Key Metrics Edit */}
+          {!industryTrendsDeletedSections.has('key-metrics') && (
+            <div className="relative group">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="sm" onClick={() => onIndustryTrendsDeleteSection('key-metrics')} className="absolute -top-2 -right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50">
+                    <X className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Delete this section</p>
+                </TooltipContent>
+              </Tooltip>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Key Metrics</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700 mb-2 block">
+                      AI Adoption Rate
+                    </Label>
+                    <div className="text-2xl font-bold text-blue-600">{industryTrendsAiAdoption}</div>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700 mb-2 block">
+                      Cloud Migration Increase
+                    </Label>
+                    <div className="text-2xl font-bold text-green-600">{industryTrendsCloudMigration}</div>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700 mb-2 block">
+                      Regulatory Changes
+                    </Label>
+                    <div className="text-2xl font-bold text-purple-600">{industryTrendsRegulatory}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Trend Snapshots Edit */}
+          {!industryTrendsDeletedSections.has('trend-snapshots') && (
+            <div className="relative group">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="sm" onClick={() => onIndustryTrendsDeleteSection('trend-snapshots')} className="absolute -top-2 -right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50">
+                    <X className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Delete this section</p>
+                </TooltipContent>
+              </Tooltip>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Key Trend Snapshots</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {industryTrendSnapshots.map((trend, index) => (
+                    <div key={index} className="bg-white border border-gray-200 rounded-lg p-4">
+                      <h4 className="font-medium text-gray-900 mb-2">{trend.title}</h4>
+                      <p className="text-sm text-gray-600">{trend.metric}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Save/Cancel Buttons */}
           <div className="flex items-center gap-3 pt-6 border-t">
             <Button onClick={onIndustryTrendsSaveChanges}>Save Changes</Button>

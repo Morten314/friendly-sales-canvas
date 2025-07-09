@@ -24,7 +24,7 @@ interface MarketSizeSectionProps {
   marketEntry: string;
   marketDrivers: string[];
   onToggleEdit: () => void;
-  onScoutIconClick: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape') => void;
+  onScoutIconClick: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape', hasEdits?: boolean, customMessage?: string) => void;
   onEditHistoryOpen: () => void;
   onDeleteSection: (sectionId: string) => void;
   onSaveChanges: () => void;
