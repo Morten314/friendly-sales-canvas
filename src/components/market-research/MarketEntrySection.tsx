@@ -23,7 +23,7 @@ interface MarketEntrySectionProps {
   strategicRecommendations: string[];
   riskAssessment: string[];
   onToggleEdit: () => void;
-  onScoutIconClick: (context?: 'market-entry') => void;
+  onScoutIconClick: (context?: 'market-entry', hasEdits?: boolean, customMessage?: string) => void;
   onEditHistoryOpen: () => void;
   onDeleteSection: (sectionId: string) => void;
   onSaveChanges: () => void;
@@ -297,88 +297,121 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
       {/* Edit Mode */}
       {isEditing && (
         <div className="space-y-6">
-          <div className="space-y-4">
-            <Label htmlFor="market-entry-executive-summary" className="text-sm font-medium text-gray-700">
-              Executive Summary
-            </Label>
-            <Textarea
-              id="market-entry-executive-summary"
-              value={executiveSummary}
-              onChange={(e) => onExecutiveSummaryChange(e.target.value)}
-              rows={4}
-              className="w-full"
-              placeholder="Enter executive summary for market entry strategy..."
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="recommended-channel" className="text-sm font-medium text-gray-700">
-                Recommended Entry Channel
-              </Label>
-              <Input
-                id="recommended-channel"
-                value={recommendedChannel}
-                onChange={(e) => onRecommendedChannelChange(e.target.value)}
-                placeholder="e.g., Local partnerships"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="time-to-market" className="text-sm font-medium text-gray-700">
-                Time to Market
-              </Label>
-              <Input
-                id="time-to-market"
-                value={timeToMarket}
-                onChange={(e) => onTimeToMarketChange(e.target.value)}
-                placeholder="e.g., 12-18 months"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="top-barrier" className="text-sm font-medium text-gray-700">
-                Top Barrier
-              </Label>
-              <Input
-                id="top-barrier"
-                value={topBarrier}
-                onChange={(e) => onTopBarrierChange(e.target.value)}
-                placeholder="e.g., Data residency laws"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <Label className="text-sm font-medium text-gray-700">Entry Barriers</Label>
-            {entryBarriers.map((barrier, index) => (
-              <div key={index} className="flex gap-2">
-                <Input
-                  value={barrier}
-                  onChange={(e) => {
-                    const updated = [...entryBarriers];
-                    updated[index] = e.target.value;
-                    onEntryBarriersChange(updated);
-                  }}
-                  placeholder={`Entry barrier ${index + 1}`}
-                />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const updated = entryBarriers.filter((_, i) => i !== index);
-                    onEntryBarriersChange(updated);
-                  }}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onEntryBarriersChange([...entryBarriers, ''])}
+          <div className="relative group border border-gray-200 rounded-lg p-4">
+            <button
+              onClick={() => {
+                onDeleteSection('executive-summary');
+                onScoutIconClick('market-entry', true, 'I noticed you removed the Executive Summary. Want me to help refine or replace it?');
+              }}
+              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
             >
-              Add Barrier
-            </Button>
+              <X className="h-4 w-4 text-red-600" />
+            </button>
+            <div className="space-y-4">
+              <Label htmlFor="market-entry-executive-summary" className="text-sm font-medium text-gray-700">
+                Executive Summary
+              </Label>
+              <Textarea
+                id="market-entry-executive-summary"
+                value={executiveSummary}
+                onChange={(e) => onExecutiveSummaryChange(e.target.value)}
+                rows={4}
+                className="w-full"
+                placeholder="Enter executive summary for market entry strategy..."
+              />
+            </div>
+          </div>
+
+          <div className="relative group border border-gray-200 rounded-lg p-4">
+            <button
+              onClick={() => {
+                onDeleteSection('key-metrics');
+                onScoutIconClick('market-entry', true, 'I noticed you removed the Key Metrics section. Want me to help refine or replace it?');
+              }}
+              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
+            >
+              <X className="h-4 w-4 text-red-600" />
+            </button>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="recommended-channel" className="text-sm font-medium text-gray-700">
+                  Recommended Entry Channel
+                </Label>
+                <Input
+                  id="recommended-channel"
+                  value={recommendedChannel}
+                  onChange={(e) => onRecommendedChannelChange(e.target.value)}
+                  placeholder="e.g., Local partnerships"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="time-to-market" className="text-sm font-medium text-gray-700">
+                  Time to Market
+                </Label>
+                <Input
+                  id="time-to-market"
+                  value={timeToMarket}
+                  onChange={(e) => onTimeToMarketChange(e.target.value)}
+                  placeholder="e.g., 12-18 months"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="top-barrier" className="text-sm font-medium text-gray-700">
+                  Top Barrier
+                </Label>
+                <Input
+                  id="top-barrier"
+                  value={topBarrier}
+                  onChange={(e) => onTopBarrierChange(e.target.value)}
+                  placeholder="e.g., Data residency laws"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="relative group border border-gray-200 rounded-lg p-4">
+            <button
+              onClick={() => {
+                onDeleteSection('entry-barriers');
+                onScoutIconClick('market-entry', true, 'I noticed you removed the Entry Barriers section. Want me to help refine or replace it?');
+              }}
+              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
+            >
+              <X className="h-4 w-4 text-red-600" />
+            </button>
+            <div className="space-y-4">
+              <Label className="text-sm font-medium text-gray-700">Entry Barriers</Label>
+              {entryBarriers.map((barrier, index) => (
+                <div key={index} className="flex gap-2">
+                  <Input
+                    value={barrier}
+                    onChange={(e) => {
+                      const updated = [...entryBarriers];
+                      updated[index] = e.target.value;
+                      onEntryBarriersChange(updated);
+                    }}
+                    placeholder={`Entry barrier ${index + 1}`}
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const updated = entryBarriers.filter((_, i) => i !== index);
+                      onEntryBarriersChange(updated);
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onEntryBarriersChange([...entryBarriers, ''])}
+              >
+                Add Barrier
+              </Button>
+            </div>
           </div>
 
           {/* Save/Cancel Buttons */}

@@ -2141,7 +2141,7 @@ const MarketResearch = () => {
   };
 
 
-  const handleMarketEntryScoutClick = (context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance' | 'market-entry', hasEdits?: boolean) => {
+  const handleMarketEntryScoutClick = (context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance' | 'market-entry', hasEdits?: boolean, customMessage?: string) => {
     console.log('Market Entry scout clicked with context:', context);
     
     // Close all other scout chats first
@@ -2150,6 +2150,11 @@ const MarketResearch = () => {
     setShowCompetitorScoutChat(false);
     setShowRegulatoryScoutChat(false);
     setIsChatOpen(false);
+    
+    // Set custom message if provided
+    if (customMessage) {
+      setMarketEntryCustomMessage(customMessage);
+    }
     
     // Open Market Entry scout chat
     setShowMarketEntryScoutChat(true);

@@ -69,7 +69,7 @@ export interface MarketIntelligenceTabProps {
   onIndustryTrendsScoutIconClick: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance' | 'market-entry', hasEdits?: boolean, lastEditedField?: string) => void;
   onCompetitorScoutIconClick: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance' | 'market-entry', hasEdits?: boolean, lastEditedField?: string) => void;
   onRegulatoryScoutIconClick?: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance' | 'market-entry', hasEdits?: boolean, lastEditedField?: string) => void;
-  onMarketEntryScoutIconClick?: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance' | 'market-entry', hasEdits?: boolean, lastEditedField?: string) => void;
+  onMarketEntryScoutIconClick?: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance' | 'market-entry', hasEdits?: boolean, customMessage?: string) => void;
   onEditHistoryOpen: () => void;
   onDeleteSection: (sectionId: string) => void;
   onSaveChanges: () => void;
