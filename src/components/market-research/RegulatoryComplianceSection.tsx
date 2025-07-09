@@ -53,7 +53,7 @@ interface RegulatoryComplianceSectionProps {
   potentialFines: string;
   dataLocalization: string;
   onToggleEdit: () => void;
-  onScoutIconClick: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance', hasEdits?: boolean, lastEditedField?: string) => void;
+  onScoutIconClick: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance', hasEdits?: boolean, customMessage?: string) => void;
   onEditHistoryOpen: () => void;
   onDeleteSection: (sectionId: string) => void;
   onSaveChanges: () => void;

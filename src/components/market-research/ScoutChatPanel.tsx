@@ -13,6 +13,7 @@ interface ScoutChatPanelProps {
   lastEditedField: string;
   context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance';
   isPostSave?: boolean;
+  customMessage?: string;
   onClose: () => void;
 }
 
@@ -25,6 +26,7 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
   lastEditedField,
   context = 'market-size',
   isPostSave = false,
+  customMessage,
   onClose
 }) => {
   // const getContextualScoutMessage = () => {
@@ -93,6 +95,11 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
 
   // Fixed ScoutChatPanel getContextualScoutMessage function
 const getContextualScoutMessage = () => {
+  // Use custom message if provided (for deletion scenarios)
+  if (customMessage) {
+    return customMessage;
+  }
+  
   if (context === 'competitor-landscape') {
     if (showEditHistory && editHistory.length > 0) {
       return "Hi Alex! Reviewing your competitor changes? Let me know if you'd like me to pull latest funding news or analyze market positioning shifts.";

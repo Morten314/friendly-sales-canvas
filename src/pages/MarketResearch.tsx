@@ -1142,6 +1142,7 @@ const MarketResearch = () => {
   // Regulatory Compliance Scout Chat states
   const [showRegulatoryScoutChat, setShowRegulatoryScoutChat] = useState(false);
   const [isRegulatoryPostSave, setIsRegulatoryPostSave] = useState(false);
+  const [regulatoryCustomMessage, setRegulatoryCustomMessage] = useState<string | undefined>(undefined);
 
   const navigate = useNavigate();
 
@@ -1686,8 +1687,8 @@ const MarketResearch = () => {
     setRegulatoryData(prev => ({ ...prev, dataLocalization: value }));
   };
 
-  const handleRegulatoryScoutClick = (context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance', hasEdits?: boolean, lastEditedField?: string) => {
-    console.log('Regulatory scout clicked with context:', context, 'hasEdits:', hasEdits, 'lastEditedField:', lastEditedField);
+  const handleRegulatoryScoutClick = (context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance', hasEdits?: boolean, customMessage?: string) => {
+    console.log('Regulatory scout clicked with context:', context, 'hasEdits:', hasEdits, 'customMessage:', customMessage);
     
     // Close all other scout chats first to prevent state overlap
     setShowMarketSizeScoutChat(false);
@@ -1698,6 +1699,7 @@ const MarketResearch = () => {
     // Reset any previous chat states to ensure clean start
     setTimeout(() => {
       setIsRegulatoryPostSave(false); // Reset post-save state when manually clicking scout
+      setRegulatoryCustomMessage(customMessage); // Set custom message for deletion scenarios
       setShowRegulatoryScoutChat(true);
     }, 100);
   };
@@ -2052,9 +2054,11 @@ const MarketResearch = () => {
                           lastEditedField=""
                           context="regulatory-compliance"
                           isPostSave={isRegulatoryPostSave}
+                          customMessage={regulatoryCustomMessage}
                           onClose={() => {
                             setShowRegulatoryScoutChat(false);
                             setIsRegulatoryPostSave(false); // Reset post-save state when closing
+                            setRegulatoryCustomMessage(undefined); // Reset custom message when closing
                           }}
                         />
                       )}
