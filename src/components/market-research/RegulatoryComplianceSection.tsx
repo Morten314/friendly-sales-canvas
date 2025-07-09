@@ -265,14 +265,6 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
           </div>
         </div>
 
-        {isEditing && (
-          <div className="flex items-center bg-blue-50 border border-blue-200 rounded-lg p-3 mt-4">
-            <div className="flex items-center space-x-2">
-              <Edit className="h-4 w-4 text-blue-600" />
-              <span className="text-sm font-medium text-blue-800">Edit Mode Active</span>
-            </div>
-          </div>
-        )}
       </CardHeader>
 
       <CardContent className="space-y-6">
@@ -283,7 +275,10 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
             {!deletedSections.has('executive-summary') && (
               <div className="relative group border border-gray-200 rounded-lg p-4">
                 <button
-                  onClick={() => onDeleteSection('executive-summary')}
+                  onClick={() => {
+                    onDeleteSection('executive-summary');
+                    onScoutIconClick('regulatory-compliance', true, 'I noticed you removed the Executive Summary. Want me to help refine or replace it?');
+                  }}
                   className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
                 >
                   <X className="h-4 w-4 text-red-600" />
@@ -303,7 +298,10 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
             {!deletedSections.has('key-updates') && (
               <div className="relative group border border-gray-200 rounded-lg p-4">
                 <button
-                  onClick={() => onDeleteSection('key-updates')}
+                  onClick={() => {
+                    onDeleteSection('key-updates');
+                    onScoutIconClick('regulatory-compliance', true, 'I noticed you removed the Key Regulatory Updates. Want me to help refine or replace it?');
+                  }}
                   className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
                 >
                   <X className="h-4 w-4 text-red-600" />
@@ -351,7 +349,10 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
             {!deletedSections.has('compliance-analytics') && (
               <div className="relative group border border-gray-200 rounded-lg p-4">
                 <button
-                  onClick={() => onDeleteSection('compliance-analytics')}
+                  onClick={() => {
+                    onDeleteSection('compliance-analytics');
+                    onScoutIconClick('regulatory-compliance', true, 'I noticed you removed the Compliance Analytics. Want me to help refine or replace it?');
+                  }}
                   className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
                 >
                   <X className="h-4 w-4 text-red-600" />
@@ -434,7 +435,10 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
             {!deletedSections.has('regional-breakdown') && (
               <div className="relative group border border-gray-200 rounded-lg p-4">
                 <button
-                  onClick={() => onDeleteSection('regional-breakdown')}
+                  onClick={() => {
+                    onDeleteSection('regional-breakdown');
+                    onScoutIconClick('regulatory-compliance', true, 'I noticed you removed the Regional Compliance Overview. Want me to help refine or replace it?');
+                  }}
                   className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
                 >
                   <X className="h-4 w-4 text-red-600" />
@@ -489,7 +493,10 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
             {!deletedSections.has('strategic-recommendations') && (
               <div className="relative group border border-gray-200 rounded-lg p-4">
                 <button
-                  onClick={() => onDeleteSection('strategic-recommendations')}
+                  onClick={() => {
+                    onDeleteSection('strategic-recommendations');
+                    onScoutIconClick('regulatory-compliance', true, 'I noticed you removed the Strategic Recommendations. Want me to help refine or replace it?');
+                  }}
                   className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
                 >
                   <X className="h-4 w-4 text-red-600" />
