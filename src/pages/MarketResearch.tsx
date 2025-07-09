@@ -1676,13 +1676,16 @@ const MarketResearch = () => {
   const handleRegulatoryScoutClick = (context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance', hasEdits?: boolean, lastEditedField?: string) => {
     console.log('Regulatory scout clicked with context:', context, 'hasEdits:', hasEdits, 'lastEditedField:', lastEditedField);
     
-    // Close all other scout chats first
+    // Close all other scout chats first to prevent state overlap
     setShowMarketSizeScoutChat(false);
     setShowIndustryTrendsScoutChat(false);
     setShowCompetitorScoutChat(false);
+    setIsChatOpen(false);
     
-    // Open regulatory scout chat
-    setShowRegulatoryScoutChat(true);
+    // Reset any previous chat states to ensure clean start
+    setTimeout(() => {
+      setShowRegulatoryScoutChat(true);
+    }, 100);
   };
 
   // Edit history handlers
@@ -2029,9 +2032,9 @@ const MarketResearch = () => {
                         <ScoutChatPanel
                           showScoutChat={showRegulatoryScoutChat}
                           isSplitView={showRegulatoryScoutChat}
-                          hasEdits={regulatoryHasEdits}
+                          hasEdits={false}
                           showEditHistory={false}
-                          editHistory={regulatoryEditHistory}
+                          editHistory={[]}
                           lastEditedField=""
                           context="regulatory-compliance"
                           onClose={() => {
