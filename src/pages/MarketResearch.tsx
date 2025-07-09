@@ -1134,12 +1134,15 @@ const MarketResearch = () => {
   const [marketSizeHasEdits, setMarketSizeHasEdits] = useState(false);
   const [marketSizeLastEditedField, setMarketSizeLastEditedField] = useState('');
   const [marketSizeDeletedSections, setMarketSizeDeletedSections] = useState<Set<string>>(new Set());
+  const [marketSizeCustomMessage, setMarketSizeCustomMessage] = useState<string | undefined>(undefined);
 
   // Industry Trends Scout Chat states (separate from Market Size)
   const [showIndustryTrendsScoutChat, setShowIndustryTrendsScoutChat] = useState(false);
+  const [industryTrendsCustomMessage, setIndustryTrendsCustomMessage] = useState<string | undefined>(undefined);
 
   // Competitor Landscape Scout Chat states (separate from others)
   const [showCompetitorScoutChat, setShowCompetitorScoutChat] = useState(false);
+  const [competitorCustomMessage, setCompetitorCustomMessage] = useState<string | undefined>(undefined);
 
   // Regulatory Compliance Scout Chat states
   const [showRegulatoryScoutChat, setShowRegulatoryScoutChat] = useState(false);
@@ -1466,9 +1469,11 @@ const MarketResearch = () => {
     // Set up state based on the context
     if (customMessage) {
       // For deletion scenarios, use custom message
+      setMarketSizeCustomMessage(customMessage);
       setMarketSizeHasEdits(true);
     } else {
       // For normal bot icon clicks, reset states
+      setMarketSizeCustomMessage(undefined);
       setMarketSizeHasEdits(false);
       setMarketSizeLastEditedField('');
     }
@@ -1492,9 +1497,11 @@ const MarketResearch = () => {
     // Set up state based on the context
     if (customMessage) {
       // For deletion scenarios, use custom message
+      setIndustryTrendsCustomMessage(customMessage);
       setIndustryTrendsHasEdits(true);
     } else {
       // For normal bot icon clicks, reset states
+      setIndustryTrendsCustomMessage(undefined);
       setIndustryTrendsHasEdits(false);
       setIndustryTrendsLastEditedField('');
     }
@@ -1518,9 +1525,11 @@ const MarketResearch = () => {
     // Set up state based on the context
     if (customMessage) {
       // For deletion scenarios, use custom message
+      setCompetitorCustomMessage(customMessage);
       setCompetitorHasEdits(true);
     } else {
       // For normal bot icon clicks, reset states
+      setCompetitorCustomMessage(undefined);
       setCompetitorHasEdits(false);
     }
     
@@ -1629,9 +1638,10 @@ const MarketResearch = () => {
     const sectionName = sectionNames[sectionId] || sectionId;
     setIndustryTrendsDeletedSections(prev => new Set([...prev, sectionId]));
     
-    // Trigger Scout with deletion message
+    // Set custom message and trigger Scout with deletion message
+    setIndustryTrendsCustomMessage(`I noticed you removed the ${sectionName}. Want me to help refine or replace it?`);
     setTimeout(() => {
-      handleIndustryTrendsScoutClick('industry-trends', false, `I noticed you removed the ${sectionName}. Want me to help refine or replace it?`);
+      handleIndustryTrendsScoutClick('industry-trends', false);
     }, 300);
   };
 
@@ -1734,9 +1744,10 @@ const MarketResearch = () => {
     const sectionName = sectionNames[sectionId] || sectionId;
     setCompetitorDeletedSections(prev => new Set([...prev, sectionId]));
     
-    // Trigger Scout with deletion message
+    // Set custom message and trigger Scout with deletion message  
+    setCompetitorCustomMessage(`I noticed you removed the ${sectionName}. Want me to help refine or replace it?`);
     setTimeout(() => {
-      handleCompetitorScoutClick('competitor-landscape', false, `I noticed you removed the ${sectionName}. Want me to help refine or replace it?`);
+      handleCompetitorScoutClick('competitor-landscape', false);
     }, 300);
   };
 
@@ -1753,9 +1764,10 @@ const MarketResearch = () => {
     const sectionName = sectionNames[sectionId] || sectionId;
     setMarketSizeDeletedSections(prev => new Set([...prev, sectionId]));
     
-    // Trigger Scout with deletion message
+    // Set custom message and trigger Scout with deletion message
+    setMarketSizeCustomMessage(`I noticed you removed the ${sectionName}. Want me to help refine or replace it?`);
     setTimeout(() => {
-      handleMarketSizeScoutClick('market-size', false, `I noticed you removed the ${sectionName}. Want me to help refine or replace it?`);
+      handleMarketSizeScoutClick('market-size', false);
     }, 300);
   };
 
@@ -2725,8 +2737,10 @@ const MarketResearch = () => {
                           editHistory={editHistory}
                           lastEditedField={marketSizeLastEditedField}
                           context="market-size"
+                          customMessage={marketSizeCustomMessage}
                           onClose={() => {
                             setShowMarketSizeScoutChat(false);
+                            setMarketSizeCustomMessage(undefined);
                             setIsChatOpen(false);
                           }}
                         />
@@ -2742,8 +2756,10 @@ const MarketResearch = () => {
                           editHistory={industryTrendsEditHistory}
                           lastEditedField={industryTrendsLastEditedField}
                           context="industry-trends"
+                          customMessage={industryTrendsCustomMessage}
                           onClose={() => {
                             setShowIndustryTrendsScoutChat(false);
+                            setIndustryTrendsCustomMessage(undefined);
                             setIsChatOpen(false);
                           }}
                         />
@@ -2759,8 +2775,10 @@ const MarketResearch = () => {
                           editHistory={competitorEditHistory}
                           lastEditedField=""
                           context="competitor-landscape"
+                          customMessage={competitorCustomMessage}
                           onClose={() => {
                             setShowCompetitorScoutChat(false);
+                            setCompetitorCustomMessage(undefined);
                             setIsChatOpen(false);
                           }}
                         />
