@@ -2404,6 +2404,7 @@ const MarketResearch = () => {
                         onMarketEntryCompetitiveDifferentiationChange={(diff) => setMarketEntryData(prev => ({ ...prev, competitiveDifferentiation: diff }))}
                         onMarketEntryStrategicRecommendationsChange={(recs) => setMarketEntryData(prev => ({ ...prev, strategicRecommendations: recs }))}
                         onMarketEntryRiskAssessmentChange={(risks) => setMarketEntryData(prev => ({ ...prev, riskAssessment: risks }))}
+                        onMarketEntryScoutIconClick={handleMarketEntryScoutClick}
                         onExportPDF={handleMarketIntelligenceExportPDF}
                         onSaveToWorkspace={handleMarketIntelligenceSaveToWorkspace}
                         onGenerateShareableLink={handleMarketIntelligenceGenerateShareableLink}
