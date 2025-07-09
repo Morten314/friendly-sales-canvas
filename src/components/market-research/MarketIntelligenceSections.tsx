@@ -4,6 +4,7 @@ import MarketSizeSection from './MarketSizeSection';
 import IndustryTrendsSection from './IndustryTrendsSection';
 import CompetitorLandscapeSection from './CompetitorLandscapeSection';
 import RegulatoryComplianceSection from './RegulatoryComplianceSection';
+import MarketEntrySection from './MarketEntrySection';
 import { MarketIntelligenceTabProps } from './MarketIntelligenceTabProps';
 
 interface MarketIntelligenceSectionsProps extends MarketIntelligenceTabProps {}
@@ -126,6 +127,42 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
         onGdprComplianceChange={props.onRegulatoryGdprComplianceChange || (() => {})}
         onPotentialFinesChange={props.onRegulatoryPotentialFinesChange || (() => {})}
         onDataLocalizationChange={props.onRegulatoryDataLocalizationChange || (() => {})}
+        onExportPDF={props.onExportPDF}
+        onSaveToWorkspace={props.onSaveToWorkspace}
+        onGenerateShareableLink={props.onGenerateShareableLink}
+      />
+
+      {/* Market Entry & Growth Strategy Section */}
+      <MarketEntrySection
+        isEditing={props.isMarketEntryEditing || false}
+        isSplitView={props.isSplitView}
+        isExpanded={props.marketEntryExpanded || false}
+        hasEdits={props.marketEntryHasEdits || false}
+        deletedSections={props.marketEntryDeletedSections || new Set()}
+        editHistory={props.marketEntryEditHistory || []}
+        executiveSummary={props.marketEntryExecutiveSummary || 'The Indian SaaS market offers significant growth potential for mid-size players, but entry barriers exist due to regulatory compliance and entrenched competitors. Strategic partnerships and phased market entry approaches can help mitigate risks while maximizing opportunities.'}
+        entryBarriers={props.marketEntryBarriers || ['Data residency regulations', 'Established local competitors', 'Complex compliance requirements', 'Cultural adaptation needs']}
+        recommendedChannel={props.marketEntryRecommendedChannel || 'Local partnerships'}
+        timeToMarket={props.marketEntryTimeToMarket || '12-18 months'}
+        topBarrier={props.marketEntryTopBarrier || 'Data residency laws'}
+        competitiveDifferentiation={props.marketEntryCompetitiveDifferentiation || ['Advanced AI capabilities', 'Robust security framework', 'Flexible deployment options', 'Strong API ecosystem']}
+        strategicRecommendations={props.marketEntryStrategicRecommendations || ['Partner with local system integrators', 'Establish regional data centers', 'Develop compliance automation tools', 'Create localized go-to-market strategy']}
+        riskAssessment={props.marketEntryRiskAssessment || ['Regulatory changes could impact timeline', 'Competition intensifying rapidly', 'Economic uncertainty affecting IT spending']}
+        onToggleEdit={props.onMarketEntryToggleEdit || (() => {})}
+        onScoutIconClick={props.onMarketEntryScoutIconClick || props.onMarketSizeScoutIconClick}
+        onEditHistoryOpen={props.onMarketEntryEditHistoryOpen || (() => {})}
+        onDeleteSection={props.onMarketEntryDeleteSection || (() => {})}
+        onSaveChanges={props.onMarketEntrySaveChanges || (() => {})}
+        onCancelEdit={props.onMarketEntryCancelEdit || (() => {})}
+        onExpandToggle={props.onMarketEntryExpandToggle || (() => {})}
+        onExecutiveSummaryChange={props.onMarketEntryExecutiveSummaryChange || (() => {})}
+        onEntryBarriersChange={props.onMarketEntryBarriersChange || (() => {})}
+        onRecommendedChannelChange={props.onMarketEntryRecommendedChannelChange || (() => {})}
+        onTimeToMarketChange={props.onMarketEntryTimeToMarketChange || (() => {})}
+        onTopBarrierChange={props.onMarketEntryTopBarrierChange || (() => {})}
+        onCompetitiveDifferentiationChange={props.onMarketEntryCompetitiveDifferentiationChange || (() => {})}
+        onStrategicRecommendationsChange={props.onMarketEntryStrategicRecommendationsChange || (() => {})}
+        onRiskAssessmentChange={props.onMarketEntryRiskAssessmentChange || (() => {})}
         onExportPDF={props.onExportPDF}
         onSaveToWorkspace={props.onSaveToWorkspace}
         onGenerateShareableLink={props.onGenerateShareableLink}

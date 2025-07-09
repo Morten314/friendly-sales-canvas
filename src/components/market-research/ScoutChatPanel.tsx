@@ -11,7 +11,7 @@ interface ScoutChatPanelProps {
   showEditHistory: boolean;
   editHistory: any[];
   lastEditedField: string;
-  context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance';
+  context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance' | 'market-entry';
   isPostSave?: boolean;
   customMessage?: string;
   onClose: () => void;
@@ -173,6 +173,35 @@ const getContextualScoutMessage = () => {
     return "Hi there! 👋 I'm Scout. Ready to dive deeper into regulatory compliance? I can help you stay ahead of changing regulations and assess compliance risks.";
   }
 
+  if (context === 'market-entry') {
+    // Post-save specific message
+    if (isPostSave) {
+      return "Excellent work on your market entry strategy! 🎉 Your plan is now saved. I can help you dig deeper into entry barriers, timelines, or competitive positioning. What would you like to explore next?";
+    }
+    
+    if (showEditHistory && editHistory.length > 0) {
+      return "Hi Alex! Reviewing your market entry changes? Let me know if you'd like me to validate entry timelines or explore alternative go-to-market strategies.";
+    }
+    
+    if (hasEdits) {
+      if (lastEditedField.includes("entry barriers") || lastEditedField.includes("barriers")) {
+        return "I noticed you updated entry barriers. Would you like me to research ways to overcome these challenges or analyze their impact on timelines?";
+      }
+      if (lastEditedField.includes("competitive differentiation") || lastEditedField.includes("differentiation")) {
+        return "I see you modified competitive differentiation. Should I help identify additional competitive advantages or analyze market positioning strategies?";
+      }
+      if (lastEditedField.includes("time to market") || lastEditedField.includes("timeline")) {
+        return "You updated the market entry timeline. Would you like me to validate these timelines or suggest ways to accelerate market entry?";
+      }
+      if (lastEditedField.includes("deleted")) {
+        return "You removed a market entry section. Would you like me to suggest alternative content or analyze why that section might not be relevant to your strategy?";
+      }
+      return "I noticed you updated the market entry strategy. Would you like me to provide additional insights on go-to-market approaches or competitive positioning?";
+    }
+    
+    return "Hi there! 👋 I'm Scout. Ready to help you navigate your market entry and growth plan. Want to dig deeper into barriers, timelines, or the best go-to-market path?";
+  }
+
   // Default market-size context - only reached when context is not competitor-landscape, industry-trends, or regulatory-compliance
   if (showEditHistory && editHistory.length > 0) {
     return "Hi Alex! Reviewing your changes? Let me know if you'd like to validate data or explore why market estimates shifted.";
@@ -266,6 +295,38 @@ const getContextualScoutMessage = () => {
       ];
     }
 
+    if (context === 'market-entry') {
+      // Post-save specific questions
+      if (isPostSave) {
+        return [
+          "Would you like to analyze competitive entry strategies?",
+          "Need help refining your go-to-market timeline?", 
+          "Should I research local partnership opportunities?",
+          "Want to validate regulatory compliance requirements?",
+          "Analyze competitive positioning strategies?"
+        ];
+      }
+      
+      if (hasEdits) {
+        return [
+          "Research entry barrier solutions",
+          "Validate market entry timelines",
+          "Analyze competitive positioning", 
+          "Identify partnership opportunities",
+          "Assess regulatory requirements",
+          "Compare go-to-market strategies"
+        ];
+      }
+
+      return [
+        "How long would it take to enter the market?",
+        "What GTM strategies work best for mid-sized companies here?",
+        "Can you compare direct entry vs. partnership models?",
+        "Which entry barriers should we prioritize addressing?",
+        "What competitive advantages should we emphasize?"
+      ];
+    }
+
     // Default market-size questions
     if (hasEdits) {
       return [
@@ -295,6 +356,8 @@ const getContextualScoutMessage = () => {
         return 'Scout — Industry Trends';
       case 'regulatory-compliance':
         return 'Scout — Regulatory & Compliance Highlights';
+      case 'market-entry':
+        return 'Scout — Market Entry & Growth Strategy';
       default:
         return 'Scout — Market Size & Opportunity';
     }
