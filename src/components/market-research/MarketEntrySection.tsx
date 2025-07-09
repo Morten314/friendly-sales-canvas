@@ -385,9 +385,6 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
           <div className="flex items-center gap-3 pt-6 border-t">
             <Button onClick={handleMarketEntrySaveChanges}>Save Changes</Button>
             <Button variant="outline" onClick={onCancelEdit}>Cancel</Button>
-            <Button variant="destructive" onClick={() => onDeleteSection('market-entry')}>
-              Delete Section
-            </Button>
             <div className="flex-1"></div>
             
             <Tooltip>
