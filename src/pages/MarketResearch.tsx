@@ -1166,6 +1166,7 @@ const MarketResearch = () => {
   const [showMarketEntryScoutChat, setShowMarketEntryScoutChat] = useState(false);
   const [isMarketEntryPostSave, setIsMarketEntryPostSave] = useState(false);
   const [marketEntryCustomMessage, setMarketEntryCustomMessage] = useState<string | undefined>(undefined);
+  const [isMarketEntryEditHistoryOpen, setIsMarketEntryEditHistoryOpen] = useState(false);
 
   const navigate = useNavigate();
 
@@ -1939,7 +1940,46 @@ const MarketResearch = () => {
     handleMarketEntryScoutClick('market-entry');
   };
   const handleMarketEntryEditHistoryOpen = () => {
-    // Edit history functionality
+    setIsMarketEntryEditHistoryOpen(true);
+  };
+  const handleMarketEntryEditHistoryClose = () => {
+    setIsMarketEntryEditHistoryOpen(false);
+  };
+  const handleMarketEntryRevertEdit = (editId: string) => {
+    const edit = marketEntryEditHistory.find(e => e.id === editId);
+    if (!edit) return;
+
+    // Revert the change based on the field
+    switch (edit.field) {
+      case 'Market Entry Executive Summary':
+        setMarketEntryData(prev => ({ ...prev, executiveSummary: edit.oldValue }));
+        break;
+      case 'Market Entry Recommended Channel':
+        setMarketEntryData(prev => ({ ...prev, recommendedChannel: edit.oldValue }));
+        break;
+      case 'Market Entry Time to Market':
+        setMarketEntryData(prev => ({ ...prev, timeToMarket: edit.oldValue }));
+        break;
+      case 'Market Entry Top Barrier':
+        setMarketEntryData(prev => ({ ...prev, topBarrier: edit.oldValue }));
+        break;
+      // Add more cases as needed
+    }
+
+    // Create a record of the revert action
+    const revertRecord: EditRecord = {
+      id: Date.now().toString(),
+      timestamp: new Date().toISOString(),
+      user: 'Alex',
+      summary: `Reverted ${edit.field} change`,
+      field: edit.field,
+      oldValue: edit.newValue,
+      newValue: edit.oldValue
+    };
+    setMarketEntryEditHistory(prev => [revertRecord, ...prev]);
+  };
+  const handleMarketEntryViewEditDetails = (editId: string) => {
+    console.log('Viewing Market Entry edit details:', editId);
   };
   const handleMarketEntryExecutiveSummaryChange = (value: string) => {
     const oldValue = marketEntryData.executiveSummary;
@@ -2518,6 +2558,16 @@ const MarketResearch = () => {
                       onRevert={handleRevertEdit}
                       onViewDetails={handleViewEditDetails}
                       context={editHistoryContext}
+                    />
+
+                    {/* Market Entry Edit History Panel */}
+                    <EditHistoryPanel
+                      isOpen={isMarketEntryEditHistoryOpen}
+                      onClose={handleMarketEntryEditHistoryClose}
+                      editHistory={marketEntryEditHistory}
+                      onRevert={handleMarketEntryRevertEdit}
+                      onViewDetails={handleMarketEntryViewEditDetails}
+                      context="Market Entry & Growth Strategy"
                     />
 
                   </div>
