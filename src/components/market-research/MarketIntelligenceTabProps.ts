@@ -16,6 +16,7 @@ export interface MarketIntelligenceTabProps {
   strategicRecommendations: string[];
   marketEntry: string;
   marketDrivers: string[];
+  marketSizeDeletedSections: Set<string>;
   
   // Industry Trends Section
   isIndustryTrendsEditing: boolean;
@@ -75,6 +76,7 @@ export interface MarketIntelligenceTabProps {
   onMarketEntryScoutIconClick?: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance' | 'market-entry', hasEdits?: boolean, customMessage?: string) => void;
   onEditHistoryOpen: () => void;
   onDeleteSection: (sectionId: string) => void;
+  onMarketSizeDeleteSection: (sectionId: string) => void;
   onSaveChanges: () => void;
   onCancelEdit: () => void;
   onExpandToggle: (expanded: boolean) => void;

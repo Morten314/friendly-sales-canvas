@@ -1133,6 +1133,7 @@ const MarketResearch = () => {
   const [showMarketSizeScoutChat, setShowMarketSizeScoutChat] = useState(false);
   const [marketSizeHasEdits, setMarketSizeHasEdits] = useState(false);
   const [marketSizeLastEditedField, setMarketSizeLastEditedField] = useState('');
+  const [marketSizeDeletedSections, setMarketSizeDeletedSections] = useState<Set<string>>(new Set());
 
   // Industry Trends Scout Chat states (separate from Market Size)
   const [showIndustryTrendsScoutChat, setShowIndustryTrendsScoutChat] = useState(false);
@@ -1736,6 +1737,25 @@ const MarketResearch = () => {
     // Trigger Scout with deletion message
     setTimeout(() => {
       handleCompetitorScoutClick('competitor-landscape', false, `I noticed you removed the ${sectionName}. Want me to help refine or replace it?`);
+    }, 300);
+  };
+
+  // Market Size handlers
+  const handleMarketSizeDeleteSection = (sectionId: string) => {
+    const sectionNames: Record<string, string> = {
+      'executive-summary': 'Executive Summary',
+      'key-metrics': 'Key Metrics',
+      'strategic-recommendations': 'Strategic Recommendations',
+      'market-entry': 'Market Entry Strategy',
+      'market-drivers': 'Key Market Drivers'
+    };
+    
+    const sectionName = sectionNames[sectionId] || sectionId;
+    setMarketSizeDeletedSections(prev => new Set([...prev, sectionId]));
+    
+    // Trigger Scout with deletion message
+    setTimeout(() => {
+      handleMarketSizeScoutClick('market-size', false, `I noticed you removed the ${sectionName}. Want me to help refine or replace it?`);
     }, 300);
   };
 
@@ -2568,6 +2588,8 @@ const MarketResearch = () => {
                         strategicRecommendations={marketIntelligenceData.strategicRecommendations}
                         marketEntry={marketIntelligenceData.marketEntry}
                         marketDrivers={marketIntelligenceData.marketDrivers}
+                        // Market Size specific props
+                        marketSizeDeletedSections={marketSizeDeletedSections}
                         // Industry Trends props
                         isIndustryTrendsEditing={isIndustryTrendsEditing}
                         industryTrendsExpanded={industryTrendsExpanded}
@@ -2623,6 +2645,7 @@ const MarketResearch = () => {
                         onCompetitorScoutIconClick={handleCompetitorScoutClick}
                         onEditHistoryOpen={handleEditHistoryOpen}
                         onDeleteSection={handleMarketIntelligenceDeleteSection}
+                        onMarketSizeDeleteSection={handleMarketSizeDeleteSection}
                         onSaveChanges={handleMarketIntelligenceSaveChanges}
                         onCancelEdit={handleMarketIntelligenceCancelEdit}
                         onExpandToggle={handleMarketIntelligenceExpandToggle}
