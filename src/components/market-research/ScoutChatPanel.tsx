@@ -138,7 +138,28 @@ const getContextualScoutMessage = () => {
     return "Hi there! 👋 I'm Scout. Want to dive deeper into industry trends and emerging technologies? Here are some questions I can help answer.";
   }
 
-  // Default market-size context - only reached when context is not competitor-landscape or industry-trends
+  if (context === 'regulatory-compliance') {
+    if (showEditHistory && editHistory.length > 0) {
+      return "Hi Alex! Reviewing your compliance changes? Let me know if you'd like me to analyze regulatory impacts or track upcoming deadlines.";
+    }
+    
+    if (hasEdits) {
+      if (lastEditedField.includes("EU AI Act") || lastEditedField.includes("ai act")) {
+        return "I noticed you updated EU AI Act information. Would you like the latest timeline updates or implementation guidance?";
+      }
+      if (lastEditedField.includes("data protection") || lastEditedField.includes("GDPR")) {
+        return "I see you modified data protection details. Should I provide regional compliance variations or recent enforcement updates?";
+      }
+      if (lastEditedField.includes("deleted")) {
+        return "You removed a compliance section. Would you like me to suggest alternative regulatory content or analyze why that section might not be relevant?";
+      }
+      return "I noticed you updated the regulatory analysis. Would you like me to provide additional compliance insights or track regulatory changes?";
+    }
+    
+    return "Hi there! 👋 I'm Scout. Ready to dive deeper into regulatory compliance? I can help you stay ahead of changing regulations and assess compliance risks.";
+  }
+
+  // Default market-size context - only reached when context is not competitor-landscape, industry-trends, or regulatory-compliance
   if (showEditHistory && editHistory.length > 0) {
     return "Hi Alex! Reviewing your changes? Let me know if you'd like to validate data or explore why market estimates shifted.";
   }
@@ -199,6 +220,27 @@ const getContextualScoutMessage = () => {
       ];
     }
 
+    if (context === 'regulatory-compliance') {
+      if (hasEdits) {
+        return [
+          "Analyze compliance impact",
+          "Track regulatory deadlines",
+          "Compare regional requirements", 
+          "Validate compliance data",
+          "Update enforcement news",
+          "Assess implementation risks"
+        ];
+      }
+
+      return [
+        "Would you like updates on EU AI Act timelines?",
+        "Need a regional compliance comparison?",
+        "Want a summary of regulatory risks for SaaS deployment?",
+        "Track GDPR enforcement updates",
+        "Analyze data localization requirements"
+      ];
+    }
+
     // Default market-size questions
     if (hasEdits) {
       return [
@@ -226,6 +268,8 @@ const getContextualScoutMessage = () => {
         return 'Scout — Competitor Landscape';
       case 'industry-trends':
         return 'Scout — Industry Trends';
+      case 'regulatory-compliance':
+        return 'Scout — Regulatory & Compliance Highlights';
       default:
         return 'Scout — Market Size & Opportunity';
     }
