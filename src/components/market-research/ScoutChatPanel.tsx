@@ -199,7 +199,7 @@ const getContextualScoutMessage = () => {
       return "I noticed you updated the market entry strategy. Would you like me to provide additional insights on go-to-market approaches or competitive positioning?";
     }
     
-    return "Hi there! 👋 I'm Scout. Ready to help you navigate your market entry and growth plan. Want to dig deeper into barriers, timelines, or the best go-to-market path?";
+    return "Hi Alex! 👋 I'm Scout. Ready to help you navigate your market entry and growth plan. Want to dig deeper into barriers, timelines, or the best go-to-market path?";
   }
 
   // Default market-size context - only reached when context is not competitor-landscape, industry-trends, or regulatory-compliance
