@@ -183,14 +183,15 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
             </div>
           </div>
 
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => onExpandToggle(true)}
-            className="mt-4"
-          >
-            Read More
-          </Button>
+          <div className="flex justify-center mt-4">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => onExpandToggle(true)}
+            >
+              Read More
+            </Button>
+          </div>
         </div>
       )}
 
@@ -269,22 +270,26 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2 pt-4 border-t">
-            <Button variant="ghost" size="sm" onClick={() => onExpandToggle(false)}>
-              Show Less
-            </Button>
-            <Button variant="outline" size="sm" onClick={onExportPDF}>
-              <FileText className="h-4 w-4 mr-1" />
-              Save as PDF
-            </Button>
-            <Button variant="outline" size="sm" onClick={onSaveToWorkspace}>
-              <Save className="h-4 w-4 mr-1" />
-              Save to Workspace
-            </Button>
-            <Button variant="outline" size="sm" onClick={onGenerateShareableLink}>
-              <Share className="h-4 w-4 mr-1" />
-              Shareable Link
-            </Button>
+          <div className="pt-4 border-t space-y-3">
+            <div className="flex justify-center">
+              <Button variant="ghost" size="sm" onClick={() => onExpandToggle(false)}>
+                Show Less
+              </Button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" size="sm" onClick={onExportPDF}>
+                <FileText className="h-4 w-4 mr-1" />
+                Save as PDF
+              </Button>
+              <Button variant="outline" size="sm" onClick={onSaveToWorkspace}>
+                <Save className="h-4 w-4 mr-1" />
+                Save to Workspace
+              </Button>
+              <Button variant="outline" size="sm" onClick={onGenerateShareableLink}>
+                <Share className="h-4 w-4 mr-1" />
+                Shareable Link
+              </Button>
+            </div>
           </div>
         </div>
       )}
