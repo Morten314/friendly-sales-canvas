@@ -393,10 +393,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
                   variant="ghost"
                   size="sm"
                   onClick={onEditHistoryOpen}
-                  className={`text-gray-600 hover:text-gray-700 hover:bg-gray-50 transition-all duration-200 ${
-                    editHistory.length === 0 ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
-                  disabled={editHistory.length === 0}
+                  className="text-gray-600 hover:text-gray-700 hover:bg-gray-50 transition-all duration-200"
                 >
                   <Clock className="h-4 w-4" />
                   Edit History
