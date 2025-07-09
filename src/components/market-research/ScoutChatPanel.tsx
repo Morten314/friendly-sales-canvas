@@ -11,7 +11,7 @@ interface ScoutChatPanelProps {
   showEditHistory: boolean;
   editHistory: any[];
   lastEditedField: string;
-  context?: 'market-size' | 'industry-trends' | 'competitor-landscape';
+  context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance';
   onClose: () => void;
 }
 

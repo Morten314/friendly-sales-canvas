@@ -1139,6 +1139,9 @@ const MarketResearch = () => {
   // Competitor Landscape Scout Chat states (separate from others)
   const [showCompetitorScoutChat, setShowCompetitorScoutChat] = useState(false);
 
+  // Regulatory Compliance Scout Chat states
+  const [showRegulatoryScoutChat, setShowRegulatoryScoutChat] = useState(false);
+
   const navigate = useNavigate();
 
   // Transform raw report data to our expected structure
@@ -1672,7 +1675,14 @@ const MarketResearch = () => {
 
   const handleRegulatoryScoutClick = (context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance', hasEdits?: boolean, lastEditedField?: string) => {
     console.log('Regulatory scout clicked with context:', context, 'hasEdits:', hasEdits, 'lastEditedField:', lastEditedField);
-    setIsChatOpen(true);
+    
+    // Close all other scout chats first
+    setShowMarketSizeScoutChat(false);
+    setShowIndustryTrendsScoutChat(false);
+    setShowCompetitorScoutChat(false);
+    
+    // Open regulatory scout chat
+    setShowRegulatoryScoutChat(true);
   };
 
   // Edit history handlers
@@ -1845,11 +1855,11 @@ const MarketResearch = () => {
                     )}
                     
                     {/* Split view layout when chat is open */}
-                    <div className={`flex gap-6 ${isChatOpen ? 'flex-row' : 'flex-col'}`}>
+                    <div className={`flex gap-6 ${(isChatOpen || showMarketSizeScoutChat || showIndustryTrendsScoutChat || showCompetitorScoutChat || showRegulatoryScoutChat) ? 'flex-row' : 'flex-col'}`}>
                       {/* Market Intelligence Tab */}
                       <MarketIntelligenceTab
                         isEditing={isMarketIntelligenceEditing}
-                        isSplitView={isChatOpen}
+                        isSplitView={isChatOpen || showMarketSizeScoutChat || showIndustryTrendsScoutChat || showCompetitorScoutChat || showRegulatoryScoutChat}
                         isExpanded={isMarketIntelligenceExpanded}
                         hasEdits={hasEdits}
                         deletedSections={deletedSections}
@@ -2010,6 +2020,22 @@ const MarketResearch = () => {
                           onClose={() => {
                             setShowCompetitorScoutChat(false);
                             setIsChatOpen(false);
+                          }}
+                        />
+                      )}
+
+                      {/* Regulatory Compliance Scout Chat Panel */}
+                      {showRegulatoryScoutChat && (
+                        <ScoutChatPanel
+                          showScoutChat={showRegulatoryScoutChat}
+                          isSplitView={showRegulatoryScoutChat}
+                          hasEdits={regulatoryHasEdits}
+                          showEditHistory={false}
+                          editHistory={regulatoryEditHistory}
+                          lastEditedField=""
+                          context="regulatory-compliance"
+                          onClose={() => {
+                            setShowRegulatoryScoutChat(false);
                           }}
                         />
                       )}

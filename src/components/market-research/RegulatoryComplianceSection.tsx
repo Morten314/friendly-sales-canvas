@@ -98,7 +98,6 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   onGenerateShareableLink
 }) => {
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
-  const [scoutChatOpen, setScoutChatOpen] = useState(false);
 
   if (deletedSections.has('regulatory-compliance')) {
     return null;
@@ -209,99 +208,8 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     }
   ];
 
-  // Scout Chat Panel Component
-  const ScoutChatPanel = () => (
-    <div className="fixed right-0 top-0 h-full w-96 bg-white border-l border-gray-200 shadow-xl z-50 flex flex-col">
-      {/* Header */}
-      <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-purple-50">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="relative">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                <Bot className="h-6 w-6 text-white" />
-              </div>
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-400/30 to-purple-400/30 rounded-full animate-pulse"></div>
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900">Scout</h3>
-              <p className="text-sm text-gray-600">Regulatory & Compliance Highlights</p>
-            </div>
-          </div>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => setScoutChatOpen(false)}
-            className="h-8 w-8"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
-      {/* Chat Content */}
-      <div className="flex-1 p-4 space-y-4 overflow-y-auto">
-        {/* Scout Greeting */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-start space-x-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
-              <Bot className="h-4 w-4 text-white" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-900 mb-2">Hi there! 👋</p>
-              <p className="text-sm text-gray-700">I'm here to help you explore regulatory and compliance insights. What would you like to know?</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Scout Suggestions */}
-        <div className="space-y-2">
-          <p className="text-xs font-medium text-gray-600 uppercase tracking-wide">Suggested Questions</p>
-          {[
-            "Would you like updates on EU AI Act timelines?",
-            "Need a regional compliance comparison?",
-            "Want a summary of regulatory risks for SaaS deployment?",
-            "Should I analyze the business impact of new regulations?"
-          ].map((suggestion, index) => (
-            <button
-              key={index}
-              className="w-full text-left p-3 bg-gray-50 hover:bg-gray-100 rounded-lg text-sm text-gray-700 transition-colors"
-            >
-              {suggestion}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Chat Input */}
-      <div className="p-4 border-t border-gray-200">
-        <div className="flex space-x-2">
-          <input
-            type="text"
-            placeholder="Ask Scout about regulatory compliance..."
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
-            <MessageSquare className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-
   return (
-    <div className="relative">
-      {/* Scout Chat Panel Overlay */}
-      {scoutChatOpen && (
-        <>
-          <div 
-            className="fixed inset-0 bg-black/20 z-40"
-            onClick={() => setScoutChatOpen(false)}
-          />
-          <ScoutChatPanel />
-        </>
-      )}
-
-      <Card className="border border-gray-200 shadow-sm">
+    <Card className="border border-gray-200 shadow-sm">
         <CardHeader className="pb-4">
         <div className="flex items-start justify-between">
           <div className="flex items-center space-x-3">
@@ -350,7 +258,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                   variant="ghost" 
                   size="icon" 
                   className="h-8 w-8 relative hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 transition-all duration-200"
-                  onClick={() => setScoutChatOpen(true)}
+                  onClick={() => onScoutIconClick('regulatory-compliance', hasEdits)}
                 >
                   <div className="absolute inset-0 rounded-md bg-gradient-to-r from-blue-400/20 to-purple-400/20 animate-pulse opacity-75"></div>
                   <Bot className="h-4 w-4 relative z-10 text-blue-600" />
@@ -384,302 +292,564 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
       </CardHeader>
 
       <CardContent className="space-y-6">
-        {/* Executive Summary */}
-        <div>
-          <h4 className="text-sm font-medium text-gray-700 mb-2">Executive Summary</h4>
-          {isEditing ? (
-            <textarea
-              value={executiveSummary}
-              onChange={(e) => onExecutiveSummaryChange(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg text-sm resize-none"
-              rows={3}
-              placeholder="Enter executive summary..."
-            />
-          ) : (
-            <p className="text-gray-600 text-sm leading-relaxed">
-              {executiveSummary}
-            </p>
-          )}
-        </div>
-
-        {/* Key Data Points */}
-        <div>
-          <h4 className="text-sm font-medium text-gray-700 mb-3">Key Regulatory Updates</h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {keyDataPoints.map((point) => {
-              const IconComponent = point.icon;
-              return (
-                <div
-                  key={point.id}
-                  className="relative p-4 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors cursor-pointer"
-                  onMouseEnter={() => setHoveredCard(point.id)}
-                  onMouseLeave={() => setHoveredCard(null)}
+        {isEditing ? (
+          /* Full Editable Report Mode */
+          <div className="space-y-8">
+            {/* Executive Summary */}
+            {!deletedSections.has('executive-summary') && (
+              <div className="relative group border border-gray-200 rounded-lg p-4">
+                <button
+                  onClick={() => onDeleteSection('executive-summary')}
+                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
                 >
-                  <div className="flex items-start space-x-3">
-                    <div className="p-2 bg-gray-100 rounded-lg">
-                      <IconComponent className="h-4 w-4 text-gray-600" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between mb-2">
-                        <h5 className="text-sm font-medium text-gray-900 leading-tight">
-                          {point.title}
-                        </h5>
-                        <Badge className={`${point.badgeColor} text-xs`}>
-                          {point.badge}
-                        </Badge>
-                      </div>
-                      {isEditing ? (
-                        <input
-                          type="text"
-                          value={point.value}
-                          onChange={(e) => {
-                            if (point.id === 'eu-ai-act') onEuAiActDeadlineChange(e.target.value);
-                            else if (point.id === 'gdpr-compliance') onGdprComplianceChange(e.target.value);
-                            else if (point.id === 'potential-fines') onPotentialFinesChange(e.target.value);
-                            else if (point.id === 'data-localization') onDataLocalizationChange(e.target.value);
-                          }}
-                          className="w-full p-2 border border-gray-300 rounded text-sm"
-                        />
-                      ) : (
-                        <p className="text-sm text-gray-600">{point.value}</p>
-                      )}
-                    </div>
-                  </div>
+                  <X className="h-4 w-4 text-red-600" />
+                </button>
+                <h4 className="text-sm font-medium text-gray-700 mb-2">Executive Summary</h4>
+                <textarea
+                  value={executiveSummary}
+                  onChange={(e) => onExecutiveSummaryChange(e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-lg text-sm resize-none"
+                  rows={4}
+                  placeholder="Enter executive summary..."
+                />
+              </div>
+            )}
 
-                  {/* Tooltip */}
-                  {hoveredCard === point.id && (
-                    <div className="absolute z-10 bottom-full left-1/2 transform -translate-x-1/2 mb-2 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg max-w-xs">
-                      <p>{point.tooltip}</p>
-                      <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Read More Button - Only when not expanded */}
-        {!isExpanded && (
-          <div className="flex justify-center pt-4">
-            <Button
-              onClick={() => onExpandToggle(true)}
-              variant="outline"
-              className="flex items-center space-x-2 text-sm"
-            >
-              <span>Read More</span>
-              <ChevronDown className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
-
-        {/* Enhanced Expanded Content */}
-        {isExpanded && (
-          <div className="space-y-8 pt-6 border-t border-gray-200">
-            {/* Visual Data Cards */}
-            <div>
-              <h4 className="text-sm font-medium text-gray-700 mb-4">Compliance Analytics</h4>
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Compliance Adoption Rates - Bar Chart */}
-                <div className="bg-white border border-gray-200 rounded-lg p-4">
-                  <h5 className="font-medium text-gray-900 mb-3 flex items-center">
-                    <Users className="h-4 w-4 mr-2 text-blue-600" />
-                    Compliance Adoption Rates
-                  </h5>
-                  <div className="space-y-3">
-                    {visualDataCards[0].data.map((item, index) => (
-                      <div key={index} className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600">{item.name}</span>
-                        <div className="flex items-center space-x-2">
-                          <div className="w-16 h-2 bg-gray-200 rounded-full">
-                            <div 
-                              className="h-2 rounded-full" 
-                              style={{ 
-                                width: `${item.value}%`, 
-                                backgroundColor: item.color 
+            {/* Key Regulatory Updates */}
+            {!deletedSections.has('key-updates') && (
+              <div className="relative group border border-gray-200 rounded-lg p-4">
+                <button
+                  onClick={() => onDeleteSection('key-updates')}
+                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
+                >
+                  <X className="h-4 w-4 text-red-600" />
+                </button>
+                <h4 className="text-sm font-medium text-gray-700 mb-3">Key Regulatory Updates</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {keyDataPoints.map((point) => {
+                    const IconComponent = point.icon;
+                    return (
+                      <div key={point.id} className="p-4 border border-gray-200 rounded-lg">
+                        <div className="flex items-start space-x-3">
+                          <div className="p-2 bg-gray-100 rounded-lg">
+                            <IconComponent className="h-4 w-4 text-gray-600" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between mb-2">
+                              <h5 className="text-sm font-medium text-gray-900 leading-tight">
+                                {point.title}
+                              </h5>
+                              <Badge className={`${point.badgeColor} text-xs`}>
+                                {point.badge}
+                              </Badge>
+                            </div>
+                            <input
+                              type="text"
+                              value={point.value}
+                              onChange={(e) => {
+                                if (point.id === 'eu-ai-act') onEuAiActDeadlineChange(e.target.value);
+                                else if (point.id === 'gdpr-compliance') onGdprComplianceChange(e.target.value);
+                                else if (point.id === 'potential-fines') onPotentialFinesChange(e.target.value);
+                                else if (point.id === 'data-localization') onDataLocalizationChange(e.target.value);
                               }}
+                              className="w-full p-2 border border-gray-300 rounded text-sm"
                             />
                           </div>
-                          <span className="text-sm font-medium text-gray-900">{item.value}%</span>
                         </div>
                       </div>
-                    ))}
-                  </div>
+                    );
+                  })}
                 </div>
+              </div>
+            )}
 
-                {/* Regulatory Timeline */}
-                <div className="bg-white border border-gray-200 rounded-lg p-4">
-                  <h5 className="font-medium text-gray-900 mb-3 flex items-center">
-                    <Clock className="h-4 w-4 mr-2 text-orange-600" />
-                    Regulatory Timeline
-                  </h5>
-                  <div className="space-y-3">
-                    {visualDataCards[1].data.map((item, index) => (
-                      <div key={index} className="flex items-start space-x-3">
-                        <div className={`w-2 h-2 rounded-full mt-2 ${
-                          item.status === 'critical' ? 'bg-red-500' : 'bg-blue-500'
-                        }`} />
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900">{item.event}</p>
-                          <p className="text-xs text-gray-500">{item.date}</p>
+            {/* Compliance Analytics */}
+            {!deletedSections.has('compliance-analytics') && (
+              <div className="relative group border border-gray-200 rounded-lg p-4">
+                <button
+                  onClick={() => onDeleteSection('compliance-analytics')}
+                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
+                >
+                  <X className="h-4 w-4 text-red-600" />
+                </button>
+                <h4 className="text-sm font-medium text-gray-700 mb-4">Compliance Analytics</h4>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Compliance Adoption Rates - Bar Chart */}
+                  <div className="bg-white border border-gray-200 rounded-lg p-4">
+                    <h5 className="font-medium text-gray-900 mb-3 flex items-center">
+                      <Users className="h-4 w-4 mr-2 text-blue-600" />
+                      Compliance Adoption Rates
+                    </h5>
+                    <div className="space-y-3">
+                      {visualDataCards[0].data.map((item, index) => (
+                        <div key={index} className="flex items-center justify-between">
+                          <span className="text-sm text-gray-600">{item.name}</span>
+                          <div className="flex items-center space-x-2">
+                            <div className="w-16 h-2 bg-gray-200 rounded-full">
+                              <div 
+                                className="h-2 rounded-full" 
+                                style={{ 
+                                  width: `${item.value}%`, 
+                                  backgroundColor: item.color 
+                                }}
+                              />
+                            </div>
+                            <span className="text-sm font-medium text-gray-900">{item.value}%</span>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
 
-                {/* Risk Indicators */}
-                <div className="bg-white border border-gray-200 rounded-lg p-4">
-                  <h5 className="font-medium text-gray-900 mb-3 flex items-center">
-                    <AlertTriangle className="h-4 w-4 mr-2 text-red-600" />
-                    Risk Indicators
-                  </h5>
-                  <div className="space-y-3">
-                    {visualDataCards[2].data.map((item, index) => (
-                      <div key={index} className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600">{item.metric}</span>
-                        <div className="flex items-center space-x-2">
-                          <span className="text-sm font-medium text-gray-900">{item.value}%</span>
-                          <TrendingUp className={`h-3 w-3 ${
-                            item.trend === 'up' ? 'text-green-600' : 'text-red-600'
-                          } ${item.trend === 'down' ? 'rotate-180' : ''}`} />
+                  {/* Regulatory Timeline */}
+                  <div className="bg-white border border-gray-200 rounded-lg p-4">
+                    <h5 className="font-medium text-gray-900 mb-3 flex items-center">
+                      <Clock className="h-4 w-4 mr-2 text-orange-600" />
+                      Regulatory Timeline
+                    </h5>
+                    <div className="space-y-3">
+                      {visualDataCards[1].data.map((item, index) => (
+                        <div key={index} className="flex items-start space-x-3">
+                          <div className={`w-2 h-2 rounded-full mt-2 ${
+                            item.status === 'critical' ? 'bg-red-500' : 'bg-blue-500'
+                          }`} />
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-gray-900">{item.event}</p>
+                            <p className="text-xs text-gray-500">{item.date}</p>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Risk Indicators */}
+                  <div className="bg-white border border-gray-200 rounded-lg p-4">
+                    <h5 className="font-medium text-gray-900 mb-3 flex items-center">
+                      <AlertTriangle className="h-4 w-4 mr-2 text-red-600" />
+                      Risk Indicators
+                    </h5>
+                    <div className="space-y-3">
+                      {visualDataCards[2].data.map((item, index) => (
+                        <div key={index} className="flex items-center justify-between">
+                          <span className="text-sm text-gray-600">{item.metric}</span>
+                          <div className="flex items-center space-x-2">
+                            <span className="text-sm font-medium text-gray-900">{item.value}%</span>
+                            <TrendingUp className={`h-3 w-3 ${
+                              item.trend === 'up' ? 'text-green-600' : 'text-red-600'
+                            } ${item.trend === 'down' ? 'rotate-180' : ''}`} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Regional Breakdown */}
-            <div>
-              <h4 className="text-sm font-medium text-gray-700 mb-4">Regional Compliance Overview</h4>
-              <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-gray-50">
-                      <TableHead className="font-medium">Region</TableHead>
-                      <TableHead className="font-medium">Framework</TableHead>
-                      <TableHead className="font-medium">Deadline</TableHead>
-                      <TableHead className="font-medium">Impact</TableHead>
-                      <TableHead className="font-medium">Status</TableHead>
-                      <TableHead className="font-medium">Key Requirements</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {regionalData.map((region, index) => (
-                      <TableRow key={index}>
-                        <TableCell className="font-medium">{region.region}</TableCell>
-                        <TableCell>{region.framework}</TableCell>
-                        <TableCell>{region.deadline}</TableCell>
-                        <TableCell>
-                          <Badge className={`${
-                            region.impact === 'High' ? 'bg-red-100 text-red-800' :
-                            region.impact === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-green-100 text-green-800'
-                          }`}>
-                            {region.impact}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={`${
-                            region.status === 'Active' || region.status === 'Mandatory' 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-blue-100 text-blue-800'
-                          }`}>
-                            {region.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-sm text-gray-600">{region.requirements}</TableCell>
+            {!deletedSections.has('regional-breakdown') && (
+              <div className="relative group border border-gray-200 rounded-lg p-4">
+                <button
+                  onClick={() => onDeleteSection('regional-breakdown')}
+                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
+                >
+                  <X className="h-4 w-4 text-red-600" />
+                </button>
+                <h4 className="text-sm font-medium text-gray-700 mb-4">Regional Compliance Overview</h4>
+                <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-gray-50">
+                        <TableHead className="font-medium">Region</TableHead>
+                        <TableHead className="font-medium">Framework</TableHead>
+                        <TableHead className="font-medium">Deadline</TableHead>
+                        <TableHead className="font-medium">Impact</TableHead>
+                        <TableHead className="font-medium">Status</TableHead>
+                        <TableHead className="font-medium">Key Requirements</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {regionalData.map((region, index) => (
+                        <TableRow key={index}>
+                          <TableCell className="font-medium">{region.region}</TableCell>
+                          <TableCell>{region.framework}</TableCell>
+                          <TableCell>{region.deadline}</TableCell>
+                          <TableCell>
+                            <Badge className={`${
+                              region.impact === 'High' ? 'bg-red-100 text-red-800' :
+                              region.impact === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-green-100 text-green-800'
+                            }`}>
+                              {region.impact}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={`${
+                              region.status === 'Active' || region.status === 'Mandatory' 
+                                ? 'bg-green-100 text-green-800' 
+                                : 'bg-blue-100 text-blue-800'
+                            }`}>
+                              {region.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-sm text-gray-600">{region.requirements}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Strategic Recommendations */}
-            <div>
-              <h4 className="text-sm font-medium text-gray-700 mb-4">Strategic Recommendations</h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <div className="flex items-start space-x-3">
-                    <Shield className="h-5 w-5 text-blue-600 mt-0.5" />
-                    <div>
-                      <h5 className="font-medium text-blue-900 mb-2">Mitigate Regulatory Risks</h5>
-                      <ul className="text-sm text-blue-700 space-y-1">
-                        <li>• Implement privacy by design principles</li>
-                        <li>• Establish automated compliance monitoring</li>
-                        <li>• Regular risk assessments and audits</li>
-                        <li>• Cross-functional compliance team</li>
-                      </ul>
+            {!deletedSections.has('strategic-recommendations') && (
+              <div className="relative group border border-gray-200 rounded-lg p-4">
+                <button
+                  onClick={() => onDeleteSection('strategic-recommendations')}
+                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
+                >
+                  <X className="h-4 w-4 text-red-600" />
+                </button>
+                <h4 className="text-sm font-medium text-gray-700 mb-4">Strategic Recommendations</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-start space-x-3">
+                      <Shield className="h-5 w-5 text-blue-600 mt-0.5" />
+                      <div>
+                        <h5 className="font-medium text-blue-900 mb-2">Mitigate Regulatory Risks</h5>
+                        <ul className="text-sm text-blue-700 space-y-1">
+                          <li>• Implement privacy by design principles</li>
+                          <li>• Establish automated compliance monitoring</li>
+                          <li>• Regular risk assessments and audits</li>
+                          <li>• Cross-functional compliance team</li>
+                        </ul>
+                      </div>
                     </div>
                   </div>
-                </div>
-                
-                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                  <div className="flex items-start space-x-3">
-                    <Target className="h-5 w-5 text-green-600 mt-0.5" />
-                    <div>
-                      <h5 className="font-medium text-green-900 mb-2">Competitive Positioning</h5>
-                      <ul className="text-sm text-green-700 space-y-1">
-                        <li>• Market compliance as differentiator</li>
-                        <li>• Showcase security certifications</li>
-                        <li>• Transparent data handling practices</li>
-                        <li>• Industry-leading privacy standards</li>
-                      </ul>
+                  
+                  <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-start space-x-3">
+                      <Target className="h-5 w-5 text-green-600 mt-0.5" />
+                      <div>
+                        <h5 className="font-medium text-green-900 mb-2">Competitive Positioning</h5>
+                        <ul className="text-sm text-green-700 space-y-1">
+                          <li>• Market compliance as differentiator</li>
+                          <li>• Showcase security certifications</li>
+                          <li>• Transparent data handling practices</li>
+                          <li>• Industry-leading privacy standards</li>
+                        </ul>
+                      </div>
                     </div>
                   </div>
-                </div>
-                
-                <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
-                  <div className="flex items-start space-x-3">
-                    <Building className="h-5 w-5 text-purple-600 mt-0.5" />
-                    <div>
-                      <h5 className="font-medium text-purple-900 mb-2">Go-to-Market Strategy</h5>
-                      <ul className="text-sm text-purple-700 space-y-1">
-                        <li>• Regional deployment capabilities</li>
-                        <li>• Compliance-ready product offerings</li>
-                        <li>• Legal-friendly contract templates</li>
-                        <li>• Enterprise-grade data residency</li>
-                      </ul>
+                  
+                  <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                    <div className="flex items-start space-x-3">
+                      <Building className="h-5 w-5 text-purple-600 mt-0.5" />
+                      <div>
+                        <h5 className="font-medium text-purple-900 mb-2">Go-to-Market Strategy</h5>
+                        <ul className="text-sm text-purple-700 space-y-1">
+                          <li>• Regional deployment capabilities</li>
+                          <li>• Compliance-ready product offerings</li>
+                          <li>• Legal-friendly contract templates</li>
+                          <li>• Enterprise-grade data residency</li>
+                        </ul>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-
-            {/* Export Options */}
-            <div className="border-t pt-6">
-              <h4 className="text-sm font-medium text-gray-900 mb-3">Export Options</h4>
-              <div className="flex flex-wrap gap-3">
-                <Button variant="outline" size="sm" onClick={onExportPDF} className="flex items-center gap-2">
-                  <FileText className="h-4 w-4" />
-                  Save PDF
-                </Button>
-                <Button variant="outline" size="sm" onClick={onSaveToWorkspace} className="flex items-center gap-2">
-                  <Save className="h-4 w-4" />
-                  Save to Workspace
-                </Button>
-                <Button variant="outline" size="sm" onClick={onGenerateShareableLink} className="flex items-center gap-2">
-                  <Share className="h-4 w-4" />
-                  Shareable Link
-                </Button>
-              </div>
-            </div>
-
-            {/* Show Less Button - Only when not in split view */}
-            {!isSplitView && (
-              <Button variant="secondary" onClick={() => onExpandToggle(false)} className="w-full">
-                <ChevronUp className="h-4 w-4 mr-2" />
-                Show Less
-              </Button>
             )}
+
+            {/* Save Button at Bottom */}
+            <div className="flex justify-center pt-6 border-t">
+              <div className="flex space-x-3">
+                <Button onClick={onSaveChanges} className="bg-blue-600 hover:bg-blue-700">
+                  <Save className="h-4 w-4 mr-2" />
+                  Save Changes
+                </Button>
+                <Button onClick={onCancelEdit} variant="outline">
+                  <X className="h-4 w-4 mr-2" />
+                  Cancel
+                </Button>
+              </div>
+            </div>
           </div>
+        ) : (
+          /* Normal View Mode */
+          <>
+            {/* Executive Summary */}
+            <div>
+              <h4 className="text-sm font-medium text-gray-700 mb-2">Executive Summary</h4>
+              <p className="text-gray-600 text-sm leading-relaxed">
+                {executiveSummary}
+              </p>
+            </div>
+
+            {/* Key Data Points */}
+            <div>
+              <h4 className="text-sm font-medium text-gray-700 mb-3">Key Regulatory Updates</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {keyDataPoints.map((point) => {
+                  const IconComponent = point.icon;
+                  return (
+                    <div
+                      key={point.id}
+                      className="relative p-4 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors cursor-pointer"
+                      onMouseEnter={() => setHoveredCard(point.id)}
+                      onMouseLeave={() => setHoveredCard(null)}
+                    >
+                      <div className="flex items-start space-x-3">
+                        <div className="p-2 bg-gray-100 rounded-lg">
+                          <IconComponent className="h-4 w-4 text-gray-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between mb-2">
+                            <h5 className="text-sm font-medium text-gray-900 leading-tight">
+                              {point.title}
+                            </h5>
+                            <Badge className={`${point.badgeColor} text-xs`}>
+                              {point.badge}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-gray-600">{point.value}</p>
+                        </div>
+                      </div>
+
+                      {/* Tooltip */}
+                      {hoveredCard === point.id && (
+                        <div className="absolute z-10 bottom-full left-1/2 transform -translate-x-1/2 mb-2 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg max-w-xs">
+                          <p>{point.tooltip}</p>
+                          <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Read More Button - Only when not expanded */}
+            {!isExpanded && (
+              <div className="flex justify-center pt-4">
+                <Button
+                  onClick={() => onExpandToggle(true)}
+                  variant="outline"
+                  className="flex items-center space-x-2 text-sm"
+                >
+                  <span>Read More</span>
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+
+            {/* Enhanced Expanded Content */}
+            {isExpanded && (
+              <div className="space-y-8 pt-6 border-t border-gray-200">
+                {/* Visual Data Cards */}
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 mb-4">Compliance Analytics</h4>
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Compliance Adoption Rates - Bar Chart */}
+                    <div className="bg-white border border-gray-200 rounded-lg p-4">
+                      <h5 className="font-medium text-gray-900 mb-3 flex items-center">
+                        <Users className="h-4 w-4 mr-2 text-blue-600" />
+                        Compliance Adoption Rates
+                      </h5>
+                      <div className="space-y-3">
+                        {visualDataCards[0].data.map((item, index) => (
+                          <div key={index} className="flex items-center justify-between">
+                            <span className="text-sm text-gray-600">{item.name}</span>
+                            <div className="flex items-center space-x-2">
+                              <div className="w-16 h-2 bg-gray-200 rounded-full">
+                                <div 
+                                  className="h-2 rounded-full" 
+                                  style={{ 
+                                    width: `${item.value}%`, 
+                                    backgroundColor: item.color 
+                                  }}
+                                />
+                              </div>
+                              <span className="text-sm font-medium text-gray-900">{item.value}%</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Regulatory Timeline */}
+                    <div className="bg-white border border-gray-200 rounded-lg p-4">
+                      <h5 className="font-medium text-gray-900 mb-3 flex items-center">
+                        <Clock className="h-4 w-4 mr-2 text-orange-600" />
+                        Regulatory Timeline
+                      </h5>
+                      <div className="space-y-3">
+                        {visualDataCards[1].data.map((item, index) => (
+                          <div key={index} className="flex items-start space-x-3">
+                            <div className={`w-2 h-2 rounded-full mt-2 ${
+                              item.status === 'critical' ? 'bg-red-500' : 'bg-blue-500'
+                            }`} />
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-gray-900">{item.event}</p>
+                              <p className="text-xs text-gray-500">{item.date}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Risk Indicators */}
+                    <div className="bg-white border border-gray-200 rounded-lg p-4">
+                      <h5 className="font-medium text-gray-900 mb-3 flex items-center">
+                        <AlertTriangle className="h-4 w-4 mr-2 text-red-600" />
+                        Risk Indicators
+                      </h5>
+                      <div className="space-y-3">
+                        {visualDataCards[2].data.map((item, index) => (
+                          <div key={index} className="flex items-center justify-between">
+                            <span className="text-sm text-gray-600">{item.metric}</span>
+                            <div className="flex items-center space-x-2">
+                              <span className="text-sm font-medium text-gray-900">{item.value}%</span>
+                              <TrendingUp className={`h-3 w-3 ${
+                                item.trend === 'up' ? 'text-green-600' : 'text-red-600'
+                              } ${item.trend === 'down' ? 'rotate-180' : ''}`} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Regional Breakdown */}
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 mb-4">Regional Compliance Overview</h4>
+                  <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-gray-50">
+                          <TableHead className="font-medium">Region</TableHead>
+                          <TableHead className="font-medium">Framework</TableHead>
+                          <TableHead className="font-medium">Deadline</TableHead>
+                          <TableHead className="font-medium">Impact</TableHead>
+                          <TableHead className="font-medium">Status</TableHead>
+                          <TableHead className="font-medium">Key Requirements</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {regionalData.map((region, index) => (
+                          <TableRow key={index}>
+                            <TableCell className="font-medium">{region.region}</TableCell>
+                            <TableCell>{region.framework}</TableCell>
+                            <TableCell>{region.deadline}</TableCell>
+                            <TableCell>
+                              <Badge className={`${
+                                region.impact === 'High' ? 'bg-red-100 text-red-800' :
+                                region.impact === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-green-100 text-green-800'
+                              }`}>
+                                {region.impact}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge className={`${
+                                region.status === 'Active' || region.status === 'Mandatory' 
+                                  ? 'bg-green-100 text-green-800' 
+                                  : 'bg-blue-100 text-blue-800'
+                              }`}>
+                                {region.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-sm text-gray-600">{region.requirements}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+
+                {/* Strategic Recommendations */}
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 mb-4">Strategic Recommendations</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="flex items-start space-x-3">
+                        <Shield className="h-5 w-5 text-blue-600 mt-0.5" />
+                        <div>
+                          <h5 className="font-medium text-blue-900 mb-2">Mitigate Regulatory Risks</h5>
+                          <ul className="text-sm text-blue-700 space-y-1">
+                            <li>• Implement privacy by design principles</li>
+                            <li>• Establish automated compliance monitoring</li>
+                            <li>• Regular risk assessments and audits</li>
+                            <li>• Cross-functional compliance team</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="flex items-start space-x-3">
+                        <Target className="h-5 w-5 text-green-600 mt-0.5" />
+                        <div>
+                          <h5 className="font-medium text-green-900 mb-2">Competitive Positioning</h5>
+                          <ul className="text-sm text-green-700 space-y-1">
+                            <li>• Market compliance as differentiator</li>
+                            <li>• Showcase security certifications</li>
+                            <li>• Transparent data handling practices</li>
+                            <li>• Industry-leading privacy standards</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                      <div className="flex items-start space-x-3">
+                        <Building className="h-5 w-5 text-purple-600 mt-0.5" />
+                        <div>
+                          <h5 className="font-medium text-purple-900 mb-2">Go-to-Market Strategy</h5>
+                          <ul className="text-sm text-purple-700 space-y-1">
+                            <li>• Regional deployment capabilities</li>
+                            <li>• Compliance-ready product offerings</li>
+                            <li>• Legal-friendly contract templates</li>
+                            <li>• Enterprise-grade data residency</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Export Options */}
+                <div className="border-t pt-6">
+                  <h4 className="text-sm font-medium text-gray-900 mb-3">Export Options</h4>
+                  <div className="flex flex-wrap gap-3">
+                    <Button variant="outline" size="sm" onClick={onExportPDF} className="flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      Save PDF
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={onSaveToWorkspace} className="flex items-center gap-2">
+                      <Save className="h-4 w-4" />
+                      Save to Workspace
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={onGenerateShareableLink} className="flex items-center gap-2">
+                      <Share className="h-4 w-4" />
+                      Shareable Link
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Show Less Button - Only when not in split view */}
+                {!isSplitView && (
+                  <Button variant="secondary" onClick={() => onExpandToggle(false)} className="w-full">
+                    <ChevronUp className="h-4 w-4 mr-2" />
+                    Show Less
+                  </Button>
+                )}
+              </div>
+            )}
+          </>
         )}
       </CardContent>
     </Card>
-    </div>
   );
 };
 
