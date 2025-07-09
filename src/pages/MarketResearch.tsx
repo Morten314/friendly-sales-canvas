@@ -1951,19 +1951,30 @@ const MarketResearch = () => {
 
     // Revert the change based on the field
     switch (edit.field) {
-      case 'Market Entry Executive Summary':
+      case 'Executive Summary':
         setMarketEntryData(prev => ({ ...prev, executiveSummary: edit.oldValue }));
         break;
-      case 'Market Entry Recommended Channel':
+      case 'Entry Barriers':
+        setMarketEntryData(prev => ({ ...prev, entryBarriers: edit.oldValue.split(', ') }));
+        break;
+      case 'Recommended Channel':
         setMarketEntryData(prev => ({ ...prev, recommendedChannel: edit.oldValue }));
         break;
-      case 'Market Entry Time to Market':
+      case 'Time to Market':
         setMarketEntryData(prev => ({ ...prev, timeToMarket: edit.oldValue }));
         break;
-      case 'Market Entry Top Barrier':
+      case 'Top Barrier':
         setMarketEntryData(prev => ({ ...prev, topBarrier: edit.oldValue }));
         break;
-      // Add more cases as needed
+      case 'Competitive Differentiation':
+        setMarketEntryData(prev => ({ ...prev, competitiveDifferentiation: edit.oldValue.split(', ') }));
+        break;
+      case 'Strategic Recommendations':
+        setMarketEntryData(prev => ({ ...prev, strategicRecommendations: edit.oldValue.split(', ') }));
+        break;
+      case 'Risk Assessment':
+        setMarketEntryData(prev => ({ ...prev, riskAssessment: edit.oldValue.split(', ') }));
+        break;
     }
 
     // Create a record of the revert action
@@ -1998,6 +2009,137 @@ const MarketResearch = () => {
     }
     setMarketEntryData(prev => ({ ...prev, executiveSummary: value }));
   };
+
+  const handleMarketEntryBarriersChange = (barriers: string[]) => {
+    const oldValue = marketEntryData.entryBarriers.join(', ');
+    const newValue = barriers.join(', ');
+    if (oldValue !== newValue) {
+      setMarketEntryHasEdits(true);
+      const record: EditRecord = {
+        id: Date.now().toString(),
+        timestamp: new Date().toISOString(),
+        user: 'Alex',
+        summary: 'Updated entry barriers',
+        field: 'Entry Barriers',
+        oldValue,
+        newValue
+      };
+      setMarketEntryEditHistory(prev => [record, ...prev]);
+    }
+    setMarketEntryData(prev => ({ ...prev, entryBarriers: barriers }));
+  };
+
+  const handleMarketEntryRecommendedChannelChange = (value: string) => {
+    const oldValue = marketEntryData.recommendedChannel;
+    if (oldValue !== value) {
+      setMarketEntryHasEdits(true);
+      const record: EditRecord = {
+        id: Date.now().toString(),
+        timestamp: new Date().toISOString(),
+        user: 'Alex',
+        summary: 'Updated recommended channel',
+        field: 'Recommended Channel',
+        oldValue,
+        newValue: value
+      };
+      setMarketEntryEditHistory(prev => [record, ...prev]);
+    }
+    setMarketEntryData(prev => ({ ...prev, recommendedChannel: value }));
+  };
+
+  const handleMarketEntryTimeToMarketChange = (value: string) => {
+    const oldValue = marketEntryData.timeToMarket;
+    if (oldValue !== value) {
+      setMarketEntryHasEdits(true);
+      const record: EditRecord = {
+        id: Date.now().toString(),
+        timestamp: new Date().toISOString(),
+        user: 'Alex',
+        summary: 'Updated time to market',
+        field: 'Time to Market',
+        oldValue,
+        newValue: value
+      };
+      setMarketEntryEditHistory(prev => [record, ...prev]);
+    }
+    setMarketEntryData(prev => ({ ...prev, timeToMarket: value }));
+  };
+
+  const handleMarketEntryTopBarrierChange = (value: string) => {
+    const oldValue = marketEntryData.topBarrier;
+    if (oldValue !== value) {
+      setMarketEntryHasEdits(true);
+      const record: EditRecord = {
+        id: Date.now().toString(),
+        timestamp: new Date().toISOString(),
+        user: 'Alex',
+        summary: 'Updated top barrier',
+        field: 'Top Barrier',
+        oldValue,
+        newValue: value
+      };
+      setMarketEntryEditHistory(prev => [record, ...prev]);
+    }
+    setMarketEntryData(prev => ({ ...prev, topBarrier: value }));
+  };
+
+  const handleMarketEntryCompetitiveDifferentiationChange = (differentiation: string[]) => {
+    const oldValue = marketEntryData.competitiveDifferentiation.join(', ');
+    const newValue = differentiation.join(', ');
+    if (oldValue !== newValue) {
+      setMarketEntryHasEdits(true);
+      const record: EditRecord = {
+        id: Date.now().toString(),
+        timestamp: new Date().toISOString(),
+        user: 'Alex',
+        summary: 'Updated competitive differentiation',
+        field: 'Competitive Differentiation',
+        oldValue,
+        newValue
+      };
+      setMarketEntryEditHistory(prev => [record, ...prev]);
+    }
+    setMarketEntryData(prev => ({ ...prev, competitiveDifferentiation: differentiation }));
+  };
+
+  const handleMarketEntryStrategicRecommendationsChange = (recommendations: string[]) => {
+    const oldValue = marketEntryData.strategicRecommendations.join(', ');
+    const newValue = recommendations.join(', ');
+    if (oldValue !== newValue) {
+      setMarketEntryHasEdits(true);
+      const record: EditRecord = {
+        id: Date.now().toString(),
+        timestamp: new Date().toISOString(),
+        user: 'Alex',
+        summary: 'Updated strategic recommendations',
+        field: 'Strategic Recommendations',
+        oldValue,
+        newValue
+      };
+      setMarketEntryEditHistory(prev => [record, ...prev]);
+    }
+    setMarketEntryData(prev => ({ ...prev, strategicRecommendations: recommendations }));
+  };
+
+  const handleMarketEntryRiskAssessmentChange = (risks: string[]) => {
+    const oldValue = marketEntryData.riskAssessment.join(', ');
+    const newValue = risks.join(', ');
+    if (oldValue !== newValue) {
+      setMarketEntryHasEdits(true);
+      const record: EditRecord = {
+        id: Date.now().toString(),
+        timestamp: new Date().toISOString(),
+        user: 'Alex',
+        summary: 'Updated risk assessment',
+        field: 'Risk Assessment',
+        oldValue,
+        newValue
+      };
+      setMarketEntryEditHistory(prev => [record, ...prev]);
+    }
+    setMarketEntryData(prev => ({ ...prev, riskAssessment: risks }));
+  };
+
 
   const handleMarketEntryScoutClick = (context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance' | 'market-entry', hasEdits?: boolean) => {
     console.log('Market Entry scout clicked with context:', context);
@@ -2445,13 +2587,13 @@ const MarketResearch = () => {
                         onMarketEntryEditHistoryOpen={handleMarketEntryEditHistoryOpen}
                         onMarketEntryExpandToggle={handleMarketEntryExpandToggle}
                         onMarketEntryExecutiveSummaryChange={handleMarketEntryExecutiveSummaryChange}
-                        onMarketEntryBarriersChange={(barriers) => setMarketEntryData(prev => ({ ...prev, entryBarriers: barriers }))}
-                        onMarketEntryRecommendedChannelChange={(value) => setMarketEntryData(prev => ({ ...prev, recommendedChannel: value }))}
-                        onMarketEntryTimeToMarketChange={(value) => setMarketEntryData(prev => ({ ...prev, timeToMarket: value }))}
-                        onMarketEntryTopBarrierChange={(value) => setMarketEntryData(prev => ({ ...prev, topBarrier: value }))}
-                        onMarketEntryCompetitiveDifferentiationChange={(diff) => setMarketEntryData(prev => ({ ...prev, competitiveDifferentiation: diff }))}
-                        onMarketEntryStrategicRecommendationsChange={(recs) => setMarketEntryData(prev => ({ ...prev, strategicRecommendations: recs }))}
-                        onMarketEntryRiskAssessmentChange={(risks) => setMarketEntryData(prev => ({ ...prev, riskAssessment: risks }))}
+                        onMarketEntryBarriersChange={handleMarketEntryBarriersChange}
+                        onMarketEntryRecommendedChannelChange={handleMarketEntryRecommendedChannelChange}
+                        onMarketEntryTimeToMarketChange={handleMarketEntryTimeToMarketChange}
+                        onMarketEntryTopBarrierChange={handleMarketEntryTopBarrierChange}
+                        onMarketEntryCompetitiveDifferentiationChange={handleMarketEntryCompetitiveDifferentiationChange}
+                        onMarketEntryStrategicRecommendationsChange={handleMarketEntryStrategicRecommendationsChange}
+                        onMarketEntryRiskAssessmentChange={handleMarketEntryRiskAssessmentChange}
                         onMarketEntryScoutIconClick={handleMarketEntryScoutClick}
                         onExportPDF={handleMarketIntelligenceExportPDF}
                         onSaveToWorkspace={handleMarketIntelligenceSaveToWorkspace}
