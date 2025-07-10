@@ -1,5 +1,5 @@
 import React from 'react';
-import { BarChart3, Bot, Edit, Target, TrendingUp, PieChart, X, FileText, Save, Share, Clock, ChevronDown } from 'lucide-react';
+import { BarChart3, Bot, Edit, Target, TrendingUp, PieChart, X, FileText, Save, Share, Clock, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -490,9 +490,16 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
 
                 {/* Show Less Button - Only when not in split view */}
                 {!isSplitView && (
-                  <Button variant="secondary" onClick={() => onExpandToggle(false)} className="w-full">
-                    Show Less
-                  </Button>
+                  <div className="flex justify-center pt-4">
+                    <Button
+                      onClick={() => onExpandToggle(false)}
+                      variant="outline"
+                      className="flex items-center space-x-2 text-sm"
+                    >
+                      <span>Show Less</span>
+                      <ChevronUp className="h-4 w-4" />
+                    </Button>
+                  </div>
                 )}
               </div>
             </div>
