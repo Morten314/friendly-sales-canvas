@@ -63,6 +63,7 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
       editHistory={[]}
       lastEditedField=""
       context="regulatory-compliance"
+      isPostSave={props.regulatoryIsPostSave}
       customMessage={props.regulatoryCustomMessage}
       onClose={props.onRegulatoryScoutClose || (() => {})}
     />
@@ -77,6 +78,7 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
       editHistory={props.marketEntryEditHistory || []}
       lastEditedField=""
       context="market-entry"
+      isPostSave={props.marketEntryIsPostSave}
       customMessage={props.marketEntryCustomMessage}
       onClose={props.onMarketEntryScoutClose || (() => {})}
     />

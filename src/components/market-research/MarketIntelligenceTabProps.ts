@@ -155,8 +155,10 @@ export interface MarketIntelligenceTabProps {
   competitorCustomMessage?: string;
   regulatoryLastEditedField?: string;
   regulatoryCustomMessage?: string;
+  regulatoryIsPostSave?: boolean;
   marketEntryLastEditedField?: string;
   marketEntryCustomMessage?: string;
+  marketEntryIsPostSave?: boolean;
   
   // Scout panel close handlers
   onMarketSizeScoutClose?: () => void;
