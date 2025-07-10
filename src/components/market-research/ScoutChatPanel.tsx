@@ -366,7 +366,7 @@ const getContextualScoutMessage = () => {
   if (!showScoutChat) return null;
 
   return (
-    <div className={`${isSplitView ? 'w-2/5' : 'w-1/2'} bg-white rounded-lg border border-gray-200 p-6 transition-all duration-500 animate-slide-in-right`}>
+    <div className="w-full bg-white rounded-lg border border-gray-200 p-6 transition-all duration-500 animate-slide-in-right">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className="relative">
