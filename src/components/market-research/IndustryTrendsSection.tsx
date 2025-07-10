@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Bot, Edit, X, FileText, Save, Share, Clock, Zap } from 'lucide-react';
+import { Bot, Edit, X, FileText, Save, Share, Clock, Zap, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -340,9 +340,16 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
 
           {/* Read More Button */}
           {!industryTrendsExpanded && !isSplitView && (
-            <Button variant="secondary" onClick={() => onIndustryTrendsExpandToggle(true)} className="w-full">
-              Read More
-            </Button>
+            <div className="flex justify-center pt-4">
+              <Button
+                onClick={() => onIndustryTrendsExpandToggle(true)}
+                variant="outline"
+                className="flex items-center space-x-2 text-sm"
+              >
+                <span>Read More</span>
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </div>
           )}
 
           {/* Expanded Content */}

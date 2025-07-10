@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bot, Edit, X, FileText, Save, Share, Clock, Crown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Bot, Edit, X, FileText, Save, Share, Clock, Crown, ArrowUp, ArrowDown, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -350,9 +350,16 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
 
           {/* Read More Button */}
           {!isExpanded && (
-            <Button variant="secondary" onClick={() => onExpandToggle(true)} className="w-full">
-              Read More
-            </Button>
+            <div className="flex justify-center pt-4">
+              <Button
+                onClick={() => onExpandToggle(true)}
+                variant="outline"
+                className="flex items-center space-x-2 text-sm"
+              >
+                <span>Read More</span>
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </div>
           )}
 
           {/* Expanded Content - Full Report */}
