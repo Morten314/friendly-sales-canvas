@@ -29,69 +29,6 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
   customMessage,
   onClose
 }) => {
-  // const getContextualScoutMessage = () => {
-  //   if (context === 'competitor-landscape') {
-  //     if (showEditHistory && editHistory.length > 0) {
-  //       return "Hi Alex! Reviewing your competitor changes? Let me know if you'd like me to pull latest funding news or analyze market positioning shifts.";
-  //     }
-      
-  //     if (hasEdits) {
-  //       if (lastEditedField.includes("market share") || lastEditedField.includes("share")) {
-  //         return "I noticed you updated market share figures for competitors. Want me to pull the latest news or analysis?";
-  //       }
-  //       if (lastEditedField.includes("executive summary")) {
-  //         return "You updated the executive summary for competitor analysis. Should I provide additional market intelligence or competitive insights?";
-  //       }
-  //       if (lastEditedField.includes("funding") || lastEditedField.includes("news")) {
-  //         return "Would you like me to analyze new funding rounds for these competitors or check for recent M&A activity?";
-  //       }
-  //       if (lastEditedField.includes("emerging players")) {
-  //         return "I see you updated emerging players data. Should I research these companies or identify additional rising competitors?";
-  //       }
-  //       if (lastEditedField.includes("deleted")) {
-  //         return "You removed a section from the competitor analysis. Would you like me to suggest alternative content or analyze why that section might not be relevant?";
-  //       }
-  //       return "I noticed you updated the competitor analysis. Would you like me to provide additional insights on competitive positioning or recent market moves?";
-  //     }
-      
-  //     return "Hi there! 👋 I'm Scout. Ready to dive deeper into competitor analysis? I can help with market share trends, funding rounds, and competitive positioning.";
-  //   }
-
-  //   if (context === 'industry-trends') {
-  //     if (showEditHistory && editHistory.length > 0) {
-  //       return "Hi Alex! Reviewing your changes? Let me know if you'd like to validate data or explore why market estimates shifted.";
-  //     }
-      
-  //     if (hasEdits) {
-  //       if (lastEditedField.includes("AI") || lastEditedField.includes("ai")) {
-  //         return "I noticed you updated AI adoption metrics. Would you like deeper insights on AI implementation trends or regulatory impacts?";
-  //       }
-  //       if (lastEditedField.includes("cloud") || lastEditedField.includes("migration")) {
-  //         return "I see you modified cloud migration data. Should we explore the key drivers behind this trend or regional variations?";
-  //       }
-  //       return "I noticed you updated the industry trends analysis. Would you like me to provide additional insights based on your changes?";
-  //     }
-      
-  //     return "Hi there! 👋 I'm Scout. Want to dive deeper into industry trends and emerging technologies? Here are some questions I can help answer.";
-  //   }
-
-  //   // Default market-size context
-  //   if (showEditHistory && editHistory.length > 0) {
-  //     return "Hi Alex! Reviewing your changes? Let me know if you'd like to validate data or explore why market estimates shifted.";
-  //   }
-    
-  //   if (hasEdits) {
-  //     if (lastEditedField.includes("APAC") || lastEditedField.includes("apac")) {
-  //       return "I noticed you updated the APAC growth rate. Would you like deeper insights on regional trends or competitor presence in APAC?";
-  //     }
-  //     if (lastEditedField.includes("TAM") || lastEditedField.includes("tam")) {
-  //       return "I see you modified the TAM estimate. Should we explore the key drivers behind this market size or break down by industry verticals?";
-  //     }
-  //     return "I noticed you updated the market analysis. Would you like me to provide additional insights based on your changes?";
-  //   }
-    
-  //   return "Hi there! 👋 I'm Scout. Want to dive deeper into your market size and opportunities? Here are some questions I can help answer.";
-  // };
 
   // Fixed ScoutChatPanel getContextualScoutMessage function
 const getContextualScoutMessage = () => {
@@ -102,7 +39,7 @@ const getContextualScoutMessage = () => {
   
   if (context === 'competitor-landscape') {
     if (showEditHistory && editHistory.length > 0) {
-      return "Hi Alex! Reviewing your competitor changes? Let me know if you'd like me to pull latest funding news or analyze market positioning shifts.";
+      return "Hi!! Reviewing your competitor changes? Let me know if you'd like me to pull latest funding news or analyze market positioning shifts.";
     }
     
     if (hasEdits) {
@@ -130,7 +67,7 @@ const getContextualScoutMessage = () => {
 
   if (context === 'industry-trends') {
     if (showEditHistory && editHistory.length > 0) {
-      return "Hi Alex! Reviewing your changes? Let me know if you'd like to validate data or explore why market estimates shifted.";
+      return "Hi!! Reviewing your changes? Let me know if you'd like to validate data or explore why market estimates shifted.";
     }
     
     if (hasEdits) {
@@ -154,7 +91,7 @@ const getContextualScoutMessage = () => {
     }
     
     if (showEditHistory && editHistory.length > 0) {
-      return "Hi Alex! Reviewing your compliance changes? Let me know if you'd like me to analyze regulatory impacts or track upcoming deadlines.";
+      return "Hi!! Reviewing your compliance changes? Let me know if you'd like me to analyze regulatory impacts or track upcoming deadlines.";
     }
     
     if (hasEdits) {
@@ -176,11 +113,11 @@ const getContextualScoutMessage = () => {
   if (context === 'market-entry') {
     // Post-save specific message
     if (isPostSave) {
-      return "Hi Alex! I noticed you adjusted the Market Pathways. Want help exploring alternatives?";
+      return "Hi!! I noticed you adjusted the Market Pathways. Want help exploring alternatives?";
     }
     
     if (showEditHistory && editHistory.length > 0) {
-      return "Hi Alex! Reviewing your market entry changes? Let me know if you'd like me to validate entry timelines or explore alternative go-to-market strategies.";
+      return "Hi!! Reviewing your market entry changes? Let me know if you'd like me to validate entry timelines or explore alternative go-to-market strategies.";
     }
     
     if (hasEdits) {
@@ -199,12 +136,12 @@ const getContextualScoutMessage = () => {
       return "I noticed you updated the market entry strategy. Would you like me to provide additional insights on go-to-market approaches or competitive positioning?";
     }
     
-    return "Hi Alex! 👋 I'm Scout. Ready to help you navigate your market entry and growth plan. Want to dig deeper into barriers, timelines, or the best go-to-market path?";
+    return "Hi!! 👋 I'm Scout. Ready to help you navigate your market entry and growth plan. Want to dig deeper into barriers, timelines, or the best go-to-market path?";
   }
 
   // Default market-size context - only reached when context is not competitor-landscape, industry-trends, or regulatory-compliance
   if (showEditHistory && editHistory.length > 0) {
-    return "Hi Alex! Reviewing your changes? Let me know if you'd like to validate data or explore why market estimates shifted.";
+    return "Hi!! Reviewing your changes? Let me know if you'd like to validate data or explore why market estimates shifted.";
   }
   
   if (hasEdits) {
