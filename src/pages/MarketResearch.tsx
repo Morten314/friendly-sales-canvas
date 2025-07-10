@@ -2783,7 +2783,9 @@ const MarketResearch = () => {
                       industryTrendsCustomMessage={industryTrendsCustomMessage}
                       competitorCustomMessage={competitorCustomMessage}
                       regulatoryCustomMessage={regulatoryCustomMessage}
+                      regulatoryIsPostSave={isRegulatoryPostSave}
                       marketEntryCustomMessage={marketEntryCustomMessage}
+                      marketEntryIsPostSave={isMarketEntryPostSave}
                     />
                     
                     <EditHistoryPanel
