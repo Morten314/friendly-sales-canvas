@@ -11,6 +11,77 @@ import { MarketIntelligenceTabProps } from './MarketIntelligenceTabProps';
 interface MarketIntelligenceSectionsProps extends MarketIntelligenceTabProps {}
 
 const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (props) => {
+  // Create scout chat panels
+  const marketSizeScoutChatPanel = props.showMarketSizeScoutChat ? (
+    <ScoutChatPanel
+      showScoutChat={props.showMarketSizeScoutChat}
+      isSplitView={true}
+      hasEdits={props.marketSizeHasEdits || false}
+      showEditHistory={false}
+      editHistory={props.editHistory}
+      lastEditedField={props.marketSizeLastEditedField || ''}
+      context="market-size"
+      customMessage={props.marketSizeCustomMessage}
+      onClose={props.onMarketSizeScoutClose || (() => {})}
+    />
+  ) : undefined;
+
+  const industryTrendsScoutChatPanel = props.showIndustryTrendsScoutChat ? (
+    <ScoutChatPanel
+      showScoutChat={props.showIndustryTrendsScoutChat}
+      isSplitView={true}
+      hasEdits={props.industryTrendsHasEdits || false}
+      showEditHistory={false}
+      editHistory={props.industryTrendsEditHistory || []}
+      lastEditedField={props.industryTrendsLastEditedField || ''}
+      context="industry-trends"
+      customMessage={props.industryTrendsCustomMessage}
+      onClose={props.onIndustryTrendsScoutClose || (() => {})}
+    />
+  ) : undefined;
+
+  const competitorScoutChatPanel = props.showCompetitorScoutChat ? (
+    <ScoutChatPanel
+      showScoutChat={props.showCompetitorScoutChat}
+      isSplitView={true}
+      hasEdits={props.competitorHasEdits || false}
+      showEditHistory={false}
+      editHistory={props.competitorEditHistory || []}
+      lastEditedField=""
+      context="competitor-landscape"
+      customMessage={props.competitorCustomMessage}
+      onClose={props.onCompetitorScoutClose || (() => {})}
+    />
+  ) : undefined;
+
+  const regulatoryScoutChatPanel = props.showRegulatoryScoutChat ? (
+    <ScoutChatPanel
+      showScoutChat={props.showRegulatoryScoutChat}
+      isSplitView={true}
+      hasEdits={false}
+      showEditHistory={false}
+      editHistory={[]}
+      lastEditedField=""
+      context="regulatory-compliance"
+      customMessage={props.regulatoryCustomMessage}
+      onClose={props.onRegulatoryScoutClose || (() => {})}
+    />
+  ) : undefined;
+
+  const marketEntryScoutChatPanel = props.showMarketEntryScoutChat ? (
+    <ScoutChatPanel
+      showScoutChat={props.showMarketEntryScoutChat}
+      isSplitView={true}
+      hasEdits={props.marketEntryHasEdits || false}
+      showEditHistory={false}
+      editHistory={props.marketEntryEditHistory || []}
+      lastEditedField=""
+      context="market-entry"
+      customMessage={props.marketEntryCustomMessage}
+      onClose={props.onMarketEntryScoutClose || (() => {})}
+    />
+  ) : undefined;
+
   return (
     <>
       {/* Market Size & Opportunity Section */}
@@ -45,42 +116,55 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
         onExportPDF={props.onExportPDF}
         onSaveToWorkspace={props.onSaveToWorkspace}
         onGenerateShareableLink={props.onGenerateShareableLink}
+        showScoutChat={props.showMarketSizeScoutChat}
+        scoutChatPanel={marketSizeScoutChatPanel}
       />
 
       {/* Industry Trends Section */}
-      <IndustryTrendsSection
-        isIndustryTrendsEditing={props.isIndustryTrendsEditing}
-        isSplitView={props.isSplitView}
-        industryTrendsExpanded={props.industryTrendsExpanded}
-        industryTrendsHasEdits={props.industryTrendsHasEdits}
-        industryTrendsDeletedSections={props.industryTrendsDeletedSections}
-        industryTrendsEditHistory={props.industryTrendsEditHistory}
-        industryTrendsExecutiveSummary={props.industryTrendsExecutiveSummary}
-        industryTrendsAiAdoption={props.industryTrendsAiAdoption}
-        industryTrendsCloudMigration={props.industryTrendsCloudMigration}
-        industryTrendsRegulatory={props.industryTrendsRegulatory}
-        industryTrendSnapshots={props.industryTrendSnapshots}
-        industryTrendsRecommendations={props.industryTrendsRecommendations}
-        industryTrendsRisks={props.industryTrendsRisks}
-        onIndustryTrendsToggleEdit={props.onIndustryTrendsToggleEdit}
-        onIndustryTrendsSaveChanges={props.onIndustryTrendsSaveChanges}
-        onIndustryTrendsCancelEdit={props.onIndustryTrendsCancelEdit}
-        onIndustryTrendsDeleteSection={props.onIndustryTrendsDeleteSection}
-        onIndustryTrendsEditHistoryOpen={props.onIndustryTrendsEditHistoryOpen}
-        onIndustryTrendsExpandToggle={props.onIndustryTrendsExpandToggle}
-        onIndustryTrendsExecutiveSummaryChange={props.onIndustryTrendsExecutiveSummaryChange}
-        onIndustryTrendsAiAdoptionChange={props.onIndustryTrendsAiAdoptionChange}
-        onIndustryTrendsCloudMigrationChange={props.onIndustryTrendsCloudMigrationChange}
-        onIndustryTrendsRegulatoryChange={props.onIndustryTrendsRegulatoryChange}
-        onIndustryTrendSnapshotsChange={props.onIndustryTrendSnapshotsChange}
-        onScoutIconClick={props.onIndustryTrendsScoutIconClick}
-        onExportPDF={props.onExportPDF}
-        onSaveToWorkspace={props.onSaveToWorkspace}
-        onGenerateShareableLink={props.onGenerateShareableLink}
-      />
+      <div className={`${props.showIndustryTrendsScoutChat ? 'flex gap-6' : ''}`}>
+        <div className={`${props.showIndustryTrendsScoutChat ? 'flex-1' : ''}`}>
+          <IndustryTrendsSection
+            isIndustryTrendsEditing={props.isIndustryTrendsEditing}
+            isSplitView={props.isSplitView}
+            industryTrendsExpanded={props.industryTrendsExpanded}
+            industryTrendsHasEdits={props.industryTrendsHasEdits}
+            industryTrendsDeletedSections={props.industryTrendsDeletedSections}
+            industryTrendsEditHistory={props.industryTrendsEditHistory}
+            industryTrendsExecutiveSummary={props.industryTrendsExecutiveSummary}
+            industryTrendsAiAdoption={props.industryTrendsAiAdoption}
+            industryTrendsCloudMigration={props.industryTrendsCloudMigration}
+            industryTrendsRegulatory={props.industryTrendsRegulatory}
+            industryTrendSnapshots={props.industryTrendSnapshots}
+            industryTrendsRecommendations={props.industryTrendsRecommendations}
+            industryTrendsRisks={props.industryTrendsRisks}
+            onIndustryTrendsToggleEdit={props.onIndustryTrendsToggleEdit}
+            onIndustryTrendsSaveChanges={props.onIndustryTrendsSaveChanges}
+            onIndustryTrendsCancelEdit={props.onIndustryTrendsCancelEdit}
+            onIndustryTrendsDeleteSection={props.onIndustryTrendsDeleteSection}
+            onIndustryTrendsEditHistoryOpen={props.onIndustryTrendsEditHistoryOpen}
+            onIndustryTrendsExpandToggle={props.onIndustryTrendsExpandToggle}
+            onIndustryTrendsExecutiveSummaryChange={props.onIndustryTrendsExecutiveSummaryChange}
+            onIndustryTrendsAiAdoptionChange={props.onIndustryTrendsAiAdoptionChange}
+            onIndustryTrendsCloudMigrationChange={props.onIndustryTrendsCloudMigrationChange}
+            onIndustryTrendsRegulatoryChange={props.onIndustryTrendsRegulatoryChange}
+            onIndustryTrendSnapshotsChange={props.onIndustryTrendSnapshotsChange}
+            onScoutIconClick={props.onIndustryTrendsScoutIconClick}
+            onExportPDF={props.onExportPDF}
+            onSaveToWorkspace={props.onSaveToWorkspace}
+            onGenerateShareableLink={props.onGenerateShareableLink}
+          />
+        </div>
+        {props.showIndustryTrendsScoutChat && industryTrendsScoutChatPanel && (
+          <div className="w-96 flex-shrink-0">
+            {industryTrendsScoutChatPanel}
+          </div>
+        )}
+      </div>
 
       {/* Competitor Landscape Section */}
-      <CompetitorLandscapeSection
+      <div className={`${props.showCompetitorScoutChat ? 'flex gap-6' : ''}`}>
+        <div className={`${props.showCompetitorScoutChat ? 'flex-1' : ''}`}>
+          <CompetitorLandscapeSection
         isEditing={props.isCompetitorEditing || false}
         isSplitView={props.isSplitView}
         isExpanded={props.competitorExpanded || false}
@@ -105,10 +189,19 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
         onExportPDF={props.onExportPDF}
         onSaveToWorkspace={props.onSaveToWorkspace}
         onGenerateShareableLink={props.onGenerateShareableLink}
-      />
+          />
+        </div>
+        {props.showCompetitorScoutChat && competitorScoutChatPanel && (
+          <div className="w-96 flex-shrink-0">
+            {competitorScoutChatPanel}
+          </div>
+        )}
+      </div>
 
       {/* Regulatory & Compliance Highlights Section */}
-      <RegulatoryComplianceSection
+      <div className={`${props.showRegulatoryScoutChat ? 'flex gap-6' : ''}`}>
+        <div className={`${props.showRegulatoryScoutChat ? 'flex-1' : ''}`}>
+          <RegulatoryComplianceSection
         isEditing={props.isRegulatoryEditing || false}
         isSplitView={props.isSplitView}
         isExpanded={props.regulatoryExpanded || false}
@@ -135,10 +228,19 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
         onExportPDF={props.onExportPDF}
         onSaveToWorkspace={props.onSaveToWorkspace}
         onGenerateShareableLink={props.onGenerateShareableLink}
-      />
+          />
+        </div>
+        {props.showRegulatoryScoutChat && regulatoryScoutChatPanel && (
+          <div className="w-96 flex-shrink-0">
+            {regulatoryScoutChatPanel}
+          </div>
+        )}
+      </div>
 
       {/* Market Entry & Growth Strategy Section */}
-      <MarketEntrySection
+      <div className={`${props.showMarketEntryScoutChat ? 'flex gap-6' : ''}`}>
+        <div className={`${props.showMarketEntryScoutChat ? 'flex-1' : ''}`}>
+          <MarketEntrySection
         isEditing={props.isMarketEntryEditing || false}
         isSplitView={props.isSplitView}
         isExpanded={props.marketEntryExpanded || false}
@@ -171,7 +273,14 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
         onExportPDF={props.onExportPDF}
         onSaveToWorkspace={props.onSaveToWorkspace}
         onGenerateShareableLink={props.onGenerateShareableLink}
-      />
+          />
+        </div>
+        {props.showMarketEntryScoutChat && marketEntryScoutChatPanel && (
+          <div className="w-96 flex-shrink-0">
+            {marketEntryScoutChatPanel}
+          </div>
+        )}
+      </div>
     </>
   );
 };

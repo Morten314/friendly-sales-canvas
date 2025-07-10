@@ -2599,252 +2599,192 @@ const MarketResearch = () => {
                       <ScoutDeploymentDetails deploymentData={scoutDeploymentData} />
                     )}
                     
-                    {/* Split view layout when chat is open */}
-                    <div className={`flex gap-6 ${(isChatOpen || showMarketSizeScoutChat || showIndustryTrendsScoutChat || showCompetitorScoutChat || showRegulatoryScoutChat || showMarketEntryScoutChat) ? 'flex-row' : 'flex-col'}`}>
-                      {/* Market Intelligence Tab */}
-                      <MarketIntelligenceTab
-                        isEditing={isMarketIntelligenceEditing}
-                        isSplitView={isChatOpen || showMarketSizeScoutChat || showIndustryTrendsScoutChat || showCompetitorScoutChat || showRegulatoryScoutChat || showMarketEntryScoutChat}
-                        isExpanded={isMarketIntelligenceExpanded}
-                        hasEdits={hasEdits}
-                        deletedSections={deletedSections}
-                        editHistory={editHistory}
-                        executiveSummary={marketIntelligenceData.executiveSummary}
-                        tamValue={marketIntelligenceData.tamValue}
-                        samValue={marketIntelligenceData.samValue}
-                        apacGrowthRate={marketIntelligenceData.apacGrowthRate}
-                        strategicRecommendations={marketIntelligenceData.strategicRecommendations}
-                        marketEntry={marketIntelligenceData.marketEntry}
-                        marketDrivers={marketIntelligenceData.marketDrivers}
-                        // Market Size specific props
-                        marketSizeDeletedSections={marketSizeDeletedSections}
-                        // Industry Trends props
-                        isIndustryTrendsEditing={isIndustryTrendsEditing}
-                        industryTrendsExpanded={industryTrendsExpanded}
-                        industryTrendsHasEdits={industryTrendsHasEdits}
-                        industryTrendsDeletedSections={industryTrendsDeletedSections}
-                        industryTrendsEditHistory={industryTrendsEditHistory}
-                        industryTrendsExecutiveSummary={industryTrendsData.executiveSummary}
-                        industryTrendsAiAdoption={industryTrendsData.aiAdoption}
-                        industryTrendsCloudMigration={industryTrendsData.cloudMigration}
-                        industryTrendsRegulatory={industryTrendsData.regulatory}
-                        industryTrendSnapshots={industryTrendsData.trendSnapshots}
-                        industryTrendsRecommendations={industryTrendsData.recommendations}
-                        industryTrendsRisks={industryTrendsData.risks}
-                        industryTrendsLastEditedField={industryTrendsLastEditedField}
-                        // Competitor Landscape props
-                        isCompetitorEditing={isCompetitorEditing}
-                        competitorExpanded={competitorExpanded}
-                        competitorHasEdits={competitorHasEdits}
-                        competitorDeletedSections={competitorDeletedSections}
-                        competitorEditHistory={competitorEditHistory}
-                        competitorExecutiveSummary={competitorData.executiveSummary}
-                        competitorTopPlayerShare={competitorData.topPlayerShare}
-                        competitorEmergingPlayers={competitorData.emergingPlayers}
-                        competitorFundingNews={competitorData.fundingNews}
-                        // Regulatory Compliance props
-                        isRegulatoryEditing={isRegulatoryEditing}
-                        regulatoryExpanded={regulatoryExpanded}
-                        regulatoryHasEdits={regulatoryHasEdits}
-                        regulatoryDeletedSections={regulatoryDeletedSections}
-                        regulatoryEditHistory={regulatoryEditHistory}
-                        regulatoryExecutiveSummary={regulatoryData.executiveSummary}
-                        regulatoryEuAiActDeadline={regulatoryData.euAiActDeadline}
-                        regulatoryGdprCompliance={regulatoryData.gdprCompliance}
-                        regulatoryPotentialFines={regulatoryData.potentialFines}
-                        regulatoryDataLocalization={regulatoryData.dataLocalization}
-                        // Market Entry props
-                        isMarketEntryEditing={isMarketEntryEditing}
-                        marketEntryExpanded={marketEntryExpanded}
-                        marketEntryHasEdits={marketEntryHasEdits}
-                        marketEntryDeletedSections={marketEntryDeletedSections}
-                        marketEntryEditHistory={marketEntryEditHistory}
-                        marketEntryExecutiveSummary={marketEntryData.executiveSummary}
-                        marketEntryBarriers={marketEntryData.entryBarriers}
-                        marketEntryRecommendedChannel={marketEntryData.recommendedChannel}
-                        marketEntryTimeToMarket={marketEntryData.timeToMarket}
-                        marketEntryTopBarrier={marketEntryData.topBarrier}
-                        marketEntryCompetitiveDifferentiation={marketEntryData.competitiveDifferentiation}
-                        marketEntryStrategicRecommendations={marketEntryData.strategicRecommendations}
-                        marketEntryRiskAssessment={marketEntryData.riskAssessment}
-                        onToggleEdit={handleMarketIntelligenceToggleEdit}
-                        onMarketSizeScoutIconClick={handleMarketSizeScoutClick}
-                        onIndustryTrendsScoutIconClick={handleIndustryTrendsScoutClick}
-                        onCompetitorScoutIconClick={handleCompetitorScoutClick}
-                        onEditHistoryOpen={handleEditHistoryOpen}
-                        onDeleteSection={handleMarketIntelligenceDeleteSection}
-                        onMarketSizeDeleteSection={handleMarketSizeDeleteSection}
-                        onSaveChanges={handleMarketIntelligenceSaveChanges}
-                        onCancelEdit={handleMarketIntelligenceCancelEdit}
-                        onExpandToggle={handleMarketIntelligenceExpandToggle}
-                        onExecutiveSummaryChange={handleMarketIntelligenceExecutiveSummaryChange}
-                        onTamValueChange={handleMarketIntelligenceTamValueChange}
-                        onSamValueChange={handleMarketIntelligenceSamValueChange}
-                        onApacGrowthRateChange={handleMarketIntelligenceApacGrowthRateChange}
-                        onStrategicRecommendationsChange={(recommendations) => 
-                          setMarketIntelligenceData(prev => ({ ...prev, strategicRecommendations: recommendations }))
-                        }
-                        onMarketEntryChange={(value) => 
-                          setMarketIntelligenceData(prev => ({ ...prev, marketEntry: value }))
-                        }
-                        onMarketDriversChange={(drivers) => 
-                          setMarketIntelligenceData(prev => ({ ...prev, marketDrivers: drivers }))
-                        }
-                        // Industry Trends handlers
-                        onIndustryTrendsToggleEdit={handleIndustryTrendsToggleEdit}
-                        onIndustryTrendsSaveChanges={handleIndustryTrendsSaveChanges}
-                        onIndustryTrendsCancelEdit={handleIndustryTrendsCancelEdit}
-                        onIndustryTrendsDeleteSection={handleIndustryTrendsDeleteSection}
-                        onIndustryTrendsEditHistoryOpen={handleIndustryTrendsEditHistoryOpen}
-                        onIndustryTrendsExpandToggle={handleIndustryTrendsExpandToggle}
-                        onIndustryTrendsExecutiveSummaryChange={handleIndustryTrendsExecutiveSummaryChange}
-                        onIndustryTrendsAiAdoptionChange={handleIndustryTrendsAiAdoptionChange}
-                        onIndustryTrendsCloudMigrationChange={handleIndustryTrendsCloudMigrationChange}
-                        onIndustryTrendsRegulatoryChange={handleIndustryTrendsRegulatoryChange}
-                        onIndustryTrendSnapshotsChange={handleIndustryTrendSnapshotsChange}
-                        // Competitor Landscape handlers
-                        onCompetitorToggleEdit={handleCompetitorToggleEdit}
-                        onCompetitorSaveChanges={handleCompetitorSaveChanges}
-                        onCompetitorCancelEdit={handleCompetitorCancelEdit}
-                        onCompetitorDeleteSection={handleCompetitorDeleteSection}
-                        onCompetitorEditHistoryOpen={handleCompetitorEditHistoryOpen}
-                        onCompetitorExpandToggle={handleCompetitorExpandToggle}
-                        onCompetitorExecutiveSummaryChange={handleCompetitorExecutiveSummaryChange}
-                        onCompetitorTopPlayerShareChange={handleCompetitorTopPlayerShareChange}
-                        onCompetitorEmergingPlayersChange={handleCompetitorEmergingPlayersChange}
-                        onCompetitorFundingNewsChange={handleCompetitorFundingNewsChange}
-                        // Regulatory Compliance handlers
-                        onRegulatoryToggleEdit={handleRegulatoryToggleEdit}
-                        onRegulatorySaveChanges={handleRegulatorySaveChanges}
-                        onRegulatoryCancelEdit={handleRegulatoryCancelEdit}
-                        onRegulatoryDeleteSection={handleRegulatoryDeleteSection}
-                        onRegulatoryEditHistoryOpen={handleRegulatoryEditHistoryOpen}
-                        onRegulatoryExpandToggle={handleRegulatoryExpandToggle}
-                        onRegulatoryExecutiveSummaryChange={handleRegulatoryExecutiveSummaryChange}
-                        onRegulatoryEuAiActDeadlineChange={handleRegulatoryEuAiActDeadlineChange}
-                        onRegulatoryGdprComplianceChange={handleRegulatoryGdprComplianceChange}
-                        onRegulatoryPotentialFinesChange={handleRegulatoryPotentialFinesChange}
-                        onRegulatoryDataLocalizationChange={handleRegulatoryDataLocalizationChange}
-                        onRegulatoryScoutIconClick={handleRegulatoryScoutClick}
-                        // Market Entry handlers
-                        onMarketEntryToggleEdit={handleMarketEntryToggleEdit}
-                        onMarketEntrySaveChanges={handleMarketEntrySaveChanges}
-                        onMarketEntryCancelEdit={handleMarketEntryCancelEdit}
-                        onMarketEntryDeleteSection={handleMarketEntryDeleteSection}
-                        onMarketEntryEditHistoryOpen={handleMarketEntryEditHistoryOpen}
-                        onMarketEntryExpandToggle={handleMarketEntryExpandToggle}
-                        onMarketEntryExecutiveSummaryChange={handleMarketEntryExecutiveSummaryChange}
-                        onMarketEntryBarriersChange={handleMarketEntryBarriersChange}
-                        onMarketEntryRecommendedChannelChange={handleMarketEntryRecommendedChannelChange}
-                        onMarketEntryTimeToMarketChange={handleMarketEntryTimeToMarketChange}
-                        onMarketEntryTopBarrierChange={handleMarketEntryTopBarrierChange}
-                        onMarketEntryCompetitiveDifferentiationChange={handleMarketEntryCompetitiveDifferentiationChange}
-                        onMarketEntryStrategicRecommendationsChange={handleMarketEntryStrategicRecommendationsChange}
-                        onMarketEntryRiskAssessmentChange={handleMarketEntryRiskAssessmentChange}
-                        onMarketEntryScoutIconClick={handleMarketEntryScoutClick}
-                        onExportPDF={handleMarketIntelligenceExportPDF}
-                        onSaveToWorkspace={handleMarketIntelligenceSaveToWorkspace}
-                        onGenerateShareableLink={handleMarketIntelligenceGenerateShareableLink}
-                      />
-                      
-                      {/* Market Size Scout Chat Panel */}
-                      {showMarketSizeScoutChat && (
-                        <ScoutChatPanel
-                          showScoutChat={showMarketSizeScoutChat}
-                          isSplitView={showMarketSizeScoutChat}
-                          hasEdits={marketSizeHasEdits}
-                          showEditHistory={false}
-                          editHistory={editHistory}
-                          lastEditedField={marketSizeLastEditedField}
-                          context="market-size"
-                          customMessage={marketSizeCustomMessage}
-                          onClose={() => {
-                            setShowMarketSizeScoutChat(false);
-                            setMarketSizeCustomMessage(undefined);
-                            setIsChatOpen(false);
-                          }}
-                        />
-                      )}
-
-                      {/* Industry Trends Scout Chat Panel */}
-                      {showIndustryTrendsScoutChat && (
-                        <ScoutChatPanel
-                          showScoutChat={showIndustryTrendsScoutChat}
-                          isSplitView={showIndustryTrendsScoutChat}
-                          hasEdits={industryTrendsHasEdits}
-                          showEditHistory={false}
-                          editHistory={industryTrendsEditHistory}
-                          lastEditedField={industryTrendsLastEditedField}
-                          context="industry-trends"
-                          customMessage={industryTrendsCustomMessage}
-                          onClose={() => {
-                            setShowIndustryTrendsScoutChat(false);
-                            setIndustryTrendsCustomMessage(undefined);
-                            setIsChatOpen(false);
-                          }}
-                        />
-                      )}
-
-                      {/* Competitor Landscape Scout Chat Panel */}
-                      {showCompetitorScoutChat && (
-                        <ScoutChatPanel
-                          showScoutChat={showCompetitorScoutChat}
-                          isSplitView={showCompetitorScoutChat}
-                          hasEdits={competitorHasEdits}
-                          showEditHistory={false}
-                          editHistory={competitorEditHistory}
-                          lastEditedField=""
-                          context="competitor-landscape"
-                          customMessage={competitorCustomMessage}
-                          onClose={() => {
-                            setShowCompetitorScoutChat(false);
-                            setCompetitorCustomMessage(undefined);
-                            setIsChatOpen(false);
-                          }}
-                        />
-                      )}
-
-                      {/* Regulatory Compliance Scout Chat Panel */}
-                      {showRegulatoryScoutChat && (
-                        <ScoutChatPanel
-                          showScoutChat={showRegulatoryScoutChat}
-                          isSplitView={showRegulatoryScoutChat}
-                          hasEdits={false}
-                          showEditHistory={false}
-                          editHistory={[]}
-                          lastEditedField=""
-                          context="regulatory-compliance"
-                          isPostSave={isRegulatoryPostSave}
-                          customMessage={regulatoryCustomMessage}
-                          onClose={() => {
-                            setShowRegulatoryScoutChat(false);
-                            setIsRegulatoryPostSave(false); // Reset post-save state when closing
-                            setRegulatoryCustomMessage(undefined); // Reset custom message when closing
-                          }}
-                        />
-                       )}
-
-                       {/* Market Entry Scout Chat Panel */}
-                       {showMarketEntryScoutChat && (
-                         <ScoutChatPanel
-                           showScoutChat={showMarketEntryScoutChat}
-                           isSplitView={showMarketEntryScoutChat}
-                           hasEdits={marketEntryHasEdits}
-                           showEditHistory={false}
-                           editHistory={marketEntryEditHistory}
-                           lastEditedField=""
-                           context="market-entry"
-                           isPostSave={isMarketEntryPostSave}
-                           customMessage={marketEntryCustomMessage}
-                           onClose={() => {
-                             setShowMarketEntryScoutChat(false);
-                             setIsMarketEntryPostSave(false); // Reset post-save state when closing
-                             setMarketEntryCustomMessage(undefined); // Reset custom message when closing
-                             setIsChatOpen(false);
-                           }}
-                         />
-                       )}
-                    </div>
+                    {/* Market Intelligence Tab with embedded scout chats */}
+                    <MarketIntelligenceTab
+                      isEditing={isMarketIntelligenceEditing}
+                      isSplitView={false}
+                      isExpanded={isMarketIntelligenceExpanded}
+                      hasEdits={hasEdits}
+                      deletedSections={deletedSections}
+                      editHistory={editHistory}
+                      executiveSummary={marketIntelligenceData.executiveSummary}
+                      tamValue={marketIntelligenceData.tamValue}
+                      samValue={marketIntelligenceData.samValue}
+                      apacGrowthRate={marketIntelligenceData.apacGrowthRate}
+                      strategicRecommendations={marketIntelligenceData.strategicRecommendations}
+                      marketEntry={marketIntelligenceData.marketEntry}
+                      marketDrivers={marketIntelligenceData.marketDrivers}
+                      // Market Size specific props
+                      marketSizeDeletedSections={marketSizeDeletedSections}
+                      // Industry Trends props
+                      isIndustryTrendsEditing={isIndustryTrendsEditing}
+                      industryTrendsExpanded={industryTrendsExpanded}
+                      industryTrendsHasEdits={industryTrendsHasEdits}
+                      industryTrendsDeletedSections={industryTrendsDeletedSections}
+                      industryTrendsEditHistory={industryTrendsEditHistory}
+                      industryTrendsExecutiveSummary={industryTrendsData.executiveSummary}
+                      industryTrendsAiAdoption={industryTrendsData.aiAdoption}
+                      industryTrendsCloudMigration={industryTrendsData.cloudMigration}
+                      industryTrendsRegulatory={industryTrendsData.regulatory}
+                      industryTrendSnapshots={industryTrendsData.trendSnapshots}
+                      industryTrendsRecommendations={industryTrendsData.recommendations}
+                      industryTrendsRisks={industryTrendsData.risks}
+                      industryTrendsLastEditedField={industryTrendsLastEditedField}
+                      // Competitor Landscape props
+                      isCompetitorEditing={isCompetitorEditing}
+                      competitorExpanded={competitorExpanded}
+                      competitorHasEdits={competitorHasEdits}
+                      competitorDeletedSections={competitorDeletedSections}
+                      competitorEditHistory={competitorEditHistory}
+                      competitorExecutiveSummary={competitorData.executiveSummary}
+                      competitorTopPlayerShare={competitorData.topPlayerShare}
+                      competitorEmergingPlayers={competitorData.emergingPlayers}
+                      competitorFundingNews={competitorData.fundingNews}
+                      // Regulatory Compliance props
+                      isRegulatoryEditing={isRegulatoryEditing}
+                      regulatoryExpanded={regulatoryExpanded}
+                      regulatoryHasEdits={regulatoryHasEdits}
+                      regulatoryDeletedSections={regulatoryDeletedSections}
+                      regulatoryEditHistory={regulatoryEditHistory}
+                      regulatoryExecutiveSummary={regulatoryData.executiveSummary}
+                      regulatoryEuAiActDeadline={regulatoryData.euAiActDeadline}
+                      regulatoryGdprCompliance={regulatoryData.gdprCompliance}
+                      regulatoryPotentialFines={regulatoryData.potentialFines}
+                      regulatoryDataLocalization={regulatoryData.dataLocalization}
+                      // Market Entry props
+                      isMarketEntryEditing={isMarketEntryEditing}
+                      marketEntryExpanded={marketEntryExpanded}
+                      marketEntryHasEdits={marketEntryHasEdits}
+                      marketEntryDeletedSections={marketEntryDeletedSections}
+                      marketEntryEditHistory={marketEntryEditHistory}
+                      marketEntryExecutiveSummary={marketEntryData.executiveSummary}
+                      marketEntryBarriers={marketEntryData.entryBarriers}
+                      marketEntryRecommendedChannel={marketEntryData.recommendedChannel}
+                      marketEntryTimeToMarket={marketEntryData.timeToMarket}
+                      marketEntryTopBarrier={marketEntryData.topBarrier}
+                      marketEntryCompetitiveDifferentiation={marketEntryData.competitiveDifferentiation}
+                      marketEntryStrategicRecommendations={marketEntryData.strategicRecommendations}
+                      marketEntryRiskAssessment={marketEntryData.riskAssessment}
+                      onToggleEdit={handleMarketIntelligenceToggleEdit}
+                      onMarketSizeScoutIconClick={handleMarketSizeScoutClick}
+                      onIndustryTrendsScoutIconClick={handleIndustryTrendsScoutClick}
+                      onCompetitorScoutIconClick={handleCompetitorScoutClick}
+                      onEditHistoryOpen={handleEditHistoryOpen}
+                      onDeleteSection={handleMarketIntelligenceDeleteSection}
+                      onMarketSizeDeleteSection={handleMarketSizeDeleteSection}
+                      onSaveChanges={handleMarketIntelligenceSaveChanges}
+                      onCancelEdit={handleMarketIntelligenceCancelEdit}
+                      onExpandToggle={handleMarketIntelligenceExpandToggle}
+                      onExecutiveSummaryChange={handleMarketIntelligenceExecutiveSummaryChange}
+                      onTamValueChange={handleMarketIntelligenceTamValueChange}
+                      onSamValueChange={handleMarketIntelligenceSamValueChange}
+                      onApacGrowthRateChange={handleMarketIntelligenceApacGrowthRateChange}
+                      onStrategicRecommendationsChange={(recommendations) => 
+                        setMarketIntelligenceData(prev => ({ ...prev, strategicRecommendations: recommendations }))
+                      }
+                      onMarketEntryChange={(value) => 
+                        setMarketIntelligenceData(prev => ({ ...prev, marketEntry: value }))
+                      }
+                      onMarketDriversChange={(drivers) => 
+                        setMarketIntelligenceData(prev => ({ ...prev, marketDrivers: drivers }))
+                      }
+                      // Industry Trends handlers
+                      onIndustryTrendsToggleEdit={handleIndustryTrendsToggleEdit}
+                      onIndustryTrendsSaveChanges={handleIndustryTrendsSaveChanges}
+                      onIndustryTrendsCancelEdit={handleIndustryTrendsCancelEdit}
+                      onIndustryTrendsDeleteSection={handleIndustryTrendsDeleteSection}
+                      onIndustryTrendsEditHistoryOpen={handleIndustryTrendsEditHistoryOpen}
+                      onIndustryTrendsExpandToggle={handleIndustryTrendsExpandToggle}
+                      onIndustryTrendsExecutiveSummaryChange={handleIndustryTrendsExecutiveSummaryChange}
+                      onIndustryTrendsAiAdoptionChange={handleIndustryTrendsAiAdoptionChange}
+                      onIndustryTrendsCloudMigrationChange={handleIndustryTrendsCloudMigrationChange}
+                      onIndustryTrendsRegulatoryChange={handleIndustryTrendsRegulatoryChange}
+                      onIndustryTrendSnapshotsChange={handleIndustryTrendSnapshotsChange}
+                      // Competitor Landscape handlers
+                      onCompetitorToggleEdit={handleCompetitorToggleEdit}
+                      onCompetitorSaveChanges={handleCompetitorSaveChanges}
+                      onCompetitorCancelEdit={handleCompetitorCancelEdit}
+                      onCompetitorDeleteSection={handleCompetitorDeleteSection}
+                      onCompetitorEditHistoryOpen={handleCompetitorEditHistoryOpen}
+                      onCompetitorExpandToggle={handleCompetitorExpandToggle}
+                      onCompetitorExecutiveSummaryChange={handleCompetitorExecutiveSummaryChange}
+                      onCompetitorTopPlayerShareChange={handleCompetitorTopPlayerShareChange}
+                      onCompetitorEmergingPlayersChange={handleCompetitorEmergingPlayersChange}
+                      onCompetitorFundingNewsChange={handleCompetitorFundingNewsChange}
+                      // Regulatory Compliance handlers
+                      onRegulatoryToggleEdit={handleRegulatoryToggleEdit}
+                      onRegulatorySaveChanges={handleRegulatorySaveChanges}
+                      onRegulatoryCancelEdit={handleRegulatoryCancelEdit}
+                      onRegulatoryDeleteSection={handleRegulatoryDeleteSection}
+                      onRegulatoryEditHistoryOpen={handleRegulatoryEditHistoryOpen}
+                      onRegulatoryExpandToggle={handleRegulatoryExpandToggle}
+                      onRegulatoryExecutiveSummaryChange={handleRegulatoryExecutiveSummaryChange}
+                      onRegulatoryEuAiActDeadlineChange={handleRegulatoryEuAiActDeadlineChange}
+                      onRegulatoryGdprComplianceChange={handleRegulatoryGdprComplianceChange}
+                      onRegulatoryPotentialFinesChange={handleRegulatoryPotentialFinesChange}
+                      onRegulatoryDataLocalizationChange={handleRegulatoryDataLocalizationChange}
+                      onRegulatoryScoutIconClick={handleRegulatoryScoutClick}
+                      // Market Entry handlers
+                      onMarketEntryToggleEdit={handleMarketEntryToggleEdit}
+                      onMarketEntrySaveChanges={handleMarketEntrySaveChanges}
+                      onMarketEntryCancelEdit={handleMarketEntryCancelEdit}
+                      onMarketEntryDeleteSection={handleMarketEntryDeleteSection}
+                      onMarketEntryEditHistoryOpen={handleMarketEntryEditHistoryOpen}
+                      onMarketEntryExpandToggle={handleMarketEntryExpandToggle}
+                      onMarketEntryExecutiveSummaryChange={handleMarketEntryExecutiveSummaryChange}
+                      onMarketEntryBarriersChange={handleMarketEntryBarriersChange}
+                      onMarketEntryRecommendedChannelChange={handleMarketEntryRecommendedChannelChange}
+                      onMarketEntryTimeToMarketChange={handleMarketEntryTimeToMarketChange}
+                      onMarketEntryTopBarrierChange={handleMarketEntryTopBarrierChange}
+                      onMarketEntryCompetitiveDifferentiationChange={handleMarketEntryCompetitiveDifferentiationChange}
+                      onMarketEntryStrategicRecommendationsChange={handleMarketEntryStrategicRecommendationsChange}
+                      onMarketEntryRiskAssessmentChange={handleMarketEntryRiskAssessmentChange}
+                      onMarketEntryScoutIconClick={handleMarketEntryScoutClick}
+                      onExportPDF={handleMarketIntelligenceExportPDF}
+                      onSaveToWorkspace={handleMarketIntelligenceSaveToWorkspace}
+                      onGenerateShareableLink={handleMarketIntelligenceGenerateShareableLink}
+                      // Scout chat panel visibility
+                      showMarketSizeScoutChat={showMarketSizeScoutChat}
+                      showIndustryTrendsScoutChat={showIndustryTrendsScoutChat}
+                      showCompetitorScoutChat={showCompetitorScoutChat}
+                      showRegulatoryScoutChat={showRegulatoryScoutChat}
+                      showMarketEntryScoutChat={showMarketEntryScoutChat}
+                      // Scout chat panel close handlers
+                      onMarketSizeScoutClose={() => {
+                        setShowMarketSizeScoutChat(false);
+                        setMarketSizeCustomMessage(undefined);
+                        setIsChatOpen(false);
+                      }}
+                      onIndustryTrendsScoutClose={() => {
+                        setShowIndustryTrendsScoutChat(false);
+                        setIndustryTrendsCustomMessage(undefined);
+                        setIsChatOpen(false);
+                      }}
+                      onCompetitorScoutClose={() => {
+                        setShowCompetitorScoutChat(false);
+                        setCompetitorCustomMessage(undefined);
+                        setIsChatOpen(false);
+                      }}
+                      onRegulatoryScoutClose={() => {
+                        setShowRegulatoryScoutChat(false);
+                        setIsRegulatoryPostSave(false);
+                        setRegulatoryCustomMessage(undefined);
+                      }}
+                      onMarketEntryScoutClose={() => {
+                        setShowMarketEntryScoutChat(false);
+                        setIsMarketEntryPostSave(false);
+                        setMarketEntryCustomMessage(undefined);
+                        setIsChatOpen(false);
+                      }}
+                      // Scout panel state props
+                      marketSizeHasEdits={marketSizeHasEdits}
+                      marketSizeLastEditedField={marketSizeLastEditedField}
+                      marketSizeCustomMessage={marketSizeCustomMessage}
+                      industryTrendsCustomMessage={industryTrendsCustomMessage}
+                      competitorCustomMessage={competitorCustomMessage}
+                      regulatoryCustomMessage={regulatoryCustomMessage}
+                      marketEntryCustomMessage={marketEntryCustomMessage}
+                    />
                     
                     <EditHistoryPanel
                       isOpen={isEditHistoryOpen}

@@ -40,6 +40,9 @@ interface MarketSizeSectionProps {
   onExportPDF: () => void;
   onSaveToWorkspace: () => void;
   onGenerateShareableLink: () => void;
+  // Scout chat panel props
+  showScoutChat?: boolean;
+  scoutChatPanel?: React.ReactNode;
 }
 
 const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
@@ -72,14 +75,17 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
   onMarketDriversChange,
   onExportPDF,
   onSaveToWorkspace,
-  onGenerateShareableLink
+  onGenerateShareableLink,
+  showScoutChat,
+  scoutChatPanel
 }) => {
   const handleMarketSizeSaveChanges = () => {
     onSaveChanges();
   };
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6">
+    <div className={`${showScoutChat ? 'flex gap-6' : ''}`}>
+      <div className={`bg-white rounded-lg border border-gray-200 p-6 ${showScoutChat ? 'flex-1' : ''}`}>
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
           <BarChart3 className="h-5 w-5 text-blue-600" />
@@ -491,6 +497,12 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
               </div>
             </div>
           )}
+        </div>
+      )}
+      </div>
+      {showScoutChat && scoutChatPanel && (
+        <div className="w-96 flex-shrink-0">
+          {scoutChatPanel}
         </div>
       )}
     </div>
