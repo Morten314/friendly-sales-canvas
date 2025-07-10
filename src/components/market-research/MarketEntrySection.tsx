@@ -1,5 +1,5 @@
 import React from 'react';
-import { MapPin, Bot, Edit, Target, Clock, AlertTriangle, X, FileText, Save, Share, TrendingUp, ChevronDown } from 'lucide-react';
+import { MapPin, Bot, Edit, Target, Clock, AlertTriangle, X, FileText, Save, Share, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -299,8 +299,13 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
 
           <div className="pt-4 border-t space-y-3">
             <div className="flex justify-center">
-              <Button variant="ghost" size="sm" onClick={() => onExpandToggle(false)}>
-                Show Less
+              <Button
+                onClick={() => onExpandToggle(false)}
+                variant="outline"
+                className="flex items-center space-x-2 text-sm"
+              >
+                <span>Show Less</span>
+                <ChevronUp className="h-4 w-4" />
               </Button>
             </div>
             <div className="flex flex-wrap gap-2">

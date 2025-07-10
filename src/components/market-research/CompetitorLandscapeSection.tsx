@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bot, Edit, X, FileText, Save, Share, Clock, Crown, ArrowUp, ArrowDown, ChevronDown } from 'lucide-react';
+import { Bot, Edit, X, FileText, Save, Share, Clock, Crown, ArrowUp, ArrowDown, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -651,9 +651,16 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
               </div>
 
               {/* Show Less Button */}
-              <Button variant="secondary" onClick={() => onExpandToggle(false)} className="w-full">
-                Show Less
-              </Button>
+              <div className="flex justify-center pt-4">
+                <Button
+                  onClick={() => onExpandToggle(false)}
+                  variant="outline"
+                  className="flex items-center space-x-2 text-sm"
+                >
+                  <span>Show Less</span>
+                  <ChevronUp className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           )}
         </div>
