@@ -303,7 +303,7 @@ const getContextualScoutMessage = () => {
   if (!showScoutChat) return null;
 
   return (
-    <div className="w-full bg-white rounded-lg border border-gray-200 p-6 transition-all duration-500 animate-slide-in-right h-fit">
+    <div className="w-full bg-white rounded-lg border border-gray-200 p-6 transition-all duration-500 animate-slide-in-right h-[400px] flex flex-col">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className="relative">
@@ -325,7 +325,7 @@ const getContextualScoutMessage = () => {
         </Button>
       </div>
 
-      <div className="space-y-4 mb-4 h-auto overflow-y-auto">
+      <div className="space-y-4 mb-4 flex-1 overflow-y-auto">
         <div className="bg-gradient-to-r from-blue-50 to-green-50 p-4 rounded-lg border border-blue-200">
           <p className="text-sm text-gray-700">
             {getContextualScoutMessage()}
@@ -347,7 +347,7 @@ const getContextualScoutMessage = () => {
         </div>
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex gap-2 mt-auto">
         <Input
           placeholder="Ask me anything about market opportunity..."
           className="flex-1"
