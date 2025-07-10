@@ -172,15 +172,9 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <h4 className="text-sm font-medium text-gray-700 mb-2">SWOT Analysis</h4>
-              <SwotQuadrant />
-            </div>
-            <div>
-              <h4 className="text-sm font-medium text-gray-700 mb-2">Timeline Preview</h4>
-              <TimelineChart />
-            </div>
+          <div>
+            <h4 className="text-sm font-medium text-gray-700 mb-2">SWOT Analysis</h4>
+            <SwotQuadrant />
           </div>
 
           <div className="flex justify-center pt-4">
