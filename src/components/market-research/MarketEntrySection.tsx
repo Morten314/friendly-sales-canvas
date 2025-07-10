@@ -211,6 +211,32 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
             </div>
           </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-purple-50 p-3 rounded-lg border border-purple-200">
+              <div className="text-xs font-medium text-purple-700 mb-1">Top Entry Channel</div>
+              <div className="text-sm font-semibold text-purple-900">{recommendedChannel}</div>
+            </div>
+            <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+              <div className="text-xs font-medium text-blue-700 mb-1">Time to Market</div>
+              <div className="text-sm font-semibold text-blue-900">{timeToMarket}</div>
+            </div>
+            <div className="bg-orange-50 p-3 rounded-lg border border-orange-200">
+              <div className="text-xs font-medium text-orange-700 mb-1">Top Barrier</div>
+              <div className="text-sm font-semibold text-orange-900">{topBarrier}</div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="md:col-span-2">
+              <h4 className="text-sm font-medium text-gray-700 mb-2">SWOT Analysis</h4>
+              <SwotQuadrant />
+            </div>
+            <div>
+              <h4 className="text-sm font-medium text-gray-700 mb-2">Timeline Preview</h4>
+              <TimelineChart />
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
               <h4 className="text-md font-semibold text-gray-900 flex items-center gap-2">
