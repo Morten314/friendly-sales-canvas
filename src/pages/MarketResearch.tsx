@@ -2286,13 +2286,22 @@ const MarketResearch = () => {
     setShowRegulatoryScoutChat(false);
     setIsChatOpen(false);
     
-    // Set custom message if provided
-    if (customMessage) {
-      setMarketEntryCustomMessage(customMessage);
-    }
-    
-    // Open Market Entry scout chat
-    setShowMarketEntryScoutChat(true);
+    // Reset post-save state when manually clicking scout (not triggered by save)
+    setTimeout(() => {
+      if (!hasEdits) {
+        setIsMarketEntryPostSave(false); // Reset post-save state when manually clicking scout
+      }
+      
+      // Set custom message if provided
+      if (customMessage) {
+        setMarketEntryCustomMessage(customMessage);
+      } else {
+        setMarketEntryCustomMessage(undefined); // Clear any previous custom messages
+      }
+      
+      // Open Market Entry scout chat
+      setShowMarketEntryScoutChat(true);
+    }, 100);
   };
 
   const handleEditHistoryClose = () => {
