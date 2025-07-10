@@ -8,7 +8,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { Badge } from '@/components/ui/badge';
 import MiniPieChart from '@/components/ui/MiniPieChart';
 import MiniLineChart from '@/components/ui/MiniLineChart';
-
 interface EditRecord {
   id: string;
   timestamp: string;
@@ -18,7 +17,6 @@ interface EditRecord {
   oldValue: string;
   newValue: string;
 }
-
 interface CompetitorLandscapeSectionProps {
   isEditing: boolean;
   isSplitView: boolean;
@@ -45,7 +43,6 @@ interface CompetitorLandscapeSectionProps {
   onSaveToWorkspace: () => void;
   onGenerateShareableLink: () => void;
 }
-
 const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   isEditing,
   isSplitView,
@@ -75,15 +72,12 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   const handleCompetitorSaveChanges = () => {
     onSaveChanges();
   };
-
   const handleFundingNewsChange = (index: number, value: string) => {
     const newNews = [...fundingNews];
     newNews[index] = value;
     onFundingNewsChange(newNews);
   };
-
-  return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6 relative">
+  return <div className="bg-white rounded-lg border border-gray-200 p-6 relative">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
@@ -96,15 +90,9 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
           <Button variant="ghost" size="sm" onClick={onToggleEdit} className="text-blue-800 hover:text-blue-900">
             <Edit className="h-4 w-4" />
           </Button>
-          {!isSplitView && (
-            <Tooltip>
+          {!isSplitView && <Tooltip>
               <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onScoutIconClick('competitor-landscape')}
-                  className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-all duration-200 hover:shadow-md hover:shadow-blue-200/50 relative"
-                >
+                <Button variant="ghost" size="sm" onClick={() => onScoutIconClick('competitor-landscape')} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-all duration-200 hover:shadow-md hover:shadow-blue-200/50 relative">
                   <div className="absolute inset-0 rounded-md bg-gradient-to-r from-blue-400/20 to-green-400/20 animate-pulse opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
                   <Bot className="h-5 w-5 relative z-10" />
                 </Button>
@@ -112,24 +100,16 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
               <TooltipContent>
                 <p>Explore More with Scout</p>
               </TooltipContent>
-            </Tooltip>
-          )}
+            </Tooltip>}
         </div>
       </div>
 
-      {isEditing ? (
-        <div className="space-y-8">
+      {isEditing ? <div className="space-y-8">
           {/* Executive Summary Edit */}
-          {!deletedSections.has('executive-summary') && (
-            <div className="relative group">
+          {!deletedSections.has('executive-summary') && <div className="relative group">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onDeleteSection('executive-summary')}
-                    className="absolute -top-2 -right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50"
-                  >
+                  <Button variant="ghost" size="sm" onClick={() => onDeleteSection('executive-summary')} className="absolute -top-2 -right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50">
                     <X className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
@@ -141,28 +121,15 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                 <Label htmlFor="competitorExecutiveSummary" className="text-sm font-medium text-gray-700 mb-2 block">
                   Executive Summary
                 </Label>
-                <Textarea
-                  id="competitorExecutiveSummary"
-                  value={executiveSummary}
-                  onChange={(e) => onExecutiveSummaryChange(e.target.value)}
-                  className="w-full h-32 resize-none"
-                  placeholder="Enter executive summary..."
-                />
+                <Textarea id="competitorExecutiveSummary" value={executiveSummary} onChange={e => onExecutiveSummaryChange(e.target.value)} className="w-full h-32 resize-none" placeholder="Enter executive summary..." />
               </div>
-            </div>
-          )}
+            </div>}
 
           {/* Key Metrics Edit */}
-          {!deletedSections.has('key-metrics') && (
-            <div className="relative group">
+          {!deletedSections.has('key-metrics') && <div className="relative group">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onDeleteSection('key-metrics')}
-                    className="absolute -top-2 -right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50"
-                  >
+                  <Button variant="ghost" size="sm" onClick={() => onDeleteSection('key-metrics')} className="absolute -top-2 -right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50">
                     <X className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
@@ -177,40 +144,23 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                     <Label htmlFor="topPlayerShare" className="text-sm font-medium text-gray-700 mb-2 block">
                       Top Player Market Share
                     </Label>
-                    <Input
-                      id="topPlayerShare"
-                      value={topPlayerShare}
-                      onChange={(e) => onTopPlayerShareChange(e.target.value)}
-                      placeholder="e.g., 48%"
-                    />
+                    <Input id="topPlayerShare" value={topPlayerShare} onChange={e => onTopPlayerShareChange(e.target.value)} placeholder="e.g., 48%" />
                   </div>
                   <div>
                     <Label htmlFor="emergingPlayers" className="text-sm font-medium text-gray-700 mb-2 block">
                       Emerging Players Added
                     </Label>
-                    <Input
-                      id="emergingPlayers"
-                      value={emergingPlayers}
-                      onChange={(e) => onEmergingPlayersChange(e.target.value)}
-                      placeholder="e.g., 2"
-                    />
+                    <Input id="emergingPlayers" value={emergingPlayers} onChange={e => onEmergingPlayersChange(e.target.value)} placeholder="e.g., 2" />
                   </div>
                 </div>
               </div>
-            </div>
-          )}
+            </div>}
 
           {/* Funding News Edit */}
-          {!deletedSections.has('funding-news') && (
-            <div className="relative group">
+          {!deletedSections.has('funding-news') && <div className="relative group">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onDeleteSection('funding-news')}
-                    className="absolute -top-2 -right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50"
-                  >
+                  <Button variant="ghost" size="sm" onClick={() => onDeleteSection('funding-news')} className="absolute -top-2 -right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50">
                     <X className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
@@ -222,18 +172,9 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                 <Label className="text-sm font-medium text-gray-700 mb-2 block">
                   Funding News & Headlines
                 </Label>
-                {fundingNews.map((news, index) => (
-                  <Textarea
-                    key={index}
-                    value={news}
-                    onChange={(e) => handleFundingNewsChange(index, e.target.value)}
-                    className="w-full h-16 resize-none mb-3"
-                    placeholder={`News headline ${index + 1}...`}
-                  />
-                ))}
+                {fundingNews.map((news, index) => <Textarea key={index} value={news} onChange={e => handleFundingNewsChange(index, e.target.value)} className="w-full h-16 resize-none mb-3" placeholder={`News headline ${index + 1}...`} />)}
               </div>
-            </div>
-          )}
+            </div>}
 
           {/* Save/Cancel Buttons */}
           <div className="flex items-center gap-3 pt-6 border-t">
@@ -243,15 +184,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
             
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={onEditHistoryOpen}
-                  className={`text-gray-600 hover:text-gray-700 hover:bg-gray-50 transition-all duration-200 ${
-                    editHistory.length === 0 ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
-                  disabled={editHistory.length === 0}
-                >
+                <Button variant="ghost" size="sm" onClick={onEditHistoryOpen} className={`text-gray-600 hover:text-gray-700 hover:bg-gray-50 transition-all duration-200 ${editHistory.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={editHistory.length === 0}>
                   <Clock className="h-4 w-4" />
                   Edit History
                 </Button>
@@ -263,12 +196,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
 
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onScoutIconClick('competitor-landscape')}
-                  className="text-blue-600 hover:text-blue-700 bg-blue-50 border border-blue-200 hover:shadow-md hover:shadow-blue-200/50 transition-all duration-200 relative"
-                >
+                <Button variant="ghost" size="sm" onClick={() => onScoutIconClick('competitor-landscape')} className="text-blue-600 hover:text-blue-700 bg-blue-50 border border-blue-200 hover:shadow-md hover:shadow-blue-200/50 transition-all duration-200 relative">
                   <div className="absolute inset-0 rounded-md bg-gradient-to-r from-blue-400/20 to-green-400/20 opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
                   <Bot className="h-4 w-4 relative z-10" />
                 </Button>
@@ -297,9 +225,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
               </Button>
             </div>
           </div>
-        </div>
-      ) : (
-        <div className="space-y-6">
+        </div> : <div className="space-y-6">
           {/* Executive Summary - Collapsed */}
           <div>
             <p className="text-gray-700 mb-4">
@@ -349,22 +275,15 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
           </div>
 
           {/* Read More Button */}
-          {!isExpanded && (
-            <div className="flex justify-center pt-4">
-              <Button
-                onClick={() => onExpandToggle(true)}
-                variant="outline"
-                className="flex items-center space-x-2 text-sm"
-              >
+          {!isExpanded && <div className="flex justify-center pt-4">
+              <Button onClick={() => onExpandToggle(true)} variant="outline" className="flex items-center space-x-2 text-sm">
                 <span>Read More</span>
                 <ChevronDown className="h-4 w-4" />
               </Button>
-            </div>
-          )}
+            </div>}
 
           {/* Expanded Content - Full Report */}
-          {isExpanded && (
-            <div className="animate-fade-in border-t pt-6 space-y-8">
+          {isExpanded && <div className="animate-fade-in border-t pt-6 space-y-8">
               <h2 className="text-2xl font-bold text-gray-900 mb-6">
                 Competitor Landscape Report
               </h2>
@@ -475,42 +394,42 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                   <div className="bg-white border border-gray-200 rounded-lg p-4">
                     <h4 className="font-medium text-gray-900 mb-3">North America</h4>
                     <MiniPieChart data={[{
-                  name: "Microsoft Teams",
-                  value: 40,
-                  color: "#3B82F6"
-                }, {
-                  name: "Slack",
-                  value: 32,
-                  color: "#8B5CF6"
-                }, {
-                  name: "Zoom",
-                  value: 18,
-                  color: "#10B981"
-                }, {
-                  name: "Others",
-                  value: 10,
-                  color: "#6B7280"
-                }]} title="" />
+                name: "Microsoft Teams",
+                value: 40,
+                color: "#3B82F6"
+              }, {
+                name: "Slack",
+                value: 32,
+                color: "#8B5CF6"
+              }, {
+                name: "Zoom",
+                value: 18,
+                color: "#10B981"
+              }, {
+                name: "Others",
+                value: 10,
+                color: "#6B7280"
+              }]} title="" />
                   </div>
                   <div className="bg-white border border-gray-200 rounded-lg p-4">
                     <h4 className="font-medium text-gray-900 mb-3">APAC Region</h4>
                     <MiniPieChart data={[{
-                  name: "Microsoft Teams",
-                  value: 30,
-                  color: "#3B82F6"
-                }, {
-                  name: "Zoom",
-                  value: 28,
-                  color: "#10B981"
-                }, {
-                  name: "Slack",
-                  value: 22,
-                  color: "#8B5CF6"
-                }, {
-                  name: "Others",
-                  value: 20,
-                  color: "#6B7280"
-                }]} title="" />
+                name: "Microsoft Teams",
+                value: 30,
+                color: "#3B82F6"
+              }, {
+                name: "Zoom",
+                value: 28,
+                color: "#10B981"
+              }, {
+                name: "Slack",
+                value: 22,
+                color: "#8B5CF6"
+              }, {
+                name: "Others",
+                value: 20,
+                color: "#6B7280"
+              }]} title="" />
                   </div>
                 </div>
               </div>
@@ -600,34 +519,34 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                   <div className="bg-white border border-gray-200 rounded-lg p-4">
                     <h4 className="font-medium text-gray-900 mb-3">Market Share Growth</h4>
                     <MiniLineChart data={[{
-                  name: "Q1",
-                  value: 25
-                }, {
-                  name: "Q2",
-                  value: 32
-                }, {
-                  name: "Q3",
-                  value: 38
-                }, {
-                  name: "Q4",
-                  value: 48
-                }]} title="" color="#3B82F6" />
+                name: "Q1",
+                value: 25
+              }, {
+                name: "Q2",
+                value: 32
+              }, {
+                name: "Q3",
+                value: 38
+              }, {
+                name: "Q4",
+                value: 48
+              }]} title="" color="#3B82F6" />
                   </div>
                   <div className="bg-white border border-gray-200 rounded-lg p-4">
                     <h4 className="font-medium text-gray-900 mb-3">Feature Adoption Rate</h4>
                     <MiniLineChart data={[{
-                  name: "AI Tools",
-                  value: 78
-                }, {
-                  name: "Video",
-                  value: 92
-                }, {
-                  name: "Automation",
-                  value: 65
-                }, {
-                  name: "Integration",
-                  value: 84
-                }]} title="" color="#8B5CF6" />
+                name: "AI Tools",
+                value: 78
+              }, {
+                name: "Video",
+                value: 92
+              }, {
+                name: "Automation",
+                value: 65
+              }, {
+                name: "Integration",
+                value: 84
+              }]} title="" color="#8B5CF6" />
                   </div>
                 </div>
               </div>
@@ -652,40 +571,25 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
 
               {/* Show Less Button */}
               <div className="flex justify-center pt-4">
-                <Button
-                  onClick={() => onExpandToggle(false)}
-                  variant="outline"
-                  className="flex items-center space-x-2 text-sm"
-                >
+                <Button onClick={() => onExpandToggle(false)} variant="outline" className="flex items-center space-x-2 text-sm">
                   <span>Show Less</span>
                   <ChevronUp className="h-4 w-4" />
                 </Button>
               </div>
-            </div>
-          )}
-        </div>
-      )}
+            </div>}
+        </div>}
 
       {/* Persistent Scout Agent Icon */}
       <div className="absolute bottom-4 right-4">
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onScoutIconClick('competitor-landscape')}
-              className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white hover:shadow-lg hover:shadow-blue-300/50 transition-all duration-200"
-            >
-              <Bot className="h-5 w-5" />
-            </Button>
+            
           </TooltipTrigger>
           <TooltipContent>
             <p>Explore More with Scout</p>
           </TooltipContent>
         </Tooltip>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default CompetitorLandscapeSection;
