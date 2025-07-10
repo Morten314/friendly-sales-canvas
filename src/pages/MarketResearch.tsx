@@ -1706,6 +1706,19 @@ const MarketResearch = () => {
     setIndustryTrendsData(prev => ({ ...prev, regulatory: value }));
   };
 
+  const handleIndustryTrendSnapshotsChange = (snapshots: TrendSnapshot[]) => {
+    const oldValue = JSON.stringify(industryTrendsData.trendSnapshots);
+    const newValue = JSON.stringify(snapshots);
+    addEditRecord(
+      'Industry Trends Snapshots',
+      oldValue,
+      newValue,
+      'Updated trend snapshots'
+    );
+    setIndustryTrendsData(prev => ({ ...prev, trendSnapshots: snapshots }));
+    setIndustryTrendsLastEditedField('trendSnapshots');
+  };
+
   const handleCompetitorSaveChanges = () => {
     setIsCompetitorEditing(false);
     
@@ -2685,6 +2698,10 @@ const MarketResearch = () => {
                         onIndustryTrendsEditHistoryOpen={handleIndustryTrendsEditHistoryOpen}
                         onIndustryTrendsExpandToggle={handleIndustryTrendsExpandToggle}
                         onIndustryTrendsExecutiveSummaryChange={handleIndustryTrendsExecutiveSummaryChange}
+                        onIndustryTrendsAiAdoptionChange={handleIndustryTrendsAiAdoptionChange}
+                        onIndustryTrendsCloudMigrationChange={handleIndustryTrendsCloudMigrationChange}
+                        onIndustryTrendsRegulatoryChange={handleIndustryTrendsRegulatoryChange}
+                        onIndustryTrendSnapshotsChange={handleIndustryTrendSnapshotsChange}
                         // Competitor Landscape handlers
                         onCompetitorToggleEdit={handleCompetitorToggleEdit}
                         onCompetitorSaveChanges={handleCompetitorSaveChanges}

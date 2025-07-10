@@ -95,6 +95,10 @@ export interface MarketIntelligenceTabProps {
   onIndustryTrendsEditHistoryOpen: () => void;
   onIndustryTrendsExpandToggle: (expanded: boolean) => void;
   onIndustryTrendsExecutiveSummaryChange: (value: string) => void;
+  onIndustryTrendsAiAdoptionChange: (value: string) => void;
+  onIndustryTrendsCloudMigrationChange: (value: string) => void;
+  onIndustryTrendsRegulatoryChange: (value: string) => void;
+  onIndustryTrendSnapshotsChange: (snapshots: TrendSnapshot[]) => void;
   // Competitor Landscape handlers (optional to maintain backward compatibility)
   onCompetitorToggleEdit?: () => void;
   onCompetitorSaveChanges?: () => void;

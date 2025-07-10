@@ -4,6 +4,7 @@ import { Bot, Edit, X, FileText, Save, Share, Clock, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import MiniPieChart from '@/components/ui/MiniPieChart';
 import MiniLineChart from '@/components/ui/MiniLineChart';
@@ -50,6 +51,10 @@ interface IndustryTrendsSectionProps {
   onIndustryTrendsEditHistoryOpen: () => void;
   onIndustryTrendsExpandToggle: (expanded: boolean) => void;
   onIndustryTrendsExecutiveSummaryChange: (value: string) => void;
+  onIndustryTrendsAiAdoptionChange: (value: string) => void;
+  onIndustryTrendsCloudMigrationChange: (value: string) => void;
+  onIndustryTrendsRegulatoryChange: (value: string) => void;
+  onIndustryTrendSnapshotsChange: (snapshots: TrendSnapshot[]) => void;
   onScoutIconClick: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape') => void;
   onExportPDF: () => void;
   onSaveToWorkspace: () => void;
@@ -77,6 +82,10 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
   onIndustryTrendsEditHistoryOpen,
   onIndustryTrendsExpandToggle,
   onIndustryTrendsExecutiveSummaryChange,
+  onIndustryTrendsAiAdoptionChange,
+  onIndustryTrendsCloudMigrationChange,
+  onIndustryTrendsRegulatoryChange,
+  onIndustryTrendSnapshotsChange,
   onScoutIconClick,
   onExportPDF,
   onSaveToWorkspace,
@@ -156,22 +165,40 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Key Metrics</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <Label className="text-sm font-medium text-gray-700 mb-2 block">
+                    <Label htmlFor="aiAdoption" className="text-sm font-medium text-gray-700 mb-2 block">
                       AI Adoption Rate
                     </Label>
-                    <div className="text-2xl font-bold text-blue-600">{industryTrendsAiAdoption}</div>
+                    <Input 
+                      id="aiAdoption"
+                      value={industryTrendsAiAdoption} 
+                      onChange={e => onIndustryTrendsAiAdoptionChange(e.target.value)}
+                      className="text-2xl font-bold text-blue-600 border-blue-200 focus:border-blue-400"
+                      placeholder="e.g., 78%"
+                    />
                   </div>
                   <div>
-                    <Label className="text-sm font-medium text-gray-700 mb-2 block">
+                    <Label htmlFor="cloudMigration" className="text-sm font-medium text-gray-700 mb-2 block">
                       Cloud Migration Increase
                     </Label>
-                    <div className="text-2xl font-bold text-green-600">{industryTrendsCloudMigration}</div>
+                    <Input 
+                      id="cloudMigration"
+                      value={industryTrendsCloudMigration} 
+                      onChange={e => onIndustryTrendsCloudMigrationChange(e.target.value)}
+                      className="text-2xl font-bold text-green-600 border-green-200 focus:border-green-400"
+                      placeholder="e.g., +45%"
+                    />
                   </div>
                   <div>
-                    <Label className="text-sm font-medium text-gray-700 mb-2 block">
+                    <Label htmlFor="regulatory" className="text-sm font-medium text-gray-700 mb-2 block">
                       Regulatory Changes
                     </Label>
-                    <div className="text-2xl font-bold text-purple-600">{industryTrendsRegulatory}</div>
+                    <Input 
+                      id="regulatory"
+                      value={industryTrendsRegulatory} 
+                      onChange={e => onIndustryTrendsRegulatoryChange(e.target.value)}
+                      className="text-2xl font-bold text-purple-600 border-purple-200 focus:border-purple-400"
+                      placeholder="e.g., 12 new"
+                    />
                   </div>
                 </div>
               </div>
@@ -196,8 +223,38 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {industryTrendSnapshots.map((trend, index) => (
                     <div key={index} className="bg-white border border-gray-200 rounded-lg p-4">
-                      <h4 className="font-medium text-gray-900 mb-2">{trend.title}</h4>
-                      <p className="text-sm text-gray-600">{trend.metric}</p>
+                      <div className="mb-3">
+                        <Label htmlFor={`trendTitle-${index}`} className="text-sm font-medium text-gray-700 mb-1 block">
+                          Title
+                        </Label>
+                        <Input 
+                          id={`trendTitle-${index}`}
+                          value={trend.title}
+                          onChange={e => {
+                            const updated = [...industryTrendSnapshots];
+                            updated[index] = { ...trend, title: e.target.value };
+                            onIndustryTrendSnapshotsChange(updated);
+                          }}
+                          className="font-medium text-gray-900"
+                          placeholder="Trend title"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor={`trendMetric-${index}`} className="text-sm font-medium text-gray-700 mb-1 block">
+                          Metric
+                        </Label>
+                        <Input 
+                          id={`trendMetric-${index}`}
+                          value={trend.metric}
+                          onChange={e => {
+                            const updated = [...industryTrendSnapshots];
+                            updated[index] = { ...trend, metric: e.target.value };
+                            onIndustryTrendSnapshotsChange(updated);
+                          }}
+                          className="text-sm text-gray-600"
+                          placeholder="Trend metric"
+                        />
+                      </div>
                     </div>
                   ))}
                 </div>
