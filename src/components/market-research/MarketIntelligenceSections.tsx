@@ -122,7 +122,7 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
 
       {/* Industry Trends Section */}
       <div className={`${props.showIndustryTrendsScoutChat ? 'flex gap-6' : ''}`}>
-        <div className={`${props.showIndustryTrendsScoutChat ? 'flex-1' : ''}`}>
+        <div className={`${props.showIndustryTrendsScoutChat ? 'w-1/2' : ''}`}>
           <IndustryTrendsSection
             isIndustryTrendsEditing={props.isIndustryTrendsEditing}
             isSplitView={props.isSplitView}
@@ -155,7 +155,7 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
           />
         </div>
         {props.showIndustryTrendsScoutChat && industryTrendsScoutChatPanel && (
-          <div className="w-96 flex-shrink-0">
+          <div className="w-1/2">
             {industryTrendsScoutChatPanel}
           </div>
         )}
@@ -163,7 +163,7 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
 
       {/* Competitor Landscape Section */}
       <div className={`${props.showCompetitorScoutChat ? 'flex gap-6' : ''}`}>
-        <div className={`${props.showCompetitorScoutChat ? 'flex-1' : ''}`}>
+        <div className={`${props.showCompetitorScoutChat ? 'w-1/2' : ''}`}>
           <CompetitorLandscapeSection
         isEditing={props.isCompetitorEditing || false}
         isSplitView={props.isSplitView}
@@ -192,7 +192,7 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
           />
         </div>
         {props.showCompetitorScoutChat && competitorScoutChatPanel && (
-          <div className="w-96 flex-shrink-0">
+          <div className="w-1/2">
             {competitorScoutChatPanel}
           </div>
         )}
@@ -200,7 +200,7 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
 
       {/* Regulatory & Compliance Highlights Section */}
       <div className={`${props.showRegulatoryScoutChat ? 'flex gap-6' : ''}`}>
-        <div className={`${props.showRegulatoryScoutChat ? 'flex-1' : ''}`}>
+        <div className={`${props.showRegulatoryScoutChat ? 'w-1/2' : ''}`}>
           <RegulatoryComplianceSection
         isEditing={props.isRegulatoryEditing || false}
         isSplitView={props.isSplitView}
@@ -231,7 +231,7 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
           />
         </div>
         {props.showRegulatoryScoutChat && regulatoryScoutChatPanel && (
-          <div className="w-96 flex-shrink-0">
+          <div className="w-1/2">
             {regulatoryScoutChatPanel}
           </div>
         )}
@@ -239,7 +239,7 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
 
       {/* Market Entry & Growth Strategy Section */}
       <div className={`${props.showMarketEntryScoutChat ? 'flex gap-6' : ''}`}>
-        <div className={`${props.showMarketEntryScoutChat ? 'flex-1' : ''}`}>
+        <div className={`${props.showMarketEntryScoutChat ? 'w-1/2' : ''}`}>
           <MarketEntrySection
         isEditing={props.isMarketEntryEditing || false}
         isSplitView={props.isSplitView}
@@ -276,7 +276,7 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
           />
         </div>
         {props.showMarketEntryScoutChat && marketEntryScoutChatPanel && (
-          <div className="w-96 flex-shrink-0">
+          <div className="w-1/2">
             {marketEntryScoutChatPanel}
           </div>
         )}
