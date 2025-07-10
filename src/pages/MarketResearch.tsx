@@ -2747,108 +2747,103 @@ const MarketResearch = () => {
                         onGenerateShareableLink={handleMarketIntelligenceGenerateShareableLink}
                       />
                       
-                      {/* Scout Chat Panels - positioned to the right */}
-                      {(showMarketSizeScoutChat || showIndustryTrendsScoutChat || showCompetitorScoutChat || showRegulatoryScoutChat || showMarketEntryScoutChat) && (
-                        <div className="flex-shrink-0">
-                          {/* Market Size Scout Chat Panel */}
-                          {showMarketSizeScoutChat && (
-                            <ScoutChatPanel
-                              showScoutChat={showMarketSizeScoutChat}
-                              isSplitView={showMarketSizeScoutChat}
-                              hasEdits={marketSizeHasEdits}
-                              showEditHistory={false}
-                              editHistory={editHistory}
-                              lastEditedField={marketSizeLastEditedField}
-                              context="market-size"
-                              customMessage={marketSizeCustomMessage}
-                              onClose={() => {
-                                setShowMarketSizeScoutChat(false);
-                                setMarketSizeCustomMessage(undefined);
-                                setIsChatOpen(false);
-                              }}
-                            />
-                          )}
-
-                          {/* Industry Trends Scout Chat Panel */}
-                          {showIndustryTrendsScoutChat && (
-                            <ScoutChatPanel
-                              showScoutChat={showIndustryTrendsScoutChat}
-                              isSplitView={showIndustryTrendsScoutChat}
-                              hasEdits={industryTrendsHasEdits}
-                              showEditHistory={false}
-                              editHistory={industryTrendsEditHistory}
-                              lastEditedField={industryTrendsLastEditedField}
-                              context="industry-trends"
-                              customMessage={industryTrendsCustomMessage}
-                              onClose={() => {
-                                setShowIndustryTrendsScoutChat(false);
-                                setIndustryTrendsCustomMessage(undefined);
-                                setIsChatOpen(false);
-                              }}
-                            />
-                          )}
-
-                          {/* Competitor Landscape Scout Chat Panel */}
-                          {showCompetitorScoutChat && (
-                            <ScoutChatPanel
-                              showScoutChat={showCompetitorScoutChat}
-                              isSplitView={showCompetitorScoutChat}
-                              hasEdits={competitorHasEdits}
-                              showEditHistory={false}
-                              editHistory={competitorEditHistory}
-                              lastEditedField=""
-                              context="competitor-landscape"
-                              customMessage={competitorCustomMessage}
-                              onClose={() => {
-                                setShowCompetitorScoutChat(false);
-                                setCompetitorCustomMessage(undefined);
-                                setIsChatOpen(false);
-                              }}
-                            />
-                          )}
-
-                          {/* Regulatory Compliance Scout Chat Panel */}
-                          {showRegulatoryScoutChat && (
-                            <ScoutChatPanel
-                              showScoutChat={showRegulatoryScoutChat}
-                              isSplitView={showRegulatoryScoutChat}
-                              hasEdits={false}
-                              showEditHistory={false}
-                              editHistory={[]}
-                              lastEditedField=""
-                              context="regulatory-compliance"
-                              isPostSave={isRegulatoryPostSave}
-                              customMessage={regulatoryCustomMessage}
-                              onClose={() => {
-                                setShowRegulatoryScoutChat(false);
-                                setIsRegulatoryPostSave(false);
-                                setRegulatoryCustomMessage(undefined);
-                              }}
-                            />
-                          )}
-
-                          {/* Market Entry Scout Chat Panel */}
-                          {showMarketEntryScoutChat && (
-                            <ScoutChatPanel
-                              showScoutChat={showMarketEntryScoutChat}
-                              isSplitView={showMarketEntryScoutChat}
-                              hasEdits={marketEntryHasEdits}
-                              showEditHistory={false}
-                              editHistory={marketEntryEditHistory}
-                              lastEditedField=""
-                              context="market-entry"
-                              isPostSave={isMarketEntryPostSave}
-                              customMessage={marketEntryCustomMessage}
-                              onClose={() => {
-                                setShowMarketEntryScoutChat(false);
-                                setIsMarketEntryPostSave(false);
-                                setMarketEntryCustomMessage(undefined);
-                                setIsChatOpen(false);
-                              }}
-                            />
-                          )}
-                        </div>
+                      {/* Market Size Scout Chat Panel */}
+                      {showMarketSizeScoutChat && (
+                        <ScoutChatPanel
+                          showScoutChat={showMarketSizeScoutChat}
+                          isSplitView={showMarketSizeScoutChat}
+                          hasEdits={marketSizeHasEdits}
+                          showEditHistory={false}
+                          editHistory={editHistory}
+                          lastEditedField={marketSizeLastEditedField}
+                          context="market-size"
+                          customMessage={marketSizeCustomMessage}
+                          onClose={() => {
+                            setShowMarketSizeScoutChat(false);
+                            setMarketSizeCustomMessage(undefined);
+                            setIsChatOpen(false);
+                          }}
+                        />
                       )}
+
+                      {/* Industry Trends Scout Chat Panel */}
+                      {showIndustryTrendsScoutChat && (
+                        <ScoutChatPanel
+                          showScoutChat={showIndustryTrendsScoutChat}
+                          isSplitView={showIndustryTrendsScoutChat}
+                          hasEdits={industryTrendsHasEdits}
+                          showEditHistory={false}
+                          editHistory={industryTrendsEditHistory}
+                          lastEditedField={industryTrendsLastEditedField}
+                          context="industry-trends"
+                          customMessage={industryTrendsCustomMessage}
+                          onClose={() => {
+                            setShowIndustryTrendsScoutChat(false);
+                            setIndustryTrendsCustomMessage(undefined);
+                            setIsChatOpen(false);
+                          }}
+                        />
+                      )}
+
+                      {/* Competitor Landscape Scout Chat Panel */}
+                      {showCompetitorScoutChat && (
+                        <ScoutChatPanel
+                          showScoutChat={showCompetitorScoutChat}
+                          isSplitView={showCompetitorScoutChat}
+                          hasEdits={competitorHasEdits}
+                          showEditHistory={false}
+                          editHistory={competitorEditHistory}
+                          lastEditedField=""
+                          context="competitor-landscape"
+                          customMessage={competitorCustomMessage}
+                          onClose={() => {
+                            setShowCompetitorScoutChat(false);
+                            setCompetitorCustomMessage(undefined);
+                            setIsChatOpen(false);
+                          }}
+                        />
+                      )}
+
+                      {/* Regulatory Compliance Scout Chat Panel */}
+                      {showRegulatoryScoutChat && (
+                        <ScoutChatPanel
+                          showScoutChat={showRegulatoryScoutChat}
+                          isSplitView={showRegulatoryScoutChat}
+                          hasEdits={false}
+                          showEditHistory={false}
+                          editHistory={[]}
+                          lastEditedField=""
+                          context="regulatory-compliance"
+                          isPostSave={isRegulatoryPostSave}
+                          customMessage={regulatoryCustomMessage}
+                          onClose={() => {
+                            setShowRegulatoryScoutChat(false);
+                            setIsRegulatoryPostSave(false); // Reset post-save state when closing
+                            setRegulatoryCustomMessage(undefined); // Reset custom message when closing
+                          }}
+                        />
+                       )}
+
+                       {/* Market Entry Scout Chat Panel */}
+                       {showMarketEntryScoutChat && (
+                         <ScoutChatPanel
+                           showScoutChat={showMarketEntryScoutChat}
+                           isSplitView={showMarketEntryScoutChat}
+                           hasEdits={marketEntryHasEdits}
+                           showEditHistory={false}
+                           editHistory={marketEntryEditHistory}
+                           lastEditedField=""
+                           context="market-entry"
+                           isPostSave={isMarketEntryPostSave}
+                           customMessage={marketEntryCustomMessage}
+                           onClose={() => {
+                             setShowMarketEntryScoutChat(false);
+                             setIsMarketEntryPostSave(false); // Reset post-save state when closing
+                             setMarketEntryCustomMessage(undefined); // Reset custom message when closing
+                             setIsChatOpen(false);
+                           }}
+                         />
+                       )}
                     </div>
                     
                     <EditHistoryPanel
