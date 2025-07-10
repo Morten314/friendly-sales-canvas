@@ -501,7 +501,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
       )}
       </div>
       {showScoutChat && scoutChatPanel && (
-        <div className="w-96 flex-shrink-0">
+        <div className="w-1/2 flex-shrink-0">
           {scoutChatPanel}
         </div>
       )}
