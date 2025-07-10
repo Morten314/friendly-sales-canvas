@@ -5,6 +5,7 @@ import IndustryTrendsSection from './IndustryTrendsSection';
 import CompetitorLandscapeSection from './CompetitorLandscapeSection';
 import RegulatoryComplianceSection from './RegulatoryComplianceSection';
 import MarketEntrySection from './MarketEntrySection';
+import ScoutChatPanel from './ScoutChatPanel';
 import { MarketIntelligenceTabProps } from './MarketIntelligenceTabProps';
 
 interface MarketIntelligenceSectionsProps extends MarketIntelligenceTabProps {}

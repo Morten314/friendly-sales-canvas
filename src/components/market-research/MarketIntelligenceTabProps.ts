@@ -137,6 +137,34 @@ export interface MarketIntelligenceTabProps {
   onMarketEntryCompetitiveDifferentiationChange?: (differentiation: string[]) => void;
   onMarketEntryStrategicRecommendationsChange?: (recommendations: string[]) => void;
   onMarketEntryRiskAssessmentChange?: (risks: string[]) => void;
+  
+  // Scout panel visibility states
+  showMarketSizeScoutChat?: boolean;
+  showIndustryTrendsScoutChat?: boolean;
+  showCompetitorScoutChat?: boolean;
+  showRegulatoryScoutChat?: boolean;
+  showMarketEntryScoutChat?: boolean;
+  
+  // Scout panel props
+  marketSizeHasEdits?: boolean;
+  marketSizeLastEditedField?: string;
+  marketSizeCustomMessage?: string;
+  // industryTrendsLastEditedField already defined above
+  industryTrendsCustomMessage?: string;
+  competitorLastEditedField?: string;
+  competitorCustomMessage?: string;
+  regulatoryLastEditedField?: string;
+  regulatoryCustomMessage?: string;
+  marketEntryLastEditedField?: string;
+  marketEntryCustomMessage?: string;
+  
+  // Scout panel close handlers
+  onMarketSizeScoutClose?: () => void;
+  onIndustryTrendsScoutClose?: () => void;
+  onCompetitorScoutClose?: () => void;
+  onRegulatoryScoutClose?: () => void;
+  onMarketEntryScoutClose?: () => void;
+  
   onExportPDF: () => void;
   onSaveToWorkspace: () => void;
   onGenerateShareableLink: () => void;
