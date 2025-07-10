@@ -155,7 +155,7 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
           />
         </div>
         {props.showIndustryTrendsScoutChat && industryTrendsScoutChatPanel && (
-          <div className="w-1/2 h-full">
+          <div className="w-1/2">
             {industryTrendsScoutChatPanel}
           </div>
         )}
@@ -192,7 +192,7 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
           />
         </div>
         {props.showCompetitorScoutChat && competitorScoutChatPanel && (
-          <div className="w-1/2 h-full">
+          <div className="w-1/2">
             {competitorScoutChatPanel}
           </div>
         )}
@@ -231,7 +231,7 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
           />
         </div>
         {props.showRegulatoryScoutChat && regulatoryScoutChatPanel && (
-          <div className="w-1/2 h-full">
+          <div className="w-1/2">
             {regulatoryScoutChatPanel}
           </div>
         )}
@@ -276,7 +276,7 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
           />
         </div>
         {props.showMarketEntryScoutChat && marketEntryScoutChatPanel && (
-          <div className="w-1/2 h-full">
+          <div className="w-1/2">
             {marketEntryScoutChatPanel}
           </div>
         )}
