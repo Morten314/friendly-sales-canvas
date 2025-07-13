@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,6 +30,8 @@ import { ICPProfilesList } from "@/components/customers/ICPProfilesList";
 import { ICPBuilder } from "@/components/customers/ICPBuilder";
 import { ICPInsights } from "@/components/customers/ICPInsights";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+import FloatingProfilerAgent from "@/components/agent-hub/FloatingProfilerAgent";
+import ProfilerEmptyState from "@/components/customers/ProfilerEmptyState";
 
 const Customers = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -40,7 +41,7 @@ const Customers = () => {
   const [inputValue, setInputValue] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
 
-  // Sample data for the new sections
+  // Sample data for the new sections - set to empty for demonstration
   const recentICPs = [
     {
       id: 1,
@@ -176,6 +177,18 @@ const Customers = () => {
     </div>
   );
 
+  const handleCreateFirstICP = () => {
+    console.log("Creating first ICP");
+    // Logic to open ICP creation modal or navigate to ICP builder
+  };
+
+  const handleSearchCompanies = () => {
+    console.log("Opening company search");
+    // Logic to open company search functionality
+  };
+
+  const hasData = recentICPs.length > 0 || recentCompanies.length > 0 || recentPeople.length > 0;
+
   return (
     <Layout>
       <div className="animate-fade-in space-y-8">
@@ -205,287 +218,297 @@ const Customers = () => {
           </div>
         </div>
 
-        {/* Chat Window */}
-        {isChatOpen && (
-          <Card className="border-blue-200 bg-blue-50/40">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <MessageSquare className="h-5 w-5 text-sales-blue" />
-                Profiler Agent Chat
-              </CardTitle>
-              <CardDescription>
-                Ask Profiler to help refine your ICPs or generate new insights
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="bg-white rounded-md border border-gray-200 p-4 flex flex-col gap-3">
-                <div className="space-y-3 max-h-60 overflow-y-auto">
-                  {messages.map((message, index) => (
-                    <div 
-                      key={index}
-                      className={`${
-                        message.role === "ai" 
-                          ? "bg-blue-50 rounded-lg p-3 self-start max-w-[80%]" 
-                          : "bg-gray-100 rounded-lg p-3 self-end max-w-[80%] ml-auto"
-                      }`}
-                    >
-                      <p className="text-sm font-medium">
-                        {message.role === "ai" ? "Profiler" : "You"}
-                      </p>
-                      <p className="text-sm">{message.content}</p>
-                    </div>
-                  ))}
-                </div>
-                
-                <div className="flex gap-2">
-                  <Input 
-                    type="text" 
-                    placeholder="Ask Profiler a question..."
-                    className="flex-1"
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleSendMessage();
-                    }}
-                  />
-                  <Button 
-                    className="bg-sales-blue hover:bg-blue-700 flex items-center gap-2"
-                    onClick={handleSendMessage}
-                  >
-                    <Send className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Recent ICP Activity - Horizontally Scrollable */}
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold text-gray-900">Recent ICP Activity</h2>
-            <Button variant="ghost" className="text-purple-600 hover:text-purple-700">
-              View All <ArrowRight className="ml-1 h-4 w-4" />
-            </Button>
-          </div>
-          
-          {recentICPs.length === 0 ? (
-            <Card className="p-8 text-center">
-              <div className="flex flex-col items-center gap-3">
-                <Users className="h-12 w-12 text-gray-400" />
-                <h3 className="font-semibold text-gray-900">No ICPs yet</h3>
-                <p className="text-gray-600">Create your first one to get started</p>
-                <Button className="bg-purple-600 hover:bg-purple-700 text-white">
-                  Create First ICP <ArrowRight className="ml-1 h-4 w-4" />
-                </Button>
-              </div>
-            </Card>
-          ) : (
-            <Carousel className="w-full">
-              <CarouselContent className="-ml-2 md:-ml-4">
-                {recentICPs.map((icp) => (
-                  <CarouselItem key={icp.id} className="pl-2 md:pl-4 basis-full md:basis-1/2 lg:basis-1/3">
-                    <Card className="hover:shadow-md transition-shadow">
-                      <CardHeader className="pb-3">
-                        <div className="flex justify-between items-start mb-2">
-                          <CardTitle className="text-lg">{icp.name}</CardTitle>
-                          <div className="flex gap-1">
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <Download className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-4 text-sm text-gray-600">
-                          <div className="flex items-center gap-1">
-                            <Building className="h-3 w-3" />
-                            {icp.industry}
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <MapPin className="h-3 w-3" />
-                            {icp.region}
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div>
-                          <p className="text-sm text-gray-500 mb-2">Key Traits</p>
-                          <div className="flex flex-wrap gap-1">
-                            {icp.keyTraits.map((trait, index) => (
-                              <Badge key={index} variant="secondary" className="text-xs">
-                                {trait}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-500">Matched Accounts</span>
-                            <span className="font-medium">{icp.matchedAccounts}</span>
-                          </div>
-                          <div className="space-y-1">
-                            <div className="flex justify-between text-sm">
-                              <span className="text-gray-500">Match Strength</span>
-                              <span className="font-medium">{icp.matchStrength}%</span>
-                            </div>
-                            <MatchScoreBar score={icp.matchStrength} />
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center gap-1 text-xs text-gray-500">
-                          <Clock className="h-3 w-3" />
-                          Updated {icp.updatedAgo}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-              <CarouselPrevious />
-              <CarouselNext />
-            </Carousel>
-          )}
-        </div>
-
-        {/* Smart Suggestions */}
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-purple-600" />
-              <h2 className="text-xl font-semibold text-gray-900">Suggested ICPs for You</h2>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {suggestedICPs.map((suggestion) => (
-              <Card key={suggestion.id} className="hover:shadow-md transition-shadow border-dashed border-purple-200">
+        {/* Show empty state if no data */}
+        {!hasData ? (
+          <ProfilerEmptyState 
+            onCreateICP={handleCreateFirstICP}
+            onSearchCompanies={handleSearchCompanies}
+          />
+        ) : (
+          <>
+            {/* Chat Window */}
+            {isChatOpen && (
+              <Card className="border-blue-200 bg-blue-50/40">
                 <CardHeader className="pb-3">
-                  <div className="flex justify-between items-start">
-                    <CardTitle className="text-lg text-purple-700">{suggestion.name}</CardTitle>
-                    <Badge variant={suggestion.confidence === "High" ? "default" : "secondary"}>
-                      {suggestion.confidence}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center gap-1 text-sm text-gray-600">
-                    <Building className="h-3 w-3" />
-                    {suggestion.industry}
-                  </div>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <MessageSquare className="h-5 w-5 text-sales-blue" />
+                    Profiler Agent Chat
+                  </CardTitle>
+                  <CardDescription>
+                    Ask Profiler to help refine your ICPs or generate new insights
+                  </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-3">
-                  <p className="text-sm text-gray-600">{suggestion.reason}</p>
-                  <Button className="w-full bg-purple-600 hover:bg-purple-700 text-white">
-                    <Plus className="mr-1 h-4 w-4" />
-                    Adopt this ICP
-                  </Button>
+                <CardContent>
+                  <div className="bg-white rounded-md border border-gray-200 p-4 flex flex-col gap-3">
+                    <div className="space-y-3 max-h-60 overflow-y-auto">
+                      {messages.map((message, index) => (
+                        <div 
+                          key={index}
+                          className={`${
+                            message.role === "ai" 
+                              ? "bg-blue-50 rounded-lg p-3 self-start max-w-[80%]" 
+                              : "bg-gray-100 rounded-lg p-3 self-end max-w-[80%] ml-auto"
+                          }`}
+                        >
+                          <p className="text-sm font-medium">
+                            {message.role === "ai" ? "Profiler" : "You"}
+                          </p>
+                          <p className="text-sm">{message.content}</p>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      <Input 
+                        type="text" 
+                        placeholder="Ask Profiler a question..."
+                        className="flex-1"
+                        value={inputValue}
+                        onChange={(e) => setInputValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleSendMessage();
+                        }}
+                      />
+                      <Button 
+                        className="bg-sales-blue hover:bg-blue-700 flex items-center gap-2"
+                        onClick={handleSendMessage}
+                      >
+                        <Send className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
-            ))}
-          </div>
-        </div>
+            )}
 
-        {/* Recent Activity */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Recent Companies */}
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-semibold text-gray-900">Recent Companies Viewed</h2>
-              <div className="flex gap-2">
-                <Button
-                  variant={viewMode === "grid" ? "default" : "ghost"}
-                  size="icon"
-                  onClick={() => setViewMode("grid")}
-                  className="h-8 w-8"
-                >
-                  <Grid3X3 className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant={viewMode === "table" ? "default" : "ghost"}
-                  size="icon"
-                  onClick={() => setViewMode("table")}
-                  className="h-8 w-8"
-                >
-                  <List className="h-4 w-4" />
+            {/* Recent ICP Activity - Horizontally Scrollable */}
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold text-gray-900">Recent ICP Activity</h2>
+                <Button variant="ghost" className="text-purple-600 hover:text-purple-700">
+                  View All <ArrowRight className="ml-1 h-4 w-4" />
                 </Button>
               </div>
-            </div>
-            
-            <div className="space-y-3">
-              {recentCompanies.map((company) => (
-                <Card key={company.id} className="p-4">
-                  <div className="flex justify-between items-center">
-                    <div className="space-y-1">
-                      <h3 className="font-medium">{company.name}</h3>
-                      <div className="flex items-center gap-3 text-sm text-gray-600">
-                        <span>{company.industry}</span>
-                        <span>{company.location}</span>
-                      </div>
-                      <MatchScoreBar score={company.matchScore} />
-                    </div>
-                    <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
-                      Enrich
+              
+              {recentICPs.length === 0 ? (
+                <Card className="p-8 text-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <Users className="h-12 w-12 text-gray-400" />
+                    <h3 className="font-semibold text-gray-900">No ICPs yet</h3>
+                    <p className="text-gray-600">Create your first one to get started</p>
+                    <Button className="bg-purple-600 hover:bg-purple-700 text-white">
+                      Create First ICP <ArrowRight className="ml-1 h-4 w-4" />
                     </Button>
                   </div>
                 </Card>
-              ))}
+              ) : (
+                <Carousel className="w-full">
+                  <CarouselContent className="-ml-2 md:-ml-4">
+                    {recentICPs.map((icp) => (
+                      <CarouselItem key={icp.id} className="pl-2 md:pl-4 basis-full md:basis-1/2 lg:basis-1/3">
+                        <Card className="hover:shadow-md transition-shadow">
+                          <CardHeader className="pb-3">
+                            <div className="flex justify-between items-start mb-2">
+                              <CardTitle className="text-lg">{icp.name}</CardTitle>
+                              <div className="flex gap-1">
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <Download className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-4 text-sm text-gray-600">
+                              <div className="flex items-center gap-1">
+                                <Building className="h-3 w-3" />
+                                {icp.industry}
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <MapPin className="h-3 w-3" />
+                                {icp.region}
+                              </div>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="space-y-4">
+                            <div>
+                              <p className="text-sm text-gray-500 mb-2">Key Traits</p>
+                              <div className="flex flex-wrap gap-1">
+                                {icp.keyTraits.map((trait, index) => (
+                                  <Badge key={index} variant="secondary" className="text-xs">
+                                    {trait}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-500">Matched Accounts</span>
+                                <span className="font-medium">{icp.matchedAccounts}</span>
+                              </div>
+                              <div className="space-y-1">
+                                <div className="flex justify-between text-sm">
+                                  <span className="text-gray-500">Match Strength</span>
+                                  <span className="font-medium">{icp.matchStrength}%</span>
+                                </div>
+                                <MatchScoreBar score={icp.matchStrength} />
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center gap-1 text-xs text-gray-500">
+                              <Clock className="h-3 w-3" />
+                              Updated {icp.updatedAgo}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </CarouselItem>
+                    ))}
+                  </CarouselContent>
+                  <CarouselPrevious />
+                  <CarouselNext />
+                </Carousel>
+              )}
             </div>
-          </div>
 
-          {/* Recent People */}
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-semibold text-gray-900">Recent People Viewed</h2>
-              <div className="flex gap-2">
-                <Button
-                  variant={viewMode === "grid" ? "default" : "ghost"}
-                  size="icon"
-                  onClick={() => setViewMode("grid")}
-                  className="h-8 w-8"
-                >
-                  <Grid3X3 className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant={viewMode === "table" ? "default" : "ghost"}
-                  size="icon"
-                  onClick={() => setViewMode("table")}
-                  className="h-8 w-8"
-                >
-                  <List className="h-4 w-4" />
-                </Button>
+            {/* Smart Suggestions */}
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-purple-600" />
+                  <h2 className="text-xl font-semibold text-gray-900">Suggested ICPs for You</h2>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {suggestedICPs.map((suggestion) => (
+                  <Card key={suggestion.id} className="hover:shadow-md transition-shadow border-dashed border-purple-200">
+                    <CardHeader className="pb-3">
+                      <div className="flex justify-between items-start">
+                        <CardTitle className="text-lg text-purple-700">{suggestion.name}</CardTitle>
+                        <Badge variant={suggestion.confidence === "High" ? "default" : "secondary"}>
+                          {suggestion.confidence}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-1 text-sm text-gray-600">
+                        <Building className="h-3 w-3" />
+                        {suggestion.industry}
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <p className="text-sm text-gray-600">{suggestion.reason}</p>
+                      <Button className="w-full bg-purple-600 hover:bg-purple-700 text-white">
+                        <Plus className="mr-1 h-4 w-4" />
+                        Adopt this ICP
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             </div>
-            
-            <div className="space-y-3">
-              {recentPeople.map((person) => (
-                <Card key={person.id} className="p-4">
-                  <div className="flex justify-between items-center">
-                    <div className="space-y-1">
-                      <h3 className="font-medium">{person.name}</h3>
-                      <div className="text-sm text-gray-600">
-                        <div>{person.title}</div>
-                        <div>{person.company}</div>
-                      </div>
-                      <MatchScoreBar score={person.matchScore} />
-                    </div>
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="outline">
-                        Enrich
-                      </Button>
-                      <Button size="sm" className="bg-green-600 hover:bg-green-700">
-                        Personalize
-                      </Button>
-                    </div>
+
+            {/* Recent Activity */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Recent Companies */}
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-xl font-semibold text-gray-900">Recent Companies Viewed</h2>
+                  <div className="flex gap-2">
+                    <Button
+                      variant={viewMode === "grid" ? "default" : "ghost"}
+                      size="icon"
+                      onClick={() => setViewMode("grid")}
+                      className="h-8 w-8"
+                    >
+                      <Grid3X3 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant={viewMode === "table" ? "default" : "ghost"}
+                      size="icon"
+                      onClick={() => setViewMode("table")}
+                      className="h-8 w-8"
+                    >
+                      <List className="h-4 w-4" />
+                    </Button>
                   </div>
-                </Card>
-              ))}
+                </div>
+                
+                <div className="space-y-3">
+                  {recentCompanies.map((company) => (
+                    <Card key={company.id} className="p-4">
+                      <div className="flex justify-between items-center">
+                        <div className="space-y-1">
+                          <h3 className="font-medium">{company.name}</h3>
+                          <div className="flex items-center gap-3 text-sm text-gray-600">
+                            <span>{company.industry}</span>
+                            <span>{company.location}</span>
+                          </div>
+                          <MatchScoreBar score={company.matchScore} />
+                        </div>
+                        <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                          Enrich
+                        </Button>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+
+              {/* Recent People */}
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-xl font-semibold text-gray-900">Recent People Viewed</h2>
+                  <div className="flex gap-2">
+                    <Button
+                      variant={viewMode === "grid" ? "default" : "ghost"}
+                      size="icon"
+                      onClick={() => setViewMode("grid")}
+                      className="h-8 w-8"
+                    >
+                      <Grid3X3 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant={viewMode === "table" ? "default" : "ghost"}
+                      size="icon"
+                      onClick={() => setViewMode("table")}
+                      className="h-8 w-8"
+                    >
+                      <List className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                
+                <div className="space-y-3">
+                  {recentPeople.map((person) => (
+                    <Card key={person.id} className="p-4">
+                      <div className="flex justify-between items-center">
+                        <div className="space-y-1">
+                          <h3 className="font-medium">{person.name}</h3>
+                          <div className="text-sm text-gray-600">
+                            <div>{person.title}</div>
+                            <div>{person.company}</div>
+                          </div>
+                          <MatchScoreBar score={person.matchScore} />
+                        </div>
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="outline">
+                            Enrich
+                          </Button>
+                          <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                            Personalize
+                          </Button>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+          </>
+        )}
 
         {/* Original Tabs for Advanced Features */}
         <Tabs defaultValue="profiles" className="w-full">
@@ -517,6 +540,13 @@ const Customers = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Floating Profiler Agent */}
+      <FloatingProfilerAgent 
+        userName="Alex"
+        hasICPs={hasData}
+        currentContext={hasData ? "Viewing Profiler Dashboard" : "First-time Setup"}
+      />
     </Layout>
   );
 };
