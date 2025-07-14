@@ -17,7 +17,6 @@ import ProspectingSection from "@/components/customers/ProspectingSection";
 import DataEnrichmentModal from "@/components/customers/DataEnrichmentModal";
 import LookalikeModal from "@/components/customers/LookalikeModal";
 import MiniContextualReport from "@/components/customers/MiniContextualReport";
-
 const Customers = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isEnrichmentOpen, setIsEnrichmentOpen] = useState(false);
@@ -408,22 +407,7 @@ const Customers = () => {
           </>}
 
         {/* Original Tabs for Advanced Features */}
-        <Tabs defaultValue="icp-profiles">
-          <TabsList>
-            <TabsTrigger value="icp-profiles">ICP Profiles</TabsTrigger>
-            <TabsTrigger value="icp-builder">ICP Builder</TabsTrigger>
-            <TabsTrigger value="icp-insights">ICP Insights</TabsTrigger>
-          </TabsList>
-          <TabsContent value="icp-profiles">
-            <ICPProfilesList />
-          </TabsContent>
-          <TabsContent value="icp-builder">
-            <ICPBuilder />
-          </TabsContent>
-          <TabsContent value="icp-insights">
-            <ICPInsights />
-          </TabsContent>
-        </Tabs>
+        
       </div>
 
       {/* Modals */}
