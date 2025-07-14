@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,7 +25,9 @@ import {
   Grid3X3,
   List,
   Sparkles,
-  TrendingUp
+  TrendingUp,
+  Upload,
+  Search
 } from "lucide-react";
 import { ICPProfilesList } from "@/components/customers/ICPProfilesList";
 import { ICPBuilder } from "@/components/customers/ICPBuilder";
@@ -32,16 +35,22 @@ import { ICPInsights } from "@/components/customers/ICPInsights";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import FloatingProfilerAgent from "@/components/agent-hub/FloatingProfilerAgent";
 import ProfilerEmptyState from "@/components/customers/ProfilerEmptyState";
+import AgentLevelInfo from "@/components/customers/AgentLevelInfo";
+import ProspectingSection from "@/components/customers/ProspectingSection";
+import DataEnrichmentModal from "@/components/customers/DataEnrichmentModal";
+import LookalikeModal from "@/components/customers/LookalikeModal";
 
 const Customers = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isEnrichmentOpen, setIsEnrichmentOpen] = useState(false);
+  const [isLookalikeOpen, setIsLookalikeOpen] = useState(false);
   const [messages, setMessages] = useState([
     { role: "ai", content: "Based on the UK market research, I've identified 3 potential ICP segments. Would you like me to create detailed profiles for each?" }
   ]);
   const [inputValue, setInputValue] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
 
-  // Sample data for the new sections - set to empty for demonstration
+  // Sample data for the new sections - set to populated for demonstration
   const recentICPs = [
     {
       id: 1,
@@ -179,12 +188,22 @@ const Customers = () => {
 
   const handleCreateFirstICP = () => {
     console.log("Creating first ICP");
-    // Logic to open ICP creation modal or navigate to ICP builder
   };
 
   const handleSearchCompanies = () => {
     console.log("Opening company search");
-    // Logic to open company search functionality
+  };
+
+  const handleScoutClick = () => {
+    setIsChatOpen(!isChatOpen);
+  };
+
+  const handleEnrichClick = (companyName?: string) => {
+    setIsEnrichmentOpen(true);
+  };
+
+  const handleLookalikeClick = () => {
+    setIsLookalikeOpen(true);
   };
 
   const hasData = recentICPs.length > 0 || recentCompanies.length > 0 || recentPeople.length > 0;
@@ -196,20 +215,24 @@ const Customers = () => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Profiler</h1>
-            <p className="text-gray-600 mt-1">Discover and manage your ideal customer profiles</p>
+            <p className="text-gray-600 mt-1">Discover and manage your ideal customer profiles with AI-powered insights</p>
           </div>
           <div className="flex gap-3">
             <Button 
               variant="outline" 
               className="flex items-center gap-2"
-              onClick={() => setIsChatOpen(!isChatOpen)}
+              onClick={() => handleEnrichClick()}
             >
-              <MessageSquare className="h-4 w-4" />
-              Chat with Profiler
+              <Upload className="h-4 w-4" />
+              Upload Data
             </Button>
-            <Button variant="outline" className="flex items-center gap-2">
-              <Download className="h-4 w-4" />
-              Export All
+            <Button 
+              variant="outline" 
+              className="flex items-center gap-2"
+              onClick={handleLookalikeClick}
+            >
+              <Search className="h-4 w-4" />
+              Find Lookalikes
             </Button>
             <Button className="bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2">
               <UserPlus className="h-4 w-4" />
@@ -217,6 +240,9 @@ const Customers = () => {
             </Button>
           </div>
         </div>
+
+        {/* Agent-Level Default Info */}
+        <AgentLevelInfo onScoutClick={handleScoutClick} />
 
         {/* Show empty state if no data */}
         {!hasData ? (
@@ -281,6 +307,9 @@ const Customers = () => {
               </Card>
             )}
 
+            {/* Prospecting Section */}
+            <ProspectingSection userName="Alex" />
+
             {/* Recent ICP Activity - Horizontally Scrollable */}
             <div className="space-y-4">
               <div className="flex justify-between items-center">
@@ -290,88 +319,75 @@ const Customers = () => {
                 </Button>
               </div>
               
-              {recentICPs.length === 0 ? (
-                <Card className="p-8 text-center">
-                  <div className="flex flex-col items-center gap-3">
-                    <Users className="h-12 w-12 text-gray-400" />
-                    <h3 className="font-semibold text-gray-900">No ICPs yet</h3>
-                    <p className="text-gray-600">Create your first one to get started</p>
-                    <Button className="bg-purple-600 hover:bg-purple-700 text-white">
-                      Create First ICP <ArrowRight className="ml-1 h-4 w-4" />
-                    </Button>
-                  </div>
-                </Card>
-              ) : (
-                <Carousel className="w-full">
-                  <CarouselContent className="-ml-2 md:-ml-4">
-                    {recentICPs.map((icp) => (
-                      <CarouselItem key={icp.id} className="pl-2 md:pl-4 basis-full md:basis-1/2 lg:basis-1/3">
-                        <Card className="hover:shadow-md transition-shadow">
-                          <CardHeader className="pb-3">
-                            <div className="flex justify-between items-start mb-2">
-                              <CardTitle className="text-lg">{icp.name}</CardTitle>
-                              <div className="flex gap-1">
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                  <Eye className="h-4 w-4" />
-                                </Button>
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                  <Download className="h-4 w-4" />
-                                </Button>
-                              </div>
+              <Carousel className="w-full">
+                <CarouselContent className="-ml-2 md:-ml-4">
+                  {recentICPs.map((icp) => (
+                    <CarouselItem key={icp.id} className="pl-2 md:pl-4 basis-full md:basis-1/2 lg:basis-1/3">
+                      <Card className="hover:shadow-md transition-shadow">
+                        <CardHeader className="pb-3">
+                          <div className="flex justify-between items-start mb-2">
+                            <CardTitle className="text-lg">{icp.name}</CardTitle>
+                            <div className="flex gap-1">
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <Download className="h-4 w-4" />
+                              </Button>
                             </div>
-                            <div className="flex items-center gap-4 text-sm text-gray-600">
-                              <div className="flex items-center gap-1">
-                                <Building className="h-3 w-3" />
-                                {icp.industry}
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <MapPin className="h-3 w-3" />
-                                {icp.region}
-                              </div>
+                          </div>
+                          <div className="flex items-center gap-4 text-sm text-gray-600">
+                            <div className="flex items-center gap-1">
+                              <Building className="h-3 w-3" />
+                              {icp.industry}
                             </div>
-                          </CardHeader>
-                          <CardContent className="space-y-4">
-                            <div>
-                              <p className="text-sm text-gray-500 mb-2">Key Traits</p>
-                              <div className="flex flex-wrap gap-1">
-                                {icp.keyTraits.map((trait, index) => (
-                                  <Badge key={index} variant="secondary" className="text-xs">
-                                    {trait}
-                                  </Badge>
-                                ))}
-                              </div>
+                            <div className="flex items-center gap-1">
+                              <MapPin className="h-3 w-3" />
+                              {icp.region}
                             </div>
-                            
-                            <div className="space-y-2">
+                          </div>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div>
+                            <p className="text-sm text-gray-500 mb-2">Key Traits</p>
+                            <div className="flex flex-wrap gap-1">
+                              {icp.keyTraits.map((trait, index) => (
+                                <Badge key={index} variant="secondary" className="text-xs">
+                                  {trait}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-500">Matched Accounts</span>
+                              <span className="font-medium">{icp.matchedAccounts}</span>
+                            </div>
+                            <div className="space-y-1">
                               <div className="flex justify-between text-sm">
-                                <span className="text-gray-500">Matched Accounts</span>
-                                <span className="font-medium">{icp.matchedAccounts}</span>
+                                <span className="text-gray-500">Match Strength</span>
+                                <span className="font-medium">{icp.matchStrength}%</span>
                               </div>
-                              <div className="space-y-1">
-                                <div className="flex justify-between text-sm">
-                                  <span className="text-gray-500">Match Strength</span>
-                                  <span className="font-medium">{icp.matchStrength}%</span>
-                                </div>
-                                <MatchScoreBar score={icp.matchStrength} />
-                              </div>
+                              <MatchScoreBar score={icp.matchStrength} />
                             </div>
-                            
-                            <div className="flex items-center gap-1 text-xs text-gray-500">
-                              <Clock className="h-3 w-3" />
-                              Updated {icp.updatedAgo}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </CarouselItem>
-                    ))}
-                  </CarouselContent>
-                  <CarouselPrevious />
-                  <CarouselNext />
-                </Carousel>
-              )}
+                          </div>
+                          
+                          <div className="flex items-center gap-1 text-xs text-gray-500">
+                            <Clock className="h-3 w-3" />
+                            Updated {icp.updatedAgo}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
+                <CarouselPrevious />
+                <CarouselNext />
+              </Carousel>
             </div>
 
             {/* Smart Suggestions */}
@@ -448,7 +464,11 @@ const Customers = () => {
                           </div>
                           <MatchScoreBar score={company.matchScore} />
                         </div>
-                        <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                        <Button 
+                          size="sm" 
+                          className="bg-blue-600 hover:bg-blue-700"
+                          onClick={() => handleEnrichClick(company.name)}
+                        >
                           Enrich
                         </Button>
                       </div>
@@ -540,6 +560,17 @@ const Customers = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Modals */}
+      <DataEnrichmentModal 
+        isOpen={isEnrichmentOpen}
+        onClose={() => setIsEnrichmentOpen(false)}
+      />
+      
+      <LookalikeModal 
+        isOpen={isLookalikeOpen}
+        onClose={() => setIsLookalikeOpen(false)}
+      />
 
       {/* Floating Profiler Agent */}
       <FloatingProfilerAgent 
