@@ -38,6 +38,7 @@ import AgentLevelInfo from "@/components/customers/AgentLevelInfo";
 import ProspectingSection from "@/components/customers/ProspectingSection";
 import DataEnrichmentModal from "@/components/customers/DataEnrichmentModal";
 import LookalikeModal from "@/components/customers/LookalikeModal";
+import MiniContextualReport from "@/components/customers/MiniContextualReport";
 
 const Customers = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -231,6 +232,9 @@ const Customers = () => {
             </Button>
           </div>
         </div>
+
+        {/* Mini Contextual Report */}
+        {hasData && <MiniContextualReport />}
 
         {/* Agent-Level Default Info */}
         <AgentLevelInfo onScoutClick={handleScoutClick} />
