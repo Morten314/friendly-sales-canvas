@@ -33,37 +33,7 @@ const AgentLevelInfo = ({
       
 
       {/* Target Regions */}
-      <Card className="relative">
-        <CardHeader className="pb-3">
-          <div className="flex justify-between items-start">
-            <div className="flex items-center gap-2">
-              <MapPin className="h-5 w-5 text-green-600" />
-              <CardTitle className="text-base">Target Regions</CardTitle>
-            </div>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit('regions')}>
-              <Edit className="h-4 w-4" />
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {editingSection === 'regions' ? <div className="space-y-2">
-              <Input placeholder="Add region..." />
-              <div className="flex gap-1">
-                <Button size="sm" onClick={handleSave}>
-                  <Save className="h-3 w-3 mr-1" />
-                  Save
-                </Button>
-                <Button size="sm" variant="outline" onClick={handleCancel}>
-                  <X className="h-3 w-3" />
-                </Button>
-              </div>
-            </div> : <div className="flex flex-wrap gap-1">
-              {agentData.regions.map((region, index) => <Badge key={index} variant="secondary" className="text-xs">
-                  {region}
-                </Badge>)}
-            </div>}
-        </CardContent>
-      </Card>
+      
 
       {/* Company Size */}
       
