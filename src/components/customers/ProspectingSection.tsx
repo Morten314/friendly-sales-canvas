@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -37,7 +36,7 @@ const ProspectingSection = ({
   const companySizes = ["10-50", "51-100", "101-200", "201-500", "501-1000", "1000+"];
   const locations = ["United States", "United Kingdom", "Canada", "Germany", "France", "Australia"];
   const industries = ["Technology", "Healthcare", "Finance", "Manufacturing", "Retail", "Education"];
-  const jobFunctions = ["Sales", "Marketing", "Operations", "Engineering", "HR", "Finance"];
+  const jobFunctions = ["Sales", "Marketing", "Operations", "Engineering", "HR", "Finance", "IT"];
 
   const handleSendMessage = () => {
     if (!inputValue.trim()) return;
