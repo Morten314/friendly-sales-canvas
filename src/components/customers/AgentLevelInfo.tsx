@@ -39,10 +39,7 @@ const AgentLevelInfo = ({
       
 
       {/* Job Titles */}
-      <Card className="relative">
-        
-        
-      </Card>
+      
     </div>;
 };
 export default AgentLevelInfo;
