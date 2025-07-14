@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -254,7 +255,7 @@ const ProspectingSection = ({
           <Bot className="h-6 w-6 text-white" />
         </div>
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Prospecting</h2>
+          <h2 className="text-2xl font-bold text-gray-900">Find & Enrich</h2>
           <p className="text-gray-600">Agent-led conversation to find your ideal prospects</p>
         </div>
       </div>
