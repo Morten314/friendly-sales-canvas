@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Bot, Send, Building, Users, MapPin, Briefcase, Search, Download, Save, Share, TrendingUp, ExternalLink, Phone, Mail, X, Eye } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Bot, Send, Building, Users, MapPin, Briefcase, Search, Download, Save, Share, TrendingUp, ExternalLink, Phone, Mail, X, Eye, RotateCcw } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -139,6 +140,25 @@ const ProspectingSection = ({
 
   const removeFilter = (index: number) => {
     setFilters(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const resetChat = () => {
+    setMessages([{
+      role: "scout",
+      content: `Hi ${userName} 👋, I'm your Profiler Assistant. Let's build your perfect prospect list. Would you like to explore companies or individual contacts first?`
+    }]);
+    setInputValue("");
+    setFilters([]);
+    setShowResults(false);
+    setCurrentStep("choice");
+    setSearchType(null);
+    setSelectedFilters({
+      companySize: "",
+      location: "",
+      industry: "",
+      jobFunction: "",
+      keywords: ""
+    });
   };
 
   const getFilterOptions = () => {
@@ -339,6 +359,19 @@ const ProspectingSection = ({
                   Skip this step
                 </Button>
               )}
+
+              {/* Reset Chat Button */}
+              <div className="flex justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={resetChat}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <RotateCcw className="h-4 w-4 mr-1" />
+                  Reset Chat
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -367,12 +400,12 @@ const ProspectingSection = ({
         </div>
       </div>
 
-      {/* Enhanced Results Section */}
-      {showResults && (
-        <Card>
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <CardTitle>Prospect Results</CardTitle>
+      {/* Enhanced Results Modal */}
+      <Dialog open={showResults} onOpenChange={setShowResults}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex justify-between items-center">
+              <span>Prospect Results</span>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm">
                   <Download className="h-4 w-4 mr-1" />
@@ -387,171 +420,170 @@ const ProspectingSection = ({
                   Share
                 </Button>
               </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue={searchType || "companies"} className="w-full">
-              <TabsList>
-                <TabsTrigger value="companies">
-                  Companies ({companyResults.length})
-                </TabsTrigger>
-                <TabsTrigger value="people">
-                  People ({peopleResults.length})
-                </TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="companies">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Company Name</TableHead>
-                      <TableHead>Industry</TableHead>
-                      <TableHead>Location</TableHead>
-                      <TableHead>Company Size</TableHead>
-                      <TableHead>LinkedIn</TableHead>
-                      <TableHead>Intent Signals</TableHead>
-                      <TableHead>Pain Points</TableHead>
-                      <TableHead>Last Activity</TableHead>
-                      <TableHead>Actions</TableHead>
+            </DialogTitle>
+          </DialogHeader>
+          
+          <Tabs defaultValue={searchType || "companies"} className="w-full">
+            <TabsList>
+              <TabsTrigger value="companies">
+                Companies ({companyResults.length})
+              </TabsTrigger>
+              <TabsTrigger value="people">
+                People ({peopleResults.length})
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="companies">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Company Name</TableHead>
+                    <TableHead>Industry</TableHead>
+                    <TableHead>Location</TableHead>
+                    <TableHead>Company Size</TableHead>
+                    <TableHead>LinkedIn</TableHead>
+                    <TableHead>Intent Signals</TableHead>
+                    <TableHead>Pain Points</TableHead>
+                    <TableHead>Last Activity</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {companyResults.map((company, index) => (
+                    <TableRow key={index} className="hover:bg-gray-50">
+                      <TableCell className="font-medium">{company.name}</TableCell>
+                      <TableCell>{company.industry}</TableCell>
+                      <TableCell>{company.location}</TableCell>
+                      <TableCell>{company.size}</TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => window.open(company.linkedinUrl, '_blank')}
+                          className="text-blue-600 hover:text-blue-800"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={company.intentSignals === "High" ? "default" : "secondary"}>
+                          {company.intentSignals}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {company.painPoints.map((point, i) => (
+                            <Badge key={i} variant="outline" className="text-xs">
+                              {point}
+                            </Badge>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm text-gray-600">
+                        {company.lastActivity}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <Button size="sm" variant="outline">
+                            <Eye className="h-3 w-3 mr-1" />
+                            View
+                          </Button>
+                          <Button size="sm" variant="outline">
+                            <Save className="h-3 w-3 mr-1" />
+                            Save
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {companyResults.map((company, index) => (
-                      <TableRow key={index} className="hover:bg-gray-50">
-                        <TableCell className="font-medium">{company.name}</TableCell>
-                        <TableCell>{company.industry}</TableCell>
-                        <TableCell>{company.location}</TableCell>
-                        <TableCell>{company.size}</TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => window.open(company.linkedinUrl, '_blank')}
-                            className="text-blue-600 hover:text-blue-800"
-                          >
-                            <ExternalLink className="h-4 w-4" />
+                  ))}
+                </TableBody>
+              </Table>
+            </TabsContent>
+            
+            <TabsContent value="people">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Full Name</TableHead>
+                    <TableHead>Job Title</TableHead>
+                    <TableHead>Company</TableHead>
+                    <TableHead>Industry</TableHead>
+                    <TableHead>Location</TableHead>
+                    <TableHead>Company Size</TableHead>
+                    <TableHead>LinkedIn Profile</TableHead>
+                    <TableHead>Company LinkedIn</TableHead>
+                    <TableHead>Intent Signals</TableHead>
+                    <TableHead>Pain Points</TableHead>
+                    <TableHead>Last Activity</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {peopleResults.map((person, index) => (
+                    <TableRow key={index} className="hover:bg-gray-50">
+                      <TableCell className="font-medium">{person.name}</TableCell>
+                      <TableCell>{person.title}</TableCell>
+                      <TableCell>{person.company}</TableCell>
+                      <TableCell>{person.industry}</TableCell>
+                      <TableCell>{person.location}</TableCell>
+                      <TableCell>{person.companySize}</TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => window.open(person.linkedinUrl, '_blank')}
+                          className="text-blue-600 hover:text-blue-800"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => window.open(person.companyLinkedinUrl, '_blank')}
+                          className="text-blue-600 hover:text-blue-800"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={person.intentSignals === "High" ? "default" : "secondary"}>
+                          {person.intentSignals}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {person.painPoints.map((point, i) => (
+                            <Badge key={i} variant="outline" className="text-xs">
+                              {point}
+                            </Badge>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm text-gray-600">
+                        {person.lastActivity}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <Button size="sm" variant="outline">
+                            <Eye className="h-3 w-3 mr-1" />
+                            View
                           </Button>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={company.intentSignals === "High" ? "default" : "secondary"}>
-                            {company.intentSignals}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-wrap gap-1">
-                            {company.painPoints.map((point, i) => (
-                              <Badge key={i} variant="outline" className="text-xs">
-                                {point}
-                              </Badge>
-                            ))}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-sm text-gray-600">
-                          {company.lastActivity}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button size="sm" variant="outline">
-                              <Eye className="h-3 w-3 mr-1" />
-                              View
-                            </Button>
-                            <Button size="sm" variant="outline">
-                              <Save className="h-3 w-3 mr-1" />
-                              Save
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TabsContent>
-              
-              <TabsContent value="people">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Full Name</TableHead>
-                      <TableHead>Job Title</TableHead>
-                      <TableHead>Company</TableHead>
-                      <TableHead>Industry</TableHead>
-                      <TableHead>Location</TableHead>
-                      <TableHead>Company Size</TableHead>
-                      <TableHead>LinkedIn Profile</TableHead>
-                      <TableHead>Company LinkedIn</TableHead>
-                      <TableHead>Intent Signals</TableHead>
-                      <TableHead>Pain Points</TableHead>
-                      <TableHead>Last Activity</TableHead>
-                      <TableHead>Actions</TableHead>
+                          <Button size="sm" variant="outline">
+                            <Save className="h-3 w-3 mr-1" />
+                            Save
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {peopleResults.map((person, index) => (
-                      <TableRow key={index} className="hover:bg-gray-50">
-                        <TableCell className="font-medium">{person.name}</TableCell>
-                        <TableCell>{person.title}</TableCell>
-                        <TableCell>{person.company}</TableCell>
-                        <TableCell>{person.industry}</TableCell>
-                        <TableCell>{person.location}</TableCell>
-                        <TableCell>{person.companySize}</TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => window.open(person.linkedinUrl, '_blank')}
-                            className="text-blue-600 hover:text-blue-800"
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => window.open(person.companyLinkedinUrl, '_blank')}
-                            className="text-blue-600 hover:text-blue-800"
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={person.intentSignals === "High" ? "default" : "secondary"}>
-                            {person.intentSignals}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-wrap gap-1">
-                            {person.painPoints.map((point, i) => (
-                              <Badge key={i} variant="outline" className="text-xs">
-                                {point}
-                              </Badge>
-                            ))}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-sm text-gray-600">
-                          {person.lastActivity}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button size="sm" variant="outline">
-                              <Eye className="h-3 w-3 mr-1" />
-                              View
-                            </Button>
-                            <Button size="sm" variant="outline">
-                              <Save className="h-3 w-3 mr-1" />
-                              Save
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
-      )}
+                  ))}
+                </TableBody>
+              </Table>
+            </TabsContent>
+          </Tabs>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
