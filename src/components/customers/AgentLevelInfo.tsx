@@ -56,27 +56,7 @@ const AgentLevelInfo = ({
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-2">
-          {editingSection === 'jobTitles' ? <div className="space-y-2">
-              <Input placeholder="Add job title..." />
-              <div className="flex gap-1">
-                <Button size="sm" onClick={handleSave}>
-                  <Save className="h-3 w-3 mr-1" />
-                  Save
-                </Button>
-                <Button size="sm" variant="outline" onClick={handleCancel}>
-                  <X className="h-3 w-3" />
-                </Button>
-              </div>
-            </div> : <div className="flex flex-wrap gap-1">
-              {agentData.jobTitles.slice(0, 2).map((title, index) => <Badge key={index} variant="secondary" className="text-xs">
-                  {title}
-                </Badge>)}
-              {agentData.jobTitles.length > 2 && <Badge variant="outline" className="text-xs">
-                  +{agentData.jobTitles.length - 2} more
-                </Badge>}
-            </div>}
-        </CardContent>
+        
       </Card>
     </div>;
 };
