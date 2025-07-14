@@ -27,7 +27,7 @@ const Customers = () => {
     content: "Based on the UK market research, I've identified 3 potential ICP segments. Would you like me to create detailed profiles for each?"
   }]);
   const [inputValue, setInputValue] = useState("");
-  const [viewMode, setViewMode<"grid" | "table">("grid");
+  const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
 
   // Sample data for the new sections - set to populated for demonstration
   const recentICPs = [{
