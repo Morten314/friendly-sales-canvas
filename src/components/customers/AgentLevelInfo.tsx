@@ -66,45 +66,7 @@ const AgentLevelInfo = ({
       </Card>
 
       {/* Company Size */}
-      <Card className="relative">
-        <CardHeader className="pb-3">
-          <div className="flex justify-between items-start">
-            <div className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-purple-600" />
-              <CardTitle className="text-base">Company Size</CardTitle>
-            </div>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit('companySize')}>
-              <Edit className="h-4 w-4" />
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {editingSection === 'companySize' ? <div className="space-y-2">
-              <Select>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select company size" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1-50">1-50 Employees</SelectItem>
-                  <SelectItem value="50-500">50-500 Employees</SelectItem>
-                  <SelectItem value="500-5000">500-5000 Employees</SelectItem>
-                  <SelectItem value="5000+">5000+ Employees</SelectItem>
-                </SelectContent>
-              </Select>
-              <div className="flex gap-1">
-                <Button size="sm" onClick={handleSave}>
-                  <Save className="h-3 w-3 mr-1" />
-                  Save
-                </Button>
-                <Button size="sm" variant="outline" onClick={handleCancel}>
-                  <X className="h-3 w-3" />
-                </Button>
-              </div>
-            </div> : <Badge variant="outline" className="text-sm">
-              {agentData.companySize}
-            </Badge>}
-        </CardContent>
-      </Card>
+      
 
       {/* Job Titles */}
       <Card className="relative">
