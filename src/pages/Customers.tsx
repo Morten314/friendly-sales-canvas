@@ -17,6 +17,7 @@ import ProspectingSection from "@/components/customers/ProspectingSection";
 import DataEnrichmentModal from "@/components/customers/DataEnrichmentModal";
 import LookalikeModal from "@/components/customers/LookalikeModal";
 import MiniContextualReport from "@/components/customers/MiniContextualReport";
+
 const Customers = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isEnrichmentOpen, setIsEnrichmentOpen] = useState(false);
@@ -57,6 +58,7 @@ const Customers = () => {
     matchedAccounts: 23,
     matchStrength: 68
   }];
+
   const suggestedICPs = [{
     id: 1,
     name: "UK E-commerce Growth Manager",
@@ -76,44 +78,53 @@ const Customers = () => {
     reason: "Based on recent market trends",
     confidence: "High"
   }];
+
   const recentCompanies = [{
     id: 1,
-    name: "TechFlow Solutions",
+    name: "Sarah Mitchell",
+    title: "Operations Director",
+    company: "TechFlow Solutions",
     industry: "Fintech",
     matchScore: 85,
     location: "London, UK"
   }, {
     id: 2,
-    name: "HealthStream Ltd",
+    name: "James Wilson",
+    title: "IT Manager", 
+    company: "HealthStream Ltd",
     industry: "Healthcare",
     matchScore: 72,
     location: "Manchester, UK"
   }, {
     id: 3,
-    name: "DataVault Systems",
+    name: "Emma Thompson",
+    title: "Founder & CEO",
+    company: "DataVault Systems",
     industry: "SaaS",
     matchScore: 68,
     location: "Edinburgh, UK"
   }];
+
   const recentPeople = [{
     id: 1,
-    name: "Sarah Mitchell",
-    title: "Operations Director",
-    company: "TechFlow Solutions",
-    matchScore: 85
+    name: "Michael Chen",
+    title: "VP of Sales",
+    company: "CloudTech Solutions",
+    matchScore: 89
   }, {
     id: 2,
-    name: "James Wilson",
-    title: "IT Manager",
-    company: "HealthStream Ltd",
-    matchScore: 72
+    name: "Lisa Rodriguez",  
+    title: "Head of Marketing",
+    company: "InnovatePay Ltd",
+    matchScore: 76
   }, {
     id: 3,
-    name: "Emma Thompson",
-    title: "Founder & CEO",
-    company: "DataVault Systems",
-    matchScore: 68
+    name: "David Kumar",
+    title: "CTO",
+    company: "SecureData Inc",
+    matchScore: 73
   }];
+
   const handleSendMessage = () => {
     if (!inputValue.trim()) return;
     setMessages([...messages, {
@@ -221,9 +232,6 @@ const Customers = () => {
             {/* Prospecting Section */}
             <ProspectingSection userName="Alex" />
 
-            {/* Recent ICP Activity - Horizontally Scrollable */}
-            
-
             {/* Smart Suggestions */}
             <div className="space-y-4">
               <div className="flex justify-between items-center">
@@ -278,8 +286,10 @@ const Customers = () => {
                   {recentCompanies.map(company => <Card key={company.id} className="p-4">
                       <div className="flex justify-between items-center">
                         <div className="space-y-1">
-                          <h3 className="font-medium">{company.name}</h3>
+                          <h3 className="font-medium text-lg">{company.name}</h3>
+                          <div className="text-sm text-gray-600">{company.title}</div>
                           <div className="flex items-center gap-3 text-sm text-gray-600">
+                            <span>{company.company}</span>
                             <span>{company.industry}</span>
                             <span>{company.location}</span>
                           </div>
@@ -311,11 +321,9 @@ const Customers = () => {
                   {recentPeople.map(person => <Card key={person.id} className="p-4">
                       <div className="flex justify-between items-center">
                         <div className="space-y-1">
-                          <h3 className="font-medium">{person.name}</h3>
-                          <div className="text-sm text-gray-600">
-                            <div>{person.title}</div>
-                            <div>{person.company}</div>
-                          </div>
+                          <h3 className="font-medium text-lg">{person.name}</h3>
+                          <div className="text-sm text-gray-600">{person.title}</div>
+                          <div className="text-sm text-gray-600">{person.company}</div>
                           <MatchScoreBar score={person.matchScore} />
                         </div>
                         <div className="flex gap-2">
@@ -334,7 +342,29 @@ const Customers = () => {
           </>}
 
         {/* Original Tabs for Advanced Features */}
-        
+        <Tabs defaultValue="icp-profiles">
+          <TabsList>
+            <TabsTrigger value="icp-profiles">ICP Profiles</TabsTrigger>
+            <TabsTrigger value="icp-builder">ICP Builder</TabsTrigger>
+            <TabsTrigger value="icp-insights">ICP Insights</TabsTrigger>
+          </TabsList>
+          <TabsContent value="icp-profiles" className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold text-gray-900">Your ICP Profiles</h2>
+              <Button className="bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2">
+                <UserPlus className="h-4 w-4" />
+                Create New ICP
+              </Button>
+            </div>
+            <ICPProfilesList />
+          </TabsContent>
+          <TabsContent value="icp-builder">
+            <ICPBuilder />
+          </TabsContent>
+          <TabsContent value="icp-insights">
+            <ICPInsights />
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Modals */}
@@ -346,4 +376,5 @@ const Customers = () => {
       <FloatingProfilerAgent userName="Alex" hasICPs={hasData} currentContext={hasData ? "Viewing Profiler Dashboard" : "First-time Setup"} />
     </Layout>;
 };
+
 export default Customers;
