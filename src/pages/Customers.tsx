@@ -17,6 +17,7 @@ import ProspectingSection from "@/components/customers/ProspectingSection";
 import DataEnrichmentModal from "@/components/customers/DataEnrichmentModal";
 import LookalikeModal from "@/components/customers/LookalikeModal";
 import MiniContextualReport from "@/components/customers/MiniContextualReport";
+
 const Customers = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isEnrichmentOpen, setIsEnrichmentOpen] = useState(false);
@@ -26,7 +27,7 @@ const Customers = () => {
     content: "Based on the UK market research, I've identified 3 potential ICP segments. Would you like me to create detailed profiles for each?"
   }]);
   const [inputValue, setInputValue] = useState("");
-  const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
+  const [viewMode, setViewMode<"grid" | "table">("grid");
 
   // Sample data for the new sections - set to populated for demonstration
   const recentICPs = [{
@@ -157,7 +158,7 @@ const Customers = () => {
   };
   const hasData = recentICPs.length > 0 || recentCompanies.length > 0 || recentPeople.length > 0;
   return <Layout>
-      <div className="animate-fade-in space-y-8">
+      <div className="animate-fade-in space-y-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
@@ -407,7 +408,22 @@ const Customers = () => {
           </>}
 
         {/* Original Tabs for Advanced Features */}
-        
+        <Tabs defaultValue="icp-profiles">
+          <TabsList>
+            <TabsTrigger value="icp-profiles">ICP Profiles</TabsTrigger>
+            <TabsTrigger value="icp-builder">ICP Builder</TabsTrigger>
+            <TabsTrigger value="icp-insights">ICP Insights</TabsTrigger>
+          </TabsList>
+          <TabsContent value="icp-profiles">
+            <ICPProfilesList />
+          </TabsContent>
+          <TabsContent value="icp-builder">
+            <ICPBuilder />
+          </TabsContent>
+          <TabsContent value="icp-insights">
+            <ICPInsights />
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Modals */}
