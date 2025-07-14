@@ -40,22 +40,7 @@ const AgentLevelInfo = ({
 
       {/* Job Titles */}
       <Card className="relative">
-        <CardHeader className="pb-3">
-          <div className="flex justify-between items-start">
-            <div className="flex items-center gap-2">
-              <Briefcase className="h-5 w-5 text-orange-600" />
-              <CardTitle className="text-base">Job Titles</CardTitle>
-            </div>
-            <div className="flex gap-1">
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onScoutClick}>
-                <Bot className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit('jobTitles')}>
-                <Edit className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
+        
         
       </Card>
     </div>;
