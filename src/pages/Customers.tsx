@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -225,14 +224,6 @@ const Customers = () => {
             >
               <Upload className="h-4 w-4" />
               Upload Data
-            </Button>
-            <Button 
-              variant="outline" 
-              className="flex items-center gap-2"
-              onClick={handleLookalikeClick}
-            >
-              <Search className="h-4 w-4" />
-              Find Lookalikes
             </Button>
             <Button className="bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2">
               <UserPlus className="h-4 w-4" />
