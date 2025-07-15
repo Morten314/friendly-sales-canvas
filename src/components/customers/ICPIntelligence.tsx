@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -5,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Edit, TrendingUp, Clock, Target, DollarSign } from "lucide-react";
 import MiniLineChart from "@/components/MiniLineChart";
 import MiniPieChart from "@/components/MiniPieChart";
+import { ICPSummaryOpportunity } from "./ICPSummaryOpportunity";
 
 export const ICPIntelligence = () => {
   const [isEditing, setIsEditing] = useState(false);
@@ -21,6 +23,9 @@ export const ICPIntelligence = () => {
         <h1 className="text-2xl font-bold text-gray-900">ICP Intelligence</h1>
         <p className="text-gray-600">Define and refine your Ideal Customer Profile with agent-guided research.</p>
       </div>
+
+      {/* ICP Summary & Market Opportunity Section */}
+      <ICPSummaryOpportunity />
 
       {/* Agent-Level Contextual Mini Report */}
       <Card className="border-purple-200 bg-gradient-to-br from-purple-50/40 to-blue-50/40">
