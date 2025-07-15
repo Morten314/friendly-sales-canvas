@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,72 +6,72 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Edit, Save, MessageSquare, Target, Globe, Settings, DollarSign, TrendingUp, MapPin, Lightbulb, Copy, MoreHorizontal, ChevronDown, Bot } from "lucide-react";
 import MiniLineChart from "@/components/MiniLineChart";
 import MiniPieChart from "@/components/MiniPieChart";
-
 export const ICPSummaryOpportunity = () => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [editingSection, setEditingSection] = useState<string | null>(null);
   const [showProfilerChat, setShowProfilerChat] = useState(false);
   const [editHistory, setEditHistory] = useState<string[]>([]);
-
   const handleEdit = (section: string) => {
     setEditingSection(section);
     if (!editHistory.includes(section)) {
       setEditHistory([...editHistory, section]);
     }
   };
-
   const handleSave = (section: string) => {
     setEditingSection(null);
     setShowProfilerChat(true);
   };
-
   const handleCopyInsight = (text: string) => {
     navigator.clipboard.writeText(text);
   };
-
-  const marketSegmentationData = [
-    { name: "Compliance", value: 35, color: "#0064FF" },
-    { name: "Risk Analytics", value: 28, color: "#00A3FF" },
-    { name: "Cross-border", value: 22, color: "#66C2FF" },
-    { name: "AI Onboarding", value: 15, color: "#B3DBFF" }
-  ];
-
-  const tamGrowthData = [
-    { name: "2021", value: 11.8 },
-    { name: "2022", value: 12.6 },
-    { name: "2023", value: 13.4 },
-    { name: "2024", value: 14.2 }
-  ];
-
+  const marketSegmentationData = [{
+    name: "Compliance",
+    value: 35,
+    color: "#0064FF"
+  }, {
+    name: "Risk Analytics",
+    value: 28,
+    color: "#00A3FF"
+  }, {
+    name: "Cross-border",
+    value: 22,
+    color: "#66C2FF"
+  }, {
+    name: "AI Onboarding",
+    value: 15,
+    color: "#B3DBFF"
+  }];
+  const tamGrowthData = [{
+    name: "2021",
+    value: 11.8
+  }, {
+    name: "2022",
+    value: 12.6
+  }, {
+    name: "2023",
+    value: 13.4
+  }, {
+    name: "2024",
+    value: 14.2
+  }];
   if (!isExpanded) {
     // Collapsed Default View
-    return (
-      <div className="space-y-6">
+    return <div className="space-y-6">
         {/* Category Header */}
         <div className="bg-gray-50 rounded-lg border border-gray-200 p-6 relative max-h-96">
           <div className="flex items-start justify-between mb-4">
             <div>
-              <h2 className="text-xl font-semibold text-gray-900 mb-2">
-                Category A: ICP Summary & Size & Opportunity
-              </h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">ICP Summary & Size & Opportunity</h2>
               <p className="text-sm text-gray-600">
                 High-level snapshot of market fit & revenue potential
               </p>
             </div>
             <div className="flex items-center gap-2">
-              {editHistory.length > 0 && (
-                <Button variant="ghost" size="sm" className="text-xs text-gray-500">
+              {editHistory.length > 0 && <Button variant="ghost" size="sm" className="text-xs text-gray-500">
                   <MoreHorizontal className="h-3 w-3 mr-1" />
                   Edit History
-                </Button>
-              )}
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => handleEdit("summary")}
-                className="text-gray-600 hover:text-gray-800 hover:bg-gray-100" 
-                title="Edit ICP"
-              >
+                </Button>}
+              <Button variant="ghost" size="sm" onClick={() => handleEdit("summary")} className="text-gray-600 hover:text-gray-800 hover:bg-gray-100" title="Edit ICP">
                 <Edit className="h-4 w-4" />
               </Button>
             </div>
@@ -130,12 +129,7 @@ export const ICPSummaryOpportunity = () => {
 
             {/* Actions */}
             <div className="flex items-center justify-between pt-2">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setIsExpanded(true)}
-                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 flex items-center gap-1"
-              >
+              <Button variant="ghost" size="sm" onClick={() => setIsExpanded(true)} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 flex items-center gap-1">
                 Read More
                 <ChevronDown className="h-4 w-4" />
               </Button>
@@ -143,20 +137,13 @@ export const ICPSummaryOpportunity = () => {
           </div>
 
           {/* Floating Profiler Chat Icon */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowProfilerChat(true)}
-            className="absolute bottom-4 right-4 w-10 h-10 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg"
-            title="Explore More with Profiler"
-          >
+          <Button variant="ghost" size="sm" onClick={() => setShowProfilerChat(true)} className="absolute bottom-4 right-4 w-10 h-10 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg" title="Explore More with Profiler">
             <Bot className="h-5 w-5" />
           </Button>
         </div>
 
         {/* Profiler Chat Panel */}
-        {showProfilerChat && (
-          <Card className="border-blue-200 bg-blue-50/40">
+        {showProfilerChat && <Card className="border-blue-200 bg-blue-50/40">
             <CardContent className="p-4">
               <div className="flex items-start gap-3">
                 <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
@@ -186,15 +173,12 @@ export const ICPSummaryOpportunity = () => {
                 </Button>
               </div>
             </CardContent>
-          </Card>
-        )}
-      </div>
-    );
+          </Card>}
+      </div>;
   }
 
   // Expanded Full Report View
-  return (
-    <div className="space-y-6">
+  return <div className="space-y-6">
       {/* Category Header */}
       <div className="bg-gray-50 rounded-lg border border-gray-200 p-6">
         <div className="flex items-start justify-between mb-4">
@@ -207,19 +191,11 @@ export const ICPSummaryOpportunity = () => {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            {editHistory.length > 0 && (
-              <Button variant="ghost" size="sm" className="text-xs text-gray-500">
+            {editHistory.length > 0 && <Button variant="ghost" size="sm" className="text-xs text-gray-500">
                 <MoreHorizontal className="h-3 w-3 mr-1" />
                 Edit History
-              </Button>
-            )}
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => setIsExpanded(false)}
-              className="text-gray-600 hover:text-gray-800 hover:bg-gray-100" 
-              title="Collapse View"
-            >
+              </Button>}
+            <Button variant="ghost" size="sm" onClick={() => setIsExpanded(false)} className="text-gray-600 hover:text-gray-800 hover:bg-gray-100" title="Collapse View">
               Collapse
             </Button>
             <Button variant="ghost" size="sm" onClick={() => setShowProfilerChat(true)} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50" title="Explore More with Profiler">
@@ -239,13 +215,8 @@ export const ICPSummaryOpportunity = () => {
               </div>
             </AccordionTrigger>
             <AccordionContent className="px-4 pb-4">
-              {editingSection === "icp-summary" ? (
-                <div className="space-y-3">
-                  <textarea 
-                    className="w-full p-3 border rounded-md resize-none" 
-                    rows={4}
-                    defaultValue="🎯 Targeting mid-sized B2B FinTech companies (200–500 employees)&#10;🌐 Primary region: North America&#10;⚙️ Top use cases: Compliance automation, Risk analytics"
-                  />
+              {editingSection === "icp-summary" ? <div className="space-y-3">
+                  <textarea className="w-full p-3 border rounded-md resize-none" rows={4} defaultValue="🎯 Targeting mid-sized B2B FinTech companies (200–500 employees)&#10;🌐 Primary region: North America&#10;⚙️ Top use cases: Compliance automation, Risk analytics" />
                   <div className="flex gap-2">
                     <Button size="sm" onClick={() => handleSave("icp-summary")} className="bg-blue-600 hover:bg-blue-700">
                       <Save className="h-4 w-4 mr-1" />
@@ -255,9 +226,7 @@ export const ICPSummaryOpportunity = () => {
                       Cancel
                     </Button>
                   </div>
-                </div>
-              ) : (
-                <div className="space-y-2">
+                </div> : <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="space-y-2">
                       <p className="flex items-center gap-2 text-sm">
@@ -277,8 +246,7 @@ export const ICPSummaryOpportunity = () => {
                       <Edit className="h-4 w-4" />
                     </Button>
                   </div>
-                </div>
-              )}
+                </div>}
             </AccordionContent>
           </AccordionItem>
 
@@ -322,10 +290,7 @@ export const ICPSummaryOpportunity = () => {
                   </Button>
                 </div>
                 <div className="flex justify-center">
-                  <MiniPieChart 
-                    data={marketSegmentationData}
-                    title="Market Segmentation"
-                  />
+                  <MiniPieChart data={marketSegmentationData} title="Market Segmentation" />
                 </div>
               </div>
             </AccordionContent>
@@ -334,8 +299,7 @@ export const ICPSummaryOpportunity = () => {
       </div>
 
       {/* Profiler Chat Panel */}
-      {showProfilerChat && (
-        <Card className="border-blue-200 bg-blue-50/40">
+      {showProfilerChat && <Card className="border-blue-200 bg-blue-50/40">
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
@@ -365,8 +329,6 @@ export const ICPSummaryOpportunity = () => {
               </Button>
             </div>
           </CardContent>
-        </Card>
-      )}
-    </div>
-  );
+        </Card>}
+    </div>;
 };
