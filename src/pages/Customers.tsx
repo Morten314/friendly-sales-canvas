@@ -6,9 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { User, Users, Filter, UserPlus, Download, MessageSquare, Send, Search, Database } from "lucide-react";
-import { ICPProfilesList } from "@/components/customers/ICPProfilesList";
-import { ICPBuilder } from "@/components/customers/ICPBuilder";
-import { ICPInsights } from "@/components/customers/ICPInsights";
+import { ICPIntelligence } from "@/components/customers/ICPIntelligence";
 
 const Customers = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -137,9 +135,7 @@ const Customers = () => {
             </TabsList>
             
             <TabsContent value="icp-intelligence" className="h-full w-full m-0">
-              <div className="h-full w-full">
-                <ICPProfilesList />
-              </div>
+              <ICPIntelligence />
             </TabsContent>
             
             <TabsContent value="find-enrich" className="h-full w-full m-0">
