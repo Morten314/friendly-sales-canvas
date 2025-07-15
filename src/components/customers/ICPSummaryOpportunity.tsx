@@ -158,12 +158,7 @@ export const ICPSummaryOpportunity = () => {
 
           {/* Size & Opportunity Accordion */}
           <AccordionItem value="size-opportunity" className="bg-white rounded-lg border">
-            <AccordionTrigger className="px-4 py-3 hover:no-underline">
-              <div className="flex items-center gap-2">
-                <DollarSign className="h-4 w-4 text-green-600" />
-                <span className="font-medium">Size & Opportunity</span>
-              </div>
-            </AccordionTrigger>
+            
             <AccordionContent className="px-4 pb-4">
               <div className="space-y-4">
                 <div className="flex gap-6">
