@@ -1,11 +1,10 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Edit, TrendingUp, Clock, Target, DollarSign } from "lucide-react";
-import { MiniLineChart } from "@/components/MiniLineChart";
-import { MiniPieChart } from "@/components/MiniPieChart";
+import MiniLineChart from "@/components/MiniLineChart";
+import MiniPieChart from "@/components/MiniPieChart";
 
 export const ICPIntelligence = () => {
   const [isEditing, setIsEditing] = useState(false);
@@ -69,11 +68,12 @@ export const ICPIntelligence = () => {
               <div className="mt-2">
                 <MiniLineChart 
                   data={[
-                    { value: 12.1 },
-                    { value: 12.8 },
-                    { value: 13.5 },
-                    { value: 14.2 }
+                    { name: "2021", value: 12.1 },
+                    { name: "2022", value: 12.8 },
+                    { name: "2023", value: 13.5 },
+                    { name: "2024", value: 14.2 }
                   ]}
+                  title=""
                   color="#059669"
                 />
               </div>
@@ -95,6 +95,7 @@ export const ICPIntelligence = () => {
                     { name: "Integration", value: 45, color: "#ea580c" },
                     { name: "Other", value: 55, color: "#fed7aa" }
                   ]}
+                  title=""
                 />
               </div>
             </div>
