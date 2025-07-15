@@ -17,6 +17,7 @@ import ProspectingSection from "@/components/customers/ProspectingSection";
 import DataEnrichmentModal from "@/components/customers/DataEnrichmentModal";
 import LookalikeModal from "@/components/customers/LookalikeModal";
 import MiniContextualReport from "@/components/customers/MiniContextualReport";
+import ICPIntelligence from "@/components/customers/ICPIntelligence";
 
 const Customers = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -341,13 +342,17 @@ const Customers = () => {
             </div>
           </>}
 
-        {/* Original Tabs for Advanced Features */}
-        <Tabs defaultValue="icp-profiles">
+        {/* Tabs for Advanced Features */}
+        <Tabs defaultValue="icp-intelligence">
           <TabsList>
+            <TabsTrigger value="icp-intelligence">ICP Intelligence</TabsTrigger>
             <TabsTrigger value="icp-profiles">ICP Profiles</TabsTrigger>
             <TabsTrigger value="icp-builder">ICP Builder</TabsTrigger>
             <TabsTrigger value="icp-insights">ICP Insights</TabsTrigger>
           </TabsList>
+          <TabsContent value="icp-intelligence">
+            <ICPIntelligence />
+          </TabsContent>
           <TabsContent value="icp-profiles" className="space-y-4">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-semibold text-gray-900">Your ICP Profiles</h2>
