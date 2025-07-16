@@ -1,8 +1,8 @@
+
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Edit, Save, MessageSquare, Target, Globe, Settings, DollarSign, TrendingUp, MapPin, Lightbulb, Copy, MoreHorizontal, ChevronDown, Bot, Users, Building, Download, FileText } from "lucide-react";
 import MiniLineChart from "@/components/MiniLineChart";
 import MiniPieChart from "@/components/MiniPieChart";
@@ -230,9 +230,6 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
                 <MoreHorizontal className="h-3 w-3 mr-1" />
                 Edit History
               </Button>}
-            <Button variant="ghost" size="sm" onClick={() => setIsExpanded(false)} className="text-gray-600 hover:text-gray-800 hover:bg-gray-100" title="Collapse View">
-              Collapse
-            </Button>
             <Button variant="ghost" size="sm" onClick={() => setShowProfilerChat(true)} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50" title="Explore More with Profiler">
               <MessageSquare className="h-4 w-4" />
             </Button>
@@ -240,194 +237,210 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
         </div>
 
         {/* Summary Blurb */}
-        <div className="bg-white rounded-lg p-4 mb-4">
+        <div className="bg-white rounded-lg p-4 mb-6">
           <p className="text-gray-700 leading-relaxed">{content.blurb}</p>
         </div>
 
-        {/* Accordion Sections */}
-        <Accordion type="multiple" defaultValue={["market-size", "segment-breakdown", "challenges", "recommendations", "signals"]} className="space-y-4">
+        {/* Quick Highlights Grid */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+          {content.stats.map((stat, index) => (
+            <div key={index} className="bg-white rounded-md p-3 border border-gray-100 shadow-sm">
+              <div className="flex items-center gap-2 mb-1">
+                <stat.icon className={`h-4 w-4 text-${stat.color}-600`} />
+                <Badge variant="secondary" className={`text-xs bg-${stat.color}-100 text-${stat.color}-700`}>
+                  {stat.label}
+                </Badge>
+              </div>
+              <p className="text-sm font-semibold text-gray-900 leading-tight">{stat.value}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Expanded Sections */}
+        <div className="space-y-6">
           {/* Market Size & Growth */}
-          <AccordionItem value="market-size" className="bg-white rounded-lg border">
-            <AccordionTrigger className="px-4 py-3 hover:no-underline">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-green-600" />
-                <span className="font-medium">Market Size & Growth</span>
+          <div className="bg-white rounded-lg border p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <TrendingUp className="h-5 w-5 text-green-600" />
+              <h3 className="text-lg font-semibold text-gray-900">Market Size & Growth</h3>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <p className="text-gray-700 text-sm leading-relaxed">
+                  The neobank sector in North America and DACH is forecasted to reach $4.3B by 2027. Growth is propelled by:
+                </p>
+                <ul className="space-y-2 text-sm text-gray-700 ml-4">
+                  <li className="flex items-start gap-2">
+                    <div className="w-1.5 h-1.5 bg-blue-600 rounded-full mt-2 flex-shrink-0"></div>
+                    Cloud-native banking architectures
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <div className="w-1.5 h-1.5 bg-blue-600 rounded-full mt-2 flex-shrink-0"></div>
+                    Customer demand for digital-first experiences
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <div className="w-1.5 h-1.5 bg-blue-600 rounded-full mt-2 flex-shrink-0"></div>
+                    Agile regulatory frameworks for fintech entrants
+                  </li>
+                </ul>
+                <p className="text-sm text-gray-600 bg-blue-50 p-3 rounded-md">
+                  <strong>{content.cagr} CAGR</strong> indicates moderate but sustainable growth, especially in mid-sized firms.
+                </p>
               </div>
-            </AccordionTrigger>
-            <AccordionContent className="px-4 pb-4">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <p className="text-gray-700 text-sm leading-relaxed">
-                    The neobank sector in North America and DACH is forecasted to reach $4.3B by 2027. Growth is propelled by:
-                  </p>
-                  <ul className="space-y-2 text-sm text-gray-700 ml-4">
-                    <li className="flex items-start gap-2">
-                      <div className="w-1.5 h-1.5 bg-blue-600 rounded-full mt-2 flex-shrink-0"></div>
-                      Cloud-native banking architectures
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <div className="w-1.5 h-1.5 bg-blue-600 rounded-full mt-2 flex-shrink-0"></div>
-                      Customer demand for digital-first experiences
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <div className="w-1.5 h-1.5 bg-blue-600 rounded-full mt-2 flex-shrink-0"></div>
-                      Agile regulatory frameworks for fintech entrants
-                    </li>
-                  </ul>
-                  <p className="text-sm text-gray-600 bg-blue-50 p-3 rounded-md">
-                    <strong>{content.cagr} CAGR</strong> indicates moderate but sustainable growth, especially in mid-sized firms.
-                  </p>
-                </div>
-                <div className="flex justify-center">
-                  <MiniLineChart data={tamGrowthData} title="TAM Growth Forecast ($B)" color="#0064FF" />
-                </div>
+              <div className="flex justify-center">
+                <MiniLineChart data={tamGrowthData} title="TAM Growth Forecast ($B)" color="#0064FF" />
               </div>
-            </AccordionContent>
-          </AccordionItem>
+            </div>
+          </div>
 
           {/* Segment Breakdown */}
-          <AccordionItem value="segment-breakdown" className="bg-white rounded-lg border">
-            <AccordionTrigger className="px-4 py-3 hover:no-underline">
-              <div className="flex items-center gap-2">
-                <Globe className="h-5 w-5 text-blue-600" />
-                <span className="font-medium">Segment Breakdown</span>
-              </div>
-            </AccordionTrigger>
-            <AccordionContent className="px-4 pb-4">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="font-semibold text-gray-900 mb-2">North America</h4>
-                    <ul className="space-y-1 text-sm text-gray-700 ml-4">
-                      <li className="flex items-start gap-2">
-                        <div className="w-1.5 h-1.5 bg-green-600 rounded-full mt-2 flex-shrink-0"></div>
-                        High consumer digital adoption
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <div className="w-1.5 h-1.5 bg-green-600 rounded-full mt-2 flex-shrink-0"></div>
-                        Regulatory scrutiny increasing around data privacy and AML
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <div className="w-1.5 h-1.5 bg-green-600 rounded-full mt-2 flex-shrink-0"></div>
-                        Competitive landscape includes Chime, Varo, and new regional entrants
-                      </li>
-                    </ul>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-gray-900 mb-2">DACH</h4>
-                    <ul className="space-y-1 text-sm text-gray-700 ml-4">
-                      <li className="flex items-start gap-2">
-                        <div className="w-1.5 h-1.5 bg-purple-600 rounded-full mt-2 flex-shrink-0"></div>
-                        Fintech hubs emerging in Germany and Switzerland
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <div className="w-1.5 h-1.5 bg-purple-600 rounded-full mt-2 flex-shrink-0"></div>
-                        Preference for strong compliance credentials
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <div className="w-1.5 h-1.5 bg-purple-600 rounded-full mt-2 flex-shrink-0"></div>
-                        Investors attracted to scalable B2B neobank models
-                      </li>
-                    </ul>
-                  </div>
-                </div>
-                <div className="flex justify-center">
-                  <MiniPieChart data={marketSegmentationData} title="Regional Market Share" />
-                </div>
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-
-          {/* Key Challenges */}
-          <AccordionItem value="challenges" className="bg-white rounded-lg border">
-            <AccordionTrigger className="px-4 py-3 hover:no-underline">
-              <div className="flex items-center gap-2">
-                <Target className="h-5 w-5 text-orange-600" />
-                <span className="font-medium">Key Challenges</span>
-              </div>
-            </AccordionTrigger>
-            <AccordionContent className="px-4 pb-4">
-              <div className="space-y-3">
-                <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-                  <h4 className="font-medium text-orange-900 mb-2">Market Pressures</h4>
-                  <ul className="space-y-1 text-sm text-orange-800">
-                    <li>• Tightening margins due to rising customer acquisition costs</li>
-                    <li>• Heightened regulatory expectations (Basel IV, PSD2 updates)</li>
-                    <li>• Talent competition in digital product and compliance roles</li>
-                  </ul>
-                </div>
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-
-          {/* Strategic Recommendations */}
-          <AccordionItem value="recommendations" className="bg-white rounded-lg border">
-            <AccordionTrigger className="px-4 py-3 hover:no-underline">
-              <div className="flex items-center gap-2">
-                <Lightbulb className="h-5 w-5 text-purple-600" />
-                <span className="font-medium">Strategic Recommendations</span>
-              </div>
-            </AccordionTrigger>
-            <AccordionContent className="px-4 pb-4">
+          <div className="bg-white rounded-lg border p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Globe className="h-5 w-5 text-blue-600" />
+              <h3 className="text-lg font-semibold text-gray-900">Segment Breakdown</h3>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="space-y-4">
                 <div>
-                  <h4 className="font-medium text-gray-900 mb-2">Go-to-Market Strategy</h4>
+                  <h4 className="font-semibold text-gray-900 mb-2">North America</h4>
                   <ul className="space-y-1 text-sm text-gray-700 ml-4">
-                    <li>• Prioritize compliance-forward messaging in go-to-market</li>
-                    <li>• Explore partnerships with RegTech vendors for differentiation</li>
+                    <li className="flex items-start gap-2">
+                      <div className="w-1.5 h-1.5 bg-green-600 rounded-full mt-2 flex-shrink-0"></div>
+                      High consumer digital adoption
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <div className="w-1.5 h-1.5 bg-green-600 rounded-full mt-2 flex-shrink-0"></div>
+                      Regulatory scrutiny increasing around data privacy and AML
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <div className="w-1.5 h-1.5 bg-green-600 rounded-full mt-2 flex-shrink-0"></div>
+                      Competitive landscape includes Chime, Varo, and new regional entrants
+                    </li>
                   </ul>
                 </div>
                 <div>
-                  <h4 className="font-medium text-gray-900 mb-2">Target Profile</h4>
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                    <p className="text-sm text-green-800 mb-2">Target firms with:</p>
-                    <ul className="space-y-1 text-sm text-green-700 ml-4">
-                      <li>• High cloud maturity</li>
-                      <li>• Digital transformation mandates</li>
-                      <li>• New funding rounds in past 12–18 months</li>
-                    </ul>
-                  </div>
+                  <h4 className="font-semibold text-gray-900 mb-2">DACH</h4>
+                  <ul className="space-y-1 text-sm text-gray-700 ml-4">
+                    <li className="flex items-start gap-2">
+                      <div className="w-1.5 h-1.5 bg-purple-600 rounded-full mt-2 flex-shrink-0"></div>
+                      Fintech hubs emerging in Germany and Switzerland
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <div className="w-1.5 h-1.5 bg-purple-600 rounded-full mt-2 flex-shrink-0"></div>
+                      Preference for strong compliance credentials
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <div className="w-1.5 h-1.5 bg-purple-600 rounded-full mt-2 flex-shrink-0"></div>
+                      Investors attracted to scalable B2B neobank models
+                    </li>
+                  </ul>
                 </div>
               </div>
-            </AccordionContent>
-          </AccordionItem>
+              <div className="flex justify-center">
+                <MiniPieChart data={marketSegmentationData} title="Regional Market Share" />
+              </div>
+            </div>
+          </div>
+
+          {/* Key Challenges */}
+          <div className="bg-white rounded-lg border p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Target className="h-5 w-5 text-orange-600" />
+              <h3 className="text-lg font-semibold text-gray-900">Key Challenges</h3>
+            </div>
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+              <ul className="space-y-2 text-sm text-orange-800">
+                <li className="flex items-start gap-2">
+                  <div className="w-1.5 h-1.5 bg-orange-600 rounded-full mt-2 flex-shrink-0"></div>
+                  Tightening margins due to rising customer acquisition costs
+                </li>
+                <li className="flex items-start gap-2">
+                  <div className="w-1.5 h-1.5 bg-orange-600 rounded-full mt-2 flex-shrink-0"></div>
+                  Heightened regulatory expectations (Basel IV, PSD2 updates)
+                </li>
+                <li className="flex items-start gap-2">
+                  <div className="w-1.5 h-1.5 bg-orange-600 rounded-full mt-2 flex-shrink-0"></div>
+                  Talent competition in digital product and compliance roles
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Strategic Recommendations */}
+          <div className="bg-white rounded-lg border p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Lightbulb className="h-5 w-5 text-purple-600" />
+              <h3 className="text-lg font-semibold text-gray-900">Strategic Recommendations</h3>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <h4 className="font-medium text-gray-900 mb-2">Go-to-Market Strategy</h4>
+                <ul className="space-y-1 text-sm text-gray-700 ml-4">
+                  <li className="flex items-start gap-2">
+                    <div className="w-1.5 h-1.5 bg-purple-600 rounded-full mt-2 flex-shrink-0"></div>
+                    Prioritize compliance-forward messaging in go-to-market
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <div className="w-1.5 h-1.5 bg-purple-600 rounded-full mt-2 flex-shrink-0"></div>
+                    Explore partnerships with RegTech vendors for differentiation
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-medium text-gray-900 mb-2">Target Profile</h4>
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                  <p className="text-sm text-green-800 mb-2">Target firms with:</p>
+                  <ul className="space-y-1 text-sm text-green-700 ml-4">
+                    <li className="flex items-start gap-2">
+                      <div className="w-1.5 h-1.5 bg-green-600 rounded-full mt-2 flex-shrink-0"></div>
+                      High cloud maturity
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <div className="w-1.5 h-1.5 bg-green-600 rounded-full mt-2 flex-shrink-0"></div>
+                      Digital transformation mandates
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <div className="w-1.5 h-1.5 bg-green-600 rounded-full mt-2 flex-shrink-0"></div>
+                      New funding rounds in past 12–18 months
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
 
           {/* Signals to Monitor */}
-          <AccordionItem value="signals" className="bg-white rounded-lg border">
-            <AccordionTrigger className="px-4 py-3 hover:no-underline">
-              <div className="flex items-center gap-2">
-                <Settings className="h-5 w-5 text-gray-600" />
-                <span className="font-medium">Signals to Monitor</span>
+          <div className="bg-white rounded-lg border p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Settings className="h-5 w-5 text-gray-600" />
+              <h3 className="text-lg font-semibold text-gray-900">Signals to Monitor</h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <h5 className="font-medium text-blue-900 text-sm mb-1">Regulatory</h5>
+                <p className="text-xs text-blue-700">New fintech regulations in Europe</p>
               </div>
-            </AccordionTrigger>
-            <AccordionContent className="px-4 pb-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                  <h5 className="font-medium text-blue-900 text-sm mb-1">Regulatory</h5>
-                  <p className="text-xs text-blue-700">New fintech regulations in Europe</p>
-                </div>
-                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                  <h5 className="font-medium text-green-900 text-sm mb-1">Funding</h5>
-                  <p className="text-xs text-green-700">Funding rounds above $20M in Neobank space</p>
-                </div>
-                <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
-                  <h5 className="font-medium text-purple-900 text-sm mb-1">Metrics</h5>
-                  <p className="text-xs text-purple-700">Shifts in customer acquisition cost metrics</p>
-                </div>
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                <h5 className="font-medium text-green-900 text-sm mb-1">Funding</h5>
+                <p className="text-xs text-green-700">Funding rounds above $20M in Neobank space</p>
               </div>
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                <h5 className="font-medium text-purple-900 text-sm mb-1">Metrics</h5>
+                <p className="text-xs text-purple-700">Shifts in customer acquisition cost metrics</p>
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* Action Buttons */}
-        <div className="flex justify-between items-center pt-4 border-t border-gray-200">
+        <div className="flex justify-between items-center pt-6 border-t border-gray-200">
           <Button 
             variant="outline" 
             onClick={() => setIsExpanded(false)}
             className="flex items-center gap-2"
           >
             <ChevronDown className="h-4 w-4 rotate-180" />
-            Collapse
+            Show Less
           </Button>
           <div className="flex gap-2">
             <Button variant="outline" className="flex items-center gap-2">
