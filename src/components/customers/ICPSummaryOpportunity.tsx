@@ -157,7 +157,7 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
                 description: "Quantifying clinical and operational benefits for budget justification."
               }
             ],
-            buyingTriggers: [
+            buyingTriggersArray: [
               {
                 trigger: "HIPAA Audit Findings",
                 description: "Compliance gaps identified during regulatory audits drive urgent system upgrades."
@@ -690,7 +690,7 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
             description: "Rising CAC and margin compression."
           }
         ],
-        buyingTriggers: [
+        buyingTriggersArray: [
           {
             trigger: "New Funding Round",
             description: "Recent capital raises push tech stack upgrades."
@@ -757,7 +757,6 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
     <div className="space-y-6">
       {/* ICP Summary & Market Opportunity Section */}
       {!isExpanded ? (
-        // Collapsed Default View
         <div className="bg-white rounded-lg border border-gray-200 p-6 relative">
           <div className="flex items-start justify-between mb-4">
             <div>
@@ -785,14 +784,11 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
             </div>
           </div>
 
-          {/* Collapsed Content */}
           <div className="space-y-4">
-            {/* Introduction Paragraph */}
             <p className="text-gray-700 text-sm leading-relaxed">
               {content.blurb}
             </p>
 
-            {/* Quick Highlights Grid */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               {content.stats.map((stat, index) => (
                 <div key={index} className="bg-white rounded-md p-3 border border-gray-100 shadow-sm">
@@ -807,7 +803,6 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
               ))}
             </div>
 
-            {/* Actions */}
             <div className="flex items-center justify-between pt-2">
               <Button 
                 variant="ghost" 
@@ -821,7 +816,6 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
             </div>
           </div>
 
-          {/* Floating Profiler Chat Icon */}
           <Button 
             variant="ghost" 
             size="sm" 
@@ -833,7 +827,6 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
           </Button>
         </div>
       ) : (
-        // Expanded Full Report View
         <div className="bg-white rounded-lg border border-gray-200 p-6">
           <div className="flex items-start justify-between mb-4">
             <div>
@@ -863,12 +856,10 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
             </div>
           </div>
 
-          {/* Summary Blurb */}
           <div className="bg-white rounded-lg p-4 mb-6">
             <p className="text-gray-700 leading-relaxed">{content.blurb}</p>
           </div>
 
-          {/* Quick Highlights Grid */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
             {content.stats.map((stat, index) => (
               <div key={index} className="bg-white rounded-md p-3 border border-gray-100 shadow-sm">
@@ -883,7 +874,6 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
             ))}
           </div>
 
-          {/* Market Size & Growth */}
           <div className="bg-white rounded-lg border p-6 mb-6">
             <div className="flex items-center gap-2 mb-4">
               <TrendingUp className="h-5 w-5 text-green-600" />
@@ -912,7 +902,6 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
             </div>
           </div>
 
-          {/* Segment Breakdown */}
           <div className="bg-white rounded-lg border p-6 mb-6">
             <div className="flex items-center gap-2 mb-4">
               <Globe className="h-5 w-5 text-blue-600" />
@@ -940,7 +929,6 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
             </div>
           </div>
 
-          {/* Key Challenges */}
           <div className="bg-white rounded-lg border p-6 mb-6">
             <div className="flex items-center gap-2 mb-4">
               <Target className="h-5 w-5 text-orange-600" />
@@ -958,7 +946,6 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
             </div>
           </div>
 
-          {/* Strategic Recommendations */}
           <div className="bg-white rounded-lg border p-6 mb-6">
             <div className="flex items-center gap-2 mb-4">
               <Lightbulb className="h-5 w-5 text-purple-600" />
@@ -993,7 +980,6 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
             </div>
           </div>
 
-          {/* Signals to Monitor */}
           <div className="bg-white rounded-lg border p-6 mb-6">
             <div className="flex items-center gap-2 mb-4">
               <Settings className="h-5 w-5 text-gray-600" />
@@ -1021,7 +1007,6 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
             </div>
           </div>
 
-          {/* Action Buttons */}
           <div className="flex justify-between items-center pt-6 border-t border-gray-200">
             <Button 
               variant="outline" 
@@ -1047,7 +1032,6 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
 
       {/* Buyer Map & Roles, Pain Points, Triggers Section */}
       {!isBuyerMapExpanded ? (
-        // Collapsed Default View
         <div className="bg-white rounded-lg border border-gray-200 p-6 relative">
           <div className="flex items-start justify-between mb-4">
             <div>
@@ -1075,14 +1059,11 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
             </div>
           </div>
 
-          {/* Collapsed Content */}
           <div className="space-y-4">
-            {/* Introduction Paragraph */}
             <p className="text-gray-700 text-sm leading-relaxed">
               {content.buyerMap.blurb}
             </p>
 
-            {/* Quick Highlights Grid */}
             <div className="grid grid-cols-3 gap-3">
               <div className="bg-white rounded-md p-3 border border-gray-100 shadow-sm">
                 <div className="flex items-center gap-2 mb-1">
@@ -1115,7 +1096,6 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
               </div>
             </div>
 
-            {/* Actions */}
             <div className="flex items-center justify-between pt-2">
               <Button 
                 variant="ghost" 
@@ -1129,7 +1109,6 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
             </div>
           </div>
 
-          {/* Floating Profiler Chat Icon */}
           <Button 
             variant="ghost" 
             size="sm" 
@@ -1141,7 +1120,6 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
           </Button>
         </div>
       ) : (
-        // Expanded Full View
         <div className="bg-white rounded-lg border border-gray-200 p-6">
           <div className="flex items-start justify-between mb-4">
             <div>
@@ -1171,12 +1149,10 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
             </div>
           </div>
 
-          {/* Summary Blurb */}
           <div className="bg-white rounded-lg p-4 mb-6">
             <p className="text-gray-700 leading-relaxed">{content.buyerMap.blurb}</p>
           </div>
 
-          {/* Quick Highlights Grid */}
           <div className="grid grid-cols-3 gap-3 mb-6">
             <div className="bg-white rounded-md p-3 border border-gray-100 shadow-sm">
               <div className="flex items-center gap-2 mb-1">
@@ -1209,7 +1185,6 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
             </div>
           </div>
 
-          {/* Buyer Map - Org Chart Visualization */}
           <div className="bg-white rounded-lg border p-6 mb-6">
             <div className="flex items-center gap-2 mb-4">
               <Users className="h-5 w-5 text-blue-600" />
@@ -1256,7 +1231,6 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
             </div>
           </div>
 
-          {/* Pain Points */}
           <div className="bg-white rounded-lg border p-6 mb-6">
             <div className="flex items-center gap-2 mb-4">
               <Target className="h-5 w-5 text-red-600" />
@@ -1282,7 +1256,6 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
             </div>
           </div>
 
-          {/* Buying Triggers */}
           <div className="bg-white rounded-lg border p-6 mb-6">
             <div className="flex items-center gap-2 mb-4">
               <Zap className="h-5 w-5 text-yellow-600" />
@@ -1297,7 +1270,7 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
                   </tr>
                 </thead>
                 <tbody>
-                  {content.buyerMap.buyingTriggers.map((trigger, index) => (
+                  {content.buyerMap.buyingTriggersArray.map((trigger, index) => (
                     <tr key={index} className="hover:bg-gray-50">
                       <td className="border border-gray-200 px-4 py-3 font-medium text-gray-900">{trigger.trigger}</td>
                       <td className="border border-gray-200 px-4 py-3 text-gray-700">{trigger.description}</td>
@@ -1308,7 +1281,6 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
             </div>
           </div>
 
-          {/* Recommendations */}
           <div className="bg-white rounded-lg border p-6 mb-6">
             <div className="flex items-center gap-2 mb-4">
               <Lightbulb className="h-5 w-5 text-purple-600" />
@@ -1357,7 +1329,6 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
             </div>
           </div>
 
-          {/* Action Buttons */}
           <div className="flex justify-between items-center pt-6 border-t border-gray-200">
             <Button 
               variant="outline" 
