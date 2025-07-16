@@ -67,7 +67,7 @@ export function AgentCards() {
   const handleAgentClick = (agent: Agent) => {
     const newWindow = window.open(agent.path, '_blank');
     if (newWindow) {
-      newWindow.document.title = `${agent.name} - Brewra`;
+      newWindow.document.title = agent.name;
     }
   };
   
