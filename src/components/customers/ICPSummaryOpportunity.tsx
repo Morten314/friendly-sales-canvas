@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -41,7 +40,7 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
   // Dynamic content based on active ICP
   const getICPContent = () => {
     const defaultContent = {
-      blurb: "Neobanks in the fintech sector are rapidly scaling across North America and DACH, driven by high cloud adoption and strong regulatory compliance demands. Mid-sized players (50–200 employees) are emerging as innovators yet face margin pressures and evolving regulatory landscapes.",
+      blurb: "Neobanks in the fintech sector are rapidly scaling across North America and DACH, driven by high cloud adoption and strong regulatory compliance demands. Mid-sized players (50–200 employees) are emerging as innovators yet face margin pressures and evolving regulatory landscapes. These financial institutions are increasingly investing in advanced API-first infrastructure to compete with traditional banks. The sector shows strong momentum toward embedded finance solutions and customer-centric digital experiences.",
       stats: [
         { icon: TrendingUp, label: "Market Growth", value: "5.6% CAGR", color: "green" },
         { icon: DollarSign, label: "Market Size", value: "$3.2B TAM in North America, $1.1B in DACH", color: "green" },
