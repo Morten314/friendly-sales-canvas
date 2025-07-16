@@ -36,7 +36,12 @@ export function Header() {
     
     if (path === '/agent-hub') return 'Agent Hub';
     if (path === '/dashboard') return 'Dashboard';
-    if (path === '/market-research') return 'Scout - Find your best markets before your competitors do';
+    if (path === '/market-research') return (
+      <div className="flex flex-col">
+        <span className="text-2xl font-bold">Scout</span>
+        <span className="text-base italic font-normal">Find your best markets before your competitors do</span>
+      </div>
+    );
     if (path === '/customers') return 'Profiler';
     if (path === '/deals') return 'GTM Strategies (Strategist)';
     if (path === '/calendar') return 'Campaigns (Activator)';
