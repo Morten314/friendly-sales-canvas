@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +20,12 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
   const [showProfilerChat, setShowProfilerChat] = useState(false);
   const [editHistory, setEditHistory] = useState<string[]>([]);
 
+  // Reset expanded state when activeICP changes
+  useEffect(() => {
+    setIsExpanded(false);
+    setShowProfilerChat(false);
+  }, [activeICP?.id]);
+
   const handleEdit = (section: string) => {
     setEditingSection(section);
     if (!editHistory.includes(section)) {
@@ -39,7 +44,10 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
 
   // Dynamic content based on active ICP
   const getICPContent = () => {
-    if (activeICP?.industry === "Healthcare SaaS" && activeICP?.segment === "Patient Data Analytics") {
+    console.log('Active ICP:', activeICP); // Debug log to see what ICP is selected
+    
+    // Match by ID first, then fallback to industry/segment matching
+    if (activeICP?.id === "healthcare-saas" || (activeICP?.industry === "Healthcare SaaS" && activeICP?.segment === "Patient Data Analytics")) {
       return {
         blurb: "Patient Data Analytics platforms in healthcare SaaS are experiencing accelerated growth across North America and EU, driven by HIPAA compliance requirements and AI/ML integration demands. Companies with 100–500 employees are leading digital health innovation while navigating complex regulatory frameworks and data privacy mandates. The sector is increasingly investing in real-time analytics and predictive modeling to enhance patient outcomes and operational efficiency.",
         stats: [
@@ -99,7 +107,7 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
       };
     }
 
-    if (activeICP?.industry === "Logistics Tech" && activeICP?.segment === "Last-Mile Delivery") {
+    if (activeICP?.id === "logistics-tech" || (activeICP?.industry === "Logistics Tech" && activeICP?.segment === "Last-Mile Delivery")) {
       return {
         blurb: "Last-Mile Delivery platforms in logistics tech are revolutionizing supply chain efficiency across SEA and North America, driven by e-commerce growth and real-time tracking demands. Companies with 200–800 employees are pioneering API-first solutions while addressing urbanization challenges and sustainability requirements. The sector is rapidly adopting IoT integration and route optimization algorithms to meet consumer expectations for faster, more transparent deliveries.",
         stats: [
@@ -159,7 +167,7 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
       };
     }
 
-    if (activeICP?.industry === "EdTech" && activeICP?.segment === "Learning Management") {
+    if (activeICP?.id === "edtech-platforms" || (activeICP?.industry === "EdTech" && activeICP?.segment === "Learning Management")) {
       return {
         blurb: "Learning Management platforms in EdTech are transforming educational delivery across Global and LATAM markets, driven by mobile-first adoption and analytics-driven personalization. Companies with 80–300 employees are pioneering adaptive learning technologies while addressing diverse linguistic and cultural requirements. The sector is increasingly focusing on outcomes measurement and AI-powered content recommendation to enhance learning effectiveness and student engagement.",
         stats: [
@@ -219,7 +227,7 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
       };
     }
 
-    if (activeICP?.industry === "PropTech" && activeICP?.segment === "Real Estate CRM") {
+    if (activeICP?.id === "proptech-crm" || (activeICP?.industry === "PropTech" && activeICP?.segment === "Real Estate CRM")) {
       return {
         blurb: "Real Estate CRM platforms in PropTech are streamlining property management across North America and ANZ, driven by integration capabilities and workflow automation demands. Companies with 150–600 employees are modernizing traditional real estate operations while addressing complex transaction management and client relationship needs. The sector is increasingly adopting AI-powered lead scoring and automated marketing workflows to enhance agent productivity and deal closure rates.",
         stats: [
@@ -279,7 +287,7 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
       };
     }
 
-    if (activeICP?.industry === "Cybersecurity" && activeICP?.segment === "Zero Trust Solutions") {
+    if (activeICP?.id === "cybersecurity-startups" || (activeICP?.industry === "Cybersecurity" && activeICP?.segment === "Zero Trust Solutions")) {
       return {
         blurb: "Zero Trust Solutions in cybersecurity are securing enterprise networks across North America and EU, driven by SOC 2 compliance and cloud-native architecture adoption. Companies with 75–400 employees are pioneering identity-centric security models while addressing remote work challenges and sophisticated threat landscapes. The sector is rapidly integrating AI-powered threat detection and behavioral analytics to provide comprehensive security postures for distributed organizations.",
         stats: [
@@ -339,7 +347,7 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
       };
     }
 
-    if (activeICP?.industry === "InsurTech" && activeICP?.segment === "Digital Claims Processing") {
+    if (activeICP?.id === "insurtech-platforms" || (activeICP?.industry === "InsurTech" && activeICP?.segment === "Digital Claims Processing")) {
       return {
         blurb: "Digital Claims Processing platforms in InsurTech are revolutionizing insurance operations across North America and UK, driven by automation focus and regulatory expertise demands. Companies with 100–350 employees are transforming traditional claims workflows while addressing fraud prevention and customer experience expectations. The sector is increasingly leveraging AI-powered damage assessment and automated decision-making to reduce processing times and operational costs.",
         stats: [
@@ -399,7 +407,7 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
       };
     }
 
-    if (activeICP?.industry === "Clean Energy" && activeICP?.segment === "Solar Management Platforms") {
+    if (activeICP?.id === "renewable-energy" || (activeICP?.industry === "Clean Energy" && activeICP?.segment === "Solar Management Platforms")) {
       return {
         blurb: "Solar Management Platforms in clean energy are optimizing renewable installations across North America, EU, and ANZ, driven by IoT integration and sustainability reporting demands. Companies with 120–500 employees are pioneering smart grid technologies while addressing regulatory incentives and environmental compliance requirements. The sector is rapidly adopting predictive maintenance algorithms and real-time performance monitoring to maximize energy output and operational efficiency.",
         stats: [
@@ -464,7 +472,7 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
       };
     }
 
-    // Default Neobanks content
+    // Default Neobanks content (fintech-neobanks or fallback)
     return {
       blurb: "Neobanks in the fintech sector are rapidly scaling across North America and DACH, driven by high cloud adoption and strong regulatory compliance demands. Mid-sized players (50–200 employees) are emerging as innovators yet face margin pressures and evolving regulatory landscapes. These financial institutions are increasingly investing in advanced API-first infrastructure to compete with traditional banks. The sector shows strong momentum toward embedded finance solutions and customer-centric digital experiences.",
       stats: [
@@ -526,7 +534,6 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
 
   const content = getICPContent();
 
-  // Dynamic chart data based on content
   const marketSegmentationData = content.regions.includes("North America + DACH") ? [
     { name: "North America", value: 65, color: "#0064FF" },
     { name: "DACH", value: 25, color: "#00A3FF" },
