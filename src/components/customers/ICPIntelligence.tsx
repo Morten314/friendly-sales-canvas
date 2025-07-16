@@ -7,43 +7,36 @@ import MiniLineChart from "@/components/MiniLineChart";
 import MiniPieChart from "@/components/MiniPieChart";
 import { ICPSummaryOpportunity } from "./ICPSummaryOpportunity";
 import { SuggestedICPsGallery } from "./SuggestedICPsGallery";
-
 export const ICPIntelligence = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [showProfilerChat, setShowProfilerChat] = useState(false);
   const [profilerMessage, setProfilerMessage] = useState("");
-
   const handleEditToggle = () => {
     setIsEditing(!isEditing);
     // TODO: Trigger context-specific chat suggestions after saving
   };
-
   const handleICPSelect = (icp: any) => {
     // Scroll to ICP details section
     const detailsSection = document.getElementById('icp-details-section');
     if (detailsSection) {
-      detailsSection.scrollIntoView({ behavior: 'smooth' });
+      detailsSection.scrollIntoView({
+        behavior: 'smooth'
+      });
     }
   };
-
   const handleProfilerChatOpen = (message?: string) => {
     setProfilerMessage(message || "I'm Profiler, your ICP research assistant. How can I help you today?");
     setShowProfilerChat(true);
   };
-
-  return (
-    <div className="space-y-6">
+  return <div className="space-y-6">
       {/* Page Header */}
       <div className="space-y-2">
-        <h1 className="text-2xl font-bold text-gray-900">ICP Intelligence</h1>
+        
         <p className="text-gray-600">Define and refine your Ideal Customer Profile with agent-guided research.</p>
       </div>
 
       {/* Suggested ICPs Gallery */}
-      <SuggestedICPsGallery 
-        onICPSelect={handleICPSelect}
-        onProfilerChatOpen={handleProfilerChatOpen}
-      />
+      <SuggestedICPsGallery onICPSelect={handleICPSelect} onProfilerChatOpen={handleProfilerChatOpen} />
 
       {/* ICP Details Section */}
       <div id="icp-details-section">
@@ -60,12 +53,7 @@ export const ICPIntelligence = () => {
                   You're exploring: <span className="font-medium">B2B SaaS → Fintech → North America → 200-500 employees</span>
                 </CardDescription>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-gray-500 hover:text-purple-600 hover:bg-purple-100"
-                onClick={handleEditToggle}
-              >
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-purple-600 hover:bg-purple-100" onClick={handleEditToggle}>
                 <Edit className="h-4 w-4" />
               </Button>
             </div>
@@ -94,16 +82,19 @@ export const ICPIntelligence = () => {
                   </p>
                 </div>
                 <div className="mt-2">
-                  <MiniLineChart 
-                    data={[
-                      { name: "2021", value: 12.1 },
-                      { name: "2022", value: 12.8 },
-                      { name: "2023", value: 13.5 },
-                      { name: "2024", value: 14.2 }
-                    ]}
-                    title=""
-                    color="#059669"
-                  />
+                  <MiniLineChart data={[{
+                  name: "2021",
+                  value: 12.1
+                }, {
+                  name: "2022",
+                  value: 12.8
+                }, {
+                  name: "2023",
+                  value: 13.5
+                }, {
+                  name: "2024",
+                  value: 14.2
+                }]} title="" color="#059669" />
                 </div>
               </div>
 
@@ -118,13 +109,15 @@ export const ICPIntelligence = () => {
                   <p className="text-xs text-gray-600">with legacy systems</p>
                 </div>
                 <div className="mt-2">
-                  <MiniPieChart 
-                    data={[
-                      { name: "Integration", value: 45, color: "#ea580c" },
-                      { name: "Other", value: 55, color: "#fed7aa" }
-                    ]}
-                    title=""
-                  />
+                  <MiniPieChart data={[{
+                  name: "Integration",
+                  value: 45,
+                  color: "#ea580c"
+                }, {
+                  name: "Other",
+                  value: 55,
+                  color: "#fed7aa"
+                }]} title="" />
                 </div>
               </div>
 
@@ -164,8 +157,7 @@ export const ICPIntelligence = () => {
             </div>
 
             {/* Edit mode placeholder */}
-            {isEditing && (
-              <div className="mt-4 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+            {isEditing && <div className="mt-4 p-4 bg-purple-50 border border-purple-200 rounded-lg">
                 <p className="text-sm text-purple-700 mb-2">Edit Mode Active</p>
                 <p className="text-xs text-purple-600">
                   ICP editing interface would appear here. After saving changes, 
@@ -179,8 +171,7 @@ export const ICPIntelligence = () => {
                     Cancel
                   </Button>
                 </div>
-              </div>
-            )}
+              </div>}
           </CardContent>
         </Card>
 
@@ -209,8 +200,7 @@ export const ICPIntelligence = () => {
       </div>
 
       {/* Profiler Chat Panel */}
-      {showProfilerChat && (
-        <Card className="border-blue-200 bg-blue-50/40 fixed right-4 top-20 w-96 h-[500px] shadow-xl z-50">
+      {showProfilerChat && <Card className="border-blue-200 bg-blue-50/40 fixed right-4 top-20 w-96 h-[500px] shadow-xl z-50">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg flex items-center gap-2">
@@ -219,12 +209,7 @@ export const ICPIntelligence = () => {
                 </div>
                 Profiler
               </CardTitle>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowProfilerChat(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
+              <Button variant="ghost" size="sm" onClick={() => setShowProfilerChat(false)} className="text-gray-400 hover:text-gray-600">
                 ✕
               </Button>
             </div>
@@ -245,8 +230,6 @@ export const ICPIntelligence = () => {
               </Button>
             </div>
           </CardContent>
-        </Card>
-      )}
-    </div>
-  );
+        </Card>}
+    </div>;
 };
