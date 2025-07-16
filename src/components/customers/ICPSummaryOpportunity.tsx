@@ -1,8 +1,11 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronDown, ChevronUp, TrendingUp, Clock, Target, DollarSign, User, Zap, Flame, Users, Swords, TrendingDown } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ChevronDown, ChevronUp, TrendingUp, Clock, Target, DollarSign, User, Zap, Flame, Users, Swords, TrendingDown, Filter } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import MiniLineChart from "@/components/MiniLineChart";
 import MiniPieChart from "@/components/MiniPieChart";
 
@@ -11,6 +14,8 @@ export const ICPSummaryOpportunity = () => {
   const [isBuyerMapExpanded, setIsBuyerMapExpanded] = useState(false);
   const [isCompetitiveExpanded, setIsCompetitiveExpanded] = useState(false);
   const [activeCard, setActiveCard] = useState(1);
+  const [signalRegionFilter, setSignalRegionFilter] = useState("all");
+  const [signalTypeFilter, setSignalTypeFilter] = useState("all");
 
   const mockData = {
     1: {
@@ -40,6 +45,85 @@ export const ICPSummaryOpportunity = () => {
           { signal: "Regulatory Updates", count: 8, trend: "up" },
           { signal: "Tech Stack Migrations", count: 15, trend: "up" },
           { signal: "Partnership Announcements", count: 6, trend: "stable" }
+        ],
+        competitiveMap: [
+          {
+            competitor: "Stripe",
+            segment: "Neobanks",
+            share: "24%",
+            winsLosses: "Won deals in Germany",
+            differentiators: "API speed, compliance integrations"
+          },
+          {
+            competitor: "Temenos",
+            segment: "Neobanks", 
+            share: "18%",
+            winsLosses: "Lost several mid-market clients",
+            differentiators: "Complex deployments"
+          },
+          {
+            competitor: "Mambu",
+            segment: "Neobanks",
+            share: "15%",
+            winsLosses: "Strong in DACH region",
+            differentiators: "Cloud-native core banking"
+          },
+          {
+            competitor: "Thought Machine",
+            segment: "Neobanks",
+            share: "12%",
+            winsLosses: "Growing in enterprise segment",
+            differentiators: "Modern architecture, real-time processing"
+          }
+        ],
+        competitiveNews: [
+          "Stripe launches instant KYC API for European fintechs",
+          "Temenos struggles with mid-market cloud rollouts",
+          "New regulations push Neobanks to adopt advanced compliance tools",
+          "Mambu expands DACH presence with new partnerships",
+          "Thought Machine raises $200M for global expansion"
+        ],
+        buyingSignalsData: [
+          {
+            signalType: "Hiring Surge",
+            description: "CTO and digital roles open in North America",
+            source: "LinkedIn",
+            recency: "2 weeks ago",
+            region: "North America",
+            type: "Hiring"
+          },
+          {
+            signalType: "Regulatory Update",
+            description: "New BaFin guidance on SaaS providers",
+            source: "News",
+            recency: "1 month ago",
+            region: "DACH",
+            type: "Regulatory"
+          },
+          {
+            signalType: "Funding Event",
+            description: "Neobank X raises $40M Series B",
+            source: "Crunchbase",
+            recency: "3 weeks ago",
+            region: "North America",
+            type: "Funding"
+          },
+          {
+            signalType: "Tech Adoption",
+            description: "Major neobank migrates to cloud infrastructure",
+            source: "Industry Report",
+            recency: "1 week ago",
+            region: "DACH",
+            type: "Tech adoption"
+          },
+          {
+            signalType: "Partnership",
+            description: "Strategic alliance between fintech and compliance provider",
+            source: "Press Release",
+            recency: "2 weeks ago",
+            region: "DACH",
+            type: "Partnership"
+          }
         ]
       }
     },
@@ -70,6 +154,37 @@ export const ICPSummaryOpportunity = () => {
           { signal: "Legacy System Replacements", count: 10, trend: "up" },
           { signal: "Customer Experience Investments", count: 7, trend: "up" },
           { signal: "RegTech Partnerships", count: 4, trend: "stable" }
+        ],
+        competitiveMap: [
+          {
+            competitor: "Guidewire",
+            segment: "Insurance",
+            share: "28%",
+            winsLosses: "Strong in enterprise segment",
+            differentiators: "Comprehensive suite, industry expertise"
+          },
+          {
+            competitor: "Duck Creek",
+            segment: "Insurance",
+            share: "22%",
+            winsLosses: "Growing cloud adoption",
+            differentiators: "Modern cloud architecture"
+          }
+        ],
+        competitiveNews: [
+          "Guidewire announces new cloud migration tools",
+          "Duck Creek expands European presence",
+          "New insurance regulations drive modernization"
+        ],
+        buyingSignalsData: [
+          {
+            signalType: "Digital Initiative",
+            description: "Insurance company announces digital transformation",
+            source: "Company Report",
+            recency: "1 week ago",
+            region: "North America",
+            type: "Digital"
+          }
         ]
       }
     },
@@ -100,12 +215,49 @@ export const ICPSummaryOpportunity = () => {
           { signal: "Product Launches", count: 14, trend: "up" },
           { signal: "Expansion Announcements", count: 11, trend: "up" },
           { signal: "Compliance Partnerships", count: 9, trend: "up" }
+        ],
+        competitiveMap: [
+          {
+            competitor: "Stripe",
+            segment: "FinTech",
+            share: "35%",
+            winsLosses: "Dominating payment infrastructure",
+            differentiators: "Developer experience, global reach"
+          },
+          {
+            competitor: "Plaid",
+            segment: "FinTech",
+            share: "28%",
+            winsLosses: "Strong in account connectivity",
+            differentiators: "Banking data APIs, security"
+          }
+        ],
+        competitiveNews: [
+          "Stripe launches new compliance tools for FinTechs",
+          "Plaid expands European API coverage",
+          "New open banking regulations create opportunities"
+        ],
+        buyingSignalsData: [
+          {
+            signalType: "Funding Round",
+            description: "FinTech startup raises Series B",
+            source: "Venture Capital",
+            recency: "1 week ago",
+            region: "North America",
+            type: "Funding"
+          }
         ]
       }
     }
   };
 
   const currentData = mockData[activeCard as keyof typeof mockData];
+
+  const filteredBuyingSignals = currentData.competitiveData.buyingSignalsData.filter(signal => {
+    const regionMatch = signalRegionFilter === "all" || signal.region === signalRegionFilter;
+    const typeMatch = signalTypeFilter === "all" || signal.type === signalTypeFilter;
+    return regionMatch && typeMatch;
+  });
 
   return (
     <div className="space-y-6">
@@ -544,77 +696,128 @@ export const ICPSummaryOpportunity = () => {
               {isCompetitiveExpanded && (
                 <div className="mt-6 space-y-6 border-t pt-6">
                   <div>
-                    <h4 className="font-semibold mb-4">Main Competitors</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {currentData.competitiveData.mainCompetitors.map((competitor, index) => (
-                        <div key={index} className="p-3 border rounded-lg">
-                          <div className="flex items-center justify-between">
-                            <h5 className="font-medium">{competitor}</h5>
-                            <Badge variant="outline" className="text-xs">
-                              {index === 0 ? "Market Leader" : index === 1 ? "Strong Player" : "Emerging"}
-                            </Badge>
-                          </div>
+                    <h4 className="font-semibold mb-4">Competitive Map</h4>
+                    <div className="border rounded-lg overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-gray-50">
+                            <TableHead className="font-medium">Competitor</TableHead>
+                            <TableHead className="font-medium">Segment</TableHead>
+                            <TableHead className="font-medium">Share</TableHead>
+                            <TableHead className="font-medium">Wins/Losses</TableHead>
+                            <TableHead className="font-medium">Differentiators</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {currentData.competitiveData.competitiveMap.map((competitor, index) => (
+                            <TableRow key={index}>
+                              <TableCell className="font-medium">{competitor.competitor}</TableCell>
+                              <TableCell>{competitor.segment}</TableCell>
+                              <TableCell>{competitor.share}</TableCell>
+                              <TableCell>{competitor.winsLosses}</TableCell>
+                              <TableCell>{competitor.differentiators}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="font-semibold mb-4">Competitive News & Events</h4>
+                    <div className="space-y-2">
+                      {currentData.competitiveData.competitiveNews.map((news, index) => (
+                        <div key={index} className="p-3 bg-gray-50 rounded-lg">
+                          <p className="text-sm text-gray-700">"{news}"</p>
                         </div>
                       ))}
                     </div>
                   </div>
 
                   <div>
-                    <h4 className="font-semibold mb-4">Market Share Shifts</h4>
-                    <div className="p-4 bg-gray-50 rounded-lg">
-                      <p className="text-sm text-gray-700">{currentData.competitiveData.marketShareShifts}</p>
+                    <h4 className="font-semibold mb-4">Buying Signals</h4>
+                    <p className="text-sm text-gray-600 mb-4">For {currentData.title.split(' (')[0]}:</p>
+                    
+                    <div className="flex gap-4 mb-4">
+                      <div className="flex items-center gap-2">
+                        <Filter className="h-4 w-4 text-gray-500" />
+                        <Select value={signalRegionFilter} onValueChange={setSignalRegionFilter}>
+                          <SelectTrigger className="w-40">
+                            <SelectValue placeholder="Region" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Regions</SelectItem>
+                            <SelectItem value="North America">North America</SelectItem>
+                            <SelectItem value="DACH">DACH</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div>
+                        <Select value={signalTypeFilter} onValueChange={setSignalTypeFilter}>
+                          <SelectTrigger className="w-40">
+                            <SelectValue placeholder="Signal Type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Types</SelectItem>
+                            <SelectItem value="Hiring">Hiring</SelectItem>
+                            <SelectItem value="Funding">Funding</SelectItem>
+                            <SelectItem value="Tech adoption">Tech Adoption</SelectItem>
+                            <SelectItem value="Regulatory">Regulatory</SelectItem>
+                            <SelectItem value="Partnership">Partnership</SelectItem>
+                            <SelectItem value="Digital">Digital</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="border rounded-lg overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-gray-50">
+                            <TableHead className="font-medium">Signal Type</TableHead>
+                            <TableHead className="font-medium">Description</TableHead>
+                            <TableHead className="font-medium">Source</TableHead>
+                            <TableHead className="font-medium">Recency</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredBuyingSignals.map((signal, index) => (
+                            <TableRow key={index}>
+                              <TableCell className="font-medium">{signal.signalType}</TableCell>
+                              <TableCell>{signal.description}</TableCell>
+                              <TableCell>{signal.source}</TableCell>
+                              <TableCell>{signal.recency}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
                     </div>
                   </div>
 
                   <div>
-                    <h4 className="font-semibold mb-4">Recent Buying Signals</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {currentData.competitiveData.recentSignals.map((signal, index) => (
-                        <div key={index} className="p-3 border rounded-lg">
-                          <div className="flex items-center justify-between mb-2">
-                            <h5 className="font-medium text-sm">{signal.signal}</h5>
-                            <div className="flex items-center gap-1">
-                              {signal.trend === "up" ? (
-                                <TrendingUp className="h-4 w-4 text-green-600" />
-                              ) : signal.trend === "down" ? (
-                                <TrendingDown className="h-4 w-4 text-red-600" />
-                              ) : (
-                                <div className="w-4 h-4 bg-gray-400 rounded-full"></div>
-                              )}
-                              <span className="text-lg font-semibold">{signal.count}</span>
-                            </div>
-                          </div>
-                          <p className="text-xs text-gray-600">
-                            {signal.trend === "up" ? "Increasing activity" : 
-                             signal.trend === "down" ? "Decreasing activity" : "Stable activity"}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <h4 className="font-semibold mb-4">Competitive Positioning</h4>
+                    <h4 className="font-semibold mb-4">Recommendations</h4>
                     <div className="space-y-3">
                       <div className="p-3 bg-blue-50 rounded-lg">
-                        <p className="text-sm"><strong>Differentiation Strategy:</strong></p>
-                        <p className="text-sm text-gray-700 mt-1">
-                          Focus on cloud-native architecture and regulatory compliance automation vs. legacy infrastructure approaches
-                        </p>
+                        <p className="text-sm"><strong>Tailor competitive positioning:</strong></p>
+                        <ul className="text-sm text-gray-700 mt-1 space-y-1">
+                          <li>• Highlight your compliance expertise against Temenos</li>
+                          <li>• Emphasize faster API deployment vs. Stripe</li>
+                        </ul>
                       </div>
                       <div className="p-3 bg-green-50 rounded-lg">
-                        <p className="text-sm"><strong>Win Themes:</strong></p>
+                        <p className="text-sm"><strong>Outreach triggers:</strong></p>
                         <ul className="text-sm text-gray-700 mt-1 space-y-1">
-                          <li>• Faster time-to-market for new financial products</li>
-                          <li>• Built-in compliance frameworks</li>
-                          <li>• API-first architecture for ecosystem integration</li>
+                          <li>• Follow-up after news of funding rounds</li>
+                          <li>• Leverage regulatory announcements to open discussions</li>
                         </ul>
                       </div>
                       <div className="p-3 bg-yellow-50 rounded-lg">
-                        <p className="text-sm"><strong>Competitive Threats:</strong></p>
-                        <p className="text-sm text-gray-700 mt-1">
-                          Watch for incumbent vendors adding cloud capabilities and new entrants with specialized vertical solutions
-                        </p>
+                        <p className="text-sm"><strong>Consider region-specific messaging:</strong></p>
+                        <ul className="text-sm text-gray-700 mt-1 space-y-1">
+                          <li>• DACH → heavy focus on compliance trust</li>
+                          <li>• North America → speed and innovation</li>
+                        </ul>
                       </div>
                     </div>
                   </div>
