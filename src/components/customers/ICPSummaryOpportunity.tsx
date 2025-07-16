@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Save, MessageSquare, Target, Globe, Settings, DollarSign, TrendingUp, MapPin, Lightbulb, Copy, MoreHorizontal, ChevronDown, Bot, Users, Building, Download, FileText } from "lucide-react";
+import { Edit, Save, MessageSquare, Target, Globe, Settings, DollarSign, TrendingUp, MapPin, Lightbulb, Copy, MoreHorizontal, ChevronDown, Bot, Users, Building, Download, FileText, User, Flame, Zap } from "lucide-react";
 import MiniLineChart from "@/components/MiniLineChart";
 import MiniPieChart from "@/components/MiniPieChart";
 
@@ -16,15 +16,19 @@ interface ICPSummaryOpportunityProps {
 
 export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isBuyerMapExpanded, setIsBuyerMapExpanded] = useState(false);
   const [editingSection, setEditingSection] = useState<string | null>(null);
   const [showProfilerChat, setShowProfilerChat] = useState(false);
+  const [showBuyerMapProfilerChat, setShowBuyerMapProfilerChat] = useState(false);
   const [editHistory, setEditHistory] = useState<string[]>([]);
 
   // Reset expanded state when activeICP changes
   useEffect(() => {
     console.log('Active ICP changed:', activeICP);
     setIsExpanded(false);
+    setIsBuyerMapExpanded(false);
     setShowProfilerChat(false);
+    setShowBuyerMapProfilerChat(false);
   }, [activeICP?.id, activeICP?.industry, activeICP?.segment]);
 
   const handleEdit = (section: string) => {
@@ -115,7 +119,39 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
             { category: "Regulatory", description: "New healthcare data regulations" },
             { category: "Technology", description: "AI/ML adoption in clinical settings" },
             { category: "Funding", description: "Healthcare IT funding rounds above $25M" }
-          ]
+          ],
+          buyerMap: {
+            blurb: "Healthcare analytics buyers span clinical and IT leadership, driven by patient outcomes pressure and regulatory compliance deadlines. Chief Medical Officers and IT Directors collaborate on vendor selection, prioritizing data security, interoperability, and measurable ROI on clinical efficiency gains.",
+            corePersonas: 4,
+            topPainPoint: "Data silos preventing unified patient view",
+            buyingTriggers: 6,
+            personas: [
+              {
+                role: "Chief Medical Officer",
+                influence: "High",
+                painPoints: ["Fragmented patient data", "Clinical workflow inefficiencies", "Quality metrics reporting"],
+                triggers: ["New patient safety regulations", "Quality scores decline", "Competitor advantage in outcomes"]
+              },
+              {
+                role: "IT Director",
+                influence: "High", 
+                painPoints: ["Legacy system integration", "Data security compliance", "Vendor management complexity"],
+                triggers: ["HIPAA audit findings", "System downtime incidents", "Budget approval cycles"]
+              },
+              {
+                role: "Clinical Data Manager",
+                influence: "Medium",
+                painPoints: ["Manual data extraction", "Report generation delays", "Inconsistent data formats"],
+                triggers: ["Monthly reporting deadlines", "Clinical research demands", "Accreditation reviews"]
+              },
+              {
+                role: "Chief Financial Officer",
+                influence: "Medium",
+                painPoints: ["ROI measurement difficulty", "Budget allocation decisions", "Operational cost pressures"],
+                triggers: ["Budget planning cycles", "Cost reduction mandates", "Revenue optimization needs"]
+              }
+            ]
+          }
         };
 
       case "logistics-tech":
@@ -176,7 +212,33 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
             { category: "Market", description: "E-commerce penetration rates in target regions" },
             { category: "Technology", description: "Autonomous delivery pilot programs" },
             { category: "Regulatory", description: "Urban delivery regulations and sustainability mandates" }
-          ]
+          ],
+          buyerMap: {
+            blurb: "Logistics technology buyers prioritize operational efficiency and customer satisfaction metrics. Supply Chain VPs and Operations Directors lead procurement decisions, focusing on real-time visibility, cost reduction, and scalability during peak delivery periods.",
+            corePersonas: 3,
+            topPainPoint: "Last-mile delivery cost optimization",
+            buyingTriggers: 5,
+            personas: [
+              {
+                role: "VP of Supply Chain",
+                influence: "High",
+                painPoints: ["Rising delivery costs", "Customer satisfaction scores", "Peak season scalability"],
+                triggers: ["Q4 planning cycles", "Customer complaints surge", "Competitor delivery improvements"]
+              },
+              {
+                role: "Operations Director",
+                influence: "High",
+                painPoints: ["Route optimization inefficiencies", "Driver productivity", "Real-time tracking gaps"],
+                triggers: ["Operational KPI misses", "Technology refresh cycles", "New market expansion"]
+              },
+              {
+                role: "CTO",
+                influence: "Medium",
+                painPoints: ["System integration complexity", "API reliability", "Data analytics capabilities"],
+                triggers: ["Platform migration needs", "Scalability bottlenecks", "Innovation initiatives"]
+              }
+            ]
+          }
         };
 
       case "edtech-platforms":
@@ -551,7 +613,33 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
         { category: "Regulatory", description: "New fintech regulations in Europe" },
         { category: "Funding", description: "Funding rounds above $20M in Neobank space" },
         { category: "Metrics", description: "Shifts in customer acquisition cost metrics" }
-      ]
+      ],
+      buyerMap: {
+        blurb: "Neobank buyers balance innovation with compliance, led by CTOs and Chief Risk Officers. Decision-makers prioritize regulatory readiness, scalability, and competitive differentiation while managing tight timelines for market entry and customer acquisition.",
+        corePersonas: 3,
+        topPainPoint: "Regulatory compliance complexity",
+        buyingTriggers: 4,
+        personas: [
+          {
+            role: "Chief Technology Officer",
+            influence: "High",
+            painPoints: ["Regulatory compliance automation", "Scalability bottlenecks", "Security requirements"],
+            triggers: ["Regulatory deadline pressures", "Customer growth milestones", "Funding round preparations"]
+          },
+          {
+            role: "Chief Risk Officer",
+            influence: "High",
+            painPoints: ["AML/KYC compliance", "Fraud detection accuracy", "Regulatory reporting"],
+            triggers: ["Audit findings", "New regulation announcements", "Risk threshold breaches"]
+          },
+          {
+            role: "Head of Product",
+            influence: "Medium",
+            painPoints: ["Time-to-market pressure", "Feature parity with competitors", "User experience optimization"],
+            triggers: ["Product roadmap deadlines", "Customer feedback patterns", "Competitive feature launches"]
+          }
+        ]
+      }
     };
   };
 
@@ -581,10 +669,11 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
     { name: "2027", value: marketSizeValue }
   ];
 
-  if (!isExpanded) {
-    // Collapsed Default View
-    return <div className="space-y-6">
-        {/* Category Header */}
+  return (
+    <div className="space-y-6">
+      {/* ICP Summary & Market Opportunity Section */}
+      {!isExpanded ? (
+        // Collapsed Default View
         <div className="bg-white rounded-lg border border-gray-200 p-6 relative">
           <div className="flex items-start justify-between mb-4">
             <div>
@@ -594,11 +683,19 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
               </p>
             </div>
             <div className="flex items-center gap-2">
-              {editHistory.length > 0 && <Button variant="ghost" size="sm" className="text-xs text-gray-500">
+              {editHistory.length > 0 && (
+                <Button variant="ghost" size="sm" className="text-xs text-gray-500">
                   <MoreHorizontal className="h-3 w-3 mr-1" />
                   Edit History
-                </Button>}
-              <Button variant="ghost" size="sm" onClick={() => handleEdit("summary")} className="text-gray-600 hover:text-gray-800 hover:bg-gray-100" title="Edit ICP">
+                </Button>
+              )}
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => handleEdit("summary")} 
+                className="text-gray-600 hover:text-gray-800 hover:bg-gray-100" 
+                title="Edit ICP"
+              >
                 <Edit className="h-4 w-4" />
               </Button>
             </div>
@@ -628,7 +725,12 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
 
             {/* Actions */}
             <div className="flex items-center justify-between pt-2">
-              <Button variant="ghost" size="sm" onClick={() => setIsExpanded(true)} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 flex items-center gap-1">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setIsExpanded(true)} 
+                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 flex items-center gap-1"
+              >
                 Read More
                 <ChevronDown className="h-4 w-4" />
               </Button>
@@ -636,94 +738,69 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
           </div>
 
           {/* Floating Profiler Chat Icon */}
-          <Button variant="ghost" size="sm" onClick={() => setShowProfilerChat(true)} className="absolute bottom-4 right-4 w-10 h-10 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg" title="Explore More with Profiler">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => setShowProfilerChat(true)} 
+            className="absolute bottom-4 right-4 w-10 h-10 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg" 
+            title="Explore More with Profiler"
+          >
             <Bot className="h-5 w-5" />
           </Button>
         </div>
-
-        {/* Profiler Chat Panel */}
-        {showProfilerChat && <Card className="border-blue-200 bg-blue-50/40">
-            <CardContent className="p-4">
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
-                  <Bot className="h-5 w-5 text-white" />
-                </div>
-                <div className="flex-1">
-                  <div className="bg-white rounded-lg p-3 mb-3">
-                    <p className="text-sm font-medium text-blue-900 mb-1">Profiler</p>
-                    <p className="text-sm text-gray-700">
-                      Hey! I can help you dive deeper into your {content.topVertical} ICP analysis. What would you like to explore?
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <Button variant="ghost" size="sm" className="justify-start text-xs bg-white hover:bg-blue-50">
-                      🔍 Which 3 competitors are growing fastest in this segment?
-                    </Button>
-                    <Button variant="ghost" size="sm" className="justify-start text-xs bg-white hover:bg-blue-50">
-                      🎯 Where's your TAM saturated vs underserved?
-                    </Button>
-                    <Button variant="ghost" size="sm" className="justify-start text-xs bg-white hover:bg-blue-50">
-                      💬 What's your main monetization route in this ICP?
-                    </Button>
-                  </div>
-                </div>
-                <Button variant="ghost" size="sm" onClick={() => setShowProfilerChat(false)} className="text-gray-400 hover:text-gray-600">
-                  ✕
-                </Button>
-              </div>
-            </CardContent>
-          </Card>}
-      </div>;
-  }
-
-  // Expanded Full Report View
-  return <div className="space-y-6">
-      {/* Category Header */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">
-              {content.reportTitle}
-            </h2>
-            <p className="text-sm text-gray-600">
-              Comprehensive market analysis and strategic recommendations
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {editHistory.length > 0 && <Button variant="ghost" size="sm" className="text-xs text-gray-500">
-                <MoreHorizontal className="h-3 w-3 mr-1" />
-                Edit History
-              </Button>}
-            <Button variant="ghost" size="sm" onClick={() => setShowProfilerChat(true)} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50" title="Explore More with Profiler">
-              <MessageSquare className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-
-        {/* Summary Blurb */}
-        <div className="bg-white rounded-lg p-4 mb-6">
-          <p className="text-gray-700 leading-relaxed">{content.blurb}</p>
-        </div>
-
-        {/* Quick Highlights Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-          {content.stats.map((stat, index) => (
-            <div key={index} className="bg-white rounded-md p-3 border border-gray-100 shadow-sm">
-              <div className="flex items-center gap-2 mb-1">
-                <stat.icon className={`h-4 w-4 text-${stat.color}-600`} />
-                <Badge variant="secondary" className={`text-xs bg-${stat.color}-100 text-${stat.color}-700`}>
-                  {stat.label}
-                </Badge>
-              </div>
-              <p className="text-sm font-semibold text-gray-900 leading-tight">{stat.value}</p>
+      ) : (
+        // Expanded Full Report View
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">
+                {content.reportTitle}
+              </h2>
+              <p className="text-sm text-gray-600">
+                Comprehensive market analysis and strategic recommendations
+              </p>
             </div>
-          ))}
-        </div>
+            <div className="flex items-center gap-2">
+              {editHistory.length > 0 && (
+                <Button variant="ghost" size="sm" className="text-xs text-gray-500">
+                  <MoreHorizontal className="h-3 w-3 mr-1" />
+                  Edit History
+                </Button>
+              )}
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setShowProfilerChat(true)} 
+                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50" 
+                title="Explore More with Profiler"
+              >
+                <MessageSquare className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
 
-        {/* Expanded Sections */}
-        <div className="space-y-6">
+          {/* Summary Blurb */}
+          <div className="bg-white rounded-lg p-4 mb-6">
+            <p className="text-gray-700 leading-relaxed">{content.blurb}</p>
+          </div>
+
+          {/* Quick Highlights Grid */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+            {content.stats.map((stat, index) => (
+              <div key={index} className="bg-white rounded-md p-3 border border-gray-100 shadow-sm">
+                <div className="flex items-center gap-2 mb-1">
+                  <stat.icon className={`h-4 w-4 text-${stat.color}-600`} />
+                  <Badge variant="secondary" className={`text-xs bg-${stat.color}-100 text-${stat.color}-700`}>
+                    {stat.label}
+                  </Badge>
+                </div>
+                <p className="text-sm font-semibold text-gray-900 leading-tight">{stat.value}</p>
+              </div>
+            ))}
+          </div>
+
           {/* Market Size & Growth */}
-          <div className="bg-white rounded-lg border p-6">
+          <div className="bg-white rounded-lg border p-6 mb-6">
             <div className="flex items-center gap-2 mb-4">
               <TrendingUp className="h-5 w-5 text-green-600" />
               <h3 className="text-lg font-semibold text-gray-900">Market Size & Growth</h3>
@@ -752,7 +829,7 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
           </div>
 
           {/* Segment Breakdown */}
-          <div className="bg-white rounded-lg border p-6">
+          <div className="bg-white rounded-lg border p-6 mb-6">
             <div className="flex items-center gap-2 mb-4">
               <Globe className="h-5 w-5 text-blue-600" />
               <h3 className="text-lg font-semibold text-gray-900">Segment Breakdown</h3>
@@ -780,7 +857,7 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
           </div>
 
           {/* Key Challenges */}
-          <div className="bg-white rounded-lg border p-6">
+          <div className="bg-white rounded-lg border p-6 mb-6">
             <div className="flex items-center gap-2 mb-4">
               <Target className="h-5 w-5 text-orange-600" />
               <h3 className="text-lg font-semibold text-gray-900">Key Challenges</h3>
@@ -798,7 +875,7 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
           </div>
 
           {/* Strategic Recommendations */}
-          <div className="bg-white rounded-lg border p-6">
+          <div className="bg-white rounded-lg border p-6 mb-6">
             <div className="flex items-center gap-2 mb-4">
               <Lightbulb className="h-5 w-5 text-purple-600" />
               <h3 className="text-lg font-semibold text-gray-900">Strategic Recommendations</h3>
@@ -833,7 +910,7 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
           </div>
 
           {/* Signals to Monitor */}
-          <div className="bg-white rounded-lg border p-6">
+          <div className="bg-white rounded-lg border p-6 mb-6">
             <div className="flex items-center gap-2 mb-4">
               <Settings className="h-5 w-5 text-gray-600" />
               <h3 className="text-lg font-semibold text-gray-900">Signals to Monitor</h3>
@@ -859,54 +936,292 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
               ))}
             </div>
           </div>
-        </div>
 
-        {/* Action Buttons */}
-        <div className="flex justify-between items-center pt-6 border-t border-gray-200">
-          <Button 
-            variant="outline" 
-            onClick={() => setIsExpanded(false)}
-            className="flex items-center gap-2"
-          >
-            <ChevronDown className="h-4 w-4 rotate-180" />
-            Show Less
-          </Button>
-          <div className="flex gap-2">
-            <Button variant="outline" className="flex items-center gap-2">
-              <Save className="h-4 w-4" />
-              Save Report
+          {/* Action Buttons */}
+          <div className="flex justify-between items-center pt-6 border-t border-gray-200">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsExpanded(false)}
+              className="flex items-center gap-2"
+            >
+              <ChevronDown className="h-4 w-4 rotate-180" />
+              Show Less
             </Button>
-            <Button variant="outline" className="flex items-center gap-2">
-              <Download className="h-4 w-4" />
-              Export PDF
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex items-center gap-2">
+                <Save className="h-4 w-4" />
+                Save Report
+              </Button>
+              <Button variant="outline" className="flex items-center gap-2">
+                <Download className="h-4 w-4" />
+                Export PDF
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Profiler Chat Panel */}
-      {showProfilerChat && <Card className="border-blue-200 bg-blue-50/40">
+      {/* Buyer Map & Roles, Pain Points, Triggers Section */}
+      {!isBuyerMapExpanded ? (
+        // Collapsed Default View
+        <div className="bg-white rounded-lg border border-gray-200 p-6 relative">
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">Buyer Map & Roles, Pain Points, Triggers</h2>
+              <p className="text-sm text-gray-600">
+                Key decision makers, their challenges, and purchase catalysts
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {editHistory.length > 0 && (
+                <Button variant="ghost" size="sm" className="text-xs text-gray-500">
+                  <MoreHorizontal className="h-3 w-3 mr-1" />
+                  Edit History
+                </Button>
+              )}
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => handleEdit("buyer-map")} 
+                className="text-gray-600 hover:text-gray-800 hover:bg-gray-100" 
+                title="Edit Buyer Map"
+              >
+                <Edit className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Collapsed Content */}
+          <div className="space-y-4">
+            {/* Introduction Paragraph */}
+            <p className="text-gray-700 text-sm leading-relaxed">
+              {content.buyerMap.blurb}
+            </p>
+
+            {/* Quick Highlights Grid */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="bg-white rounded-md p-3 border border-gray-100 shadow-sm">
+                <div className="flex items-center gap-2 mb-1">
+                  <User className="h-4 w-4 text-blue-600" />
+                  <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700">
+                    Core Personas
+                  </Badge>
+                </div>
+                <p className="text-sm font-semibold text-gray-900 leading-tight">{content.buyerMap.corePersonas} buyer roles</p>
+              </div>
+              
+              <div className="bg-white rounded-md p-3 border border-gray-100 shadow-sm">
+                <div className="flex items-center gap-2 mb-1">
+                  <Flame className="h-4 w-4 text-red-600" />
+                  <Badge variant="secondary" className="text-xs bg-red-100 text-red-700">
+                    Top Pain Point
+                  </Badge>
+                </div>
+                <p className="text-sm font-semibold text-gray-900 leading-tight">{content.buyerMap.topPainPoint}</p>
+              </div>
+
+              <div className="bg-white rounded-md p-3 border border-gray-100 shadow-sm">
+                <div className="flex items-center gap-2 mb-1">
+                  <Zap className="h-4 w-4 text-yellow-600" />
+                  <Badge variant="secondary" className="text-xs bg-yellow-100 text-yellow-700">
+                    Buying Triggers
+                  </Badge>
+                </div>
+                <p className="text-sm font-semibold text-gray-900 leading-tight">{content.buyerMap.buyingTriggers} identified</p>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center justify-between pt-2">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setIsBuyerMapExpanded(true)} 
+                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 flex items-center gap-1"
+              >
+                Read More
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Floating Profiler Chat Icon */}
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => setShowBuyerMapProfilerChat(true)} 
+            className="absolute bottom-4 right-4 w-10 h-10 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg" 
+            title="Explore More with Profiler"
+          >
+            <Bot className="h-5 w-5" />
+          </Button>
+        </div>
+      ) : (
+        // Expanded Full View
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">
+                Buyer Map & Roles, Pain Points, Triggers
+              </h2>
+              <p className="text-sm text-gray-600">
+                Comprehensive analysis of decision makers and purchase drivers
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {editHistory.length > 0 && (
+                <Button variant="ghost" size="sm" className="text-xs text-gray-500">
+                  <MoreHorizontal className="h-3 w-3 mr-1" />
+                  Edit History
+                </Button>
+              )}
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setShowBuyerMapProfilerChat(true)} 
+                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50" 
+                title="Explore More with Profiler"
+              >
+                <MessageSquare className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Summary Blurb */}
+          <div className="bg-white rounded-lg p-4 mb-6">
+            <p className="text-gray-700 leading-relaxed">{content.buyerMap.blurb}</p>
+          </div>
+
+          {/* Quick Highlights Grid */}
+          <div className="grid grid-cols-3 gap-3 mb-6">
+            <div className="bg-white rounded-md p-3 border border-gray-100 shadow-sm">
+              <div className="flex items-center gap-2 mb-1">
+                <User className="h-4 w-4 text-blue-600" />
+                <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700">
+                  Core Personas
+                </Badge>
+              </div>
+              <p className="text-sm font-semibold text-gray-900 leading-tight">{content.buyerMap.corePersonas} buyer roles</p>
+            </div>
+            
+            <div className="bg-white rounded-md p-3 border border-gray-100 shadow-sm">
+              <div className="flex items-center gap-2 mb-1">
+                <Flame className="h-4 w-4 text-red-600" />
+                <Badge variant="secondary" className="text-xs bg-red-100 text-red-700">
+                  Top Pain Point
+                </Badge>
+              </div>
+              <p className="text-sm font-semibold text-gray-900 leading-tight">{content.buyerMap.topPainPoint}</p>
+            </div>
+
+            <div className="bg-white rounded-md p-3 border border-gray-100 shadow-sm">
+              <div className="flex items-center gap-2 mb-1">
+                <Zap className="h-4 w-4 text-yellow-600" />
+                <Badge variant="secondary" className="text-xs bg-yellow-100 text-yellow-700">
+                  Buying Triggers
+                </Badge>
+              </div>
+              <p className="text-sm font-semibold text-gray-900 leading-tight">{content.buyerMap.buyingTriggers} identified</p>
+            </div>
+          </div>
+
+          {/* Buyer Personas Details */}
+          <div className="space-y-6">
+            <div className="bg-white rounded-lg border p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Users className="h-5 w-5 text-blue-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Buyer Personas</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {content.buyerMap.personas.map((persona, index) => (
+                  <div key={index} className="bg-gray-50 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-semibold text-gray-900">{persona.role}</h4>
+                      <Badge 
+                        variant={persona.influence === "High" ? "default" : "secondary"}
+                        className={persona.influence === "High" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"}
+                      >
+                        {persona.influence} Influence
+                      </Badge>
+                    </div>
+                    <div className="space-y-3">
+                      <div>
+                        <h5 className="text-sm font-medium text-gray-700 mb-1">Pain Points</h5>
+                        <ul className="space-y-1">
+                          {persona.painPoints.map((pain, painIndex) => (
+                            <li key={painIndex} className="text-sm text-gray-600 flex items-start gap-2">
+                              <div className="w-1.5 h-1.5 bg-red-500 rounded-full mt-2 flex-shrink-0"></div>
+                              {pain}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div>
+                        <h5 className="text-sm font-medium text-gray-700 mb-1">Buying Triggers</h5>
+                        <ul className="space-y-1">
+                          {persona.triggers.map((trigger, triggerIndex) => (
+                            <li key={triggerIndex} className="text-sm text-gray-600 flex items-start gap-2">
+                              <div className="w-1.5 h-1.5 bg-yellow-500 rounded-full mt-2 flex-shrink-0"></div>
+                              {trigger}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex justify-between items-center pt-6 border-t border-gray-200">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsBuyerMapExpanded(false)}
+              className="flex items-center gap-2"
+            >
+              <ChevronDown className="h-4 w-4 rotate-180" />
+              Show Less
+            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex items-center gap-2">
+                <Save className="h-4 w-4" />
+                Save Analysis
+              </Button>
+              <Button variant="outline" className="flex items-center gap-2">
+                <Download className="h-4 w-4" />
+                Export PDF
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Profiler Chat Panels */}
+      {showProfilerChat && (
+        <Card className="border-blue-200 bg-blue-50/40">
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
-                <MessageSquare className="h-5 w-5 text-white" />
+                <Bot className="h-5 w-5 text-white" />
               </div>
               <div className="flex-1">
                 <div className="bg-white rounded-lg p-3 mb-3">
                   <p className="text-sm font-medium text-blue-900 mb-1">Profiler</p>
                   <p className="text-sm text-gray-700">
-                    Great insights on the {content.topVertical} market! Want me to dive deeper into specific areas or explore adjacent opportunities?
+                    Hey! I can help you dive deeper into your {content.topVertical} ICP analysis. What would you like to explore?
                   </p>
                 </div>
                 <div className="space-y-2">
                   <Button variant="ghost" size="sm" className="justify-start text-xs bg-white hover:bg-blue-50">
-                    🏦 Analyze top 5 {content.topVertical.toLowerCase()} competitors and their positioning
+                    🔍 Which 3 competitors are growing fastest in this segment?
                   </Button>
                   <Button variant="ghost" size="sm" className="justify-start text-xs bg-white hover:bg-blue-50">
-                    📊 Deep dive into {content.regions} opportunity sizing
+                    🎯 Where's your TAM saturated vs underserved?
                   </Button>
                   <Button variant="ghost" size="sm" className="justify-start text-xs bg-white hover:bg-blue-50">
-                    🎯 Recommend specific {content.topVertical.toLowerCase()} prospects to target first
+                    💬 What's your main monetization route in this ICP?
                   </Button>
                 </div>
               </div>
@@ -915,6 +1230,42 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
               </Button>
             </div>
           </CardContent>
-        </Card>}
-    </div>;
+        </Card>
+      )}
+
+      {showBuyerMapProfilerChat && (
+        <Card className="border-blue-200 bg-blue-50/40">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                <Bot className="h-5 w-5 text-white" />
+              </div>
+              <div className="flex-1">
+                <div className="bg-white rounded-lg p-3 mb-3">
+                  <p className="text-sm font-medium text-blue-900 mb-1">Profiler</p>
+                  <p className="text-sm text-gray-700">
+                    Great analysis of the buyer personas! Want me to help you craft targeted messaging or identify specific prospect signals?
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Button variant="ghost" size="sm" className="justify-start text-xs bg-white hover:bg-blue-50">
+                    🎯 Create messaging for each buyer persona
+                  </Button>
+                  <Button variant="ghost" size="sm" className="justify-start text-xs bg-white hover:bg-blue-50">
+                    📧 Draft email templates by role
+                  </Button>
+                  <Button variant="ghost" size="sm" className="justify-start text-xs bg-white hover:bg-blue-50">
+                    🔍 Find prospects showing these pain points
+                  </Button>
+                </div>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => setShowBuyerMapProfilerChat(false)} className="text-gray-400 hover:text-gray-600">
+                ✕
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
 };
