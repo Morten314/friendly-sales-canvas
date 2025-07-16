@@ -99,7 +99,7 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
       </div>
 
       {/* Carousel Container */}
-      <div className="relative">
+      <div className="relative px-12">
         <Carousel
           opts={{
             align: "start",
@@ -192,8 +192,8 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
               </CarouselItem>
             ))}
           </CarouselContent>
-          <CarouselPrevious className="hidden md:flex" />
-          <CarouselNext className="hidden md:flex" />
+          <CarouselPrevious className="left-0 bg-white shadow-md border border-gray-200 hover:bg-gray-50 text-gray-700 h-10 w-10" />
+          <CarouselNext className="right-0 bg-white shadow-md border border-gray-200 hover:bg-gray-50 text-gray-700 h-10 w-10" />
         </Carousel>
       </div>
 
