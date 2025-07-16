@@ -1,10 +1,14 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
-import { Globe, TrendingUp, Users, Building, MapPin, Target, Bot, MessageSquare } from "lucide-react";
+import { Globe, TrendingUp, Users, Building, MapPin, Target, Bot, MessageSquare, Edit, Save, X, Check } from "lucide-react";
+import { ProfilerChatPanel } from "./ProfilerChatPanel";
+import { ICPEditHistory } from "./ICPEditHistory";
+import { useToast } from "@/hooks/use-toast";
 
 interface SuggestedICP {
   id: string;
@@ -24,8 +28,13 @@ interface SuggestedICPsGalleryProps {
 
 export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: SuggestedICPsGalleryProps) => {
   const [selectedICP, setSelectedICP] = useState<string | null>(null);
+  const [editingICP, setEditingICP] = useState<string | null>(null);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatContext, setChatContext] = useState<any>(null);
+  const [originalValues, setOriginalValues] = useState<Record<string, any>>({});
+  const { toast } = useToast();
 
-  const suggestedICPs: SuggestedICP[] = [
+  const [suggestedICPs, setSuggestedICPs] = useState<SuggestedICP[]>([
     {
       id: "fintech-neobanks",
       industry: "Fintech",
@@ -38,7 +47,7 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
     },
     {
       id: "healthcare-saas",
-      industry: "Healthcare SaaS",
+      industry: "Healthcare SaaS", 
       segment: "Patient Data Analytics",
       companySize: "100–500 employees",
       decisionMakers: ["Chief Medical Officer", "IT Director"],
@@ -106,26 +115,128 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
       keyAttributes: ["IoT integration", "Sustainability reporting"],
       growthIndicator: "18.2% CAGR"
     }
-  ];
+  ]);
+
+  const industryOptions = ["Fintech", "Healthcare SaaS", "Logistics Tech", "EdTech", "PropTech", "Cybersecurity", "InsurTech", "Clean Energy"];
+  const companySizeOptions = ["10–50 employees", "50–200 employees", "100–500 employees", "200–800 employees", "150–600 employees"];
+
+  const handleEdit = (icpId: string) => {
+    const icp = suggestedICPs.find(i => i.id === icpId);
+    if (icp) {
+      setOriginalValues({ [icpId]: { ...icp } });
+      setEditingICP(icpId);
+    }
+  };
+
+  const handleSave = (icpId: string) => {
+    const icp = suggestedICPs.find(i => i.id === icpId);
+    if (icp) {
+      setEditingICP(null);
+      
+      // Show toast with undo option
+      toast({
+        title: "Changes saved",
+        description: "Undo?",
+        action: (
+          <Button variant="outline" size="sm" onClick={() => handleUndo(icpId)}>
+            Undo
+          </Button>
+        ),
+      });
+
+      // Open Profiler chat automatically
+      setChatContext({
+        cardId: icpId,
+        cardName: icp.segment,
+        action: 'edit',
+        editedFields: ['industry', 'segment'] // Could track actual edited fields
+      });
+      setChatOpen(true);
+    }
+  };
+
+  const handleCancel = (icpId: string) => {
+    if (originalValues[icpId]) {
+      setSuggestedICPs(prev => 
+        prev.map(icp => 
+          icp.id === icpId ? originalValues[icpId] : icp
+        )
+      );
+    }
+    setEditingICP(null);
+    setOriginalValues(prev => {
+      const { [icpId]: removed, ...rest } = prev;
+      return rest;
+    });
+  };
+
+  const handleUndo = (icpId: string) => {
+    if (originalValues[icpId]) {
+      setSuggestedICPs(prev => 
+        prev.map(icp => 
+          icp.id === icpId ? originalValues[icpId] : icp
+        )
+      );
+      setOriginalValues(prev => {
+        const { [icpId]: removed, ...rest } = prev;
+        return rest;
+      });
+      
+      toast({
+        title: "Changes undone",
+        description: "ICP card restored to previous state",
+      });
+    }
+  };
+
+  const handleFieldChange = (icpId: string, field: keyof SuggestedICP, value: any) => {
+    setSuggestedICPs(prev => 
+      prev.map(icp => 
+        icp.id === icpId ? { ...icp, [field]: value } : icp
+      )
+    );
+  };
 
   const handleCardClick = (icp: SuggestedICP) => {
+    if (editingICP === icp.id) return; // Don't select while editing
+    
     setSelectedICP(icp.id);
     if (onICPSelect) {
       onICPSelect(icp);
     }
-    if (onProfilerChatOpen) {
-      onProfilerChatOpen(`Hi! Would you like to dig deeper into the ${icp.industry} ICP for ${icp.segment}?`);
-    }
+  };
+
+  const openProfilerChat = () => {
+    setChatContext({
+      action: 'general'
+    });
+    setChatOpen(true);
   };
 
   return (
     <div className="space-y-6">
       {/* Section Header */}
-      <div className="space-y-2">
-        <h2 className="text-xl font-semibold text-gray-900">Suggested ICPs</h2>
-        <p className="text-sm text-gray-600">
-          Agent-curated ideal customer profiles based on your product and market patterns
-        </p>
+      <div className="flex justify-between items-start">
+        <div className="space-y-2">
+          <h2 className="text-xl font-semibold text-gray-900">Suggested ICPs</h2>
+          <p className="text-sm text-gray-600">
+            Agent-curated ideal customer profiles based on your product and market patterns
+          </p>
+        </div>
+        
+        {/* Persistent Profiler Chat Icon */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={openProfilerChat}
+          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 flex items-center gap-2"
+          title="Chat with Profiler"
+        >
+          <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+            <Bot className="h-4 w-4 text-white" />
+          </div>
+          Chat with Profiler
+        </Button>
       </div>
 
       {/* Carousel Container */}
@@ -141,27 +252,79 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
             {suggestedICPs.map((icp) => (
               <CarouselItem key={icp.id} className="pl-4 basis-80">
                 <Card 
-                  className={`h-full cursor-pointer transition-all duration-200 hover:shadow-lg hover:-translate-y-1 border ${
+                  className={`h-full transition-all duration-200 hover:shadow-lg border ${
                     selectedICP === icp.id 
                       ? 'border-blue-500 bg-blue-50/40 shadow-md' 
+                      : editingICP === icp.id
+                      ? 'border-green-500 bg-green-50/20 shadow-md'
                       : 'border-gray-200 hover:border-blue-300'
-                  }`}
+                  } ${editingICP !== icp.id ? 'hover:-translate-y-1 cursor-pointer' : ''}`}
                   onClick={() => handleCardClick(icp)}
                 >
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
-                      <div className="space-y-1">
-                        <CardTitle className="text-lg text-gray-900">{icp.industry}</CardTitle>
-                        <CardDescription className="font-medium text-blue-600">
-                          {icp.segment}
-                        </CardDescription>
+                      <div className="space-y-1 flex-1">
+                        {editingICP === icp.id ? (
+                          <>
+                            <Select value={icp.industry} onValueChange={(value) => handleFieldChange(icp.id, 'industry', value)}>
+                              <SelectTrigger className="w-full h-8 text-lg font-semibold">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {industryOptions.map(option => (
+                                  <SelectItem key={option} value={option}>{option}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <Input 
+                              value={icp.segment}
+                              onChange={(e) => handleFieldChange(icp.id, 'segment', e.target.value)}
+                              className="font-medium text-blue-600 h-8"
+                            />
+                          </>
+                        ) : (
+                          <>
+                            <CardTitle className="text-lg text-gray-900">{icp.industry}</CardTitle>
+                            <CardDescription className="font-medium text-blue-600">
+                              {icp.segment}
+                            </CardDescription>
+                          </>
+                        )}
                       </div>
-                      {icp.growthIndicator && (
-                        <Badge variant="secondary" className="bg-green-100 text-green-700 text-xs">
-                          <TrendingUp className="h-3 w-3 mr-1" />
-                          {icp.growthIndicator}
-                        </Badge>
-                      )}
+                      
+                      <div className="flex items-center gap-1 ml-2">
+                        <ICPEditHistory icpId={icp.id} />
+                        
+                        {editingICP === icp.id ? (
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="sm" onClick={() => handleSave(icp.id)}>
+                              <Save className="h-4 w-4 text-green-600" />
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => handleCancel(icp.id)}>
+                              <X className="h-4 w-4 text-red-600" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEdit(icp.id);
+                            }}
+                            className="text-gray-400 hover:text-gray-600"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        )}
+                        
+                        {icp.growthIndicator && (
+                          <Badge variant="secondary" className="bg-green-100 text-green-700 text-xs ml-2">
+                            <TrendingUp className="h-3 w-3 mr-1" />
+                            {icp.growthIndicator}
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   </CardHeader>
                   
@@ -169,7 +332,20 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
                     {/* Company Size */}
                     <div className="flex items-center gap-2 text-sm">
                       <Building className="h-4 w-4 text-gray-500" />
-                      <span className="text-gray-700">{icp.companySize}</span>
+                      {editingICP === icp.id ? (
+                        <Select value={icp.companySize} onValueChange={(value) => handleFieldChange(icp.id, 'companySize', value)}>
+                          <SelectTrigger className="w-full h-7">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {companySizeOptions.map(option => (
+                              <SelectItem key={option} value={option}>{option}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <span className="text-gray-700">{icp.companySize}</span>
+                      )}
                     </div>
 
                     {/* Decision Makers */}
@@ -210,13 +386,16 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
                     </div>
 
                     {/* View Details Button */}
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="w-full mt-4 text-blue-600 border-blue-200 hover:bg-blue-50"
-                    >
-                      View ICP Details
-                    </Button>
+                    {editingICP !== icp.id && (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="w-full mt-4 text-blue-600 border-blue-200 hover:bg-blue-50"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        View ICP Details
+                      </Button>
+                    )}
                   </CardContent>
                 </Card>
               </CarouselItem>
@@ -227,20 +406,12 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
         </Carousel>
       </div>
 
-      {/* Profiler Chat Prompt */}
-      {!selectedICP && (
-        <div className="flex items-center justify-center py-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onProfilerChatOpen && onProfilerChatOpen("Hi! Want me to help pick the right ICP to start with?")}
-            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 flex items-center gap-2"
-          >
-            <Bot className="h-4 w-4" />
-            Need help choosing? Ask Profiler
-          </Button>
-        </div>
-      )}
+      {/* Profiler Chat Panel */}
+      <ProfilerChatPanel 
+        isOpen={chatOpen}
+        onClose={() => setChatOpen(false)}
+        context={chatContext}
+      />
     </div>
   );
 };
