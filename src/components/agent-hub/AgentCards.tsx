@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Card, CardContent } from "@/components/ui/card";
-import { Search, User, FileText, Calendar, Presentation, Shield, FileCheck, Target } from "lucide-react";
+import { Search, Users, FileText, Calendar, Presentation, Shield, FileCheck, Target } from "lucide-react";
 
 type Agent = {
   name: string;
@@ -23,7 +23,7 @@ export function AgentCards() {
     {
       name: "Profiler",
       tagline: "I study people, so you know who to chase.",
-      icon: <User className="h-4 w-4" />,
+      icon: <Users className="h-4 w-4" />,
       color: "bg-purple-100 text-purple-600",
       path: "/customers"
     },
