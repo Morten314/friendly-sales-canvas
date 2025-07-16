@@ -1,67 +1,126 @@
+
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Edit, Save, MessageSquare, Target, Globe, Settings, DollarSign, TrendingUp, MapPin, Lightbulb, Copy, MoreHorizontal, ChevronDown, Bot } from "lucide-react";
+import { Edit, Save, MessageSquare, Target, Globe, Settings, DollarSign, TrendingUp, MapPin, Lightbulb, Copy, MoreHorizontal, ChevronDown, Bot, Users, Building, Download, FileText } from "lucide-react";
 import MiniLineChart from "@/components/MiniLineChart";
 import MiniPieChart from "@/components/MiniPieChart";
-export const ICPSummaryOpportunity = () => {
+
+interface ICPSummaryOpportunityProps {
+  activeICP?: {
+    id: string;
+    industry: string;
+    segment: string;
+  };
+}
+
+export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [editingSection, setEditingSection] = useState<string | null>(null);
   const [showProfilerChat, setShowProfilerChat] = useState(false);
   const [editHistory, setEditHistory] = useState<string[]>([]);
+
   const handleEdit = (section: string) => {
     setEditingSection(section);
     if (!editHistory.includes(section)) {
       setEditHistory([...editHistory, section]);
     }
   };
+
   const handleSave = (section: string) => {
     setEditingSection(null);
     setShowProfilerChat(true);
   };
+
   const handleCopyInsight = (text: string) => {
     navigator.clipboard.writeText(text);
   };
+
+  // Dynamic content based on active ICP
+  const getICPContent = () => {
+    const defaultContent = {
+      blurb: "Your current ICP is mid-market technology firms in North America, focused on cloud adoption and digital transformation initiatives.",
+      stats: [
+        { icon: TrendingUp, label: "Growth", value: "8.2% CAGR", color: "green" },
+        { icon: DollarSign, label: "TAM", value: "$2.1B", color: "green" },
+        { icon: MapPin, label: "Regions", value: "North America", color: "purple" },
+        { icon: Building, label: "Vertical", value: "Technology", color: "orange" }
+      ],
+      marketSize: "$2.1B",
+      sam: "$750M",
+      regions: "North America + DACH",
+      topVertical: "Technology",
+      cagr: "8.2%",
+      reportTitle: "Technology Firms Market Analysis"
+    };
+
+    if (activeICP?.industry === "Fintech" && activeICP?.segment === "Neobanks") {
+      return {
+        blurb: "Neobanks in the fintech sector are rapidly scaling across North America and DACH, driven by high cloud adoption and strong regulatory compliance demands. Mid-sized players (50–200 employees) are emerging as innovators yet face margin pressures and evolving regulatory landscapes.",
+        stats: [
+          { icon: TrendingUp, label: "Market Growth", value: "5.6% CAGR", color: "green" },
+          { icon: DollarSign, label: "Market Size", value: "$3.2B TAM (NA), $1.1B (DACH)", color: "green" },
+          { icon: Users, label: "Active Players", value: "~150 Neobank firms", color: "blue" },
+          { icon: Building, label: "Investment Activity", value: "$2.4B raised (12 months)", color: "orange" }
+        ],
+        marketSize: "$4.3B",
+        sam: "$3.2B",
+        regions: "North America + DACH",
+        topVertical: "Neobanks",
+        cagr: "5.6%",
+        reportTitle: "Neobank Market Intelligence Report"
+      };
+    }
+
+    return defaultContent;
+  };
+
+  const content = getICPContent();
+
   const marketSegmentationData = [{
-    name: "Compliance",
-    value: 35,
+    name: "North America",
+    value: 65,
     color: "#0064FF"
   }, {
-    name: "Risk Analytics",
-    value: 28,
+    name: "DACH",
+    value: 25,
     color: "#00A3FF"
   }, {
-    name: "Cross-border",
-    value: 22,
+    name: "Other EU",
+    value: 10,
     color: "#66C2FF"
-  }, {
-    name: "AI Onboarding",
-    value: 15,
-    color: "#B3DBFF"
   }];
+
   const tamGrowthData = [{
-    name: "2021",
-    value: 11.8
-  }, {
     name: "2022",
-    value: 12.6
+    value: 2.8
   }, {
     name: "2023",
-    value: 13.4
+    value: 3.2
   }, {
     name: "2024",
-    value: 14.2
+    value: 3.6
+  }, {
+    name: "2025",
+    value: 4.0
+  }, {
+    name: "2026",
+    value: 4.2
+  }, {
+    name: "2027",
+    value: 4.3
   }];
+
   if (!isExpanded) {
     // Collapsed Default View
     return <div className="space-y-6">
         {/* Category Header */}
-        <div className="bg-gray-50 rounded-lg border border-gray-200 p-6 relative max-h-96">
+        <div className="bg-gray-50 rounded-lg border border-gray-200 p-6 relative">
           <div className="flex items-start justify-between mb-4">
             <div>
-              <h2 className="text-xl font-semibold text-gray-900 mb-2">ICP Summary & Size & Opportunity</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">ICP Summary & Market Opportunity</h2>
               <p className="text-sm text-gray-600">
                 High-level snapshot of market fit & revenue potential
               </p>
@@ -81,50 +140,22 @@ export const ICPSummaryOpportunity = () => {
           <div className="space-y-4">
             {/* Introduction Paragraph */}
             <p className="text-gray-700 text-sm leading-relaxed">
-              Your current ICP is mid-market technology firms in North America, focused on cloud adoption and digital transformation initiatives.
+              {content.blurb}
             </p>
 
             {/* Quick Highlights Grid */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              {/* TAM */}
-              <div className="bg-white rounded-md p-3 border border-gray-100 shadow-sm">
-                <div className="flex items-center gap-2 mb-1">
-                  <DollarSign className="h-4 w-4 text-green-600" />
-                  <Badge variant="secondary" className="text-xs bg-green-100 text-green-700">TAM</Badge>
+              {content.stats.map((stat, index) => (
+                <div key={index} className="bg-white rounded-md p-3 border border-gray-100 shadow-sm">
+                  <div className="flex items-center gap-2 mb-1">
+                    <stat.icon className={`h-4 w-4 text-${stat.color}-600`} />
+                    <Badge variant="secondary" className={`text-xs bg-${stat.color}-100 text-${stat.color}-700`}>
+                      {stat.label}
+                    </Badge>
+                  </div>
+                  <p className="text-sm font-semibold text-gray-900 leading-tight">{stat.value}</p>
                 </div>
-                <p className="text-lg font-semibold text-gray-900">$2.1B</p>
-                <p className="text-xs text-gray-500">USD</p>
-              </div>
-
-              {/* SAM */}
-              <div className="bg-white rounded-md p-3 border border-gray-100 shadow-sm">
-                <div className="flex items-center gap-2 mb-1">
-                  <Target className="h-4 w-4 text-blue-600" />
-                  <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700">SAM</Badge>
-                </div>
-                <p className="text-lg font-semibold text-gray-900">$750M</p>
-                <p className="text-xs text-gray-500">USD</p>
-              </div>
-
-              {/* Key Regions */}
-              <div className="bg-white rounded-md p-3 border border-gray-100 shadow-sm">
-                <div className="flex items-center gap-2 mb-1">
-                  <MapPin className="h-4 w-4 text-purple-600" />
-                  <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-700">Regions</Badge>
-                </div>
-                <p className="text-sm font-medium text-gray-900">North America</p>
-                <p className="text-xs text-gray-500">+ DACH</p>
-              </div>
-
-              {/* Top Vertical */}
-              <div className="bg-white rounded-md p-3 border border-gray-100 shadow-sm">
-                <div className="flex items-center gap-2 mb-1">
-                  <TrendingUp className="h-4 w-4 text-orange-600" />
-                  <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-700">Vertical</Badge>
-                </div>
-                <p className="text-sm font-medium text-gray-900">Fintech</p>
-                <p className="text-xs text-gray-500">Healthcare</p>
-              </div>
+              ))}
             </div>
 
             {/* Actions */}
@@ -153,7 +184,7 @@ export const ICPSummaryOpportunity = () => {
                   <div className="bg-white rounded-lg p-3 mb-3">
                     <p className="text-sm font-medium text-blue-900 mb-1">Profiler</p>
                     <p className="text-sm text-gray-700">
-                      Hey! I can help you dive deeper into your ICP analysis. What would you like to explore?
+                      Hey! I can help you dive deeper into your {content.topVertical} ICP analysis. What would you like to explore?
                     </p>
                   </div>
                   <div className="space-y-2">
@@ -184,10 +215,10 @@ export const ICPSummaryOpportunity = () => {
         <div className="flex items-start justify-between mb-4">
           <div>
             <h2 className="text-xl font-semibold text-gray-900 mb-2">
-              Category A: ICP Summary & Size & Opportunity
+              {content.reportTitle}
             </h2>
             <p className="text-sm text-gray-600">
-              High-level snapshot of market fit & revenue potential
+              Comprehensive market analysis and strategic recommendations
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -204,98 +235,207 @@ export const ICPSummaryOpportunity = () => {
           </div>
         </div>
 
-        {/* Accordion Sections */}
-        <Accordion type="multiple" defaultValue={["icp-summary", "size-opportunity"]} className="space-y-4">
-          {/* ICP Summary Accordion */}
-          <AccordionItem value="icp-summary" className="bg-white rounded-lg border">
-            <AccordionTrigger className="px-4 py-3 hover:no-underline">
-              <div className="flex items-center gap-2">
-                <Target className="h-5 w-5 text-blue-600" />
-                <span className="font-medium">ICP Summary</span>
-              </div>
-            </AccordionTrigger>
-            <AccordionContent className="px-4 pb-4">
-              {editingSection === "icp-summary" ? <div className="space-y-3">
-                  <textarea className="w-full p-3 border rounded-md resize-none" rows={4} defaultValue="🎯 Targeting mid-sized B2B FinTech companies (200–500 employees)&#10;🌐 Primary region: North America&#10;⚙️ Top use cases: Compliance automation, Risk analytics" />
-                  <div className="flex gap-2">
-                    <Button size="sm" onClick={() => handleSave("icp-summary")} className="bg-blue-600 hover:bg-blue-700">
-                      <Save className="h-4 w-4 mr-1" />
-                      Save Changes
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => setEditingSection(null)}>
-                      Cancel
-                    </Button>
-                  </div>
-                </div> : <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-2">
-                      <p className="flex items-center gap-2 text-sm">
-                        <Target className="h-4 w-4 text-blue-600" />
-                        Targeting mid-sized B2B FinTech companies (200–500 employees)
-                      </p>
-                      <p className="flex items-center gap-2 text-sm">
-                        <Globe className="h-4 w-4 text-green-600" />
-                        Primary region: North America
-                      </p>
-                      <p className="flex items-center gap-2 text-sm">
-                        <Settings className="h-4 w-4 text-purple-600" />
-                        Top use cases: Compliance automation, Risk analytics
-                      </p>
-                    </div>
-                    <Button variant="ghost" size="sm" onClick={() => handleEdit("icp-summary")}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>}
-            </AccordionContent>
-          </AccordionItem>
+        {/* Summary Blurb */}
+        <div className="bg-white rounded-lg p-4 mb-4">
+          <p className="text-gray-700 leading-relaxed">{content.blurb}</p>
+        </div>
 
-          {/* Size & Opportunity Accordion */}
-          <AccordionItem value="size-opportunity" className="bg-white rounded-lg border">
+        {/* Accordion Sections */}
+        <Accordion type="multiple" defaultValue={["market-size", "segment-breakdown", "challenges", "recommendations"]} className="space-y-4">
+          {/* Market Size & Growth */}
+          <AccordionItem value="market-size" className="bg-white rounded-lg border">
             <AccordionTrigger className="px-4 py-3 hover:no-underline">
               <div className="flex items-center gap-2">
-                <DollarSign className="h-5 w-5 text-green-600" />
-                <span className="font-medium">Size & Opportunity</span>
+                <TrendingUp className="h-5 w-5 text-green-600" />
+                <span className="font-medium">Market Size & Growth</span>
               </div>
             </AccordionTrigger>
             <AccordionContent className="px-4 pb-4">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="space-y-4">
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <DollarSign className="h-4 w-4 text-green-600" />
-                      <span className="text-sm font-medium">TAM: $14.2B</span>
-                      <Button variant="ghost" size="sm" onClick={() => handleCopyInsight("TAM: $14.2B")}>
-                        <Copy className="h-3 w-3" />
-                      </Button>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <TrendingUp className="h-4 w-4 text-blue-600" />
-                      <span className="text-sm font-medium">CAGR: 5.6%</span>
-                      <Button variant="ghost" size="sm" onClick={() => handleCopyInsight("CAGR: 5.6%")}>
-                        <Copy className="h-3 w-3" />
-                      </Button>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-purple-600" />
-                      <span className="text-sm font-medium">Top region: North America</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Lightbulb className="h-4 w-4 text-orange-600" />
-                      <span className="text-sm font-medium">Emerging pockets: Cross-border payments, AI-driven onboarding</span>
-                    </div>
-                  </div>
-                  <Button variant="outline" size="sm" className="w-fit">
-                    Read More
-                  </Button>
+                  <p className="text-gray-700 text-sm leading-relaxed">
+                    The neobank sector in North America and DACH is forecasted to reach $4.3B by 2027. Growth is propelled by:
+                  </p>
+                  <ul className="space-y-2 text-sm text-gray-700 ml-4">
+                    <li className="flex items-start gap-2">
+                      <div className="w-1.5 h-1.5 bg-blue-600 rounded-full mt-2 flex-shrink-0"></div>
+                      Cloud-native banking architectures
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <div className="w-1.5 h-1.5 bg-blue-600 rounded-full mt-2 flex-shrink-0"></div>
+                      Customer demand for digital-first experiences
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <div className="w-1.5 h-1.5 bg-blue-600 rounded-full mt-2 flex-shrink-0"></div>
+                      Agile regulatory frameworks for fintech entrants
+                    </li>
+                  </ul>
+                  <p className="text-sm text-gray-600 bg-blue-50 p-3 rounded-md">
+                    <strong>{content.cagr} CAGR</strong> indicates moderate but sustainable growth, especially in mid-sized firms.
+                  </p>
                 </div>
                 <div className="flex justify-center">
-                  <MiniPieChart data={marketSegmentationData} title="Market Segmentation" />
+                  <MiniLineChart data={tamGrowthData} title="TAM Growth Forecast ($B)" color="#0064FF" />
+                </div>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* Segment Breakdown */}
+          <AccordionItem value="segment-breakdown" className="bg-white rounded-lg border">
+            <AccordionTrigger className="px-4 py-3 hover:no-underline">
+              <div className="flex items-center gap-2">
+                <Globe className="h-5 w-5 text-blue-600" />
+                <span className="font-medium">Segment Breakdown</span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="px-4 pb-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-2">North America</h4>
+                    <ul className="space-y-1 text-sm text-gray-700 ml-4">
+                      <li className="flex items-start gap-2">
+                        <div className="w-1.5 h-1.5 bg-green-600 rounded-full mt-2 flex-shrink-0"></div>
+                        High consumer digital adoption
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <div className="w-1.5 h-1.5 bg-green-600 rounded-full mt-2 flex-shrink-0"></div>
+                        Regulatory scrutiny increasing around data privacy and AML
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <div className="w-1.5 h-1.5 bg-green-600 rounded-full mt-2 flex-shrink-0"></div>
+                        Competitive landscape includes Chime, Varo, and new regional entrants
+                      </li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-2">DACH</h4>
+                    <ul className="space-y-1 text-sm text-gray-700 ml-4">
+                      <li className="flex items-start gap-2">
+                        <div className="w-1.5 h-1.5 bg-purple-600 rounded-full mt-2 flex-shrink-0"></div>
+                        Fintech hubs emerging in Germany and Switzerland
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <div className="w-1.5 h-1.5 bg-purple-600 rounded-full mt-2 flex-shrink-0"></div>
+                        Preference for strong compliance credentials
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <div className="w-1.5 h-1.5 bg-purple-600 rounded-full mt-2 flex-shrink-0"></div>
+                        Investors attracted to scalable B2B neobank models
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+                <div className="flex justify-center">
+                  <MiniPieChart data={marketSegmentationData} title="Regional Market Share" />
+                </div>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* Key Challenges */}
+          <AccordionItem value="challenges" className="bg-white rounded-lg border">
+            <AccordionTrigger className="px-4 py-3 hover:no-underline">
+              <div className="flex items-center gap-2">
+                <Target className="h-5 w-5 text-orange-600" />
+                <span className="font-medium">Key Challenges</span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="px-4 pb-4">
+              <div className="space-y-3">
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                  <h4 className="font-medium text-orange-900 mb-2">Market Pressures</h4>
+                  <ul className="space-y-1 text-sm text-orange-800">
+                    <li>• Tightening margins due to rising customer acquisition costs</li>
+                    <li>• Heightened regulatory expectations (Basel IV, PSD2 updates)</li>
+                    <li>• Talent competition in digital product and compliance roles</li>
+                  </ul>
+                </div>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* Strategic Recommendations */}
+          <AccordionItem value="recommendations" className="bg-white rounded-lg border">
+            <AccordionTrigger className="px-4 py-3 hover:no-underline">
+              <div className="flex items-center gap-2">
+                <Lightbulb className="h-5 w-5 text-purple-600" />
+                <span className="font-medium">Strategic Recommendations</span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="px-4 pb-4">
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-2">Go-to-Market Strategy</h4>
+                  <ul className="space-y-1 text-sm text-gray-700 ml-4">
+                    <li>• Prioritize compliance-forward messaging in go-to-market</li>
+                    <li>• Explore partnerships with RegTech vendors for differentiation</li>
+                  </ul>
+                </div>
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-2">Target Profile</h4>
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                    <p className="text-sm text-green-800 mb-2">Target firms with:</p>
+                    <ul className="space-y-1 text-sm text-green-700 ml-4">
+                      <li>• High cloud maturity</li>
+                      <li>• Digital transformation mandates</li>
+                      <li>• New funding rounds in past 12–18 months</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
+          {/* Signals to Monitor */}
+          <AccordionItem value="signals" className="bg-white rounded-lg border">
+            <AccordionTrigger className="px-4 py-3 hover:no-underline">
+              <div className="flex items-center gap-2">
+                <Settings className="h-5 w-5 text-gray-600" />
+                <span className="font-medium">Signals to Monitor</span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="px-4 pb-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <h5 className="font-medium text-blue-900 text-sm mb-1">Regulatory</h5>
+                  <p className="text-xs text-blue-700">New fintech regulations in Europe</p>
+                </div>
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                  <h5 className="font-medium text-green-900 text-sm mb-1">Funding</h5>
+                  <p className="text-xs text-green-700">Funding rounds above $20M in Neobank space</p>
+                </div>
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                  <h5 className="font-medium text-purple-900 text-sm mb-1">Metrics</h5>
+                  <p className="text-xs text-purple-700">Shifts in customer acquisition cost metrics</p>
                 </div>
               </div>
             </AccordionContent>
           </AccordionItem>
         </Accordion>
+
+        {/* Action Buttons */}
+        <div className="flex justify-between items-center pt-4 border-t border-gray-200">
+          <Button 
+            variant="outline" 
+            onClick={() => setIsExpanded(false)}
+            className="flex items-center gap-2"
+          >
+            <ChevronDown className="h-4 w-4 rotate-180" />
+            Collapse
+          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" className="flex items-center gap-2">
+              <Save className="h-4 w-4" />
+              Save Report
+            </Button>
+            <Button variant="outline" className="flex items-center gap-2">
+              <Download className="h-4 w-4" />
+              Export PDF
+            </Button>
+          </div>
+        </div>
       </div>
 
       {/* Profiler Chat Panel */}
@@ -309,18 +449,18 @@ export const ICPSummaryOpportunity = () => {
                 <div className="bg-white rounded-lg p-3 mb-3">
                   <p className="text-sm font-medium text-blue-900 mb-1">Profiler</p>
                   <p className="text-sm text-gray-700">
-                    Hey! I noticed you refined your TAM assumptions. Want me to validate with fresh data or explore subsegments?
+                    Great insights on the {content.topVertical} market! Want me to dive deeper into specific areas or explore adjacent opportunities?
                   </p>
                 </div>
                 <div className="space-y-2">
                   <Button variant="ghost" size="sm" className="justify-start text-xs bg-white hover:bg-blue-50">
-                    🔍 Which 3 competitors are growing fastest in this segment?
+                    🏦 Analyze top 5 neobank competitors and their positioning
                   </Button>
                   <Button variant="ghost" size="sm" className="justify-start text-xs bg-white hover:bg-blue-50">
-                    🎯 Where's your TAM saturated vs underserved?
+                    📊 Deep dive into DACH vs North America opportunity sizing
                   </Button>
                   <Button variant="ghost" size="sm" className="justify-start text-xs bg-white hover:bg-blue-50">
-                    💬 What's your main monetization route in this ICP?
+                    🎯 Recommend specific neobank prospects to target first
                   </Button>
                 </div>
               </div>
