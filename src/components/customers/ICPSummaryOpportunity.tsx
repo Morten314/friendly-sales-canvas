@@ -22,9 +22,10 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
 
   // Reset expanded state when activeICP changes
   useEffect(() => {
+    console.log('Active ICP changed:', activeICP);
     setIsExpanded(false);
     setShowProfilerChat(false);
-  }, [activeICP?.id]);
+  }, [activeICP?.id, activeICP?.industry, activeICP?.segment]);
 
   const handleEdit = (section: string) => {
     setEditingSection(section);
@@ -44,435 +45,457 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
 
   // Dynamic content based on active ICP
   const getICPContent = () => {
-    console.log('Active ICP:', activeICP); // Debug log to see what ICP is selected
+    console.log('Getting ICP content for:', activeICP);
     
-    // Match by ID first, then fallback to industry/segment matching
-    if (activeICP?.id === "healthcare-saas" || (activeICP?.industry === "Healthcare SaaS" && activeICP?.segment === "Patient Data Analytics")) {
-      return {
-        blurb: "Patient Data Analytics platforms in healthcare SaaS are experiencing accelerated growth across North America and EU, driven by HIPAA compliance requirements and AI/ML integration demands. Companies with 100–500 employees are leading digital health innovation while navigating complex regulatory frameworks and data privacy mandates. The sector is increasingly investing in real-time analytics and predictive modeling to enhance patient outcomes and operational efficiency.",
-        stats: [
-          { icon: TrendingUp, label: "Market Growth", value: "8.2% CAGR", color: "green" },
-          { icon: DollarSign, label: "Market Size", value: "$6.8B TAM in North America, $4.2B in EU", color: "green" },
-          { icon: Users, label: "Active Players", value: "~280 Healthcare Analytics firms", color: "blue" },
-          { icon: Building, label: "Investment Activity", value: "$4.1B raised in past 12 months", color: "orange" }
-        ],
-        marketSize: "$11.0B",
-        sam: "$8.5B",
-        regions: "North America + EU",
-        topVertical: "Patient Data Analytics",
-        cagr: "8.2%",
-        reportTitle: "Healthcare SaaS Market Intelligence Report",
-        marketContent: {
-          forecast: "$11.0B by 2027",
-          drivers: [
-            "HIPAA and GDPR compliance requirements",
-            "AI-driven diagnostic and predictive analytics",
-            "Interoperability standards (FHIR, HL7)"
-          ],
-          insight: "8.2% CAGR reflects strong demand for data-driven healthcare solutions."
-        },
-        segments: {
-          "North America": [
-            "Strong regulatory framework with HIPAA compliance",
-            "High adoption of EHR systems driving data availability",
-            "Major health systems investing in analytics platforms"
-          ],
-          "EU": [
-            "GDPR creating robust data protection standards",
-            "Government-led digital health initiatives",
-            "Growing focus on population health management"
-          ]
-        },
-        challenges: [
-          "Complex data integration across disparate healthcare systems",
-          "Stringent regulatory requirements for patient data handling",
-          "High customer acquisition costs in healthcare sector"
-        ],
-        recommendations: {
-          goToMarket: [
-            "Lead with compliance and security credentials",
-            "Partner with EHR vendors for seamless integration"
-          ],
-          targetProfile: [
-            "HIPAA-compliant infrastructure",
-            "Active EHR implementation projects",
-            "Recent healthcare IT investments"
-          ]
-        },
-        signals: [
-          { category: "Regulatory", description: "New healthcare data regulations" },
-          { category: "Technology", description: "AI/ML adoption in clinical settings" },
-          { category: "Funding", description: "Healthcare IT funding rounds above $25M" }
-        ]
-      };
+    if (!activeICP) {
+      console.log('No active ICP, using default');
+      return getDefaultContent();
     }
 
-    if (activeICP?.id === "logistics-tech" || (activeICP?.industry === "Logistics Tech" && activeICP?.segment === "Last-Mile Delivery")) {
-      return {
-        blurb: "Last-Mile Delivery platforms in logistics tech are revolutionizing supply chain efficiency across SEA and North America, driven by e-commerce growth and real-time tracking demands. Companies with 200–800 employees are pioneering API-first solutions while addressing urbanization challenges and sustainability requirements. The sector is rapidly adopting IoT integration and route optimization algorithms to meet consumer expectations for faster, more transparent deliveries.",
-        stats: [
-          { icon: TrendingUp, label: "Market Growth", value: "12.1% CAGR", color: "green" },
-          { icon: DollarSign, label: "Market Size", value: "$8.3B TAM in SEA, $15.7B in North America", color: "green" },
-          { icon: Users, label: "Active Players", value: "~190 Last-Mile Tech firms", color: "blue" },
-          { icon: Building, label: "Investment Activity", value: "$6.2B raised in past 12 months", color: "orange" }
-        ],
-        marketSize: "$24.0B",
-        sam: "$18.5B",
-        regions: "SEA + North America",
-        topVertical: "Last-Mile Delivery",
-        cagr: "12.1%",
-        reportTitle: "Logistics Tech Market Intelligence Report",
-        marketContent: {
-          forecast: "$24.0B by 2027",
-          drivers: [
-            "E-commerce boom driving delivery demand",
-            "Consumer expectations for real-time tracking",
-            "Urban density requiring optimized routing solutions"
+    // Match by ID or industry/segment combination
+    const icpKey = activeICP.id || `${activeICP.industry}-${activeICP.segment}`.toLowerCase().replace(/\s+/g, '-');
+    console.log('ICP Key:', icpKey);
+    
+    switch (icpKey) {
+      case "healthcare-saas":
+      case "healthcare-saas-patient-data-analytics":
+        console.log('Matched Healthcare SaaS');
+        return {
+          blurb: "Patient Data Analytics platforms in healthcare SaaS are experiencing accelerated growth across North America and EU, driven by HIPAA compliance requirements and AI/ML integration demands. Companies with 100–500 employees are leading digital health innovation while navigating complex regulatory frameworks and data privacy mandates. The sector is increasingly investing in real-time analytics and predictive modeling to enhance patient outcomes and operational efficiency.",
+          stats: [
+            { icon: TrendingUp, label: "Market Growth", value: "8.2% CAGR", color: "green" },
+            { icon: DollarSign, label: "Market Size", value: "$6.8B TAM in North America, $4.2B in EU", color: "green" },
+            { icon: Users, label: "Active Players", value: "~280 Healthcare Analytics firms", color: "blue" },
+            { icon: Building, label: "Investment Activity", value: "$4.1B raised in past 12 months", color: "orange" }
           ],
-          insight: "12.1% CAGR driven by explosive e-commerce growth and urbanization trends."
-        },
-        segments: {
-          "SEA": [
-            "Rapid e-commerce growth in emerging markets",
-            "Infrastructure challenges creating innovation opportunities",
-            "Government support for digital logistics initiatives"
+          marketSize: "$11.0B",
+          sam: "$8.5B",
+          regions: "North America + EU",
+          topVertical: "Patient Data Analytics",
+          cagr: "8.2%",
+          reportTitle: "Healthcare SaaS Market Intelligence Report",
+          marketContent: {
+            forecast: "$11.0B by 2027",
+            drivers: [
+              "HIPAA and GDPR compliance requirements",
+              "AI-driven diagnostic and predictive analytics",
+              "Interoperability standards (FHIR, HL7)"
+            ],
+            insight: "8.2% CAGR reflects strong demand for data-driven healthcare solutions."
+          },
+          segments: {
+            "North America": [
+              "Strong regulatory framework with HIPAA compliance",
+              "High adoption of EHR systems driving data availability",
+              "Major health systems investing in analytics platforms"
+            ],
+            "EU": [
+              "GDPR creating robust data protection standards",
+              "Government-led digital health initiatives",
+              "Growing focus on population health management"
+            ]
+          },
+          challenges: [
+            "Complex data integration across disparate healthcare systems",
+            "Stringent regulatory requirements for patient data handling",
+            "High customer acquisition costs in healthcare sector"
           ],
-          "North America": [
-            "Mature e-commerce market demanding efficiency gains",
-            "Focus on sustainability and carbon footprint reduction",
-            "Integration with autonomous delivery technologies"
+          recommendations: {
+            goToMarket: [
+              "Lead with compliance and security credentials",
+              "Partner with EHR vendors for seamless integration"
+            ],
+            targetProfile: [
+              "HIPAA-compliant infrastructure",
+              "Active EHR implementation projects",
+              "Recent healthcare IT investments"
+            ]
+          },
+          signals: [
+            { category: "Regulatory", description: "New healthcare data regulations" },
+            { category: "Technology", description: "AI/ML adoption in clinical settings" },
+            { category: "Funding", description: "Healthcare IT funding rounds above $25M" }
           ]
-        },
-        challenges: [
-          "Complex urban logistics and traffic congestion",
-          "Rising fuel costs impacting delivery economics",
-          "Competition from established logistics giants"
-        ],
-        recommendations: {
-          goToMarket: [
-            "Emphasize real-time visibility and customer experience",
-            "Target mid-market e-commerce companies seeking differentiation"
-          ],
-          targetProfile: [
-            "High delivery volume operations",
-            "Customer experience focus",
-            "Technology modernization initiatives"
-          ]
-        },
-        signals: [
-          { category: "Market", description: "E-commerce penetration rates in target regions" },
-          { category: "Technology", description: "Autonomous delivery pilot programs" },
-          { category: "Regulatory", description: "Urban delivery regulations and sustainability mandates" }
-        ]
-      };
-    }
+        };
 
-    if (activeICP?.id === "edtech-platforms" || (activeICP?.industry === "EdTech" && activeICP?.segment === "Learning Management")) {
-      return {
-        blurb: "Learning Management platforms in EdTech are transforming educational delivery across Global and LATAM markets, driven by mobile-first adoption and analytics-driven personalization. Companies with 80–300 employees are pioneering adaptive learning technologies while addressing diverse linguistic and cultural requirements. The sector is increasingly focusing on outcomes measurement and AI-powered content recommendation to enhance learning effectiveness and student engagement.",
-        stats: [
-          { icon: TrendingUp, label: "Market Growth", value: "9.4% CAGR", color: "green" },
-          { icon: DollarSign, label: "Market Size", value: "$12.8B TAM globally, $3.2B in LATAM", color: "green" },
-          { icon: Users, label: "Active Players", value: "~350 EdTech LMS firms", color: "blue" },
-          { icon: Building, label: "Investment Activity", value: "$3.8B raised in past 12 months", color: "orange" }
-        ],
-        marketSize: "$16.0B",
-        sam: "$12.5B",
-        regions: "Global + LATAM",
-        topVertical: "Learning Management",
-        cagr: "9.4%",
-        reportTitle: "EdTech Market Intelligence Report",
-        marketContent: {
-          forecast: "$16.0B by 2027",
-          drivers: [
-            "Mobile-first learning preferences among students",
-            "Demand for personalized learning experiences",
-            "Analytics-driven educational outcomes measurement"
+      case "logistics-tech":
+      case "logistics-tech-last-mile-delivery":
+        console.log('Matched Logistics Tech');
+        return {
+          blurb: "Last-Mile Delivery platforms in logistics tech are revolutionizing supply chain efficiency across SEA and North America, driven by e-commerce growth and real-time tracking demands. Companies with 200–800 employees are pioneering API-first solutions while addressing urbanization challenges and sustainability requirements. The sector is rapidly adopting IoT integration and route optimization algorithms to meet consumer expectations for faster, more transparent deliveries.",
+          stats: [
+            { icon: TrendingUp, label: "Market Growth", value: "12.1% CAGR", color: "green" },
+            { icon: DollarSign, label: "Market Size", value: "$8.3B TAM in SEA, $15.7B in North America", color: "green" },
+            { icon: Users, label: "Active Players", value: "~190 Last-Mile Tech firms", color: "blue" },
+            { icon: Building, label: "Investment Activity", value: "$6.2B raised in past 12 months", color: "orange" }
           ],
-          insight: "9.4% CAGR reflects sustained investment in digital learning transformation."
-        },
-        segments: {
-          "Global": [
-            "Widespread digital transformation in education",
-            "Hybrid learning models becoming standard",
-            "Integration with productivity and collaboration tools"
+          marketSize: "$24.0B",
+          sam: "$18.5B",
+          regions: "SEA + North America",
+          topVertical: "Last-Mile Delivery",
+          cagr: "12.1%",
+          reportTitle: "Logistics Tech Market Intelligence Report",
+          marketContent: {
+            forecast: "$24.0B by 2027",
+            drivers: [
+              "E-commerce boom driving delivery demand",
+              "Consumer expectations for real-time tracking",
+              "Urban density requiring optimized routing solutions"
+            ],
+            insight: "12.1% CAGR driven by explosive e-commerce growth and urbanization trends."
+          },
+          segments: {
+            "SEA": [
+              "Rapid e-commerce growth in emerging markets",
+              "Infrastructure challenges creating innovation opportunities",
+              "Government support for digital logistics initiatives"
+            ],
+            "North America": [
+              "Mature e-commerce market demanding efficiency gains",
+              "Focus on sustainability and carbon footprint reduction",
+              "Integration with autonomous delivery technologies"
+            ]
+          },
+          challenges: [
+            "Complex urban logistics and traffic congestion",
+            "Rising fuel costs impacting delivery economics",
+            "Competition from established logistics giants"
           ],
-          "LATAM": [
-            "Rapid smartphone adoption enabling mobile learning",
-            "Government initiatives for digital education access",
-            "Growing demand for multilingual learning platforms"
+          recommendations: {
+            goToMarket: [
+              "Emphasize real-time visibility and customer experience",
+              "Target mid-market e-commerce companies seeking differentiation"
+            ],
+            targetProfile: [
+              "High delivery volume operations",
+              "Customer experience focus",
+              "Technology modernization initiatives"
+            ]
+          },
+          signals: [
+            { category: "Market", description: "E-commerce penetration rates in target regions" },
+            { category: "Technology", description: "Autonomous delivery pilot programs" },
+            { category: "Regulatory", description: "Urban delivery regulations and sustainability mandates" }
           ]
-        },
-        challenges: [
-          "Diverse educational standards and curriculum requirements",
-          "Digital divide affecting student access to technology",
-          "Complex procurement processes in educational institutions"
-        ],
-        recommendations: {
-          goToMarket: [
-            "Focus on measurable learning outcomes and ROI",
-            "Develop partnerships with educational content providers"
-          ],
-          targetProfile: [
-            "Digital transformation initiatives",
-            "Student engagement improvement goals",
-            "Recent educational technology investments"
-          ]
-        },
-        signals: [
-          { category: "Education", description: "Hybrid learning policy changes" },
-          { category: "Technology", description: "AI adoption in educational content" },
-          { category: "Funding", description: "EdTech funding rounds above $15M" }
-        ]
-      };
-    }
+        };
 
-    if (activeICP?.id === "proptech-crm" || (activeICP?.industry === "PropTech" && activeICP?.segment === "Real Estate CRM")) {
-      return {
-        blurb: "Real Estate CRM platforms in PropTech are streamlining property management across North America and ANZ, driven by integration capabilities and workflow automation demands. Companies with 150–600 employees are modernizing traditional real estate operations while addressing complex transaction management and client relationship needs. The sector is increasingly adopting AI-powered lead scoring and automated marketing workflows to enhance agent productivity and deal closure rates.",
-        stats: [
-          { icon: TrendingUp, label: "Market Growth", value: "6.8% CAGR", color: "green" },
-          { icon: DollarSign, label: "Market Size", value: "$7.2B TAM in North America, $2.1B in ANZ", color: "green" },
-          { icon: Users, label: "Active Players", value: "~220 PropTech CRM firms", color: "blue" },
-          { icon: Building, label: "Investment Activity", value: "$2.9B raised in past 12 months", color: "orange" }
-        ],
-        marketSize: "$9.3B",
-        sam: "$7.8B",
-        regions: "North America + ANZ",
-        topVertical: "Real Estate CRM",
-        cagr: "6.8%",
-        reportTitle: "PropTech Market Intelligence Report",
-        marketContent: {
-          forecast: "$9.3B by 2027",
-          drivers: [
-            "Digital transformation in real estate operations",
-            "Integration with MLS and property listing platforms",
-            "Automated workflow and lead management needs"
+      case "edtech-platforms":
+      case "edtech-learning-management":
+        console.log('Matched EdTech');
+        return {
+          blurb: "Learning Management platforms in EdTech are transforming educational delivery across Global and LATAM markets, driven by mobile-first adoption and analytics-driven personalization. Companies with 80–300 employees are pioneering adaptive learning technologies while addressing diverse linguistic and cultural requirements. The sector is increasingly focusing on outcomes measurement and AI-powered content recommendation to enhance learning effectiveness and student engagement.",
+          stats: [
+            { icon: TrendingUp, label: "Market Growth", value: "9.4% CAGR", color: "green" },
+            { icon: DollarSign, label: "Market Size", value: "$12.8B TAM globally, $3.2B in LATAM", color: "green" },
+            { icon: Users, label: "Active Players", value: "~350 EdTech LMS firms", color: "blue" },
+            { icon: Building, label: "Investment Activity", value: "$3.8B raised in past 12 months", color: "orange" }
           ],
-          insight: "6.8% CAGR driven by real estate industry digitization and agent productivity focus."
-        },
-        segments: {
-          "North America": [
-            "Mature real estate market with established MLS systems",
-            "High agent adoption of digital tools",
-            "Integration with mortgage and title service providers"
+          marketSize: "$16.0B",
+          sam: "$12.5B",
+          regions: "Global + LATAM",
+          topVertical: "Learning Management",
+          cagr: "9.4%",
+          reportTitle: "EdTech Market Intelligence Report",
+          marketContent: {
+            forecast: "$16.0B by 2027",
+            drivers: [
+              "Mobile-first learning preferences among students",
+              "Demand for personalized learning experiences",
+              "Analytics-driven educational outcomes measurement"
+            ],
+            insight: "9.4% CAGR reflects sustained investment in digital learning transformation."
+          },
+          segments: {
+            "Global": [
+              "Widespread digital transformation in education",
+              "Hybrid learning models becoming standard",
+              "Integration with productivity and collaboration tools"
+            ],
+            "LATAM": [
+              "Rapid smartphone adoption enabling mobile learning",
+              "Government initiatives for digital education access",
+              "Growing demand for multilingual learning platforms"
+            ]
+          },
+          challenges: [
+            "Diverse educational standards and curriculum requirements",
+            "Digital divide affecting student access to technology",
+            "Complex procurement processes in educational institutions"
           ],
-          "ANZ": [
-            "Growing real estate investment market",
-            "Government digitization initiatives for property transactions",
-            "Increasing focus on data analytics for market insights"
+          recommendations: {
+            goToMarket: [
+              "Focus on measurable learning outcomes and ROI",
+              "Develop partnerships with educational content providers"
+            ],
+            targetProfile: [
+              "Digital transformation initiatives",
+              "Student engagement improvement goals",
+              "Recent educational technology investments"
+            ]
+          },
+          signals: [
+            { category: "Education", description: "Hybrid learning policy changes" },
+            { category: "Technology", description: "AI adoption in educational content" },
+            { category: "Funding", description: "EdTech funding rounds above $15M" }
           ]
-        },
-        challenges: [
-          "Fragmented real estate technology ecosystem",
-          "Resistance to change among traditional real estate professionals",
-          "Complex integration requirements with existing systems"
-        ],
-        recommendations: {
-          goToMarket: [
-            "Emphasize ROI through improved agent productivity",
-            "Partner with MLS providers and real estate franchises"
-          ],
-          targetProfile: [
-            "High transaction volume brokerages",
-            "Technology modernization projects",
-            "Agent productivity improvement initiatives"
-          ]
-        },
-        signals: [
-          { category: "Market", description: "Real estate transaction volume trends" },
-          { category: "Technology", description: "MLS integration announcements" },
-          { category: "Regulatory", description: "Real estate technology compliance requirements" }
-        ]
-      };
-    }
+        };
 
-    if (activeICP?.id === "cybersecurity-startups" || (activeICP?.industry === "Cybersecurity" && activeICP?.segment === "Zero Trust Solutions")) {
-      return {
-        blurb: "Zero Trust Solutions in cybersecurity are securing enterprise networks across North America and EU, driven by SOC 2 compliance and cloud-native architecture adoption. Companies with 75–400 employees are pioneering identity-centric security models while addressing remote work challenges and sophisticated threat landscapes. The sector is rapidly integrating AI-powered threat detection and behavioral analytics to provide comprehensive security postures for distributed organizations.",
-        stats: [
-          { icon: TrendingUp, label: "Market Growth", value: "15.3% CAGR", color: "green" },
-          { icon: DollarSign, label: "Market Size", value: "$18.7B TAM in North America, $12.4B in EU", color: "green" },
-          { icon: Users, label: "Active Players", value: "~180 Zero Trust firms", color: "blue" },
-          { icon: Building, label: "Investment Activity", value: "$8.3B raised in past 12 months", color: "orange" }
-        ],
-        marketSize: "$31.1B",
-        sam: "$25.2B",
-        regions: "North America + EU",
-        topVertical: "Zero Trust Solutions",
-        cagr: "15.3%",
-        reportTitle: "Cybersecurity Market Intelligence Report",
-        marketContent: {
-          forecast: "$31.1B by 2027",
-          drivers: [
-            "Remote work driving perimeter security obsolescence",
-            "Increasing sophistication of cyber threats",
-            "Regulatory compliance requirements (SOC 2, ISO 27001)"
+      case "proptech-crm":
+      case "proptech-real-estate-crm":
+        console.log('Matched PropTech');
+        return {
+          blurb: "Real Estate CRM platforms in PropTech are streamlining property management across North America and ANZ, driven by integration capabilities and workflow automation demands. Companies with 150–600 employees are modernizing traditional real estate operations while addressing complex transaction management and client relationship needs. The sector is increasingly adopting AI-powered lead scoring and automated marketing workflows to enhance agent productivity and deal closure rates.",
+          stats: [
+            { icon: TrendingUp, label: "Market Growth", value: "6.8% CAGR", color: "green" },
+            { icon: DollarSign, label: "Market Size", value: "$7.2B TAM in North America, $2.1B in ANZ", color: "green" },
+            { icon: Users, label: "Active Players", value: "~220 PropTech CRM firms", color: "blue" },
+            { icon: Building, label: "Investment Activity", value: "$2.9B raised in past 12 months", color: "orange" }
           ],
-          insight: "15.3% CAGR reflects urgent enterprise need for modern security architectures."
-        },
-        segments: {
-          "North America": [
-            "High cybersecurity spending driven by regulatory requirements",
-            "Mature cloud adoption creating security transformation needs",
-            "Strong venture capital investment in security technologies"
+          marketSize: "$9.3B",
+          sam: "$7.8B",
+          regions: "North America + ANZ",
+          topVertical: "Real Estate CRM",
+          cagr: "6.8%",
+          reportTitle: "PropTech Market Intelligence Report",
+          marketContent: {
+            forecast: "$9.3B by 2027",
+            drivers: [
+              "Digital transformation in real estate operations",
+              "Integration with MLS and property listing platforms",
+              "Automated workflow and lead management needs"
+            ],
+            insight: "6.8% CAGR driven by real estate industry digitization and agent productivity focus."
+          },
+          segments: {
+            "North America": [
+              "Mature real estate market with established MLS systems",
+              "High agent adoption of digital tools",
+              "Integration with mortgage and title service providers"
+            ],
+            "ANZ": [
+              "Growing real estate investment market",
+              "Government digitization initiatives for property transactions",
+              "Increasing focus on data analytics for market insights"
+            ]
+          },
+          challenges: [
+            "Fragmented real estate technology ecosystem",
+            "Resistance to change among traditional real estate professionals",
+            "Complex integration requirements with existing systems"
           ],
-          "EU": [
-            "GDPR creating stringent data protection requirements",
-            "Government initiatives for cybersecurity resilience",
-            "Growing focus on supply chain security"
+          recommendations: {
+            goToMarket: [
+              "Emphasize ROI through improved agent productivity",
+              "Partner with MLS providers and real estate franchises"
+            ],
+            targetProfile: [
+              "High transaction volume brokerages",
+              "Technology modernization projects",
+              "Agent productivity improvement initiatives"
+            ]
+          },
+          signals: [
+            { category: "Market", description: "Real estate transaction volume trends" },
+            { category: "Technology", description: "MLS integration announcements" },
+            { category: "Regulatory", description: "Real estate technology compliance requirements" }
           ]
-        },
-        challenges: [
-          "Complex migration from legacy security architectures",
-          "Skills shortage in cybersecurity professionals",
-          "Integration complexity with existing security tools"
-        ],
-        recommendations: {
-          goToMarket: [
-            "Lead with compliance and risk reduction messaging",
-            "Target organizations with recent security incidents or audits"
-          ],
-          targetProfile: [
-            "Cloud transformation initiatives",
-            "Remote work security challenges",
-            "Recent cybersecurity investments or incidents"
-          ]
-        },
-        signals: [
-          { category: "Security", description: "High-profile cybersecurity breaches" },
-          { category: "Compliance", description: "New data protection regulations" },
-          { category: "Technology", description: "Cloud migration announcements" }
-        ]
-      };
-    }
+        };
 
-    if (activeICP?.id === "insurtech-platforms" || (activeICP?.industry === "InsurTech" && activeICP?.segment === "Digital Claims Processing")) {
-      return {
-        blurb: "Digital Claims Processing platforms in InsurTech are revolutionizing insurance operations across North America and UK, driven by automation focus and regulatory expertise demands. Companies with 100–350 employees are transforming traditional claims workflows while addressing fraud prevention and customer experience expectations. The sector is increasingly leveraging AI-powered damage assessment and automated decision-making to reduce processing times and operational costs.",
-        stats: [
-          { icon: TrendingUp, label: "Market Growth", value: "11.7% CAGR", color: "green" },
-          { icon: DollarSign, label: "Market Size", value: "$9.4B TAM in North America, $3.8B in UK", color: "green" },
-          { icon: Users, label: "Active Players", value: "~160 InsurTech Claims firms", color: "blue" },
-          { icon: Building, label: "Investment Activity", value: "$3.6B raised in past 12 months", color: "orange" }
-        ],
-        marketSize: "$13.2B",
-        sam: "$10.8B",
-        regions: "North America + UK",
-        topVertical: "Digital Claims Processing",
-        cagr: "11.7%",
-        reportTitle: "InsurTech Market Intelligence Report",
-        marketContent: {
-          forecast: "$13.2B by 2027",
-          drivers: [
-            "Customer expectations for faster claims resolution",
-            "Regulatory pressure for transparent claims processes",
-            "AI and automation reducing manual processing costs"
+      case "cybersecurity-startups":
+      case "cybersecurity-zero-trust-solutions":
+        console.log('Matched Cybersecurity');
+        return {
+          blurb: "Zero Trust Solutions in cybersecurity are securing enterprise networks across North America and EU, driven by SOC 2 compliance and cloud-native architecture adoption. Companies with 75–400 employees are pioneering identity-centric security models while addressing remote work challenges and sophisticated threat landscapes. The sector is rapidly integrating AI-powered threat detection and behavioral analytics to provide comprehensive security postures for distributed organizations.",
+          stats: [
+            { icon: TrendingUp, label: "Market Growth", value: "15.3% CAGR", color: "green" },
+            { icon: DollarSign, label: "Market Size", value: "$18.7B TAM in North America, $12.4B in EU", color: "green" },
+            { icon: Users, label: "Active Players", value: "~180 Zero Trust firms", color: "blue" },
+            { icon: Building, label: "Investment Activity", value: "$8.3B raised in past 12 months", color: "orange" }
           ],
-          insight: "11.7% CAGR driven by digital transformation pressure and cost reduction needs."
-        },
-        segments: {
-          "North America": [
-            "Mature insurance market with legacy system modernization needs",
-            "Regulatory focus on consumer protection and transparency",
-            "High adoption of mobile-first claims reporting"
+          marketSize: "$31.1B",
+          sam: "$25.2B",
+          regions: "North America + EU",
+          topVertical: "Zero Trust Solutions",
+          cagr: "15.3%",
+          reportTitle: "Cybersecurity Market Intelligence Report",
+          marketContent: {
+            forecast: "$31.1B by 2027",
+            drivers: [
+              "Remote work driving perimeter security obsolescence",
+              "Increasing sophistication of cyber threats",
+              "Regulatory compliance requirements (SOC 2, ISO 27001)"
+            ],
+            insight: "15.3% CAGR reflects urgent enterprise need for modern security architectures."
+          },
+          segments: {
+            "North America": [
+              "High cybersecurity spending driven by regulatory requirements",
+              "Mature cloud adoption creating security transformation needs",
+              "Strong venture capital investment in security technologies"
+            ],
+            "EU": [
+              "GDPR creating stringent data protection requirements",
+              "Government initiatives for cybersecurity resilience",
+              "Growing focus on supply chain security"
+            ]
+          },
+          challenges: [
+            "Complex migration from legacy security architectures",
+            "Skills shortage in cybersecurity professionals",
+            "Integration complexity with existing security tools"
           ],
-          "UK": [
-            "Strong regulatory framework driving innovation",
-            "Government initiatives for insurance sector digitization",
-            "Growing focus on parametric and usage-based insurance"
+          recommendations: {
+            goToMarket: [
+              "Lead with compliance and risk reduction messaging",
+              "Target organizations with recent security incidents or audits"
+            ],
+            targetProfile: [
+              "Cloud transformation initiatives",
+              "Remote work security challenges",
+              "Recent cybersecurity investments or incidents"
+            ]
+          },
+          signals: [
+            { category: "Security", description: "High-profile cybersecurity breaches" },
+            { category: "Compliance", description: "New data protection regulations" },
+            { category: "Technology", description: "Cloud migration announcements" }
           ]
-        },
-        challenges: [
-          "Legacy system integration in established insurance companies",
-          "Regulatory compliance across different insurance products",
-          "Fraud detection and prevention in automated processes"
-        ],
-        recommendations: {
-          goToMarket: [
-            "Emphasize cost reduction and processing time improvements",
-            "Target insurers with high claims volume and complexity"
-          ],
-          targetProfile: [
-            "Legacy system modernization projects",
-            "High claims processing volumes",
-            "Customer experience improvement initiatives"
-          ]
-        },
-        signals: [
-          { category: "Insurance", description: "Claims processing cost pressures" },
-          { category: "Technology", description: "AI adoption in insurance operations" },
-          { category: "Regulatory", description: "Insurance industry digital transformation mandates" }
-        ]
-      };
-    }
+        };
 
-    if (activeICP?.id === "renewable-energy" || (activeICP?.industry === "Clean Energy" && activeICP?.segment === "Solar Management Platforms")) {
-      return {
-        blurb: "Solar Management Platforms in clean energy are optimizing renewable installations across North America, EU, and ANZ, driven by IoT integration and sustainability reporting demands. Companies with 120–500 employees are pioneering smart grid technologies while addressing regulatory incentives and environmental compliance requirements. The sector is rapidly adopting predictive maintenance algorithms and real-time performance monitoring to maximize energy output and operational efficiency.",
-        stats: [
-          { icon: TrendingUp, label: "Market Growth", value: "18.2% CAGR", color: "green" },
-          { icon: DollarSign, label: "Market Size", value: "$8.9B TAM in North America, $6.7B in EU, $2.2B in ANZ", color: "green" },
-          { icon: Users, label: "Active Players", value: "~85 Solar Management firms", color: "blue" },
-          { icon: Building, label: "Investment Activity", value: "$5.4B raised in past 12 months", color: "orange" }
-        ],
-        marketSize: "$17.8B",
-        sam: "$14.3B",
-        regions: "North America + EU + ANZ",
-        topVertical: "Solar Management Platforms",
-        cagr: "18.2%",
-        reportTitle: "Clean Energy Market Intelligence Report",
-        marketContent: {
-          forecast: "$17.8B by 2027",
-          drivers: [
-            "Government renewable energy mandates and incentives",
-            "IoT sensor technology enabling real-time monitoring",
-            "Corporate sustainability commitments driving solar adoption"
+      case "insurtech-platforms":
+      case "insurtech-digital-claims-processing":
+        console.log('Matched InsurTech');
+        return {
+          blurb: "Digital Claims Processing platforms in InsurTech are revolutionizing insurance operations across North America and UK, driven by automation focus and regulatory expertise demands. Companies with 100–350 employees are transforming traditional claims workflows while addressing fraud prevention and customer experience expectations. The sector is increasingly leveraging AI-powered damage assessment and automated decision-making to reduce processing times and operational costs.",
+          stats: [
+            { icon: TrendingUp, label: "Market Growth", value: "11.7% CAGR", color: "green" },
+            { icon: DollarSign, label: "Market Size", value: "$9.4B TAM in North America, $3.8B in UK", color: "green" },
+            { icon: Users, label: "Active Players", value: "~160 InsurTech Claims firms", color: "blue" },
+            { icon: Building, label: "Investment Activity", value: "$3.6B raised in past 12 months", color: "orange" }
           ],
-          insight: "18.2% CAGR reflects accelerating renewable energy transition and technology maturation."
-        },
-        segments: {
-          "North America": [
-            "Strong federal and state incentives for solar adoption",
-            "Mature installation market creating management needs",
-            "Grid integration requirements driving software demand"
+          marketSize: "$13.2B",
+          sam: "$10.8B",
+          regions: "North America + UK",
+          topVertical: "Digital Claims Processing",
+          cagr: "11.7%",
+          reportTitle: "InsurTech Market Intelligence Report",
+          marketContent: {
+            forecast: "$13.2B by 2027",
+            drivers: [
+              "Customer expectations for faster claims resolution",
+              "Regulatory pressure for transparent claims processes",
+              "AI and automation reducing manual processing costs"
+            ],
+            insight: "11.7% CAGR driven by digital transformation pressure and cost reduction needs."
+          },
+          segments: {
+            "North America": [
+              "Mature insurance market with legacy system modernization needs",
+              "Regulatory focus on consumer protection and transparency",
+              "High adoption of mobile-first claims reporting"
+            ],
+            "UK": [
+              "Strong regulatory framework driving innovation",
+              "Government initiatives for insurance sector digitization",
+              "Growing focus on parametric and usage-based insurance"
+            ]
+          },
+          challenges: [
+            "Legacy system integration in established insurance companies",
+            "Regulatory compliance across different insurance products",
+            "Fraud detection and prevention in automated processes"
           ],
-          "EU": [
-            "Aggressive renewable energy targets by 2030",
-            "Green Deal policies supporting clean energy investment",
-            "Focus on energy independence driving solar installations"
-          ],
-          "ANZ": [
-            "High solar irradiance creating optimal conditions",
-            "Government renewable energy targets",
-            "Growing commercial and utility-scale installations"
+          recommendations: {
+            goToMarket: [
+              "Emphasize cost reduction and processing time improvements",
+              "Target insurers with high claims volume and complexity"
+            ],
+            targetProfile: [
+              "Legacy system modernization projects",
+              "High claims processing volumes",
+              "Customer experience improvement initiatives"
+            ]
+          },
+          signals: [
+            { category: "Insurance", description: "Claims processing cost pressures" },
+            { category: "Technology", description: "AI adoption in insurance operations" },
+            { category: "Regulatory", description: "Insurance industry digital transformation mandates" }
           ]
-        },
-        challenges: [
-          "Complex grid integration and energy storage coordination",
-          "Varying regulatory frameworks across different regions",
-          "Technology standardization across diverse solar installations"
-        ],
-        recommendations: {
-          goToMarket: [
-            "Emphasize ROI through performance optimization and predictive maintenance",
-            "Partner with solar installers and energy management companies"
-          ],
-          targetProfile: [
-            "Large-scale solar installations",
-            "Sustainability reporting requirements",
-            "Recent renewable energy investments"
-          ]
-        },
-        signals: [
-          { category: "Policy", description: "Renewable energy policy changes and incentives" },
-          { category: "Technology", description: "Battery storage and grid integration developments" },
-          { category: "Investment", description: "Clean energy funding rounds above $30M" }
-        ]
-      };
-    }
+        };
 
-    // Default Neobanks content (fintech-neobanks or fallback)
+      case "renewable-energy":
+      case "clean-energy-solar-management-platforms":
+        console.log('Matched Clean Energy');
+        return {
+          blurb: "Solar Management Platforms in clean energy are optimizing renewable installations across North America, EU, and ANZ, driven by IoT integration and sustainability reporting demands. Companies with 120–500 employees are pioneering smart grid technologies while addressing regulatory incentives and environmental compliance requirements. The sector is rapidly adopting predictive maintenance algorithms and real-time performance monitoring to maximize energy output and operational efficiency.",
+          stats: [
+            { icon: TrendingUp, label: "Market Growth", value: "18.2% CAGR", color: "green" },
+            { icon: DollarSign, label: "Market Size", value: "$8.9B TAM in North America, $6.7B in EU, $2.2B in ANZ", color: "green" },
+            { icon: Users, label: "Active Players", value: "~85 Solar Management firms", color: "blue" },
+            { icon: Building, label: "Investment Activity", value: "$5.4B raised in past 12 months", color: "orange" }
+          ],
+          marketSize: "$17.8B",
+          sam: "$14.3B",
+          regions: "North America + EU + ANZ",
+          topVertical: "Solar Management Platforms",
+          cagr: "18.2%",
+          reportTitle: "Clean Energy Market Intelligence Report",
+          marketContent: {
+            forecast: "$17.8B by 2027",
+            drivers: [
+              "Government renewable energy mandates and incentives",
+              "IoT sensor technology enabling real-time monitoring",
+              "Corporate sustainability commitments driving solar adoption"
+            ],
+            insight: "18.2% CAGR reflects accelerating renewable energy transition and technology maturation."
+          },
+          segments: {
+            "North America": [
+              "Strong federal and state incentives for solar adoption",
+              "Mature installation market creating management needs",
+              "Grid integration requirements driving software demand"
+            ],
+            "EU": [
+              "Aggressive renewable energy targets by 2030",
+              "Green Deal policies supporting clean energy investment",
+              "Focus on energy independence driving solar installations"
+            ],
+            "ANZ": [
+              "High solar irradiance creating optimal conditions",
+              "Government renewable energy targets",
+              "Growing commercial and utility-scale installations"
+            ]
+          },
+          challenges: [
+            "Complex grid integration and energy storage coordination",
+            "Varying regulatory frameworks across different regions",
+            "Technology standardization across diverse solar installations"
+          ],
+          recommendations: {
+            goToMarket: [
+              "Emphasize ROI through performance optimization and predictive maintenance",
+              "Partner with solar installers and energy management companies"
+            ],
+            targetProfile: [
+              "Large-scale solar installations",
+              "Sustainability reporting requirements",
+              "Recent renewable energy investments"
+            ]
+          },
+          signals: [
+            { category: "Policy", description: "Renewable energy policy changes and incentives" },
+            { category: "Technology", description: "Battery storage and grid integration developments" },
+            { category: "Investment", description: "Clean energy funding rounds above $30M" }
+          ]
+        };
+
+      default:
+        console.log('No match found, using default Neobanks content');
+        return getDefaultContent();
+    }
+  };
+
+  const getDefaultContent = () => {
     return {
       blurb: "Neobanks in the fintech sector are rapidly scaling across North America and DACH, driven by high cloud adoption and strong regulatory compliance demands. Mid-sized players (50–200 employees) are emerging as innovators yet face margin pressures and evolving regulatory landscapes. These financial institutions are increasingly investing in advanced API-first infrastructure to compete with traditional banks. The sector shows strong momentum toward embedded finance solutions and customer-centric digital experiences.",
       stats: [
@@ -548,24 +571,25 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
     { name: "Other", value: 10, color: "#66C2FF" }
   ];
 
+  const marketSizeValue = parseFloat(content.marketSize.replace(/[^0-9.]/g, ''));
   const tamGrowthData = [{
     name: "2022",
-    value: parseFloat(content.marketSize.replace(/[^0-9.]/g, '')) * 0.7
+    value: marketSizeValue * 0.7
   }, {
     name: "2023", 
-    value: parseFloat(content.marketSize.replace(/[^0-9.]/g, '')) * 0.8
+    value: marketSizeValue * 0.8
   }, {
     name: "2024",
-    value: parseFloat(content.marketSize.replace(/[^0-9.]/g, '')) * 0.9
+    value: marketSizeValue * 0.9
   }, {
     name: "2025",
-    value: parseFloat(content.marketSize.replace(/[^0-9.]/g, '')) * 0.95
+    value: marketSizeValue * 0.95
   }, {
     name: "2026",
-    value: parseFloat(content.marketSize.replace(/[^0-9.]/g, '')) * 0.98
+    value: marketSizeValue * 0.98
   }, {
     name: "2027",
-    value: parseFloat(content.marketSize.replace(/[^0-9.]/g, ''))
+    value: marketSizeValue
   }];
 
   if (!isExpanded) {
