@@ -378,19 +378,37 @@ interface Lead {
 interface ConsumerTrendsProps {
   apiEndpoint?: string;
   userId?: string;
+  // Props for persistent filter state
+  selectedIndustry?: string;
+  selectedSize?: string;
+  selectedRegion?: string;
+  onFiltersChange?: (filters: { selectedIndustry: string; selectedSize: string; selectedRegion: string }) => void;
 }
 
 export const ConsumerTrends = ({ 
   apiEndpoint = "https://backend-11kr.onrender.com/leads",
-  userId = "brewra"
+  userId = "brewra",
+  selectedIndustry = "all",
+  selectedSize = "all", 
+  selectedRegion = "all",
+  onFiltersChange
 }: ConsumerTrendsProps) => {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedIndustry, setSelectedIndustry] = useState("all");
-  const [selectedSize, setSelectedSize] = useState("all");
-  const [selectedRegion, setSelectedRegion] = useState("all");
   const [refreshing, setRefreshing] = useState(false);
+
+  // Helper function to handle filter changes
+  const handleFilterChange = (filterType: 'industry' | 'size' | 'region', value: string) => {
+    if (onFiltersChange) {
+      const newFilters = {
+        selectedIndustry: filterType === 'industry' ? value : selectedIndustry,
+        selectedSize: filterType === 'size' ? value : selectedSize,
+        selectedRegion: filterType === 'region' ? value : selectedRegion
+      };
+      onFiltersChange(newFilters);
+    }
+  };
 
   // Dynamic status columns based on actual data
   const getStatusColumns = (leadsData: Lead[]) => {
@@ -714,7 +732,7 @@ export const ConsumerTrends = ({
       <div className="p-4 border-b bg-gray-50">
         <div className="flex flex-wrap gap-3">
           <div className="flex items-center gap-2">
-            <Select value={selectedIndustry} onValueChange={setSelectedIndustry}>
+            <Select value={selectedIndustry} onValueChange={(value) => handleFilterChange('industry', value)}>
               <SelectTrigger className="w-[130px] h-9">
                 <SelectValue placeholder="Industry" />
               </SelectTrigger>
@@ -728,7 +746,7 @@ export const ConsumerTrends = ({
           </div>
           
           <div className="flex items-center gap-2">
-            <Select value={selectedSize} onValueChange={setSelectedSize}>
+            <Select value={selectedSize} onValueChange={(value) => handleFilterChange('size', value)}>
               <SelectTrigger className="w-[130px] h-9">
                 <SelectValue placeholder="Company Size" />
               </SelectTrigger>
@@ -742,7 +760,7 @@ export const ConsumerTrends = ({
           </div>
           
           <div className="flex items-center gap-2">
-            <Select value={selectedRegion} onValueChange={setSelectedRegion}>
+            <Select value={selectedRegion} onValueChange={(value) => handleFilterChange('region', value)}>
               <SelectTrigger className="w-[130px] h-9">
                 <SelectValue placeholder="Region" />
               </SelectTrigger>

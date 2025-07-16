@@ -1100,6 +1100,13 @@ const MarketResearch = () => {
   });
   const [industryTrendsLastEditedField, setIndustryTrendsLastEditedField] = useState("");
 
+  // ConsumerTrends (Your Lead Stream) filter state - persist across tab switches
+  const [leadStreamFilters, setLeadStreamFilters] = useState({
+    selectedIndustry: "all",
+    selectedSize: "all", 
+    selectedRegion: "all"
+  });
+
   // Regulatory Compliance state - Add these new state variables
   const [isRegulatoryEditing, setIsRegulatoryEditing] = useState(false);
   const [regulatoryExpanded, setRegulatoryExpanded] = useState(false);
@@ -2833,7 +2840,12 @@ const MarketResearch = () => {
               </TabsContent>
               
               <TabsContent value="analysis" className="mt-0">
-                <ConsumerTrends />
+                <ConsumerTrends 
+                  selectedIndustry={leadStreamFilters.selectedIndustry}
+                  selectedSize={leadStreamFilters.selectedSize}
+                  selectedRegion={leadStreamFilters.selectedRegion}
+                  onFiltersChange={(filters) => setLeadStreamFilters(filters)}
+                />
               </TabsContent>
               
               <TabsContent value="trends" className="mt-0">
