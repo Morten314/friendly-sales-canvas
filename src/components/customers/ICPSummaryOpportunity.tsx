@@ -125,32 +125,71 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
             corePersonas: 4,
             topPainPoint: "Data silos preventing unified patient view",
             buyingTriggers: 6,
-            personas: [
+            orgChart: [
               {
                 role: "Chief Medical Officer",
-                influence: "High",
-                painPoints: ["Fragmented patient data", "Clinical workflow inefficiencies", "Quality metrics reporting"],
-                triggers: ["New patient safety regulations", "Quality scores decline", "Competitor advantage in outcomes"]
+                focus: "Clinical outcomes, patient safety protocols",
+                kpis: ["Patient satisfaction scores", "Clinical workflow efficiency", "Quality metrics compliance"],
+                relationships: ["Direct report to CEO", "Works closely with IT Director"]
               },
               {
-                role: "IT Director",
-                influence: "High", 
-                painPoints: ["Legacy system integration", "Data security compliance", "Vendor management complexity"],
-                triggers: ["HIPAA audit findings", "System downtime incidents", "Budget approval cycles"]
-              },
-              {
-                role: "Clinical Data Manager",
-                influence: "Medium",
-                painPoints: ["Manual data extraction", "Report generation delays", "Inconsistent data formats"],
-                triggers: ["Monthly reporting deadlines", "Clinical research demands", "Accreditation reviews"]
-              },
-              {
-                role: "Chief Financial Officer",
-                influence: "Medium",
-                painPoints: ["ROI measurement difficulty", "Budget allocation decisions", "Operational cost pressures"],
-                triggers: ["Budget planning cycles", "Cost reduction mandates", "Revenue optimization needs"]
+                role: "IT Director", 
+                focus: "Healthcare technology infrastructure, data security",
+                kpis: ["System uptime", "HIPAA compliance metrics", "Data integration success rates"],
+                relationships: ["Reports to COO", "Partners with Chief Medical Officer"]
               }
-            ]
+            ],
+            painPoints: [
+              { 
+                painPoint: "Legacy EHR Integration",
+                description: "Existing electronic health record systems create data silos and integration challenges."
+              },
+              {
+                painPoint: "HIPAA Compliance Complexity", 
+                description: "Stringent healthcare data privacy regulations require specialized security measures."
+              },
+              {
+                painPoint: "Clinical Workflow Disruption",
+                description: "New systems must integrate seamlessly without disrupting patient care delivery."
+              },
+              {
+                painPoint: "ROI Measurement Difficulty",
+                description: "Quantifying clinical and operational benefits for budget justification."
+              }
+            ],
+            buyingTriggers: [
+              {
+                trigger: "HIPAA Audit Findings",
+                description: "Compliance gaps identified during regulatory audits drive urgent system upgrades."
+              },
+              {
+                trigger: "Quality Score Decline", 
+                description: "Falling patient satisfaction or clinical quality metrics spark technology investments."
+              },
+              {
+                trigger: "New Patient Safety Regulations",
+                description: "Updated healthcare regulations require enhanced data analytics capabilities."
+              },
+              {
+                trigger: "EHR System Migration",
+                description: "Electronic health record system changes create opportunities for analytics integration."
+              }
+            ],
+            recommendations: {
+              cto: [
+                "Emphasize HIPAA-compliant cloud architecture and security certifications",
+                "Showcase seamless EHR integration capabilities and data interoperability"
+              ],
+              headOfDigital: [
+                "Highlight patient experience improvements and clinical workflow optimization",
+                "Demonstrate measurable ROI through clinical efficiency and outcome metrics"
+              ],
+              timing: [
+                "Monitor healthcare regulation announcements and compliance deadlines",
+                "Track EHR system migration announcements and major health system expansions",
+                "Target timing around budget planning cycles and quality review periods"
+              ]
+            }
           }
         };
 
@@ -619,26 +658,71 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
         corePersonas: 3,
         topPainPoint: "Regulatory compliance complexity",
         buyingTriggers: 4,
-        personas: [
+        orgChart: [
           {
             role: "Chief Technology Officer",
-            influence: "High",
-            painPoints: ["Regulatory compliance automation", "Scalability bottlenecks", "Security requirements"],
-            triggers: ["Regulatory deadline pressures", "Customer growth milestones", "Funding round preparations"]
+            focus: "Technology strategy, infrastructure modernization",
+            kpis: ["Cloud adoption velocity", "IT compliance posture", "Time-to-market for digital products"],
+            relationships: ["Reports to CEO", "Works closely with Head of Digital"]
           },
           {
-            role: "Chief Risk Officer",
-            influence: "High",
-            painPoints: ["AML/KYC compliance", "Fraud detection accuracy", "Regulatory reporting"],
-            triggers: ["Audit findings", "New regulation announcements", "Risk threshold breaches"]
-          },
-          {
-            role: "Head of Product",
-            influence: "Medium",
-            painPoints: ["Time-to-market pressure", "Feature parity with competitors", "User experience optimization"],
-            triggers: ["Product roadmap deadlines", "Customer feedback patterns", "Competitive feature launches"]
+            role: "Head of Digital",
+            focus: "Customer experience, digital product rollouts", 
+            kpis: ["App adoption rates", "Customer churn metrics", "Regulatory UX compliance"],
+            relationships: ["Reports to CMO", "Partners with CTO on product strategy"]
           }
-        ]
+        ],
+        painPoints: [
+          { 
+            painPoint: "Legacy Core Banking Systems",
+            description: "Even newer Neobanks sometimes have inherited legacy systems slowing innovation."
+          },
+          {
+            painPoint: "Regulatory Overload", 
+            description: "Highly complex rules (e.g. PSD2, Basel IV) strain teams."
+          },
+          {
+            painPoint: "Talent Competition",
+            description: "Difficulty attracting compliance-savvy tech talent."
+          },
+          {
+            painPoint: "Cost Pressures",
+            description: "Rising CAC and margin compression."
+          }
+        ],
+        buyingTriggers: [
+          {
+            trigger: "New Funding Round",
+            description: "Recent capital raises push tech stack upgrades."
+          },
+          {
+            trigger: "Regulatory Change", 
+            description: "A new law forces compliance investment."
+          },
+          {
+            trigger: "Customer Churn Spike",
+            description: "Loss of users sparks urgent digital product fixes."
+          },
+          {
+            trigger: "Competitive Move",
+            description: "A rival launches innovative digital services."
+          }
+        ],
+        recommendations: {
+          cto: [
+            "Emphasize cloud-native compliance architecture and scalability benefits",
+            "Showcase regulatory automation capabilities and infrastructure modernization"
+          ],
+          headOfDigital: [
+            "Highlight customer-centric digital capabilities and user experience improvements",
+            "Demonstrate competitive differentiation through innovative digital services"
+          ],
+          timing: [
+            "Monitor industry news on regulatory changes and compliance deadlines",
+            "Track funding announcements and expansion plans",
+            "Consider multi-threading both personas early in sales cycle"
+          ]
+        }
       }
     };
   };
@@ -1125,44 +1209,42 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
             </div>
           </div>
 
-          {/* Buyer Personas Details */}
-          <div className="space-y-6">
-            <div className="bg-white rounded-lg border p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <Users className="h-5 w-5 text-blue-600" />
-                <h3 className="text-lg font-semibold text-gray-900">Buyer Personas</h3>
-              </div>
+          {/* Buyer Map - Org Chart Visualization */}
+          <div className="bg-white rounded-lg border p-6 mb-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Users className="h-5 w-5 text-blue-600" />
+              <h3 className="text-lg font-semibold text-gray-900">Buyer Map</h3>
+            </div>
+            <div className="space-y-4">
+              <h4 className="font-medium text-gray-900 mb-3">Org Chart Visualization</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {content.buyerMap.personas.map((persona, index) => (
-                  <div key={index} className="bg-gray-50 rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-semibold text-gray-900">{persona.role}</h4>
-                      <Badge 
-                        variant={persona.influence === "High" ? "default" : "secondary"}
-                        className={persona.influence === "High" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"}
-                      >
-                        {persona.influence} Influence
-                      </Badge>
+                {content.buyerMap.orgChart.map((role, index) => (
+                  <div key={index} className="bg-gray-50 rounded-lg p-4 border-2 border-dashed border-gray-200">
+                    <div className="mb-3">
+                      <h5 className="font-semibold text-gray-900 text-lg">{role.role}</h5>
+                      <p className="text-sm text-gray-600 mt-1">{role.focus}</p>
                     </div>
+                    
                     <div className="space-y-3">
                       <div>
-                        <h5 className="text-sm font-medium text-gray-700 mb-1">Pain Points</h5>
+                        <h6 className="text-sm font-medium text-gray-700 mb-1">KPIs</h6>
                         <ul className="space-y-1">
-                          {persona.painPoints.map((pain, painIndex) => (
-                            <li key={painIndex} className="text-sm text-gray-600 flex items-start gap-2">
-                              <div className="w-1.5 h-1.5 bg-red-500 rounded-full mt-2 flex-shrink-0"></div>
-                              {pain}
+                          {role.kpis.map((kpi, kpiIndex) => (
+                            <li key={kpiIndex} className="text-sm text-gray-600 flex items-start gap-2">
+                              <div className="w-1.5 h-1.5 bg-blue-600 rounded-full mt-2 flex-shrink-0"></div>
+                              {kpi}
                             </li>
                           ))}
                         </ul>
                       </div>
+                      
                       <div>
-                        <h5 className="text-sm font-medium text-gray-700 mb-1">Buying Triggers</h5>
+                        <h6 className="text-sm font-medium text-gray-700 mb-1">Relationships</h6>
                         <ul className="space-y-1">
-                          {persona.triggers.map((trigger, triggerIndex) => (
-                            <li key={triggerIndex} className="text-sm text-gray-600 flex items-start gap-2">
-                              <div className="w-1.5 h-1.5 bg-yellow-500 rounded-full mt-2 flex-shrink-0"></div>
-                              {trigger}
+                          {role.relationships.map((relationship, relIndex) => (
+                            <li key={relIndex} className="text-sm text-gray-600 flex items-start gap-2">
+                              <div className="w-1.5 h-1.5 bg-purple-600 rounded-full mt-2 flex-shrink-0"></div>
+                              {relationship}
                             </li>
                           ))}
                         </ul>
@@ -1170,6 +1252,107 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Pain Points */}
+          <div className="bg-white rounded-lg border p-6 mb-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Target className="h-5 w-5 text-red-600" />
+              <h3 className="text-lg font-semibold text-gray-900">Pain Points</h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse border border-gray-200 rounded-lg">
+                <thead>
+                  <tr className="bg-gray-50">
+                    <th className="border border-gray-200 px-4 py-3 text-left font-semibold text-gray-900">Pain Point</th>
+                    <th className="border border-gray-200 px-4 py-3 text-left font-semibold text-gray-900">Description</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {content.buyerMap.painPoints.map((pain, index) => (
+                    <tr key={index} className="hover:bg-gray-50">
+                      <td className="border border-gray-200 px-4 py-3 font-medium text-gray-900">{pain.painPoint}</td>
+                      <td className="border border-gray-200 px-4 py-3 text-gray-700">{pain.description}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Buying Triggers */}
+          <div className="bg-white rounded-lg border p-6 mb-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Zap className="h-5 w-5 text-yellow-600" />
+              <h3 className="text-lg font-semibold text-gray-900">Buying Triggers</h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse border border-gray-200 rounded-lg">
+                <thead>
+                  <tr className="bg-gray-50">
+                    <th className="border border-gray-200 px-4 py-3 text-left font-semibold text-gray-900">Trigger</th>
+                    <th className="border border-gray-200 px-4 py-3 text-left font-semibold text-gray-900">Description</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {content.buyerMap.buyingTriggers.map((trigger, index) => (
+                    <tr key={index} className="hover:bg-gray-50">
+                      <td className="border border-gray-200 px-4 py-3 font-medium text-gray-900">{trigger.trigger}</td>
+                      <td className="border border-gray-200 px-4 py-3 text-gray-700">{trigger.description}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Recommendations */}
+          <div className="bg-white rounded-lg border p-6 mb-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Lightbulb className="h-5 w-5 text-purple-600" />
+              <h3 className="text-lg font-semibold text-gray-900">Recommendations</h3>
+            </div>
+            <div className="space-y-4">
+              <p className="text-gray-700 mb-4">Tailor messaging for:</p>
+              
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-2">CTO</h4>
+                  <ul className="space-y-1 text-sm text-gray-700 ml-4">
+                    {content.buyerMap.recommendations.cto.map((rec, index) => (
+                      <li key={index} className="flex items-start gap-2">
+                        <div className="w-1.5 h-1.5 bg-blue-600 rounded-full mt-2 flex-shrink-0"></div>
+                        {rec}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-2">Head of Digital</h4>
+                  <ul className="space-y-1 text-sm text-gray-700 ml-4">
+                    {content.buyerMap.recommendations.headOfDigital.map((rec, index) => (
+                      <li key={index} className="flex items-start gap-2">
+                        <div className="w-1.5 h-1.5 bg-green-600 rounded-full mt-2 flex-shrink-0"></div>
+                        {rec}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-2">Time outreach around:</h4>
+                  <ul className="space-y-1 text-sm text-gray-700 ml-4">
+                    {content.buyerMap.recommendations.timing.map((timing, index) => (
+                      <li key={index} className="flex items-start gap-2">
+                        <div className="w-1.5 h-1.5 bg-purple-600 rounded-full mt-2 flex-shrink-0"></div>
+                        {timing}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
             </div>
           </div>
@@ -1187,7 +1370,7 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
             <div className="flex gap-2">
               <Button variant="outline" className="flex items-center gap-2">
                 <Save className="h-4 w-4" />
-                Save Analysis
+                Save Report
               </Button>
               <Button variant="outline" className="flex items-center gap-2">
                 <Download className="h-4 w-4" />
