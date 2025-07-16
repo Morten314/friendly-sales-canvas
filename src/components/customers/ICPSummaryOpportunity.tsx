@@ -1,1425 +1,634 @@
-import { useState, useEffect } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Save, MessageSquare, Target, Globe, Settings, DollarSign, TrendingUp, MapPin, Lightbulb, Copy, MoreHorizontal, ChevronDown, Bot, Users, Building, Download, FileText, User, Flame, Zap } from "lucide-react";
+import { ChevronDown, ChevronUp, TrendingUp, Clock, Target, DollarSign, User, Zap, Flame, Users, Swords, TrendingDown } from "lucide-react";
 import MiniLineChart from "@/components/MiniLineChart";
 import MiniPieChart from "@/components/MiniPieChart";
 
-interface ICPSummaryOpportunityProps {
-  activeICP?: {
-    id: string;
-    industry: string;
-    segment: string;
-  };
-}
-
-export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps) => {
-  const [isExpanded, setIsExpanded] = useState(false);
+export const ICPSummaryOpportunity = () => {
+  const [isMarketExpanded, setIsMarketExpanded] = useState(false);
   const [isBuyerMapExpanded, setIsBuyerMapExpanded] = useState(false);
-  const [editingSection, setEditingSection] = useState<string | null>(null);
-  const [showProfilerChat, setShowProfilerChat] = useState(false);
-  const [showBuyerMapProfilerChat, setShowBuyerMapProfilerChat] = useState(false);
-  const [editHistory, setEditHistory] = useState<string[]>([]);
+  const [isCompetitiveExpanded, setIsCompetitiveExpanded] = useState(false);
+  const [activeCard, setActiveCard] = useState(1);
 
-  // Reset expanded state when activeICP changes
-  useEffect(() => {
-    console.log('Active ICP changed:', activeICP);
-    setIsExpanded(false);
-    setIsBuyerMapExpanded(false);
-    setShowProfilerChat(false);
-    setShowBuyerMapProfilerChat(false);
-  }, [activeICP?.id, activeICP?.industry, activeICP?.segment]);
-
-  const handleEdit = (section: string) => {
-    setEditingSection(section);
-    if (!editHistory.includes(section)) {
-      setEditHistory([...editHistory, section]);
-    }
-  };
-
-  const handleSave = (section: string) => {
-    setEditingSection(null);
-    setShowProfilerChat(true);
-  };
-
-  const handleCopyInsight = (text: string) => {
-    navigator.clipboard.writeText(text);
-  };
-
-  // Dynamic content based on active ICP
-  const getICPContent = () => {
-    console.log('Getting ICP content for:', activeICP);
-    
-    if (!activeICP) {
-      console.log('No active ICP, using default');
-      return getDefaultContent();
-    }
-
-    // Match by ID or industry/segment combination
-    const icpKey = activeICP.id || `${activeICP.industry}-${activeICP.segment}`.toLowerCase().replace(/\s+/g, '-');
-    console.log('ICP Key:', icpKey);
-    
-    switch (icpKey) {
-      case "healthcare-saas":
-      case "healthcare-saas-patient-data-analytics":
-        console.log('Matched Healthcare SaaS');
-        return {
-          blurb: "Patient Data Analytics platforms in healthcare SaaS are experiencing accelerated growth across North America and EU, driven by HIPAA compliance requirements and AI/ML integration demands. Companies with 100–500 employees are leading digital health innovation while navigating complex regulatory frameworks and data privacy mandates. The sector is increasingly investing in real-time analytics and predictive modeling to enhance patient outcomes and operational efficiency.",
-          stats: [
-            { icon: TrendingUp, label: "Market Growth", value: "8.2% CAGR", color: "green" },
-            { icon: DollarSign, label: "Market Size", value: "$6.8B TAM in North America, $4.2B in EU", color: "green" },
-            { icon: Users, label: "Active Players", value: "~280 Healthcare Analytics firms", color: "blue" },
-            { icon: Building, label: "Investment Activity", value: "$4.1B raised in past 12 months", color: "orange" }
-          ],
-          marketSize: "$11.0B",
-          sam: "$8.5B",
-          regions: "North America + EU",
-          topVertical: "Patient Data Analytics",
-          cagr: "8.2%",
-          reportTitle: "Healthcare SaaS Market Intelligence Report",
-          marketContent: {
-            forecast: "$11.0B by 2027",
-            drivers: [
-              "HIPAA and GDPR compliance requirements",
-              "AI-driven diagnostic and predictive analytics",
-              "Interoperability standards (FHIR, HL7)"
-            ],
-            insight: "8.2% CAGR reflects strong demand for data-driven healthcare solutions."
-          },
-          segments: {
-            "North America": [
-              "Strong regulatory framework with HIPAA compliance",
-              "High adoption of EHR systems driving data availability",
-              "Major health systems investing in analytics platforms"
-            ],
-            "EU": [
-              "GDPR creating robust data protection standards",
-              "Government-led digital health initiatives",
-              "Growing focus on population health management"
-            ]
-          },
-          challenges: [
-            "Complex data integration across disparate healthcare systems",
-            "Stringent regulatory requirements for patient data handling",
-            "High customer acquisition costs in healthcare sector"
-          ],
-          recommendations: {
-            goToMarket: [
-              "Lead with compliance and security credentials",
-              "Partner with EHR vendors for seamless integration"
-            ],
-            targetProfile: [
-              "HIPAA-compliant infrastructure",
-              "Active EHR implementation projects",
-              "Recent healthcare IT investments"
-            ]
-          },
-          signals: [
-            { category: "Regulatory", description: "New healthcare data regulations" },
-            { category: "Technology", description: "AI/ML adoption in clinical settings" },
-            { category: "Funding", description: "Healthcare IT funding rounds above $25M" }
-          ],
-          buyerMap: {
-            blurb: "Healthcare analytics buyers span clinical and IT leadership, driven by patient outcomes pressure and regulatory compliance deadlines. Chief Medical Officers and IT Directors collaborate on vendor selection, prioritizing data security, interoperability, and measurable ROI on clinical efficiency gains.",
-            corePersonas: 4,
-            topPainPoint: "Data silos preventing unified patient view",
-            buyingTriggers: 6,
-            orgChart: [
-              {
-                role: "Chief Medical Officer",
-                focus: "Clinical outcomes, patient safety protocols",
-                kpis: ["Patient satisfaction scores", "Clinical workflow efficiency", "Quality metrics compliance"],
-                relationships: ["Direct report to CEO", "Works closely with IT Director"]
-              },
-              {
-                role: "IT Director", 
-                focus: "Healthcare technology infrastructure, data security",
-                kpis: ["System uptime", "HIPAA compliance metrics", "Data integration success rates"],
-                relationships: ["Reports to COO", "Partners with Chief Medical Officer"]
-              }
-            ],
-            painPoints: [
-              { 
-                painPoint: "Legacy EHR Integration",
-                description: "Existing electronic health record systems create data silos and integration challenges."
-              },
-              {
-                painPoint: "HIPAA Compliance Complexity", 
-                description: "Stringent healthcare data privacy regulations require specialized security measures."
-              },
-              {
-                painPoint: "Clinical Workflow Disruption",
-                description: "New systems must integrate seamlessly without disrupting patient care delivery."
-              },
-              {
-                painPoint: "ROI Measurement Difficulty",
-                description: "Quantifying clinical and operational benefits for budget justification."
-              }
-            ],
-            buyingTriggersArray: [
-              {
-                trigger: "HIPAA Audit Findings",
-                description: "Compliance gaps identified during regulatory audits drive urgent system upgrades."
-              },
-              {
-                trigger: "Quality Score Decline", 
-                description: "Falling patient satisfaction or clinical quality metrics spark technology investments."
-              },
-              {
-                trigger: "New Patient Safety Regulations",
-                description: "Updated healthcare regulations require enhanced data analytics capabilities."
-              },
-              {
-                trigger: "EHR System Migration",
-                description: "Electronic health record system changes create opportunities for analytics integration."
-              }
-            ],
-            recommendations: {
-              cto: [
-                "Emphasize HIPAA-compliant cloud architecture and security certifications",
-                "Showcase seamless EHR integration capabilities and data interoperability"
-              ],
-              headOfDigital: [
-                "Highlight patient experience improvements and clinical workflow optimization",
-                "Demonstrate measurable ROI through clinical efficiency and outcome metrics"
-              ],
-              timing: [
-                "Monitor healthcare regulation announcements and compliance deadlines",
-                "Track EHR system migration announcements and major health system expansions",
-                "Target timing around budget planning cycles and quality review periods"
-              ]
-            }
-          }
-        };
-
-      case "logistics-tech":
-      case "logistics-tech-last-mile-delivery":
-        console.log('Matched Logistics Tech');
-        return {
-          blurb: "Last-Mile Delivery platforms in logistics tech are revolutionizing supply chain efficiency across SEA and North America, driven by e-commerce growth and real-time tracking demands. Companies with 200–800 employees are pioneering API-first solutions while addressing urbanization challenges and sustainability requirements. The sector is rapidly adopting IoT integration and route optimization algorithms to meet consumer expectations for faster, more transparent deliveries.",
-          stats: [
-            { icon: TrendingUp, label: "Market Growth", value: "12.1% CAGR", color: "green" },
-            { icon: DollarSign, label: "Market Size", value: "$8.3B TAM in SEA, $15.7B in North America", color: "green" },
-            { icon: Users, label: "Active Players", value: "~190 Last-Mile Tech firms", color: "blue" },
-            { icon: Building, label: "Investment Activity", value: "$6.2B raised in past 12 months", color: "orange" }
-          ],
-          marketSize: "$24.0B",
-          sam: "$18.5B",
-          regions: "SEA + North America",
-          topVertical: "Last-Mile Delivery",
-          cagr: "12.1%",
-          reportTitle: "Logistics Tech Market Intelligence Report",
-          marketContent: {
-            forecast: "$24.0B by 2027",
-            drivers: [
-              "E-commerce boom driving delivery demand",
-              "Consumer expectations for real-time tracking",
-              "Urban density requiring optimized routing solutions"
-            ],
-            insight: "12.1% CAGR driven by explosive e-commerce growth and urbanization trends."
-          },
-          segments: {
-            "SEA": [
-              "Rapid e-commerce growth in emerging markets",
-              "Infrastructure challenges creating innovation opportunities",
-              "Government support for digital logistics initiatives"
-            ],
-            "North America": [
-              "Mature e-commerce market demanding efficiency gains",
-              "Focus on sustainability and carbon footprint reduction",
-              "Integration with autonomous delivery technologies"
-            ]
-          },
-          challenges: [
-            "Complex urban logistics and traffic congestion",
-            "Rising fuel costs impacting delivery economics",
-            "Competition from established logistics giants"
-          ],
-          recommendations: {
-            goToMarket: [
-              "Emphasize real-time visibility and customer experience",
-              "Target mid-market e-commerce companies seeking differentiation"
-            ],
-            targetProfile: [
-              "High delivery volume operations",
-              "Customer experience focus",
-              "Technology modernization initiatives"
-            ]
-          },
-          signals: [
-            { category: "Market", description: "E-commerce penetration rates in target regions" },
-            { category: "Technology", description: "Autonomous delivery pilot programs" },
-            { category: "Regulatory", description: "Urban delivery regulations and sustainability mandates" }
-          ],
-          buyerMap: {
-            blurb: "Logistics technology buyers prioritize operational efficiency and customer satisfaction metrics. Supply Chain VPs and Operations Directors lead procurement decisions, focusing on real-time visibility, cost reduction, and scalability during peak delivery periods.",
-            corePersonas: 3,
-            topPainPoint: "Last-mile delivery cost optimization",
-            buyingTriggers: 5,
-            personas: [
-              {
-                role: "VP of Supply Chain",
-                influence: "High",
-                painPoints: ["Rising delivery costs", "Customer satisfaction scores", "Peak season scalability"],
-                triggers: ["Q4 planning cycles", "Customer complaints surge", "Competitor delivery improvements"]
-              },
-              {
-                role: "Operations Director",
-                influence: "High",
-                painPoints: ["Route optimization inefficiencies", "Driver productivity", "Real-time tracking gaps"],
-                triggers: ["Operational KPI misses", "Technology refresh cycles", "New market expansion"]
-              },
-              {
-                role: "CTO",
-                influence: "Medium",
-                painPoints: ["System integration complexity", "API reliability", "Data analytics capabilities"],
-                triggers: ["Platform migration needs", "Scalability bottlenecks", "Innovation initiatives"]
-              }
-            ]
-          }
-        };
-
-      case "edtech-platforms":
-      case "edtech-learning-management":
-        console.log('Matched EdTech');
-        return {
-          blurb: "Learning Management platforms in EdTech are transforming educational delivery across Global and LATAM markets, driven by mobile-first adoption and analytics-driven personalization. Companies with 80–300 employees are pioneering adaptive learning technologies while addressing diverse linguistic and cultural requirements. The sector is increasingly focusing on outcomes measurement and AI-powered content recommendation to enhance learning effectiveness and student engagement.",
-          stats: [
-            { icon: TrendingUp, label: "Market Growth", value: "9.4% CAGR", color: "green" },
-            { icon: DollarSign, label: "Market Size", value: "$12.8B TAM globally, $3.2B in LATAM", color: "green" },
-            { icon: Users, label: "Active Players", value: "~350 EdTech LMS firms", color: "blue" },
-            { icon: Building, label: "Investment Activity", value: "$3.8B raised in past 12 months", color: "orange" }
-          ],
-          marketSize: "$16.0B",
-          sam: "$12.5B",
-          regions: "Global + LATAM",
-          topVertical: "Learning Management",
-          cagr: "9.4%",
-          reportTitle: "EdTech Market Intelligence Report",
-          marketContent: {
-            forecast: "$16.0B by 2027",
-            drivers: [
-              "Mobile-first learning preferences among students",
-              "Demand for personalized learning experiences",
-              "Analytics-driven educational outcomes measurement"
-            ],
-            insight: "9.4% CAGR reflects sustained investment in digital learning transformation."
-          },
-          segments: {
-            "Global": [
-              "Widespread digital transformation in education",
-              "Hybrid learning models becoming standard",
-              "Integration with productivity and collaboration tools"
-            ],
-            "LATAM": [
-              "Rapid smartphone adoption enabling mobile learning",
-              "Government initiatives for digital education access",
-              "Growing demand for multilingual learning platforms"
-            ]
-          },
-          challenges: [
-            "Diverse educational standards and curriculum requirements",
-            "Digital divide affecting student access to technology",
-            "Complex procurement processes in educational institutions"
-          ],
-          recommendations: {
-            goToMarket: [
-              "Focus on measurable learning outcomes and ROI",
-              "Develop partnerships with educational content providers"
-            ],
-            targetProfile: [
-              "Digital transformation initiatives",
-              "Student engagement improvement goals",
-              "Recent educational technology investments"
-            ]
-          },
-          signals: [
-            { category: "Education", description: "Hybrid learning policy changes" },
-            { category: "Technology", description: "AI adoption in educational content" },
-            { category: "Funding", description: "EdTech funding rounds above $15M" }
-          ]
-        };
-
-      case "proptech-crm":
-      case "proptech-real-estate-crm":
-        console.log('Matched PropTech');
-        return {
-          blurb: "Real Estate CRM platforms in PropTech are streamlining property management across North America and ANZ, driven by integration capabilities and workflow automation demands. Companies with 150–600 employees are modernizing traditional real estate operations while addressing complex transaction management and client relationship needs. The sector is increasingly adopting AI-powered lead scoring and automated marketing workflows to enhance agent productivity and deal closure rates.",
-          stats: [
-            { icon: TrendingUp, label: "Market Growth", value: "6.8% CAGR", color: "green" },
-            { icon: DollarSign, label: "Market Size", value: "$7.2B TAM in North America, $2.1B in ANZ", color: "green" },
-            { icon: Users, label: "Active Players", value: "~220 PropTech CRM firms", color: "blue" },
-            { icon: Building, label: "Investment Activity", value: "$2.9B raised in past 12 months", color: "orange" }
-          ],
-          marketSize: "$9.3B",
-          sam: "$7.8B",
-          regions: "North America + ANZ",
-          topVertical: "Real Estate CRM",
-          cagr: "6.8%",
-          reportTitle: "PropTech Market Intelligence Report",
-          marketContent: {
-            forecast: "$9.3B by 2027",
-            drivers: [
-              "Digital transformation in real estate operations",
-              "Integration with MLS and property listing platforms",
-              "Automated workflow and lead management needs"
-            ],
-            insight: "6.8% CAGR driven by real estate industry digitization and agent productivity focus."
-          },
-          segments: {
-            "North America": [
-              "Mature real estate market with established MLS systems",
-              "High agent adoption of digital tools",
-              "Integration with mortgage and title service providers"
-            ],
-            "ANZ": [
-              "Growing real estate investment market",
-              "Government digitization initiatives for property transactions",
-              "Increasing focus on data analytics for market insights"
-            ]
-          },
-          challenges: [
-            "Fragmented real estate technology ecosystem",
-            "Resistance to change among traditional real estate professionals",
-            "Complex integration requirements with existing systems"
-          ],
-          recommendations: {
-            goToMarket: [
-              "Emphasize ROI through improved agent productivity",
-              "Partner with MLS providers and real estate franchises"
-            ],
-            targetProfile: [
-              "High transaction volume brokerages",
-              "Technology modernization projects",
-              "Agent productivity improvement initiatives"
-            ]
-          },
-          signals: [
-            { category: "Market", description: "Real estate transaction volume trends" },
-            { category: "Technology", description: "MLS integration announcements" },
-            { category: "Regulatory", description: "Real estate technology compliance requirements" }
-          ]
-        };
-
-      case "cybersecurity-startups":
-      case "cybersecurity-zero-trust-solutions":
-        console.log('Matched Cybersecurity');
-        return {
-          blurb: "Zero Trust Solutions in cybersecurity are securing enterprise networks across North America and EU, driven by SOC 2 compliance and cloud-native architecture adoption. Companies with 75–400 employees are pioneering identity-centric security models while addressing remote work challenges and sophisticated threat landscapes. The sector is rapidly integrating AI-powered threat detection and behavioral analytics to provide comprehensive security postures for distributed organizations.",
-          stats: [
-            { icon: TrendingUp, label: "Market Growth", value: "15.3% CAGR", color: "green" },
-            { icon: DollarSign, label: "Market Size", value: "$18.7B TAM in North America, $12.4B in EU", color: "green" },
-            { icon: Users, label: "Active Players", value: "~180 Zero Trust firms", color: "blue" },
-            { icon: Building, label: "Investment Activity", value: "$8.3B raised in past 12 months", color: "orange" }
-          ],
-          marketSize: "$31.1B",
-          sam: "$25.2B",
-          regions: "North America + EU",
-          topVertical: "Zero Trust Solutions",
-          cagr: "15.3%",
-          reportTitle: "Cybersecurity Market Intelligence Report",
-          marketContent: {
-            forecast: "$31.1B by 2027",
-            drivers: [
-              "Remote work driving perimeter security obsolescence",
-              "Increasing sophistication of cyber threats",
-              "Regulatory compliance requirements (SOC 2, ISO 27001)"
-            ],
-            insight: "15.3% CAGR reflects urgent enterprise need for modern security architectures."
-          },
-          segments: {
-            "North America": [
-              "High cybersecurity spending driven by regulatory requirements",
-              "Mature cloud adoption creating security transformation needs",
-              "Strong venture capital investment in security technologies"
-            ],
-            "EU": [
-              "GDPR creating stringent data protection requirements",
-              "Government initiatives for cybersecurity resilience",
-              "Growing focus on supply chain security"
-            ]
-          },
-          challenges: [
-            "Complex migration from legacy security architectures",
-            "Skills shortage in cybersecurity professionals",
-            "Integration complexity with existing security tools"
-          ],
-          recommendations: {
-            goToMarket: [
-              "Lead with compliance and risk reduction messaging",
-              "Target organizations with recent security incidents or audits"
-            ],
-            targetProfile: [
-              "Cloud transformation initiatives",
-              "Remote work security challenges",
-              "Recent cybersecurity investments or incidents"
-            ]
-          },
-          signals: [
-            { category: "Security", description: "High-profile cybersecurity breaches" },
-            { category: "Compliance", description: "New data protection regulations" },
-            { category: "Technology", description: "Cloud migration announcements" }
-          ]
-        };
-
-      case "insurtech-platforms":
-      case "insurtech-digital-claims-processing":
-        console.log('Matched InsurTech');
-        return {
-          blurb: "Digital Claims Processing platforms in InsurTech are revolutionizing insurance operations across North America and UK, driven by automation focus and regulatory expertise demands. Companies with 100–350 employees are transforming traditional claims workflows while addressing fraud prevention and customer experience expectations. The sector is increasingly leveraging AI-powered damage assessment and automated decision-making to reduce processing times and operational costs.",
-          stats: [
-            { icon: TrendingUp, label: "Market Growth", value: "11.7% CAGR", color: "green" },
-            { icon: DollarSign, label: "Market Size", value: "$9.4B TAM in North America, $3.8B in UK", color: "green" },
-            { icon: Users, label: "Active Players", value: "~160 InsurTech Claims firms", color: "blue" },
-            { icon: Building, label: "Investment Activity", value: "$3.6B raised in past 12 months", color: "orange" }
-          ],
-          marketSize: "$13.2B",
-          sam: "$10.8B",
-          regions: "North America + UK",
-          topVertical: "Digital Claims Processing",
-          cagr: "11.7%",
-          reportTitle: "InsurTech Market Intelligence Report",
-          marketContent: {
-            forecast: "$13.2B by 2027",
-            drivers: [
-              "Customer expectations for faster claims resolution",
-              "Regulatory pressure for transparent claims processes",
-              "AI and automation reducing manual processing costs"
-            ],
-            insight: "11.7% CAGR driven by digital transformation pressure and cost reduction needs."
-          },
-          segments: {
-            "North America": [
-              "Mature insurance market with legacy system modernization needs",
-              "Regulatory focus on consumer protection and transparency",
-              "High adoption of mobile-first claims reporting"
-            ],
-            "UK": [
-              "Strong regulatory framework driving innovation",
-              "Government initiatives for insurance sector digitization",
-              "Growing focus on parametric and usage-based insurance"
-            ]
-          },
-          challenges: [
-            "Legacy system integration in established insurance companies",
-            "Regulatory compliance across different insurance products",
-            "Fraud detection and prevention in automated processes"
-          ],
-          recommendations: {
-            goToMarket: [
-              "Emphasize cost reduction and processing time improvements",
-              "Target insurers with high claims volume and complexity"
-            ],
-            targetProfile: [
-              "Legacy system modernization projects",
-              "High claims processing volumes",
-              "Customer experience improvement initiatives"
-            ]
-          },
-          signals: [
-            { category: "Insurance", description: "Claims processing cost pressures" },
-            { category: "Technology", description: "AI adoption in insurance operations" },
-            { category: "Regulatory", description: "Insurance industry digital transformation mandates" }
-          ]
-        };
-
-      case "renewable-energy":
-      case "clean-energy-solar-management-platforms":
-        console.log('Matched Clean Energy');
-        return {
-          blurb: "Solar Management Platforms in clean energy are optimizing renewable installations across North America, EU, and ANZ, driven by IoT integration and sustainability reporting demands. Companies with 120–500 employees are pioneering smart grid technologies while addressing regulatory incentives and environmental compliance requirements. The sector is rapidly adopting predictive maintenance algorithms and real-time performance monitoring to maximize energy output and operational efficiency.",
-          stats: [
-            { icon: TrendingUp, label: "Market Growth", value: "18.2% CAGR", color: "green" },
-            { icon: DollarSign, label: "Market Size", value: "$8.9B TAM in North America, $6.7B in EU, $2.2B in ANZ", color: "green" },
-            { icon: Users, label: "Active Players", value: "~85 Solar Management firms", color: "blue" },
-            { icon: Building, label: "Investment Activity", value: "$5.4B raised in past 12 months", color: "orange" }
-          ],
-          marketSize: "$17.8B",
-          sam: "$14.3B",
-          regions: "North America + EU + ANZ",
-          topVertical: "Solar Management Platforms",
-          cagr: "18.2%",
-          reportTitle: "Clean Energy Market Intelligence Report",
-          marketContent: {
-            forecast: "$17.8B by 2027",
-            drivers: [
-              "Government renewable energy mandates and incentives",
-              "IoT sensor technology enabling real-time monitoring",
-              "Corporate sustainability commitments driving solar adoption"
-            ],
-            insight: "18.2% CAGR reflects accelerating renewable energy transition and technology maturation."
-          },
-          segments: {
-            "North America": [
-              "Strong federal and state incentives for solar adoption",
-              "Mature installation market creating management needs",
-              "Grid integration requirements driving software demand"
-            ],
-            "EU": [
-              "Aggressive renewable energy targets by 2030",
-              "Green Deal policies supporting clean energy investment",
-              "Focus on energy independence driving solar installations"
-            ],
-            "ANZ": [
-              "High solar irradiance creating optimal conditions",
-              "Government renewable energy targets",
-              "Growing commercial and utility-scale installations"
-            ]
-          },
-          challenges: [
-            "Complex grid integration and energy storage coordination",
-            "Varying regulatory frameworks across different regions",
-            "Technology standardization across diverse solar installations"
-          ],
-          recommendations: {
-            goToMarket: [
-              "Emphasize ROI through performance optimization and predictive maintenance",
-              "Partner with solar installers and energy management companies"
-            ],
-            targetProfile: [
-              "Large-scale solar installations",
-              "Sustainability reporting requirements",
-              "Recent renewable energy investments"
-            ]
-          },
-          signals: [
-            { category: "Policy", description: "Renewable energy policy changes and incentives" },
-            { category: "Technology", description: "Battery storage and grid integration developments" },
-            { category: "Investment", description: "Clean energy funding rounds above $30M" }
-          ]
-        };
-
-      default:
-        console.log('No match found, using default Neobanks content');
-        return getDefaultContent();
-    }
-  };
-
-  const getDefaultContent = () => {
-    return {
-      blurb: "Neobanks in the fintech sector are rapidly scaling across North America and DACH, driven by high cloud adoption and strong regulatory compliance demands. Mid-sized players (50–200 employees) are emerging as innovators yet face margin pressures and evolving regulatory landscapes. These financial institutions are increasingly investing in advanced API-first infrastructure to compete with traditional banks. The sector shows strong momentum toward embedded finance solutions and customer-centric digital experiences.",
-      stats: [
-        { icon: TrendingUp, label: "Market Growth", value: "5.6% CAGR", color: "green" },
-        { icon: DollarSign, label: "Market Size", value: "$3.2B TAM in North America, $1.1B in DACH", color: "green" },
-        { icon: Users, label: "Active Players", value: "~150 Neobank firms in target segments", color: "blue" },
-        { icon: Building, label: "Investment Activity", value: "$2.4B raised in past 12 months", color: "orange" }
+  const mockData = {
+    1: {
+      title: "Neobanks (€50M+ ARR)",
+      blurb: "Fast-growing digital banks seeking compliance-friendly infrastructure to scale across European markets while maintaining regulatory standards.",
+      marketSize: "€12.3B",
+      growth: "+23%",
+      urgency: "High",
+      timeToClose: "4-6 months",
+      corePersonas: 3,
+      topPainPoint: "Legacy Core Systems",
+      buyingTriggers: 7,
+      buyingTriggersArray: [
+        { trigger: "New Funding Round", description: "Recent capital raises push tech stack upgrades." },
+        { trigger: "Regulatory Change", description: "A new law forces compliance investment." },
+        { trigger: "Customer Churn Spike", description: "Loss of users sparks urgent digital product fixes." },
+        { trigger: "Competitive Move", description: "A rival launches innovative digital services." }
       ],
-      marketSize: "$4.3B",
-      sam: "$3.2B",
-      regions: "North America + DACH",
-      topVertical: "Neobanks",
-      cagr: "5.6%",
-      reportTitle: "Neobank Market Intelligence Report",
-      marketContent: {
-        forecast: "$4.3B by 2027",
-        drivers: [
-          "Cloud-native banking architectures",
-          "Customer demand for digital-first experiences", 
-          "Agile regulatory frameworks for fintech entrants"
-        ],
-        insight: "5.6% CAGR indicates moderate but sustainable growth, especially in mid-sized firms."
-      },
-      segments: {
-        "North America": [
-          "High consumer digital adoption",
-          "Regulatory scrutiny increasing around data privacy and AML",
-          "Competitive landscape includes Chime, Varo, and new regional entrants"
-        ],
-        "DACH": [
-          "Fintech hubs emerging in Germany and Switzerland",
-          "Preference for strong compliance credentials",
-          "Investors attracted to scalable B2B neobank models"
+      competitors: 4,
+      winLossChange: "+12%",
+      buyingSignals: 8,
+      competitiveData: {
+        mainCompetitors: ["Temenos", "Mambu", "Thought Machine", "10x Banking"],
+        marketShareShifts: "Traditional core banking vendors losing 15% market share to cloud-native solutions",
+        recentSignals: [
+          { signal: "Funding Announcements", count: 12, trend: "up" },
+          { signal: "Regulatory Updates", count: 8, trend: "up" },
+          { signal: "Tech Stack Migrations", count: 15, trend: "up" },
+          { signal: "Partnership Announcements", count: 6, trend: "stable" }
         ]
-      },
-      challenges: [
-        "Tightening margins due to rising customer acquisition costs",
-        "Heightened regulatory expectations (Basel IV, PSD2 updates)",
-        "Talent competition in digital product and compliance roles"
-      ],
-      recommendations: {
-        goToMarket: [
-          "Prioritize compliance-forward messaging in go-to-market",
-          "Explore partnerships with RegTech vendors for differentiation"
-        ],
-        targetProfile: [
-          "High cloud maturity",
-          "Digital transformation mandates",
-          "New funding rounds in past 12–18 months"
-        ]
-      },
-      signals: [
-        { category: "Regulatory", description: "New fintech regulations in Europe" },
-        { category: "Funding", description: "Funding rounds above $20M in Neobank space" },
-        { category: "Metrics", description: "Shifts in customer acquisition cost metrics" }
-      ],
-      buyerMap: {
-        blurb: "Neobank buyers balance innovation with compliance, led by CTOs and Chief Risk Officers. Decision-makers prioritize regulatory readiness, scalability, and competitive differentiation while managing tight timelines for market entry and customer acquisition.",
-        corePersonas: 3,
-        topPainPoint: "Regulatory compliance complexity",
-        buyingTriggers: 4,
-        orgChart: [
-          {
-            role: "Chief Technology Officer",
-            focus: "Technology strategy, infrastructure modernization",
-            kpis: ["Cloud adoption velocity", "IT compliance posture", "Time-to-market for digital products"],
-            relationships: ["Reports to CEO", "Works closely with Head of Digital"]
-          },
-          {
-            role: "Head of Digital",
-            focus: "Customer experience, digital product rollouts", 
-            kpis: ["App adoption rates", "Customer churn metrics", "Regulatory UX compliance"],
-            relationships: ["Reports to CMO", "Partners with CTO on product strategy"]
-          }
-        ],
-        painPoints: [
-          { 
-            painPoint: "Legacy Core Banking Systems",
-            description: "Even newer Neobanks sometimes have inherited legacy systems slowing innovation."
-          },
-          {
-            painPoint: "Regulatory Overload", 
-            description: "Highly complex rules (e.g. PSD2, Basel IV) strain teams."
-          },
-          {
-            painPoint: "Talent Competition",
-            description: "Difficulty attracting compliance-savvy tech talent."
-          },
-          {
-            painPoint: "Cost Pressures",
-            description: "Rising CAC and margin compression."
-          }
-        ],
-        buyingTriggersArray: [
-          {
-            trigger: "New Funding Round",
-            description: "Recent capital raises push tech stack upgrades."
-          },
-          {
-            trigger: "Regulatory Change", 
-            description: "A new law forces compliance investment."
-          },
-          {
-            trigger: "Customer Churn Spike",
-            description: "Loss of users sparks urgent digital product fixes."
-          },
-          {
-            trigger: "Competitive Move",
-            description: "A rival launches innovative digital services."
-          }
-        ],
-        recommendations: {
-          cto: [
-            "Emphasize cloud-native compliance architecture and scalability benefits",
-            "Showcase regulatory automation capabilities and infrastructure modernization"
-          ],
-          headOfDigital: [
-            "Highlight customer-centric digital capabilities and user experience improvements",
-            "Demonstrate competitive differentiation through innovative digital services"
-          ],
-          timing: [
-            "Monitor industry news on regulatory changes and compliance deadlines",
-            "Track funding announcements and expansion plans",
-            "Consider multi-threading both personas early in sales cycle"
-          ]
-        }
       }
-    };
+    },
+    2: {
+      title: "Insurance Companies (€200M+ Premium)",
+      blurb: "Established insurers modernizing legacy systems to improve customer experience and meet evolving regulatory requirements in digital transformation.",
+      marketSize: "€8.7B",
+      growth: "+18%",
+      urgency: "Medium",
+      timeToClose: "6-9 months",
+      corePersonas: 4,
+      topPainPoint: "Digital Experience Gap",
+      buyingTriggers: 5,
+      buyingTriggersArray: [
+        { trigger: "Digital Transformation Initiative", description: "Board-level mandate to modernize customer experience." },
+        { trigger: "Regulatory Compliance", description: "New insurance regulations require system updates." },
+        { trigger: "Customer Experience Metrics", description: "Declining NPS scores drive technology investment." },
+        { trigger: "Competitive Pressure", description: "InsurTech competitors gaining market share." }
+      ],
+      competitors: 5,
+      winLossChange: "+8%",
+      buyingSignals: 6,
+      competitiveData: {
+        mainCompetitors: ["Guidewire", "Duck Creek", "Sapiens", "Insurity", "Majesco"],
+        marketShareShifts: "Cloud-first insurance platforms growing 25% annually vs legacy on-premise solutions",
+        recentSignals: [
+          { signal: "Digital Initiative Announcements", count: 8, trend: "up" },
+          { signal: "Legacy System Replacements", count: 10, trend: "up" },
+          { signal: "Customer Experience Investments", count: 7, trend: "up" },
+          { signal: "RegTech Partnerships", count: 4, trend: "stable" }
+        ]
+      }
+    },
+    3: {
+      title: "FinTech Scale-ups (€10-50M ARR)",
+      blurb: "Rapidly growing financial technology companies needing robust, scalable infrastructure to support expansion while ensuring regulatory compliance.",
+      marketSize: "€5.2B",
+      growth: "+35%",
+      urgency: "Very High",
+      timeToClose: "2-4 months",
+      corePersonas: 2,
+      topPainPoint: "Scaling Infrastructure",
+      buyingTriggers: 9,
+      buyingTriggersArray: [
+        { trigger: "Series B+ Funding", description: "Growth capital necessitates infrastructure scaling." },
+        { trigger: "Geographic Expansion", description: "Multi-country rollout requires compliance architecture." },
+        { trigger: "Product Launch", description: "New financial products need robust backend systems." },
+        { trigger: "Regulatory Audit", description: "Compliance reviews expose infrastructure gaps." }
+      ],
+      competitors: 3,
+      winLossChange: "+18%",
+      buyingSignals: 12,
+      competitiveData: {
+        mainCompetitors: ["Stripe", "Plaid", "Adyen"],
+        marketShareShifts: "API-first fintech infrastructure providers capturing 40% of new FinTech implementations",
+        recentSignals: [
+          { signal: "Funding Rounds", count: 18, trend: "up" },
+          { signal: "Product Launches", count: 14, trend: "up" },
+          { signal: "Expansion Announcements", count: 11, trend: "up" },
+          { signal: "Compliance Partnerships", count: 9, trend: "up" }
+        ]
+      }
+    }
   };
 
-  const content = getICPContent();
-
-  const marketSegmentationData = content.regions.includes("North America + DACH") ? [
-    { name: "North America", value: 65, color: "#0064FF" },
-    { name: "DACH", value: 25, color: "#00A3FF" },
-    { name: "Other EU", value: 10, color: "#66C2FF" }
-  ] : content.regions.includes("SEA") ? [
-    { name: "SEA", value: 45, color: "#0064FF" },
-    { name: "North America", value: 40, color: "#00A3FF" },
-    { name: "Other", value: 15, color: "#66C2FF" }
-  ] : [
-    { name: "Primary Region", value: 60, color: "#0064FF" },
-    { name: "Secondary Region", value: 30, color: "#00A3FF" },
-    { name: "Other", value: 10, color: "#66C2FF" }
-  ];
-
-  const marketSizeValue = parseFloat(content.marketSize.replace(/[^0-9.]/g, ''));
-  const tamGrowthData = [
-    { name: "2022", value: marketSizeValue * 0.7 },
-    { name: "2023", value: marketSizeValue * 0.8 },
-    { name: "2024", value: marketSizeValue * 0.9 },
-    { name: "2025", value: marketSizeValue * 0.95 },
-    { name: "2026", value: marketSizeValue * 0.98 },
-    { name: "2027", value: marketSizeValue }
-  ];
+  const currentData = mockData[activeCard as keyof typeof mockData];
 
   return (
     <div className="space-y-6">
-      {/* ICP Summary & Market Opportunity Section */}
-      {!isExpanded ? (
-        <div className="bg-white rounded-lg border border-gray-200 p-6 relative">
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900 mb-2">ICP Summary & Market Opportunity</h2>
-              <p className="text-sm text-gray-600">
-                High-level snapshot of market fit & revenue potential
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              {editHistory.length > 0 && (
-                <Button variant="ghost" size="sm" className="text-xs text-gray-500">
-                  <MoreHorizontal className="h-3 w-3 mr-1" />
-                  Edit History
-                </Button>
-              )}
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => handleEdit("summary")} 
-                className="text-gray-600 hover:text-gray-800 hover:bg-gray-100" 
-                title="Edit ICP"
-              >
-                <Edit className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <p className="text-gray-700 text-sm leading-relaxed">
-              {content.blurb}
-            </p>
-
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              {content.stats.map((stat, index) => (
-                <div key={index} className="bg-white rounded-md p-3 border border-gray-100 shadow-sm">
-                  <div className="flex items-center gap-2 mb-1">
-                    <stat.icon className={`h-4 w-4 text-${stat.color}-600`} />
-                    <Badge variant="secondary" className={`text-xs bg-${stat.color}-100 text-${stat.color}-700`}>
-                      {stat.label}
-                    </Badge>
-                  </div>
-                  <p className="text-sm font-semibold text-gray-900 leading-tight">{stat.value}</p>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex items-center justify-between pt-2">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setIsExpanded(true)} 
-                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 flex items-center gap-1"
-              >
-                Read More
-                <ChevronDown className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => setShowProfilerChat(true)} 
-            className="absolute bottom-4 right-4 w-10 h-10 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg" 
-            title="Explore More with Profiler"
-          >
-            <Bot className="h-5 w-5" />
-          </Button>
-        </div>
-      ) : (
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900 mb-2">
-                {content.reportTitle}
-              </h2>
-              <p className="text-sm text-gray-600">
-                Comprehensive market analysis and strategic recommendations
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              {editHistory.length > 0 && (
-                <Button variant="ghost" size="sm" className="text-xs text-gray-500">
-                  <MoreHorizontal className="h-3 w-3 mr-1" />
-                  Edit History
-                </Button>
-              )}
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setShowProfilerChat(true)} 
-                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50" 
-                title="Explore More with Profiler"
-              >
-                <MessageSquare className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg p-4 mb-6">
-            <p className="text-gray-700 leading-relaxed">{content.blurb}</p>
-          </div>
-
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-            {content.stats.map((stat, index) => (
-              <div key={index} className="bg-white rounded-md p-3 border border-gray-100 shadow-sm">
-                <div className="flex items-center gap-2 mb-1">
-                  <stat.icon className={`h-4 w-4 text-${stat.color}-600`} />
-                  <Badge variant="secondary" className={`text-xs bg-${stat.color}-100 text-${stat.color}-700`}>
-                    {stat.label}
-                  </Badge>
-                </div>
-                <p className="text-sm font-semibold text-gray-900 leading-tight">{stat.value}</p>
+      {/* ICP Summary & Market Opportunity */}
+      <div className="space-y-4">
+        <Card className="border border-gray-200">
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-xl font-semibold">ICP Summary & Market Opportunity</CardTitle>
+                <CardDescription className="mt-1">
+                  Overview of target customer profile and market dynamics
+                </CardDescription>
               </div>
-            ))}
-          </div>
-
-          <div className="bg-white rounded-lg border p-6 mb-6">
-            <div className="flex items-center gap-2 mb-4">
-              <TrendingUp className="h-5 w-5 text-green-600" />
-              <h3 className="text-lg font-semibold text-gray-900">Market Size & Growth</h3>
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <p className="text-gray-700 text-sm leading-relaxed">
-                  The {content.topVertical.toLowerCase()} sector in {content.regions.replace(' + ', ' and ')} is forecasted to reach {content.marketContent.forecast}. Growth is propelled by:
-                </p>
-                <ul className="space-y-2 text-sm text-gray-700 ml-4">
-                  {content.marketContent.drivers.map((driver, index) => (
-                    <li key={index} className="flex items-start gap-2">
-                      <div className="w-1.5 h-1.5 bg-blue-600 rounded-full mt-2 flex-shrink-0"></div>
-                      {driver}
-                    </li>
-                  ))}
-                </ul>
-                <p className="text-sm text-gray-600 bg-blue-50 p-3 rounded-md">
-                  <strong>{content.cagr} CAGR</strong> {content.marketContent.insight}
-                </p>
-              </div>
-              <div className="flex justify-center">
-                <MiniLineChart data={tamGrowthData} title="TAM Growth Forecast ($B)" color="#0064FF" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg border p-6 mb-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Globe className="h-5 w-5 text-blue-600" />
-              <h3 className="text-lg font-semibold text-gray-900">Segment Breakdown</h3>
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                {Object.entries(content.segments).map(([region, points], index) => (
-                  <div key={region}>
-                    <h4 className="font-semibold text-gray-900 mb-2">{region}</h4>
-                    <ul className="space-y-1 text-sm text-gray-700 ml-4">
-                      {points.map((point, pointIndex) => (
-                        <li key={pointIndex} className="flex items-start gap-2">
-                          <div className={`w-1.5 h-1.5 ${index === 0 ? 'bg-green-600' : index === 1 ? 'bg-purple-600' : 'bg-orange-600'} rounded-full mt-2 flex-shrink-0`}></div>
-                          {point}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+              <div className="flex gap-2">
+                {[1, 2, 3].map((cardNum) => (
+                  <Button
+                    key={cardNum}
+                    variant={activeCard === cardNum ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setActiveCard(cardNum)}
+                    className={`text-xs ${
+                      activeCard === cardNum 
+                        ? "bg-blue-600 text-white hover:bg-blue-700" 
+                        : "hover:bg-gray-50"
+                    }`}
+                  >
+                    Card {cardNum}
+                  </Button>
                 ))}
               </div>
-              <div className="flex justify-center">
-                <MiniPieChart data={marketSegmentationData} title="Regional Market Share" />
-              </div>
             </div>
-          </div>
-
-          <div className="bg-white rounded-lg border p-6 mb-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Target className="h-5 w-5 text-orange-600" />
-              <h3 className="text-lg font-semibold text-gray-900">Key Challenges</h3>
-            </div>
-            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-              <ul className="space-y-2 text-sm text-orange-800">
-                {content.challenges.map((challenge, index) => (
-                  <li key={index} className="flex items-start gap-2">
-                    <div className="w-1.5 h-1.5 bg-orange-600 rounded-full mt-2 flex-shrink-0"></div>
-                    {challenge}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg border p-6 mb-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Lightbulb className="h-5 w-5 text-purple-600" />
-              <h3 className="text-lg font-semibold text-gray-900">Strategic Recommendations</h3>
-            </div>
+          </CardHeader>
+          
+          <CardContent>
             <div className="space-y-4">
               <div>
-                <h4 className="font-medium text-gray-900 mb-2">Go-to-Market Strategy</h4>
-                <ul className="space-y-1 text-sm text-gray-700 ml-4">
-                  {content.recommendations.goToMarket.map((rec, index) => (
-                    <li key={index} className="flex items-start gap-2">
-                      <div className="w-1.5 h-1.5 bg-purple-600 rounded-full mt-2 flex-shrink-0"></div>
-                      {rec}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div>
-                <h4 className="font-medium text-gray-900 mb-2">Target Profile</h4>
-                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                  <p className="text-sm text-green-800 mb-2">Target firms with:</p>
-                  <ul className="space-y-1 text-sm text-green-700 ml-4">
-                    {content.recommendations.targetProfile.map((profile, index) => (
-                      <li key={index} className="flex items-start gap-2">
-                        <div className="w-1.5 h-1.5 bg-green-600 rounded-full mt-2 flex-shrink-0"></div>
-                        {profile}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg border p-6 mb-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Settings className="h-5 w-5 text-gray-600" />
-              <h3 className="text-lg font-semibold text-gray-900">Signals to Monitor</h3>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {content.signals.map((signal, index) => (
-                <div key={index} className={`${
-                  index === 0 ? 'bg-blue-50 border-blue-200' : 
-                  index === 1 ? 'bg-green-50 border-green-200' : 
-                  'bg-purple-50 border-purple-200'
-                } border rounded-lg p-3`}>
-                  <h5 className={`font-medium text-sm mb-1 ${
-                    index === 0 ? 'text-blue-900' : 
-                    index === 1 ? 'text-green-900' : 
-                    'text-purple-900'
-                  }`}>{signal.category}</h5>
-                  <p className={`text-xs ${
-                    index === 0 ? 'text-blue-700' : 
-                    index === 1 ? 'text-green-700' : 
-                    'text-purple-700'
-                  }`}>{signal.description}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex justify-between items-center pt-6 border-t border-gray-200">
-            <Button 
-              variant="outline" 
-              onClick={() => setIsExpanded(false)}
-              className="flex items-center gap-2"
-            >
-              <ChevronDown className="h-4 w-4 rotate-180" />
-              Show Less
-            </Button>
-            <div className="flex gap-2">
-              <Button variant="outline" className="flex items-center gap-2">
-                <Save className="h-4 w-4" />
-                Save Report
-              </Button>
-              <Button variant="outline" className="flex items-center gap-2">
-                <Download className="h-4 w-4" />
-                Export PDF
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Buyer Map & Roles, Pain Points, Triggers Section */}
-      {!isBuyerMapExpanded ? (
-        <div className="bg-white rounded-lg border border-gray-200 p-6 relative">
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900 mb-2">Buyer Map & Roles, Pain Points, Triggers</h2>
-              <p className="text-sm text-gray-600">
-                Key decision makers, their challenges, and purchase catalysts
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              {editHistory.length > 0 && (
-                <Button variant="ghost" size="sm" className="text-xs text-gray-500">
-                  <MoreHorizontal className="h-3 w-3 mr-1" />
-                  Edit History
-                </Button>
-              )}
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => handleEdit("buyer-map")} 
-                className="text-gray-600 hover:text-gray-800 hover:bg-gray-100" 
-                title="Edit Buyer Map"
-              >
-                <Edit className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <p className="text-gray-700 text-sm leading-relaxed">
-              {content.buyerMap.blurb}
-            </p>
-
-            <div className="grid grid-cols-3 gap-3">
-              <div className="bg-white rounded-md p-3 border border-gray-100 shadow-sm">
-                <div className="flex items-center gap-2 mb-1">
-                  <User className="h-4 w-4 text-blue-600" />
-                  <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700">
-                    Core Personas
-                  </Badge>
-                </div>
-                <p className="text-sm font-semibold text-gray-900 leading-tight">{content.buyerMap.corePersonas} buyer roles</p>
-              </div>
-              
-              <div className="bg-white rounded-md p-3 border border-gray-100 shadow-sm">
-                <div className="flex items-center gap-2 mb-1">
-                  <Flame className="h-4 w-4 text-red-600" />
-                  <Badge variant="secondary" className="text-xs bg-red-100 text-red-700">
-                    Top Pain Point
-                  </Badge>
-                </div>
-                <p className="text-sm font-semibold text-gray-900 leading-tight">{content.buyerMap.topPainPoint}</p>
+                <h3 className="font-semibold text-lg mb-2">{currentData.title}</h3>
+                <p className="text-gray-600 text-sm leading-relaxed">
+                  {currentData.blurb}
+                </p>
               </div>
 
-              <div className="bg-white rounded-md p-3 border border-gray-100 shadow-sm">
-                <div className="flex items-center gap-2 mb-1">
-                  <Zap className="h-4 w-4 text-yellow-600" />
-                  <Badge variant="secondary" className="text-xs bg-yellow-100 text-yellow-700">
-                    Buying Triggers
-                  </Badge>
-                </div>
-                <p className="text-sm font-semibold text-gray-900 leading-tight">{content.buyerMap.buyingTriggers} identified</p>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between pt-2">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setIsBuyerMapExpanded(true)} 
-                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 flex items-center gap-1"
-              >
-                Read More
-                <ChevronDown className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => setShowBuyerMapProfilerChat(true)} 
-            className="absolute bottom-4 right-4 w-10 h-10 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg" 
-            title="Explore More with Profiler"
-          >
-            <Bot className="h-5 w-5" />
-          </Button>
-        </div>
-      ) : (
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900 mb-2">
-                Buyer Map & Roles, Pain Points, Triggers
-              </h2>
-              <p className="text-sm text-gray-600">
-                Comprehensive analysis of decision makers and purchase drivers
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              {editHistory.length > 0 && (
-                <Button variant="ghost" size="sm" className="text-xs text-gray-500">
-                  <MoreHorizontal className="h-3 w-3 mr-1" />
-                  Edit History
-                </Button>
-              )}
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setShowBuyerMapProfilerChat(true)} 
-                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50" 
-                title="Explore More with Profiler"
-              >
-                <MessageSquare className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg p-4 mb-6">
-            <p className="text-gray-700 leading-relaxed">{content.buyerMap.blurb}</p>
-          </div>
-
-          <div className="grid grid-cols-3 gap-3 mb-6">
-            <div className="bg-white rounded-md p-3 border border-gray-100 shadow-sm">
-              <div className="flex items-center gap-2 mb-1">
-                <User className="h-4 w-4 text-blue-600" />
-                <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700">
-                  Core Personas
-                </Badge>
-              </div>
-              <p className="text-sm font-semibold text-gray-900 leading-tight">{content.buyerMap.corePersonas} buyer roles</p>
-            </div>
-            
-            <div className="bg-white rounded-md p-3 border border-gray-100 shadow-sm">
-              <div className="flex items-center gap-2 mb-1">
-                <Flame className="h-4 w-4 text-red-600" />
-                <Badge variant="secondary" className="text-xs bg-red-100 text-red-700">
-                  Top Pain Point
-                </Badge>
-              </div>
-              <p className="text-sm font-semibold text-gray-900 leading-tight">{content.buyerMap.topPainPoint}</p>
-            </div>
-
-            <div className="bg-white rounded-md p-3 border border-gray-100 shadow-sm">
-              <div className="flex items-center gap-2 mb-1">
-                <Zap className="h-4 w-4 text-yellow-600" />
-                <Badge variant="secondary" className="text-xs bg-yellow-100 text-yellow-700">
-                  Buying Triggers
-                </Badge>
-              </div>
-              <p className="text-sm font-semibold text-gray-900 leading-tight">{content.buyerMap.buyingTriggers} identified</p>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg border p-6 mb-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Users className="h-5 w-5 text-blue-600" />
-              <h3 className="text-lg font-semibold text-gray-900">Buyer Map</h3>
-            </div>
-            <div className="space-y-4">
-              <h4 className="font-medium text-gray-900 mb-3">Org Chart Visualization</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {content.buyerMap.orgChart.map((role, index) => (
-                  <div key={index} className="bg-gray-50 rounded-lg p-4 border-2 border-dashed border-gray-200">
-                    <div className="mb-3">
-                      <h5 className="font-semibold text-gray-900 text-lg">{role.role}</h5>
-                      <p className="text-sm text-gray-600 mt-1">{role.focus}</p>
-                    </div>
-                    
-                    <div className="space-y-3">
-                      <div>
-                        <h6 className="text-sm font-medium text-gray-700 mb-1">KPIs</h6>
-                        <ul className="space-y-1">
-                          {role.kpis.map((kpi, kpiIndex) => (
-                            <li key={kpiIndex} className="text-sm text-gray-600 flex items-start gap-2">
-                              <div className="w-1.5 h-1.5 bg-blue-600 rounded-full mt-2 flex-shrink-0"></div>
-                              {kpi}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                      
-                      <div>
-                        <h6 className="text-sm font-medium text-gray-700 mb-1">Relationships</h6>
-                        <ul className="space-y-1">
-                          {role.relationships.map((relationship, relIndex) => (
-                            <li key={relIndex} className="text-sm text-gray-600 flex items-start gap-2">
-                              <div className="w-1.5 h-1.5 bg-purple-600 rounded-full mt-2 flex-shrink-0"></div>
-                              {relationship}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg">
+                  <Target className="h-5 w-5 text-blue-600" />
+                  <div>
+                    <p className="text-xs text-gray-600">Market Size</p>
+                    <p className="font-semibold text-blue-900">{currentData.marketSize}</p>
                   </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg border p-6 mb-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Target className="h-5 w-5 text-red-600" />
-              <h3 className="text-lg font-semibold text-gray-900">Pain Points</h3>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse border border-gray-200 rounded-lg">
-                <thead>
-                  <tr className="bg-gray-50">
-                    <th className="border border-gray-200 px-4 py-3 text-left font-semibold text-gray-900">Pain Point</th>
-                    <th className="border border-gray-200 px-4 py-3 text-left font-semibold text-gray-900">Description</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {content.buyerMap.painPoints.map((pain, index) => (
-                    <tr key={index} className="hover:bg-gray-50">
-                      <td className="border border-gray-200 px-4 py-3 font-medium text-gray-900">{pain.painPoint}</td>
-                      <td className="border border-gray-200 px-4 py-3 text-gray-700">{pain.description}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg border p-6 mb-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Zap className="h-5 w-5 text-yellow-600" />
-              <h3 className="text-lg font-semibold text-gray-900">Buying Triggers</h3>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse border border-gray-200 rounded-lg">
-                <thead>
-                  <tr className="bg-gray-50">
-                    <th className="border border-gray-200 px-4 py-3 text-left font-semibold text-gray-900">Trigger</th>
-                    <th className="border border-gray-200 px-4 py-3 text-left font-semibold text-gray-900">Description</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {content.buyerMap.buyingTriggersArray.map((trigger, index) => (
-                    <tr key={index} className="hover:bg-gray-50">
-                      <td className="border border-gray-200 px-4 py-3 font-medium text-gray-900">{trigger.trigger}</td>
-                      <td className="border border-gray-200 px-4 py-3 text-gray-700">{trigger.description}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg border p-6 mb-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Lightbulb className="h-5 w-5 text-purple-600" />
-              <h3 className="text-lg font-semibold text-gray-900">Recommendations</h3>
-            </div>
-            <div className="space-y-4">
-              <p className="text-gray-700 mb-4">Tailor messaging for:</p>
-              
-              <div className="space-y-4">
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-2">CTO</h4>
-                  <ul className="space-y-1 text-sm text-gray-700 ml-4">
-                    {content.buyerMap.recommendations.cto.map((rec, index) => (
-                      <li key={index} className="flex items-start gap-2">
-                        <div className="w-1.5 h-1.5 bg-blue-600 rounded-full mt-2 flex-shrink-0"></div>
-                        {rec}
-                      </li>
-                    ))}
-                  </ul>
                 </div>
                 
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-2">Head of Digital</h4>
-                  <ul className="space-y-1 text-sm text-gray-700 ml-4">
-                    {content.buyerMap.recommendations.headOfDigital.map((rec, index) => (
-                      <li key={index} className="flex items-start gap-2">
-                        <div className="w-1.5 h-1.5 bg-green-600 rounded-full mt-2 flex-shrink-0"></div>
-                        {rec}
-                      </li>
-                    ))}
-                  </ul>
+                <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg">
+                  <TrendingUp className="h-5 w-5 text-green-600" />
+                  <div>
+                    <p className="text-xs text-gray-600">Growth Rate</p>
+                    <p className="font-semibold text-green-900">{currentData.growth}</p>
+                  </div>
                 </div>
+                
+                <div className="flex items-center gap-2 p-3 bg-orange-50 rounded-lg">
+                  <Clock className="h-5 w-5 text-orange-600" />
+                  <div>
+                    <p className="text-xs text-gray-600">Urgency</p>
+                    <p className="font-semibold text-orange-900">{currentData.urgency}</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2 p-3 bg-purple-50 rounded-lg">
+                  <DollarSign className="h-5 w-5 text-purple-600" />
+                  <div>
+                    <p className="text-xs text-gray-600">Time to Close</p>
+                    <p className="font-semibold text-purple-900">{currentData.timeToClose}</p>
+                  </div>
+                </div>
+              </div>
 
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-2">Time outreach around:</h4>
-                  <ul className="space-y-1 text-sm text-gray-700 ml-4">
-                    {content.buyerMap.recommendations.timing.map((timing, index) => (
-                      <li key={index} className="flex items-start gap-2">
-                        <div className="w-1.5 h-1.5 bg-purple-600 rounded-full mt-2 flex-shrink-0"></div>
-                        {timing}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+              <div className="flex justify-center">
+                <Button 
+                  variant="ghost" 
+                  className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                  onClick={() => setIsMarketExpanded(!isMarketExpanded)}
+                >
+                  {isMarketExpanded ? (
+                    <>
+                      Show Less <ChevronUp className="ml-1 h-4 w-4" />
+                    </>
+                  ) : (
+                    <>
+                      Read More <ChevronDown className="ml-1 h-4 w-4" />
+                    </>
+                  )}
+                </Button>
               </div>
-            </div>
-          </div>
 
-          <div className="flex justify-between items-center pt-6 border-t border-gray-200">
-            <Button 
-              variant="outline" 
-              onClick={() => setIsBuyerMapExpanded(false)}
-              className="flex items-center gap-2"
-            >
-              <ChevronDown className="h-4 w-4 rotate-180" />
-              Show Less
-            </Button>
-            <div className="flex gap-2">
-              <Button variant="outline" className="flex items-center gap-2">
-                <Save className="h-4 w-4" />
-                Save Report
-              </Button>
-              <Button variant="outline" className="flex items-center gap-2">
-                <Download className="h-4 w-4" />
-                Export PDF
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+              {isMarketExpanded && (
+                <div className="mt-6 space-y-6 border-t pt-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div>
+                      <h4 className="font-semibold mb-3">Market Dynamics</h4>
+                      <div className="space-y-3">
+                        <div className="p-3 bg-gray-50 rounded-lg">
+                          <h5 className="font-medium text-sm">Total Addressable Market</h5>
+                          <p className="text-xs text-gray-600 mt-1">European financial services infrastructure market showing strong growth trajectory</p>
+                        </div>
+                        <div className="p-3 bg-gray-50 rounded-lg">
+                          <h5 className="font-medium text-sm">Market Trends</h5>
+                          <p className="text-xs text-gray-600 mt-1">Shift from legacy systems to cloud-native solutions accelerating post-pandemic</p>
+                        </div>
+                        <div className="p-3 bg-gray-50 rounded-lg">
+                          <h5 className="font-medium text-sm">Regulatory Impact</h5>
+                          <p className="text-xs text-gray-600 mt-1">Open banking and PSD2 compliance driving infrastructure modernization</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <h4 className="font-semibold mb-3">Opportunity Sizing</h4>
+                      <div className="space-y-4">
+                        <div className="p-4 border rounded-lg">
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-sm font-medium">Market Penetration</span>
+                            <span className="text-sm text-gray-600">23%</span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div className="bg-blue-600 h-2 rounded-full" style={{ width: '23%' }}></div>
+                          </div>
+                        </div>
+                        
+                        <div className="p-4 border rounded-lg">
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-sm font-medium">Competitive Intensity</span>
+                            <span className="text-sm text-gray-600">Medium</span>
+                          </div>
+                          <div className="flex gap-1">
+                            <div className="w-4 h-2 bg-green-500 rounded"></div>
+                            <div className="w-4 h-2 bg-green-500 rounded"></div>
+                            <div className="w-4 h-2 bg-yellow-500 rounded"></div>
+                            <div className="w-4 h-2 bg-gray-200 rounded"></div>
+                            <div className="w-4 h-2 bg-gray-200 rounded"></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
 
-      {/* Profiler Chat Panels */}
-      {showProfilerChat && (
-        <Card className="border-blue-200 bg-blue-50/40">
-          <CardContent className="p-4">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
-                <Bot className="h-5 w-5 text-white" />
-              </div>
-              <div className="flex-1">
-                <div className="bg-white rounded-lg p-3 mb-3">
-                  <p className="text-sm font-medium text-blue-900 mb-1">Profiler</p>
-                  <p className="text-sm text-gray-700">
-                    Hey! I can help you dive deeper into your {content.topVertical} ICP analysis. What would you like to explore?
-                  </p>
+                  <div className="flex justify-center gap-3 pt-4 border-t">
+                    <Button variant="outline" size="sm">Save Report</Button>
+                    <Button variant="outline" size="sm">Export PDF</Button>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Button variant="ghost" size="sm" className="justify-start text-xs bg-white hover:bg-blue-50">
-                    🔍 Which 3 competitors are growing fastest in this segment?
-                  </Button>
-                  <Button variant="ghost" size="sm" className="justify-start text-xs bg-white hover:bg-blue-50">
-                    🎯 Where's your TAM saturated vs underserved?
-                  </Button>
-                  <Button variant="ghost" size="sm" className="justify-start text-xs bg-white hover:bg-blue-50">
-                    💬 What's your main monetization route in this ICP?
-                  </Button>
-                </div>
-              </div>
-              <Button variant="ghost" size="sm" onClick={() => setShowProfilerChat(false)} className="text-gray-400 hover:text-gray-600">
-                ✕
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {showBuyerMapProfilerChat && (
-        <Card className="border-blue-200 bg-blue-50/40">
-          <CardContent className="p-4">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
-                <Bot className="h-5 w-5 text-white" />
-              </div>
-              <div className="flex-1">
-                <div className="bg-white rounded-lg p-3 mb-3">
-                  <p className="text-sm font-medium text-blue-900 mb-1">Profiler</p>
-                  <p className="text-sm text-gray-700">
-                    Great analysis of the buyer personas! Want me to help you craft targeted messaging or identify specific prospect signals?
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Button variant="ghost" size="sm" className="justify-start text-xs bg-white hover:bg-blue-50">
-                    🎯 Create messaging for each buyer persona
-                  </Button>
-                  <Button variant="ghost" size="sm" className="justify-start text-xs bg-white hover:bg-blue-50">
-                    📧 Draft email templates by role
-                  </Button>
-                  <Button variant="ghost" size="sm" className="justify-start text-xs bg-white hover:bg-blue-50">
-                    🔍 Find prospects showing these pain points
-                  </Button>
-                </div>
-              </div>
-              <Button variant="ghost" size="sm" onClick={() => setShowBuyerMapProfilerChat(false)} className="text-gray-400 hover:text-gray-600">
-                ✕
-              </Button>
+              )}
             </div>
           </CardContent>
         </Card>
-      )}
+      </div>
+
+      {/* Buyer Map & Roles, Pain Points, Triggers */}
+      <div className="space-y-4">
+        <Card className="border border-gray-200">
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-xl font-semibold">Buyer Map & Roles, Pain Points, Triggers</CardTitle>
+                <CardDescription className="mt-1">
+                  Key stakeholders, challenges, and purchase catalysts
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <p className="text-gray-600 text-sm leading-relaxed">
+                  Primary decision makers include CTOs focused on infrastructure modernization and Heads of Digital 
+                  driving customer experience improvements. Key pain points center around legacy system constraints 
+                  and regulatory compliance complexity, with funding rounds and competitive pressures serving as 
+                  primary buying triggers.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg">
+                  <User className="h-5 w-5 text-blue-600" />
+                  <div>
+                    <p className="text-xs text-gray-600"># of core buyer personas</p>
+                    <p className="font-semibold text-blue-900">{currentData.corePersonas}</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2 p-3 bg-red-50 rounded-lg">
+                  <Flame className="h-5 w-5 text-red-600" />
+                  <div>
+                    <p className="text-xs text-gray-600">Top pain point</p>
+                    <p className="font-semibold text-red-900">{currentData.topPainPoint}</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2 p-3 bg-yellow-50 rounded-lg">
+                  <Zap className="h-5 w-5 text-yellow-600" />
+                  <div>
+                    <p className="text-xs text-gray-600"># of buying triggers identified</p>
+                    <p className="font-semibold text-yellow-900">{currentData.buyingTriggers}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-center">
+                <Button 
+                  variant="ghost" 
+                  className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                  onClick={() => setIsBuyerMapExpanded(!isBuyerMapExpanded)}
+                >
+                  {isBuyerMapExpanded ? (
+                    <>
+                      Show Less <ChevronUp className="ml-1 h-4 w-4" />
+                    </>
+                  ) : (
+                    <>
+                      Read More <ChevronDown className="ml-1 h-4 w-4" />
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {isBuyerMapExpanded && (
+                <div className="mt-6 space-y-6 border-t pt-6">
+                  <div>
+                    <h4 className="font-semibold mb-4">Buyer Map</h4>
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <h5 className="font-medium mb-3">Org Chart Visualization</h5>
+                      <div className="flex items-center justify-center space-x-8 mb-4">
+                        <div className="text-center">
+                          <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mb-2">
+                            <User className="h-8 w-8 text-blue-600" />
+                          </div>
+                          <p className="text-sm font-medium">CTO</p>
+                        </div>
+                        <div className="border-t-2 border-dashed border-gray-300 w-16"></div>
+                        <div className="text-center">
+                          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-2">
+                            <User className="h-8 w-8 text-green-600" />
+                          </div>
+                          <p className="text-sm font-medium">Head of Digital</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+                      <div className="p-4 border rounded-lg">
+                        <h5 className="font-medium text-blue-900 mb-2">CTO</h5>
+                        <p className="text-sm text-gray-600 mb-3">Role focus: Technology strategy, infrastructure modernization</p>
+                        <div>
+                          <p className="text-xs font-medium text-gray-700 mb-1">KPIs:</p>
+                          <ul className="text-xs text-gray-600 space-y-1">
+                            <li>• Cloud adoption velocity</li>
+                            <li>• IT compliance posture</li>
+                            <li>• Time-to-market for digital products</li>
+                          </ul>
+                        </div>
+                      </div>
+                      
+                      <div className="p-4 border rounded-lg">
+                        <h5 className="font-medium text-green-900 mb-2">Head of Digital</h5>
+                        <p className="text-sm text-gray-600 mb-3">Role focus: Customer experience, digital product rollouts</p>
+                        <div>
+                          <p className="text-xs font-medium text-gray-700 mb-1">KPIs:</p>
+                          <ul className="text-xs text-gray-600 space-y-1">
+                            <li>• App adoption rates</li>
+                            <li>• Customer churn metrics</li>
+                            <li>• Regulatory UX compliance</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="font-semibold mb-4">Pain Points</h4>
+                    <p className="text-sm text-gray-600 mb-3">For {currentData.title.split(' (')[0]}:</p>
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse border border-gray-300">
+                        <thead>
+                          <tr className="bg-gray-50">
+                            <th className="border border-gray-300 px-4 py-2 text-left text-sm font-medium">Pain Point</th>
+                            <th className="border border-gray-300 px-4 py-2 text-left text-sm font-medium">Description</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td className="border border-gray-300 px-4 py-2 text-sm">Legacy Core Banking Systems</td>
+                            <td className="border border-gray-300 px-4 py-2 text-sm">Even newer Neobanks sometimes have inherited legacy systems slowing innovation.</td>
+                          </tr>
+                          <tr>
+                            <td className="border border-gray-300 px-4 py-2 text-sm">Regulatory Overload</td>
+                            <td className="border border-gray-300 px-4 py-2 text-sm">Highly complex rules (e.g. PSD2, Basel IV) strain teams.</td>
+                          </tr>
+                          <tr>
+                            <td className="border border-gray-300 px-4 py-2 text-sm">Talent Competition</td>
+                            <td className="border border-gray-300 px-4 py-2 text-sm">Difficulty attracting compliance-savvy tech talent.</td>
+                          </tr>
+                          <tr>
+                            <td className="border border-gray-300 px-4 py-2 text-sm">Cost Pressures</td>
+                            <td className="border border-gray-300 px-4 py-2 text-sm">Rising CAC and margin compression.</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="font-semibold mb-4">Buying Triggers</h4>
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse border border-gray-300">
+                        <thead>
+                          <tr className="bg-gray-50">
+                            <th className="border border-gray-300 px-4 py-2 text-left text-sm font-medium">Trigger</th>
+                            <th className="border border-gray-300 px-4 py-2 text-left text-sm font-medium">Description</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {currentData.buyingTriggersArray.map((trigger, index) => (
+                            <tr key={index}>
+                              <td className="border border-gray-300 px-4 py-2 text-sm font-medium">{trigger.trigger}</td>
+                              <td className="border border-gray-300 px-4 py-2 text-sm">{trigger.description}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="font-semibold mb-4">Recommendations</h4>
+                    <div className="space-y-3">
+                      <div className="p-3 bg-blue-50 rounded-lg">
+                        <p className="text-sm"><strong>Tailor messaging for:</strong></p>
+                        <ul className="text-sm text-gray-700 mt-1 space-y-1">
+                          <li>• <strong>CTO</strong> → emphasize cloud-native compliance architecture</li>
+                          <li>• <strong>Head of Digital</strong> → showcase customer-centric digital capabilities</li>
+                        </ul>
+                      </div>
+                      <div className="p-3 bg-green-50 rounded-lg">
+                        <p className="text-sm"><strong>Time outreach around:</strong></p>
+                        <ul className="text-sm text-gray-700 mt-1 space-y-1">
+                          <li>• Industry news on regulatory changes</li>
+                          <li>• Funding announcements</li>
+                        </ul>
+                      </div>
+                      <div className="p-3 bg-yellow-50 rounded-lg">
+                        <p className="text-sm"><strong>Consider multi-threading both personas early in cycle.</strong></p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-center gap-3 pt-4 border-t">
+                    <Button variant="outline" size="sm">Save Report</Button>
+                    <Button variant="outline" size="sm">Export PDF</Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Competitive Overlap & Buying Signals */}
+      <div className="space-y-4">
+        <Card className="border border-gray-200">
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-xl font-semibold">Competitive Overlap & Buying Signals</CardTitle>
+                <CardDescription className="mt-1">
+                  Competitive landscape analysis and market signals
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <p className="text-gray-600 text-sm leading-relaxed">
+                  Key competitors include {currentData.competitiveData.mainCompetitors.slice(0, 2).join(" and ")} dominating 
+                  the established market, while cloud-native solutions gain traction. Recent market signals show increased 
+                  funding activity and regulatory-driven technology investments creating new opportunities.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="flex items-center gap-2 p-3 bg-red-50 rounded-lg">
+                  <Swords className="h-5 w-5 text-red-600" />
+                  <div>
+                    <p className="text-xs text-gray-600">Number of main competitors</p>
+                    <p className="font-semibold text-red-900">{currentData.competitors}</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg">
+                  <TrendingUp className="h-5 w-5 text-green-600" />
+                  <div>
+                    <p className="text-xs text-gray-600">Notable recent win/loss % change</p>
+                    <p className="font-semibold text-green-900">{currentData.winLossChange}</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2 p-3 bg-orange-50 rounded-lg">
+                  <Flame className="h-5 w-5 text-orange-600" />
+                  <div>
+                    <p className="text-xs text-gray-600">Count of active buying signals</p>
+                    <p className="font-semibold text-orange-900">{currentData.buyingSignals}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-center">
+                <Button 
+                  variant="ghost" 
+                  className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                  onClick={() => setIsCompetitiveExpanded(!isCompetitiveExpanded)}
+                >
+                  {isCompetitiveExpanded ? (
+                    <>
+                      Show Less <ChevronUp className="ml-1 h-4 w-4" />
+                    </>
+                  ) : (
+                    <>
+                      Read More <ChevronDown className="ml-1 h-4 w-4" />
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {isCompetitiveExpanded && (
+                <div className="mt-6 space-y-6 border-t pt-6">
+                  <div>
+                    <h4 className="font-semibold mb-4">Main Competitors</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {currentData.competitiveData.mainCompetitors.map((competitor, index) => (
+                        <div key={index} className="p-3 border rounded-lg">
+                          <div className="flex items-center justify-between">
+                            <h5 className="font-medium">{competitor}</h5>
+                            <Badge variant="outline" className="text-xs">
+                              {index === 0 ? "Market Leader" : index === 1 ? "Strong Player" : "Emerging"}
+                            </Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="font-semibold mb-4">Market Share Shifts</h4>
+                    <div className="p-4 bg-gray-50 rounded-lg">
+                      <p className="text-sm text-gray-700">{currentData.competitiveData.marketShareShifts}</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="font-semibold mb-4">Recent Buying Signals</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {currentData.competitiveData.recentSignals.map((signal, index) => (
+                        <div key={index} className="p-3 border rounded-lg">
+                          <div className="flex items-center justify-between mb-2">
+                            <h5 className="font-medium text-sm">{signal.signal}</h5>
+                            <div className="flex items-center gap-1">
+                              {signal.trend === "up" ? (
+                                <TrendingUp className="h-4 w-4 text-green-600" />
+                              ) : signal.trend === "down" ? (
+                                <TrendingDown className="h-4 w-4 text-red-600" />
+                              ) : (
+                                <div className="w-4 h-4 bg-gray-400 rounded-full"></div>
+                              )}
+                              <span className="text-lg font-semibold">{signal.count}</span>
+                            </div>
+                          </div>
+                          <p className="text-xs text-gray-600">
+                            {signal.trend === "up" ? "Increasing activity" : 
+                             signal.trend === "down" ? "Decreasing activity" : "Stable activity"}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="font-semibold mb-4">Competitive Positioning</h4>
+                    <div className="space-y-3">
+                      <div className="p-3 bg-blue-50 rounded-lg">
+                        <p className="text-sm"><strong>Differentiation Strategy:</strong></p>
+                        <p className="text-sm text-gray-700 mt-1">
+                          Focus on cloud-native architecture and regulatory compliance automation vs. legacy infrastructure approaches
+                        </p>
+                      </div>
+                      <div className="p-3 bg-green-50 rounded-lg">
+                        <p className="text-sm"><strong>Win Themes:</strong></p>
+                        <ul className="text-sm text-gray-700 mt-1 space-y-1">
+                          <li>• Faster time-to-market for new financial products</li>
+                          <li>• Built-in compliance frameworks</li>
+                          <li>• API-first architecture for ecosystem integration</li>
+                        </ul>
+                      </div>
+                      <div className="p-3 bg-yellow-50 rounded-lg">
+                        <p className="text-sm"><strong>Competitive Threats:</strong></p>
+                        <p className="text-sm text-gray-700 mt-1">
+                          Watch for incumbent vendors adding cloud capabilities and new entrants with specialized vertical solutions
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-center gap-3 pt-4 border-t">
+                    <Button variant="outline" size="sm">Save Report</Button>
+                    <Button variant="outline" size="sm">Export PDF</Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };
