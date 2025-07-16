@@ -572,31 +572,20 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
   ];
 
   const marketSizeValue = parseFloat(content.marketSize.replace(/[^0-9.]/g, ''));
-  const tamGrowthData = [{
-    name: "2022",
-    value: marketSizeValue * 0.7
-  }, {
-    name: "2023", 
-    value: marketSizeValue * 0.8
-  }, {
-    name: "2024",
-    value: marketSizeValue * 0.9
-  }, {
-    name: "2025",
-    value: marketSizeValue * 0.95
-  }, {
-    name: "2026",
-    value: marketSizeValue * 0.98
-  }, {
-    name: "2027",
-    value: marketSizeValue
-  }];
+  const tamGrowthData = [
+    { name: "2022", value: marketSizeValue * 0.7 },
+    { name: "2023", value: marketSizeValue * 0.8 },
+    { name: "2024", value: marketSizeValue * 0.9 },
+    { name: "2025", value: marketSizeValue * 0.95 },
+    { name: "2026", value: marketSizeValue * 0.98 },
+    { name: "2027", value: marketSizeValue }
+  ];
 
   if (!isExpanded) {
     // Collapsed Default View
     return <div className="space-y-6">
         {/* Category Header */}
-        <div className="bg-gray-50 rounded-lg border border-gray-200 p-6 relative">
+        <div className="bg-white rounded-lg border border-gray-200 p-6 relative">
           <div className="flex items-start justify-between mb-4">
             <div>
               <h2 className="text-xl font-semibold text-gray-900 mb-2">ICP Summary & Market Opportunity</h2>
@@ -690,7 +679,7 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
   // Expanded Full Report View
   return <div className="space-y-6">
       {/* Category Header */}
-      <div className="bg-gray-50 rounded-lg border border-gray-200 p-6">
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
         <div className="flex items-start justify-between mb-4">
           <div>
             <h2 className="text-xl font-semibold text-gray-900 mb-2">
