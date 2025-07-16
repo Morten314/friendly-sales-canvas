@@ -122,7 +122,6 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
   const industryOptions = ["Fintech", "Healthcare SaaS", "Logistics Tech", "EdTech", "PropTech", "Cybersecurity", "InsurTech", "Clean Energy"];
   const companySizeOptions = ["10–50 employees", "50–200 employees", "100–500 employees", "200–800 employees", "150–600 employees"];
   const regionOptions = ["North America", "EU", "DACH", "SEA", "LATAM", "Global", "ANZ", "UK"];
-  const decisionMakerOptions = ["CTO", "Head of Digital", "Chief Medical Officer", "IT Director", "VP Operations", "Chief Academic Officer", "IT Manager", "VP Sales", "Technology Director", "CISO", "VP Engineering", "Chief Claims Officer", "Head of Technology", "Chief Technology Officer"];
 
   const handleEdit = (icpId: string) => {
     const icp = suggestedICPs.find(i => i.id === icpId);
@@ -148,7 +147,7 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
         ),
       });
 
-      // Open Profiler chat automatically
+      // Open Profiler chat automatically with context
       setChatContext({
         cardId: icpId,
         cardName: icp.segment,
@@ -238,10 +237,10 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
           variant="ghost"
           size="sm"
           onClick={openProfilerChat}
-          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 flex items-center gap-2"
+          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 flex items-center gap-2 relative"
           title="Chat with Profiler"
         >
-          <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+          <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center animate-pulse">
             <Bot className="h-4 w-4 text-white" />
           </div>
           Chat with Profiler
@@ -259,7 +258,7 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
         >
           <CarouselContent className="-ml-4">
             {suggestedICPs.map((icp) => (
-              <CarouselItem key={icp.id} className="pl-4 basis-96">
+              <CarouselItem key={icp.id} className="pl-4 basis-[420px]">
                 <Card 
                   className={`h-full transition-all duration-200 hover:shadow-lg border ${
                     selectedICP === icp.id 
@@ -328,9 +327,9 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
                         )}
                         
                         {icp.growthIndicator && (
-                          <Badge variant="secondary" className="bg-green-100 text-green-700 text-xs whitespace-nowrap flex items-center gap-1">
+                          <Badge variant="secondary" className="bg-green-100 text-green-700 text-xs flex items-center gap-1 min-w-fit">
                             <TrendingUp className="h-3 w-3" />
-                            {icp.growthIndicator}
+                            <span className="whitespace-nowrap">{icp.growthIndicator}</span>
                           </Badge>
                         )}
                       </div>

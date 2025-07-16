@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,12 +35,12 @@ export const ProfilerChatPanel = ({ isOpen, onClose, context }: ProfilerChatPane
 - Or tell me about a new ICP you're researching.`;
   };
 
-  // Set initial message when context changes
-  useState(() => {
-    if (isOpen && context) {
+  // Set initial message when context changes or chat opens
+  useEffect(() => {
+    if (isOpen) {
       setMessages([{ role: 'profiler', content: getInitialMessage() }]);
     }
-  });
+  }, [isOpen, context?.cardName, context?.action]);
 
   const handleSendMessage = () => {
     if (!inputValue.trim()) return;
@@ -72,8 +72,8 @@ export const ProfilerChatPanel = ({ isOpen, onClose, context }: ProfilerChatPane
   if (!isOpen) return null;
 
   return (
-    <Card className="fixed right-4 top-20 w-96 h-[600px] shadow-xl z-50 border-blue-200 bg-blue-50/40">
-      <CardHeader className="pb-3 border-b">
+    <Card className="fixed right-4 top-20 w-96 h-[600px] shadow-xl z-50 border-blue-200 bg-white">
+      <CardHeader className="pb-3 border-b bg-white">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg flex items-center gap-2">
             <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
@@ -106,15 +106,15 @@ export const ProfilerChatPanel = ({ isOpen, onClose, context }: ProfilerChatPane
         )}
       </CardHeader>
       
-      <CardContent className="flex flex-col h-full p-0">
-        <div className="flex-1 p-4 space-y-3 overflow-y-auto max-h-[400px]">
+      <CardContent className="flex flex-col h-full p-0 bg-white">
+        <div className="flex-1 p-4 space-y-3 overflow-y-auto max-h-[400px] bg-white">
           {messages.map((message, index) => (
             <div 
               key={index}
               className={`${
                 message.role === "profiler" 
-                  ? "bg-white rounded-lg p-3 self-start" 
-                  : "bg-blue-100 rounded-lg p-3 self-end ml-auto max-w-[80%]"
+                  ? "bg-blue-50 rounded-lg p-3 self-start" 
+                  : "bg-gray-100 rounded-lg p-3 self-end ml-auto max-w-[80%]"
               }`}
             >
               <p className="text-sm font-medium">
