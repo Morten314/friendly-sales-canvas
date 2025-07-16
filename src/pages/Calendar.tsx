@@ -1,12 +1,14 @@
 
 import { useState } from "react";
 import { Layout } from "@/components/layout/Layout";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar as CalendarIcon, PlusCircle, MessageSquare, Send, Zap } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
 const Calendar = () => {
+  usePageTitle("⚡ Activator - Brewra");
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [messages, setMessages] = useState([
     { role: "ai", content: "Hello! I'm Activator. How can I help with your tasks and campaigns today?" }

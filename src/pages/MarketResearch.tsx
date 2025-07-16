@@ -866,6 +866,7 @@
 
 import { useState, useEffect } from "react";
 import { Layout } from "@/components/layout/Layout";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { Button } from "@/components/ui/button";
 import { Search, MessageSquare, Users, Settings, RefreshCw, AlertCircle, History, Calendar } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -1012,6 +1013,7 @@ const getCachedData = (): MarketIntelligenceData | null => {
 };
 
 const MarketResearch = () => {
+  usePageTitle("🔍 Scout - Brewra");
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("intelligence");
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);

@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { Layout } from "@/components/layout/Layout";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FileText, PlusCircle, ArrowRight, Download, MessageSquare, Send } from "lucide-react";
 
 const Deals = () => {
+  usePageTitle("🧭 Strategist - Brewra");
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [messages, setMessages] = useState([
     { role: "ai", content: "Hello! I'm Strategist. How can I help with your go-to-market strategy today?" }

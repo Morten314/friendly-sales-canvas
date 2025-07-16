@@ -2,7 +2,6 @@
 import React from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Search, User, Compass, Zap, Presentation, Shield, FileCheck, Target } from "lucide-react";
-import { useNavigate } from 'react-router-dom';
 
 type Agent = {
   name: string;
@@ -72,7 +71,12 @@ export function AgentCards() {
     }
   ];
   
-  const navigate = useNavigate();
+  const handleAgentClick = (agent: Agent) => {
+    const newWindow = window.open(agent.path, '_blank');
+    if (newWindow) {
+      newWindow.document.title = `${agent.name} - Brewra`;
+    }
+  };
   
   return (
     <div className="mb-6">
@@ -81,7 +85,7 @@ export function AgentCards() {
           <Card
             key={index}
             className="cursor-pointer hover:shadow-md transition-all"
-            onClick={() => navigate(agent.path)}
+            onClick={() => handleAgentClick(agent)}
           >
             <CardContent className="p-4">
               <div className="flex items-start gap-2">

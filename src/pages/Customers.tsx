@@ -1,6 +1,7 @@
 
 import { useState } from "react";
 import { Layout } from "@/components/layout/Layout";
+import { usePageTitle } from "@/hooks/usePageTitle";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +10,7 @@ import { User, Users, Filter, UserPlus, Download, MessageSquare, Send, Search, D
 import { ICPIntelligence } from "@/components/customers/ICPIntelligence";
 
 const Customers = () => {
+  usePageTitle("👤 Profiler - Brewra");
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [messages, setMessages] = useState([
     { role: "ai", content: "I'm Profiler, your ICP research assistant. I can help you define ideal customer profiles, find prospects, and enrich your data. What would you like to work on today?" }
