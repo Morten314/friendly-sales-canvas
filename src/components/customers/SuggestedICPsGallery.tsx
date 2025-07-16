@@ -1,8 +1,10 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { Globe, TrendingUp, Users, Building, MapPin, Target, Bot, MessageSquare, Edit, Save, X, Check } from "lucide-react";
@@ -119,6 +121,8 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
 
   const industryOptions = ["Fintech", "Healthcare SaaS", "Logistics Tech", "EdTech", "PropTech", "Cybersecurity", "InsurTech", "Clean Energy"];
   const companySizeOptions = ["10–50 employees", "50–200 employees", "100–500 employees", "200–800 employees", "150–600 employees"];
+  const regionOptions = ["North America", "EU", "DACH", "SEA", "LATAM", "Global", "ANZ", "UK"];
+  const decisionMakerOptions = ["CTO", "Head of Digital", "Chief Medical Officer", "IT Director", "VP Operations", "Chief Academic Officer", "IT Manager", "VP Sales", "Technology Director", "CISO", "VP Engineering", "Chief Claims Officer", "Head of Technology", "Chief Technology Officer"];
 
   const handleEdit = (icpId: string) => {
     const icp = suggestedICPs.find(i => i.id === icpId);
@@ -197,6 +201,11 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
     );
   };
 
+  const handleArrayFieldChange = (icpId: string, field: 'decisionMakers' | 'regions' | 'keyAttributes', value: string) => {
+    const items = value.split(',').map(item => item.trim()).filter(item => item.length > 0);
+    handleFieldChange(icpId, field, items);
+  };
+
   const handleCardClick = (icp: SuggestedICP) => {
     if (editingICP === icp.id) return; // Don't select while editing
     
@@ -250,7 +259,7 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
         >
           <CarouselContent className="-ml-4">
             {suggestedICPs.map((icp) => (
-              <CarouselItem key={icp.id} className="pl-4 basis-80">
+              <CarouselItem key={icp.id} className="pl-4 basis-96">
                 <Card 
                   className={`h-full transition-all duration-200 hover:shadow-lg border ${
                     selectedICP === icp.id 
@@ -263,7 +272,7 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
                 >
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
-                      <div className="space-y-1 flex-1">
+                      <div className="space-y-1 flex-1 min-w-0">
                         {editingICP === icp.id ? (
                           <>
                             <Select value={icp.industry} onValueChange={(value) => handleFieldChange(icp.id, 'industry', value)}>
@@ -292,7 +301,7 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
                         )}
                       </div>
                       
-                      <div className="flex items-center gap-1 ml-2">
+                      <div className="flex items-center gap-1 ml-2 flex-shrink-0">
                         <ICPEditHistory icpId={icp.id} />
                         
                         {editingICP === icp.id ? (
@@ -319,8 +328,8 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
                         )}
                         
                         {icp.growthIndicator && (
-                          <Badge variant="secondary" className="bg-green-100 text-green-700 text-xs ml-2">
-                            <TrendingUp className="h-3 w-3 mr-1" />
+                          <Badge variant="secondary" className="bg-green-100 text-green-700 text-xs whitespace-nowrap flex items-center gap-1">
+                            <TrendingUp className="h-3 w-3" />
                             {icp.growthIndicator}
                           </Badge>
                         )}
@@ -331,7 +340,7 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
                   <CardContent className="space-y-4">
                     {/* Company Size */}
                     <div className="flex items-center gap-2 text-sm">
-                      <Building className="h-4 w-4 text-gray-500" />
+                      <Building className="h-4 w-4 text-gray-500 flex-shrink-0" />
                       {editingICP === icp.id ? (
                         <Select value={icp.companySize} onValueChange={(value) => handleFieldChange(icp.id, 'companySize', value)}>
                           <SelectTrigger className="w-full h-7">
@@ -351,39 +360,85 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
                     {/* Decision Makers */}
                     <div className="space-y-1">
                       <div className="flex items-center gap-2 text-sm">
-                        <Users className="h-4 w-4 text-gray-500" />
+                        <Users className="h-4 w-4 text-gray-500 flex-shrink-0" />
                         <span className="text-gray-600 font-medium">Key Decision Makers:</span>
                       </div>
-                      <div className="flex flex-wrap gap-1 ml-6">
-                        {icp.decisionMakers.map((role, index) => (
-                          <Badge key={index} variant="outline" className="text-xs">
-                            {role}
-                          </Badge>
-                        ))}
-                      </div>
+                      {editingICP === icp.id ? (
+                        <Textarea
+                          value={icp.decisionMakers.join(', ')}
+                          onChange={(e) => handleArrayFieldChange(icp.id, 'decisionMakers', e.target.value)}
+                          className="ml-6 min-h-[60px] text-sm"
+                          placeholder="Enter decision makers separated by commas"
+                        />
+                      ) : (
+                        <div className="flex flex-wrap gap-1 ml-6">
+                          {icp.decisionMakers.map((role, index) => (
+                            <Badge key={index} variant="outline" className="text-xs">
+                              {role}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                     {/* Regions */}
-                    <div className="flex items-center gap-2 text-sm">
-                      <MapPin className="h-4 w-4 text-gray-500" />
-                      <span className="text-gray-700">{icp.regions.join(", ")}</span>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 text-sm">
+                        <MapPin className="h-4 w-4 text-gray-500 flex-shrink-0" />
+                        <span className="text-gray-600 font-medium">Regions:</span>
+                      </div>
+                      {editingICP === icp.id ? (
+                        <Textarea
+                          value={icp.regions.join(', ')}
+                          onChange={(e) => handleArrayFieldChange(icp.id, 'regions', e.target.value)}
+                          className="ml-6 min-h-[40px] text-sm"
+                          placeholder="Enter regions separated by commas"
+                        />
+                      ) : (
+                        <span className="text-gray-700 ml-6 text-sm">{icp.regions.join(", ")}</span>
+                      )}
                     </div>
 
                     {/* Key Attributes */}
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-sm">
-                        <Target className="h-4 w-4 text-gray-500" />
+                        <Target className="h-4 w-4 text-gray-500 flex-shrink-0" />
                         <span className="text-gray-600 font-medium">Key Attributes:</span>
                       </div>
-                      <div className="space-y-1 ml-6">
-                        {icp.keyAttributes.map((attribute, index) => (
-                          <div key={index} className="flex items-center gap-2 text-sm">
-                            <div className="w-1.5 h-1.5 bg-blue-600 rounded-full"></div>
-                            <span className="text-gray-700">{attribute}</span>
-                          </div>
-                        ))}
-                      </div>
+                      {editingICP === icp.id ? (
+                        <Textarea
+                          value={icp.keyAttributes.join(', ')}
+                          onChange={(e) => handleArrayFieldChange(icp.id, 'keyAttributes', e.target.value)}
+                          className="ml-6 min-h-[60px] text-sm"
+                          placeholder="Enter key attributes separated by commas"
+                        />
+                      ) : (
+                        <div className="space-y-1 ml-6">
+                          {icp.keyAttributes.map((attribute, index) => (
+                            <div key={index} className="flex items-center gap-2 text-sm">
+                              <div className="w-1.5 h-1.5 bg-blue-600 rounded-full flex-shrink-0"></div>
+                              <span className="text-gray-700">{attribute}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
+
+                    {/* Growth Indicator (editable when in edit mode) */}
+                    {editingICP === icp.id && (
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 text-sm">
+                          <TrendingUp className="h-4 w-4 text-gray-500 flex-shrink-0" />
+                          <span className="text-gray-600 font-medium">Growth Indicator:</span>
+                        </div>
+                        <Input
+                          value={icp.growthIndicator || ''}
+                          onChange={(e) => handleFieldChange(icp.id, 'growthIndicator', e.target.value)}
+                          className="ml-6 h-7 text-sm"
+                          placeholder="e.g., 5.6% CAGR"
+                        />
+                      </div>
+                    )}
 
                     {/* View Details Button */}
                     {editingICP !== icp.id && (
