@@ -45,19 +45,7 @@ export const ICPIntelligence = () => {
 
         {/* Agent-Level Contextual Mini Report */}
         <Card className="border-purple-200 bg-gradient-to-br from-purple-50/40 to-blue-50/40 mt-6">
-          <CardHeader className="relative pb-4">
-            <div className="flex items-start justify-between">
-              <div>
-                <CardTitle className="text-lg text-gray-900">Current ICP Focus</CardTitle>
-                <CardDescription className="mt-1">
-                  You're exploring: <span className="font-medium">B2B SaaS → Fintech → North America → 200-500 employees</span>
-                </CardDescription>
-              </div>
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-purple-600 hover:bg-purple-100" onClick={handleEditToggle}>
-                <Edit className="h-4 w-4" />
-              </Button>
-            </div>
-          </CardHeader>
+          
           
           
         </Card>
