@@ -68,22 +68,6 @@ export function AgentCards() {
     const newWindow = window.open(agent.path, '_blank');
     if (newWindow) {
       newWindow.document.title = agent.name;
-      
-      // Remove existing favicon and add a custom one
-      newWindow.addEventListener('load', () => {
-        const existingLink = newWindow.document.querySelector('link[rel="icon"]') || newWindow.document.querySelector('link[rel="shortcut icon"]');
-        if (existingLink) {
-          existingLink.remove();
-        }
-        
-        // Create a simple data URL favicon with just the agent icon (remove heart)
-        const link = newWindow.document.createElement('link');
-        link.rel = 'icon';
-        link.type = 'image/svg+xml';
-        // Create a simple SVG favicon without heart icon
-        link.href = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>')}`;
-        newWindow.document.head.appendChild(link);
-      });
     }
   };
   
