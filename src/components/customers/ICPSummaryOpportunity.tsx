@@ -41,36 +41,41 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
   // Dynamic content based on active ICP
   const getICPContent = () => {
     const defaultContent = {
-      blurb: "Your current ICP is mid-market technology firms in North America, focused on cloud adoption and digital transformation initiatives.",
+      blurb: "Neobanks in the fintech sector are rapidly scaling across North America and DACH, driven by high cloud adoption and strong regulatory compliance demands. Mid-sized players (50–200 employees) are emerging as innovators yet face margin pressures and evolving regulatory landscapes.",
       stats: [
-        { icon: TrendingUp, label: "Growth", value: "8.2% CAGR", color: "green" },
-        { icon: DollarSign, label: "TAM", value: "$2.1B", color: "green" },
-        { icon: MapPin, label: "Regions", value: "North America", color: "purple" },
-        { icon: Building, label: "Vertical", value: "Technology", color: "orange" }
+        { icon: TrendingUp, label: "Market Growth", value: "5.6% CAGR", color: "green" },
+        { icon: DollarSign, label: "Market Size", value: "$3.2B TAM in North America, $1.1B in DACH", color: "green" },
+        { icon: Users, label: "Active Players", value: "~150 Neobank firms in target segments", color: "blue" },
+        { icon: Building, label: "Investment Activity", value: "$2.4B raised in past 12 months", color: "orange" }
       ],
-      marketSize: "$2.1B",
-      sam: "$750M",
+      marketSize: "$4.3B",
+      sam: "$3.2B",
       regions: "North America + DACH",
-      topVertical: "Technology",
-      cagr: "8.2%",
-      reportTitle: "Technology Firms Market Analysis"
+      topVertical: "Neobanks",
+      cagr: "5.6%",
+      reportTitle: "Neobank Market Intelligence Report"
     };
 
     if (activeICP?.industry === "Fintech" && activeICP?.segment === "Neobanks") {
+      return defaultContent;
+    }
+
+    // For other ICPs, return different content - this makes it dynamic
+    if (activeICP?.industry === "Clean Energy") {
       return {
-        blurb: "Neobanks in the fintech sector are rapidly scaling across North America and DACH, driven by high cloud adoption and strong regulatory compliance demands. Mid-sized players (50–200 employees) are emerging as innovators yet face margin pressures and evolving regulatory landscapes.",
+        blurb: "Solar management platforms in the clean energy sector are experiencing rapid growth across multiple regions, driven by sustainability mandates and IoT integration demands. Companies with 120–500 employees are leading innovation while navigating complex regulatory landscapes.",
         stats: [
-          { icon: TrendingUp, label: "Market Growth", value: "5.6% CAGR", color: "green" },
-          { icon: DollarSign, label: "Market Size", value: "$3.2B TAM (NA), $1.1B (DACH)", color: "green" },
-          { icon: Users, label: "Active Players", value: "~150 Neobank firms", color: "blue" },
-          { icon: Building, label: "Investment Activity", value: "$2.4B raised (12 months)", color: "orange" }
+          { icon: TrendingUp, label: "Market Growth", value: "18.2% CAGR", color: "green" },
+          { icon: DollarSign, label: "Market Size", value: "$5.8B TAM globally", color: "green" },
+          { icon: Users, label: "Active Players", value: "~85 Solar Management firms", color: "blue" },
+          { icon: Building, label: "Investment Activity", value: "$3.1B raised in past 12 months", color: "orange" }
         ],
-        marketSize: "$4.3B",
-        sam: "$3.2B",
-        regions: "North America + DACH",
-        topVertical: "Neobanks",
-        cagr: "5.6%",
-        reportTitle: "Neobank Market Intelligence Report"
+        marketSize: "$5.8B",
+        sam: "$4.2B",
+        regions: "North America + EU + ANZ",
+        topVertical: "Solar Management Platforms",
+        cagr: "18.2%",
+        reportTitle: "Clean Energy Market Intelligence Report"
       };
     }
 
@@ -241,7 +246,7 @@ export const ICPSummaryOpportunity = ({ activeICP }: ICPSummaryOpportunityProps)
         </div>
 
         {/* Accordion Sections */}
-        <Accordion type="multiple" defaultValue={["market-size", "segment-breakdown", "challenges", "recommendations"]} className="space-y-4">
+        <Accordion type="multiple" defaultValue={["market-size", "segment-breakdown", "challenges", "recommendations", "signals"]} className="space-y-4">
           {/* Market Size & Growth */}
           <AccordionItem value="market-size" className="bg-white rounded-lg border">
             <AccordionTrigger className="px-4 py-3 hover:no-underline">
