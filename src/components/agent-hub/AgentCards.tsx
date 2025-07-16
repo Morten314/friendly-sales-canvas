@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Card, CardContent } from "@/components/ui/card";
-import { Search, User, Compass, Zap, Presentation, Shield, FileCheck, Target } from "lucide-react";
+import { Search, Users, FileText, Calendar, Presentation, Shield, FileCheck, Target } from "lucide-react";
 
 type Agent = {
   name: string;
@@ -23,28 +23,21 @@ export function AgentCards() {
     {
       name: "Profiler",
       tagline: "I study people, so you know who to chase.",
-      icon: <User className="h-4 w-4" />,
+      icon: <Users className="h-4 w-4" />,
       color: "bg-purple-100 text-purple-600",
       path: "/customers"
     },
     {
       name: "Strategist",
       tagline: "I craft the perfect GTM game plan.",
-      icon: <Compass className="h-4 w-4" />,
+      icon: <FileText className="h-4 w-4" />,
       color: "bg-green-100 text-green-600",
       path: "/deals"
     },
     {
-      name: "Playmaker",
-      tagline: "I design plays that sellers can win with.",
-      icon: <Target className="h-4 w-4" />,
-      color: "bg-amber-100 text-amber-600",
-      path: "/calendar"
-    },
-    {
       name: "Activator",
       tagline: "I set things in motion—campaigns, cadences, and connections.",
-      icon: <Zap className="h-4 w-4" />,
+      icon: <Calendar className="h-4 w-4" />,
       color: "bg-red-100 text-red-600",
       path: "/calendar"
     },
