@@ -75,6 +75,36 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
       regions: ["North America", "ANZ"],
       keyAttributes: ["Integration capabilities", "Workflow automation"],
       growthIndicator: "6.8% CAGR"
+    },
+    {
+      id: "cybersecurity-startups",
+      industry: "Cybersecurity",
+      segment: "Zero Trust Solutions",
+      companySize: "75–400 employees",
+      decisionMakers: ["CISO", "VP Engineering"],
+      regions: ["North America", "EU"],
+      keyAttributes: ["SOC 2 compliance", "Cloud-native architecture"],
+      growthIndicator: "15.3% CAGR"
+    },
+    {
+      id: "insurtech-platforms",
+      industry: "InsurTech",
+      segment: "Digital Claims Processing",
+      companySize: "100–350 employees",
+      decisionMakers: ["Chief Claims Officer", "Head of Technology"],
+      regions: ["North America", "UK"],
+      keyAttributes: ["Automation focus", "Regulatory expertise"],
+      growthIndicator: "11.7% CAGR"
+    },
+    {
+      id: "renewable-energy",
+      industry: "Clean Energy",
+      segment: "Solar Management Platforms",
+      companySize: "120–500 employees",
+      decisionMakers: ["VP Operations", "Chief Technology Officer"],
+      regions: ["North America", "EU", "ANZ"],
+      keyAttributes: ["IoT integration", "Sustainability reporting"],
+      growthIndicator: "18.2% CAGR"
     }
   ];
 
