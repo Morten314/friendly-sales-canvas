@@ -32,7 +32,7 @@ export const ICPIntelligence = () => {
       {/* Page Header */}
       <div className="space-y-2">
         
-        <p className="text-gray-600">Define and refine your Ideal Customer Profile with agent-guided research.</p>
+        
       </div>
 
       {/* Suggested ICPs Gallery */}
