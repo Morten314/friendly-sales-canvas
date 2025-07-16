@@ -44,11 +44,7 @@ export const ICPIntelligence = () => {
         <ICPSummaryOpportunity />
 
         {/* Agent-Level Contextual Mini Report */}
-        <Card className="border-purple-200 bg-gradient-to-br from-purple-50/40 to-blue-50/40 mt-6">
-          
-          
-          
-        </Card>
+        
 
         {/* Additional ICP content would go here */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
