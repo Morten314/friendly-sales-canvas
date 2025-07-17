@@ -73,7 +73,7 @@ export function Header() {
         {isMarketResearchPage && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="ml-3 h-6 w-6 p-0 hover:bg-gray-100">
+              <Button variant="ghost" size="icon" className="ml-1 h-6 w-6 p-0 hover:bg-gray-100">
                 <Info className="h-4 w-4 text-gray-500 hover:text-gray-700" />
               </Button>
             </DropdownMenuTrigger>
