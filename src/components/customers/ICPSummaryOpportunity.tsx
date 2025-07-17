@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -37,6 +36,38 @@ export const ICPSummaryOpportunity = () => {
       competitors: 4,
       winLossChange: "+12%",
       buyingSignals: 8,
+      marketAnalysis: {
+        totalMarketSize: "€12.3B",
+        servicableMarket: "€4.8B",
+        targetableMarket: "€1.2B",
+        marketGrowth: "+23%",
+        segments: [
+          { name: "Digital-only Banks", size: "€6.2B", growth: "+28%", share: "50%" },
+          { name: "Traditional Bank Digital Arms", size: "€3.8B", growth: "+18%", share: "31%" },
+          { name: "Challenger Banks", size: "€2.3B", growth: "+32%", share: "19%" }
+        ],
+        keyChallenges: [
+          "Regulatory compliance complexity across multiple jurisdictions",
+          "Legacy infrastructure modernization costs",
+          "Customer acquisition in saturated markets",
+          "Pressure to maintain profitability while scaling",
+          "Cybersecurity and data protection requirements"
+        ],
+        strategicRecommendations: [
+          "Focus on compliance-as-a-service messaging to address regulatory pain points",
+          "Develop region-specific go-to-market strategies for DACH vs. UK markets",
+          "Create partnership opportunities with existing fintech infrastructure providers",
+          "Build case studies showcasing rapid deployment and cost savings",
+          "Establish thought leadership around regulatory technology trends"
+        ],
+        signalsToMonitor: [
+          "Series B+ funding announcements in target segments",
+          "Regulatory updates from BaFin, FCA, and ECB",
+          "New product launches requiring infrastructure scaling",
+          "Executive hiring patterns in technology and compliance roles",
+          "Partnership announcements between neobanks and traditional institutions"
+        ]
+      },
       competitiveData: {
         mainCompetitors: ["Temenos", "Mambu", "Thought Machine", "10x Banking"],
         marketShareShifts: "Traditional core banking vendors losing 15% market share to cloud-native solutions",
@@ -146,6 +177,38 @@ export const ICPSummaryOpportunity = () => {
       competitors: 5,
       winLossChange: "+8%",
       buyingSignals: 6,
+      marketAnalysis: {
+        totalMarketSize: "€8.7B",
+        servicableMarket: "€3.2B",
+        targetableMarket: "€800M",
+        marketGrowth: "+18%",
+        segments: [
+          { name: "Property & Casualty", size: "€4.1B", growth: "+15%", share: "47%" },
+          { name: "Life & Health", size: "€2.8B", growth: "+22%", share: "32%" },
+          { name: "Specialty Insurance", size: "€1.8B", growth: "+20%", share: "21%" }
+        ],
+        keyChallenges: [
+          "Legacy system modernization without business disruption",
+          "Regulatory compliance across multiple insurance markets",
+          "Customer expectations for digital-first experiences",
+          "Integration complexity with existing ecosystem partners",
+          "Data privacy and security in digital transformation"
+        ],
+        strategicRecommendations: [
+          "Target insurers in digital transformation phases",
+          "Emphasize low-risk migration strategies and proven implementation methodologies",
+          "Develop industry-specific compliance frameworks",
+          "Create partnership ecosystem for seamless integrations",
+          "Build customer experience improvement case studies"
+        ],
+        signalsToMonitor: [
+          "Digital transformation budget allocations and initiatives",
+          "New insurance product launches requiring modern infrastructure",
+          "Regulatory changes affecting customer experience requirements",
+          "Executive appointments in digital and technology leadership",
+          "Customer satisfaction scores and digital adoption metrics"
+        ]
+      },
       competitiveData: {
         mainCompetitors: ["Guidewire", "Duck Creek", "Sapiens", "Insurity", "Majesco"],
         marketShareShifts: "Cloud-first insurance platforms growing 25% annually vs legacy on-premise solutions",
@@ -207,6 +270,38 @@ export const ICPSummaryOpportunity = () => {
       competitors: 3,
       winLossChange: "+18%",
       buyingSignals: 12,
+      marketAnalysis: {
+        totalMarketSize: "€5.2B",
+        servicableMarket: "€2.1B",
+        targetableMarket: "€650M",
+        marketGrowth: "+35%",
+        segments: [
+          { name: "Payment Processing", size: "€2.3B", growth: "+40%", share: "44%" },
+          { name: "Lending Platforms", size: "€1.6B", growth: "+32%", share: "31%" },
+          { name: "Investment Tech", size: "€1.3B", growth: "+30%", share: "25%" }
+        ],
+        keyChallenges: [
+          "Rapid scaling while maintaining regulatory compliance",
+          "Technical infrastructure that can handle exponential growth",
+          "Multi-jurisdiction regulatory requirements for expansion",
+          "Integration complexity with banking and financial partners",
+          "Security and fraud prevention at scale"
+        ],
+        strategicRecommendations: [
+          "Focus on rapid deployment and time-to-market advantages",
+          "Develop scalable pricing models that grow with customer success",
+          "Create regulatory compliance accelerators for new markets",
+          "Build strong partner ecosystem for seamless integrations",
+          "Emphasize proven track record with high-growth fintech companies"
+        ],
+        signalsToMonitor: [
+          "Series B+ funding rounds and expansion announcements",
+          "New product launches and geographic expansion plans",
+          "Regulatory approvals and license applications",
+          "Technical leadership hiring and team scaling",
+          "Partnership announcements with financial institutions"
+        ]
+      },
       competitiveData: {
         mainCompetitors: ["Stripe", "Plaid", "Adyen"],
         marketShareShifts: "API-first fintech infrastructure providers capturing 40% of new FinTech implementations",
@@ -354,53 +449,108 @@ export const ICPSummaryOpportunity = () => {
               </div>
 
               {isMarketExpanded && (
-                <div className="mt-6 space-y-6 border-t pt-6">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div>
-                      <h4 className="font-semibold mb-3">Market Dynamics</h4>
-                      <div className="space-y-3">
-                        <div className="p-3 bg-gray-50 rounded-lg">
-                          <h5 className="font-medium text-sm">Total Addressable Market</h5>
-                          <p className="text-xs text-gray-600 mt-1">European financial services infrastructure market showing strong growth trajectory</p>
+                <div className="mt-6 space-y-8 border-t pt-6">
+                  {/* Market Size & Growth */}
+                  <div>
+                    <h4 className="font-semibold text-lg mb-4">Market Size & Growth</h4>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="p-4 bg-blue-50 rounded-lg">
+                            <p className="text-sm font-medium text-blue-900">Total Market Size</p>
+                            <p className="text-2xl font-bold text-blue-600">{currentData.marketAnalysis.totalMarketSize}</p>
+                          </div>
+                          <div className="p-4 bg-green-50 rounded-lg">
+                            <p className="text-sm font-medium text-green-900">Market Growth</p>
+                            <p className="text-2xl font-bold text-green-600">{currentData.marketAnalysis.marketGrowth}</p>
+                          </div>
                         </div>
-                        <div className="p-3 bg-gray-50 rounded-lg">
-                          <h5 className="font-medium text-sm">Market Trends</h5>
-                          <p className="text-xs text-gray-600 mt-1">Shift from legacy systems to cloud-native solutions accelerating post-pandemic</p>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="p-4 bg-purple-50 rounded-lg">
+                            <p className="text-sm font-medium text-purple-900">Serviceable Market</p>
+                            <p className="text-xl font-bold text-purple-600">{currentData.marketAnalysis.servicableMarket}</p>
+                          </div>
+                          <div className="p-4 bg-orange-50 rounded-lg">
+                            <p className="text-sm font-medium text-orange-900">Targetable Market</p>
+                            <p className="text-xl font-bold text-orange-600">{currentData.marketAnalysis.targetableMarket}</p>
+                          </div>
                         </div>
-                        <div className="p-3 bg-gray-50 rounded-lg">
-                          <h5 className="font-medium text-sm">Regulatory Impact</h5>
-                          <p className="text-xs text-gray-600 mt-1">Open banking and PSD2 compliance driving infrastructure modernization</p>
+                      </div>
+                      <div className="p-4 bg-gray-50 rounded-lg">
+                        <h5 className="font-medium mb-3">Market Growth Trajectory</h5>
+                        <div className="h-32">
+                          <MiniLineChart />
                         </div>
                       </div>
                     </div>
-                    
-                    <div>
-                      <h4 className="font-semibold mb-3">Opportunity Sizing</h4>
+                  </div>
+
+                  {/* Segment Breakdown */}
+                  <div>
+                    <h4 className="font-semibold text-lg mb-4">Segment Breakdown</h4>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                       <div className="space-y-4">
-                        <div className="p-4 border rounded-lg">
-                          <div className="flex justify-between items-center mb-2">
-                            <span className="text-sm font-medium">Market Penetration</span>
-                            <span className="text-sm text-gray-600">23%</span>
+                        {currentData.marketAnalysis.segments.map((segment, index) => (
+                          <div key={index} className="p-4 border rounded-lg">
+                            <div className="flex justify-between items-start mb-2">
+                              <h5 className="font-medium">{segment.name}</h5>
+                              <Badge variant="outline">{segment.share}</Badge>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                              <div>
+                                <p className="text-gray-600">Market Size</p>
+                                <p className="font-semibold">{segment.size}</p>
+                              </div>
+                              <div>
+                                <p className="text-gray-600">Growth Rate</p>
+                                <p className="font-semibold text-green-600">{segment.growth}</p>
+                              </div>
+                            </div>
                           </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div className="bg-blue-600 h-2 rounded-full" style={{ width: '23%' }}></div>
-                          </div>
-                        </div>
-                        
-                        <div className="p-4 border rounded-lg">
-                          <div className="flex justify-between items-center mb-2">
-                            <span className="text-sm font-medium">Competitive Intensity</span>
-                            <span className="text-sm text-gray-600">Medium</span>
-                          </div>
-                          <div className="flex gap-1">
-                            <div className="w-4 h-2 bg-green-500 rounded"></div>
-                            <div className="w-4 h-2 bg-green-500 rounded"></div>
-                            <div className="w-4 h-2 bg-yellow-500 rounded"></div>
-                            <div className="w-4 h-2 bg-gray-200 rounded"></div>
-                            <div className="w-4 h-2 bg-gray-200 rounded"></div>
-                          </div>
+                        ))}
+                      </div>
+                      <div className="p-4 bg-gray-50 rounded-lg">
+                        <h5 className="font-medium mb-3">Market Share Distribution</h5>
+                        <div className="h-48">
+                          <MiniPieChart />
                         </div>
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Key Challenges */}
+                  <div>
+                    <h4 className="font-semibold text-lg mb-4">Key Challenges</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {currentData.marketAnalysis.keyChallenges.map((challenge, index) => (
+                        <div key={index} className="p-4 bg-red-50 rounded-lg border-l-4 border-red-400">
+                          <p className="text-sm text-red-800">{challenge}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Strategic Recommendations */}
+                  <div>
+                    <h4 className="font-semibold text-lg mb-4">Strategic Recommendations</h4>
+                    <div className="space-y-3">
+                      {currentData.marketAnalysis.strategicRecommendations.map((recommendation, index) => (
+                        <div key={index} className="p-4 bg-blue-50 rounded-lg border-l-4 border-blue-400">
+                          <p className="text-sm text-blue-800">{recommendation}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Signals to Monitor */}
+                  <div>
+                    <h4 className="font-semibold text-lg mb-4">Signals to Monitor</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {currentData.marketAnalysis.signalsToMonitor.map((signal, index) => (
+                        <div key={index} className="p-4 bg-yellow-50 rounded-lg border-l-4 border-yellow-400">
+                          <p className="text-sm text-yellow-800">{signal}</p>
+                        </div>
+                      ))}
                     </div>
                   </div>
 
