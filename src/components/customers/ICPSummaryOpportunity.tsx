@@ -16,6 +16,21 @@ export const ICPSummaryOpportunity = () => {
   const [signalRegionFilter, setSignalRegionFilter] = useState("all");
   const [signalTypeFilter, setSignalTypeFilter] = useState("all");
 
+  // Mock data for charts
+  const mockGrowthData = [
+    { name: "2022", value: 8.5 },
+    { name: "2023", value: 10.2 },
+    { name: "2024", value: 12.3 },
+    { name: "2025", value: 15.1 },
+    { name: "2026", value: 18.8 }
+  ];
+
+  const mockSegmentData = [
+    { name: "Digital-only", value: 50, color: "#3b82f6" },
+    { name: "Traditional", value: 31, color: "#10b981" },
+    { name: "Challenger", value: 19, color: "#f59e0b" }
+  ];
+
   const mockData = {
     1: {
       title: "Neobanks (€50M+ ARR)",
@@ -479,7 +494,11 @@ export const ICPSummaryOpportunity = () => {
                       <div className="p-4 bg-gray-50 rounded-lg">
                         <h5 className="font-medium mb-3">Market Growth Trajectory</h5>
                         <div className="h-32">
-                          <MiniLineChart />
+                          <MiniLineChart 
+                            data={mockGrowthData}
+                            title="Market Growth Trajectory"
+                            color="#3b82f6"
+                          />
                         </div>
                       </div>
                     </div>
@@ -512,7 +531,10 @@ export const ICPSummaryOpportunity = () => {
                       <div className="p-4 bg-gray-50 rounded-lg">
                         <h5 className="font-medium mb-3">Market Share Distribution</h5>
                         <div className="h-48">
-                          <MiniPieChart />
+                          <MiniPieChart 
+                            data={mockSegmentData}
+                            title="Market Share Distribution"
+                          />
                         </div>
                       </div>
                     </div>
