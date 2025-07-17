@@ -29,8 +29,8 @@ const App = () => (
           <Route path="/calendar" element={<Calendar />} />
           <Route path="/reports" element={<Reports />} />
           <Route path="/settings" element={<Settings />} />
-          <Route path="/market-research" element={<MarketResearch />} />
-          <Route path="/your-lead-stream" element={<MarketResearch />} />
+          <Route path="/market-research" element={<Navigate to="/your-ai-team/scout/marketintelligence" replace />} />
+          <Route path="/your-lead-stream" element={<Navigate to="/your-ai-team/scout/leadstream" replace />} />
           <Route path="/your-ai-team/scout/:tab" element={<MarketResearch />} />
           <Route path="/your-ai-team/scout" element={<Navigate to="/your-ai-team/scout/marketintelligence" replace />} />
           <Route path="/insights" element={<Insights />} />
