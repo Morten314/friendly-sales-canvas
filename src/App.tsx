@@ -31,6 +31,8 @@ const App = () => (
           <Route path="/settings" element={<Settings />} />
           <Route path="/market-research" element={<MarketResearch />} />
           <Route path="/your-lead-stream" element={<MarketResearch />} />
+          <Route path="/your-ai-team/scout/:tab" element={<MarketResearch />} />
+          <Route path="/your-ai-team/scout" element={<Navigate to="/your-ai-team/scout/marketintelligence" replace />} />
           <Route path="/insights" element={<Insights />} />
           <Route path="/scout-deployment" element={<ScoutDeploymentPage />} />
           <Route path="*" element={<NotFound />} />

@@ -890,7 +890,7 @@ import { DataHistoryDialog } from "@/components/market-research/DataHistoryDialo
 import MarketIntelligenceTab from "@/components/market-research/MarketIntelligenceTab";
 import EditHistoryPanel from "@/components/market-research/EditHistoryPanel";
 import { DeploymentData } from "@/components/layout/Header";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import ScoutChatPanel from "@/components/market-research/ScoutChatPanel";
 
 // Define types for the API response
@@ -1015,7 +1015,25 @@ const getCachedData = (): MarketIntelligenceData | null => {
 const MarketResearch = () => {
   usePageTitle("🔍 Scout - Brewra");
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("intelligence");
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Extract tab from URL path
+  const getActiveTabFromPath = () => {
+    const pathSegments = location.pathname.split('/');
+    const lastSegment = pathSegments[pathSegments.length - 1];
+    
+    // Map URL segments to tab values
+    const tabMap: { [key: string]: string } = {
+      'marketintelligence': 'intelligence',
+      'leadstream': 'analysis', 
+      'chatwithscout': 'trends'
+    };
+    
+    return tabMap[lastSegment] || 'intelligence';
+  };
+  
+  const [activeTab, setActiveTab] = useState(getActiveTabFromPath());
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isAIViewActive, setIsAIViewActive] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -1181,7 +1199,28 @@ const MarketResearch = () => {
   const [marketEntryCustomMessage, setMarketEntryCustomMessage] = useState<string | undefined>(undefined);
   const [isMarketEntryEditHistoryOpen, setIsMarketEntryEditHistoryOpen] = useState(false);
 
-  const navigate = useNavigate();
+  // Handle tab changes with URL navigation
+  const handleTabChange = (tabValue: string) => {
+    setActiveTab(tabValue);
+    
+    // Map tab values to URL segments
+    const urlMap: { [key: string]: string } = {
+      'intelligence': 'marketintelligence',
+      'analysis': 'leadstream',
+      'trends': 'chatwithscout'
+    };
+    
+    const urlSegment = urlMap[tabValue] || 'marketintelligence';
+    navigate(`/your-ai-team/scout/${urlSegment}`);
+  };
+  
+  // Update active tab when URL changes
+  useEffect(() => {
+    const newActiveTab = getActiveTabFromPath();
+    if (newActiveTab !== activeTab) {
+      setActiveTab(newActiveTab);
+    }
+  }, [location.pathname, activeTab, getActiveTabFromPath]);
 
   // Transform raw report data to our expected structure
   const transformReportData = (reportData: any): MarketIntelligenceData => {
@@ -2585,7 +2624,7 @@ const MarketResearch = () => {
               </Button>
             </div>
             
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
+            <Tabs value={activeTab} onValueChange={handleTabChange} className="mb-6">
               <TabsList className="w-full bg-gray-100 p-1 mb-2">
                 <TabsTrigger value="intelligence" className="flex items-center gap-2 flex-1">
                   <Search className="h-4 w-4" />
@@ -2608,7 +2647,7 @@ const MarketResearch = () => {
         <ScrollArea className="flex-1">
           {/* Show content with subtle overlay when refreshing */}
           <div className={`transition-opacity duration-300 ${(isRefreshing || isInitialLoading) && marketData ? 'opacity-70' : 'opacity-100'} relative`}>
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-0">
+            <Tabs value={activeTab} onValueChange={handleTabChange} className="mt-0">
               <TabsContent value="intelligence" className="mt-0">
                 {marketData ? (
                   <div className="space-y-6">
