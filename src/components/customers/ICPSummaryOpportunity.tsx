@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronDown, ChevronUp, TrendingUp, Clock, Target, DollarSign, User, Zap, Flame, Users, Swords, TrendingDown, Filter } from "lucide-react";
+import { ChevronDown, ChevronUp, TrendingUp, Clock, Target, DollarSign, User, Zap, Flame, Users, Swords, TrendingDown, Filter, Shield, Calendar, Brain, CheckCircle } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import MiniLineChart from "@/components/MiniLineChart";
 import MiniPieChart from "@/components/MiniPieChart";
@@ -12,6 +12,7 @@ export const ICPSummaryOpportunity = () => {
   const [isMarketExpanded, setIsMarketExpanded] = useState(false);
   const [isBuyerMapExpanded, setIsBuyerMapExpanded] = useState(false);
   const [isCompetitiveExpanded, setIsCompetitiveExpanded] = useState(false);
+  const [isRegulatoryExpanded, setIsRegulatoryExpanded] = useState(false);
   const [activeCard, setActiveCard] = useState(1);
   const [signalRegionFilter, setSignalRegionFilter] = useState("all");
   const [signalTypeFilter, setSignalTypeFilter] = useState("all");
@@ -991,6 +992,248 @@ export const ICPSummaryOpportunity = () => {
                           <li>• North America → speed and innovation</li>
                         </ul>
                       </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-center gap-3 pt-4 border-t">
+                    <Button variant="outline" size="sm">Save Report</Button>
+                    <Button variant="outline" size="sm">Export PDF</Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Regulatory, Compliance & Recommended ICP */}
+      <div className="space-y-4">
+        <Card className="border border-gray-200">
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-xl font-semibold">Regulatory, Compliance & Recommended ICP</CardTitle>
+                <CardDescription className="mt-1">
+                  Regulatory frameworks, compliance requirements, and ICP refinement recommendations
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <p className="text-gray-600 text-sm leading-relaxed">
+                  Neobanks in North America & DACH face increasing compliance requirements, especially around cloud-hosted data and financial KYC/AML. This section recommends refining your ICP to reflect these regulatory triggers.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg">
+                  <Shield className="h-5 w-5 text-blue-600" />
+                  <div>
+                    <p className="text-xs text-gray-600">Key Compliance Frameworks</p>
+                    <p className="font-semibold text-blue-900">GDPR, PSD2</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2 p-3 bg-orange-50 rounded-lg">
+                  <Calendar className="h-5 w-5 text-orange-600" />
+                  <div>
+                    <p className="text-xs text-gray-600">Upcoming Mandates</p>
+                    <p className="font-semibold text-orange-900">Cloud audit rules (DACH, Q4 2025)</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2 p-3 bg-purple-50 rounded-lg">
+                  <Brain className="h-5 w-5 text-purple-600" />
+                  <div>
+                    <p className="text-xs text-gray-600">ICP Fit Score</p>
+                    <p className="font-semibold text-purple-900">92% match</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <div>
+                    <p className="text-xs text-gray-600">Recommendation Confidence</p>
+                    <p className="font-semibold text-green-900">High</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-center">
+                <Button 
+                  variant="ghost" 
+                  className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                  onClick={() => setIsRegulatoryExpanded(!isRegulatoryExpanded)}
+                >
+                  {isRegulatoryExpanded ? (
+                    <>
+                      Show Less <ChevronUp className="ml-1 h-4 w-4" />
+                    </>
+                  ) : (
+                    <>
+                      Read More <ChevronDown className="ml-1 h-4 w-4" />
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {isRegulatoryExpanded && (
+                <div className="mt-6 space-y-8 border-t pt-6">
+                  {/* Regulatory Landscape */}
+                  <div>
+                    <h4 className="font-semibold text-lg mb-4">Regulatory Landscape</h4>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <div className="p-4 border rounded-lg">
+                          <h5 className="font-medium text-blue-900 mb-2">GDPR (General Data Protection Regulation)</h5>
+                          <p className="text-sm text-gray-600 mb-3">EU-wide data protection and privacy regulation affecting all financial services</p>
+                          <div>
+                            <p className="text-xs font-medium text-gray-700 mb-1">Key Requirements:</p>
+                            <ul className="text-xs text-gray-600 space-y-1">
+                              <li>• Data minimization and purpose limitation</li>
+                              <li>• Right to data portability and erasure</li>
+                              <li>• Privacy by design and by default</li>
+                              <li>• Data breach notification within 72 hours</li>
+                            </ul>
+                          </div>
+                        </div>
+                        
+                        <div className="p-4 border rounded-lg">
+                          <h5 className="font-medium text-green-900 mb-2">PSD2 (Payment Services Directive 2)</h5>
+                          <p className="text-sm text-gray-600 mb-3">European regulation for payment services and open banking</p>
+                          <div>
+                            <p className="text-xs font-medium text-gray-700 mb-1">Key Requirements:</p>
+                            <ul className="text-xs text-gray-600 space-y-1">
+                              <li>• Strong customer authentication (SCA)</li>
+                              <li>• Open banking API requirements</li>
+                              <li>• Third-party provider access</li>
+                              <li>• Enhanced security standards</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-4">
+                        <div className="p-4 border rounded-lg">
+                          <h5 className="font-medium text-orange-900 mb-2">DACH Cloud Audit Rules</h5>
+                          <p className="text-sm text-gray-600 mb-3">Upcoming compliance requirements for cloud-hosted financial data</p>
+                          <div>
+                            <p className="text-xs font-medium text-gray-700 mb-1">Timeline & Impact:</p>
+                            <ul className="text-xs text-gray-600 space-y-1">
+                              <li>• Implementation deadline: Q4 2025</li>
+                              <li>• Mandatory cloud audit trails</li>
+                              <li>• Data residency requirements</li>
+                              <li>• Vendor risk assessment protocols</li>
+                            </ul>
+                          </div>
+                        </div>
+
+                        <div className="p-4 border rounded-lg">
+                          <h5 className="font-medium text-red-900 mb-2">KYC/AML Compliance</h5>
+                          <p className="text-sm text-gray-600 mb-3">Know Your Customer and Anti-Money Laundering requirements</p>
+                          <div>
+                            <p className="text-xs font-medium text-gray-700 mb-1">Core Elements:</p>
+                            <ul className="text-xs text-gray-600 space-y-1">
+                              <li>• Customer due diligence (CDD)</li>
+                              <li>• Suspicious activity monitoring</li>
+                              <li>• Transaction reporting requirements</li>
+                              <li>• Risk-based compliance programs</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Compliance Challenges */}
+                  <div>
+                    <h4 className="font-semibold text-lg mb-4">Compliance Challenges</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="p-4 bg-red-50 rounded-lg border-l-4 border-red-400">
+                        <h5 className="font-medium text-red-800 mb-2">Cross-Border Data Transfers</h5>
+                        <p className="text-sm text-red-700">Complex requirements for moving customer data between jurisdictions while maintaining compliance</p>
+                      </div>
+                      <div className="p-4 bg-red-50 rounded-lg border-l-4 border-red-400">
+                        <h5 className="font-medium text-red-800 mb-2">Cloud Vendor Management</h5>
+                        <p className="text-sm text-red-700">Ensuring third-party cloud providers meet regulatory standards and audit requirements</p>
+                      </div>
+                      <div className="p-4 bg-red-50 rounded-lg border-l-4 border-red-400">
+                        <h5 className="font-medium text-red-800 mb-2">Real-time Compliance Monitoring</h5>
+                        <p className="text-sm text-red-700">Need for automated systems to detect and prevent compliance violations in real-time</p>
+                      </div>
+                      <div className="p-4 bg-red-50 rounded-lg border-l-4 border-red-400">
+                        <h5 className="font-medium text-red-800 mb-2">Regulatory Fragmentation</h5>
+                        <p className="text-sm text-red-700">Different requirements across regions making multi-jurisdiction operations complex</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ICP Refinement Recommendations */}
+                  <div>
+                    <h4 className="font-semibold text-lg mb-4">ICP Refinement Recommendations</h4>
+                    <div className="space-y-4">
+                      <div className="p-4 bg-blue-50 rounded-lg border-l-4 border-blue-400">
+                        <h5 className="font-medium text-blue-800 mb-2">Target High-Compliance Organizations</h5>
+                        <p className="text-sm text-blue-700">Focus on neobanks that have already invested in compliance infrastructure and understand regulatory complexity</p>
+                      </div>
+                      <div className="p-4 bg-blue-50 rounded-lg border-l-4 border-blue-400">
+                        <h5 className="font-medium text-blue-800 mb-2">Prioritize Multi-Jurisdiction Players</h5>
+                        <p className="text-sm text-blue-700">Companies operating across North America and DACH regions face the highest compliance burden and need</p>
+                      </div>
+                      <div className="p-4 bg-blue-50 rounded-lg border-l-4 border-blue-400">
+                        <h5 className="font-medium text-blue-800 mb-2">Focus on Cloud-First Organizations</h5>
+                        <p className="text-sm text-blue-700">Target companies already committed to cloud infrastructure who need compliance-ready solutions</p>
+                      </div>
+                      <div className="p-4 bg-blue-50 rounded-lg border-l-4 border-blue-400">
+                        <h5 className="font-medium text-blue-800 mb-2">Emphasize Audit-Ready Capabilities</h5>
+                        <p className="text-sm text-blue-700">Position solutions that provide built-in audit trails and compliance reporting features</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Regulatory Triggers & Timing */}
+                  <div>
+                    <h4 className="font-semibold text-lg mb-4">Regulatory Triggers & Timing</h4>
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-gray-50">
+                            <TableHead className="font-medium">Regulatory Event</TableHead>
+                            <TableHead className="font-medium">Timeline</TableHead>
+                            <TableHead className="font-medium">Impact</TableHead>
+                            <TableHead className="font-medium">Opportunity</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          <TableRow>
+                            <TableCell className="font-medium">DACH Cloud Audit Rules</TableCell>
+                            <TableCell>Q4 2025</TableCell>
+                            <TableCell>Mandatory compliance for cloud infrastructure</TableCell>
+                            <TableCell>High - Infrastructure modernization needed</TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell className="font-medium">PSD2 SCA Updates</TableCell>
+                            <TableCell>Q2 2025</TableCell>
+                            <TableCell>Enhanced authentication requirements</TableCell>
+                            <TableCell>Medium - API and security upgrades</TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell className="font-medium">GDPR Enforcement Increase</TableCell>
+                            <TableCell>Ongoing</TableCell>
+                            <TableCell>Higher penalties and stricter audits</TableCell>
+                            <TableCell>High - Privacy-by-design solutions</TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell className="font-medium">Basel IV Implementation</TableCell>
+                            <TableCell>Q1 2026</TableCell>
+                            <TableCell>Capital and risk management changes</TableCell>
+                            <TableCell>Medium - Risk calculation systems</TableCell>
+                          </TableRow>
+                        </TableBody>
+                      </Table>
                     </div>
                   </div>
 
