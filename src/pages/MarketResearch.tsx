@@ -1423,12 +1423,38 @@ const MarketResearch = () => {
       setIsMarketSizeLoading(true);
       setMarketSizeError(null);
 
-      // Use the backend's existing market research endpoint
-      // The backend should manage its own configuration internally
+      // The backend expects specific data structure for market research
+      // Use default values that the backend can work with
       const payload = {
         user_id: "brewra",
         component_name: "Market Size & Opportunity",
-        refresh: refresh
+        refresh: refresh,
+        data: {
+          industry: "Technology",
+          target_region: "Global",
+          year_range: {
+            start: 2024,
+            end: 2029
+          },
+          segments: [
+            "Enterprise Software",
+            "Cloud Services",
+            "Mobile Applications",
+            "AI/ML Platforms"
+          ],
+          distribution_channels: [
+            "Direct Sales",
+            "Partner Network",
+            "Online Platform",
+            "Reseller Channel"
+          ],
+          key_competitors: [
+            "Microsoft",
+            "Google",
+            "Amazon",
+            "Oracle"
+          ]
+        }
       };
 
       console.log('📤 Sending API request to:', 'https://backend-11kr.onrender.com/market-research');
