@@ -894,6 +894,7 @@ import EditHistoryPanel from "@/components/market-research/EditHistoryPanel";
 import { DeploymentData } from "@/components/layout/Header";
 import { useNavigate, useLocation } from "react-router-dom";
 import ScoutChatPanel from "@/components/market-research/ScoutChatPanel";
+import MarketResearchConfig, { MarketResearchConfigData } from '@/components/market-research/MarketResearchConfig';
 
 // Define types for the API response
 interface ResearchReport {
@@ -1102,6 +1103,34 @@ const MarketResearch = () => {
   const [isMarketSizeLoading, setIsMarketSizeLoading] = useState(false);
   const [marketSizeError, setMarketSizeError] = useState<string | null>(null);
   const [deletedSections, setDeletedSections] = useState<Set<string>>(new Set());
+  
+  // Market Research Configuration state
+  const [marketResearchConfig, setMarketResearchConfig] = useState<MarketResearchConfigData>({
+    industry: "Baby Food",
+    target_region: "North America", 
+    year_range: {
+      start: 2020,
+      end: 2025
+    },
+    segments: [
+      "Infant Formula",
+      "Prepared Baby Food",
+      "Dried Baby Food", 
+      "Organic Baby Food"
+    ],
+    distribution_channels: [
+      "Online Retail",
+      "Supermarkets",
+      "Pharmacies",
+      "Convenience Stores"
+    ],
+    key_competitors: [
+      "Nestlé",
+      "Danone", 
+      "Abbott",
+      "Mead Johnson"
+    ]
+  });
   
   // Edit history state
   const [editHistory, setEditHistory] = useState<EditRecord[]>([]);
@@ -1426,30 +1455,15 @@ const MarketResearch = () => {
         component_name: "Market Size & Opportunity",
         refresh: refresh,
         data: {
-          industry: "Baby Food",
-          target_region: "North America",
+          industry: marketResearchConfig.industry,
+          target_region: marketResearchConfig.target_region,
           year_range: {
-            start: 2020,
-            end: 2025
+            start: marketResearchConfig.year_range.start,
+            end: marketResearchConfig.year_range.end
           },
-          segments: [
-            "Infant Formula",
-            "Prepared Baby Food",
-            "Dried Baby Food",
-            "Organic Baby Food"
-          ],
-          distribution_channels: [
-            "Online Retail",
-            "Supermarkets",
-            "Pharmacies",
-            "Convenience Stores"
-          ],
-          key_competitors: [
-            "Nestlé",
-            "Danone",
-            "Abbott",
-            "Mead Johnson"
-          ]
+          segments: marketResearchConfig.segments,
+          distribution_channels: marketResearchConfig.distribution_channels,
+          key_competitors: marketResearchConfig.key_competitors
         }
       };
 
@@ -2735,6 +2749,10 @@ const MarketResearch = () => {
                   : (isRefreshing || isInitialLoading) ? 'Updating...' : 'Refresh'
                 }
               </Button>
+              <MarketResearchConfig
+                config={marketResearchConfig}
+                onConfigChange={setMarketResearchConfig}
+              />
               <Button
                 variant="outline"
                 size="sm"
