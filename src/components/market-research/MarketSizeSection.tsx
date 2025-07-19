@@ -23,6 +23,8 @@ interface MarketSizeSectionProps {
   strategicRecommendations: string[];
   marketEntry: string;
   marketDrivers: string[];
+  marketSizeBySegment?: Record<string, string>;
+  growthProjections?: Record<string, string>;
   onToggleEdit: () => void;
   onScoutIconClick: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape', hasEdits?: boolean, customMessage?: string) => void;
   onEditHistoryOpen: () => void;
@@ -63,6 +65,8 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
   strategicRecommendations,
   marketEntry,
   marketDrivers,
+  marketSizeBySegment,
+  growthProjections,
   onToggleEdit,
   onScoutIconClick,
   onEditHistoryOpen,
@@ -471,7 +475,11 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                     <div className="bg-white border border-gray-200 rounded-lg p-4">
                       <h4 className="font-medium text-gray-900 mb-3">Market Size by Segment</h4>
                       <MiniPieChart 
-                        data={[
+                        data={marketSizeBySegment ? Object.entries(marketSizeBySegment).map(([name, value], index) => ({
+                          name,
+                          value: parseInt(value.replace('%', '')),
+                          color: ["#3B82F6", "#10B981", "#8B5CF6", "#F59E0B"][index % 4]
+                        })) : [
                           { name: "Enterprise", value: 45, color: "#3B82F6" },
                           { name: "Mid-Market", value: 35, color: "#10B981" },
                           { name: "SMB", value: 20, color: "#8B5CF6" }

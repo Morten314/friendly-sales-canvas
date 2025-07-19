@@ -973,6 +973,16 @@ interface MarketIntelligenceData {
   emerging_trends: EmergingTrend[];
   technology_drivers: TechnologyDriver[];
   timestamp?: string; // Add timestamp to track which data is loaded
+  // Market Size & Opportunity data from API
+  executiveSummary?: string;
+  tamValue?: string;
+  samValue?: string;
+  apacGrowthRate?: string;
+  strategicRecommendations?: string[];
+  marketEntry?: string;
+  marketDrivers?: string[];
+  marketSizeBySegment?: Record<string, string>;
+  growthProjections?: Record<string, string>;
 }
 
 // Add EditRecord interface for edit history
@@ -2764,13 +2774,15 @@ const MarketResearch = () => {
                       hasEdits={hasEdits}
                       deletedSections={deletedSections}
                       editHistory={editHistory}
-                      executiveSummary={marketIntelligenceData.executiveSummary}
-                      tamValue={marketIntelligenceData.tamValue}
-                      samValue={marketIntelligenceData.samValue}
-                      apacGrowthRate={marketIntelligenceData.apacGrowthRate}
-                      strategicRecommendations={marketIntelligenceData.strategicRecommendations}
-                      marketEntry={marketIntelligenceData.marketEntry}
-                      marketDrivers={marketIntelligenceData.marketDrivers}
+                      executiveSummary={marketData?.executiveSummary || marketIntelligenceData.executiveSummary}
+                      tamValue={marketData?.tamValue || marketIntelligenceData.tamValue}
+                      samValue={marketData?.samValue || marketIntelligenceData.samValue}
+                      apacGrowthRate={marketData?.apacGrowthRate || marketIntelligenceData.apacGrowthRate}
+                      strategicRecommendations={marketData?.strategicRecommendations || marketIntelligenceData.strategicRecommendations}
+                      marketEntry={marketData?.marketEntry || marketIntelligenceData.marketEntry}
+                      marketDrivers={marketData?.marketDrivers || marketIntelligenceData.marketDrivers}
+                      marketSizeBySegment={marketData?.marketSizeBySegment}
+                      growthProjections={marketData?.growthProjections}
                        // Market Size specific props
                        marketSizeDeletedSections={marketSizeDeletedSections}
                        isMarketSizeLoading={isMarketSizeLoading}

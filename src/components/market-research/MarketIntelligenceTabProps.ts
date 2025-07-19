@@ -16,6 +16,8 @@ export interface MarketIntelligenceTabProps {
   strategicRecommendations: string[];
   marketEntry: string;
   marketDrivers: string[];
+  marketSizeBySegment?: Record<string, string>;
+  growthProjections?: Record<string, string>;
   marketSizeDeletedSections: Set<string>;
   isMarketSizeLoading?: boolean;
   marketSizeError?: string | null;
