@@ -1257,7 +1257,17 @@ const MarketResearch = () => {
       },
       emerging_trends: reportData.emerging_trends || [],
       technology_drivers: reportData.technology_drivers || [],
-      timestamp: reportData.timestamp
+      timestamp: reportData.timestamp,
+      // Market Size & Opportunity fields
+      executiveSummary: reportData.executiveSummary,
+      tamValue: reportData.tamValue,
+      samValue: reportData.samValue,
+      apacGrowthRate: reportData.apacGrowthRate,
+      strategicRecommendations: reportData.strategicRecommendations,
+      marketEntry: reportData.marketEntry,
+      marketDrivers: reportData.marketDrivers,
+      marketSizeBySegment: reportData.marketSizeBySegment,
+      growthProjections: reportData.growthProjections
     };
   };
 
