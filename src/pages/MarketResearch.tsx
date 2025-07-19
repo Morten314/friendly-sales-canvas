@@ -1013,6 +1013,7 @@ const getCachedData = (): MarketIntelligenceData | null => {
 };
 
 const MarketResearch = () => {
+  console.log('🔥 MarketResearch component is mounting!');
   usePageTitle("🔍 Scout - Brewra");
   const [isChatOpen, setIsChatOpen] = useState(false);
   const navigate = useNavigate();
