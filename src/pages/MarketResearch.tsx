@@ -894,7 +894,7 @@ import EditHistoryPanel from "@/components/market-research/EditHistoryPanel";
 import { DeploymentData } from "@/components/layout/Header";
 import { useNavigate, useLocation } from "react-router-dom";
 import ScoutChatPanel from "@/components/market-research/ScoutChatPanel";
-import MarketResearchConfig, { MarketResearchConfigData } from '@/components/market-research/MarketResearchConfig';
+
 
 // Define types for the API response
 interface ResearchReport {
@@ -1104,33 +1104,6 @@ const MarketResearch = () => {
   const [marketSizeError, setMarketSizeError] = useState<string | null>(null);
   const [deletedSections, setDeletedSections] = useState<Set<string>>(new Set());
   
-  // Market Research Configuration state
-  const [marketResearchConfig, setMarketResearchConfig] = useState<MarketResearchConfigData>({
-    industry: "Baby Food",
-    target_region: "North America", 
-    year_range: {
-      start: 2020,
-      end: 2025
-    },
-    segments: [
-      "Infant Formula",
-      "Prepared Baby Food",
-      "Dried Baby Food", 
-      "Organic Baby Food"
-    ],
-    distribution_channels: [
-      "Online Retail",
-      "Supermarkets",
-      "Pharmacies",
-      "Convenience Stores"
-    ],
-    key_competitors: [
-      "Nestlé",
-      "Danone", 
-      "Abbott",
-      "Mead Johnson"
-    ]
-  });
   
   // Edit history state
   const [editHistory, setEditHistory] = useState<EditRecord[]>([]);
@@ -1324,7 +1297,7 @@ const MarketResearch = () => {
     await fetchMarketData(true);
   };
 
-  // Fetch market intelligence data
+  // Fetch market intelligence data dynamically using backend configuration
   const fetchMarketData = async (isRefresh = false) => {
     try {
       console.log('fetchMarketData called with isRefresh:', isRefresh);
@@ -1340,14 +1313,52 @@ const MarketResearch = () => {
       
       setError(null);
       
-      const response = await fetch('https://backend-11kr.onrender.com/market_intelligence');
+      // First, try to get existing market intelligence data
+      let response = await fetch('https://backend-11kr.onrender.com/market_intelligence');
+      
+      if (!response.ok) {
+        console.log('No existing data, fetching configuration and generating new data...');
+        
+        // If no existing data, fetch configuration and generate new data
+        const configResponse = await fetch('https://backend-11kr.onrender.com/research-config');
+        
+        if (!configResponse.ok) {
+          throw new Error(`Config fetch failed! status: ${configResponse.status}`);
+        }
+        
+        const configData = await configResponse.json();
+        console.log('📋 Using backend configuration:', configData);
+        
+        // Generate market research with dynamic configuration
+        const payload = {
+          user_id: "brewra",
+          component_name: "Market Size & Opportunity",
+          refresh: false,
+          data: configData
+        };
+
+        const researchResponse = await fetch('https://backend-11kr.onrender.com/market-research', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload)
+        });
+        
+        if (!researchResponse.ok) {
+          throw new Error(`Market research generation failed! status: ${researchResponse.status}`);
+        }
+        
+        // Now fetch the generated data
+        response = await fetch('https://backend-11kr.onrender.com/market_intelligence');
+      }
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
       const apiResponse = await response.json();
-      console.log('Raw API response:', apiResponse);
+      console.log('📊 Market intelligence data:', apiResponse);
       
       // Extract the report data from the API response
       const reportData = apiResponse.report || apiResponse;
@@ -1355,7 +1366,7 @@ const MarketResearch = () => {
       // Transform the data to match our expected structure
       const transformedData = transformReportData(reportData);
       
-      console.log('Transformed data:', transformedData);
+      console.log('✅ Transformed data:', transformedData);
       
       // Update both state and cache (only for current data, not historical)
       setMarketData(transformedData);
@@ -1384,29 +1395,54 @@ const MarketResearch = () => {
     }
   };
 
-  // Trigger Scout API call and then fetch market data
+  // Fetch configuration data from backend first, then trigger market research
   const triggerScoutAndRefresh = async () => {
     try {
       setIsRefreshing(true);
       setError(null);
       
-      console.log('Triggering Scout and refreshing market data...');
+      console.log('Fetching configuration data from backend...');
       
-      // First trigger scout
-      const scoutResponse = await fetch('https://backend-11kr.onrender.com/trigger_scout', {
+      // First, fetch configuration data from backend
+      const configResponse = await fetch('https://backend-11kr.onrender.com/research-config', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      if (!configResponse.ok) {
+        throw new Error(`Config fetch failed! status: ${configResponse.status}`);
+      }
+      
+      const configData = await configResponse.json();
+      console.log('📋 Configuration data received from backend:', configData);
+      
+      // Use the configuration data to build the payload
+      const payload = {
+        user_id: "brewra",
+        component_name: "Market Size & Opportunity",
+        refresh: true,
+        data: configData
+      };
+
+      console.log('📤 Sending dynamic API request with backend config:', payload);
+
+      // Send the market research request with dynamic configuration
+      const researchResponse = await fetch('https://backend-11kr.onrender.com/market-research', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({})
+        body: JSON.stringify(payload)
       });
       
-      if (!scoutResponse.ok) {
-        throw new Error(`Scout trigger failed! status: ${scoutResponse.status}`);
+      if (!researchResponse.ok) {
+        throw new Error(`Market research failed! status: ${researchResponse.status}`);
       }
       
-      const scoutResult = await scoutResponse.json();
-      console.log('Scout triggered successfully:', scoutResult);
+      const researchResult = await researchResponse.json();
+      console.log('📊 Market research data received:', researchResult);
       
       // Then fetch updated market intelligence data
       const marketResponse = await fetch('https://backend-11kr.onrender.com/market_intelligence');
@@ -1416,7 +1452,7 @@ const MarketResearch = () => {
       }
       
       const apiResponse = await marketResponse.json();
-      console.log('New market data received:', apiResponse);
+      console.log('📈 Updated market intelligence data:', apiResponse);
       
       // Extract and transform the data
       const reportData = apiResponse.report || apiResponse;
@@ -1432,11 +1468,10 @@ const MarketResearch = () => {
       setHistoricalDataTimestamp(null);
       
     } catch (err) {
-      console.error('Error in scout trigger and refresh:', err);
-      setError(err instanceof Error ? err.message : 'Failed to trigger scout and refresh data');
+      console.error('Error in dynamic market research:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch dynamic market research data');
       
       // Keep showing existing data even if the operation failed
-      // Don't clear marketData here - let it show previous data
     } finally {
       setIsRefreshing(false);
     }
@@ -1450,21 +1485,21 @@ const MarketResearch = () => {
       setIsMarketSizeLoading(true);
       setMarketSizeError(null);
 
+      // First, fetch configuration data from backend
+      const configResponse = await fetch('https://backend-11kr.onrender.com/research-config');
+      
+      if (!configResponse.ok) {
+        throw new Error(`Config fetch failed! status: ${configResponse.status}`);
+      }
+      
+      const configData = await configResponse.json();
+      console.log('📋 Using dynamic configuration from backend:', configData);
+
       const payload = {
         user_id: "brewra",
         component_name: "Market Size & Opportunity",
         refresh: refresh,
-        data: {
-          industry: marketResearchConfig.industry,
-          target_region: marketResearchConfig.target_region,
-          year_range: {
-            start: marketResearchConfig.year_range.start,
-            end: marketResearchConfig.year_range.end
-          },
-          segments: marketResearchConfig.segments,
-          distribution_channels: marketResearchConfig.distribution_channels,
-          key_competitors: marketResearchConfig.key_competitors
-        }
+        data: configData
       };
 
       console.log('📤 Sending API request to:', 'https://backend-11kr.onrender.com/market-research');
@@ -2749,10 +2784,6 @@ const MarketResearch = () => {
                   : (isRefreshing || isInitialLoading) ? 'Updating...' : 'Refresh'
                 }
               </Button>
-              <MarketResearchConfig
-                config={marketResearchConfig}
-                onConfigChange={setMarketResearchConfig}
-              />
               <Button
                 variant="outline"
                 size="sm"
