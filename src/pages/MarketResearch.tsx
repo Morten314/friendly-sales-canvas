@@ -1093,7 +1093,9 @@ const MarketResearch = () => {
       "Increasing demand for scalable cloud infrastructure solutions", 
       "Growing emphasis on data security and compliance requirements",
       "Rising adoption of hybrid and multi-cloud architectures"
-    ]
+    ],
+    marketSizeBySegment: undefined,
+    growthProjections: undefined
   });
 
   // Market Size API state
@@ -2781,8 +2783,8 @@ const MarketResearch = () => {
                       strategicRecommendations={marketData?.strategicRecommendations || marketIntelligenceData.strategicRecommendations}
                       marketEntry={marketData?.marketEntry || marketIntelligenceData.marketEntry}
                       marketDrivers={marketData?.marketDrivers || marketIntelligenceData.marketDrivers}
-                      marketSizeBySegment={marketData?.marketSizeBySegment}
-                      growthProjections={marketData?.growthProjections}
+                       marketSizeBySegment={marketData?.marketSizeBySegment || marketIntelligenceData.marketSizeBySegment}
+                       growthProjections={marketData?.growthProjections || marketIntelligenceData.growthProjections}
                        // Market Size specific props
                        marketSizeDeletedSections={marketSizeDeletedSections}
                        isMarketSizeLoading={isMarketSizeLoading}
