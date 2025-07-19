@@ -865,6 +865,7 @@
 
 
 import { useState, useEffect } from "react";
+console.log('📁 MarketResearch.tsx file is loading!');
 import { Layout } from "@/components/layout/Layout";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { Button } from "@/components/ui/button";
