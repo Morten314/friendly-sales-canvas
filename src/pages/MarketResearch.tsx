@@ -1392,8 +1392,9 @@ const MarketResearch = () => {
 
   // Fetch Market Size data from API
   const fetchMarketSizeData = async (refresh = true) => {
+    console.log('🚀 Starting fetchMarketSizeData with refresh:', refresh);
     try {
-      console.log('🚀 Starting fetchMarketSizeData with refresh:', refresh);
+      console.log('📍 Inside try block');
       setIsMarketSizeLoading(true);
       setMarketSizeError(null);
 
