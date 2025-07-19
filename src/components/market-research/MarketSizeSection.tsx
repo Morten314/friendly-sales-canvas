@@ -472,20 +472,25 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                   </h3>
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                    <div className="bg-white border border-gray-200 rounded-lg p-4">
-                      <h4 className="font-medium text-gray-900 mb-3">Market Size by Segment</h4>
-                      <MiniPieChart 
-                        data={marketSizeBySegment ? Object.entries(marketSizeBySegment).map(([name, value], index) => ({
-                          name,
-                          value: parseInt(value.replace('%', '')),
-                          color: ["#3B82F6", "#10B981", "#8B5CF6", "#F59E0B"][index % 4]
-                        })) : [
-                          { name: "Enterprise", value: 45, color: "#3B82F6" },
-                          { name: "Mid-Market", value: 35, color: "#10B981" },
-                          { name: "SMB", value: 20, color: "#8B5CF6" }
-                        ]} 
-                        title="" 
-                      />
+                     <div className="bg-white border border-gray-200 rounded-lg p-4">
+                       <h4 className="font-medium text-gray-900 mb-3">Market Size by Segment</h4>
+                       {(() => {
+                         console.log('🔍 MarketSizeSection - marketSizeBySegment:', marketSizeBySegment);
+                         console.log('🔍 MarketSizeSection - marketSizeBySegment exists:', !!marketSizeBySegment);
+                         return null;
+                       })()}
+                       <MiniPieChart 
+                         data={marketSizeBySegment ? Object.entries(marketSizeBySegment).map(([name, value], index) => ({
+                           name,
+                           value: parseInt(value.replace('%', '')),
+                           color: ["#3B82F6", "#10B981", "#8B5CF6", "#F59E0B"][index % 4]
+                         })) : [
+                           { name: "Enterprise", value: 45, color: "#3B82F6" },
+                           { name: "Mid-Market", value: 35, color: "#10B981" },
+                           { name: "SMB", value: 20, color: "#8B5CF6" }
+                         ]} 
+                         title="" 
+                       />
                     </div>
                     <div className="bg-white border border-gray-200 rounded-lg p-4">
                       <h4 className="font-medium text-gray-900 mb-3">Growth Projections</h4>
