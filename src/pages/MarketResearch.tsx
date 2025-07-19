@@ -1494,6 +1494,7 @@ const MarketResearch = () => {
     }
 
     // Fetch Market Size data
+    console.log('🎯 About to call fetchMarketSizeData from useEffect');
     fetchMarketSizeData(false);
   }, []);
 
