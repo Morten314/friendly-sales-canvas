@@ -1448,10 +1448,13 @@ const MarketResearch = () => {
 
       const apiResponse = await response.json();
       console.log('📥 Market Size API response:', apiResponse);
+      console.log('🔍 API Response structure:', JSON.stringify(apiResponse, null, 2));
 
       // Update market intelligence data with API response
       if (apiResponse.report) {
+        console.log('✅ Found report in API response');
         const report = apiResponse.report;
+        console.log('📊 Report data:', JSON.stringify(report, null, 2));
         console.log('🔄 Updating marketIntelligenceData with report:', report);
         setMarketIntelligenceData(prev => {
           const newData = {
