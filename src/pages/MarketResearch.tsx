@@ -1391,6 +1391,7 @@ const MarketResearch = () => {
   // Fetch Market Size data from API
   const fetchMarketSizeData = async (refresh = true) => {
     try {
+      console.log('🚀 Starting fetchMarketSizeData with refresh:', refresh);
       setIsMarketSizeLoading(true);
       setMarketSizeError(null);
 
@@ -1426,6 +1427,9 @@ const MarketResearch = () => {
         }
       };
 
+      console.log('📤 Sending API request to:', 'https://backend-11kr.onrender.com/market-research');
+      console.log('📦 Payload:', payload);
+
       const response = await fetch('https://backend-11kr.onrender.com/market-research', {
         method: 'POST',
         headers: {
@@ -1439,21 +1443,26 @@ const MarketResearch = () => {
       }
 
       const apiResponse = await response.json();
-      console.log('Market Size API response:', apiResponse);
+      console.log('📥 Market Size API response:', apiResponse);
 
       // Update market intelligence data with API response
       if (apiResponse.report) {
         const report = apiResponse.report;
-        setMarketIntelligenceData(prev => ({
-          ...prev,
-          executiveSummary: report.executive_summary || prev.executiveSummary,
-          tamValue: report.tam_value || prev.tamValue,
-          samValue: report.sam_value || prev.samValue,
-          apacGrowthRate: report.apac_growth_rate || prev.apacGrowthRate,
-          strategicRecommendations: report.strategic_recommendations || prev.strategicRecommendations,
-          marketEntry: report.market_entry || prev.marketEntry,
-          marketDrivers: report.market_drivers || prev.marketDrivers
-        }));
+        console.log('🔄 Updating marketIntelligenceData with report:', report);
+        setMarketIntelligenceData(prev => {
+          const newData = {
+            ...prev,
+            executiveSummary: report.executive_summary || prev.executiveSummary,
+            tamValue: report.tam_value || prev.tamValue,
+            samValue: report.sam_value || prev.samValue,
+            apacGrowthRate: report.apac_growth_rate || prev.apacGrowthRate,
+            strategicRecommendations: report.strategic_recommendations || prev.strategicRecommendations,
+            marketEntry: report.market_entry || prev.marketEntry,
+            marketDrivers: report.market_drivers || prev.marketDrivers
+          };
+          console.log('✅ Updated marketIntelligenceData:', newData);
+          return newData;
+        });
       }
 
     } catch (err) {
