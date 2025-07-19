@@ -84,6 +84,9 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
     />
   ) : undefined;
 
+  console.log('🔍 MarketIntelligenceSections - marketSizeBySegment from props:', props.marketSizeBySegment);
+  console.log('🔍 MarketIntelligenceSections - growthProjections from props:', props.growthProjections);
+  
   return (
     <>
       {/* Market Size & Opportunity Section */}

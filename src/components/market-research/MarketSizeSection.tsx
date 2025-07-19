@@ -492,19 +492,27 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                          title="" 
                        />
                     </div>
-                    <div className="bg-white border border-gray-200 rounded-lg p-4">
-                      <h4 className="font-medium text-gray-900 mb-3">Growth Projections</h4>
-                      <MiniLineChart 
-                        data={[
-                          { name: "2023", value: 100 },
-                          { name: "2024", value: 115 },
-                          { name: "2025", value: 132 },
-                          { name: "2026", value: 152 }
-                        ]} 
-                        title="" 
-                        color="#3B82F6" 
-                      />
-                    </div>
+                     <div className="bg-white border border-gray-200 rounded-lg p-4">
+                       <h4 className="font-medium text-gray-900 mb-3">Growth Projections</h4>
+                       {(() => {
+                         console.log('🔍 MarketSizeSection - growthProjections:', growthProjections);
+                         console.log('🔍 MarketSizeSection - growthProjections exists:', !!growthProjections);
+                         return null;
+                       })()}
+                       <MiniLineChart 
+                         data={growthProjections ? Object.entries(growthProjections).map(([year, value]) => ({
+                           name: year,
+                           value: parseFloat(value.toString()) * 100
+                         })) : [
+                           { name: "2023", value: 100 },
+                           { name: "2024", value: 115 },
+                           { name: "2025", value: 132 },
+                           { name: "2026", value: 152 }
+                         ]} 
+                         title="" 
+                         color="#3B82F6" 
+                       />
+                     </div>
                   </div>
 
                   <div className="bg-gray-50 p-4 rounded-lg">
