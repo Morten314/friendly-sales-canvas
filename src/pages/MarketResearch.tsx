@@ -1082,6 +1082,10 @@ const MarketResearch = () => {
       "Rising adoption of hybrid and multi-cloud architectures"
     ]
   });
+
+  // Market Size API state
+  const [isMarketSizeLoading, setIsMarketSizeLoading] = useState(false);
+  const [marketSizeError, setMarketSizeError] = useState<string | null>(null);
   const [deletedSections, setDeletedSections] = useState<Set<string>>(new Set());
   
   // Edit history state
@@ -1384,6 +1388,82 @@ const MarketResearch = () => {
     }
   };
 
+  // Fetch Market Size data from API
+  const fetchMarketSizeData = async (refresh = true) => {
+    try {
+      setIsMarketSizeLoading(true);
+      setMarketSizeError(null);
+
+      const payload = {
+        user_id: "brewra",
+        component_name: "Market Size & Opportunity",
+        refresh: refresh,
+        data: {
+          industry: "Baby Food",
+          target_region: "North America",
+          year_range: {
+            start: 2020,
+            end: 2025
+          },
+          segments: [
+            "Infant Formula",
+            "Prepared Baby Food",
+            "Dried Baby Food",
+            "Organic Baby Food"
+          ],
+          distribution_channels: [
+            "Online Retail",
+            "Supermarkets",
+            "Pharmacies",
+            "Convenience Stores"
+          ],
+          key_competitors: [
+            "Nestlé",
+            "Danone",
+            "Abbott",
+            "Mead Johnson"
+          ]
+        }
+      };
+
+      const response = await fetch('https://backend-11kr.onrender.com/market-research', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const apiResponse = await response.json();
+      console.log('Market Size API response:', apiResponse);
+
+      // Update market intelligence data with API response
+      if (apiResponse.report) {
+        const report = apiResponse.report;
+        setMarketIntelligenceData(prev => ({
+          ...prev,
+          executiveSummary: report.executive_summary || prev.executiveSummary,
+          tamValue: report.tam_value || prev.tamValue,
+          samValue: report.sam_value || prev.samValue,
+          apacGrowthRate: report.apac_growth_rate || prev.apacGrowthRate,
+          strategicRecommendations: report.strategic_recommendations || prev.strategicRecommendations,
+          marketEntry: report.market_entry || prev.marketEntry,
+          marketDrivers: report.market_drivers || prev.marketDrivers
+        }));
+      }
+
+    } catch (err) {
+      console.error('Error fetching market size data:', err);
+      setMarketSizeError(err instanceof Error ? err.message : 'Failed to fetch market size data');
+    } finally {
+      setIsMarketSizeLoading(false);
+    }
+  };
+
   // Initial data fetch - ALWAYS try to use cached data immediately
   useEffect(() => {
     console.log('Initial useEffect - checking for cached data');
@@ -1403,6 +1483,9 @@ const MarketResearch = () => {
       console.log('Data exists, fetching fresh data in background');
       fetchMarketData(true); // Background refresh
     }
+
+    // Fetch Market Size data
+    fetchMarketSizeData(false);
   }, []);
 
   // Listen for company profile updates and trigger background refresh
@@ -2671,8 +2754,11 @@ const MarketResearch = () => {
                       strategicRecommendations={marketIntelligenceData.strategicRecommendations}
                       marketEntry={marketIntelligenceData.marketEntry}
                       marketDrivers={marketIntelligenceData.marketDrivers}
-                      // Market Size specific props
-                      marketSizeDeletedSections={marketSizeDeletedSections}
+                       // Market Size specific props
+                       marketSizeDeletedSections={marketSizeDeletedSections}
+                       isMarketSizeLoading={isMarketSizeLoading}
+                       marketSizeError={marketSizeError}
+                       onMarketSizeRefresh={() => fetchMarketSizeData(true)}
                       // Industry Trends props
                       isIndustryTrendsEditing={isIndustryTrendsEditing}
                       industryTrendsExpanded={industryTrendsExpanded}

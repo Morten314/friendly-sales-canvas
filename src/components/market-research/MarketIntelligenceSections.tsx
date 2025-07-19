@@ -120,6 +120,9 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
         onGenerateShareableLink={props.onGenerateShareableLink}
         showScoutChat={props.showMarketSizeScoutChat}
         scoutChatPanel={marketSizeScoutChatPanel}
+        isLoading={props.isMarketSizeLoading}
+        error={props.marketSizeError}
+        onRefresh={props.onMarketSizeRefresh}
       />
 
       {/* Industry Trends Section */}

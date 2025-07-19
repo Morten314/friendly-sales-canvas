@@ -17,6 +17,9 @@ export interface MarketIntelligenceTabProps {
   marketEntry: string;
   marketDrivers: string[];
   marketSizeDeletedSections: Set<string>;
+  isMarketSizeLoading?: boolean;
+  marketSizeError?: string | null;
+  onMarketSizeRefresh?: () => void;
   
   // Industry Trends Section
   isIndustryTrendsEditing: boolean;

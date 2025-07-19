@@ -43,6 +43,10 @@ interface MarketSizeSectionProps {
   // Scout chat panel props
   showScoutChat?: boolean;
   scoutChatPanel?: React.ReactNode;
+  // API integration props
+  isLoading?: boolean;
+  error?: string | null;
+  onRefresh?: () => void;
 }
 
 const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
@@ -77,7 +81,10 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
   onSaveToWorkspace,
   onGenerateShareableLink,
   showScoutChat,
-  scoutChatPanel
+  scoutChatPanel,
+  isLoading,
+  error,
+  onRefresh
 }) => {
   const handleMarketSizeSaveChanges = () => {
     onSaveChanges();
@@ -111,7 +118,38 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
         </div>
       </div>
 
-      {isEditing ? (
+      {/* Loading and Error States */}
+      {isLoading && (
+        <div className="flex items-center justify-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <span className="ml-3 text-gray-600">Loading market data...</span>
+        </div>
+      )}
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-red-500"></div>
+              <span className="text-red-700 text-sm font-medium">Error loading data</span>
+            </div>
+            {onRefresh && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={onRefresh}
+                className="text-red-600 border-red-200 hover:bg-red-50"
+              >
+                Retry
+              </Button>
+            )}
+          </div>
+          <p className="text-red-600 text-sm mt-2">{error}</p>
+        </div>
+      )}
+
+      {!isLoading && !error && (
+        isEditing ? (
         <div className="space-y-8">
           {/* Executive Summary Edit */}
           {!deletedSections.has('executive-summary') && (
@@ -505,7 +543,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
             </div>
           )}
         </div>
-      )}
+      ))}
       </div>
       {showScoutChat && scoutChatPanel && (
         <div className="w-1/2 flex-shrink-0">
