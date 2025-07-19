@@ -1451,21 +1451,21 @@ const MarketResearch = () => {
       console.log('🔍 API Response structure:', JSON.stringify(apiResponse, null, 2));
 
       // Update market intelligence data with API response
-      if (apiResponse.report) {
-        console.log('✅ Found report in API response');
-        const report = apiResponse.report;
+      if (apiResponse.data) {
+        console.log('✅ Found data in API response');
+        const report = apiResponse.data;
         console.log('📊 Report data:', JSON.stringify(report, null, 2));
         console.log('🔄 Updating marketIntelligenceData with report:', report);
         setMarketIntelligenceData(prev => {
           const newData = {
             ...prev,
-            executiveSummary: report.executive_summary || prev.executiveSummary,
-            tamValue: report.tam_value || prev.tamValue,
-            samValue: report.sam_value || prev.samValue,
-            apacGrowthRate: report.apac_growth_rate || prev.apacGrowthRate,
-            strategicRecommendations: report.strategic_recommendations || prev.strategicRecommendations,
-            marketEntry: report.market_entry || prev.marketEntry,
-            marketDrivers: report.market_drivers || prev.marketDrivers
+            executiveSummary: report.executiveSummary || prev.executiveSummary,
+            tamValue: report.tamValue || prev.tamValue,
+            samValue: report.samValue || prev.samValue,
+            apacGrowthRate: report.apacGrowthRate || prev.apacGrowthRate,
+            strategicRecommendations: report.strategicRecommendations || prev.strategicRecommendations,
+            marketEntry: report.marketEntry || prev.marketEntry,
+            marketDrivers: report.marketDrivers || prev.marketDrivers
           };
           console.log('✅ Updated marketIntelligenceData:', newData);
           return newData;
