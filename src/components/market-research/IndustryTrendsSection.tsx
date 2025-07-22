@@ -110,7 +110,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
       setError(null);
 
       const payload = {
-        user_id: "user_123",
+        user_id: "brewra",
         component_name: "industry trends report",
         refresh: true,
         data: {
