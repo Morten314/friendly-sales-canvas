@@ -503,7 +503,10 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
           {!industryTrendsExpanded && !isSplitView && (
             <div className="flex justify-center pt-4">
               <Button
-                onClick={() => onIndustryTrendsExpandToggle(true)}
+                onClick={() => {
+                  console.log('📋 Read More button clicked, current expanded:', industryTrendsExpanded);
+                  onIndustryTrendsExpandToggle(true);
+                }}
                 variant="outline"
                 className="flex items-center space-x-2 text-sm"
               >
