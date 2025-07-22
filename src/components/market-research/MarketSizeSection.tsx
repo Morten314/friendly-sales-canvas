@@ -443,12 +443,17 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                   </h3>
                   <div className="bg-green-50 p-4 rounded-lg border border-green-200">
                     <ul className="space-y-2 text-gray-700">
-                      {strategicRecommendations.map((rec, index) => (
+                      {Array.isArray(strategicRecommendations) ? strategicRecommendations.map((rec, index) => (
                         <li key={index} className="flex items-start gap-2">
                           <div className="w-2 h-2 rounded-full bg-green-500 mt-2 flex-shrink-0"></div>
                           {rec}
                         </li>
-                      ))}
+                      )) : (
+                        <li className="flex items-start gap-2">
+                          <div className="w-2 h-2 rounded-full bg-green-500 mt-2 flex-shrink-0"></div>
+                          No strategic recommendations available
+                        </li>
+                      )}
                     </ul>
                   </div>
                 </div>
