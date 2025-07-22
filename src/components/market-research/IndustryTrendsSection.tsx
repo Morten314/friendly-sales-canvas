@@ -41,7 +41,7 @@ interface IndustryTrendsData {
     Europe: string;
     "North America": string;
   };
-  recommendations: IndustryTrendsRecommendations;
+  strategicRecommendations: IndustryTrendsRecommendations;
   risks: string[];
   visualCharts: {
     aiAdoptionTrends: string[];
@@ -165,7 +165,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
       console.log('📊 Full API Response Structure:', JSON.stringify(apiResponse, null, 2));
       console.log('📊 Industry Trends Data Keys:', apiResponse.data ? Object.keys(apiResponse.data) : 'No data');
       console.log('📊 Regional Hotspots:', apiResponse.data?.regionalHotspots);
-      console.log('📊 Recommendations:', apiResponse.data?.recommendations);
+      console.log('📊 Strategic Recommendations:', apiResponse.data?.strategicRecommendations);
       console.log('📊 Visual Charts:', apiResponse.data?.visualCharts);
       console.log('📊 Risks:', apiResponse.data?.risks);
 
@@ -583,11 +583,11 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="bg-green-50 p-4 rounded-lg border border-green-200">
                       <h4 className="font-medium text-green-900 mb-2">Primary Focus</h4>
-                      <p className="text-green-700 text-sm">{industryTrendsData.recommendations?.primaryFocus || 'No recommendations available'}</p>
+                      <p className="text-green-700 text-sm">{industryTrendsData.strategicRecommendations?.primaryFocus || 'No recommendations available'}</p>
                     </div>
                     <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
                       <h4 className="font-medium text-blue-900 mb-2">Market Entry</h4>
-                      <p className="text-blue-700 text-sm">{industryTrendsData.recommendations?.marketEntry || 'No recommendations available'}</p>
+                      <p className="text-blue-700 text-sm">{industryTrendsData.strategicRecommendations?.marketEntry || 'No recommendations available'}</p>
                     </div>
                   </div>
                 </div>
