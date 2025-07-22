@@ -103,40 +103,40 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
   const [editTrendSnapshots, setEditTrendSnapshots] = useState<TrendSnapshot[]>([]);
 
   // Fetch Industry Trends data from API
-  const fetchIndustryTrendsData = async (refresh = false) => {
+  const fetchIndustryTrendsData = async (refresh = true) => {
     console.log('🚀 Starting fetchIndustryTrendsData with refresh:', refresh);
     try {
       setIsLoading(true);
       setError(null);
 
       const payload = {
-        user_id: "brewra",
+        user_id: "user_123",
         component_name: "Industry Trends",
-        refresh: refresh,
+        refresh: true,
         data: {
-          industry: "Technology",
-          target_region: "Global",
+          industry: "Baby Food",
+          target_region: "North America",
           year_range: {
-            start: 2024,
-            end: 2029
+            start: 2020,
+            end: 2025
           },
           segments: [
-            "Enterprise Software",
-            "Cloud Services",
-            "Mobile Applications",
-            "AI/ML Platforms"
+            "Infant Formula",
+            "Prepared Baby Food",
+            "Dried Baby Food",
+            "Organic Baby Food"
           ],
           distribution_channels: [
-            "Direct Sales",
-            "Partner Network",
-            "Online Platform",
-            "Reseller Channel"
+            "Online Retail",
+            "Supermarkets",
+            "Pharmacies",
+            "Convenience Stores"
           ],
           key_competitors: [
-            "Microsoft",
-            "Google",
-            "Amazon",
-            "Oracle"
+            "Nestlé",
+            "Danone",
+            "Abbott",
+            "Mead Johnson"
           ]
         }
       };
