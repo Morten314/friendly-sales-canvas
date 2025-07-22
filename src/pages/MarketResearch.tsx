@@ -2792,15 +2792,24 @@ const MarketResearch = () => {
                       hasEdits={hasEdits}
                       deletedSections={deletedSections}
                       editHistory={editHistory}
-                      executiveSummary={marketData?.executiveSummary || marketIntelligenceData.executiveSummary}
-                      tamValue={marketData?.tamValue || marketIntelligenceData.tamValue}
-                      samValue={marketData?.samValue || marketIntelligenceData.samValue}
-                      apacGrowthRate={marketData?.apacGrowthRate || marketIntelligenceData.apacGrowthRate}
-                      strategicRecommendations={marketData?.strategicRecommendations || marketIntelligenceData.strategicRecommendations}
-                      marketEntry={marketData?.marketEntry || marketIntelligenceData.marketEntry}
-                      marketDrivers={marketData?.marketDrivers || marketIntelligenceData.marketDrivers}
-                       marketSizeBySegment={marketData?.marketSizeBySegment || marketIntelligenceData.marketSizeBySegment}
-                       growthProjections={marketData?.growthProjections || marketIntelligenceData.growthProjections}
+                       executiveSummary={marketData?.executiveSummary || marketIntelligenceData.executiveSummary}
+                       tamValue={marketData?.tamValue || marketIntelligenceData.tamValue}
+                       samValue={marketData?.samValue || marketIntelligenceData.samValue}
+                       apacGrowthRate={marketData?.apacGrowthRate || marketIntelligenceData.apacGrowthRate}
+                       strategicRecommendations={(() => {
+                         console.log('🔍 MarketResearch - passing strategicRecommendations:', marketData?.strategicRecommendations || marketIntelligenceData.strategicRecommendations);
+                         return marketData?.strategicRecommendations || marketIntelligenceData.strategicRecommendations;
+                       })()}
+                       marketEntry={marketData?.marketEntry || marketIntelligenceData.marketEntry}
+                       marketDrivers={marketData?.marketDrivers || marketIntelligenceData.marketDrivers}
+                        marketSizeBySegment={(() => {
+                         console.log('🔍 MarketResearch - passing marketSizeBySegment:', marketData?.marketSizeBySegment || marketIntelligenceData.marketSizeBySegment);
+                         return marketData?.marketSizeBySegment || marketIntelligenceData.marketSizeBySegment;
+                       })()}
+                        growthProjections={(() => {
+                         console.log('🔍 MarketResearch - passing growthProjections:', marketData?.growthProjections || marketIntelligenceData.growthProjections);
+                         return marketData?.growthProjections || marketIntelligenceData.growthProjections;
+                       })()}
                        // Market Size specific props
                        marketSizeDeletedSections={marketSizeDeletedSections}
                        isMarketSizeLoading={isMarketSizeLoading}
