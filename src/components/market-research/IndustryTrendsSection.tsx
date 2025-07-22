@@ -1,6 +1,6 @@
 
-import React from 'react';
-import { Bot, Edit, X, FileText, Save, Share, Clock, Zap, ChevronDown, ChevronUp } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Bot, Edit, X, FileText, Save, Share, Clock, Zap, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -30,6 +30,29 @@ interface IndustryTrendsRecommendations {
   marketEntry: string;
 }
 
+interface IndustryTrendsData {
+  executiveSummary: string;
+  aiAdoption: string;
+  cloudMigration: string;
+  regulatory: string;
+  trendSnapshots: TrendSnapshot[];
+  regionalHotspots: {
+    APAC: string;
+    Europe: string;
+    "North America": string;
+  };
+  recommendations: IndustryTrendsRecommendations;
+  risks: string[];
+  visualCharts: {
+    aiAdoptionTrends: string[];
+    technologyBudgetAllocation: {
+      "AI/ML": string;
+      Cloud: string;
+      Security: string;
+    };
+  };
+}
+
 interface IndustryTrendsSectionProps {
   isIndustryTrendsEditing: boolean;
   isSplitView: boolean;
@@ -37,24 +60,12 @@ interface IndustryTrendsSectionProps {
   industryTrendsHasEdits: boolean;
   industryTrendsDeletedSections: Set<string>;
   industryTrendsEditHistory: EditRecord[];
-  industryTrendsExecutiveSummary: string;
-  industryTrendsAiAdoption: string;
-  industryTrendsCloudMigration: string;
-  industryTrendsRegulatory: string;
-  industryTrendSnapshots: TrendSnapshot[];
-  industryTrendsRecommendations: IndustryTrendsRecommendations;
-  industryTrendsRisks: string[];
   onIndustryTrendsToggleEdit: () => void;
   onIndustryTrendsSaveChanges: () => void;
   onIndustryTrendsCancelEdit: () => void;
   onIndustryTrendsDeleteSection: (sectionId: string) => void;
   onIndustryTrendsEditHistoryOpen: () => void;
   onIndustryTrendsExpandToggle: (expanded: boolean) => void;
-  onIndustryTrendsExecutiveSummaryChange: (value: string) => void;
-  onIndustryTrendsAiAdoptionChange: (value: string) => void;
-  onIndustryTrendsCloudMigrationChange: (value: string) => void;
-  onIndustryTrendsRegulatoryChange: (value: string) => void;
-  onIndustryTrendSnapshotsChange: (snapshots: TrendSnapshot[]) => void;
   onScoutIconClick: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape') => void;
   onExportPDF: () => void;
   onSaveToWorkspace: () => void;
@@ -68,29 +79,177 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
   industryTrendsHasEdits,
   industryTrendsDeletedSections,
   industryTrendsEditHistory,
-  industryTrendsExecutiveSummary,
-  industryTrendsAiAdoption,
-  industryTrendsCloudMigration,
-  industryTrendsRegulatory,
-  industryTrendSnapshots,
-  industryTrendsRecommendations,
-  industryTrendsRisks,
   onIndustryTrendsToggleEdit,
   onIndustryTrendsSaveChanges,
   onIndustryTrendsCancelEdit,
   onIndustryTrendsDeleteSection,
   onIndustryTrendsEditHistoryOpen,
   onIndustryTrendsExpandToggle,
-  onIndustryTrendsExecutiveSummaryChange,
-  onIndustryTrendsAiAdoptionChange,
-  onIndustryTrendsCloudMigrationChange,
-  onIndustryTrendsRegulatoryChange,
-  onIndustryTrendSnapshotsChange,
   onScoutIconClick,
   onExportPDF,
   onSaveToWorkspace,
   onGenerateShareableLink
 }) => {
+  // State for API data
+  const [industryTrendsData, setIndustryTrendsData] = useState<IndustryTrendsData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Local editing state
+  const [editExecutiveSummary, setEditExecutiveSummary] = useState('');
+  const [editAiAdoption, setEditAiAdoption] = useState('');
+  const [editCloudMigration, setEditCloudMigration] = useState('');
+  const [editRegulatory, setEditRegulatory] = useState('');
+  const [editTrendSnapshots, setEditTrendSnapshots] = useState<TrendSnapshot[]>([]);
+
+  // Fetch Industry Trends data from API
+  const fetchIndustryTrendsData = async (refresh = false) => {
+    console.log('🚀 Starting fetchIndustryTrendsData with refresh:', refresh);
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const payload = {
+        user_id: "brewra",
+        component_name: "Industry Trends",
+        refresh: refresh,
+        data: {
+          industry: "Baby Food",
+          target_region: "North America",
+          year_range: {
+            start: 2020,
+            end: 2025
+          },
+          segments: [
+            "Infant Formula",
+            "Prepared Baby Food",
+            "Dried Baby Food",
+            "Organic Baby Food"
+          ],
+          distribution_channels: [
+            "Online Retail",
+            "Supermarkets",
+            "Pharmacies",
+            "Convenience Stores"
+          ],
+          key_competitors: [
+            "Nestlé",
+            "Danone",
+            "Abbott",
+            "Mead Johnson"
+          ]
+        }
+      };
+
+      console.log('📤 Sending API request to:', 'https://backend-11kr.onrender.com/market-research');
+      console.log('📦 Industry Trends Payload:', payload);
+
+      const response = await fetch('https://backend-11kr.onrender.com/market-research', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const apiResponse = await response.json();
+      console.log('📥 Industry Trends API response:', apiResponse);
+
+      if (apiResponse.data) {
+        setIndustryTrendsData(apiResponse.data);
+        // Initialize edit fields with fetched data
+        setEditExecutiveSummary(apiResponse.data.executiveSummary || '');
+        setEditAiAdoption(apiResponse.data.aiAdoption || '');
+        setEditCloudMigration(apiResponse.data.cloudMigration || '');
+        setEditRegulatory(apiResponse.data.regulatory || '');
+        setEditTrendSnapshots(apiResponse.data.trendSnapshots || []);
+      }
+    } catch (err) {
+      console.error('Error fetching industry trends data:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch industry trends data');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Fetch data on component mount
+  useEffect(() => {
+    fetchIndustryTrendsData(false);
+  }, []);
+
+  // Handle save changes
+  const handleSaveChanges = async () => {
+    try {
+      await fetchIndustryTrendsData(true); // Refresh data
+      onIndustryTrendsSaveChanges();
+    } catch (err) {
+      console.error('Error saving changes:', err);
+    }
+  };
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+            <Zap className="h-5 w-5 text-purple-600" />
+            Industry Trends
+          </h2>
+        </div>
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin text-purple-600 mx-auto mb-4" />
+            <p className="text-gray-600">Loading industry trends data...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+            <Zap className="h-5 w-5 text-purple-600" />
+            Industry Trends
+          </h2>
+        </div>
+        <div className="text-center py-12">
+          <p className="text-red-600 mb-4">Error loading industry trends data: {error}</p>
+          <Button onClick={() => fetchIndustryTrendsData(false)} variant="outline">
+            Retry
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Show no data state
+  if (!industryTrendsData) {
+    return (
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+            <Zap className="h-5 w-5 text-purple-600" />
+            Industry Trends
+          </h2>
+        </div>
+        <div className="text-center py-12">
+          <p className="text-gray-600 mb-4">No industry trends data available</p>
+          <Button onClick={() => fetchIndustryTrendsData(true)} variant="outline">
+            Generate Report
+          </Button>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-6">
       <div className="flex items-center justify-between mb-6">
@@ -139,8 +298,8 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                 </Label>
                 <Textarea 
                   id="industryTrendsExecutiveSummary" 
-                  value={industryTrendsExecutiveSummary} 
-                  onChange={e => onIndustryTrendsExecutiveSummaryChange(e.target.value)} 
+                  value={editExecutiveSummary} 
+                  onChange={e => setEditExecutiveSummary(e.target.value)} 
                   className="w-full h-32 resize-none" 
                   placeholder="Enter executive summary..." 
                 />
@@ -170,8 +329,8 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                     </Label>
                     <Input 
                       id="aiAdoption"
-                      value={industryTrendsAiAdoption} 
-                      onChange={e => onIndustryTrendsAiAdoptionChange(e.target.value)}
+                      value={editAiAdoption} 
+                      onChange={e => setEditAiAdoption(e.target.value)}
                       className="text-2xl font-bold text-blue-600 border-blue-200 focus:border-blue-400"
                       placeholder="e.g., 78%"
                     />
@@ -182,8 +341,8 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                     </Label>
                     <Input 
                       id="cloudMigration"
-                      value={industryTrendsCloudMigration} 
-                      onChange={e => onIndustryTrendsCloudMigrationChange(e.target.value)}
+                      value={editCloudMigration} 
+                      onChange={e => setEditCloudMigration(e.target.value)}
                       className="text-2xl font-bold text-green-600 border-green-200 focus:border-green-400"
                       placeholder="e.g., +45%"
                     />
@@ -194,8 +353,8 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                     </Label>
                     <Input 
                       id="regulatory"
-                      value={industryTrendsRegulatory} 
-                      onChange={e => onIndustryTrendsRegulatoryChange(e.target.value)}
+                      value={editRegulatory} 
+                      onChange={e => setEditRegulatory(e.target.value)}
                       className="text-2xl font-bold text-purple-600 border-purple-200 focus:border-purple-400"
                       placeholder="e.g., 12 new"
                     />
@@ -221,7 +380,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Key Trend Snapshots</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {industryTrendSnapshots.map((trend, index) => (
+                  {editTrendSnapshots.map((trend, index) => (
                     <div key={index} className="bg-white border border-gray-200 rounded-lg p-4">
                       <div className="mb-3">
                         <Label htmlFor={`trendTitle-${index}`} className="text-sm font-medium text-gray-700 mb-1 block">
@@ -231,9 +390,9 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                           id={`trendTitle-${index}`}
                           value={trend.title}
                           onChange={e => {
-                            const updated = [...industryTrendSnapshots];
+                            const updated = [...editTrendSnapshots];
                             updated[index] = { ...trend, title: e.target.value };
-                            onIndustryTrendSnapshotsChange(updated);
+                            setEditTrendSnapshots(updated);
                           }}
                           className="font-medium text-gray-900"
                           placeholder="Trend title"
@@ -247,9 +406,9 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                           id={`trendMetric-${index}`}
                           value={trend.metric}
                           onChange={e => {
-                            const updated = [...industryTrendSnapshots];
+                            const updated = [...editTrendSnapshots];
                             updated[index] = { ...trend, metric: e.target.value };
-                            onIndustryTrendSnapshotsChange(updated);
+                            setEditTrendSnapshots(updated);
                           }}
                           className="text-sm text-gray-600"
                           placeholder="Trend metric"
@@ -264,7 +423,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
 
           {/* Save/Cancel Buttons */}
           <div className="flex items-center gap-3 pt-6 border-t">
-            <Button onClick={onIndustryTrendsSaveChanges}>Save Changes</Button>
+            <Button onClick={handleSaveChanges}>Save Changes</Button>
             <Button variant="outline" onClick={onIndustryTrendsCancelEdit}>Cancel</Button>
             <div className="flex-1"></div>
             
@@ -316,22 +475,22 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
         <div className="space-y-6">
           {/* Default View */}
           <div>
-            <p className="text-gray-700 mb-6">{industryTrendsExecutiveSummary}</p>
+            <p className="text-gray-700 mb-6">{industryTrendsData.executiveSummary}</p>
 
             {/* Key Metrics Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
-                <div className="text-2xl font-bold text-blue-600">{industryTrendsAiAdoption}</div>
+                <div className="text-2xl font-bold text-blue-600">{industryTrendsData.aiAdoption}</div>
                 <div className="text-sm font-medium text-gray-900">AI Adoption Rate</div>
                 <div className="text-xs text-gray-600">Enterprise pilots</div>
               </div>
               <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded-r-lg">
-                <div className="text-2xl font-bold text-green-600">{industryTrendsCloudMigration}</div>
+                <div className="text-2xl font-bold text-green-600">{industryTrendsData.cloudMigration}</div>
                 <div className="text-sm font-medium text-gray-900">Cloud Migration Increase</div>
                 <div className="text-xs text-gray-600">Year over year</div>
               </div>
               <div className="bg-purple-50 border-l-4 border-purple-500 p-4 rounded-r-lg">
-                <div className="text-2xl font-bold text-purple-600">{industryTrendsRegulatory}</div>
+                <div className="text-2xl font-bold text-purple-600">{industryTrendsData.regulatory}</div>
                 <div className="text-sm font-medium text-gray-900">Regulatory Changes</div>
                 <div className="text-xs text-gray-600">Impacting sector</div>
               </div>
@@ -363,14 +522,14 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                 {/* Executive Summary */}
                 <div className="mb-8">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Executive Summary</h3>
-                  <p className="text-gray-700 bg-gray-50 p-4 rounded-lg">{industryTrendsExecutiveSummary}</p>
+                  <p className="text-gray-700 bg-gray-50 p-4 rounded-lg">{industryTrendsData.executiveSummary}</p>
                 </div>
 
                 {/* Key Trend Snapshots */}
                 <div className="mb-8">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Key Trend Snapshots</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {industryTrendSnapshots.map((trend, index) => (
+                    {industryTrendsData.trendSnapshots.map((trend, index) => (
                       <div key={index} className="bg-white border border-gray-200 rounded-lg p-4">
                         <h4 className="font-medium text-gray-900 mb-2">{trend.title}</h4>
                         <p className="text-sm text-gray-600 mb-3">{trend.metric}</p>
@@ -394,11 +553,11 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="bg-green-50 p-4 rounded-lg border border-green-200">
                       <h4 className="font-medium text-green-900 mb-2">Primary Focus</h4>
-                      <p className="text-green-700 text-sm">{industryTrendsRecommendations.primaryFocus}</p>
+                      <p className="text-green-700 text-sm">{industryTrendsData.recommendations.primaryFocus}</p>
                     </div>
                     <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
                       <h4 className="font-medium text-blue-900 mb-2">Market Entry</h4>
-                      <p className="text-blue-700 text-sm">{industryTrendsRecommendations.marketEntry}</p>
+                      <p className="text-blue-700 text-sm">{industryTrendsData.recommendations.marketEntry}</p>
                     </div>
                   </div>
                 </div>
@@ -408,7 +567,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Risks & Watchouts</h3>
                   <div className="bg-red-50 p-4 rounded-lg border border-red-200">
                     <ul className="space-y-2">
-                      {industryTrendsRisks.map((risk, index) => (
+                      {industryTrendsData.risks.map((risk, index) => (
                         <li key={index} className="flex items-start gap-2 text-red-700 text-sm">
                           <div className="w-2 h-2 rounded-full bg-red-500 mt-2 flex-shrink-0"></div>
                           {risk}
