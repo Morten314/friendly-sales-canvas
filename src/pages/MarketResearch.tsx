@@ -1482,6 +1482,8 @@ const MarketResearch = () => {
         const report = apiResponse.data;
         console.log('📊 Report data:', JSON.stringify(report, null, 2));
         console.log('🔄 Updating marketIntelligenceData with report:', report);
+        
+        // Update marketIntelligenceData state
         setMarketIntelligenceData(prev => {
           const newData = {
             ...prev,
@@ -1495,6 +1497,24 @@ const MarketResearch = () => {
           };
           console.log('✅ Updated marketIntelligenceData:', newData);
           return newData;
+        });
+
+        // ALSO update marketData state with the new fields including missing ones
+        setMarketData(prev => {
+          const updated = {
+            ...prev,
+            executiveSummary: report.executiveSummary,
+            tamValue: report.tamValue,
+            samValue: report.samValue,
+            apacGrowthRate: report.apacGrowthRate,
+            strategicRecommendations: report.strategicRecommendations,
+            marketEntry: report.marketEntry,
+            marketDrivers: report.marketDrivers,
+            marketSizeBySegment: report.marketSizeBySegment, // This was missing!
+            growthProjections: report.growthProjections      // This was missing!
+          };
+          console.log('✅ Updated marketData with Market Size API data:', updated);
+          return updated;
         });
       }
 
