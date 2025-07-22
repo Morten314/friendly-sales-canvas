@@ -105,6 +105,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
   // Fetch Industry Trends data from API
   const fetchIndustryTrendsData = async (refresh = true) => {
     console.log('🚀 Starting fetchIndustryTrendsData with refresh:', refresh);
+    console.log('🌐 Testing CORS with Industry Trends API call...');
     try {
       setIsLoading(true);
       setError(null);
