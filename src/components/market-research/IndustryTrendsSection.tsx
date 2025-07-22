@@ -189,7 +189,13 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
 
   // Fetch data on component mount
   useEffect(() => {
-    fetchIndustryTrendsData(true);
+    // Add 3-second delay to avoid rate limiting with Market Size API call
+    const timer = setTimeout(() => {
+      console.log('🕒 Delayed Industry Trends API call to avoid rate limiting');
+      fetchIndustryTrendsData(true);
+    }, 3000);
+
+    return () => clearTimeout(timer);
   }, []);
 
   // Handle save changes
