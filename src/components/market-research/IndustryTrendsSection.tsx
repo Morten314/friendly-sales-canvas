@@ -382,7 +382,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Key Trend Snapshots</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {editTrendSnapshots.map((trend, index) => (
+                  {editTrendSnapshots?.map((trend, index) => (
                     <div key={index} className="bg-white border border-gray-200 rounded-lg p-4">
                       <div className="mb-3">
                         <Label htmlFor={`trendTitle-${index}`} className="text-sm font-medium text-gray-700 mb-1 block">
@@ -571,13 +571,13 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                 <div className="mb-8">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Risks & Watchouts</h3>
                   <div className="bg-red-50 p-4 rounded-lg border border-red-200">
-                    <ul className="space-y-2">
-                      {industryTrendsData.risks.map((risk, index) => (
+                     <ul className="space-y-2">
+                      {industryTrendsData.risks?.map((risk, index) => (
                         <li key={index} className="flex items-start gap-2 text-red-700 text-sm">
                           <div className="w-2 h-2 rounded-full bg-red-500 mt-2 flex-shrink-0"></div>
                           {risk}
                         </li>
-                      ))}
+                      )) || <li className="text-gray-500 text-sm">No risks identified</li>}
                     </ul>
                   </div>
                 </div>
