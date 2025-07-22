@@ -155,7 +155,9 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error('🚨 API Error Response:', errorText);
+        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
       }
 
       const apiResponse = await response.json();
@@ -180,7 +182,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
 
   // Fetch data on component mount
   useEffect(() => {
-    fetchIndustryTrendsData(false);
+    fetchIndustryTrendsData(true);
   }, []);
 
   // Handle save changes
