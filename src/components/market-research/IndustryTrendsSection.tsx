@@ -111,7 +111,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
 
       const payload = {
         user_id: "brewra",
-        component_name: "Market Size & Opportunity",
+        component_name: "Industry Trends",
         refresh: refresh,
         data: {
           industry: "Technology",
@@ -558,11 +558,11 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="bg-green-50 p-4 rounded-lg border border-green-200">
                       <h4 className="font-medium text-green-900 mb-2">Primary Focus</h4>
-                      <p className="text-green-700 text-sm">{industryTrendsData.recommendations.primaryFocus}</p>
+                      <p className="text-green-700 text-sm">{industryTrendsData.recommendations?.primaryFocus || 'No recommendations available'}</p>
                     </div>
                     <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
                       <h4 className="font-medium text-blue-900 mb-2">Market Entry</h4>
-                      <p className="text-blue-700 text-sm">{industryTrendsData.recommendations.marketEntry}</p>
+                      <p className="text-blue-700 text-sm">{industryTrendsData.recommendations?.marketEntry || 'No recommendations available'}</p>
                     </div>
                   </div>
                 </div>
