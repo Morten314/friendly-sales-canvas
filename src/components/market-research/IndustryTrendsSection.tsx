@@ -114,29 +114,29 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
         component_name: "Industry Trends",
         refresh: refresh,
         data: {
-          industry: "Baby Food",
-          target_region: "North America",
+          industry: "Technology",
+          target_region: "Global",
           year_range: {
-            start: 2020,
-            end: 2025
+            start: 2024,
+            end: 2029
           },
           segments: [
-            "Infant Formula",
-            "Prepared Baby Food",
-            "Dried Baby Food",
-            "Organic Baby Food"
+            "Enterprise Software",
+            "Cloud Services",
+            "Mobile Applications",
+            "AI/ML Platforms"
           ],
           distribution_channels: [
-            "Online Retail",
-            "Supermarkets",
-            "Pharmacies",
-            "Convenience Stores"
+            "Direct Sales",
+            "Partner Network",
+            "Online Platform",
+            "Reseller Channel"
           ],
           key_competitors: [
-            "Nestlé",
-            "Danone",
-            "Abbott",
-            "Mead Johnson"
+            "Microsoft",
+            "Google",
+            "Amazon",
+            "Oracle"
           ]
         }
       };
