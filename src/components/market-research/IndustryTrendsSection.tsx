@@ -111,7 +111,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
 
       const payload = {
         user_id: "brewra",
-        component_name: "Industry Trends",
+        component_name: "Market Size & Opportunity",
         refresh: refresh,
         data: {
           industry: "Technology",
@@ -142,7 +142,9 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
       };
 
       console.log('📤 Sending API request to:', 'https://backend-11kr.onrender.com/market-research');
-      console.log('📦 Industry Trends Payload:', payload);
+      console.log('📦 Industry Trends Payload:', JSON.stringify(payload, null, 2));
+      console.log('📦 Payload keys:', Object.keys(payload));
+      console.log('📦 Data keys:', Object.keys(payload.data));
 
       const response = await fetch('https://backend-11kr.onrender.com/market-research', {
         method: 'POST',
