@@ -1751,6 +1751,8 @@ const MarketResearch = () => {
   };
 
   const handleMarketIntelligenceExpandToggle = (expanded: boolean) => {
+    console.log('🔄 Market Intelligence Expand Toggle called with:', expanded);
+    console.log('🔄 Current isMarketIntelligenceExpanded state:', isMarketIntelligenceExpanded);
     setIsMarketIntelligenceExpanded(expanded);
   };
 
