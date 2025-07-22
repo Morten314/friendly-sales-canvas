@@ -1459,6 +1459,7 @@ const MarketResearch = () => {
 
       console.log('📤 Sending API request to:', 'https://backend-11kr.onrender.com/market-research');
       console.log('📦 Payload:', payload);
+      console.log('🔥 MARKET SIZE IS ACTUALLY CALLING API - WILL WE GET CORS?');
 
       const response = await fetch('https://backend-11kr.onrender.com/market-research', {
         method: 'POST',
@@ -1548,6 +1549,7 @@ const MarketResearch = () => {
 
     // Fetch Market Size data
     console.log('🎯 About to call fetchMarketSizeData from useEffect');
+    console.log('🔍 Testing if Market Size actually makes API call...');
     fetchMarketSizeData(false);
   }, []);
 
