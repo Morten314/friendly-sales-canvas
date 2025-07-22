@@ -111,7 +111,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
 
       const payload = {
         user_id: "user_123",
-        component_name: "Industry Trends",
+        component_name: "Industry Trends & Analysis",
         refresh: true,
         data: {
           industry: "Baby Food",
