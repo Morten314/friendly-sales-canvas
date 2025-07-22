@@ -162,6 +162,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
 
       const apiResponse = await response.json();
       console.log('📥 Industry Trends API response:', apiResponse);
+      console.log('📊 Full API Response Structure:', JSON.stringify(apiResponse, null, 2));
       console.log('📊 Industry Trends Data Keys:', apiResponse.data ? Object.keys(apiResponse.data) : 'No data');
       console.log('📊 Regional Hotspots:', apiResponse.data?.regionalHotspots);
       console.log('📊 Recommendations:', apiResponse.data?.recommendations);
