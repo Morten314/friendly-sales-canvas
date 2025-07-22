@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,14 +8,17 @@ import MiniLineChart from "@/components/MiniLineChart";
 import MiniPieChart from "@/components/MiniPieChart";
 import { ICPSummaryOpportunity } from "./ICPSummaryOpportunity";
 import { SuggestedICPsGallery } from "./SuggestedICPsGallery";
+
 export const ICPIntelligence = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [showProfilerChat, setShowProfilerChat] = useState(false);
   const [profilerMessage, setProfilerMessage] = useState("");
+
   const handleEditToggle = () => {
     setIsEditing(!isEditing);
     // TODO: Trigger context-specific chat suggestions after saving
   };
+
   const handleICPSelect = (icp: any) => {
     // Scroll to ICP details section
     const detailsSection = document.getElementById('icp-details-section');
@@ -24,11 +28,14 @@ export const ICPIntelligence = () => {
       });
     }
   };
+
   const handleProfilerChatOpen = (message?: string) => {
     setProfilerMessage(message || "I'm Profiler, your ICP research assistant. How can I help you today?");
     setShowProfilerChat(true);
   };
-  return <div className="space-y-6">
+
+  return (
+    <div className="space-y-6">
       {/* Page Header */}
       <div className="space-y-2">
         
@@ -46,32 +53,12 @@ export const ICPIntelligence = () => {
         {/* Agent-Level Contextual Mini Report */}
         
 
-        {/* Additional ICP content would go here */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>ICP Profiles</CardTitle>
-              <CardDescription>Manage your defined customer profiles</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-600">ICP profile management interface coming soon...</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Profile Analytics</CardTitle>
-              <CardDescription>Performance metrics for your ICPs</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-600">Analytics dashboard coming soon...</p>
-            </CardContent>
-          </Card>
-        </div>
+        {/* ICP Profiles and Profile Analytics section removed */}
       </div>
 
       {/* Profiler Chat Panel */}
-      {showProfilerChat && <Card className="border-blue-200 bg-blue-50/40 fixed right-4 top-20 w-96 h-[500px] shadow-xl z-50">
+      {showProfilerChat && (
+        <Card className="border-blue-200 bg-blue-50/40 fixed right-4 top-20 w-96 h-[500px] shadow-xl z-50">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg flex items-center gap-2">
@@ -101,6 +88,8 @@ export const ICPIntelligence = () => {
               </Button>
             </div>
           </CardContent>
-        </Card>}
-    </div>;
+        </Card>
+      )}
+    </div>
+  );
 };
