@@ -534,13 +534,13 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                 <div className="mb-8">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Key Trend Snapshots</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {industryTrendsData.trendSnapshots.map((trend, index) => (
+                    {industryTrendsData.trendSnapshots?.map((trend, index) => (
                       <div key={index} className="bg-white border border-gray-200 rounded-lg p-4">
                         <h4 className="font-medium text-gray-900 mb-2">{trend.title}</h4>
                         <p className="text-sm text-gray-600 mb-3">{trend.metric}</p>
                         <div className="h-8 bg-gradient-to-r from-purple-100 to-blue-100 rounded"></div>
                       </div>
-                    ))}
+                    )) || <p className="text-gray-500">No trend snapshots available</p>}
                   </div>
                 </div>
 
