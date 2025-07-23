@@ -874,6 +874,7 @@ import { Search, MessageSquare, Users, Settings, RefreshCw, AlertCircle, History
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { toast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { RecentMarketResearch } from "@/components/market-research/RecentMarketResearch";
 import { ScoutCapabilities } from "@/components/market-research/ScoutCapabilities";
@@ -1695,18 +1696,45 @@ const MarketResearch = () => {
     }
   };
 
-  // Real-time data synchronization with backend (DISABLED to prevent overwriting fresh data)
+  // Smart auto-refresh with timestamp checking to prevent overwriting fresh data
   useEffect(() => {
-    console.log('🔥 Setting up optimized data sync - background refresh disabled to preserve fresh data');
-    console.log('🚫 Background auto-refresh disabled to prevent overwriting component-specific fresh data');
+    console.log('🔥 Setting up intelligent auto-refresh with timestamp checking');
     
-    // Optimized sequential loading to prevent performance issues
+    // Smart auto-refresh that only updates if backend has newer data
     const fetchLatestData = async () => {
-      console.log('🎯 Background data refresh SKIPPED to preserve fresh component data');
+      if (isRefreshing || isInitialLoading) {
+        console.log('⏸️ Skipping auto-refresh - manual operation in progress');
+        return;
+      }
       
-      // DISABLED: Background refresh can overwrite fresh component-specific data
-      // Only refresh if user explicitly requests it
-      console.log('⚠️ Background refresh disabled - fresh data preserved');
+      try {
+        console.log('🔍 Checking for backend updates...');
+        
+        // Quick timestamp check first to avoid unnecessary data fetching
+        const response = await fetch(`https://backend-11kr.onrender.com/market-research?t=${Date.now()}`, {
+          method: 'GET',
+          headers: { 'Cache-Control': 'no-cache' }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          const backendTime = new Date(data.timestamp || data.generated_at || data.lastUpdated);
+          const currentTime = marketData?.timestamp ? new Date(marketData.timestamp) : new Date(0);
+          
+          if (backendTime > currentTime) {
+            console.log('🆕 Newer data detected - auto-updating...');
+            await fetchMarketData(true);
+            toast({
+              title: "Data Updated",
+              description: "Fresh data automatically loaded from backend.",
+            });
+          } else {
+            console.log('✅ Data is current - no update needed');
+          }
+        }
+      } catch (error) {
+        console.log('📡 Auto-refresh check failed:', error);
+      }
     };
     
     // Optimized initial load - sequential instead of parallel  
@@ -1755,12 +1783,18 @@ const MarketResearch = () => {
     
     window.addEventListener('focus', handleFocus);
 
-    // Cleanup (no intervals to clear since background refresh is disabled)
+    // Set up auto-refresh interval (every 30 seconds)
+    const autoRefreshInterval = setInterval(() => {
+      console.log('⏰ Auto-refresh timer triggered');
+      fetchLatestData();
+    }, 30000);
+
+    // Cleanup intervals and event listeners
     return () => {
-      // clearInterval(syncInterval); // Disabled since no background refresh
+      clearInterval(autoRefreshInterval);
       window.removeEventListener('focus', handleFocus);
     };
-  }, []);
+  }, [isRefreshing, isInitialLoading, marketData]);
 
   // Listen for company profile updates and trigger background refresh
   useEffect(() => {
