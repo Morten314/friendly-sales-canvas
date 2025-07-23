@@ -115,30 +115,10 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
         component_name: "industry trends report",
         refresh: true,
         data: {
-          industry: "Technology",
-          target_region: "North America", 
-          year_range: {
-            start: 2020,
-            end: 2025
-          },
-          segments: [
-            "Enterprise Software",
-            "Cloud Services", 
-            "Mobile Applications",
-            "AI/ML Platforms"
-          ],
-          distribution_channels: [
-            "Direct Sales",
-            "Partner Network",
-            "Online Platform", 
-            "Reseller Channel"
-          ],
-          key_competitors: [
-            "Microsoft",
-            "Google",
-            "Amazon",
-            "Oracle"
-          ]
+          company: "OrbiSelf",
+          product: "Convoic.AI", 
+          target_market: "Indian college students (Tier 2 & 3)",
+          region: "India"
         }
       };
 
