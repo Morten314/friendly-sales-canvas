@@ -1095,8 +1095,8 @@ const MarketResearch = () => {
       "Growing emphasis on data security and compliance requirements",
       "Rising adoption of hybrid and multi-cloud architectures"
     ],
-    marketSizeBySegment: undefined,
-    growthProjections: undefined
+    marketSizeBySegment: {},
+    growthProjections: {}
   });
 
   // Market Size API state
@@ -1245,7 +1245,9 @@ const MarketResearch = () => {
 
   // Transform raw report data to our expected structure
   const transformReportData = (reportData: any): MarketIntelligenceData => {
-    return {
+    console.log('🔄 TRANSFORM: Input reportData:', JSON.stringify(reportData, null, 2));
+    
+    const transformed = {
       researchReports: reportData.researchReports || [],
       rankings: reportData.rankings || [],
       markets: reportData.markets || [],
@@ -1260,17 +1262,20 @@ const MarketResearch = () => {
       emerging_trends: reportData.emerging_trends || [],
       technology_drivers: reportData.technology_drivers || [],
       timestamp: reportData.timestamp,
-      // Market Size & Opportunity fields
-      executiveSummary: reportData.executiveSummary,
-      tamValue: reportData.tamValue,
-      samValue: reportData.samValue,
-      apacGrowthRate: reportData.apacGrowthRate,
-      strategicRecommendations: reportData.strategicRecommendations,
-      marketEntry: reportData.marketEntry,
-      marketDrivers: reportData.marketDrivers,
-      marketSizeBySegment: reportData.marketSizeBySegment,
-      growthProjections: reportData.growthProjections
+      // Market Size & Opportunity fields with fallbacks to prevent undefined
+      executiveSummary: reportData.executiveSummary || 'Executive summary not available',
+      tamValue: reportData.tamValue || 'TAM not available',
+      samValue: reportData.samValue || 'SAM not available', 
+      apacGrowthRate: reportData.apacGrowthRate || 'Growth rate not available',
+      strategicRecommendations: reportData.strategicRecommendations || [],
+      marketEntry: reportData.marketEntry || 'Market entry strategy not available',
+      marketDrivers: reportData.marketDrivers || [],
+      marketSizeBySegment: reportData.marketSizeBySegment || {},
+      growthProjections: reportData.growthProjections || {}
     };
+    
+    console.log('✅ TRANSFORM: Output transformed data:', JSON.stringify(transformed, null, 2));
+    return transformed;
   };
 
   // Handle historical report selection
@@ -1507,6 +1512,17 @@ const MarketResearch = () => {
         const report = apiResponse.data;
         console.log('📊 Report data:', JSON.stringify(report, null, 2));
         console.log('🔄 Updating marketIntelligenceData with report:', report);
+        
+        // Log specific field values to check for undefined
+        console.log('🔍 FIELD CHECK - executiveSummary:', report.executiveSummary);
+        console.log('🔍 FIELD CHECK - tamValue:', report.tamValue);
+        console.log('🔍 FIELD CHECK - samValue:', report.samValue);
+        console.log('🔍 FIELD CHECK - apacGrowthRate:', report.apacGrowthRate);
+        console.log('🔍 FIELD CHECK - strategicRecommendations:', report.strategicRecommendations);
+        console.log('🔍 FIELD CHECK - marketEntry:', report.marketEntry);
+        console.log('🔍 FIELD CHECK - marketDrivers:', report.marketDrivers);
+        console.log('🔍 FIELD CHECK - marketSizeBySegment:', report.marketSizeBySegment);
+        console.log('🔍 FIELD CHECK - growthProjections:', report.growthProjections);
         
         // Update marketIntelligenceData state
         setMarketIntelligenceData(prev => {
