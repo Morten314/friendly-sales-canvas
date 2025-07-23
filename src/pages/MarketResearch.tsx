@@ -1314,7 +1314,13 @@ const MarketResearch = () => {
       setError(null);
       
       // Try to get existing market intelligence data first
-      const response = await fetch('https://backend-11kr.onrender.com/market_intelligence');
+      const response = await fetch(`https://backend-11kr.onrender.com/market_intelligence?t=${Date.now()}`, {
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -1383,7 +1389,13 @@ const MarketResearch = () => {
       console.log('🚀 Scout triggered successfully:', scoutResult);
       
       // Then fetch updated market intelligence data
-      const marketResponse = await fetch('https://backend-11kr.onrender.com/market_intelligence');
+      const marketResponse = await fetch(`https://backend-11kr.onrender.com/market_intelligence?t=${Date.now()}`, {
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
       
       if (!marketResponse.ok) {
         throw new Error(`Market data fetch failed! status: ${marketResponse.status}`);
@@ -1461,10 +1473,13 @@ const MarketResearch = () => {
       console.log('📦 Payload:', payload);
       console.log('🔥 MARKET SIZE IS ACTUALLY CALLING API - WILL WE GET CORS?');
 
-      const response = await fetch('https://backend-11kr.onrender.com/market-research', {
+      const response = await fetch(`https://backend-11kr.onrender.com/market-research?t=${Date.now()}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
         },
         body: JSON.stringify(payload)
       });
