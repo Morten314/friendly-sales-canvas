@@ -1313,13 +1313,27 @@ const MarketResearch = () => {
       
       setError(null);
       
+      // Clear any browser cache for this endpoint
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        await Promise.all(
+          cacheNames.map(cacheName => 
+            caches.open(cacheName).then(cache => 
+              cache.delete('https://backend-11kr.onrender.com/market_intelligence')
+            )
+          )
+        );
+      }
+      
       // Try to get existing market intelligence data first
-      const response = await fetch(`https://backend-11kr.onrender.com/market_intelligence?t=${Date.now()}`, {
+      const response = await fetch(`https://backend-11kr.onrender.com/market_intelligence?t=${Date.now()}&cache_bust=${Math.random()}`, {
+        method: 'GET',
         headers: {
           'Cache-Control': 'no-cache, no-store, must-revalidate',
           'Pragma': 'no-cache',
           'Expires': '0'
-        }
+        },
+        cache: 'no-store'
       });
       
       if (!response.ok) {
@@ -1389,12 +1403,14 @@ const MarketResearch = () => {
       console.log('🚀 Scout triggered successfully:', scoutResult);
       
       // Then fetch updated market intelligence data
-      const marketResponse = await fetch(`https://backend-11kr.onrender.com/market_intelligence?t=${Date.now()}`, {
+      const marketResponse = await fetch(`https://backend-11kr.onrender.com/market_intelligence?t=${Date.now()}&cache_bust=${Math.random()}`, {
+        method: 'GET',
         headers: {
           'Cache-Control': 'no-cache, no-store, must-revalidate',
           'Pragma': 'no-cache',
           'Expires': '0'
-        }
+        },
+        cache: 'no-store'
       });
       
       if (!marketResponse.ok) {
@@ -1473,7 +1489,7 @@ const MarketResearch = () => {
       console.log('📦 Payload:', payload);
       console.log('🔥 MARKET SIZE IS ACTUALLY CALLING API - WILL WE GET CORS?');
 
-      const response = await fetch(`https://backend-11kr.onrender.com/market-research?t=${Date.now()}`, {
+      const response = await fetch(`https://backend-11kr.onrender.com/market-research?t=${Date.now()}&cache_bust=${Math.random()}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1481,6 +1497,7 @@ const MarketResearch = () => {
           'Pragma': 'no-cache',
           'Expires': '0'
         },
+        cache: 'no-store',
         body: JSON.stringify(payload)
       });
 

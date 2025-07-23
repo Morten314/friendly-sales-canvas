@@ -147,7 +147,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
       console.log('📦 Payload keys:', Object.keys(payload));
       console.log('📦 Data keys:', Object.keys(payload.data));
 
-      const response = await fetch(`https://backend-11kr.onrender.com/market-research?t=${Date.now()}`, {
+      const response = await fetch(`https://backend-11kr.onrender.com/market-research?t=${Date.now()}&cache_bust=${Math.random()}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -155,6 +155,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
           'Pragma': 'no-cache',
           'Expires': '0'
         },
+        cache: 'no-store',
         body: JSON.stringify(payload)
       });
 
