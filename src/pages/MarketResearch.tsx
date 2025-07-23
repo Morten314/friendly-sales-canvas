@@ -1519,6 +1519,8 @@ const MarketResearch = () => {
         console.log('🔍 FIELD CHECK - samValue:', report.samValue);
         console.log('🔍 FIELD CHECK - apacGrowthRate:', report.apacGrowthRate);
         console.log('🔍 FIELD CHECK - strategicRecommendations:', report.strategicRecommendations);
+        console.log('🔍 TYPE CHECK - strategicRecommendations type:', typeof report.strategicRecommendations);
+        console.log('🔍 ARRAY CHECK - strategicRecommendations isArray:', Array.isArray(report.strategicRecommendations));
         console.log('🔍 FIELD CHECK - marketEntry:', report.marketEntry);
         console.log('🔍 FIELD CHECK - marketDrivers:', report.marketDrivers);
         console.log('🔍 FIELD CHECK - marketSizeBySegment:', report.marketSizeBySegment);

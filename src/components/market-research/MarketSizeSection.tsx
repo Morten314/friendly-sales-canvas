@@ -441,9 +441,16 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                     <Target className="h-5 w-5 text-green-600" />
                     Strategic Recommendations
                   </h3>
-                  <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                    <ul className="space-y-2 text-gray-700">
-                      {Array.isArray(strategicRecommendations) ? strategicRecommendations.map((rec, index) => (
+                   <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                     <ul className="space-y-2 text-gray-700">
+                       {(() => {
+                         console.log('🎯 RENDER CHECK - strategicRecommendations in MarketSizeSection:', strategicRecommendations);
+                         console.log('🎯 RENDER CHECK - Type:', typeof strategicRecommendations);
+                         console.log('🎯 RENDER CHECK - Is Array:', Array.isArray(strategicRecommendations));
+                         console.log('🎯 RENDER CHECK - Length:', strategicRecommendations?.length);
+                         return null;
+                       })()}
+                       {Array.isArray(strategicRecommendations) ? strategicRecommendations.map((rec, index) => (
                         <li key={index} className="flex items-start gap-2">
                           <div className="w-2 h-2 rounded-full bg-green-500 mt-2 flex-shrink-0"></div>
                           {rec}
