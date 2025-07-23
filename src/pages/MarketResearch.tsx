@@ -1342,21 +1342,32 @@ const MarketResearch = () => {
       
       const apiResponse = await response.json();
       console.log('📊 Market intelligence data:', apiResponse);
+      console.log('🔍 DEBUGGING: Raw API response structure:', JSON.stringify(apiResponse, null, 2));
+      console.log('🔍 DEBUGGING: Response timestamp or ID:', apiResponse.timestamp || apiResponse.id || apiResponse.created_at || 'NO_TIMESTAMP');
+      console.log('🔍 DEBUGGING: Response headers:', [...response.headers.entries()]);
       
       // Extract the report data from the API response
       const reportData = apiResponse.report || apiResponse;
+      console.log('🔍 DEBUGGING: Extracted report data:', JSON.stringify(reportData, null, 2));
       
       // Transform the data to match our expected structure
       const transformedData = transformReportData(reportData);
       
       console.log('✅ Transformed data:', transformedData);
+      console.log('🔍 DEBUGGING: Key fields from transformed data:');
+      console.log('- Executive Summary:', transformedData.executiveSummary?.substring(0, 100) + '...');
+      console.log('- TAM Value:', transformedData.tamValue);
+      console.log('- SAM Value:', transformedData.samValue);
+      console.log('- Market Entry:', transformedData.marketEntry?.substring(0, 100) + '...');
       
-      // Update both state and cache (only for current data, not historical)
-      setMarketData(transformedData);
-      if (!isShowingHistoricalData) {
-        cachedMarketData = transformedData;
-        cacheTimestamp = Date.now();
-      }
+        // Update both state and cache (only for current data, not historical)
+        setMarketData(transformedData);
+        // DISABLE CACHING TO ENSURE FRESH DATA ALWAYS LOADS
+        // if (!isShowingHistoricalData) {
+        //   cachedMarketData = transformedData;
+        //   cacheTimestamp = Date.now();
+        //   console.log('🔍 DEBUGGING: Updated cache at timestamp:', cacheTimestamp);
+        // }
       
       // Reset historical data flags when fetching current data
       setIsShowingHistoricalData(false);
@@ -1508,6 +1519,8 @@ const MarketResearch = () => {
       const apiResponse = await response.json();
       console.log('📥 Market Size API response:', apiResponse);
       console.log('🔍 API Response structure:', JSON.stringify(apiResponse, null, 2));
+      console.log('🔍 DEBUGGING: Market Size response timestamp:', apiResponse.timestamp || apiResponse.id || apiResponse.created_at || 'NO_TIMESTAMP');
+      console.log('🔍 DEBUGGING: Current marketIntelligenceData before update:', JSON.stringify(marketIntelligenceData, null, 2));
 
       // Update market intelligence data with API response
       if (apiResponse.data) {
@@ -1528,7 +1541,12 @@ const MarketResearch = () => {
             marketEntry: report.marketEntry || prev.marketEntry,
             marketDrivers: report.marketDrivers || prev.marketDrivers
           };
-          console.log('✅ Updated marketIntelligenceData:', newData);
+          console.log('🔍 DEBUGGING: NEW marketIntelligenceData after update:', JSON.stringify(newData, null, 2));
+          console.log('🔍 DEBUGGING: Data comparison:');
+          console.log('- OLD Executive Summary:', prev.executiveSummary?.substring(0, 100) + '...');
+          console.log('- NEW Executive Summary:', newData.executiveSummary?.substring(0, 100) + '...');
+          console.log('- OLD TAM Value:', prev.tamValue);
+          console.log('- NEW TAM Value:', newData.tamValue);
           return newData;
         });
 
@@ -1561,23 +1579,16 @@ const MarketResearch = () => {
 
   // Initial data fetch - ALWAYS try to use cached data immediately
   useEffect(() => {
-    console.log('Initial useEffect - checking for cached data');
-    const existingCachedData = getCachedData();
+    console.log('🔥 DEBUGGING: Initial useEffect - FORCING FRESH DATA FETCH');
+    console.log('🔥 DEBUGGING: Disabling all caching to get latest data from your Swagger updates');
     
-    if (existingCachedData && !marketData) {
-      console.log('Found cached data, setting it immediately');
-      setMarketData(existingCachedData);
-      setIsInitialLoading(false);
-    }
+    // Clear any existing cached data to force fresh fetch
+    cachedMarketData = null;
+    cacheTimestamp = null;
     
-    // Always fetch fresh data, but only show loading if no data exists
-    if (!marketData && !existingCachedData) {
-      console.log('No data found anywhere, fetching fresh data with loading screen');
-      fetchMarketData(false);
-    } else {
-      console.log('Data exists, fetching fresh data in background');
-      fetchMarketData(true); // Background refresh
-    }
+    // ALWAYS fetch fresh data instead of using cache
+    console.log('🔥 Fetching fresh market intelligence data');
+    fetchMarketData(false);
 
     // Fetch Market Size data
     console.log('🎯 About to call fetchMarketSizeData from useEffect');

@@ -89,6 +89,18 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
   showScoutChat,
   scoutChatPanel
 }) => {
+  // Debug logging to track prop changes
+  console.log('🔍 DEBUGGING: MarketSizeOpportunityComponent received props:', {
+    executiveSummary: executiveSummary?.substring(0, 50) + '...',
+    tamValue,
+    samValue,
+    apacGrowthRate,
+    strategicRecommendations: strategicRecommendations?.length,
+    marketEntry: marketEntry?.substring(0, 50) + '...',
+    marketDrivers: marketDrivers?.length,
+    timestamp: Date.now()
+  });
+
   const handleMarketSizeSaveChanges = () => {
     onSaveChanges();
   };
