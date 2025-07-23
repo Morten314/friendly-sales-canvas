@@ -1592,12 +1592,13 @@ const MarketResearch = () => {
             marketEntry: report.marketEntry !== undefined ? report.marketEntry : prev.marketEntry,
             marketDrivers: report.marketDrivers !== undefined ? report.marketDrivers : prev.marketDrivers
           };
-          console.log('🔍 DEBUGGING: NEW marketIntelligenceData after update:', JSON.stringify(newData, null, 2));
-          console.log('🔍 DEBUGGING: Data comparison:');
+          console.log('🔍 DEBUGGING: NEW marketIntelligenceData after MARKET SIZE update:', JSON.stringify(newData, null, 2));
+          console.log('🔍 DEBUGGING: Market Size Data comparison:');
           console.log('- OLD Executive Summary:', prev.executiveSummary?.substring(0, 100) + '...');
           console.log('- NEW Executive Summary:', newData.executiveSummary?.substring(0, 100) + '...');
           console.log('- OLD TAM Value:', prev.tamValue);
           console.log('- NEW TAM Value:', newData.tamValue);
+          console.log('✅ MARKET SIZE DATA UPDATED - Component name: "Market Size & Opportunity"');
           return newData;
         });
 
@@ -1636,34 +1637,101 @@ const MarketResearch = () => {
     }
   };
 
-  // Real-time data synchronization with backend
+  // Fetch Industry Trends data using backend API with correct component_name
+  const fetchIndustryTrendsData = async (refresh = true, showLoading = true) => {
+    console.log('🚀 Starting fetchIndustryTrendsData with refresh:', refresh, 'showLoading:', showLoading);
+    try {
+      console.log('📍 Fetching industry trends data with correct component_name');
+      if (showLoading) {
+        setIsMarketSizeLoading(true); // Reuse same loading state for now
+      }
+      setMarketSizeError(null);
+
+      // Payload specifically for Industry Trends
+      const currentTime = Date.now();
+      const randomId = Math.random().toString(36).substring(7);
+      const payload = {
+        user_id: "brewra",
+        component_name: "industry trends report", // Correct component name for Industry Trends
+        refresh: true,
+        force_refresh: true,
+        cache_bypass: true,
+        bypass_all_cache: true,
+        request_timestamp: currentTime,
+        request_id: randomId,
+        data: {
+          company: "OrbiSelf",
+          product: "Convoic.AI",
+          target_market: "Indian college students (Tier 2 & 3)",
+          region: "India",
+          timestamp: currentTime,
+          force_new_data: true
+        }
+      };
+
+      console.log('📤 Sending Industry Trends API request to:', 'https://backend-11kr.onrender.com/market-research');
+      console.log('📦 Industry Trends Complete Payload:', JSON.stringify(payload, null, 2));
+      console.log('📦 Industry Trends Payload component_name:', payload.component_name);
+      
+      const response = await fetch(`https://backend-11kr.onrender.com/market-research?t=${currentTime}&cache_bust=${randomId}&force_fresh=1&bypass_cache=1&refresh_db=1&new_data_only=1`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+          'X-Request-ID': randomId,
+          'X-Force-Fresh': '1',
+          'X-Bypass-Cache': '1',
+          'X-Refresh-DB': '1',
+          'X-Request-Time': currentTime.toString(),
+          'X-Cache-Control': 'no-cache'
+        },
+        cache: 'no-store',
+        body: JSON.stringify({
+          ...payload,
+          force_refresh: true,
+          request_timestamp: currentTime,
+          cache_bypass: randomId,
+          database_refresh: true
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const apiResponse = await response.json();
+      console.log('📥 Industry Trends API response:', apiResponse);
+      console.log('🔍 Industry Trends API Response structure:', JSON.stringify(apiResponse, null, 2));
+      console.log('🔍 DEBUGGING: Industry Trends response timestamp:', apiResponse.timestamp || apiResponse.data?.timestamp || 'NO_TIMESTAMP');
+      
+      // This will handle Industry Trends data differently from Market Size data
+      // The IndustryTrendsSection component will handle its own state management
+      console.log('✅ Industry Trends API call completed - data will be handled by IndustryTrendsSection component');
+
+    } catch (err) {
+      console.error('Error fetching industry trends data:', err);
+      setMarketSizeError(err instanceof Error ? err.message : 'Failed to fetch industry trends data');
+    } finally {
+      if (showLoading) {
+        setIsMarketSizeLoading(false);
+      }
+    }
+  };
+
+  // Real-time data synchronization with backend (DISABLED to prevent overwriting fresh data)
   useEffect(() => {
-    console.log('🔥 Setting up real-time data sync with backend');
-    console.log('🔄 Will auto-refresh every 15 seconds for live updates');
+    console.log('🔥 Setting up optimized data sync - background refresh disabled to preserve fresh data');
+    console.log('🚫 Background auto-refresh disabled to prevent overwriting component-specific fresh data');
     
     // Optimized sequential loading to prevent performance issues
     const fetchLatestData = async () => {
-      console.log('🎯 Background data refresh...');
+      console.log('🎯 Background data refresh SKIPPED to preserve fresh component data');
       
-      try {
-        // Load market intelligence first (lighter call)
-        const marketResponse = await fetch(`https://backend-11kr.onrender.com/market_intelligence?t=${Date.now()}`);
-        if (marketResponse.ok) {
-          const data = await marketResponse.json();
-          if (data && typeof data === 'object') {
-            const transformedData = transformReportData(data.report || data);
-            setMarketData(transformedData);
-            cachedMarketData = transformedData;
-            cacheTimestamp = Date.now();
-          }
-        }
-        
-        // Then load market size data only if needed
-        // Don't force refresh on background calls to improve performance
-        await fetchMarketSizeData(false, false);
-      } catch (err) {
-        console.log('Background refresh failed:', err);
-      }
+      // DISABLED: Background refresh can overwrite fresh component-specific data
+      // Only refresh if user explicitly requests it
+      console.log('⚠️ Background refresh disabled - fresh data preserved');
     };
     
     // Optimized initial load - sequential instead of parallel  
@@ -1693,11 +1761,12 @@ const MarketResearch = () => {
     
     initialFetch();
     
-    // Reduced polling frequency to improve performance (every 5 minutes instead of 1 minute)
-    const syncInterval = setInterval(() => {
-      console.log('🔄 Periodic background sync...');
-      fetchLatestData();
-    }, 300000); // 5 minutes
+    // Background polling DISABLED to preserve fresh component-specific data
+    console.log('🚫 Background polling disabled to prevent overwriting fresh data');
+    // const syncInterval = setInterval(() => {
+    //   console.log('🔄 Periodic background sync...');
+    //   fetchLatestData();
+    // }, 300000); // 5 minutes
 
     // Debounced focus handler to prevent excessive calls
     let focusTimeout: NodeJS.Timeout;
@@ -1711,9 +1780,9 @@ const MarketResearch = () => {
     
     window.addEventListener('focus', handleFocus);
 
-    // Cleanup
+    // Cleanup (no intervals to clear since background refresh is disabled)
     return () => {
-      clearInterval(syncInterval);
+      // clearInterval(syncInterval); // Disabled since no background refresh
       window.removeEventListener('focus', handleFocus);
     };
   }, []);
