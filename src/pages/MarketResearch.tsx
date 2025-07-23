@@ -1607,61 +1607,63 @@ const MarketResearch = () => {
     console.log('🔥 Setting up real-time data sync with backend');
     console.log('🔄 Will auto-refresh every 15 seconds for live updates');
     
-    // Force fresh data fetch on every load
+    // Optimized sequential loading to prevent performance issues
     const fetchLatestData = async () => {
-      console.log('🎯 FORCE FETCHING latest data - clearing all cache...');
+      console.log('🎯 Background data refresh...');
       
-      // FORCE clear ALL cache
-      cachedMarketData = null;
-      cacheTimestamp = null;
-      localStorage.removeItem('market_cache');
-      sessionStorage.removeItem('market_cache');
-      
-      // Fetch with force refresh parameters
-      await Promise.all([
-        fetchMarketSizeData(true, false), // Force refresh market size
-        fetch(`https://backend-11kr.onrender.com/market_intelligence?force_fresh=true&t=${Date.now()}&r=${Math.random()}`)
-          .then(res => res.json())
-          .then(data => {
-            console.log('📈 FORCE FRESH market intelligence:', data);
-            if (data && typeof data === 'object') {
-              const transformedData = transformReportData(data.report || data);
-              setMarketData(transformedData);
-              cachedMarketData = transformedData;
-              cacheTimestamp = Date.now();
-            }
-          })
-          .catch(err => console.log('Market intelligence fetch failed:', err))
-      ]);
+      try {
+        // Load market intelligence first (lighter call)
+        const marketResponse = await fetch(`https://backend-11kr.onrender.com/market_intelligence?t=${Date.now()}`);
+        if (marketResponse.ok) {
+          const data = await marketResponse.json();
+          if (data && typeof data === 'object') {
+            const transformedData = transformReportData(data.report || data);
+            setMarketData(transformedData);
+            cachedMarketData = transformedData;
+            cacheTimestamp = Date.now();
+          }
+        }
+        
+        // Then load market size data only if needed
+        // Don't force refresh on background calls to improve performance
+        await fetchMarketSizeData(false, false);
+      } catch (err) {
+        console.log('Background refresh failed:', err);
+      }
     };
     
-    // Initial fetch with loading spinner
+    // Optimized initial load - sequential instead of parallel  
     const initialFetch = async () => {
-      console.log('🎯 Initial data fetch with loading indicators...');
-      await Promise.all([
-        fetchMarketSizeData(true, true), // FORCE refresh with loading spinner
-        fetch(`https://backend-11kr.onrender.com/market_intelligence?force_fresh=true&t=${Date.now()}&r=${Math.random()}`)
-          .then(res => res.json())
-          .then(data => {
-            console.log('📈 INITIAL FORCE FRESH market intelligence:', data);
-            if (data && typeof data === 'object') {
-              const transformedData = transformReportData(data.report || data);
-              setMarketData(transformedData);
-              cachedMarketData = transformedData;
-              cacheTimestamp = Date.now();
-            }
-          })
-          .catch(err => console.log('Market intelligence fetch failed:', err))
-      ]);
+      console.log('🎯 Optimized initial load - sequential for better performance');
+      
+      try {
+        // Load market intelligence first (usually faster)
+        const marketResponse = await fetch(`https://backend-11kr.onrender.com/market_intelligence?t=${Date.now()}`);
+        if (marketResponse.ok) {
+          const data = await marketResponse.json();
+          if (data && typeof data === 'object') {
+            const transformedData = transformReportData(data.report || data);
+            setMarketData(transformedData);
+            cachedMarketData = transformedData;
+            cacheTimestamp = Date.now();
+          }
+        }
+        
+        // Then load market size data
+        await fetchMarketSizeData(false, true);
+        
+      } catch (err) {
+        console.log('Initial fetch failed:', err);
+      }
     };
     
     initialFetch();
     
-    // Set up intelligent polling (every 60 seconds instead of 15)
+    // Reduced polling frequency to improve performance (every 5 minutes instead of 1 minute)
     const syncInterval = setInterval(() => {
-      console.log('🔄 Auto-syncing with backend...');
+      console.log('🔄 Periodic background sync...');
       fetchLatestData();
-    }, 60000);
+    }, 300000); // 5 minutes
 
     // Debounced focus handler to prevent excessive calls
     let focusTimeout: NodeJS.Timeout;
