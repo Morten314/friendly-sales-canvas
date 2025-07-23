@@ -1565,6 +1565,11 @@ const MarketResearch = () => {
             growthProjections: report.growthProjections      // This was missing!
           };
           console.log('✅ Updated marketData with Market Size API data:', updated);
+          
+          // Stop loading states after successful Market Size data fetch
+          setIsInitialLoading(false);
+          setIsRefreshing(false);
+          
           return updated;
         });
       }
@@ -1572,6 +1577,9 @@ const MarketResearch = () => {
     } catch (err) {
       console.error('Error fetching market size data:', err);
       setMarketSizeError(err instanceof Error ? err.message : 'Failed to fetch market size data');
+      // Stop loading even on error
+      setIsInitialLoading(false);
+      setIsRefreshing(false);
     } finally {
       setIsMarketSizeLoading(false);
     }
