@@ -251,11 +251,17 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
     }
   };
 
-  // Fetch data on component mount
+  // Clear previous data and fetch fresh data on component mount
   useEffect(() => {
+    console.log('🚀 Component mounted - clearing previous data and fetching fresh');
+    // Clear any existing data immediately to prevent showing stale data
+    setIndustryTrendsData(null);
+    setIsLoading(true);
+    setError(null);
+    
     // Reduced delay to improve user experience - 500ms is sufficient to avoid conflicts
     const timer = setTimeout(() => {
-      console.log('🕒 Starting Industry Trends API call');
+      console.log('🕒 Starting Industry Trends API call for fresh data');
       fetchIndustryTrendsData(true);
     }, 500);
 
