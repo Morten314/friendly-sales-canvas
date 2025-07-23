@@ -191,13 +191,14 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
             { type: "pie", title: "Technology Adoption", data: [{ name: "AI/ML", value: 35, color: "#3B82F6" }, { name: "Cloud", value: 45, color: "#10B981" }, { name: "IoT", value: 20, color: "#F59E0B" }] }
           ]
         };
+        console.log('🔥 Setting industryTrendsData with trendSnapshots:', dataWithFallbacks.trendSnapshots);
         setIndustryTrendsData(dataWithFallbacks);
         // Initialize edit fields with fetched data
         setEditExecutiveSummary(apiResponse.data.executiveSummary || '');
         setEditAiAdoption(apiResponse.data.aiAdoption || '');
         setEditCloudMigration(apiResponse.data.cloudMigration || '');
         setEditRegulatory(apiResponse.data.regulatory || '');
-        setEditTrendSnapshots(apiResponse.data.trendSnapshots || []);
+        setEditTrendSnapshots(dataWithFallbacks.trendSnapshots);
       }
     } catch (err) {
       console.error('Error fetching industry trends data:', err);
