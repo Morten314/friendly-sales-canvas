@@ -1490,7 +1490,7 @@ const MarketResearch = () => {
       // Complete payload matching working IndustryTrendsSection format
       const payload = {
         user_id: "brewra",
-        component_name: "market size and opportunity",
+        component_name: "Market Size & Opportunity",
         refresh: true,
         data: {
           company: "OrbiSelf",
