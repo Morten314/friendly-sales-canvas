@@ -1402,32 +1402,7 @@ const MarketResearch = () => {
       setIsRefreshing(true);
       setError(null);
       
-      console.log('Triggering market research refresh...');
-      
-      // Enhanced trigger_scout call with force refresh for real-time sync
-      const scoutResponse = await fetch('https://backend-11kr.onrender.com/trigger_scout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          force_refresh: true,
-          timestamp: Date.now(),
-          auto_sync: true
-        })
-      });
-      
-      if (!scoutResponse.ok) {
-        throw new Error(`Scout trigger failed! status: ${scoutResponse.status}`);
-      }
-      
-      const scoutResult = await scoutResponse.json();
-      console.log('🚀 Scout triggered successfully with real-time sync:', scoutResult);
-      
-      // Wait for backend processing to complete
-      console.log('⏱️ Waiting for backend to process new data...');
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      
+      console.log('🔄 Refreshing market research data...');
       // Fetch updated data from multiple sources simultaneously
       console.log('🔄 Fetching fresh data from all backend endpoints...');
       const [marketResponse, marketSizeResponse] = await Promise.allSettled([
