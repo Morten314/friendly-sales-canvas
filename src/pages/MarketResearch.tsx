@@ -1462,38 +1462,17 @@ const MarketResearch = () => {
       setIsMarketSizeLoading(true);
       setMarketSizeError(null);
 
-      // The backend expects specific data structure for market research
-      // Use default values that the backend can work with
+      // Updated payload to match your OrbiSelf/Convoic.AI data
       const payload = {
         user_id: "brewra",
         component_name: "Market Size & Opportunity",
-        refresh: refresh,
         data: {
-          industry: "Technology",
-          target_region: "Global",
-          year_range: {
-            start: 2024,
-            end: 2029
-          },
-          segments: [
-            "Enterprise Software",
-            "Cloud Services",
-            "Mobile Applications",
-            "AI/ML Platforms"
-          ],
-          distribution_channels: [
-            "Direct Sales",
-            "Partner Network",
-            "Online Platform",
-            "Reseller Channel"
-          ],
-          key_competitors: [
-            "Microsoft",
-            "Google",
-            "Amazon",
-            "Oracle"
-          ]
-        }
+          company: "OrbiSelf",
+          product: "Convoic.AI",
+          target_market: "Indian college students (Tier 2 & 3)",
+          region: "India"
+        },
+        refresh: true
       };
 
       console.log('📤 Sending API request to:', 'https://backend-11kr.onrender.com/market-research');
