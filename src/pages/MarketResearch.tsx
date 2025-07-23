@@ -1530,13 +1530,13 @@ const MarketResearch = () => {
         setMarketIntelligenceData(prev => {
           const newData = {
             ...prev,
-            executiveSummary: report.executiveSummary || prev.executiveSummary,
-            tamValue: report.tamValue || prev.tamValue,
-            samValue: report.samValue || prev.samValue,
-            apacGrowthRate: report.apacGrowthRate || prev.apacGrowthRate,
-            strategicRecommendations: report.strategicRecommendations || prev.strategicRecommendations,
-            marketEntry: report.marketEntry || prev.marketEntry,
-            marketDrivers: report.marketDrivers || prev.marketDrivers
+            executiveSummary: report.executiveSummary !== undefined ? report.executiveSummary : prev.executiveSummary,
+            tamValue: report.tamValue !== undefined ? report.tamValue : prev.tamValue,
+            samValue: report.samValue !== undefined ? report.samValue : prev.samValue,
+            apacGrowthRate: report.apacGrowthRate !== undefined ? report.apacGrowthRate : prev.apacGrowthRate,
+            strategicRecommendations: report.strategicRecommendations !== undefined ? report.strategicRecommendations : prev.strategicRecommendations,
+            marketEntry: report.marketEntry !== undefined ? report.marketEntry : prev.marketEntry,
+            marketDrivers: report.marketDrivers !== undefined ? report.marketDrivers : prev.marketDrivers
           };
           console.log('🔍 DEBUGGING: NEW marketIntelligenceData after update:', JSON.stringify(newData, null, 2));
           console.log('🔍 DEBUGGING: Data comparison:');
