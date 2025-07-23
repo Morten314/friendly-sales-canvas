@@ -1487,32 +1487,20 @@ const MarketResearch = () => {
       }
       setMarketSizeError(null);
 
-      // Updated payload to match your OrbiSelf/Convoic.AI data
+      // Simplified payload - removing potential problematic fields
       const payload = {
         user_id: "brewra",
-        component_name: "Market Size and Opportunity",
-        data: {
-          company: "OrbiSelf",
-          product: "Convoic.AI",
-          target_market: "Indian college students (Tier 2 & 3)",
-          region: "India"
-        },
-        refresh: true
+        component_name: "Market Size and Opportunity"
       };
 
       console.log('📤 Sending API request to:', 'https://backend-11kr.onrender.com/market-research');
-      console.log('📦 Payload:', payload);
-      console.log('🔥 MARKET SIZE IS ACTUALLY CALLING API - WILL WE GET CORS?');
+      console.log('📦 Simplified Payload:', payload);
 
-      const response = await fetch(`https://backend-11kr.onrender.com/market-research?force_refresh=true&t=${Date.now()}`, {
+      const response = await fetch(`https://backend-11kr.onrender.com/market-research`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
+          'Content-Type': 'application/json'
         },
-        cache: 'no-store',
         body: JSON.stringify(payload)
       });
 
