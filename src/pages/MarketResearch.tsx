@@ -1009,10 +1009,10 @@ interface IndustryTrendsRecommendations {
   marketEntry: string;
 }
 
-// Cache for market data - persists across component re-renders and page refreshes
+// Cache for market data - DISABLED to ensure fresh data on every load
 let cachedMarketData: MarketIntelligenceData | null = null;
 let cacheTimestamp: number | null = null;
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
+const CACHE_DURATION = 0; // Disabled - always fetch fresh data
 
 // Helper function to check if cached data is still valid
 const isCacheValid = (): boolean => {
@@ -1607,22 +1607,23 @@ const MarketResearch = () => {
     console.log('🔥 Setting up real-time data sync with backend');
     console.log('🔄 Will auto-refresh every 15 seconds for live updates');
     
-    // Initial fetch with latest data
+    // Force fresh data fetch on every load
     const fetchLatestData = async () => {
-      console.log('🎯 Fetching latest data from backend...');
+      console.log('🎯 FORCE FETCHING latest data - clearing all cache...');
       
-      // Clear cache to ensure fresh data
+      // FORCE clear ALL cache
       cachedMarketData = null;
       cacheTimestamp = null;
+      localStorage.removeItem('market_cache');
+      sessionStorage.removeItem('market_cache');
       
-      // Fetch both data sources for complete sync
+      // Fetch with force refresh parameters
       await Promise.all([
-        fetchMarketSizeData(false, false), // No loading spinner for background refresh
-        // Add market intelligence back with fresh fetch
-        fetch(`https://backend-11kr.onrender.com/market_intelligence?t=${Date.now()}`)
+        fetchMarketSizeData(true, false), // Force refresh market size
+        fetch(`https://backend-11kr.onrender.com/market_intelligence?force_fresh=true&t=${Date.now()}&r=${Math.random()}`)
           .then(res => res.json())
           .then(data => {
-            console.log('📈 Fresh market intelligence:', data);
+            console.log('📈 FORCE FRESH market intelligence:', data);
             if (data && typeof data === 'object') {
               const transformedData = transformReportData(data.report || data);
               setMarketData(transformedData);
@@ -1638,11 +1639,11 @@ const MarketResearch = () => {
     const initialFetch = async () => {
       console.log('🎯 Initial data fetch with loading indicators...');
       await Promise.all([
-        fetchMarketSizeData(false, true), // Show loading spinner for initial fetch
-        fetch(`https://backend-11kr.onrender.com/market_intelligence?t=${Date.now()}`)
+        fetchMarketSizeData(true, true), // FORCE refresh with loading spinner
+        fetch(`https://backend-11kr.onrender.com/market_intelligence?force_fresh=true&t=${Date.now()}&r=${Math.random()}`)
           .then(res => res.json())
           .then(data => {
-            console.log('📈 Fresh market intelligence:', data);
+            console.log('📈 INITIAL FORCE FRESH market intelligence:', data);
             if (data && typeof data === 'object') {
               const transformedData = transformReportData(data.report || data);
               setMarketData(transformedData);
