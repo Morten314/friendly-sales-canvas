@@ -35,6 +35,7 @@ interface IndustryTrendsData {
   aiAdoption: string;
   cloudMigration: string;
   regulatory: string;
+  timestamp?: string; // Add timestamp to track data generation time
   trendSnapshots: TrendSnapshot[];
   regionalHotspots: {
     APAC: string;
@@ -175,14 +176,32 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
       console.log('📥 Industry Trends API response:', apiResponse);
       console.log('📊 Full API Response Structure:', JSON.stringify(apiResponse, null, 2));
       console.log('📊 Industry Trends Data Keys:', apiResponse.data ? Object.keys(apiResponse.data) : 'No data');
-      console.log('⏰ INDUSTRY TRENDS REQUEST vs RESPONSE TIMING (UTC):');
+      
+      // Data freshness comparison using actual data timestamps
+      const currentDataTimestamp = industryTrendsData?.timestamp;
+      const newDataTimestamp = apiResponse.data?.timestamp;
+      
+      console.log('⏰ INDUSTRY TRENDS DATA FRESHNESS COMPARISON (UTC):');
+      console.log('  - Previous data timestamp (UTC):', currentDataTimestamp || 'No previous data');
+      console.log('  - New backend timestamp (UTC):', newDataTimestamp || 'No backend timestamp');
       console.log('  - Request sent at (UTC):', new Date(requestTimestamp).toISOString());
-      console.log('  - Response timestamp (UTC):', apiResponse.data?.timestamp || 'No backend timestamp');
-      console.log('  - Time difference:', apiResponse.data?.timestamp ? (requestTimestamp - new Date(apiResponse.data.timestamp).getTime()) : 'Cannot calculate');
-      console.log('🔍 DATA FRESHNESS CHECK (UTC):');
-      console.log('  - Backend timestamp (UTC):', apiResponse.data?.timestamp);
-      console.log('  - Frontend request time (UTC):', new Date(requestTimestamp).toISOString());
-      console.log('  - Is data from today? (UTC):', apiResponse.data?.timestamp ? new Date(apiResponse.data.timestamp).toISOString().split('T')[0] === new Date().toISOString().split('T')[0] : 'Unknown');
+      
+      if (currentDataTimestamp && newDataTimestamp) {
+        const currentTime = new Date(currentDataTimestamp).getTime();
+        const newTime = new Date(newDataTimestamp).getTime();
+        const isNewDataAvailable = newTime > currentTime;
+        
+        console.log('🔍 DATA COMPARISON ANALYSIS:');
+        console.log('  - Current data time (ms):', currentTime);
+        console.log('  - New data time (ms):', newTime);
+        console.log('  - Time difference (ms):', newTime - currentTime);
+        console.log('  - Is new data available?:', isNewDataAvailable);
+        console.log('  - Data will be updated?:', isNewDataAvailable ? 'YES - NEW DATA DETECTED' : 'NO - EXISTING DATA IS CURRENT');
+      } else if (newDataTimestamp) {
+        console.log('🔍 DATA STATUS: First time loading data or no previous timestamp');
+      } else {
+        console.log('🔍 DATA STATUS: No timestamp in backend response');
+      }
       console.log('📊 Regional Hotspots:', apiResponse.data?.regionalHotspots);
       console.log('📊 Strategic Recommendations:', apiResponse.data?.strategicRecommendations);
       console.log('📊 Visual Charts:', apiResponse.data?.visualCharts);
