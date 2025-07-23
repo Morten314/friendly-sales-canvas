@@ -1488,15 +1488,24 @@ const MarketResearch = () => {
       setMarketSizeError(null);
 
       // Complete payload matching working IndustryTrendsSection format
+      const currentTime = Date.now();
+      const randomId = Math.random().toString(36).substring(7);
       const payload = {
         user_id: "brewra",
         component_name: "Market Size & Opportunity",
         refresh: true,
+        force_refresh: true,
+        cache_bypass: true,
+        bypass_all_cache: true,
+        request_timestamp: currentTime,
+        request_id: randomId,
         data: {
           company: "OrbiSelf",
           product: "Convoic.AI",
           target_market: "Indian college students (Tier 2 & 3)",
-          region: "India"
+          region: "India",
+          timestamp: currentTime,
+          force_new_data: true
         }
       };
 
@@ -1511,22 +1520,27 @@ const MarketResearch = () => {
       console.log('⏰ REQUEST TIMESTAMP:', requestTimestamp);
       console.log('🔄 FORCE_REFRESH in payload:', payload.refresh);
       
-      const response = await fetch(`https://backend-11kr.onrender.com/market-research?t=${requestTimestamp}&cache_bust=${Math.random()}&force_fresh=1`, {
+      const response = await fetch(`https://backend-11kr.onrender.com/market-research?t=${requestTimestamp}&cache_bust=${randomId}&force_fresh=1&bypass_cache=1&refresh_db=1&new_data_only=1`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Cache-Control': 'no-cache, no-store, must-revalidate',
           'Pragma': 'no-cache',
           'Expires': '0',
-          'X-Request-ID': `req-${requestTimestamp}`,
-          'X-Force-Fresh': 'true'
+          'X-Request-ID': randomId,
+          'X-Force-Fresh': '1',
+          'X-Bypass-Cache': '1',
+          'X-Refresh-DB': '1',
+          'X-Request-Time': currentTime.toString(),
+          'X-Cache-Control': 'no-cache'
         },
         cache: 'no-store',
         body: JSON.stringify({
           ...payload,
           force_refresh: true,
           request_timestamp: requestTimestamp,
-          cache_bypass: Math.random().toString(36)
+          cache_bypass: randomId,
+          database_refresh: true
         })
       });
 
