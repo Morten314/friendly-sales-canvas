@@ -1402,13 +1402,17 @@ const MarketResearch = () => {
       
       console.log('Triggering market research refresh...');
       
-      // Use the existing trigger_scout endpoint which works with backend's data
+      // Enhanced trigger_scout call with force refresh for real-time sync
       const scoutResponse = await fetch('https://backend-11kr.onrender.com/trigger_scout', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({})
+        body: JSON.stringify({
+          force_refresh: true,
+          timestamp: Date.now(),
+          auto_sync: true
+        })
       });
       
       if (!scoutResponse.ok) {
@@ -1416,34 +1420,48 @@ const MarketResearch = () => {
       }
       
       const scoutResult = await scoutResponse.json();
-      console.log('🚀 Scout triggered successfully:', scoutResult);
+      console.log('🚀 Scout triggered successfully with real-time sync:', scoutResult);
       
-      // Then fetch updated market intelligence data
-      const marketResponse = await fetch(`https://backend-11kr.onrender.com/market_intelligence?t=${Date.now()}&cache_bust=${Math.random()}`, {
-        method: 'GET',
-        headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
-        },
-        cache: 'no-store'
-      });
+      // Wait for backend processing to complete
+      console.log('⏱️ Waiting for backend to process new data...');
+      await new Promise(resolve => setTimeout(resolve, 3000));
       
-      if (!marketResponse.ok) {
-        throw new Error(`Market data fetch failed! status: ${marketResponse.status}`);
+      // Fetch updated data from multiple sources simultaneously
+      console.log('🔄 Fetching fresh data from all backend endpoints...');
+      const [marketResponse, marketSizeResponse] = await Promise.allSettled([
+        fetch(`https://backend-11kr.onrender.com/market_intelligence?t=${Date.now()}&cache_bust=${Math.random()}`, {
+          method: 'GET',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          },
+          cache: 'no-store'
+        }),
+        fetchMarketSizeData(true, false) // Trigger market size refresh too
+      ]);
+      
+      // Process market intelligence response
+      if (marketResponse.status === 'fulfilled' && marketResponse.value.ok) {
+        const apiResponse = await marketResponse.value.json();
+        console.log('📈 Fresh market intelligence data received:', apiResponse);
+        
+        // Extract and transform the data
+        const reportData = apiResponse.report || apiResponse;
+        const transformedData = transformReportData(reportData);
+        
+        // Update both state and cache
+        setMarketData(transformedData);
+        cachedMarketData = transformedData;
+        cacheTimestamp = Date.now();
+        
+        console.log('✅ Market intelligence data updated from backend');
+      } else {
+        console.log('⚠️ Market intelligence fetch failed, keeping existing data');
       }
       
-      const apiResponse = await marketResponse.json();
-      console.log('📈 Updated market intelligence data:', apiResponse);
-      
-      // Extract and transform the data
-      const reportData = apiResponse.report || apiResponse;
-      const transformedData = transformReportData(reportData);
-      
-      // Update both state and cache
-      setMarketData(transformedData);
-      cachedMarketData = transformedData;
-      cacheTimestamp = Date.now();
+      // Market size data is handled by fetchMarketSizeData call above
+      console.log('✅ All backend data sources refreshed successfully');
       
       // Reset historical data flags
       setIsShowingHistoricalData(false);
@@ -1459,12 +1477,14 @@ const MarketResearch = () => {
     }
   };
 
-  // Fetch Market Size data using existing backend APIs
-  const fetchMarketSizeData = async (refresh = true) => {
-    console.log('🚀 Starting fetchMarketSizeData with refresh:', refresh);
+  // Fetch Market Size data using existing backend APIs with smart loading
+  const fetchMarketSizeData = async (refresh = true, showLoading = true) => {
+    console.log('🚀 Starting fetchMarketSizeData with refresh:', refresh, 'showLoading:', showLoading);
     try {
       console.log('📍 Fetching market size data without config dependency');
-      setIsMarketSizeLoading(true);
+      if (showLoading) {
+        setIsMarketSizeLoading(true);
+      }
       setMarketSizeError(null);
 
       // Updated payload to match your OrbiSelf/Convoic.AI data
@@ -1582,23 +1602,60 @@ const MarketResearch = () => {
     }
   };
 
-  // Initial data fetch - ALWAYS try to use cached data immediately
+  // Real-time data synchronization with backend
   useEffect(() => {
-    console.log('🔥 DEBUGGING: Initial useEffect - FORCING FRESH DATA FETCH');
-    console.log('🔥 DEBUGGING: Disabling all caching to get latest data from your Swagger updates');
+    console.log('🔥 Setting up real-time data sync with backend');
+    console.log('🔄 Will auto-refresh every 15 seconds for live updates');
     
-    // Clear any existing cached data to force fresh fetch
-    cachedMarketData = null;
-    cacheTimestamp = null;
+    // Initial fetch with latest data
+    const fetchLatestData = async () => {
+      console.log('🎯 Fetching latest data from backend...');
+      
+      // Clear cache to ensure fresh data
+      cachedMarketData = null;
+      cacheTimestamp = null;
+      
+      // Fetch both data sources for complete sync
+      await Promise.all([
+        fetchMarketSizeData(false),
+        // Add market intelligence back with fresh fetch
+        fetch(`https://backend-11kr.onrender.com/market_intelligence?t=${Date.now()}`)
+          .then(res => res.json())
+          .then(data => {
+            console.log('📈 Fresh market intelligence:', data);
+            if (data && typeof data === 'object') {
+              const transformedData = transformReportData(data.report || data);
+              setMarketData(transformedData);
+              cachedMarketData = transformedData;
+              cacheTimestamp = Date.now();
+            }
+          })
+          .catch(err => console.log('Market intelligence fetch failed:', err))
+      ]);
+    };
     
-    // ONLY fetch Market Size data - this has your updated baby food market data
-    console.log('🎯 About to call fetchMarketSizeData from useEffect');
-    console.log('🔍 Testing if Market Size actually makes API call...');
-    fetchMarketSizeData(false);
+    // Initial fetch
+    fetchLatestData();
     
-    // COMMENT OUT Market Intelligence call to prevent override
-    // console.log('🔥 Fetching fresh market intelligence data');
-    // fetchMarketData(false);
+    // Set up polling for real-time updates (every 15 seconds)
+    const syncInterval = setInterval(() => {
+      console.log('🔄 Auto-syncing with backend for real-time updates...');
+      fetchLatestData();
+    }, 15000);
+
+    // Listen for window focus to refresh data when user returns
+    const handleFocus = () => {
+      console.log('👀 Window focused - refreshing data');
+      fetchLatestData();
+    };
+    
+    window.addEventListener('focus', handleFocus);
+
+    // Cleanup
+    return () => {
+      clearInterval(syncInterval);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, []);
 
   // Listen for company profile updates and trigger background refresh
