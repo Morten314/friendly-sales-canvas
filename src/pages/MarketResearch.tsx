@@ -1701,6 +1701,34 @@ const MarketResearch = () => {
     console.log('🔥 Setting up optimized data sync - background refresh disabled to preserve fresh data');
     console.log('🚫 Background auto-refresh disabled to prevent overwriting component-specific fresh data');
     
+    // Clear previous market size data immediately on component mount
+    console.log('🧹 Clearing previous market size data on component mount');
+    setMarketData(prev => ({
+      ...prev,
+      executiveSummary: '',
+      tamValue: '$0',
+      samValue: '$0',
+      apacGrowthRate: '0%',
+      strategicRecommendations: [] as string[],
+      marketEntry: '',
+      marketDrivers: [] as string[],
+      marketSizeBySegment: {} as Record<string, string>,
+      growthProjections: {} as Record<string, string>
+    }));
+    setMarketIntelligenceData(prev => ({
+      ...prev,
+      executiveSummary: '',
+      tamValue: '$0',
+      samValue: '$0',
+      apacGrowthRate: '0%',
+      strategicRecommendations: [] as string[],
+      marketEntry: '',
+      marketDrivers: [] as string[],
+      marketSizeBySegment: {} as Record<string, string>,
+      growthProjections: {} as Record<string, string>
+    }));
+    setIsInitialLoading(true);
+    
     // Optimized sequential loading to prevent performance issues
     const fetchLatestData = async () => {
       console.log('🎯 Background data refresh SKIPPED to preserve fresh component data');
@@ -1727,8 +1755,8 @@ const MarketResearch = () => {
           }
         }
         
-        // Then load market size data
-        await fetchMarketSizeData(false, true);
+        // Then load fresh market size data
+        await fetchMarketSizeData(true, true);
         
       } catch (err) {
         console.log('Initial fetch failed:', err);
