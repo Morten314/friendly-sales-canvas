@@ -127,16 +127,28 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
       console.log('📦 Payload keys:', Object.keys(payload));
       console.log('📦 Data keys:', Object.keys(payload.data));
 
-      const response = await fetch(`https://backend-11kr.onrender.com/market-research?t=${Date.now()}&cache_bust=${Math.random()}`, {
+      // Add debugging to track data freshness
+      const requestTimestamp = Date.now();
+      console.log('⏰ INDUSTRY TRENDS REQUEST TIMESTAMP:', requestTimestamp);
+      console.log('🔄 FORCE_REFRESH in payload:', payload.refresh);
+      
+      const response = await fetch(`https://backend-11kr.onrender.com/market-research?t=${requestTimestamp}&cache_bust=${Math.random()}&force_fresh=1`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Cache-Control': 'no-cache, no-store, must-revalidate',
           'Pragma': 'no-cache',
-          'Expires': '0'
+          'Expires': '0',
+          'X-Request-ID': `req-trends-${requestTimestamp}`,
+          'X-Force-Fresh': 'true'
         },
         cache: 'no-store',
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          ...payload,
+          force_refresh: true,
+          request_timestamp: requestTimestamp,
+          cache_bypass: Math.random().toString(36)
+        })
       });
 
       if (!response.ok) {
@@ -149,6 +161,13 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
       console.log('📥 Industry Trends API response:', apiResponse);
       console.log('📊 Full API Response Structure:', JSON.stringify(apiResponse, null, 2));
       console.log('📊 Industry Trends Data Keys:', apiResponse.data ? Object.keys(apiResponse.data) : 'No data');
+      console.log('⏰ INDUSTRY TRENDS REQUEST vs RESPONSE TIMING:');
+      console.log('  - Request sent at:', requestTimestamp);
+      console.log('  - Response timestamp:', apiResponse.data?.timestamp || 'No backend timestamp');
+      console.log('  - Time difference:', apiResponse.data?.timestamp ? (requestTimestamp - new Date(apiResponse.data.timestamp).getTime()) : 'Cannot calculate');
+      console.log('🔍 DATA FRESHNESS CHECK:');
+      console.log('  - Backend timestamp:', apiResponse.data?.timestamp);
+      console.log('  - Is data from today?:', apiResponse.data?.timestamp ? new Date(apiResponse.data.timestamp).toDateString() === new Date().toDateString() : 'Unknown');
       console.log('📊 Regional Hotspots:', apiResponse.data?.regionalHotspots);
       console.log('📊 Strategic Recommendations:', apiResponse.data?.strategicRecommendations);
       console.log('📊 Visual Charts:', apiResponse.data?.visualCharts);

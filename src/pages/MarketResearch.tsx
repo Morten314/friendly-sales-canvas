@@ -1506,16 +1506,28 @@ const MarketResearch = () => {
       console.log('📦 Market Size Payload keys:', Object.keys(payload));
       console.log('📦 Market Size Data keys:', Object.keys(payload.data));
 
-      const response = await fetch(`https://backend-11kr.onrender.com/market-research?t=${Date.now()}&cache_bust=${Math.random()}`, {
+      // Add debugging to track data freshness
+      const requestTimestamp = Date.now();
+      console.log('⏰ REQUEST TIMESTAMP:', requestTimestamp);
+      console.log('🔄 FORCE_REFRESH in payload:', payload.refresh);
+      
+      const response = await fetch(`https://backend-11kr.onrender.com/market-research?t=${requestTimestamp}&cache_bust=${Math.random()}&force_fresh=1`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Cache-Control': 'no-cache, no-store, must-revalidate',
           'Pragma': 'no-cache',
-          'Expires': '0'
+          'Expires': '0',
+          'X-Request-ID': `req-${requestTimestamp}`,
+          'X-Force-Fresh': 'true'
         },
         cache: 'no-store',
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          ...payload,
+          force_refresh: true,
+          request_timestamp: requestTimestamp,
+          cache_bypass: Math.random().toString(36)
+        })
       });
 
       if (!response.ok) {
@@ -1525,7 +1537,11 @@ const MarketResearch = () => {
       const apiResponse = await response.json();
       console.log('📥 Market Size API response:', apiResponse);
       console.log('🔍 API Response structure:', JSON.stringify(apiResponse, null, 2));
-      console.log('🔍 DEBUGGING: Market Size response timestamp:', apiResponse.timestamp || apiResponse.id || apiResponse.created_at || 'NO_TIMESTAMP');
+      console.log('🔍 DEBUGGING: Market Size response timestamp:', apiResponse.timestamp || apiResponse.data?.timestamp || apiResponse.id || apiResponse.created_at || 'NO_TIMESTAMP');
+      console.log('⏰ REQUEST vs RESPONSE TIMING:');
+      console.log('  - Request sent at:', requestTimestamp);
+      console.log('  - Response timestamp:', apiResponse.data?.timestamp || 'No backend timestamp');
+      console.log('  - Time difference:', apiResponse.data?.timestamp ? (requestTimestamp - new Date(apiResponse.data.timestamp).getTime()) : 'Cannot calculate');
       console.log('🔍 DEBUGGING: Current marketIntelligenceData before update:', JSON.stringify(marketIntelligenceData, null, 2));
 
       // Update market intelligence data with API response
