@@ -1501,9 +1501,10 @@ const MarketResearch = () => {
       };
 
       console.log('📤 Sending API request to:', 'https://backend-11kr.onrender.com/market-research');
-      console.log('📦 Complete Payload:', JSON.stringify(payload, null, 2));
-      console.log('📦 Payload keys:', Object.keys(payload));
-      console.log('📦 Data keys:', Object.keys(payload.data));
+      console.log('📦 Market Size Complete Payload:', JSON.stringify(payload, null, 2));
+      console.log('📦 Market Size Payload component_name:', payload.component_name);
+      console.log('📦 Market Size Payload keys:', Object.keys(payload));
+      console.log('📦 Market Size Data keys:', Object.keys(payload.data));
 
       const response = await fetch(`https://backend-11kr.onrender.com/market-research?t=${Date.now()}&cache_bust=${Math.random()}`, {
         method: 'POST',
