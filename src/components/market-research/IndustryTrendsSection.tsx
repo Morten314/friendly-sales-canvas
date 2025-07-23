@@ -181,10 +181,10 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
       const currentDataTimestamp = industryTrendsData?.timestamp;
       const newDataTimestamp = apiResponse.data?.timestamp;
       
-      console.log('⏰ INDUSTRY TRENDS DATA FRESHNESS COMPARISON (UTC):');
-      console.log('  - Previous data timestamp (UTC):', currentDataTimestamp || 'No previous data');
-      console.log('  - New backend timestamp (UTC):', newDataTimestamp || 'No backend timestamp');
-      console.log('  - Request sent at (UTC):', new Date(requestTimestamp).toISOString());
+      console.log('⏰ SWAGGER VS FRONTEND DATA GENERATION TIMESTAMPS (UTC):');
+      console.log('  - Frontend data generation time (OLD):', currentDataTimestamp || 'No previous data generated');
+      console.log('  - Swagger data generation time (NEW):', newDataTimestamp || 'No backend timestamp');
+      console.log('  - Current request time (UTC):', new Date(requestTimestamp).toISOString());
       
       if (currentDataTimestamp && newDataTimestamp) {
         const currentTime = new Date(currentDataTimestamp).getTime();
