@@ -1487,14 +1487,18 @@ const MarketResearch = () => {
       }
       setMarketSizeError(null);
 
-      // Simplified payload - removing potential problematic fields
+      // Add back required fields for backend validation
       const payload = {
         user_id: "brewra",
-        component_name: "Market Size and Opportunity"
+        component_name: "Market Size and Opportunity",
+        data: {
+          company: "OrbiSelf",
+          product: "Convoic.AI"
+        }
       };
 
       console.log('📤 Sending API request to:', 'https://backend-11kr.onrender.com/market-research');
-      console.log('📦 Simplified Payload:', payload);
+      console.log('📦 Fixed Payload:', payload);
 
       const response = await fetch(`https://backend-11kr.onrender.com/market-research`, {
         method: 'POST',
