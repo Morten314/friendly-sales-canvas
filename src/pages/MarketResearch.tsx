@@ -1586,14 +1586,14 @@ const MarketResearch = () => {
     cachedMarketData = null;
     cacheTimestamp = null;
     
-    // ALWAYS fetch fresh data instead of using cache
-    console.log('🔥 Fetching fresh market intelligence data');
-    fetchMarketData(false);
-
-    // Fetch Market Size data
+    // ONLY fetch Market Size data - this has your updated baby food market data
     console.log('🎯 About to call fetchMarketSizeData from useEffect');
     console.log('🔍 Testing if Market Size actually makes API call...');
     fetchMarketSizeData(false);
+    
+    // COMMENT OUT Market Intelligence call to prevent override
+    // console.log('🔥 Fetching fresh market intelligence data');
+    // fetchMarketData(false);
   }, []);
 
   // Listen for company profile updates and trigger background refresh

@@ -13,9 +13,21 @@ interface MiniLineChartProps {
 }
 
 const MiniLineChart: React.FC<MiniLineChartProps> = ({ data, title, color = '#3b82f6' }) => {
+  // Handle undefined or empty data
+  if (!data || data.length === 0) {
+    return (
+      <div className="bg-white rounded-lg p-4 border w-full max-w-sm">
+        <h4 className="text-sm font-medium text-gray-700 mb-4 text-center">{title}</h4>
+        <div className="flex items-center justify-center h-20 text-gray-400 text-sm">
+          No data available
+        </div>
+      </div>
+    );
+  }
+
   const maxValue = Math.max(...data.map(d => d.value));
   const minValue = Math.min(...data.map(d => d.value));
-  const range = maxValue - minValue;
+  const range = maxValue - minValue || 1; // Prevent division by zero
 
   const createPath = () => {
     const width = 140;
