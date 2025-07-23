@@ -1243,10 +1243,12 @@ const MarketResearch = () => {
     }
   }, [location.pathname, activeTab, getActiveTabFromPath]);
 
-  // Transform raw report data to our expected structure
+  // Transform raw report data to our expected structure (for historical data only)
   const transformReportData = (reportData: any): MarketIntelligenceData => {
-    console.log('🔄 TRANSFORM: Input reportData:', JSON.stringify(reportData, null, 2));
+    console.log('🔄 TRANSFORM: Input reportData for historical:', JSON.stringify(reportData, null, 2));
     
+    // Only transform if this is historical data or general market data
+    // Don't use this for component-specific API responses
     const transformed = {
       researchReports: reportData.researchReports || [],
       rankings: reportData.rankings || [],
@@ -1274,7 +1276,7 @@ const MarketResearch = () => {
       growthProjections: reportData.growthProjections || {}
     };
     
-    console.log('✅ TRANSFORM: Output transformed data:', JSON.stringify(transformed, null, 2));
+    console.log('✅ TRANSFORM: Output transformed historical data:', JSON.stringify(transformed, null, 2));
     return transformed;
   };
 
