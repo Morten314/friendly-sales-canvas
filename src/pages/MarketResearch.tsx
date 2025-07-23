@@ -1490,7 +1490,7 @@ const MarketResearch = () => {
       // Updated payload to match your OrbiSelf/Convoic.AI data
       const payload = {
         user_id: "brewra",
-        component_name: "Market Size & Opportunity",
+        component_name: "Market Size and Opportunity",
         data: {
           company: "OrbiSelf",
           product: "Convoic.AI",
@@ -1504,7 +1504,7 @@ const MarketResearch = () => {
       console.log('📦 Payload:', payload);
       console.log('🔥 MARKET SIZE IS ACTUALLY CALLING API - WILL WE GET CORS?');
 
-      const response = await fetch(`https://backend-11kr.onrender.com/market-research?t=${Date.now()}&cache_bust=${Math.random()}`, {
+      const response = await fetch(`https://backend-11kr.onrender.com/market-research?force_refresh=true&t=${Date.now()}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
