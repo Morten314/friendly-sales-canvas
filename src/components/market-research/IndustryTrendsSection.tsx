@@ -170,12 +170,18 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
             "Skills gap in emerging technologies",
             "Economic uncertainty affecting technology budgets"
           ],
-          visualCharts: apiResponse.data.visualCharts || [
-            { type: "line", title: "Market Growth Trends", data: [{ name: "2023", value: 85 }, { name: "2024", value: 92 }, { name: "2025", value: 98 }] },
-            { type: "pie", title: "Technology Adoption", data: [{ name: "AI/ML", value: 35, color: "#3B82F6" }, { name: "Cloud", value: 45, color: "#10B981" }, { name: "IoT", value: 20, color: "#F59E0B" }] }
-          ]
+          visualCharts: apiResponse.data.visualCharts || {
+            aiAdoptionTrends: ["Q1", "Q2", "Q3", "Q4"],
+            technologyBudgetAllocation: {
+              "AI/ML": "35%",
+              "Cloud": "40%", 
+              "Security": "25%"
+            }
+          }
         };
         console.log('🔥 Setting industryTrendsData with trendSnapshots:', dataWithFallbacks.trendSnapshots);
+        console.log('🔥 Setting industryTrendsData with visualCharts:', dataWithFallbacks.visualCharts);
+        console.log('🔥 Full dataWithFallbacks object:', dataWithFallbacks);
         setIndustryTrendsData(dataWithFallbacks);
         // Initialize edit fields with fetched data
         setEditExecutiveSummary(apiResponse.data.executiveSummary || '');
