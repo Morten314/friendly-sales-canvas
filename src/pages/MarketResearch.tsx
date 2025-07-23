@@ -1487,24 +1487,33 @@ const MarketResearch = () => {
       }
       setMarketSizeError(null);
 
-      // Add back required fields for backend validation
+      // Complete payload matching working IndustryTrendsSection format
       const payload = {
         user_id: "brewra",
-        component_name: "Market Size and Opportunity",
+        component_name: "market size and opportunity",
+        refresh: true,
         data: {
           company: "OrbiSelf",
-          product: "Convoic.AI"
+          product: "Convoic.AI",
+          target_market: "Indian college students (Tier 2 & 3)",
+          region: "India"
         }
       };
 
       console.log('📤 Sending API request to:', 'https://backend-11kr.onrender.com/market-research');
-      console.log('📦 Fixed Payload:', payload);
+      console.log('📦 Complete Payload:', JSON.stringify(payload, null, 2));
+      console.log('📦 Payload keys:', Object.keys(payload));
+      console.log('📦 Data keys:', Object.keys(payload.data));
 
-      const response = await fetch(`https://backend-11kr.onrender.com/market-research`, {
+      const response = await fetch(`https://backend-11kr.onrender.com/market-research?t=${Date.now()}&cache_bust=${Math.random()}`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
         },
+        cache: 'no-store',
         body: JSON.stringify(payload)
       });
 
