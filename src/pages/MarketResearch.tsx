@@ -1617,7 +1617,7 @@ const MarketResearch = () => {
       
       // Fetch both data sources for complete sync
       await Promise.all([
-        fetchMarketSizeData(false),
+        fetchMarketSizeData(false, false), // No loading spinner for background refresh
         // Add market intelligence back with fresh fetch
         fetch(`https://backend-11kr.onrender.com/market_intelligence?t=${Date.now()}`)
           .then(res => res.json())
@@ -1634,8 +1634,27 @@ const MarketResearch = () => {
       ]);
     };
     
-    // Initial fetch
-    fetchLatestData();
+    // Initial fetch with loading spinner
+    const initialFetch = async () => {
+      console.log('🎯 Initial data fetch with loading indicators...');
+      await Promise.all([
+        fetchMarketSizeData(false, true), // Show loading spinner for initial fetch
+        fetch(`https://backend-11kr.onrender.com/market_intelligence?t=${Date.now()}`)
+          .then(res => res.json())
+          .then(data => {
+            console.log('📈 Fresh market intelligence:', data);
+            if (data && typeof data === 'object') {
+              const transformedData = transformReportData(data.report || data);
+              setMarketData(transformedData);
+              cachedMarketData = transformedData;
+              cacheTimestamp = Date.now();
+            }
+          })
+          .catch(err => console.log('Market intelligence fetch failed:', err))
+      ]);
+    };
+    
+    initialFetch();
     
     // Set up polling for real-time updates (every 15 seconds)
     const syncInterval = setInterval(() => {
