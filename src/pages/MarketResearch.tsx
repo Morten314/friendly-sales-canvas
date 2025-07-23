@@ -1656,16 +1656,20 @@ const MarketResearch = () => {
     
     initialFetch();
     
-    // Set up polling for real-time updates (every 15 seconds)
+    // Set up intelligent polling (every 60 seconds instead of 15)
     const syncInterval = setInterval(() => {
-      console.log('🔄 Auto-syncing with backend for real-time updates...');
+      console.log('🔄 Auto-syncing with backend...');
       fetchLatestData();
-    }, 15000);
+    }, 60000);
 
-    // Listen for window focus to refresh data when user returns
+    // Debounced focus handler to prevent excessive calls
+    let focusTimeout: NodeJS.Timeout;
     const handleFocus = () => {
-      console.log('👀 Window focused - refreshing data');
-      fetchLatestData();
+      clearTimeout(focusTimeout);
+      focusTimeout = setTimeout(() => {
+        console.log('👀 Window focused - refreshing data');
+        fetchLatestData();
+      }, 2000); // 2 second delay
     };
     
     window.addEventListener('focus', handleFocus);
