@@ -511,19 +511,41 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                          console.log('🔍 MarketSizeSection - growthProjections exists:', !!growthProjections);
                          return null;
                        })()}
-                       <MiniLineChart 
-                         data={growthProjections ? Object.entries(growthProjections).map(([year, value]) => ({
-                           name: year,
-                           value: parseFloat(value.toString()) * 100
-                         })) : [
-                           { name: "2023", value: 100 },
-                           { name: "2024", value: 115 },
-                           { name: "2025", value: 132 },
-                           { name: "2026", value: 152 }
-                         ]} 
-                         title="" 
-                         color="#3B82F6" 
-                       />
+                        <MiniLineChart 
+                          data={(() => {
+                            if (!growthProjections) {
+                              return [
+                                { name: "2023", value: 100 },
+                                { name: "2024", value: 115 },
+                                { name: "2025", value: 132 },
+                                { name: "2026", value: 152 }
+                              ];
+                            }
+                            
+                            // If growthProjections is a string, use fallback data
+                            if (typeof growthProjections === 'string') {
+                              console.log('🔧 growthProjections is string, using fallback data');
+                              return [
+                                { name: "2023", value: 100 },
+                                { name: "2024", value: 120 },
+                                { name: "2025", value: 144 },
+                                { name: "2026", value: 173 }
+                              ];
+                            }
+                            
+                            // If it's an object, transform it safely
+                            return Object.entries(growthProjections).map(([year, value]) => {
+                              const numericValue = parseFloat(value.toString());
+                              console.log(`🔧 Converting ${year}: ${value} -> ${numericValue}`);
+                              return {
+                                name: year,
+                                value: isNaN(numericValue) ? 100 : numericValue * 100
+                              };
+                            });
+                          })()} 
+                          title="" 
+                          color="#3B82F6" 
+                        />
                      </div>
                   </div>
 
