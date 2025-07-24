@@ -759,22 +759,22 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                       </div>
                       <div className="bg-white border border-gray-200 rounded-lg p-4">
                         <h4 className="font-medium text-gray-900 mb-3">Technology Budget Allocation</h4>
-                        {industryTrendsData.visualCharts.technologyBudgetAllocation ? (
+                        {industryTrendsData?.visualCharts?.technologyBudgetAllocation ? (
                           <MiniPieChart 
                             data={[
                               { 
                                 name: "AI/ML", 
-                                value: parseInt(industryTrendsData.visualCharts.technologyBudgetAllocation["AI/ML"].replace('%', '')), 
+                                value: parseInt((industryTrendsData.visualCharts.technologyBudgetAllocation["AI/ML"] || "30%").replace('%', '')), 
                                 color: "#8B5CF6" 
                               },
                               { 
                                 name: "Cloud", 
-                                value: parseInt(industryTrendsData.visualCharts.technologyBudgetAllocation.Cloud.replace('%', '')), 
+                                value: parseInt((industryTrendsData.visualCharts.technologyBudgetAllocation.Cloud || "25%").replace('%', '')), 
                                 color: "#3B82F6" 
                               },
                               { 
                                 name: "Security", 
-                                value: parseInt(industryTrendsData.visualCharts.technologyBudgetAllocation.Security.replace('%', '')), 
+                                value: parseInt((industryTrendsData.visualCharts.technologyBudgetAllocation.Security || "20%").replace('%', '')), 
                                 color: "#10B981" 
                               }
                             ]} 
