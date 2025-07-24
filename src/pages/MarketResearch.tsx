@@ -1407,7 +1407,28 @@ const MarketResearch = () => {
       setIsRefreshing(true);
       setError(null);
       
-      console.log('🔄 Refreshing market research data...');
+      console.log('🔄 Checking for existing fresh Swagger data before refresh...');
+      
+      // First check if there's already fresh data from recent Swagger call
+      const existingData = getInitialMarketIntelligenceData();
+      const currentTime = Date.now();
+      const dataTimestamp = existingData?.timestamp ? parseInt(existingData.timestamp) : 0;
+      const dataAge = currentTime - dataTimestamp;
+      const fiveMinutesInMs = 5 * 60 * 1000; // 5 minutes
+      
+      if (existingData && dataAge < fiveMinutesInMs) {
+        console.log('✅ Found fresh Swagger data from recent session - using existing data');
+        console.log(`📅 Data age: ${Math.round(dataAge / 1000)} seconds (< 5 minutes)`);
+        console.log(`🕒 Data timestamp: ${new Date(dataTimestamp).toISOString()}`);
+        
+        // Use existing fresh data instead of generating new
+        setMarketData(existingData);
+        setMarketIntelligenceData(existingData);
+        setIsRefreshing(false);
+        return;
+      }
+      
+      console.log('⚠️ No fresh data found or data is stale - fetching new data...');
       console.log('🧹 Clearing localStorage before refresh to ensure fresh data');
       localStorage.removeItem('marketIntelligenceData');
       
