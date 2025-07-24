@@ -1762,9 +1762,9 @@ const MarketResearch = () => {
     }
   };
 
-  // Real-time data synchronization with backend (DISABLED to prevent overwriting fresh data)
+  // Initial data fetch and synchronization
   useEffect(() => {
-    console.log('🔥 Setting up optimized data sync - preserving persistent data');
+    console.log('🔥 Setting up initial data load and sync');
     
     // Check if we have persistent data from previous session
     const storedMarketData = localStorage.getItem('marketIntelligenceData');
@@ -1794,6 +1794,7 @@ const MarketResearch = () => {
             console.log('🔄 Restored persistent data to marketData state:', restoredData);
             return restoredData;
           });
+          setIsInitialLoading(false); // Turn off loading since we have data
           return; // Exit early - don't clear data
         }
       } catch (error) {
@@ -1801,7 +1802,9 @@ const MarketResearch = () => {
       }
     }
     
-    console.log('🧹 No valid persistent data found - this is first visit or localStorage is empty');
+    console.log('🧹 No valid persistent data found - fetching fresh data from backend');
+    // If no valid cached data, fetch from backend
+    fetchMarketData();
   }, []);
 
   // Listen for company profile updates and trigger background refresh
