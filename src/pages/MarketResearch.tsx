@@ -1540,8 +1540,8 @@ const MarketResearch = () => {
       
       console.log('🔍 MARKET SIZE TIMESTAMP ANALYSIS:');
       console.log('  - Current request time:', new Date(requestTimestamp).toISOString());
-      console.log('  - Frontend data generation time (OLD):', currentDataTimestamp ? new Date(currentDataTimestamp).toISOString() : 'NO_TIMESTAMP');
-      console.log('  - Swagger data generation time (NEW):', newDataTimestamp ? new Date(newDataTimestamp).toISOString() : 'NO_TIMESTAMP');
+      console.log('  - Frontend data generation time (OLD):', currentDataTimestamp ? (isNaN(new Date(currentDataTimestamp).getTime()) ? 'INVALID_TIMESTAMP' : new Date(currentDataTimestamp).toISOString()) : 'NO_TIMESTAMP');
+      console.log('  - Swagger data generation time (NEW):', newDataTimestamp ? (isNaN(new Date(newDataTimestamp).getTime()) ? 'INVALID_TIMESTAMP' : new Date(newDataTimestamp).toISOString()) : 'NO_TIMESTAMP');
       
       // Only update data if Swagger timestamp is newer than current UI timestamp
       let shouldUpdateData = false;
@@ -1552,13 +1552,20 @@ const MarketResearch = () => {
         // Compare timestamps - only update if Swagger data is newer
         const currentTime = new Date(currentDataTimestamp).getTime();
         const newTime = new Date(newDataTimestamp).getTime();
-        shouldUpdateData = newTime > currentTime;
+        
+        // Check for invalid dates
+        if (isNaN(currentTime) || isNaN(newTime)) {
+          console.log('⚠️ Invalid timestamp detected - forcing update');
+          shouldUpdateData = true;
+        } else {
+          shouldUpdateData = newTime > currentTime;
+        }
       }
       
       console.log('🔄 MARKET SIZE UPDATE DECISION:');
       console.log('  - Should update data:', shouldUpdateData);
-      console.log('  - Current data timestamp:', currentDataTimestamp ? new Date(currentDataTimestamp).toISOString() : 'NONE');
-      console.log('  - New data timestamp:', newDataTimestamp ? new Date(newDataTimestamp).toISOString() : 'NONE');
+      console.log('  - Current data timestamp:', currentDataTimestamp ? (isNaN(new Date(currentDataTimestamp).getTime()) ? 'INVALID_TIMESTAMP' : new Date(currentDataTimestamp).toISOString()) : 'NONE');
+      console.log('  - New data timestamp:', newDataTimestamp ? (isNaN(new Date(newDataTimestamp).getTime()) ? 'INVALID_TIMESTAMP' : new Date(newDataTimestamp).toISOString()) : 'NONE');
       console.log('  - Reason for update:', !currentDataTimestamp ? 'No existing data' : shouldUpdateData ? 'Swagger data is newer' : 'Current data is up to date');
       
       console.log('🔍 DEBUGGING: Current marketIntelligenceData before update:', JSON.stringify(marketIntelligenceData, null, 2));
