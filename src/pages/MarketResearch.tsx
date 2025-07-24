@@ -1411,78 +1411,52 @@ const MarketResearch = () => {
       
       // Get current UI data timestamp for comparison
       const currentUIData = getInitialMarketIntelligenceData();
-      const currentUITimestamp = currentUIData?.timestamp ? parseInt(currentUIData.timestamp) : 0;
-      console.log('📊 Current UI data timestamp:', currentUITimestamp);
+      let currentUITimestamp = 0;
+      if (currentUIData?.timestamp) {
+        // Handle both ISO string and timestamp number formats
+        currentUITimestamp = typeof currentUIData.timestamp === 'string' ? 
+          new Date(currentUIData.timestamp).getTime() : 
+          parseInt(currentUIData.timestamp);
+      }
+      console.log('📊 Current UI data timestamp:', currentUIData?.timestamp);
       console.log('📊 Current UI data time:', currentUITimestamp ? new Date(currentUITimestamp).toISOString() : 'No timestamp');
       
-      // Always fetch fresh data from Swagger API when refresh is clicked
+      // Always fetch fresh data from Swagger API when refresh is clicked  
       console.log('🔄 Fetching fresh data from Swagger API...');
-      const [marketResponse, marketSizeResponse] = await Promise.allSettled([
-        fetch(`https://backend-11kr.onrender.com/market_intelligence?t=${Date.now()}&cache_bust=${Math.random()}`, {
-          method: 'GET',
-          headers: {
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache',
-            'Expires': '0'
-          },
-          cache: 'no-store'
-        }),
-        fetchMarketSizeData(true, false) // Trigger market size refresh too
+      
+      // Force refresh both market size and industry trends data - they will automatically
+      // update the UI if their timestamps are newer than current data
+      const [marketSizeResponse] = await Promise.allSettled([
+        fetchMarketSizeData(true, false), // This calls the correct market-research API
       ]);
       
-      // Process market intelligence response
-      if (marketResponse.status === 'fulfilled' && marketResponse.value.ok) {
-        const apiResponse = await marketResponse.value.json();
-        console.log('📈 Fresh market intelligence data received:', apiResponse);
-        
-        // Extract and transform the data
-        const reportData = apiResponse.report || apiResponse;
-        const transformedData = transformReportData(reportData);
-        
-        // PRESERVE the original Swagger timestamp - DO NOT override it
-        const swaggerTimestamp = reportData.timestamp; // Original Swagger timestamp
-        console.log('📊 Swagger data timestamp:', swaggerTimestamp);
-        console.log('📊 Current UI data timestamp:', currentUITimestamp);
-        
-        // Convert timestamps for comparison
-        let swaggerTime = 0;
-        if (swaggerTimestamp) {
-          // Handle both ISO string format and timestamp number
-          swaggerTime = typeof swaggerTimestamp === 'string' ? 
-            new Date(swaggerTimestamp).getTime() : 
-            parseInt(swaggerTimestamp);
+      // Also trigger industry trends refresh to get latest data
+      // The IndustryTrendsSection component will handle its own refresh and data updates
+      
+      console.log('🔄 All API calls completed - checking if any updates were applied');
+      
+      // Check if we have any fresh data in localStorage after the API calls
+      const updatedData = getInitialMarketIntelligenceData();
+      if (updatedData && updatedData.timestamp) {
+        let updatedTimestamp = 0;
+        if (updatedData.timestamp) {
+          updatedTimestamp = typeof updatedData.timestamp === 'string' ? 
+            new Date(updatedData.timestamp).getTime() : 
+            parseInt(updatedData.timestamp);
         }
         
-        console.log('🔄 TIMESTAMP COMPARISON:');
-        console.log('  - Current UI timestamp:', currentUITimestamp, new Date(currentUITimestamp).toISOString());
-        console.log('  - Swagger timestamp:', swaggerTime, new Date(swaggerTime).toISOString());
+        console.log('🔄 POST-REFRESH TIMESTAMP COMPARISON:');
+        console.log('  - Original UI timestamp:', currentUITimestamp, new Date(currentUITimestamp).toISOString());
+        console.log('  - Updated data timestamp:', updatedTimestamp, new Date(updatedTimestamp).toISOString());
         
-        // Only update if Swagger data is newer than current UI data
-        if (swaggerTime > currentUITimestamp) {
-          console.log('✅ Swagger data is newer - updating UI with fresh data');
-          
-          // Keep the original Swagger timestamp - DO NOT modify it
-          transformedData.timestamp = swaggerTimestamp;
-          
-          // Update both state and localStorage for persistence
-          setMarketData(transformedData);
-          setMarketIntelligenceData(transformedData);
-          saveMarketIntelligenceToLocalStorage(transformedData);
-          cachedMarketData = transformedData;
-          cacheTimestamp = swaggerTime;
-          
-          console.log('✅ Market intelligence data updated from Swagger and saved to localStorage');
-          console.log('🔍 REFRESH DEBUG: Updated data contains:', {
-            executiveSummary: transformedData.executiveSummary?.substring(0, 50) + '...',
-            tamValue: transformedData.tamValue,
-            samValue: transformedData.samValue,
-            timestamp: transformedData.timestamp
-          });
-        } else {
-          console.log('⚠️ Swagger data is not newer than current UI data - keeping existing data');
+        // If we have newer data, force update the UI states
+        if (updatedTimestamp > currentUITimestamp) {
+          console.log('✅ Fresh data found after refresh - updating UI states');
+          setMarketData(updatedData);
+          setMarketIntelligenceData(updatedData);
+          cachedMarketData = updatedData;
+          cacheTimestamp = updatedTimestamp;
         }
-      } else {
-        console.log('⚠️ Market intelligence fetch failed, keeping existing data');
       }
       
       // Market size data is handled by fetchMarketSizeData call above
