@@ -740,14 +740,14 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                 {/* Visual Charts Section */}
                 <div className="mb-8">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Visual Charts</h3>
-                  {industryTrendsData.visualCharts ? (
+                  {industryTrendsData && industryTrendsData.visualCharts ? (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                       <div className="bg-white border border-gray-200 rounded-lg p-4">
                         <h4 className="font-medium text-gray-900 mb-3">AI Adoption Trends</h4>
-                        {industryTrendsData.visualCharts.aiAdoptionTrends ? (
+                        {industryTrendsData.visualCharts.aiAdoptionTrends && Array.isArray(industryTrendsData.visualCharts.aiAdoptionTrends) ? (
                           <MiniLineChart 
                             data={industryTrendsData.visualCharts.aiAdoptionTrends.map((quarter, index) => ({
-                              name: quarter,
+                              name: quarter || `Q${index + 1}`,
                               value: 45 + (index * 11) // Dynamic values based on quarters
                             }))} 
                             title="" 
@@ -759,30 +759,45 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                       </div>
                       <div className="bg-white border border-gray-200 rounded-lg p-4">
                         <h4 className="font-medium text-gray-900 mb-3">Technology Budget Allocation</h4>
-                        {industryTrendsData?.visualCharts?.technologyBudgetAllocation ? (
-                          <MiniPieChart 
-                            data={[
-                              { 
-                                name: "AI/ML", 
-                                value: parseInt((industryTrendsData.visualCharts.technologyBudgetAllocation["AI/ML"] || "30%").replace('%', '')), 
-                                color: "#8B5CF6" 
-                              },
-                              { 
-                                name: "Cloud", 
-                                value: parseInt((industryTrendsData.visualCharts.technologyBudgetAllocation.Cloud || "25%").replace('%', '')), 
-                                color: "#3B82F6" 
-                              },
-                              { 
-                                name: "Security", 
-                                value: parseInt((industryTrendsData.visualCharts.technologyBudgetAllocation.Security || "20%").replace('%', '')), 
-                                color: "#10B981" 
-                              }
-                            ]} 
-                            title="" 
-                          />
-                        ) : (
-                          <p className="text-gray-500 text-sm">No budget allocation data available</p>
-                        )}
+                        {(() => {
+                          try {
+                            const budgetData = industryTrendsData?.visualCharts?.technologyBudgetAllocation;
+                            if (!budgetData) {
+                              return <p className="text-gray-500 text-sm">No budget allocation data available</p>;
+                            }
+                            
+                            // Safely parse the data with fallbacks
+                            const aiValue = budgetData["AI/ML"] ? parseInt(String(budgetData["AI/ML"]).replace('%', '')) : 30;
+                            const cloudValue = budgetData.Cloud ? parseInt(String(budgetData.Cloud).replace('%', '')) : 25;
+                            const securityValue = budgetData.Security ? parseInt(String(budgetData.Security).replace('%', '')) : 20;
+                            
+                            return (
+                              <MiniPieChart 
+                                data={[
+                                  { 
+                                    name: "AI/ML", 
+                                    value: isNaN(aiValue) ? 30 : aiValue,
+                                    color: "#8B5CF6" 
+                                  },
+                                  { 
+                                    name: "Cloud", 
+                                    value: isNaN(cloudValue) ? 25 : cloudValue,
+                                    color: "#3B82F6" 
+                                  },
+                                  { 
+                                    name: "Security", 
+                                    value: isNaN(securityValue) ? 20 : securityValue,
+                                    color: "#10B981" 
+                                  }
+                                ]} 
+                                title="" 
+                              />
+                            );
+                          } catch (error) {
+                            console.error('Error rendering budget allocation chart:', error);
+                            return <p className="text-gray-500 text-sm">Error loading budget allocation chart</p>;
+                          }
+                        })()}
                       </div>
                     </div>
                   ) : (
