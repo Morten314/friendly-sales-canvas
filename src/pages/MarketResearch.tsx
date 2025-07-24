@@ -1540,8 +1540,10 @@ const MarketResearch = () => {
       
       console.log('🔍 MARKET SIZE TIMESTAMP ANALYSIS:');
       console.log('  - Current request time:', new Date(requestTimestamp).toISOString());
-      console.log('  - Frontend data generation time (OLD):', currentDataTimestamp ? (isNaN(new Date(currentDataTimestamp).getTime()) ? 'INVALID_TIMESTAMP' : new Date(currentDataTimestamp).toISOString()) : 'NO_TIMESTAMP');
-      console.log('  - Swagger data generation time (NEW):', newDataTimestamp ? (isNaN(new Date(newDataTimestamp).getTime()) ? 'INVALID_TIMESTAMP' : new Date(newDataTimestamp).toISOString()) : 'NO_TIMESTAMP');
+      console.log('  - Frontend data generation time (OLD):', currentDataTimestamp || 'NO_TIMESTAMP');
+      console.log('  - Swagger data generation time (NEW):', newDataTimestamp || 'NO_TIMESTAMP');
+      console.log('  - Raw Swagger timestamp from API:', JSON.stringify(newDataTimestamp));
+      console.log('  - Swagger timestamp direct comparison:', newDataTimestamp);
       
       // Only update data if Swagger timestamp is newer than current UI timestamp
       let shouldUpdateData = false;
@@ -1549,23 +1551,33 @@ const MarketResearch = () => {
         // No existing data, use new data
         shouldUpdateData = true;
       } else if (newDataTimestamp) {
-        // Compare timestamps - only update if Swagger data is newer
-        const currentTime = new Date(currentDataTimestamp).getTime();
-        const newTime = new Date(newDataTimestamp).getTime();
-        
-        // Check for invalid dates
-        if (isNaN(currentTime) || isNaN(newTime)) {
-          console.log('⚠️ Invalid timestamp detected - forcing update');
-          shouldUpdateData = true;
+        // Compare timestamps using string comparison for swagger ISO timestamps
+        // If both are ISO format strings, compare directly
+        if (typeof currentDataTimestamp === 'string' && typeof newDataTimestamp === 'string' && 
+            currentDataTimestamp.includes('T') && newDataTimestamp.includes('T')) {
+          // Direct string comparison for ISO timestamps
+          shouldUpdateData = newDataTimestamp > currentDataTimestamp;
+          console.log('🔄 Using string comparison for ISO timestamps');
         } else {
-          shouldUpdateData = newTime > currentTime;
+          // Fallback to Date comparison
+          const currentTime = new Date(currentDataTimestamp).getTime();
+          const newTime = new Date(newDataTimestamp).getTime();
+          
+          // Check for invalid dates
+          if (isNaN(currentTime) || isNaN(newTime)) {
+            console.log('⚠️ Invalid timestamp detected - forcing update');
+            shouldUpdateData = true;
+          } else {
+            shouldUpdateData = newTime > currentTime;
+          }
         }
       }
       
       console.log('🔄 MARKET SIZE UPDATE DECISION:');
       console.log('  - Should update data:', shouldUpdateData);
-      console.log('  - Current data timestamp:', currentDataTimestamp ? (isNaN(new Date(currentDataTimestamp).getTime()) ? 'INVALID_TIMESTAMP' : new Date(currentDataTimestamp).toISOString()) : 'NONE');
-      console.log('  - New data timestamp:', newDataTimestamp ? (isNaN(new Date(newDataTimestamp).getTime()) ? 'INVALID_TIMESTAMP' : new Date(newDataTimestamp).toISOString()) : 'NONE');
+      console.log('  - Current data timestamp (RAW):', currentDataTimestamp);
+      console.log('  - New data timestamp (RAW):', newDataTimestamp);
+      console.log('  - Timestamp comparison:', newDataTimestamp, '>', currentDataTimestamp, '=', newDataTimestamp > currentDataTimestamp);
       console.log('  - Reason for update:', !currentDataTimestamp ? 'No existing data' : shouldUpdateData ? 'Swagger data is newer' : 'Current data is up to date');
       
       console.log('🔍 DEBUGGING: Current marketIntelligenceData before update:', JSON.stringify(marketIntelligenceData, null, 2));
