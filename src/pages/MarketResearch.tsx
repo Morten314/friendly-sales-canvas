@@ -1596,7 +1596,8 @@ const MarketResearch = () => {
             marketDrivers: report.marketDrivers !== undefined ? report.marketDrivers : prev.marketDrivers,
             marketSizeBySegment: report.marketSizeBySegment !== undefined ? report.marketSizeBySegment : prev.marketSizeBySegment,
             growthProjections: report.growthProjections !== undefined ? report.growthProjections : prev.growthProjections,
-            timestamp: newDataTimestamp // Store the Swagger generation timestamp
+            timestamp: newDataTimestamp, // Store the original Swagger generation timestamp
+            originalSwaggerTimestamp: newDataTimestamp // Track the original timestamp
           };
           console.log('🔍 DEBUGGING: NEW marketIntelligenceData after MARKET SIZE update:', JSON.stringify(newData, null, 2));
           console.log('🔍 DEBUGGING: Market Size Data comparison:');
