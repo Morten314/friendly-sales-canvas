@@ -117,10 +117,10 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
       const payload = {
         user_id: "brewra",
         component_name: "industry trends report",
-        refresh: true,
-        force_refresh: true,
-        cache_bypass: true,
-        bypass_all_cache: true,
+        refresh: false,  // Changed to false to fetch existing data
+        force_refresh: false,  // Changed to false
+        cache_bypass: false,  // Changed to false
+        bypass_all_cache: false,  // Changed to false
         request_timestamp: currentTime,
         request_id: randomId,
         data: {
@@ -129,7 +129,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
           target_market: "Indian college students (Tier 2 & 3)",
           region: "India",
           timestamp: currentTime,
-          force_new_data: true
+          force_new_data: false  // Changed to false to fetch existing report
         }
       };
 

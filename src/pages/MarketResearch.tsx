@@ -1487,16 +1487,16 @@ const MarketResearch = () => {
       }
       setMarketSizeError(null);
 
-      // Complete payload matching working IndustryTrendsSection format
+      // Modified payload to fetch existing reports instead of generating new ones
       const currentTime = Date.now();
       const randomId = Math.random().toString(36).substring(7);
       const payload = {
         user_id: "brewra",
         component_name: "Market Size & Opportunity",
-        refresh: true,
-        force_refresh: true,
-        cache_bypass: true,
-        bypass_all_cache: true,
+        refresh: false,  // Changed to false to fetch existing data
+        force_refresh: false,  // Changed to false
+        cache_bypass: false,  // Changed to false
+        bypass_all_cache: false,  // Changed to false
         request_timestamp: currentTime,
         request_id: randomId,
         data: {
@@ -1505,7 +1505,7 @@ const MarketResearch = () => {
           target_market: "Indian college students (Tier 2 & 3)",
           region: "India",
           timestamp: currentTime,
-          force_new_data: true
+          force_new_data: false  // Changed to false to fetch existing report
         }
       };
 
