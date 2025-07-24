@@ -1079,27 +1079,54 @@ const MarketResearch = () => {
   // MarketIntelligenceTab state
   const [isMarketIntelligenceEditing, setIsMarketIntelligenceEditing] = useState(false);
   const [isMarketIntelligenceExpanded, setIsMarketIntelligenceExpanded] = useState(false);
-  const [marketIntelligenceData, setMarketIntelligenceData] = useState({
-    executiveSummary: "The cloud infrastructure market presents a significant opportunity with strong growth potential across all segments. Key drivers include digital transformation, remote work adoption, and increasing data requirements.",
-    tamValue: "$4.2B",
-    samValue: "$2.1B",
-    apacGrowthRate: "25%",
-    strategicRecommendations: [
-      "Focus on mid-market segment for fastest revenue growth",
-      "Invest in APAC expansion to capture high-growth markets",
-      "Develop industry-specific solutions for better differentiation"
-    ],
-    marketEntry: "A phased approach starting with established markets in North America, followed by selective expansion into high-growth APAC regions. Focus on building strategic partnerships with system integrators and cloud providers.",
-    marketDrivers: [
-      "Accelerating digital transformation initiatives across industries",
-      "Increasing demand for scalable cloud infrastructure solutions", 
-      "Growing emphasis on data security and compliance requirements",
-      "Rising adoption of hybrid and multi-cloud architectures"
-    ],
-    marketSizeBySegment: {},
-    growthProjections: {},
-    timestamp: null as string | null  // Add timestamp to track data generation time
-  });
+  // Get initial market intelligence data from localStorage or defaults
+  const getInitialMarketIntelligenceData = () => {
+    try {
+      const stored = localStorage.getItem('marketIntelligenceData');
+      if (stored) {
+        const parsedData = JSON.parse(stored);
+        console.log('📦 Loading Market Intelligence data from localStorage:', parsedData);
+        return parsedData;
+      }
+    } catch (error) {
+      console.error('Error loading Market Intelligence data from localStorage:', error);
+    }
+    
+    // Return default values if no stored data
+    return {
+      executiveSummary: "The cloud infrastructure market presents a significant opportunity with strong growth potential across all segments. Key drivers include digital transformation, remote work adoption, and increasing data requirements.",
+      tamValue: "$4.2B",
+      samValue: "$2.1B",
+      apacGrowthRate: "25%",
+      strategicRecommendations: [
+        "Focus on mid-market segment for fastest revenue growth",
+        "Invest in APAC expansion to capture high-growth markets",
+        "Develop industry-specific solutions for better differentiation"
+      ],
+      marketEntry: "A phased approach starting with established markets in North America, followed by selective expansion into high-growth APAC regions. Focus on building strategic partnerships with system integrators and cloud providers.",
+      marketDrivers: [
+        "Accelerating digital transformation initiatives across industries",
+        "Increasing demand for scalable cloud infrastructure solutions", 
+        "Growing emphasis on data security and compliance requirements",
+        "Rising adoption of hybrid and multi-cloud architectures"
+      ],
+      marketSizeBySegment: {},
+      growthProjections: {},
+      timestamp: null as string | null
+    };
+  };
+
+  const [marketIntelligenceData, setMarketIntelligenceData] = useState(getInitialMarketIntelligenceData());
+
+  // Helper function to save market intelligence data to localStorage
+  const saveMarketIntelligenceToLocalStorage = (data: any) => {
+    try {
+      localStorage.setItem('marketIntelligenceData', JSON.stringify(data));
+      console.log('💾 Market Intelligence data saved to localStorage');
+    } catch (error) {
+      console.error('❌ Failed to save Market Intelligence data to localStorage:', error);
+    }
+  };
 
   // Market Size API state
   const [isMarketSizeLoading, setIsMarketSizeLoading] = useState(false);
@@ -1592,6 +1619,15 @@ const MarketResearch = () => {
           console.log('- OLD Timestamp:', prev.timestamp);
           console.log('- NEW Timestamp:', newData.timestamp);
           console.log('✅ MARKET SIZE DATA UPDATED - Component name: "Market Size & Opportunity"');
+          
+          // Save to localStorage for persistence
+          try {
+            localStorage.setItem('marketIntelligenceData', JSON.stringify(newData));
+            console.log('💾 Market Intelligence data saved to localStorage');
+          } catch (error) {
+            console.error('❌ Failed to save Market Intelligence data to localStorage:', error);
+          }
+          
           return newData;
         });
 
@@ -1728,34 +1764,45 @@ const MarketResearch = () => {
     console.log('🔥 Setting up optimized data sync - background refresh disabled to preserve fresh data');
     console.log('🚫 Background auto-refresh disabled to prevent overwriting component-specific fresh data');
     
-    // Clear previous market size data immediately on component mount
-    console.log('🧹 Clearing previous market size data on component mount to ensure fresh Swagger data');
-    setMarketData(prev => ({
-      ...prev,
-      executiveSummary: '',
-      tamValue: '$0',
-      samValue: '$0',
-      apacGrowthRate: '0%',
-      strategicRecommendations: [] as string[],
-      marketEntry: '',
-      marketDrivers: [] as string[],
-      marketSizeBySegment: {} as Record<string, string>,
-      growthProjections: {} as Record<string, string>,
-      timestamp: null  // Clear timestamp to force fresh data update
-    }));
-    setMarketIntelligenceData(prev => ({
-      ...prev,
-      executiveSummary: '',
-      tamValue: '$0',
-      samValue: '$0',
-      apacGrowthRate: '0%',
-      strategicRecommendations: [] as string[],
-      marketEntry: '',
-      marketDrivers: [] as string[],
-      marketSizeBySegment: {} as Record<string, string>,
-      growthProjections: {} as Record<string, string>,
-      timestamp: null  // Clear timestamp to force fresh data update
-    }));
+    // Check if we have persistent data from previous session
+    const storedMarketData = localStorage.getItem('marketIntelligenceData');
+    const hasStoredData = storedMarketData && JSON.parse(storedMarketData).timestamp;
+    
+    if (hasStoredData) {
+      console.log('📦 Found persistent Market Size data from previous session - preserving it');
+      console.log('🔧 Not clearing data - user will see last Swagger data until new data arrives');
+    } else {
+      console.log('🧹 No persistent data found - this is first visit or localStorage is empty');
+      console.log('🧹 Clearing market size data to show loading state until Swagger data arrives');
+      
+      // Only clear data if this is truly a first visit
+      setMarketData(prev => ({
+        ...prev,
+        executiveSummary: '',
+        tamValue: '$0',
+        samValue: '$0',
+        apacGrowthRate: '0%',
+        strategicRecommendations: [] as string[],
+        marketEntry: '',
+        marketDrivers: [] as string[],
+        marketSizeBySegment: {} as Record<string, string>,
+        growthProjections: {} as Record<string, string>,
+        timestamp: null  // Clear timestamp to force fresh data update
+      }));
+      setMarketIntelligenceData(prev => ({
+        ...prev,
+        executiveSummary: '',
+        tamValue: '$0',
+        samValue: '$0',
+        apacGrowthRate: '0%',
+        strategicRecommendations: [] as string[],
+        marketEntry: '',
+        marketDrivers: [] as string[],
+        marketSizeBySegment: {} as Record<string, string>,
+        growthProjections: {} as Record<string, string>,
+        timestamp: null  // Clear timestamp to force fresh data update
+      }));
+    }
     setIsInitialLoading(true);
     
     // Optimized sequential loading to prevent performance issues
@@ -2314,7 +2361,11 @@ const MarketResearch = () => {
       value,
       'Updated executive summary for market analysis'
     );
-    setMarketIntelligenceData(prev => ({ ...prev, executiveSummary: value }));
+    setMarketIntelligenceData(prev => {
+      const newData = { ...prev, executiveSummary: value };
+      saveMarketIntelligenceToLocalStorage(newData);
+      return newData;
+    });
   };
 
   const handleMarketIntelligenceTamValueChange = (value: string) => {
@@ -2325,7 +2376,11 @@ const MarketResearch = () => {
       value,
       'Updated Total Addressable Market (TAM) value'
     );
-    setMarketIntelligenceData(prev => ({ ...prev, tamValue: value }));
+    setMarketIntelligenceData(prev => {
+      const newData = { ...prev, tamValue: value };
+      saveMarketIntelligenceToLocalStorage(newData);
+      return newData;
+    });
   };
 
   const handleMarketIntelligenceSamValueChange = (value: string) => {
@@ -2336,7 +2391,11 @@ const MarketResearch = () => {
       value,
       'Updated Serviceable Addressable Market (SAM) value'
     );
-    setMarketIntelligenceData(prev => ({ ...prev, samValue: value }));
+    setMarketIntelligenceData(prev => {
+      const newData = { ...prev, samValue: value };
+      saveMarketIntelligenceToLocalStorage(newData);
+      return newData;
+    });
   };
 
   const handleMarketIntelligenceApacGrowthRateChange = (value: string) => {
@@ -2347,7 +2406,11 @@ const MarketResearch = () => {
       value,
       'Updated APAC region growth rate'
     );
-    setMarketIntelligenceData(prev => ({ ...prev, apacGrowthRate: value }));
+    setMarketIntelligenceData(prev => {
+      const newData = { ...prev, apacGrowthRate: value };
+      saveMarketIntelligenceToLocalStorage(newData);
+      return newData;
+    });
   };
 
   // Regulatory Compliance handlers - Add these new handlers
@@ -3168,13 +3231,25 @@ const MarketResearch = () => {
                       onSamValueChange={handleMarketIntelligenceSamValueChange}
                       onApacGrowthRateChange={handleMarketIntelligenceApacGrowthRateChange}
                       onStrategicRecommendationsChange={(recommendations) => 
-                        setMarketIntelligenceData(prev => ({ ...prev, strategicRecommendations: recommendations }))
+                        setMarketIntelligenceData(prev => {
+                          const newData = { ...prev, strategicRecommendations: recommendations };
+                          saveMarketIntelligenceToLocalStorage(newData);
+                          return newData;
+                        })
                       }
                       onMarketEntryChange={(value) => 
-                        setMarketIntelligenceData(prev => ({ ...prev, marketEntry: value }))
+                        setMarketIntelligenceData(prev => {
+                          const newData = { ...prev, marketEntry: value };
+                          saveMarketIntelligenceToLocalStorage(newData);
+                          return newData;
+                        })
                       }
                       onMarketDriversChange={(drivers) => 
-                        setMarketIntelligenceData(prev => ({ ...prev, marketDrivers: drivers }))
+                        setMarketIntelligenceData(prev => {
+                          const newData = { ...prev, marketDrivers: drivers };
+                          saveMarketIntelligenceToLocalStorage(newData);
+                          return newData;
+                        })
                       }
                       // Industry Trends handlers
                       onIndustryTrendsToggleEdit={handleIndustryTrendsToggleEdit}
