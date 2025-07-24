@@ -1272,13 +1272,13 @@ const MarketResearch = () => {
       emerging_trends: reportData.emerging_trends || [],
       technology_drivers: reportData.technology_drivers || [],
       timestamp: reportData.timestamp,
-      // Market Size & Opportunity fields with fallbacks to prevent undefined
-      executiveSummary: reportData.executiveSummary || 'Executive summary not available',
-      tamValue: reportData.tamValue || 'TAM not available',
-      samValue: reportData.samValue || 'SAM not available', 
-      apacGrowthRate: reportData.apacGrowthRate || 'Growth rate not available',
+      // Market Size & Opportunity fields - NO fallback text, keep empty if not available
+      executiveSummary: reportData.executiveSummary || '',
+      tamValue: reportData.tamValue || '',
+      samValue: reportData.samValue || '', 
+      apacGrowthRate: reportData.apacGrowthRate || '',
       strategicRecommendations: reportData.strategicRecommendations || [],
-      marketEntry: reportData.marketEntry || 'Market entry strategy not available',
+      marketEntry: reportData.marketEntry || '',
       marketDrivers: reportData.marketDrivers || [],
       marketSizeBySegment: reportData.marketSizeBySegment || {},
       growthProjections: reportData.growthProjections || {}
@@ -1435,19 +1435,23 @@ const MarketResearch = () => {
         const reportData = apiResponse.report || apiResponse;
         const transformedData = transformReportData(reportData);
         
-        // Update both state and localStorage for persistence
-        setMarketData(transformedData);
-        saveMarketIntelligenceToLocalStorage(transformedData);
-        cachedMarketData = transformedData;
-        cacheTimestamp = Date.now();
-        
-        console.log('✅ Market intelligence data updated from backend and saved to localStorage');
-        console.log('🔍 REFRESH DEBUG: Updated data contains:', {
-          executiveSummary: transformedData.executiveSummary?.substring(0, 50) + '...',
-          tamValue: transformedData.tamValue,
-          samValue: transformedData.samValue,
-          timestamp: transformedData.timestamp
-        });
+      // Add timestamp to ensure persistence 
+      transformedData.timestamp = Date.now().toString();
+      
+      // Update both state and localStorage for persistence
+      setMarketData(transformedData);
+      setMarketIntelligenceData(transformedData); // Update the marketIntelligenceData state too
+      saveMarketIntelligenceToLocalStorage(transformedData);
+      cachedMarketData = transformedData;
+      cacheTimestamp = Date.now();
+      
+      console.log('✅ Market intelligence data updated from backend and saved to localStorage');
+      console.log('🔍 REFRESH DEBUG: Updated data contains:', {
+        executiveSummary: transformedData.executiveSummary?.substring(0, 50) + '...',
+        tamValue: transformedData.tamValue,
+        samValue: transformedData.samValue,
+        timestamp: transformedData.timestamp
+      });
       } else {
         console.log('⚠️ Market intelligence fetch failed, keeping existing data');
       }
