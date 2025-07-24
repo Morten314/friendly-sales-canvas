@@ -1543,16 +1543,23 @@ const MarketResearch = () => {
       console.log('  - Frontend data generation time (OLD):', currentDataTimestamp ? new Date(currentDataTimestamp).toISOString() : 'NO_TIMESTAMP');
       console.log('  - Swagger data generation time (NEW):', newDataTimestamp ? new Date(newDataTimestamp).toISOString() : 'NO_TIMESTAMP');
       
-      // Always update data when refresh is requested OR when we have new data from Swagger
-      // Don't block updates based on timestamps - let new data through
-      const shouldUpdateData = refresh || !currentDataTimestamp || newDataTimestamp;
+      // Only update data if Swagger timestamp is newer than current UI timestamp
+      let shouldUpdateData = false;
+      if (!currentDataTimestamp) {
+        // No existing data, use new data
+        shouldUpdateData = true;
+      } else if (newDataTimestamp) {
+        // Compare timestamps - only update if Swagger data is newer
+        const currentTime = new Date(currentDataTimestamp).getTime();
+        const newTime = new Date(newDataTimestamp).getTime();
+        shouldUpdateData = newTime > currentTime;
+      }
       
       console.log('🔄 MARKET SIZE UPDATE DECISION:');
       console.log('  - Should update data:', shouldUpdateData);
-      console.log('  - Refresh requested:', refresh);
       console.log('  - Current data timestamp:', currentDataTimestamp ? new Date(currentDataTimestamp).toISOString() : 'NONE');
       console.log('  - New data timestamp:', newDataTimestamp ? new Date(newDataTimestamp).toISOString() : 'NONE');
-      console.log('  - Reason for update:', refresh ? 'Refresh requested' : !currentDataTimestamp ? 'No existing data' : 'New data available');
+      console.log('  - Reason for update:', !currentDataTimestamp ? 'No existing data' : shouldUpdateData ? 'Swagger data is newer' : 'Current data is up to date');
       
       console.log('🔍 DEBUGGING: Current marketIntelligenceData before update:', JSON.stringify(marketIntelligenceData, null, 2));
 

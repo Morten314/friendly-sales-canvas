@@ -206,7 +206,26 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
       console.log('📊 Risks:', apiResponse.data?.risks);
       console.log('📊 Trend Snapshots:', apiResponse.data?.trendSnapshots);
 
-      if (apiResponse.data) {
+      // Only update data if Swagger timestamp is newer than current data timestamp
+      let shouldUpdateData = false;
+      if (!currentDataTimestamp) {
+        // No existing data, use new data
+        shouldUpdateData = true;
+      } else if (newDataTimestamp) {
+        // Compare timestamps - only update if Swagger data is newer
+        const currentTime = new Date(currentDataTimestamp).getTime();
+        const newTime = new Date(newDataTimestamp).getTime();
+        shouldUpdateData = newTime > currentTime;
+        
+        console.log('🔍 INDUSTRY TRENDS TIMESTAMP COMPARISON:');
+        console.log('  - Current data time (ms):', currentTime);
+        console.log('  - New data time (ms):', newTime);
+        console.log('  - Time difference (ms):', newTime - currentTime);
+        console.log('  - Should update?:', shouldUpdateData ? 'YES - Swagger data is newer' : 'NO - Current data is up to date');
+      }
+
+      if (apiResponse.data && shouldUpdateData) {
+        console.log('✅ Industry Trends data is newer - updating UI');
         // Add fallback data if properties are missing
         const dataWithFallbacks = {
           ...apiResponse.data,
@@ -240,6 +259,8 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
         setEditCloudMigration(apiResponse.data.cloudMigration || '');
         setEditRegulatory(apiResponse.data.regulatory || '');
         setEditTrendSnapshots(dataWithFallbacks.trendSnapshots);
+      } else if (!shouldUpdateData && currentDataTimestamp && newDataTimestamp) {
+        console.log('ℹ️ Industry Trends data not updated - current data is newer or equal');
       }
     } catch (err) {
       console.error('Error fetching industry trends data:', err);
