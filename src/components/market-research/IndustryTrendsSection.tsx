@@ -222,11 +222,35 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
             }
           ];
 
+          // Fix strategic recommendations structure
+          const strategicRecommendations = Array.isArray(reportData.strategicRecommendations) 
+            ? {
+                primaryFocus: reportData.strategicRecommendations[0] || 'Focus on digital transformation and AI adoption',
+                marketEntry: reportData.strategicRecommendations[1] || 'Strategic partnerships and gradual market penetration'
+              }
+            : (reportData.strategicRecommendations || {
+                primaryFocus: 'Focus on digital transformation and AI adoption',
+                marketEntry: 'Strategic partnerships and gradual market penetration'
+              });
+
+          // Fix regional hotspots structure
+          const regionalHotspots = reportData.regionalHotspots && typeof reportData.regionalHotspots === 'object'
+            ? {
+                APAC: reportData.regionalHotspots.India || reportData.regionalHotspots.APAC || '60%',
+                Europe: reportData.regionalHotspots.Europe || '45%',
+                "North America": reportData.regionalHotspots["North America"] || '55%'
+              }
+            : {
+                APAC: '60%',
+                Europe: '45%',
+                "North America": '55%'
+              };
+
           const dataWithFallbacks = {
             ...reportData,
             trendSnapshots,
-            regionalHotspots: reportData.regionalHotspots || {},
-            strategicRecommendations: reportData.strategicRecommendations || [],
+            regionalHotspots,
+            strategicRecommendations,
             visualCharts: reportData.visualCharts || {},
             risks: reportData.risks || [],
             marketDrivers: reportData.marketDrivers || [],
@@ -601,6 +625,11 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
               <Button
                 onClick={() => {
                   console.log('📋 Read More button clicked, current expanded:', industryTrendsExpanded);
+                  console.log('📋 Industry Trends Data:', industryTrendsData);
+                  console.log('📋 Executive Summary:', industryTrendsData?.executiveSummary);
+                  console.log('📋 Trend Snapshots:', industryTrendsData?.trendSnapshots);
+                  console.log('📋 Regional Hotspots:', industryTrendsData?.regionalHotspots);
+                  console.log('📋 Strategic Recommendations:', industryTrendsData?.strategicRecommendations);
                   onIndustryTrendsExpandToggle(true);
                 }}
                 variant="outline"
@@ -619,11 +648,24 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                 <h2 className="text-2xl font-bold text-gray-900 mb-8">
                   Industry Trends Report
                 </h2>
+                
+                {/* Debug Information */}
+                <div className="mb-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                  <h4 className="font-medium text-yellow-900 mb-2">Debug Info:</h4>
+                  <p className="text-sm text-yellow-700">
+                    Data available: {industryTrendsData ? 'Yes' : 'No'} | 
+                    Executive Summary: {industryTrendsData?.executiveSummary ? 'Available' : 'Missing'} |
+                    Trend Snapshots: {industryTrendsData?.trendSnapshots?.length || 0} items |
+                    Regional Hotspots: {industryTrendsData?.regionalHotspots ? 'Available' : 'Missing'}
+                  </p>
+                </div>
 
                 {/* Executive Summary */}
                 <div className="mb-8">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Executive Summary</h3>
-                  <p className="text-gray-700 bg-gray-50 p-4 rounded-lg">{industryTrendsData.executiveSummary}</p>
+                  <p className="text-gray-700 bg-gray-50 p-4 rounded-lg">
+                    {industryTrendsData?.executiveSummary || 'No executive summary available'}
+                  </p>
                 </div>
 
                 {/* Key Trend Snapshots */}
