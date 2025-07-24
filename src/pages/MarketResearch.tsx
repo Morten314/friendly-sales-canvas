@@ -1100,24 +1100,17 @@ const MarketResearch = () => {
       localStorage.removeItem('marketIntelligenceData');
     }
     
-    // Return default values if no stored data or invalid stored data
-    console.log('📝 Using default market intelligence data');
+    // Return empty values if no stored data - let the API populate the data
+    console.log('📝 No stored data found - returning empty state, will load from API');
     return {
-      executiveSummary: "The cloud infrastructure market presents a significant opportunity with strong growth potential across all segments. Key drivers include digital transformation, remote work adoption, and increasing data requirements.",
-      tamValue: "$4.2B",
-      samValue: "$2.1B", 
-      apacGrowthRate: "25%",
+      executiveSummary: "",
+      tamValue: "",
+      samValue: "", 
+      apacGrowthRate: "",
       strategicRecommendations: [
-        "Focus on mid-market segment for fastest revenue growth",
-        "Invest in APAC expansion to capture high-growth markets",
-        "Develop industry-specific solutions for better differentiation"
       ],
-      marketEntry: "A phased approach starting with established markets in North America, followed by selective expansion into high-growth APAC regions. Focus on building strategic partnerships with system integrators and cloud providers.",
+      marketEntry: "",
       marketDrivers: [
-        "Accelerating digital transformation initiatives across industries",
-        "Increasing demand for scalable cloud infrastructure solutions", 
-        "Growing emphasis on data security and compliance requirements",
-        "Rising adoption of hybrid and multi-cloud architectures"
       ],
       marketSizeBySegment: {},
       growthProjections: {},
@@ -1405,14 +1398,11 @@ const MarketResearch = () => {
       console.log('- SAM Value:', transformedData.samValue);
       console.log('- Market Entry:', transformedData.marketEntry?.substring(0, 100) + '...');
       
-        // Update both state and cache (only for current data, not historical)
+        // Update both state and localStorage for persistence
         setMarketData(transformedData);
-        // DISABLE CACHING TO ENSURE FRESH DATA ALWAYS LOADS
-        // if (!isShowingHistoricalData) {
-        //   cachedMarketData = transformedData;
-        //   cacheTimestamp = Date.now();
-        //   console.log('🔍 DEBUGGING: Updated cache at timestamp:', cacheTimestamp);
-        // }
+        // Save transformed data to localStorage for persistence
+        saveMarketIntelligenceToLocalStorage(transformedData);
+        console.log('💾 Market data saved to localStorage for persistence');
       
       // Reset historical data flags when fetching current data
       setIsShowingHistoricalData(false);
@@ -1465,12 +1455,13 @@ const MarketResearch = () => {
         const reportData = apiResponse.report || apiResponse;
         const transformedData = transformReportData(reportData);
         
-        // Update both state and cache
+        // Update both state and localStorage for persistence
         setMarketData(transformedData);
+        saveMarketIntelligenceToLocalStorage(transformedData);
         cachedMarketData = transformedData;
         cacheTimestamp = Date.now();
         
-        console.log('✅ Market intelligence data updated from backend');
+        console.log('✅ Market intelligence data updated from backend and saved to localStorage');
       } else {
         console.log('⚠️ Market intelligence fetch failed, keeping existing data');
       }
