@@ -1086,17 +1086,26 @@ const MarketResearch = () => {
       if (stored) {
         const parsedData = JSON.parse(stored);
         console.log('📦 Loading Market Intelligence data from localStorage:', parsedData);
-        return parsedData;
+        // Only return stored data if it has a timestamp (meaning it came from swagger)
+        if (parsedData.timestamp) {
+          console.log('✅ Found persisted swagger data with timestamp:', parsedData.timestamp);
+          return parsedData;
+        } else {
+          console.log('⚠️ Found localStorage data but no timestamp - this is default data, clearing...');
+          localStorage.removeItem('marketIntelligenceData');
+        }
       }
     } catch (error) {
       console.error('Error loading Market Intelligence data from localStorage:', error);
+      localStorage.removeItem('marketIntelligenceData');
     }
     
-    // Return default values if no stored data
+    // Return default values if no stored data or invalid stored data
+    console.log('📝 Using default market intelligence data');
     return {
       executiveSummary: "The cloud infrastructure market presents a significant opportunity with strong growth potential across all segments. Key drivers include digital transformation, remote work adoption, and increasing data requirements.",
       tamValue: "$4.2B",
-      samValue: "$2.1B",
+      samValue: "$2.1B", 
       apacGrowthRate: "25%",
       strategicRecommendations: [
         "Focus on mid-market segment for fastest revenue growth",
@@ -1621,12 +1630,7 @@ const MarketResearch = () => {
           console.log('✅ MARKET SIZE DATA UPDATED - Component name: "Market Size & Opportunity"');
           
           // Save to localStorage for persistence
-          try {
-            localStorage.setItem('marketIntelligenceData', JSON.stringify(newData));
-            console.log('💾 Market Intelligence data saved to localStorage');
-          } catch (error) {
-            console.error('❌ Failed to save Market Intelligence data to localStorage:', error);
-          }
+          saveMarketIntelligenceToLocalStorage(newData);
           
           return newData;
         });
@@ -1761,110 +1765,40 @@ const MarketResearch = () => {
 
   // Real-time data synchronization with backend (DISABLED to prevent overwriting fresh data)
   useEffect(() => {
-    console.log('🔥 Setting up optimized data sync - background refresh disabled to preserve fresh data');
-    console.log('🚫 Background auto-refresh disabled to prevent overwriting component-specific fresh data');
+    console.log('🔥 Setting up optimized data sync - preserving persistent data');
     
     // Check if we have persistent data from previous session
     const storedMarketData = localStorage.getItem('marketIntelligenceData');
-    const hasStoredData = storedMarketData && JSON.parse(storedMarketData).timestamp;
-    
-    if (hasStoredData) {
-      console.log('📦 Found persistent Market Size data from previous session - preserving it');
-      console.log('🔧 Not clearing data - user will see last Swagger data until new data arrives');
-    } else {
-      console.log('🧹 No persistent data found - this is first visit or localStorage is empty');
-      console.log('🧹 Clearing market size data to show loading state until Swagger data arrives');
-      
-      // Only clear data if this is truly a first visit
-      setMarketData(prev => ({
-        ...prev,
-        executiveSummary: '',
-        tamValue: '$0',
-        samValue: '$0',
-        apacGrowthRate: '0%',
-        strategicRecommendations: [] as string[],
-        marketEntry: '',
-        marketDrivers: [] as string[],
-        marketSizeBySegment: {} as Record<string, string>,
-        growthProjections: {} as Record<string, string>,
-        timestamp: null  // Clear timestamp to force fresh data update
-      }));
-      setMarketIntelligenceData(prev => ({
-        ...prev,
-        executiveSummary: '',
-        tamValue: '$0',
-        samValue: '$0',
-        apacGrowthRate: '0%',
-        strategicRecommendations: [] as string[],
-        marketEntry: '',
-        marketDrivers: [] as string[],
-        marketSizeBySegment: {} as Record<string, string>,
-        growthProjections: {} as Record<string, string>,
-        timestamp: null  // Clear timestamp to force fresh data update
-      }));
-    }
-    setIsInitialLoading(true);
-    
-    // Optimized sequential loading to prevent performance issues
-    const fetchLatestData = async () => {
-      console.log('🎯 Background data refresh SKIPPED to preserve fresh component data');
-      
-      // DISABLED: Background refresh can overwrite fresh component-specific data
-      // Only refresh if user explicitly requests it
-      console.log('⚠️ Background refresh disabled - fresh data preserved');
-    };
-    
-    // Optimized initial load - sequential instead of parallel  
-    const initialFetch = async () => {
-      console.log('🎯 Optimized initial load - sequential for better performance');
-      
+    if (storedMarketData) {
       try {
-        // Load market intelligence first (usually faster)
-        const marketResponse = await fetch(`https://backend-11kr.onrender.com/market_intelligence?t=${Date.now()}`);
-        if (marketResponse.ok) {
-          const data = await marketResponse.json();
-          if (data && typeof data === 'object') {
-            const transformedData = transformReportData(data.report || data);
-            setMarketData(transformedData);
-            cachedMarketData = transformedData;
-            cacheTimestamp = Date.now();
-          }
+        const parsedData = JSON.parse(storedMarketData);
+        if (parsedData.timestamp) {
+          console.log('📦 Found persistent Market Size data from previous session - preserving it');
+          console.log('🔧 Not clearing data - user will see last Swagger data until new data arrives');
+          console.log('💾 Persistent data timestamp:', parsedData.timestamp);
+          
+          // Make sure the persistent data is properly set in marketData state too
+          setMarketData(prev => ({
+            ...prev,
+            executiveSummary: parsedData.executiveSummary,
+            tamValue: parsedData.tamValue,
+            samValue: parsedData.samValue,
+            apacGrowthRate: parsedData.apacGrowthRate,
+            strategicRecommendations: parsedData.strategicRecommendations,
+            marketEntry: parsedData.marketEntry,
+            marketDrivers: parsedData.marketDrivers,
+            marketSizeBySegment: parsedData.marketSizeBySegment,
+            growthProjections: parsedData.growthProjections,
+            timestamp: parsedData.timestamp
+          }));
+          return; // Exit early - don't clear data
         }
-        
-        // Then load fresh market size data
-        await fetchMarketSizeData(true, true);
-        
-      } catch (err) {
-        console.log('Initial fetch failed:', err);
+      } catch (error) {
+        console.error('Error parsing stored market data:', error);
       }
-    };
+    }
     
-    initialFetch();
-    
-    // Background polling DISABLED to preserve fresh component-specific data
-    console.log('🚫 Background polling disabled to prevent overwriting fresh data');
-    // const syncInterval = setInterval(() => {
-    //   console.log('🔄 Periodic background sync...');
-    //   fetchLatestData();
-    // }, 300000); // 5 minutes
-
-    // Debounced focus handler to prevent excessive calls
-    let focusTimeout: NodeJS.Timeout;
-    const handleFocus = () => {
-      clearTimeout(focusTimeout);
-      focusTimeout = setTimeout(() => {
-        console.log('👀 Window focused - refreshing data');
-        fetchLatestData();
-      }, 2000); // 2 second delay
-    };
-    
-    window.addEventListener('focus', handleFocus);
-
-    // Cleanup (no intervals to clear since background refresh is disabled)
-    return () => {
-      // clearInterval(syncInterval); // Disabled since no background refresh
-      window.removeEventListener('focus', handleFocus);
-    };
+    console.log('🧹 No valid persistent data found - this is first visit or localStorage is empty');
   }, []);
 
   // Listen for company profile updates and trigger background refresh
