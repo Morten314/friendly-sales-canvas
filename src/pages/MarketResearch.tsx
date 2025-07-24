@@ -1097,7 +1097,8 @@ const MarketResearch = () => {
       "Rising adoption of hybrid and multi-cloud architectures"
     ],
     marketSizeBySegment: {},
-    growthProjections: {}
+    growthProjections: {},
+    timestamp: null as string | null  // Add timestamp to track data generation time
   });
 
   // Market Size API state
@@ -1529,16 +1530,29 @@ const MarketResearch = () => {
       const apiResponse = await response.json();
       console.log('📥 Market Size API response:', apiResponse);
       console.log('🔍 API Response structure:', JSON.stringify(apiResponse, null, 2));
-      console.log('🔍 DEBUGGING: Market Size response timestamp:', apiResponse.timestamp || apiResponse.data?.timestamp || apiResponse.id || apiResponse.created_at || 'NO_TIMESTAMP');
-      console.log('⏰ REQUEST vs RESPONSE TIMING:');
-      console.log('  - Request sent at:', requestTimestamp);
-      console.log('  - Response timestamp:', apiResponse.data?.timestamp || 'No backend timestamp');
-      console.log('  - Time difference:', apiResponse.data?.timestamp ? (requestTimestamp - new Date(apiResponse.data.timestamp).getTime()) : 'Cannot calculate');
+      // Extract timestamps for comparison
+      const newDataTimestamp = apiResponse.data?.timestamp || apiResponse.timestamp;
+      const currentDataTimestamp = marketIntelligenceData.timestamp;
+      
+      console.log('🔍 MARKET SIZE TIMESTAMP ANALYSIS:');
+      console.log('  - Current request time:', new Date(requestTimestamp).toISOString());
+      console.log('  - Frontend data generation time (OLD):', currentDataTimestamp ? new Date(currentDataTimestamp).toISOString() : 'NO_TIMESTAMP');
+      console.log('  - Swagger data generation time (NEW):', newDataTimestamp ? new Date(newDataTimestamp).toISOString() : 'NO_TIMESTAMP');
+      
+      // Compare timestamps - only update if new data is actually newer
+      const shouldUpdateData = !currentDataTimestamp || !newDataTimestamp || new Date(newDataTimestamp) > new Date(currentDataTimestamp);
+      
+      console.log('🔄 MARKET SIZE UPDATE DECISION:');
+      console.log('  - Should update data:', shouldUpdateData);
+      console.log('  - Reason:', !currentDataTimestamp ? 'No existing timestamp' : 
+                   !newDataTimestamp ? 'No new timestamp' : 
+                   new Date(newDataTimestamp) > new Date(currentDataTimestamp) ? 'New data is newer' : 'Existing data is newer or same');
+      
       console.log('🔍 DEBUGGING: Current marketIntelligenceData before update:', JSON.stringify(marketIntelligenceData, null, 2));
 
-      // Update market intelligence data with API response
-      if (apiResponse.data) {
-        console.log('✅ Found data in API response');
+      // Update market intelligence data with API response only if data is newer
+      if (apiResponse.data && shouldUpdateData) {
+        console.log('✅ Found data in API response and data is newer - updating');
         const report = apiResponse.data;
         console.log('📊 Report data:', JSON.stringify(report, null, 2));
         console.log('🔄 Updating marketIntelligenceData with report:', report);
@@ -1566,7 +1580,8 @@ const MarketResearch = () => {
             apacGrowthRate: report.apacGrowthRate !== undefined ? report.apacGrowthRate : prev.apacGrowthRate,
             strategicRecommendations: report.strategicRecommendations !== undefined ? report.strategicRecommendations : prev.strategicRecommendations,
             marketEntry: report.marketEntry !== undefined ? report.marketEntry : prev.marketEntry,
-            marketDrivers: report.marketDrivers !== undefined ? report.marketDrivers : prev.marketDrivers
+            marketDrivers: report.marketDrivers !== undefined ? report.marketDrivers : prev.marketDrivers,
+            timestamp: newDataTimestamp // Store the Swagger generation timestamp
           };
           console.log('🔍 DEBUGGING: NEW marketIntelligenceData after MARKET SIZE update:', JSON.stringify(newData, null, 2));
           console.log('🔍 DEBUGGING: Market Size Data comparison:');
@@ -1574,6 +1589,8 @@ const MarketResearch = () => {
           console.log('- NEW Executive Summary:', newData.executiveSummary?.substring(0, 100) + '...');
           console.log('- OLD TAM Value:', prev.tamValue);
           console.log('- NEW TAM Value:', newData.tamValue);
+          console.log('- OLD Timestamp:', prev.timestamp);
+          console.log('- NEW Timestamp:', newData.timestamp);
           console.log('✅ MARKET SIZE DATA UPDATED - Component name: "Market Size & Opportunity"');
           return newData;
         });
@@ -1590,7 +1607,8 @@ const MarketResearch = () => {
             marketEntry: report.marketEntry,
             marketDrivers: report.marketDrivers,
             marketSizeBySegment: report.marketSizeBySegment, // This was missing!
-            growthProjections: report.growthProjections      // This was missing!
+            growthProjections: report.growthProjections,      // This was missing!
+            timestamp: newDataTimestamp // Store the Swagger generation timestamp
           };
           console.log('✅ Updated marketData with Market Size API data:', updated);
           
@@ -1600,6 +1618,15 @@ const MarketResearch = () => {
           
           return updated;
         });
+      } else if (!shouldUpdateData) {
+        console.log('⏸️ Skipping Market Size data update - existing data is newer or same');
+        console.log('🔍 Keeping existing timestamp:', currentDataTimestamp);
+        setIsInitialLoading(false);
+        setIsRefreshing(false);
+      } else {
+        console.log('❌ No data found in Market Size API response or failed to update');
+        setIsInitialLoading(false);
+        setIsRefreshing(false);
       }
 
     } catch (err) {
@@ -1702,7 +1729,7 @@ const MarketResearch = () => {
     console.log('🚫 Background auto-refresh disabled to prevent overwriting component-specific fresh data');
     
     // Clear previous market size data immediately on component mount
-    console.log('🧹 Clearing previous market size data on component mount');
+    console.log('🧹 Clearing previous market size data on component mount to ensure fresh Swagger data');
     setMarketData(prev => ({
       ...prev,
       executiveSummary: '',
@@ -1713,7 +1740,8 @@ const MarketResearch = () => {
       marketEntry: '',
       marketDrivers: [] as string[],
       marketSizeBySegment: {} as Record<string, string>,
-      growthProjections: {} as Record<string, string>
+      growthProjections: {} as Record<string, string>,
+      timestamp: null  // Clear timestamp to force fresh data update
     }));
     setMarketIntelligenceData(prev => ({
       ...prev,
@@ -1725,7 +1753,8 @@ const MarketResearch = () => {
       marketEntry: '',
       marketDrivers: [] as string[],
       marketSizeBySegment: {} as Record<string, string>,
-      growthProjections: {} as Record<string, string>
+      growthProjections: {} as Record<string, string>,
+      timestamp: null  // Clear timestamp to force fresh data update
     }));
     setIsInitialLoading(true);
     
