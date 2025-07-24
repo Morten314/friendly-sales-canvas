@@ -1407,33 +1407,16 @@ const MarketResearch = () => {
       setIsRefreshing(true);
       setError(null);
       
-      console.log('🔄 Checking for existing fresh Swagger data before refresh...');
+      console.log('🔄 Refresh button clicked - fetching fresh data from Swagger...');
       
-      // First check if there's already fresh data from recent Swagger call
-      const existingData = getInitialMarketIntelligenceData();
-      const currentTime = Date.now();
-      const dataTimestamp = existingData?.timestamp ? parseInt(existingData.timestamp) : 0;
-      const dataAge = currentTime - dataTimestamp;
-      const fiveMinutesInMs = 5 * 60 * 1000; // 5 minutes
+      // Get current UI data timestamp for comparison
+      const currentUIData = getInitialMarketIntelligenceData();
+      const currentUITimestamp = currentUIData?.timestamp ? parseInt(currentUIData.timestamp) : 0;
+      console.log('📊 Current UI data timestamp:', currentUITimestamp);
+      console.log('📊 Current UI data time:', currentUITimestamp ? new Date(currentUITimestamp).toISOString() : 'No timestamp');
       
-      if (existingData && dataAge < fiveMinutesInMs) {
-        console.log('✅ Found fresh Swagger data from recent session - using existing data');
-        console.log(`📅 Data age: ${Math.round(dataAge / 1000)} seconds (< 5 minutes)`);
-        console.log(`🕒 Data timestamp: ${new Date(dataTimestamp).toISOString()}`);
-        
-        // Use existing fresh data instead of generating new
-        setMarketData(existingData);
-        setMarketIntelligenceData(existingData);
-        setIsRefreshing(false);
-        return;
-      }
-      
-      console.log('⚠️ No fresh data found or data is stale - fetching new data...');
-      console.log('🧹 Clearing localStorage before refresh to ensure fresh data');
-      localStorage.removeItem('marketIntelligenceData');
-      
-      // Fetch updated data from multiple sources simultaneously
-      console.log('🔄 Fetching fresh data from all backend endpoints...');
+      // Always fetch fresh data from Swagger API when refresh is clicked
+      console.log('🔄 Fetching fresh data from Swagger API...');
       const [marketResponse, marketSizeResponse] = await Promise.allSettled([
         fetch(`https://backend-11kr.onrender.com/market_intelligence?t=${Date.now()}&cache_bust=${Math.random()}`, {
           method: 'GET',
@@ -1456,23 +1439,48 @@ const MarketResearch = () => {
         const reportData = apiResponse.report || apiResponse;
         const transformedData = transformReportData(reportData);
         
-      // Add timestamp to ensure persistence 
-      transformedData.timestamp = Date.now().toString();
-      
-      // Update both state and localStorage for persistence
-      setMarketData(transformedData);
-      setMarketIntelligenceData(transformedData); // Update the marketIntelligenceData state too
-      saveMarketIntelligenceToLocalStorage(transformedData);
-      cachedMarketData = transformedData;
-      cacheTimestamp = Date.now();
-      
-      console.log('✅ Market intelligence data updated from backend and saved to localStorage');
-      console.log('🔍 REFRESH DEBUG: Updated data contains:', {
-        executiveSummary: transformedData.executiveSummary?.substring(0, 50) + '...',
-        tamValue: transformedData.tamValue,
-        samValue: transformedData.samValue,
-        timestamp: transformedData.timestamp
-      });
+        // PRESERVE the original Swagger timestamp - DO NOT override it
+        const swaggerTimestamp = reportData.timestamp; // Original Swagger timestamp
+        console.log('📊 Swagger data timestamp:', swaggerTimestamp);
+        console.log('📊 Current UI data timestamp:', currentUITimestamp);
+        
+        // Convert timestamps for comparison
+        let swaggerTime = 0;
+        if (swaggerTimestamp) {
+          // Handle both ISO string format and timestamp number
+          swaggerTime = typeof swaggerTimestamp === 'string' ? 
+            new Date(swaggerTimestamp).getTime() : 
+            parseInt(swaggerTimestamp);
+        }
+        
+        console.log('🔄 TIMESTAMP COMPARISON:');
+        console.log('  - Current UI timestamp:', currentUITimestamp, new Date(currentUITimestamp).toISOString());
+        console.log('  - Swagger timestamp:', swaggerTime, new Date(swaggerTime).toISOString());
+        
+        // Only update if Swagger data is newer than current UI data
+        if (swaggerTime > currentUITimestamp) {
+          console.log('✅ Swagger data is newer - updating UI with fresh data');
+          
+          // Keep the original Swagger timestamp - DO NOT modify it
+          transformedData.timestamp = swaggerTimestamp;
+          
+          // Update both state and localStorage for persistence
+          setMarketData(transformedData);
+          setMarketIntelligenceData(transformedData);
+          saveMarketIntelligenceToLocalStorage(transformedData);
+          cachedMarketData = transformedData;
+          cacheTimestamp = swaggerTime;
+          
+          console.log('✅ Market intelligence data updated from Swagger and saved to localStorage');
+          console.log('🔍 REFRESH DEBUG: Updated data contains:', {
+            executiveSummary: transformedData.executiveSummary?.substring(0, 50) + '...',
+            tamValue: transformedData.tamValue,
+            samValue: transformedData.samValue,
+            timestamp: transformedData.timestamp
+          });
+        } else {
+          console.log('⚠️ Swagger data is not newer than current UI data - keeping existing data');
+        }
       } else {
         console.log('⚠️ Market intelligence fetch failed, keeping existing data');
       }
