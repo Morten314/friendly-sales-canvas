@@ -161,30 +161,7 @@
 //   });
   
 //   const [isRefreshing, setIsRefreshing] = useState(false);
-//   const [error, setError] = useState<string | null>(null);
-  
-//   // MarketIntelligenceTab state
-//   const [isMarketIntelligenceEditing, setIsMarketIntelligenceEditing] = useState(false);
-//   const [isMarketIntelligenceExpanded, setIsMarketIntelligenceExpanded] = useState(false);
-//   const [marketIntelligenceData, setMarketIntelligenceData] = useState({
-//     executiveSummary: "The cloud infrastructure market presents a significant opportunity with strong growth potential across all segments. Key drivers include digital transformation, remote work adoption, and increasing data requirements.",
-//     tamValue: "$4.2B",
-//     samValue: "$2.1B",
-//     apacGrowthRate: "25%",
-//     strategicRecommendations: [
-//       "Focus on mid-market segment for fastest revenue growth",
-//       "Invest in APAC expansion to capture high-growth markets",
-//       "Develop industry-specific solutions for better differentiation"
-//     ],
-//     marketEntry: "A phased approach starting with established markets in North America, followed by selective expansion into high-growth APAC regions. Focus on building strategic partnerships with system integrators and cloud providers.",
-//     marketDrivers: [
-//       "Accelerating digital transformation initiatives across industries",
-//       "Increasing demand for scalable cloud infrastructure solutions", 
-//       "Growing emphasis on data security and compliance requirements",
-//       "Rising adoption of hybrid and multi-cloud architectures"
-//     ]
-//   });
-//   const [deletedSections, setDeletedSections] = useState<Set<string>>(new Set());
+// Cleaned up - no default data
   
 //   // Edit history state
 //   const [editHistory, setEditHistory] = useState<EditRecord[]>([]);
@@ -1431,6 +1408,9 @@ const MarketResearch = () => {
       setError(null);
       
       console.log('🔄 Refreshing market research data...');
+      console.log('🧹 Clearing localStorage before refresh to ensure fresh data');
+      localStorage.removeItem('marketIntelligenceData');
+      
       // Fetch updated data from multiple sources simultaneously
       console.log('🔄 Fetching fresh data from all backend endpoints...');
       const [marketResponse, marketSizeResponse] = await Promise.allSettled([
@@ -1462,6 +1442,12 @@ const MarketResearch = () => {
         cacheTimestamp = Date.now();
         
         console.log('✅ Market intelligence data updated from backend and saved to localStorage');
+        console.log('🔍 REFRESH DEBUG: Updated data contains:', {
+          executiveSummary: transformedData.executiveSummary?.substring(0, 50) + '...',
+          tamValue: transformedData.tamValue,
+          samValue: transformedData.samValue,
+          timestamp: transformedData.timestamp
+        });
       } else {
         console.log('⚠️ Market intelligence fetch failed, keeping existing data');
       }
