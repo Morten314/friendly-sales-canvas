@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import MiniPieChart from '@/components/ui/MiniPieChart';
 import MiniLineChart from '@/components/ui/MiniLineChart';
-import { toUTCTimestamp, isTimestampNewer, logTimestampComparison } from '@/lib/timestampUtils';
+import { toUTCTimestamp, isTimestampNewer, getCurrentUTCTimestamp, logTimestampComparison } from '@/lib/timestampUtils';
 
 interface EditRecord {
   id: string;
@@ -147,97 +147,112 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Expires': '0',
-          'X-Request-ID': randomId,
-          'X-Force-Fresh': '1',
-          'X-Bypass-Cache': '1', 
-          'X-Refresh-DB': '1',
-          'X-Request-Time': currentTime.toString(),
-          'X-Cache-Control': 'no-cache'
         },
-        cache: 'no-store',
-        body: JSON.stringify({
-          ...payload,
-          force_refresh: true,
-          request_timestamp: requestTimestamp,
-          cache_bypass: randomId,
-          database_refresh: true
-        })
+        body: JSON.stringify(payload)
       });
 
+      console.log('📥 Industry Trends API response:', response);
+      
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('🚨 API Error Response:', errorText);
-        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const apiResponse = await response.json();
-      console.log('📥 Industry Trends API response:', apiResponse);
-      console.log('📊 Full API Response Structure:', JSON.stringify(apiResponse, null, 2));
-      console.log('📊 Industry Trends Data Keys:', apiResponse.data ? Object.keys(apiResponse.data) : 'No data');
+      const result = await response.json();
+      console.log('📊 Full API Response Structure:', result);
+      console.log('📊 Industry Trends Data Keys:', Object.keys(result.data || {}));
       
-      // Data freshness comparison using UTC timestamp utilities
-      const currentDataTimestamp = industryTrendsData?.timestamp;
-      const newDataTimestamp = apiResponse.data?.timestamp;
-      
-      // Use UTC timestamp utilities for consistent comparison
-      logTimestampComparison(currentDataTimestamp, newDataTimestamp, 'Industry Trends');
-      
-      // Only update data if Swagger timestamp is newer than current data timestamp
-      let shouldUpdateData = false;
-      if (!currentDataTimestamp) {
-        // No existing data, use new data
-        shouldUpdateData = true;
-        console.log('🔄 No existing data - will update');
-      } else if (newDataTimestamp) {
-        // Use UTC comparison utility
-        shouldUpdateData = isTimestampNewer(newDataTimestamp, currentDataTimestamp);
-        console.log('🔄 Timestamp comparison result:', shouldUpdateData ? 'Update needed' : 'Data is current');
-      }
-
-      if (apiResponse.data && shouldUpdateData) {
-        console.log('✅ Industry Trends data is newer - updating UI');
-        // Add fallback data if properties are missing
-        const dataWithFallbacks = {
-          ...apiResponse.data,
-          trendSnapshots: apiResponse.data.trendSnapshots || [
-            { title: "AI/ML Integration", metric: "78% adoption rate", type: "growth" },
-            { title: "Cloud Migration", metric: "45% increase", type: "performance" },
-            { title: "Data Privacy", metric: "12 new regulations", type: "adoption" }
-          ],
-          risks: apiResponse.data.risks || [
-            "Cybersecurity threats increasing with digital transformation",
-            "Regulatory compliance complexity in multiple jurisdictions",
-            "Skills gap in emerging technologies",
-            "Economic uncertainty affecting technology budgets"
-          ],
-          visualCharts: apiResponse.data.visualCharts || {
-            aiAdoptionTrends: ["Q1", "Q2", "Q3", "Q4"],
-            technologyBudgetAllocation: {
-              "AI/ML": "35%",
-              "Cloud": "40%", 
-              "Security": "25%"
-            }
-          }
-        };
-        // Convert timestamp to UTC and store
-        const dataWithUTCTimestamp = {
-          ...dataWithFallbacks,
-          timestamp: toUTCTimestamp(newDataTimestamp)
-        };
+      if (result.status === 'success' && result.data) {
+        const reportData = result.data;
         
-        console.log('🔥 Setting industryTrendsData with UTC timestamp:', dataWithUTCTimestamp.timestamp);
-        console.log('🔥 Setting industryTrendsData with trendSnapshots:', dataWithUTCTimestamp.trendSnapshots);
-        console.log('🔥 Setting industryTrendsData with visualCharts:', dataWithUTCTimestamp.visualCharts);
-        setIndustryTrendsData(dataWithUTCTimestamp);
-        // Initialize edit fields with fetched data
-        setEditExecutiveSummary(apiResponse.data.executiveSummary || '');
-        setEditAiAdoption(apiResponse.data.aiAdoption || '');
-        setEditCloudMigration(apiResponse.data.cloudMigration || '');
-        setEditRegulatory(apiResponse.data.regulatory || '');
-        setEditTrendSnapshots(dataWithUTCTimestamp.trendSnapshots);
-      } else if (!shouldUpdateData && currentDataTimestamp && newDataTimestamp) {
-        console.log('ℹ️ Industry Trends data not updated - current data is newer or equal');
+        // Convert timestamps to UTC for comparison  
+        const currentTimestampUTC = toUTCTimestamp(industryTrendsData?.timestamp);
+        const newTimestampUTC = toUTCTimestamp(reportData.timestamp);
+        const requestTimeUTC = getCurrentUTCTimestamp();
+        
+        console.log('🔍 INDUSTRY TRENDS TIMESTAMP ANALYSIS (UTC):');
+        console.log('  - Current request time (UTC):', requestTimeUTC);
+        console.log('  - Frontend data time (UTC):', currentTimestampUTC || 'NO_TIMESTAMP');
+        console.log('  - Swagger data time (UTC):', newTimestampUTC || 'NO_TIMESTAMP');
+        console.log('  - Raw current timestamp:', industryTrendsData?.timestamp);
+        console.log('  - Raw new timestamp:', reportData.timestamp);
+        
+        // Determine if we should update
+        let shouldUpdate = false;
+        let updateReason = '';
+        
+        if (!currentTimestampUTC) {
+          shouldUpdate = true;
+          updateReason = 'No existing timestamp - first load';
+        } else if (!newTimestampUTC) {
+          shouldUpdate = false;
+          updateReason = 'Invalid new timestamp';
+        } else if (newTimestampUTC > currentTimestampUTC) {
+          shouldUpdate = true;
+          updateReason = 'Swagger data is newer';
+        } else {
+          shouldUpdate = false;
+          updateReason = 'Current data is up to date or newer';
+        }
+        
+        console.log('🔄 INDUSTRY TRENDS UPDATE DECISION:');
+        console.log('  - Should update data:', shouldUpdate);
+        console.log('  - Current data timestamp:', currentTimestampUTC || 'NO_TIMESTAMP');
+        console.log('  - New data timestamp:', newTimestampUTC || 'NO_TIMESTAMP');
+        console.log('  - Reason for update:', updateReason);
+        
+        if (shouldUpdate) {
+          console.log('✅ Found data in API response and data is newer - updating');
+          
+          // Generate trend snapshots if not provided
+          const trendSnapshots = reportData.trendSnapshots || [
+            {
+              title: "Market Growth",
+              metric: reportData.growthProjections || "25% YoY",
+              type: "growth" as const
+            },
+            {
+              title: "AI Adoption", 
+              metric: reportData.regionalHotspots?.India || "60%",
+              type: "adoption" as const
+            },
+            {
+              title: "Performance Index",
+              metric: "92/100",
+              type: "performance" as const
+            }
+          ];
+
+          const dataWithFallbacks = {
+            ...reportData,
+            trendSnapshots,
+            regionalHotspots: reportData.regionalHotspots || {},
+            strategicRecommendations: reportData.strategicRecommendations || [],
+            visualCharts: reportData.visualCharts || {},
+            risks: reportData.risks || [],
+            marketDrivers: reportData.marketDrivers || [],
+            executiveSummary: reportData.executiveSummary || '',
+            marketSize: reportData.marketSize || '',
+            marketSizeBySegment: reportData.marketSizeBySegment || {},
+            growthProjections: reportData.growthProjections || '',
+            timestamp: newTimestampUTC
+          };
+
+          console.log('🔄 Updating Industry Trends data with newer report');
+          console.log('✅ INDUSTRY TRENDS DATA UPDATED - Component name:', reportData.component_name);
+          
+          setIndustryTrendsData(dataWithFallbacks);
+          
+          // Initialize edit fields with fetched data
+          setEditExecutiveSummary(reportData.executiveSummary || '');
+          setEditAiAdoption(reportData.aiAdoption || '');
+          setEditCloudMigration(reportData.cloudMigration || '');
+          setEditRegulatory(reportData.regulatory || '');
+          setEditTrendSnapshots(dataWithFallbacks.trendSnapshots);
+        } else {
+          console.log('⏭️ Industry Trends data is up to date - no update needed');
+          console.log('  - Current timestamp (UTC):', currentTimestampUTC);
+          console.log('  - New timestamp (UTC):', newTimestampUTC);
+        }
       }
     } catch (err) {
       console.error('Error fetching industry trends data:', err);
