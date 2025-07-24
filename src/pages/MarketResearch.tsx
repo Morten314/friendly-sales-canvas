@@ -871,6 +871,7 @@ import MarketIntelligenceTab from "@/components/market-research/MarketIntelligen
 import EditHistoryPanel from "@/components/market-research/EditHistoryPanel";
 import { DeploymentData } from "@/components/layout/Header";
 import { useNavigate, useLocation } from "react-router-dom";
+import { toUTCTimestamp, isTimestampNewer, logTimestampComparison } from '@/lib/timestampUtils';
 import ScoutChatPanel from "@/components/market-research/ScoutChatPanel";
 
 
@@ -1534,50 +1535,32 @@ const MarketResearch = () => {
       const apiResponse = await response.json();
       console.log('📥 Market Size API response:', apiResponse);
       console.log('🔍 API Response structure:', JSON.stringify(apiResponse, null, 2));
-      // Extract timestamps for comparison
+      // Extract timestamps for comparison - convert to UTC
       const newDataTimestamp = apiResponse.data?.timestamp || apiResponse.timestamp;
       const currentDataTimestamp = marketIntelligenceData.timestamp;
       
-      console.log('🔍 MARKET SIZE TIMESTAMP ANALYSIS:');
-      console.log('  - Current request time:', new Date(requestTimestamp).toISOString());
-      console.log('  - Frontend data generation time (OLD):', currentDataTimestamp || 'NO_TIMESTAMP');
-      console.log('  - Swagger data generation time (NEW):', newDataTimestamp || 'NO_TIMESTAMP');
-      console.log('  - Raw Swagger timestamp from API:', JSON.stringify(newDataTimestamp));
-      console.log('  - Swagger timestamp direct comparison:', newDataTimestamp);
+      // Use UTC timestamp utilities for consistent comparison
+      logTimestampComparison(currentDataTimestamp, newDataTimestamp, 'Market Size');
       
       // Only update data if Swagger timestamp is newer than current UI timestamp
       let shouldUpdateData = false;
       if (!currentDataTimestamp) {
         // No existing data, use new data
         shouldUpdateData = true;
+        console.log('🔄 No existing data - will update');
       } else if (newDataTimestamp) {
-        // Compare timestamps using string comparison for swagger ISO timestamps
-        // If both are ISO format strings, compare directly
-        if (typeof currentDataTimestamp === 'string' && typeof newDataTimestamp === 'string' && 
-            currentDataTimestamp.includes('T') && newDataTimestamp.includes('T')) {
-          // Direct string comparison for ISO timestamps
-          shouldUpdateData = newDataTimestamp > currentDataTimestamp;
-          console.log('🔄 Using string comparison for ISO timestamps');
-        } else {
-          // Fallback to Date comparison
-          const currentTime = new Date(currentDataTimestamp).getTime();
-          const newTime = new Date(newDataTimestamp).getTime();
-          
-          // Check for invalid dates
-          if (isNaN(currentTime) || isNaN(newTime)) {
-            console.log('⚠️ Invalid timestamp detected - forcing update');
-            shouldUpdateData = true;
-          } else {
-            shouldUpdateData = newTime > currentTime;
-          }
-        }
+        // Use UTC comparison utility
+        shouldUpdateData = isTimestampNewer(newDataTimestamp, currentDataTimestamp);
+        console.log('🔄 Timestamp comparison result:', shouldUpdateData ? 'Update needed' : 'Data is current');
       }
       
       console.log('🔄 MARKET SIZE UPDATE DECISION:');
       console.log('  - Should update data:', shouldUpdateData);
       console.log('  - Current data timestamp (RAW):', currentDataTimestamp);
       console.log('  - New data timestamp (RAW):', newDataTimestamp);
-      console.log('  - Timestamp comparison:', newDataTimestamp, '>', currentDataTimestamp, '=', newDataTimestamp > currentDataTimestamp);
+      console.log('  - Current data timestamp (UTC):', toUTCTimestamp(currentDataTimestamp));
+      console.log('  - New data timestamp (UTC):', toUTCTimestamp(newDataTimestamp));
+      console.log('  - Reason for update:', !currentDataTimestamp ? 'No existing data' : shouldUpdateData ? 'Swagger data is newer' : 'Current data is up to date');
       console.log('  - Reason for update:', !currentDataTimestamp ? 'No existing data' : shouldUpdateData ? 'Swagger data is newer' : 'Current data is up to date');
       
       console.log('🔍 DEBUGGING: Current marketIntelligenceData before update:', JSON.stringify(marketIntelligenceData, null, 2));
@@ -1615,8 +1598,8 @@ const MarketResearch = () => {
             marketDrivers: report.marketDrivers !== undefined ? report.marketDrivers : prev.marketDrivers,
             marketSizeBySegment: report.marketSizeBySegment !== undefined ? report.marketSizeBySegment : prev.marketSizeBySegment,
             growthProjections: report.growthProjections !== undefined ? report.growthProjections : prev.growthProjections,
-            timestamp: newDataTimestamp, // Store the original Swagger generation timestamp
-            originalSwaggerTimestamp: newDataTimestamp // Track the original timestamp
+            timestamp: toUTCTimestamp(newDataTimestamp), // Store as UTC timestamp
+            originalSwaggerTimestamp: toUTCTimestamp(newDataTimestamp) // Track the original timestamp in UTC
           };
           console.log('🔍 DEBUGGING: NEW marketIntelligenceData after MARKET SIZE update:', JSON.stringify(newData, null, 2));
           console.log('🔍 DEBUGGING: Market Size Data comparison:');

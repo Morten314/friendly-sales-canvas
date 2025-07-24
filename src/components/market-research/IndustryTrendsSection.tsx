@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import MiniPieChart from '@/components/ui/MiniPieChart';
 import MiniLineChart from '@/components/ui/MiniLineChart';
+import { toUTCTimestamp, isTimestampNewer, logTimestampComparison } from '@/lib/timestampUtils';
 
 interface EditRecord {
   id: string;
@@ -175,53 +176,23 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
       console.log('📊 Full API Response Structure:', JSON.stringify(apiResponse, null, 2));
       console.log('📊 Industry Trends Data Keys:', apiResponse.data ? Object.keys(apiResponse.data) : 'No data');
       
-      // Data freshness comparison using actual data timestamps
+      // Data freshness comparison using UTC timestamp utilities
       const currentDataTimestamp = industryTrendsData?.timestamp;
       const newDataTimestamp = apiResponse.data?.timestamp;
       
-      console.log('⏰ SWAGGER VS FRONTEND DATA GENERATION TIMESTAMPS (UTC):');
-      console.log('  - Frontend data generation time (OLD):', currentDataTimestamp || 'No previous data generated');
-      console.log('  - Swagger data generation time (NEW):', newDataTimestamp || 'No backend timestamp');
-      console.log('  - Current request time (UTC):', new Date(requestTimestamp).toISOString());
+      // Use UTC timestamp utilities for consistent comparison
+      logTimestampComparison(currentDataTimestamp, newDataTimestamp, 'Industry Trends');
       
-      if (currentDataTimestamp && newDataTimestamp) {
-        const currentTime = new Date(currentDataTimestamp).getTime();
-        const newTime = new Date(newDataTimestamp).getTime();
-        const isNewDataAvailable = newTime > currentTime;
-        
-        console.log('🔍 DATA COMPARISON ANALYSIS:');
-        console.log('  - Current data time (ms):', currentTime);
-        console.log('  - New data time (ms):', newTime);
-        console.log('  - Time difference (ms):', newTime - currentTime);
-        console.log('  - Is new data available?:', isNewDataAvailable);
-        console.log('  - Data will be updated?:', isNewDataAvailable ? 'YES - NEW DATA DETECTED' : 'NO - EXISTING DATA IS CURRENT');
-      } else if (newDataTimestamp) {
-        console.log('🔍 DATA STATUS: First time loading data or no previous timestamp');
-      } else {
-        console.log('🔍 DATA STATUS: No timestamp in backend response');
-      }
-      console.log('📊 Regional Hotspots:', apiResponse.data?.regionalHotspots);
-      console.log('📊 Strategic Recommendations:', apiResponse.data?.strategicRecommendations);
-      console.log('📊 Visual Charts:', apiResponse.data?.visualCharts);
-      console.log('📊 Risks:', apiResponse.data?.risks);
-      console.log('📊 Trend Snapshots:', apiResponse.data?.trendSnapshots);
-
       // Only update data if Swagger timestamp is newer than current data timestamp
       let shouldUpdateData = false;
       if (!currentDataTimestamp) {
         // No existing data, use new data
         shouldUpdateData = true;
+        console.log('🔄 No existing data - will update');
       } else if (newDataTimestamp) {
-        // Compare timestamps - only update if Swagger data is newer
-        const currentTime = new Date(currentDataTimestamp).getTime();
-        const newTime = new Date(newDataTimestamp).getTime();
-        shouldUpdateData = newTime > currentTime;
-        
-        console.log('🔍 INDUSTRY TRENDS TIMESTAMP COMPARISON:');
-        console.log('  - Current data time (ms):', currentTime);
-        console.log('  - New data time (ms):', newTime);
-        console.log('  - Time difference (ms):', newTime - currentTime);
-        console.log('  - Should update?:', shouldUpdateData ? 'YES - Swagger data is newer' : 'NO - Current data is up to date');
+        // Use UTC comparison utility
+        shouldUpdateData = isTimestampNewer(newDataTimestamp, currentDataTimestamp);
+        console.log('🔄 Timestamp comparison result:', shouldUpdateData ? 'Update needed' : 'Data is current');
       }
 
       if (apiResponse.data && shouldUpdateData) {
@@ -249,16 +220,22 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
             }
           }
         };
-        console.log('🔥 Setting industryTrendsData with trendSnapshots:', dataWithFallbacks.trendSnapshots);
-        console.log('🔥 Setting industryTrendsData with visualCharts:', dataWithFallbacks.visualCharts);
-        console.log('🔥 Full dataWithFallbacks object:', dataWithFallbacks);
-        setIndustryTrendsData(dataWithFallbacks);
+        // Convert timestamp to UTC and store
+        const dataWithUTCTimestamp = {
+          ...dataWithFallbacks,
+          timestamp: toUTCTimestamp(newDataTimestamp)
+        };
+        
+        console.log('🔥 Setting industryTrendsData with UTC timestamp:', dataWithUTCTimestamp.timestamp);
+        console.log('🔥 Setting industryTrendsData with trendSnapshots:', dataWithUTCTimestamp.trendSnapshots);
+        console.log('🔥 Setting industryTrendsData with visualCharts:', dataWithUTCTimestamp.visualCharts);
+        setIndustryTrendsData(dataWithUTCTimestamp);
         // Initialize edit fields with fetched data
         setEditExecutiveSummary(apiResponse.data.executiveSummary || '');
         setEditAiAdoption(apiResponse.data.aiAdoption || '');
         setEditCloudMigration(apiResponse.data.cloudMigration || '');
         setEditRegulatory(apiResponse.data.regulatory || '');
-        setEditTrendSnapshots(dataWithFallbacks.trendSnapshots);
+        setEditTrendSnapshots(dataWithUTCTimestamp.trendSnapshots);
       } else if (!shouldUpdateData && currentDataTimestamp && newDataTimestamp) {
         console.log('ℹ️ Industry Trends data not updated - current data is newer or equal');
       }
