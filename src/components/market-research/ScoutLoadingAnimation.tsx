@@ -15,7 +15,7 @@ export const ScoutLoadingAnimation = () => {
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentStep((prev) => (prev + 1) % steps.length);
-    }, 600); // Faster step changes for more dynamic feel
+    }, 300); // Faster step changes for quicker feel
 
     return () => clearInterval(interval);
   }, []);
@@ -68,10 +68,10 @@ export const ScoutLoadingAnimation = () => {
         
         {/* Progress bar animation */}
         <div className="mt-3 w-full bg-blue-100 rounded-full h-2">
-          <div className="bg-gradient-to-r from-blue-500 to-cyan-500 h-2 rounded-full animate-pulse" 
+          <div className="bg-gradient-to-r from-blue-500 to-cyan-500 h-2 rounded-full" 
                style={{ 
                  width: '100%', 
-                 animation: 'loading-bar 3s ease-in-out infinite' 
+                 animation: 'loading-bar 1.5s ease-in-out infinite' 
                }}>
           </div>
         </div>
@@ -80,9 +80,8 @@ export const ScoutLoadingAnimation = () => {
         <style dangerouslySetInnerHTML={{
           __html: `
             @keyframes loading-bar {
-              0% { width: 0%; }
-              33% { width: 30%; }
-              66% { width: 70%; }
+              0% { width: 15%; }
+              50% { width: 85%; }
               100% { width: 100%; }
             }
           `
