@@ -1575,14 +1575,16 @@ const MarketResearch = () => {
       console.log('  - Frontend data generation time (OLD):', currentDataTimestamp ? new Date(currentDataTimestamp).toISOString() : 'NO_TIMESTAMP');
       console.log('  - Swagger data generation time (NEW):', newDataTimestamp ? new Date(newDataTimestamp).toISOString() : 'NO_TIMESTAMP');
       
-      // Compare timestamps - only update if new data is actually newer
-      const shouldUpdateData = !currentDataTimestamp || !newDataTimestamp || new Date(newDataTimestamp) > new Date(currentDataTimestamp);
+      // Always update data when refresh is requested OR when we have new data from Swagger
+      // Don't block updates based on timestamps - let new data through
+      const shouldUpdateData = refresh || !currentDataTimestamp || newDataTimestamp;
       
       console.log('🔄 MARKET SIZE UPDATE DECISION:');
       console.log('  - Should update data:', shouldUpdateData);
-      console.log('  - Reason:', !currentDataTimestamp ? 'No existing timestamp' : 
-                   !newDataTimestamp ? 'No new timestamp' : 
-                   new Date(newDataTimestamp) > new Date(currentDataTimestamp) ? 'New data is newer' : 'Existing data is newer or same');
+      console.log('  - Refresh requested:', refresh);
+      console.log('  - Current data timestamp:', currentDataTimestamp ? new Date(currentDataTimestamp).toISOString() : 'NONE');
+      console.log('  - New data timestamp:', newDataTimestamp ? new Date(newDataTimestamp).toISOString() : 'NONE');
+      console.log('  - Reason for update:', refresh ? 'Refresh requested' : !currentDataTimestamp ? 'No existing data' : 'New data available');
       
       console.log('🔍 DEBUGGING: Current marketIntelligenceData before update:', JSON.stringify(marketIntelligenceData, null, 2));
 
@@ -1606,7 +1608,7 @@ const MarketResearch = () => {
         console.log('🔍 FIELD CHECK - marketSizeBySegment:', report.marketSizeBySegment);
         console.log('🔍 FIELD CHECK - growthProjections:', report.growthProjections);
         
-        // Update marketIntelligenceData state
+        // Update marketIntelligenceData state with all new data
         setMarketIntelligenceData(prev => {
           const newData = {
             ...prev,
@@ -1617,6 +1619,8 @@ const MarketResearch = () => {
             strategicRecommendations: report.strategicRecommendations !== undefined ? report.strategicRecommendations : prev.strategicRecommendations,
             marketEntry: report.marketEntry !== undefined ? report.marketEntry : prev.marketEntry,
             marketDrivers: report.marketDrivers !== undefined ? report.marketDrivers : prev.marketDrivers,
+            marketSizeBySegment: report.marketSizeBySegment !== undefined ? report.marketSizeBySegment : prev.marketSizeBySegment,
+            growthProjections: report.growthProjections !== undefined ? report.growthProjections : prev.growthProjections,
             timestamp: newDataTimestamp // Store the Swagger generation timestamp
           };
           console.log('🔍 DEBUGGING: NEW marketIntelligenceData after MARKET SIZE update:', JSON.stringify(newData, null, 2));
@@ -1658,13 +1662,8 @@ const MarketResearch = () => {
           
           return updated;
         });
-      } else if (!shouldUpdateData) {
-        console.log('⏸️ Skipping Market Size data update - existing data is newer or same');
-        console.log('🔍 Keeping existing timestamp:', currentDataTimestamp);
-        setIsInitialLoading(false);
-        setIsRefreshing(false);
       } else {
-        console.log('❌ No data found in Market Size API response or failed to update');
+        console.log('❌ No data found in Market Size API response - keeping existing data');
         setIsInitialLoading(false);
         setIsRefreshing(false);
       }
@@ -1778,19 +1777,23 @@ const MarketResearch = () => {
           console.log('💾 Persistent data timestamp:', parsedData.timestamp);
           
           // Make sure the persistent data is properly set in marketData state too
-          setMarketData(prev => ({
-            ...prev,
-            executiveSummary: parsedData.executiveSummary,
-            tamValue: parsedData.tamValue,
-            samValue: parsedData.samValue,
-            apacGrowthRate: parsedData.apacGrowthRate,
-            strategicRecommendations: parsedData.strategicRecommendations,
-            marketEntry: parsedData.marketEntry,
-            marketDrivers: parsedData.marketDrivers,
-            marketSizeBySegment: parsedData.marketSizeBySegment,
-            growthProjections: parsedData.growthProjections,
-            timestamp: parsedData.timestamp
-          }));
+          setMarketData(prev => {
+            const restoredData = {
+              ...prev,
+              executiveSummary: parsedData.executiveSummary,
+              tamValue: parsedData.tamValue,
+              samValue: parsedData.samValue,
+              apacGrowthRate: parsedData.apacGrowthRate,
+              strategicRecommendations: parsedData.strategicRecommendations,
+              marketEntry: parsedData.marketEntry,
+              marketDrivers: parsedData.marketDrivers,
+              marketSizeBySegment: parsedData.marketSizeBySegment,
+              growthProjections: parsedData.growthProjections,
+              timestamp: parsedData.timestamp
+            };
+            console.log('🔄 Restored persistent data to marketData state:', restoredData);
+            return restoredData;
+          });
           return; // Exit early - don't clear data
         }
       } catch (error) {
