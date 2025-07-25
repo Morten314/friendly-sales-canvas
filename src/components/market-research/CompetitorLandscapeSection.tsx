@@ -542,17 +542,32 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
     onFundingNewsChange(newNews);
   };
 
-  // Helper functions to get data from API or fallback to props
+  // Helper functions to get data from competitorData (fresh Swagger data) or fallback to props
   const getExecutiveSummary = () => {
+    // Use fresh competitorData to build executive summary
+    if (competitorData?.competitiveAdvantages?.length > 0 && competitorData?.marketPositioning) {
+      return `Strategic analysis shows focus on ${competitorData.competitiveAdvantages.join(', ').toLowerCase()}. ${competitorData.marketPositioning}. Key market players include ${competitorData.majorCompetitors?.slice(0, 2).join(' and ') || 'major competitors'}.`;
+    }
     return apiData.report?.executiveSummary || executiveSummary || "The enterprise collaboration tools market is increasingly competitive, with several dominant players holding significant market share.";
   };
 
   const getTopPlayerShare = () => {
+    // Use fresh competitorData market shares
+    if (competitorData?.marketShares && Object.keys(competitorData.marketShares).length > 0) {
+      const topCompetitor = Object.entries(competitorData.marketShares).reduce((a, b) => 
+        parseFloat(a[1].replace('%', '')) > parseFloat(b[1].replace('%', '')) ? a : b
+      );
+      return topCompetitor[1];
+    }
     const metric = apiData.section?.metrics?.find(m => m.label.toLowerCase().includes('market share'));
     return metric?.value || topPlayerShare || "48%";
   };
 
   const getEmergingPlayers = () => {
+    // Use competitorData major competitors count
+    if (competitorData?.majorCompetitors?.length > 0) {
+      return competitorData.majorCompetitors.length.toString();
+    }
     const metric = apiData.section?.metrics?.find(m => m.label.toLowerCase().includes('emerging'));
     return metric?.value || emergingPlayers || "2";
   };
