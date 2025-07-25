@@ -174,44 +174,72 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         
         const data = await response.json();
         console.log('📊 Competitor API Response:', data);
+        console.log('📊 Competitor API Response Keys:', Object.keys(data));
+        console.log('📊 Checking for uiComponents:', data.uiComponents ? 'Found' : 'Not found');
         
         // Parse the API response to extract competitor landscape data
         const competitorData: ApiCompetitorData = {};
         
+        // Check if data has the expected structure from Industry Trends pattern
         if (data.uiComponents && Array.isArray(data.uiComponents)) {
-          data.uiComponents.forEach((component: any) => {
+          console.log('📊 Processing uiComponents array, length:', data.uiComponents.length);
+          data.uiComponents.forEach((component: any, index: number) => {
+            console.log(`📊 Component ${index}:`, component.type, component.title);
             switch (component.type) {
               case 'section':
-                if (component.title?.includes('Competitor Landscape')) {
+                if (component.title?.toLowerCase().includes('competitor')) {
                   competitorData.section = component;
+                  console.log('✅ Found competitor section component');
                 }
                 break;
               case 'report':
-                if (component.title?.includes('Competitor Landscape')) {
+                if (component.title?.toLowerCase().includes('competitor')) {
                   competitorData.report = component;
+                  console.log('✅ Found competitor report component');
                 }
                 break;
               case 'swotAnalysis':
                 competitorData.swotAnalysis = component;
+                console.log('✅ Found SWOT analysis component');
                 break;
               case 'news':
                 competitorData.news = component;
+                console.log('✅ Found news component');
                 break;
               case 'marketShareCharts':
                 competitorData.marketShareCharts = component;
+                console.log('✅ Found market share charts component');
                 break;
               case 'featureComparison':
                 competitorData.featureComparison = component;
+                console.log('✅ Found feature comparison component');
                 break;
               case 'mnaInsights':
                 competitorData.mnaInsights = component;
+                console.log('✅ Found M&A insights component');
                 break;
               case 'marketTrends':
                 competitorData.marketTrends = component;
+                console.log('✅ Found market trends component');
                 break;
             }
           });
+        } else {
+          console.log('⚠️ No uiComponents found, checking direct data structure');
+          // Try direct data structure if uiComponents is not present
+          competitorData.section = data.section;
+          competitorData.report = data.report;
+          competitorData.swotAnalysis = data.swotAnalysis;
+          competitorData.news = data.news;
+          competitorData.marketShareCharts = data.marketShareCharts;
+          competitorData.featureComparison = data.featureComparison;
+          competitorData.mnaInsights = data.mnaInsights;
+          competitorData.marketTrends = data.marketTrends;
         }
+        
+        console.log('📊 Final competitorData structure:', competitorData);
+        console.log('📊 Has section data:', !!competitorData.section);
+        console.log('📊 Has report data:', !!competitorData.report);
         
         setApiData(competitorData);
       } catch (error) {
