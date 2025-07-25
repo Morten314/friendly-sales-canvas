@@ -140,35 +140,32 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   const [editSwotAnalysis, setEditSwotAnalysis] = useState<string[]>([]);
 
   useEffect(() => {
-    // Load existing data from localStorage first
-    const loadStoredData = () => {
-      try {
-        const storedData = localStorage.getItem('competitorLandscapeData');
-        if (storedData) {
-          const parsedData = JSON.parse(storedData);
-          console.log('📦 Loading stored Competitor Landscape data with timestamp:', parsedData.timestamp);
-          setCompetitorData(parsedData);
-          // Initialize edit fields with stored data
-          if (parsedData) {
-            setEditMajorCompetitors(parsedData.majorCompetitors || []);
-            setEditMarketShares(parsedData.marketShares || {});
-            setEditCompetitiveAdvantages(parsedData.competitiveAdvantages || []);
-            setEditEmergingThreats(parsedData.emergingThreats || []);
-            setEditMarketPositioning(parsedData.marketPositioning || '');
-            setEditSwotAnalysis(parsedData.swotAnalysis || []);
-          }
-        }
-      } catch (error) {
-        console.error('Error loading stored competitor data:', error);
-      }
-    };
-
-    loadStoredData();
-
     const fetchCompetitorData = async () => {
       try {
         setIsLoading(true);
         setError(null);
+        
+        // Load existing data from localStorage first
+        let currentStoredData: CompetitorLandscapeData | null = null;
+        try {
+          const storedData = localStorage.getItem('competitorLandscapeData');
+          if (storedData) {
+            currentStoredData = JSON.parse(storedData);
+            console.log('📦 Loading stored Competitor Landscape data with timestamp:', currentStoredData?.timestamp);
+            setCompetitorData(currentStoredData);
+            // Initialize edit fields with stored data
+            if (currentStoredData) {
+              setEditMajorCompetitors(currentStoredData.majorCompetitors || []);
+              setEditMarketShares(currentStoredData.marketShares || {});
+              setEditCompetitiveAdvantages(currentStoredData.competitiveAdvantages || []);
+              setEditEmergingThreats(currentStoredData.emergingThreats || []);
+              setEditMarketPositioning(currentStoredData.marketPositioning || '');
+              setEditSwotAnalysis(currentStoredData.swotAnalysis || []);
+            }
+          }
+        } catch (error) {
+          console.error('Error loading stored competitor data:', error);
+        }
         
         console.log('🔍 Fetching competitor data...');
         console.log('🌐 Testing CORS with Competitor Landscape API call...');
@@ -225,12 +222,12 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         if (data.status === 'success' && data.data) {
           const reportData = data.data;
           
-          // Convert timestamps to UTC for comparison  
-          const currentTimestampUTC = toUTCTimestamp(competitorData?.timestamp);
+          // Convert timestamps to UTC for comparison using stored data
+          const currentTimestampUTC = toUTCTimestamp(currentStoredData?.timestamp);
           const newTimestampUTC = toUTCTimestamp(reportData.timestamp);
           
           logTimestampComparison(
-            competitorData?.timestamp,
+            currentStoredData?.timestamp,
             reportData.timestamp,
             'COMPETITOR LANDSCAPE'
           );
@@ -283,9 +280,9 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
             const updatedData: CompetitorLandscapeData = {
               majorCompetitors: topPlayers,
               marketShares: marketShares,
-              competitiveAdvantages: reportData.strategic_recommendations || competitorData?.competitiveAdvantages || [],
+              competitiveAdvantages: reportData.strategic_recommendations || currentStoredData?.competitiveAdvantages || [],
               emergingThreats: emergingPlayers,
-              marketPositioning: reportData.market_drivers?.join('. ') || competitorData?.marketPositioning || '',
+              marketPositioning: reportData.market_drivers?.join('. ') || currentStoredData?.marketPositioning || '',
               swotAnalysis: [
                 ...(topPlayers.map((player: string) => `${player}: Market leader with strong positioning`)),
                 ...(emergingPlayers.map((player: string) => `${player}: Emerging threat with growth potential`))
