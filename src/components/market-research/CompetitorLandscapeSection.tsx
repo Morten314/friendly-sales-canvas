@@ -471,7 +471,10 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
       }
     };
 
-    fetchCompetitorData();
+    // Add a small delay to prevent race condition with other API calls
+    setTimeout(() => {
+      fetchCompetitorData();
+    }, 500);
   }, []);
   const handleCompetitorSaveChanges = () => {
     onSaveChanges();
