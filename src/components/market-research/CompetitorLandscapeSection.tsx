@@ -126,7 +126,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         setError(null);
         
         console.log('🔍 Fetching competitor data...');
-        const response = await fetch('https://backend-11kr.onrender.com/market-research?user_id=brewra&timeframe=60', {
+        const response = await fetch('https://backend-11kr.onrender.com/market-research?user_id=brewra&component_name=Competitor Landscape', {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
