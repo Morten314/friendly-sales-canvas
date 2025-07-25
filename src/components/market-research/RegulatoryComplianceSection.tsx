@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -23,7 +23,10 @@ import {
   Building,
   Share,
   Bot,
-  MessageSquare
+  MessageSquare,
+  Sun,
+  BarChart3,
+  Factory
 } from 'lucide-react';
 import {
   Table,
@@ -39,6 +42,9 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { EditRecord } from './types';
+import { toUTCTimestamp, isTimestampNewer, getCurrentUTCTimestamp, logTimestampComparison } from '@/lib/timestampUtils';
+import MiniPieChart from '../MiniPieChart';
+import MiniLineChart from '../MiniLineChart';
 
 interface RegulatoryComplianceSectionProps {
   isEditing: boolean;
@@ -98,12 +104,169 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   onGenerateShareableLink
 }) => {
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
+  const [regulatoryData, setRegulatoryData] = useState<any>(null);
+  const [regulatoryTimestamp, setRegulatoryTimestamp] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [regulatoryExpanded, setRegulatoryExpanded] = useState(true);
+
+  // API integration for Regulatory & Compliance Highlights
+  const fetchRegulatoryData = async (refresh: boolean = false) => {
+    console.log('🚀 Starting fetchRegulatoryData with refresh:', refresh);
+    
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const requestTimestamp = Date.now();
+      const requestId = Math.random().toString(36).substring(2, 8);
+      
+      const payload = {
+        user_id: 'brewra',
+        component_name: 'regulatory & compliance highlights',
+        refresh: false,
+        force_refresh: false,
+        cache_bypass: false,
+        bypass_all_cache: false,
+        request_timestamp: requestTimestamp,
+        request_id: requestId,
+        data: {
+          company: 'OrbiSelf',
+          product: 'Convoic.AI',
+          target_market: 'Indian college students (Tier 2 & 3)',
+          region: 'India',
+          timestamp: requestTimestamp,
+          force_new_data: false
+        }
+      };
+
+      console.log('📤 Sending API request to: https://backend-11kr.onrender.com/market-research');
+      console.log('📦 Regulatory Payload:', payload);
+      console.log('⏰ REGULATORY REQUEST TIMESTAMP:', requestTimestamp);
+      console.log('🔄 FORCE_REFRESH in payload:', payload.force_refresh);
+
+      const response = await fetch('https://backend-11kr.onrender.com/market-research', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      });
+
+      console.log('📥 Regulatory API response:', response);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('📊 Full API Response Structure:', result);
+      console.log('📊 Regulatory Data Keys:', Object.keys(result.data || {}));
+
+      if (result.status === 'success' && result.data) {
+        const currentTimestampUTC = toUTCTimestamp(regulatoryTimestamp);
+        const newTimestampUTC = toUTCTimestamp(result.data.timestamp);
+
+        logTimestampComparison(
+          regulatoryTimestamp,
+          result.data.timestamp,
+          'REGULATORY COMPLIANCE'
+        );
+
+        let shouldUpdate = false;
+        let updateReason = '';
+        
+        if (!regulatoryData) {
+          shouldUpdate = true;
+          updateReason = 'No existing data - first load';
+        } else if (!currentTimestampUTC) {
+          shouldUpdate = true;
+          updateReason = 'No existing timestamp - first load';
+        } else if (!newTimestampUTC) {
+          shouldUpdate = false;
+          updateReason = 'No timestamp in API response - keeping current data';
+        } else if (newTimestampUTC > currentTimestampUTC) {
+          shouldUpdate = true;
+          updateReason = 'New data is newer than current data';
+        } else {
+          shouldUpdate = false;
+          updateReason = 'Current data is up to date or newer';
+        }
+
+        console.log('🔄 REGULATORY UPDATE DECISION:');
+        console.log('  - Should update data:', shouldUpdate);
+        console.log('  - Current data timestamp:', currentTimestampUTC || 'NO_TIMESTAMP');
+        console.log('  - New data timestamp:', newTimestampUTC || 'NO_TIMESTAMP');
+        console.log('  - Reason for update:', updateReason);
+
+        if (shouldUpdate) {
+          console.log('✅ Found data in API response and data is newer - updating');
+          console.log('🔄 Updating Regulatory data with newer report');
+          setRegulatoryData(result.data);
+          setRegulatoryTimestamp(toUTCTimestamp(result.data.timestamp));
+          console.log('✅ REGULATORY DATA UPDATED - Component name:', result.data.component_name);
+        } else {
+          console.log('⏭️ Regulatory data is up to date - no update needed');
+        }
+      } else {
+        console.log('❌ No data in API response or error status');
+        setError('No data received from API');
+      }
+    } catch (error) {
+      console.error('❌ Error fetching Regulatory data:', error);
+      setError('Failed to fetch data');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Fetch data on component mount
+  useEffect(() => {
+    console.log('🚀 Component mounted - clearing previous data and fetching fresh');
+    fetchRegulatoryData(true);
+  }, []);
+
+  console.log('🎨 RegulatoryComplianceSection RENDER DEBUG:');
+  console.log('  - isLoading:', isLoading);
+  console.log('  - error:', error);
+  console.log('  - regulatoryData exists:', !!regulatoryData);
+  console.log('  - regulatoryExpanded:', regulatoryExpanded);
 
   if (deletedSections.has('regulatory-compliance')) {
     return null;
   }
 
-  const keyDataPoints = [
+  // Use API data if available, otherwise fall back to props
+  const getIconByName = (iconName: string) => {
+    switch (iconName) {
+      case 'sun': return Sun;
+      case 'chart': return BarChart3;
+      case 'government': return Building;
+      case 'competition': return Factory;
+      default: return Scale;
+    }
+  };
+
+  const getBadgeColor = (tag: string) => {
+    switch (tag) {
+      case 'New': return 'bg-blue-100 text-blue-800';
+      case 'Update': return 'bg-yellow-100 text-yellow-800';
+      case 'Support': return 'bg-green-100 text-green-800';
+      case 'Competitive': return 'bg-purple-100 text-purple-800';
+      case 'Risk': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const keyDataPoints = regulatoryData?.keyUpdates ? regulatoryData.keyUpdates.map((update: any) => ({
+    id: update.title.toLowerCase().replace(/\s+/g, '-'),
+    icon: getIconByName(update.icon),
+    title: update.title,
+    value: update.description,
+    badge: update.tag,
+    badgeColor: getBadgeColor(update.tag),
+    tooltip: update.description
+  })) : [
     {
       id: 'eu-ai-act',
       icon: Scale,
@@ -142,7 +305,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     }
   ];
 
-  const visualDataCards = [
+  const visualDataCards = regulatoryData?.visualDataCards || [
     {
       title: 'Compliance Adoption Rates',
       type: 'bar-chart',
@@ -173,7 +336,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     }
   ];
 
-  const regionalData = [
+  const regionalData = regulatoryData?.regionalData || [
     {
       region: 'European Union',
       framework: 'GDPR + AI Act',
@@ -207,6 +370,8 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
       requirements: 'Data protection, transfers'
     }
   ];
+
+  const currentExecutiveSummary = regulatoryData?.executiveSummary || executiveSummary;
 
   return (
     <Card className="border border-gray-200 shadow-sm">
@@ -590,7 +755,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
             <div>
               <h4 className="text-sm font-medium text-gray-700 mb-2">Executive Summary</h4>
               <p className="text-gray-600 text-sm leading-relaxed">
-                {executiveSummary}
+                {currentExecutiveSummary}
               </p>
             </div>
 
@@ -658,74 +823,75 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                 <div>
                   <h4 className="text-sm font-medium text-gray-700 mb-4">Compliance Analytics</h4>
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Compliance Adoption Rates - Bar Chart */}
-                    <div className="bg-white border border-gray-200 rounded-lg p-4">
-                      <h5 className="font-medium text-gray-900 mb-3 flex items-center">
-                        <Users className="h-4 w-4 mr-2 text-blue-600" />
-                        Compliance Adoption Rates
-                      </h5>
-                      <div className="space-y-3">
-                        {visualDataCards[0].data.map((item, index) => (
-                          <div key={index} className="flex items-center justify-between">
-                            <span className="text-sm text-gray-600">{item.name}</span>
-                            <div className="flex items-center space-x-2">
-                              <div className="w-16 h-2 bg-gray-200 rounded-full">
-                                <div 
-                                  className="h-2 rounded-full" 
-                                  style={{ 
-                                    width: `${item.value}%`, 
-                                    backgroundColor: item.color 
-                                  }}
-                                />
+                    {visualDataCards.map((card, cardIndex) => (
+                      <div key={cardIndex} className="bg-white border border-gray-200 rounded-lg p-4">
+                        <h5 className="font-medium text-gray-900 mb-3 flex items-center">
+                          {card.type === 'pie-chart' && <Users className="h-4 w-4 mr-2 text-blue-600" />}
+                          {card.type === 'line-chart' && <TrendingUp className="h-4 w-4 mr-2 text-green-600" />}
+                          {card.type === 'bar-chart' && <BarChart3 className="h-4 w-4 mr-2 text-purple-600" />}
+                          {!card.type && <Users className="h-4 w-4 mr-2 text-blue-600" />}
+                          {card.title}
+                        </h5>
+
+                        {/* Render based on chart type */}
+                        {card.type === 'pie-chart' ? (
+                          <MiniPieChart 
+                            data={card.data.map((item: any) => ({
+                              name: item.label,
+                              value: item.value,
+                              color: `hsl(${cardIndex * 137 + item.value * 2}, 70%, 50%)`
+                            }))}
+                            title={card.title}
+                          />
+                        ) : card.type === 'line-chart' ? (
+                          <MiniLineChart 
+                            data={card.data.map((item: any) => ({
+                              name: item.label,
+                              value: item.value
+                            }))}
+                            title={card.title}
+                            color={`hsl(${cardIndex * 120}, 70%, 50%)`}
+                          />
+                        ) : card.type === 'bar-chart' ? (
+                          <div className="space-y-3">
+                            {card.data.map((item: any, index: number) => (
+                              <div key={index} className="flex items-center justify-between">
+                                <span className="text-sm text-gray-600">{item.label || item.name}</span>
+                                <div className="flex items-center space-x-2">
+                                  <div className="w-16 h-2 bg-gray-200 rounded-full">
+                                    <div 
+                                      className="h-2 rounded-full" 
+                                      style={{ 
+                                        width: `${item.value}%`, 
+                                        backgroundColor: `hsl(${index * 60}, 70%, 50%)`
+                                      }}
+                                    />
+                                  </div>
+                                  <span className="text-sm font-medium text-gray-900">{item.value}{card.title.includes('Growth') ? 'B' : '%'}</span>
+                                </div>
                               </div>
-                              <span className="text-sm font-medium text-gray-900">{item.value}%</span>
-                            </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Regulatory Timeline */}
-                    <div className="bg-white border border-gray-200 rounded-lg p-4">
-                      <h5 className="font-medium text-gray-900 mb-3 flex items-center">
-                        <Clock className="h-4 w-4 mr-2 text-orange-600" />
-                        Regulatory Timeline
-                      </h5>
-                      <div className="space-y-3">
-                        {visualDataCards[1].data.map((item, index) => (
-                          <div key={index} className="flex items-start space-x-3">
-                            <div className={`w-2 h-2 rounded-full mt-2 ${
-                              item.status === 'critical' ? 'bg-red-500' : 'bg-blue-500'
-                            }`} />
-                            <div className="flex-1">
-                              <p className="text-sm font-medium text-gray-900">{item.event}</p>
-                              <p className="text-xs text-gray-500">{item.date}</p>
-                            </div>
+                        ) : (
+                          /* Fallback for unknown types or old format */
+                          <div className="space-y-3">
+                            {card.data.map((item: any, index: number) => (
+                              <div key={index} className="flex items-center justify-between">
+                                <span className="text-sm text-gray-600">{item.metric || item.name || item.label}</span>
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-sm font-medium text-gray-900">{item.value}%</span>
+                                  {item.trend && (
+                                    <TrendingUp className={`h-3 w-3 ${
+                                      item.trend === 'up' ? 'text-green-600' : 'text-red-600'
+                                    } ${item.trend === 'down' ? 'rotate-180' : ''}`} />
+                                  )}
+                                </div>
+                              </div>
+                            ))}
                           </div>
-                        ))}
+                        )}
                       </div>
-                    </div>
-
-                    {/* Risk Indicators */}
-                    <div className="bg-white border border-gray-200 rounded-lg p-4">
-                      <h5 className="font-medium text-gray-900 mb-3 flex items-center">
-                        <AlertTriangle className="h-4 w-4 mr-2 text-red-600" />
-                        Risk Indicators
-                      </h5>
-                      <div className="space-y-3">
-                        {visualDataCards[2].data.map((item, index) => (
-                          <div key={index} className="flex items-center justify-between">
-                            <span className="text-sm text-gray-600">{item.metric}</span>
-                            <div className="flex items-center space-x-2">
-                              <span className="text-sm font-medium text-gray-900">{item.value}%</span>
-                              <TrendingUp className={`h-3 w-3 ${
-                                item.trend === 'up' ? 'text-green-600' : 'text-red-600'
-                              } ${item.trend === 'down' ? 'rotate-180' : ''}`} />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                    ))}
                   </div>
                 </div>
 
@@ -784,12 +950,21 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                       <div className="flex items-start space-x-3">
                         <Shield className="h-5 w-5 text-blue-600 mt-0.5" />
                         <div>
-                          <h5 className="font-medium text-blue-900 mb-2">Mitigate Regulatory Risks</h5>
+                          <h5 className="font-medium text-blue-900 mb-2">
+                            {regulatoryData?.strategicRecommendations ? 'Mitigate Regulatory Risks' : 'Mitigate Regulatory Risks'}
+                          </h5>
                           <ul className="text-sm text-blue-700 space-y-1">
-                            <li>• Implement privacy by design principles</li>
-                            <li>• Establish automated compliance monitoring</li>
-                            <li>• Regular risk assessments and audits</li>
-                            <li>• Cross-functional compliance team</li>
+                            {regulatoryData?.strategicRecommendations?.mitigateRegulatoryRisks ? 
+                              regulatoryData.strategicRecommendations.mitigateRegulatoryRisks.map((item: string, index: number) => (
+                                <li key={index}>• {item}</li>
+                              )) : (
+                              <>
+                                <li>• Implement privacy by design principles</li>
+                                <li>• Establish automated compliance monitoring</li>
+                                <li>• Regular risk assessments and audits</li>
+                                <li>• Cross-functional compliance team</li>
+                              </>
+                            )}
                           </ul>
                         </div>
                       </div>
@@ -799,12 +974,21 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                       <div className="flex items-start space-x-3">
                         <Target className="h-5 w-5 text-green-600 mt-0.5" />
                         <div>
-                          <h5 className="font-medium text-green-900 mb-2">Competitive Positioning</h5>
+                          <h5 className="font-medium text-green-900 mb-2">
+                            {regulatoryData?.strategicRecommendations ? 'Competitive Positioning' : 'Competitive Positioning'}
+                          </h5>
                           <ul className="text-sm text-green-700 space-y-1">
-                            <li>• Market compliance as differentiator</li>
-                            <li>• Showcase security certifications</li>
-                            <li>• Transparent data handling practices</li>
-                            <li>• Industry-leading privacy standards</li>
+                            {regulatoryData?.strategicRecommendations?.competitivePositioning ? 
+                              regulatoryData.strategicRecommendations.competitivePositioning.map((item: string, index: number) => (
+                                <li key={index}>• {item}</li>
+                              )) : (
+                              <>
+                                <li>• Market compliance as differentiator</li>
+                                <li>• Showcase security certifications</li>
+                                <li>• Transparent data handling practices</li>
+                                <li>• Industry-leading privacy standards</li>
+                              </>
+                            )}
                           </ul>
                         </div>
                       </div>
@@ -814,12 +998,21 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                       <div className="flex items-start space-x-3">
                         <Building className="h-5 w-5 text-purple-600 mt-0.5" />
                         <div>
-                          <h5 className="font-medium text-purple-900 mb-2">Go-to-Market Strategy</h5>
+                          <h5 className="font-medium text-purple-900 mb-2">
+                            {regulatoryData?.strategicRecommendations ? 'Go-to-Market Strategy' : 'Go-to-Market Strategy'}
+                          </h5>
                           <ul className="text-sm text-purple-700 space-y-1">
-                            <li>• Regional deployment capabilities</li>
-                            <li>• Compliance-ready product offerings</li>
-                            <li>• Legal-friendly contract templates</li>
-                            <li>• Enterprise-grade data residency</li>
+                            {regulatoryData?.strategicRecommendations?.goToMarketStrategy ? 
+                              regulatoryData.strategicRecommendations.goToMarketStrategy.map((item: string, index: number) => (
+                                <li key={index}>• {item}</li>
+                              )) : (
+                              <>
+                                <li>• Regional deployment capabilities</li>
+                                <li>• Compliance-ready product offerings</li>
+                                <li>• Legal-friendly contract templates</li>
+                                <li>• Enterprise-grade data residency</li>
+                              </>
+                            )}
                           </ul>
                         </div>
                       </div>
