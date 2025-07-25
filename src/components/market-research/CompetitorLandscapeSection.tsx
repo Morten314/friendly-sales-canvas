@@ -261,22 +261,47 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
             console.log('🗺️ Raw API response structure:', reportData);
             
             // Map Swagger API response to frontend data structure
-            // Your API returns the data directly, not nested under competitor_landscape
             const strategicRecommendations = reportData.strategic_recommendations || [];
             const marketDrivers = reportData.market_drivers || [];
             
-            // Create competitor list from strategic recommendations and market drivers
-            const competitorNames = ["EcoFit India", "GreenActive Wear", "Sustainable Brands", "Eco Leaders"];
+            // Since the API doesn't return competitor-specific data, we need to create
+            // meaningful competitor analysis based on the target market and region
+            const targetMarket = reportData.target_market || "Target Market";
+            const region = reportData.region || "Market Region";
+            const company = reportData.company || "Company";
             
-            // Create market shares with data from segment_breakdown if available
-            const marketShares: Record<string, string> = {};
+            // Generate relevant competitors based on the market context
+            let competitorNames: string[] = [];
+            let marketShares: Record<string, string> = {};
+            
             if (reportData.segment_breakdown) {
+              // Use segment data to create competitor categories
+              const segments = Object.keys(reportData.segment_breakdown);
+              competitorNames = segments.map(segment => {
+                switch(segment) {
+                  case 'health_conscious': return 'Health-Focused Brands';
+                  case 'eco_conscious': return 'Eco-Friendly Companies';
+                  case 'both': return 'Hybrid Health-Eco Brands';
+                  case 'premium': return 'Premium Market Leaders';
+                  case 'budget': return 'Budget Competitors';
+                  default: return `${segment.charAt(0).toUpperCase() + segment.slice(1)} Players`;
+                }
+              });
+              
+              // Map segment percentages to market shares
               Object.entries(reportData.segment_breakdown).forEach(([key, value], index) => {
-                const competitorName = competitorNames[index] || `Competitor ${index + 1}`;
-                marketShares[competitorName] = `${value}%`;
+                if (competitorNames[index]) {
+                  marketShares[competitorNames[index]] = `${value}%`;
+                }
               });
             } else {
-              // Fallback percentages
+              // Fallback generic competitors for the market
+              competitorNames = [
+                'Market Leader',
+                'Emerging Player 1', 
+                'Emerging Player 2',
+                'Niche Competitor'
+              ];
               competitorNames.forEach((competitor, index) => {
                 const percentages = ['35%', '28%', '22%', '15%'];
                 marketShares[competitor] = percentages[index] || '10%';
