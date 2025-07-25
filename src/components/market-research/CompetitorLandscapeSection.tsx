@@ -286,85 +286,10 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
             console.log('✅ Found data in API response and data is newer - updating');
             console.log('🗺️ Raw API response structure:', reportData);
             
-            // Map Swagger API response to frontend data structure
-            const strategicRecommendations = reportData.strategic_recommendations || [];
-            const marketDrivers = reportData.market_drivers || [];
-            
-            // Since the API doesn't return competitor-specific data, we need to create
-            // meaningful competitor analysis based on the target market and region
-            const targetMarket = reportData.target_market || "Target Market";
-            const region = reportData.region || "Market Region";
-            const company = reportData.company || "Company";
-            
-            // Extract competitors from the Swagger response
-            let competitorNames: string[] = [];
-            let marketShares: Record<string, string> = {};
-            
-            // First, try to get competitors from the competitorLandscape field
-            if (reportData.competitorLandscape?.topPlayers || reportData.competitorLandscape?.emergingPlayers) {
-              const topPlayers = reportData.competitorLandscape.topPlayers || [];
-              const emergingPlayers = reportData.competitorLandscape.emergingPlayers || [];
-              competitorNames = [...topPlayers, ...emergingPlayers];
-              
-              // Assign market shares to competitors
-              competitorNames.forEach((competitor, index) => {
-                if (index === 0) marketShares[competitor] = '35%';
-                else if (index === 1) marketShares[competitor] = '28%';
-                else if (index === 2) marketShares[competitor] = '22%';
-                else marketShares[competitor] = '15%';
-              });
-            } else if (reportData.segment_breakdown) {
-              // Fallback: Use segment data to create competitor categories
-              const segments = Object.keys(reportData.segment_breakdown);
-              competitorNames = segments.map(segment => {
-                switch(segment) {
-                  case 'health_conscious': return 'Health-Focused Brands';
-                  case 'eco_conscious': return 'Eco-Friendly Companies';
-                  case 'both': return 'Hybrid Health-Eco Brands';
-                  case 'premium': return 'Premium Market Leaders';
-                  case 'budget': return 'Budget Competitors';
-                  default: return `${segment.charAt(0).toUpperCase() + segment.slice(1)} Players`;
-                }
-              });
-              
-              // Map segment percentages to market shares
-              Object.entries(reportData.segment_breakdown).forEach(([key, value], index) => {
-                if (competitorNames[index]) {
-                  marketShares[competitorNames[index]] = `${value}%`;
-                }
-              });
-            } else {
-              // Final fallback
-              competitorNames = [
-                'Market Leader',
-                'Emerging Player 1', 
-                'Emerging Player 2',
-                'Niche Competitor'
-              ];
-              competitorNames.forEach((competitor, index) => {
-                const percentages = ['35%', '28%', '22%', '15%'];
-                marketShares[competitor] = percentages[index] || '10%';
-              });
-            }
-            
-            console.log('🗺️ Mapping Swagger data to frontend structure:');
-            console.log('  - Competitors:', competitorNames);
-            console.log('  - Market shares:', marketShares);
-            console.log('  - Strategic recommendations:', strategicRecommendations);
-            console.log('  - Market drivers:', marketDrivers);
-            console.log('  - Segment breakdown:', reportData.segment_breakdown);
-            
+            // Store the raw API response directly like Industry Trends component
             const updatedData: CompetitorLandscapeData = {
-              majorCompetitors: competitorNames,
-              marketShares: marketShares,
-              competitiveAdvantages: strategicRecommendations,
-              emergingThreats: ["New sustainable brands", "Tech-enabled eco platforms"],
-              marketPositioning: marketDrivers.join('. '),
-              swotAnalysis: [
-                ...strategicRecommendations.map((rec: string) => `Opportunity: ${rec}`),
-                ...marketDrivers.map((driver: string) => `Driver: ${driver}`)
-              ],
-              timestamp: reportData.timestamp // Use original swagger timestamp directly
+              ...reportData,
+              timestamp: reportData.timestamp
             };
             
             console.log('🔍 TIMESTAMP PRESERVATION CHECK:');
