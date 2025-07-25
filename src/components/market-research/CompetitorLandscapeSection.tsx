@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { Badge } from '@/components/ui/badge';
 import MiniPieChart from '@/components/ui/MiniPieChart';
 import MiniLineChart from '@/components/ui/MiniLineChart';
+import { toUTCTimestamp, isTimestampNewer, getCurrentUTCTimestamp, logTimestampComparison } from '@/lib/timestampUtils';
 
 interface EditRecord {
   id: string;
@@ -17,6 +18,16 @@ interface EditRecord {
   field: string;
   oldValue: string;
   newValue: string;
+}
+
+interface CompetitorLandscapeData {
+  majorCompetitors: string[];
+  marketShares: Record<string, string>;
+  competitiveAdvantages: string[];
+  emergingThreats: string[];
+  marketPositioning: string;
+  swotAnalysis: string[];
+  timestamp?: string; // Add timestamp to track data generation time
 }
 
 interface CompetitorLandscapeSectionProps {
@@ -116,8 +127,17 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   onGenerateShareableLink
 }) => {
   const [apiData, setApiData] = useState<ApiCompetitorData>({});
+  const [competitorData, setCompetitorData] = useState<CompetitorLandscapeData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Edit state variables
+  const [editMajorCompetitors, setEditMajorCompetitors] = useState<string[]>([]);
+  const [editMarketShares, setEditMarketShares] = useState<Record<string, string>>({});
+  const [editCompetitiveAdvantages, setEditCompetitiveAdvantages] = useState<string[]>([]);
+  const [editEmergingThreats, setEditEmergingThreats] = useState<string[]>([]);
+  const [editMarketPositioning, setEditMarketPositioning] = useState<string>('');
+  const [editSwotAnalysis, setEditSwotAnalysis] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchCompetitorData = async () => {
@@ -175,12 +195,79 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         const data = await response.json();
         console.log('📊 Competitor API Response:', data);
         console.log('📊 Competitor API Response Keys:', Object.keys(data));
-        console.log('📊 Checking for uiComponents:', data.uiComponents ? 'Found' : 'Not found');
+        console.log('📊 Checking for report data:', data.data ? 'Found' : 'Not found');
         
-        // Parse the API response to extract competitor landscape data
-        const competitorData: ApiCompetitorData = {};
+        if (data.status === 'success' && data.data) {
+          const reportData = data.data;
+          
+          // Convert timestamps to UTC for comparison  
+          const currentTimestampUTC = toUTCTimestamp(competitorData?.timestamp);
+          const newTimestampUTC = toUTCTimestamp(reportData.timestamp);
+          
+          logTimestampComparison(
+            competitorData?.timestamp,
+            reportData.timestamp,
+            'COMPETITOR LANDSCAPE'
+          );
+          
+          // Determine if we should update
+          let shouldUpdate = false;
+          let updateReason = '';
+          
+          if (!currentTimestampUTC) {
+            shouldUpdate = true;
+            updateReason = 'No existing timestamp - first load';
+          } else if (!newTimestampUTC) {
+            shouldUpdate = false;
+            updateReason = 'Invalid new timestamp';
+          } else if (newTimestampUTC > currentTimestampUTC) {
+            shouldUpdate = true;
+            updateReason = 'Swagger data is newer';
+          } else {
+            shouldUpdate = false;
+            updateReason = 'Current data is up to date or newer';
+          }
+          
+          console.log('🔄 COMPETITOR LANDSCAPE UPDATE DECISION:');
+          console.log('  - Should update data:', shouldUpdate);
+          console.log('  - Current data timestamp:', currentTimestampUTC || 'NO_TIMESTAMP');
+          console.log('  - New data timestamp:', newTimestampUTC || 'NO_TIMESTAMP');
+          console.log('  - Reason for update:', updateReason);
+          
+          if (shouldUpdate) {
+            console.log('✅ Found data in API response and data is newer - updating');
+            
+            const updatedData: CompetitorLandscapeData = {
+              majorCompetitors: reportData.majorCompetitors || competitorData?.majorCompetitors || [],
+              marketShares: reportData.marketShares || competitorData?.marketShares || {},
+              competitiveAdvantages: reportData.competitiveAdvantages || competitorData?.competitiveAdvantages || [],
+              emergingThreats: reportData.emergingThreats || competitorData?.emergingThreats || [],
+              marketPositioning: reportData.marketPositioning || competitorData?.marketPositioning || '',
+              swotAnalysis: reportData.swotAnalysis || competitorData?.swotAnalysis || [],
+              timestamp: newTimestampUTC
+            };
+            
+            console.log('🔄 Updating Competitor Landscape data with newer report');
+            console.log('✅ COMPETITOR LANDSCAPE DATA UPDATED - Component name:', reportData.component_name);
+            
+            setCompetitorData(updatedData);
+            
+            // Initialize edit fields with fetched data
+            setEditMajorCompetitors(updatedData.majorCompetitors);
+            setEditMarketShares(updatedData.marketShares);
+            setEditCompetitiveAdvantages(updatedData.competitiveAdvantages);
+            setEditEmergingThreats(updatedData.emergingThreats);
+            setEditMarketPositioning(updatedData.marketPositioning);
+            setEditSwotAnalysis(updatedData.swotAnalysis);
+          } else {
+            console.log('⏭️ Competitor Landscape data is up to date - no update needed');
+            console.log('  - Current timestamp (UTC):', currentTimestampUTC);
+            console.log('  - New timestamp (UTC):', newTimestampUTC);
+          }
+        }
         
-        // Check if data has the expected structure from Industry Trends pattern
+        // Also parse UI components for display purposes
+        const apiCompetitorData: ApiCompetitorData = {};
         if (data.uiComponents && Array.isArray(data.uiComponents)) {
           console.log('📊 Processing uiComponents array, length:', data.uiComponents.length);
           data.uiComponents.forEach((component: any, index: number) => {
@@ -188,60 +275,45 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
             switch (component.type) {
               case 'section':
                 if (component.title?.toLowerCase().includes('competitor')) {
-                  competitorData.section = component;
+                  apiCompetitorData.section = component;
                   console.log('✅ Found competitor section component');
                 }
                 break;
               case 'report':
                 if (component.title?.toLowerCase().includes('competitor')) {
-                  competitorData.report = component;
+                  apiCompetitorData.report = component;
                   console.log('✅ Found competitor report component');
                 }
                 break;
               case 'swotAnalysis':
-                competitorData.swotAnalysis = component;
+                apiCompetitorData.swotAnalysis = component;
                 console.log('✅ Found SWOT analysis component');
                 break;
               case 'news':
-                competitorData.news = component;
+                apiCompetitorData.news = component;
                 console.log('✅ Found news component');
                 break;
               case 'marketShareCharts':
-                competitorData.marketShareCharts = component;
+                apiCompetitorData.marketShareCharts = component;
                 console.log('✅ Found market share charts component');
                 break;
               case 'featureComparison':
-                competitorData.featureComparison = component;
+                apiCompetitorData.featureComparison = component;
                 console.log('✅ Found feature comparison component');
                 break;
               case 'mnaInsights':
-                competitorData.mnaInsights = component;
+                apiCompetitorData.mnaInsights = component;
                 console.log('✅ Found M&A insights component');
                 break;
               case 'marketTrends':
-                competitorData.marketTrends = component;
+                apiCompetitorData.marketTrends = component;
                 console.log('✅ Found market trends component');
                 break;
             }
           });
-        } else {
-          console.log('⚠️ No uiComponents found, checking direct data structure');
-          // Try direct data structure if uiComponents is not present
-          competitorData.section = data.section;
-          competitorData.report = data.report;
-          competitorData.swotAnalysis = data.swotAnalysis;
-          competitorData.news = data.news;
-          competitorData.marketShareCharts = data.marketShareCharts;
-          competitorData.featureComparison = data.featureComparison;
-          competitorData.mnaInsights = data.mnaInsights;
-          competitorData.marketTrends = data.marketTrends;
         }
         
-        console.log('📊 Final competitorData structure:', competitorData);
-        console.log('📊 Has section data:', !!competitorData.section);
-        console.log('📊 Has report data:', !!competitorData.report);
-        
-        setApiData(competitorData);
+        setApiData(apiCompetitorData);
       } catch (error) {
         console.error('Error fetching competitor data:', error);
         setError(error instanceof Error ? error.message : 'Failed to fetch data');
