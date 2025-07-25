@@ -929,16 +929,31 @@ const MarketResearch = () => {
       }
       setMarketSizeError(null);
 
-      // Payload specifically for Market Entry & Growth Strategy
+      // Payload specifically for Market Entry & Growth Strategy (matching other components pattern)
       const payload = {
-        component_name: "Market Entry & Growth Strategy",
-        refresh: refresh,
-        user_id: "brewra"
+        user_id: "brewra",
+        component_name: "Market Entry & Growth Strategy", // Exact match from your swagger
+        refresh: false, // Always false initially to get existing data
+        force_refresh: false,
+        cache_bypass: false,
+        bypass_all_cache: false,
+        request_timestamp: Date.now(),
+        request_id: Math.random().toString(36).substr(2, 6),
+        data: {
+          company: "OrbiSelf",
+          product: "Convoic.AI", 
+          target_market: "Indian college students (Tier 2 & 3)",
+          region: "India",
+          timestamp: Date.now(),
+          force_new_data: false
+        }
       };
 
       console.log('📤 Sending Market Entry API request with payload:', payload);
+      console.log('⏰ MARKET ENTRY REQUEST TIMESTAMP:', payload.request_timestamp);
+      console.log('🔄 FORCE_REFRESH in payload:', payload.force_refresh);
 
-      const response = await fetch('https://swaggerapi.clodura.ai/backend/v1/market-research/generate', {
+      const response = await fetch('https://backend-11kr.onrender.com/market-research', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -954,21 +969,37 @@ const MarketResearch = () => {
 
       const result = await response.json();
       console.log('📊 Market Entry API result:', result);
+      console.log('📊 Full API Response Structure:', result);
+      console.log('📊 Market Entry Data Keys:', Object.keys(result.data || {}));
 
       if (result.status === 'success' && result.data) {
         const apiData = result.data;
         console.log('🎯 Processing API data for Market Entry:', apiData);
 
-        // Check timestamp comparison with timestampUtils
+        // Check timestamp comparison with timestampUtils  
         const currentTimestamp = marketEntryData.timestamp || null;
         const newTimestamp = apiData.timestamp;
         
-        logTimestampComparison(currentTimestamp, newTimestamp, 'MarketEntry');
+        console.log('🔍 MARKET ENTRY TIMESTAMP ANALYSIS (UTC):');
+        console.log('  - Current request time (UTC):', new Date().toISOString());
+        console.log('  - Frontend data time (UTC):', currentTimestamp ? new Date(currentTimestamp).toISOString() : 'NO_TIMESTAMP');
+        console.log('  - Swagger data time (UTC):', newTimestamp ? new Date(newTimestamp).toISOString() : 'NO_TIMESTAMP');
+        console.log('  - Raw current timestamp:', currentTimestamp);
+        console.log('  - Raw new timestamp:', newTimestamp);
         
-        if (!currentTimestamp || isTimestampNewer(newTimestamp, currentTimestamp)) {
-          console.log('✅ New Market Entry data is newer, updating UI');
+        const shouldUpdate = !currentTimestamp || isTimestampNewer(newTimestamp, currentTimestamp);
+        
+        console.log('🔄 MARKET ENTRY UPDATE DECISION:');
+        console.log('  - Should update data:', shouldUpdate);
+        console.log('  - Current data timestamp:', currentTimestamp ? new Date(currentTimestamp).toISOString() : 'NO_TIMESTAMP');
+        console.log('  - New data timestamp:', newTimestamp ? new Date(newTimestamp).toISOString() : 'NO_TIMESTAMP');
+        console.log('  - Reason for update:', !currentTimestamp ? 'No existing data - first load' : 'Newer data available');
+        
+        if (shouldUpdate) {
+          console.log('✅ Found data in API response and data is newer - updating');
+          console.log('🔄 Updating Market Entry data with newer report');
           
-          // Update market entry data with API response
+          // Update market entry data with API response - mapping all the swagger fields
           const updatedData = {
             executiveSummary: apiData.executiveSummary || marketEntryData.executiveSummary,
             entryBarriers: apiData.entryBarriers || marketEntryData.entryBarriers,
@@ -995,7 +1026,7 @@ const MarketResearch = () => {
             console.error('❌ Failed to save Market Entry data to localStorage:', error);
           }
           
-          console.log('✅ Market Entry data updated successfully');
+          console.log('✅ MARKET ENTRY DATA UPDATED - Component name:', apiData.component_name);
         } else {
           console.log('ℹ️ Current Market Entry data is up to date');
         }

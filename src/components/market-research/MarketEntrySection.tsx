@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { MapPin, Bot, Edit, Target, Clock, AlertTriangle, X, FileText, Save, Share, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { EditRecord } from './types';
+import { toUTCTimestamp, isTimestampNewer } from '@/lib/timestampUtils';
 
 interface MarketEntrySectionProps {
   isEditing: boolean;
@@ -76,6 +77,99 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
   onSaveToWorkspace,
   onGenerateShareableLink
 }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [marketEntryData, setMarketEntryData] = useState<any>(null);
+
+  // Fetch Market Entry data from API
+  const fetchMarketEntryData = async (refresh = false) => {
+    console.log('🚀 MarketEntrySection: Starting fetchMarketEntryData with refresh:', refresh);
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const payload = {
+        user_id: "brewra",
+        component_name: "Market Entry & Growth Strategy", // Exact match from swagger
+        refresh: false,
+        force_refresh: false,
+        cache_bypass: false,
+        bypass_all_cache: false,
+        request_timestamp: Date.now(),
+        request_id: Math.random().toString(36).substr(2, 6),
+        data: {
+          company: "OrbiSelf",
+          product: "Convoic.AI", 
+          target_market: "Indian college students (Tier 2 & 3)",
+          region: "India",
+          timestamp: Date.now(),
+          force_new_data: false
+        }
+      };
+
+      console.log('📤 MarketEntrySection: Sending API request with payload:', payload);
+      console.log('⏰ MARKET ENTRY REQUEST TIMESTAMP:', payload.request_timestamp);
+
+      const response = await fetch('https://backend-11kr.onrender.com/market-research', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      });
+
+      console.log('📨 MarketEntrySection: API response status:', response.status);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('📊 MarketEntrySection: API result:', result);
+      console.log('📊 Full API Response Structure:', result);
+
+      if (result.status === 'success' && result.data) {
+        const apiData = result.data;
+        console.log('🎯 MarketEntrySection: Processing API data:', apiData);
+
+        // Check if we have the expected Market Entry data structure
+        if (apiData.executiveSummary || apiData.entryBarriers) {
+          console.log('✅ MarketEntrySection: Found Market Entry data - updating component');
+          
+          // Update component data with API response
+          if (apiData.executiveSummary) onExecutiveSummaryChange(apiData.executiveSummary);
+          if (apiData.entryBarriers) onEntryBarriersChange(apiData.entryBarriers);
+          if (apiData.recommendedChannel) onRecommendedChannelChange(apiData.recommendedChannel);
+          if (apiData.timeToMarket) onTimeToMarketChange(apiData.timeToMarket);
+          if (apiData.topBarrier) onTopBarrierChange(apiData.topBarrier);
+          if (apiData.competitiveDifferentiation) onCompetitiveDifferentiationChange(apiData.competitiveDifferentiation);
+          if (apiData.strategicRecommendations) onStrategicRecommendationsChange(apiData.strategicRecommendations);
+          if (apiData.riskAssessment) onRiskAssessmentChange(apiData.riskAssessment);
+          
+          setMarketEntryData(apiData);
+          console.log('✅ MARKET ENTRY SECTION UPDATED - Component name:', apiData.component_name);
+        } else {
+          console.log('ℹ️ MarketEntrySection: No Market Entry specific data found in response');
+        }
+      }
+    } catch (error) {
+      console.error('❌ MarketEntrySection: Error fetching data:', error);
+      setError('Failed to load market entry data');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Fetch data on component mount
+  useEffect(() => {
+    console.log('🚀 MarketEntrySection: Component mounted - fetching fresh data');
+    const timer = setTimeout(() => {
+      fetchMarketEntryData(false);
+    }, 600); // Slight delay to avoid conflicts with other components
+    
+    return () => clearTimeout(timer);
+  }, []);
+
   const handleMarketEntrySaveChanges = () => {
     onSaveChanges();
   };
