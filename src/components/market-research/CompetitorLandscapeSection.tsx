@@ -544,9 +544,13 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
 
   // Helper functions to get data from competitorData (fresh Swagger data) or fallback to props
   const getExecutiveSummary = () => {
-    // Use fresh competitorData to build executive summary
-    if (competitorData?.competitiveAdvantages?.length > 0 && competitorData?.marketPositioning) {
-      return `Strategic analysis shows focus on ${competitorData.competitiveAdvantages.join(', ').toLowerCase()}. ${competitorData.marketPositioning}. Key market players include ${competitorData.majorCompetitors?.slice(0, 2).join(' and ') || 'major competitors'}.`;
+    // Generate executive summary from fresh Swagger data
+    if (competitorData?.majorCompetitors?.length > 0) {
+      const topCompetitors = competitorData.majorCompetitors.slice(0, 3).join(', ');
+      const totalCompetitors = competitorData.majorCompetitors.length;
+      const marketShare = Object.values(competitorData.marketShares || {}).slice(0, 1)[0] || 'significant market share';
+      
+      return `Competitive landscape analysis reveals ${totalCompetitors} key players in the market. Leading competitors include ${topCompetitors}, with the top player holding ${marketShare}. ${competitorData.marketPositioning || 'The market shows strong competitive dynamics with opportunities for strategic positioning.'}`;
     }
     return apiData.report?.executiveSummary || executiveSummary || "The enterprise collaboration tools market is increasingly competitive, with several dominant players holding significant market share.";
   };
