@@ -370,21 +370,42 @@ const MarketResearch = () => {
   const [marketEntryHasEdits, setMarketEntryHasEdits] = useState(false);
   const [marketEntryDeletedSections, setMarketEntryDeletedSections] = useState<Set<string>>(new Set());
   const [marketEntryEditHistory, setMarketEntryEditHistory] = useState<EditRecord[]>([]);
-  const [marketEntryData, setMarketEntryData] = useState({
-    executiveSummary: 'The Indian SaaS market offers significant growth potential for mid-size players, but entry barriers exist due to regulatory compliance and entrenched competitors. Strategic partnerships and phased market entry approaches can help mitigate risks while maximizing opportunities.',
-    entryBarriers: ['Data residency regulations', 'Established local competitors', 'Complex compliance requirements', 'Cultural adaptation needs'],
-    recommendedChannel: 'Local partnerships',
-    timeToMarket: '12-18 months',
-    topBarrier: 'Data residency laws',
-    competitiveDifferentiation: ['Advanced AI capabilities', 'Robust security framework', 'Flexible deployment options', 'Strong API ecosystem'],
-    strategicRecommendations: ['Partner with local system integrators', 'Establish regional data centers', 'Develop compliance automation tools', 'Create localized go-to-market strategy'],
-    riskAssessment: ['Regulatory changes could impact timeline', 'Competition intensifying rapidly', 'Economic uncertainty affecting IT spending'],
-    swot: null as any,
-    timeline: null as any,
-    marketSizeBySegment: null as any,
-    growthProjections: null as any,
-    timestamp: null as string | null
-  });
+  // Function to get initial Market Entry data from localStorage or defaults
+  const getInitialMarketEntryData = () => {
+    try {
+      const stored = localStorage.getItem('marketEntryData');
+      if (stored) {
+        const parsedData = JSON.parse(stored);
+        console.log('📦 Loading Market Entry data from localStorage:', parsedData);
+        // Only return stored data if it has a timestamp (meaning it came from API)
+        if (parsedData.timestamp) {
+          console.log('✅ Found persisted Market Entry data with timestamp:', parsedData.timestamp);
+          return parsedData;
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error loading Market Entry data from localStorage:', error);
+    }
+    
+    // Return default data if no valid stored data
+    return {
+      executiveSummary: 'The Indian SaaS market offers significant growth potential for mid-size players, but entry barriers exist due to regulatory compliance and entrenched competitors. Strategic partnerships and phased market entry approaches can help mitigate risks while maximizing opportunities.',
+      entryBarriers: ['Data residency regulations', 'Established local competitors', 'Complex compliance requirements', 'Cultural adaptation needs'],
+      recommendedChannel: 'Local partnerships',
+      timeToMarket: '12-18 months',
+      topBarrier: 'Data residency laws',
+      competitiveDifferentiation: ['Advanced AI capabilities', 'Robust security framework', 'Flexible deployment options', 'Strong API ecosystem'],
+      strategicRecommendations: ['Partner with local system integrators', 'Establish regional data centers', 'Develop compliance automation tools', 'Create localized go-to-market strategy'],
+      riskAssessment: ['Regulatory changes could impact timeline', 'Competition intensifying rapidly', 'Economic uncertainty affecting IT spending'],
+      swot: null as any,
+      timeline: null as any,
+      marketSizeBySegment: null as any,
+      growthProjections: null as any,
+      timestamp: null as string | null
+    };
+  };
+
+  const [marketEntryData, setMarketEntryData] = useState(getInitialMarketEntryData());
 
   // Market Entry Scout Chat states
   const [showMarketEntryScoutChat, setShowMarketEntryScoutChat] = useState(false);
@@ -965,6 +986,15 @@ const MarketResearch = () => {
           };
           
           setMarketEntryData(updatedData);
+          
+          // Save to localStorage for persistence
+          try {
+            localStorage.setItem('marketEntryData', JSON.stringify(updatedData));
+            console.log('💾 Market Entry data saved to localStorage');
+          } catch (error) {
+            console.error('❌ Failed to save Market Entry data to localStorage:', error);
+          }
+          
           console.log('✅ Market Entry data updated successfully');
         } else {
           console.log('ℹ️ Current Market Entry data is up to date');
@@ -1023,6 +1053,15 @@ const MarketResearch = () => {
     console.log('🧹 No valid persistent data found - fetching fresh data from backend');
     // If no valid cached data, fetch from backend
     fetchMarketData();
+    
+    // Check if we have Market Entry data, if not fetch it
+    const storedMarketEntry = localStorage.getItem('marketEntryData');
+    if (!storedMarketEntry || !JSON.parse(storedMarketEntry).timestamp) {
+      console.log('📊 No Market Entry data found, fetching from API...');
+      fetchMarketEntryData(false, true); // Don't refresh, but show loading
+    } else {
+      console.log('📊 Market Entry data already loaded from localStorage');
+    }
   }, []);
 
   // Listen for company profile updates and trigger background refresh
