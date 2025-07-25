@@ -222,9 +222,18 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         if (result.status === 'success' && result.data) {
           const reportData = result.data;
           
+          // Debug the original timestamps before conversion
+          console.log('🔍 TIMESTAMP DEBUG:');
+          console.log('  - Original swagger timestamp from API:', reportData.timestamp);
+          console.log('  - Current stored timestamp:', currentStoredData?.timestamp);
+          
           // Convert timestamps to UTC for comparison using stored data
           const currentTimestampUTC = toUTCTimestamp(currentStoredData?.timestamp);
           const newTimestampUTC = toUTCTimestamp(reportData.timestamp);
+          
+          console.log('  - After toUTCTimestamp conversion:');
+          console.log('    - Current UTC:', currentTimestampUTC);
+          console.log('    - New UTC:', newTimestampUTC);
           
           logTimestampComparison(
             currentStoredData?.timestamp,
@@ -325,8 +334,13 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                 ...strategicRecommendations.map((rec: string) => `Opportunity: ${rec}`),
                 ...marketDrivers.map((driver: string) => `Driver: ${driver}`)
               ],
-              timestamp: newTimestampUTC
+              timestamp: reportData.timestamp // Use original swagger timestamp directly
             };
+            
+            console.log('🔍 TIMESTAMP PRESERVATION CHECK:');
+            console.log('  - Original reportData.timestamp:', reportData.timestamp);
+            console.log('  - Converted newTimestampUTC:', newTimestampUTC);
+            console.log('  - Final updatedData.timestamp:', updatedData.timestamp);
             
             console.log('🔄 Updating Competitor Landscape data with newer report');
             console.log('✅ COMPETITOR LANDSCAPE DATA UPDATED - Component name:', reportData.component_name);
