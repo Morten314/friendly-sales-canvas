@@ -195,6 +195,12 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         console.log('📦 Competitor Landscape Payload:', payload);
         console.log('📦 Payload keys:', Object.keys(payload));
         console.log('📦 Data keys:', Object.keys(payload.data));
+        console.log('🔍 REFRESH FLAGS CHECK:');
+        console.log('  - refresh:', payload.refresh);
+        console.log('  - force_refresh:', payload.force_refresh);
+        console.log('  - cache_bypass:', payload.cache_bypass);
+        console.log('  - bypass_all_cache:', payload.bypass_all_cache);
+        console.log('  - data.force_new_data:', payload.data.force_new_data);
 
         // Add debugging to track data freshness
         const requestTimestamp = Date.now();
