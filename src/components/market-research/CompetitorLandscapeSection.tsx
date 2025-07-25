@@ -225,7 +225,10 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         let shouldUpdate = false;
         let updateReason = '';
         
-        if (!currentTimestampUTC) {
+        if (!competitorData) {
+          shouldUpdate = true;
+          updateReason = 'No existing data - first load';
+        } else if (!currentTimestampUTC) {
           shouldUpdate = true;
           updateReason = 'No existing timestamp - first load';
         } else if (!newTimestampUTC) {
