@@ -237,6 +237,13 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         }
         
         if (result.status === 'success' && result.data) {
+          console.log('🔍 COMPETITOR LANDSCAPE DEBUG - API RESPONSE RECEIVED:');
+          console.log('  - Full result:', JSON.stringify(result, null, 2));
+          console.log('  - result.data structure:', result.data);
+          console.log('  - result.data.competitorLandscape:', result.data.competitorLandscape);
+          console.log('  - result.data.strategicRecommendations:', result.data.strategicRecommendations);
+          console.log('  - result.data.trends:', result.data.trends);
+          
           const reportData = result.data;
           
           // Debug the original timestamps before conversion
@@ -860,6 +867,34 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                 Executive Summary
               </h3>
               <p className="text-gray-700 mb-6">{competitorData.marketPositioning}</p>
+            </div>
+          )}
+
+          {/* Market Size and Growth */}
+          {competitorData && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-lg font-bold text-blue-600">
+                      {competitorData.majorCompetitors ? competitorData.majorCompetitors.length : 0}
+                    </div>
+                    <div className="text-sm text-gray-700">Major Competitors</div>
+                  </div>
+                  <ArrowUp className="h-4 w-4 text-green-500" />
+                </div>
+              </div>
+              <div className="border border-green-200 p-4 rounded-lg bg-amber-100">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-lg font-bold text-green-600">
+                      {competitorData.emergingThreats ? competitorData.emergingThreats.length : 0}
+                    </div>
+                    <div className="text-sm text-gray-700">Emerging Players</div>
+                  </div>
+                  <ArrowDown className="h-4 w-4 text-red-500" />
+                </div>
+              </div>
             </div>
           )}
 
