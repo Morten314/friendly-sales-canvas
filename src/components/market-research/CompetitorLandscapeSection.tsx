@@ -410,7 +410,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
           </div>
         </div>
 
-        {competitorLandscapeExpanded && (
+        {(competitorLandscapeExpanded || true) && (
           <div className="space-y-6">
             {/* Debug Info */}
             <div className="bg-gray-100 p-4 rounded text-sm">
