@@ -125,7 +125,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         setIsLoading(true);
         setError(null);
         
-        const response = await fetch('https://backend-11kr.onrender.com/market-research');
+        const response = await fetch('https://backend-11kr.onrender.com/market-research?user_id=brewra&timeframe=60');
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
