@@ -192,19 +192,10 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         console.log('📤 Sending API request to: https://backend-11kr.onrender.com/market-research');
         console.log('📦 Competitor Landscape Payload:', payload);
         
-        const currentTime = Date.now();
-        const randomId = Math.random().toString(36).substring(7);
-        
-        const response = await fetch(`https://backend-11kr.onrender.com/market-research?t=${currentTime}&cache_bust=${randomId}&force_fresh=1&bypass_cache=1&refresh_db=1&new_data_only=1`, {
+        const response = await fetch('https://backend-11kr.onrender.com/market-research', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache',
-            'Expires': '0',
-            'X-Request-ID': randomId,
-            'X-Force-Fresh': '1',
-            'X-Bypass-Cache': '1'
           },
           body: JSON.stringify(payload),
         });
