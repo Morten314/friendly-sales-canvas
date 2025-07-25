@@ -129,7 +129,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         
         const payload = {
           user_id: "brewra",
-          component_name: "competitor landscape",
+          component_name: "Competitor Landscape",
           refresh: false,
           force_refresh: false,
           cache_bypass: false,
