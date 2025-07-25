@@ -170,57 +170,57 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         console.log('🔍 Fetching competitor data...');
         console.log('🌐 Testing CORS with Competitor Landscape API call...');
         
+        const currentTime = Date.now();
+        const randomId = Math.random().toString(36).substring(7);
         const payload = {
           user_id: "brewra",
-          component_name: "Competitor Landscape",
-          refresh: true,
-          force_refresh: true,
-          cache_bypass: true,
-          bypass_all_cache: true,
-          request_timestamp: Date.now(),
-          request_id: Math.random().toString(36).substring(7),
+          component_name: "competitor landscape",
+          refresh: false,  // Changed to false to fetch existing data
+          force_refresh: false,  // Changed to false
+          cache_bypass: false,  // Changed to false
+          bypass_all_cache: false,  // Changed to false
+          request_timestamp: currentTime,
+          request_id: randomId,
           data: {
             company: "OrbiSelf",
             product: "Convoic.AI",
             target_market: "Indian college students (Tier 2 & 3)",
             region: "India",
-            timestamp: Date.now(),
-            force_new_data: false
+            timestamp: currentTime,
+            force_new_data: false  // Changed to false to fetch existing report
           }
         };
         
-        console.log('📤 Sending API request to: https://backend-11kr.onrender.com/market-research');
+        console.log('📤 Sending API request to:', 'https://backend-11kr.onrender.com/market-research');
         console.log('📦 Competitor Landscape Payload:', payload);
+        console.log('📦 Payload keys:', Object.keys(payload));
+        console.log('📦 Data keys:', Object.keys(payload.data));
+
+        // Add debugging to track data freshness
+        const requestTimestamp = Date.now();
+        console.log('⏰ COMPETITOR LANDSCAPE REQUEST TIMESTAMP:', requestTimestamp);
+        console.log('🔄 FORCE_REFRESH in payload:', payload.refresh);
         
         const response = await fetch('https://backend-11kr.onrender.com/market-research', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(payload),
+          body: JSON.stringify(payload)
         });
-        
-        console.log('📊 Response status:', response.status);
-        console.log('📊 Response headers:', Object.fromEntries(response.headers.entries()));
+
+        console.log('📥 Competitor Landscape API response:', response);
         
         if (!response.ok) {
-          const errorText = await response.text();
-          console.error('❌ API Error Details:', {
-            status: response.status,
-            statusText: response.statusText,
-            errorBody: errorText,
-            url: response.url
-          });
-          throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
+
+        const result = await response.json();
+        console.log('📊 Full API Response Structure:', result);
+        console.log('📊 Competitor Landscape Data Keys:', Object.keys(result.data || {}));
         
-        const data = await response.json();
-        console.log('📊 Competitor API Response:', data);
-        console.log('📊 Competitor API Response Keys:', Object.keys(data));
-        console.log('📊 Checking for report data:', data.data ? 'Found' : 'Not found');
-        
-        if (data.status === 'success' && data.data) {
-          const reportData = data.data;
+        if (result.status === 'success' && result.data) {
+          const reportData = result.data;
           
           // Convert timestamps to UTC for comparison using stored data
           const currentTimestampUTC = toUTCTimestamp(currentStoredData?.timestamp);
@@ -353,9 +353,9 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         
         // Also parse UI components for display purposes
         const apiCompetitorData: ApiCompetitorData = {};
-        if (data.uiComponents && Array.isArray(data.uiComponents)) {
-          console.log('📊 Processing uiComponents array, length:', data.uiComponents.length);
-          data.uiComponents.forEach((component: any, index: number) => {
+        if (result.uiComponents && Array.isArray(result.uiComponents)) {
+          console.log('📊 Processing uiComponents array, length:', result.uiComponents.length);
+          result.uiComponents.forEach((component: any, index: number) => {
             console.log(`📊 Component ${index}:`, component.type, component.title);
             switch (component.type) {
               case 'section':
