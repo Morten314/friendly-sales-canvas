@@ -1083,7 +1083,7 @@ const MarketResearch = () => {
     
     console.log('🧹 No valid persistent data found - fetching fresh data from backend');
     // If no valid cached data, fetch from backend
-    fetchMarketData();
+    fetchMarketSizeData(false, true); // Call the correct API function for Market Size & Opportunity
     
     // Check if we have Market Entry data, if not fetch it
     const storedMarketEntry = localStorage.getItem('marketEntryData');
