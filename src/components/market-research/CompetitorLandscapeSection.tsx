@@ -173,10 +173,10 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         const payload = {
           user_id: "brewra",
           component_name: "Competitor Landscape",
-          refresh: false,
-          force_refresh: false,
-          cache_bypass: false,
-          bypass_all_cache: false,
+          refresh: true,
+          force_refresh: true,
+          cache_bypass: true,
+          bypass_all_cache: true,
           request_timestamp: Date.now(),
           request_id: Math.random().toString(36).substring(7),
           data: {
