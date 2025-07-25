@@ -126,17 +126,48 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         setError(null);
         
         console.log('🔍 Fetching competitor data...');
-        const response = await fetch('https://backend-11kr.onrender.com/market-research?user_id=brewra&component_name=Competitor Landscape', {
-          method: 'GET',
+        
+        const payload = {
+          user_id: "brewra",
+          component_name: "competitor landscape report",
+          refresh: false,
+          force_refresh: false,
+          cache_bypass: false,
+          bypass_all_cache: false,
+          request_timestamp: Date.now(),
+          request_id: Math.random().toString(36).substring(7),
+          data: {
+            company: "OrbiSelf",
+            product: "Convoic.AI",
+            target_market: "Indian college students (Tier 2 & 3)",
+            region: "India",
+            timestamp: Date.now(),
+            force_new_data: false
+          }
+        };
+        
+        console.log('📦 Competitor Landscape Payload:', payload);
+        
+        const response = await fetch('https://backend-11kr.onrender.com/market-research', {
+          method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
+          body: JSON.stringify(payload),
         });
         
         console.log('📊 Response status:', response.status);
+        console.log('📊 Response headers:', Object.fromEntries(response.headers.entries()));
         
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+          const errorText = await response.text();
+          console.error('❌ API Error Details:', {
+            status: response.status,
+            statusText: response.statusText,
+            errorBody: errorText,
+            url: response.url
+          });
+          throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
         }
         
         const data = await response.json();
