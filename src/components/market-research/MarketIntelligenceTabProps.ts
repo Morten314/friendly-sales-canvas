@@ -73,6 +73,10 @@ export interface MarketIntelligenceTabProps {
   marketEntryCompetitiveDifferentiation?: string[];
   marketEntryStrategicRecommendations?: string[];
   marketEntryRiskAssessment?: string[];
+  // Market Entry loading states and handlers
+  isMarketEntryLoading?: boolean;
+  marketEntryError?: string | null;
+  onMarketEntryRefresh?: () => void;
   onToggleEdit: () => void;
   onMarketSizeScoutIconClick: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance' | 'market-entry', hasEdits?: boolean, lastEditedField?: string) => void;
   onIndustryTrendsScoutIconClick: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance' | 'market-entry', hasEdits?: boolean, lastEditedField?: string) => void;

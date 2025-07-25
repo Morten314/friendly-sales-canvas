@@ -1144,7 +1144,8 @@ const MarketResearch = () => {
       "Regulatory uncertainty in AI governance could slow enterprise adoption",
       "Cloud vendor lock-in risks may drive customers toward multi-cloud strategies",
       "Skills shortage in AI/ML talent could limit implementation speed"
-    ]
+    ],
+    timestamp: null as string | null
   });
   const [industryTrendsLastEditedField, setIndustryTrendsLastEditedField] = useState("");
 
@@ -1220,7 +1221,12 @@ const MarketResearch = () => {
     topBarrier: 'Data residency laws',
     competitiveDifferentiation: ['Advanced AI capabilities', 'Robust security framework', 'Flexible deployment options', 'Strong API ecosystem'],
     strategicRecommendations: ['Partner with local system integrators', 'Establish regional data centers', 'Develop compliance automation tools', 'Create localized go-to-market strategy'],
-    riskAssessment: ['Regulatory changes could impact timeline', 'Competition intensifying rapidly', 'Economic uncertainty affecting IT spending']
+    riskAssessment: ['Regulatory changes could impact timeline', 'Competition intensifying rapidly', 'Economic uncertainty affecting IT spending'],
+    swot: null as any,
+    timeline: null as any,
+    marketSizeBySegment: null as any,
+    growthProjections: null as any,
+    timestamp: null as string | null
   });
 
   // Market Entry Scout Chat states
@@ -1425,10 +1431,12 @@ const MarketResearch = () => {
       // Always fetch fresh data from Swagger API when refresh is clicked  
       console.log('🔄 Fetching fresh data from Swagger API...');
       
-      // Force refresh both market size and industry trends data - they will automatically
+      // Force refresh all market intelligence data - they will automatically
       // update the UI if their timestamps are newer than current data
-      const [marketSizeResponse] = await Promise.allSettled([
+      const [marketSizeResponse, industryTrendsResponse, marketEntryResponse] = await Promise.allSettled([
         fetchMarketSizeData(true, false), // This calls the correct market-research API
+        fetchIndustryTrendsData(true, false), // Industry Trends data
+        fetchMarketEntryData(true, false), // Market Entry data
       ]);
       
       // Also trigger industry trends refresh to get latest data
@@ -1668,71 +1676,146 @@ const MarketResearch = () => {
       setMarketSizeError(null);
 
       // Payload specifically for Industry Trends
-      const currentTime = Date.now();
-      const randomId = Math.random().toString(36).substring(7);
       const payload = {
-        user_id: "brewra",
-        component_name: "industry trends report", // Correct component name for Industry Trends
-        refresh: true,
-        force_refresh: true,
-        cache_bypass: true,
-        bypass_all_cache: true,
-        request_timestamp: currentTime,
-        request_id: randomId,
-        data: {
-          company: "OrbiSelf",
-          product: "Convoic.AI",
-          target_market: "Indian college students (Tier 2 & 3)",
-          region: "India",
-          timestamp: currentTime,
-          force_new_data: true
-        }
+        component_name: "Industry Trends",
+        refresh: refresh,
+        user_id: "brewra"
       };
 
-      console.log('📤 Sending Industry Trends API request to:', 'https://backend-11kr.onrender.com/market-research');
-      console.log('📦 Industry Trends Complete Payload:', JSON.stringify(payload, null, 2));
-      console.log('📦 Industry Trends Payload component_name:', payload.component_name);
-      
-      const response = await fetch(`https://backend-11kr.onrender.com/market-research?t=${currentTime}&cache_bust=${randomId}&force_fresh=1&bypass_cache=1&refresh_db=1&new_data_only=1`, {
+      console.log('📤 Sending Industry Trends API request with payload:', payload);
+
+      const response = await fetch('https://swaggerapi.clodura.ai/backend/v1/market-research/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0',
-          'X-Request-ID': randomId,
-          'X-Force-Fresh': '1',
-          'X-Bypass-Cache': '1',
-          'X-Refresh-DB': '1',
-          'X-Request-Time': currentTime.toString(),
-          'X-Cache-Control': 'no-cache'
         },
-        cache: 'no-store',
-        body: JSON.stringify({
-          ...payload,
-          force_refresh: true,
-          request_timestamp: currentTime,
-          cache_bypass: randomId,
-          database_refresh: true
-        })
+        body: JSON.stringify(payload)
       });
+
+      console.log('📨 Industry Trends API response status:', response.status);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const apiResponse = await response.json();
-      console.log('📥 Industry Trends API response:', apiResponse);
-      console.log('🔍 Industry Trends API Response structure:', JSON.stringify(apiResponse, null, 2));
-      console.log('🔍 DEBUGGING: Industry Trends response timestamp:', apiResponse.timestamp || apiResponse.data?.timestamp || 'NO_TIMESTAMP');
-      
-      // This will handle Industry Trends data differently from Market Size data
-      // The IndustryTrendsSection component will handle its own state management
-      console.log('✅ Industry Trends API call completed - data will be handled by IndustryTrendsSection component');
+      const result = await response.json();
+      console.log('📊 Industry Trends API result:', result);
 
-    } catch (err) {
-      console.error('Error fetching industry trends data:', err);
-      setMarketSizeError(err instanceof Error ? err.message : 'Failed to fetch industry trends data');
+      if (result.status === 'success' && result.data) {
+        const apiData = result.data;
+        console.log('🎯 Processing API data for Industry Trends:', apiData);
+
+        // Check timestamp comparison with timestampUtils
+        const currentTimestamp = industryTrendsData.timestamp || null;
+        const newTimestamp = apiData.timestamp;
+        
+        logTimestampComparison(currentTimestamp, newTimestamp, 'IndustryTrends');
+        
+        if (!currentTimestamp || isTimestampNewer(newTimestamp, currentTimestamp)) {
+          console.log('✅ New Industry Trends data is newer, updating UI');
+          
+          // Update industry trends data with API response
+          const updatedData = {
+            ...industryTrendsData,
+            executiveSummary: apiData.executiveSummary || industryTrendsData.executiveSummary,
+            aiAdoption: apiData.aiAdoption || industryTrendsData.aiAdoption,
+            cloudMigration: apiData.cloudMigration || industryTrendsData.cloudMigration,
+            regulatory: apiData.regulatory || industryTrendsData.regulatory,
+            risks: apiData.risks || industryTrendsData.risks,
+            timestamp: toUTCTimestamp(newTimestamp)
+          };
+          
+          setIndustryTrendsData(updatedData);
+          console.log('✅ Industry Trends data updated successfully');
+        } else {
+          console.log('ℹ️ Current Industry Trends data is up to date');
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error fetching Industry Trends data:', error);
+      setMarketSizeError('Failed to load industry trends data');
+    } finally {
+      if (showLoading) {
+        setIsMarketSizeLoading(false);
+      }
+    }
+  };
+
+  // Fetch Market Entry data using backend API with correct component_name
+  const fetchMarketEntryData = async (refresh = true, showLoading = true) => {
+    console.log('🚀 Starting fetchMarketEntryData with refresh:', refresh, 'showLoading:', showLoading);
+    try {
+      console.log('📍 Fetching market entry data with correct component_name');
+      if (showLoading) {
+        setIsMarketSizeLoading(true); // Reuse same loading state for now
+      }
+      setMarketSizeError(null);
+
+      // Payload specifically for Market Entry & Growth Strategy
+      const payload = {
+        component_name: "Market Entry & Growth Strategy",
+        refresh: refresh,
+        user_id: "brewra"
+      };
+
+      console.log('📤 Sending Market Entry API request with payload:', payload);
+
+      const response = await fetch('https://swaggerapi.clodura.ai/backend/v1/market-research/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      });
+
+      console.log('📨 Market Entry API response status:', response.status);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('📊 Market Entry API result:', result);
+
+      if (result.status === 'success' && result.data) {
+        const apiData = result.data;
+        console.log('🎯 Processing API data for Market Entry:', apiData);
+
+        // Check timestamp comparison with timestampUtils
+        const currentTimestamp = marketEntryData.timestamp || null;
+        const newTimestamp = apiData.timestamp;
+        
+        logTimestampComparison(currentTimestamp, newTimestamp, 'MarketEntry');
+        
+        if (!currentTimestamp || isTimestampNewer(newTimestamp, currentTimestamp)) {
+          console.log('✅ New Market Entry data is newer, updating UI');
+          
+          // Update market entry data with API response
+          const updatedData = {
+            executiveSummary: apiData.executiveSummary || marketEntryData.executiveSummary,
+            entryBarriers: apiData.entryBarriers || marketEntryData.entryBarriers,
+            recommendedChannel: apiData.recommendedChannel || marketEntryData.recommendedChannel,
+            timeToMarket: apiData.timeToMarket || marketEntryData.timeToMarket,
+            topBarrier: apiData.topBarrier || marketEntryData.topBarrier,
+            competitiveDifferentiation: apiData.competitiveDifferentiation || marketEntryData.competitiveDifferentiation,
+            strategicRecommendations: apiData.strategicRecommendations || marketEntryData.strategicRecommendations,
+            riskAssessment: apiData.riskAssessment || marketEntryData.riskAssessment,
+            swot: apiData.swot || marketEntryData.swot,
+            timeline: apiData.timeline || marketEntryData.timeline,
+            marketSizeBySegment: apiData.marketSizeBySegment || marketEntryData.marketSizeBySegment,
+            growthProjections: apiData.growthProjections || marketEntryData.growthProjections,
+            timestamp: toUTCTimestamp(newTimestamp)
+          };
+          
+          setMarketEntryData(updatedData);
+          console.log('✅ Market Entry data updated successfully');
+        } else {
+          console.log('ℹ️ Current Market Entry data is up to date');
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error fetching Market Entry data:', error);
+      setMarketSizeError('Failed to load market entry data');
     } finally {
       if (showLoading) {
         setIsMarketSizeLoading(false);
@@ -3132,9 +3215,13 @@ const MarketResearch = () => {
                       marketEntryTimeToMarket={marketEntryData.timeToMarket}
                       marketEntryTopBarrier={marketEntryData.topBarrier}
                       marketEntryCompetitiveDifferentiation={marketEntryData.competitiveDifferentiation}
-                      marketEntryStrategicRecommendations={marketEntryData.strategicRecommendations}
-                      marketEntryRiskAssessment={marketEntryData.riskAssessment}
-                      onToggleEdit={handleMarketIntelligenceToggleEdit}
+                       marketEntryStrategicRecommendations={marketEntryData.strategicRecommendations}
+                       marketEntryRiskAssessment={marketEntryData.riskAssessment}
+                       // Market Entry loading states and handlers
+                       isMarketEntryLoading={isMarketSizeLoading}
+                       marketEntryError={marketSizeError}
+                       onMarketEntryRefresh={() => fetchMarketEntryData(true)}
+                       onToggleEdit={handleMarketIntelligenceToggleEdit}
                       onMarketSizeScoutIconClick={handleMarketSizeScoutClick}
                       onIndustryTrendsScoutIconClick={handleIndustryTrendsScoutClick}
                       onCompetitorScoutIconClick={handleCompetitorScoutClick}
