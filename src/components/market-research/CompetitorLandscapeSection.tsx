@@ -436,10 +436,24 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
 
             {/* Executive Summary */}
             {(() => {
+              console.log('🔍 Rendering Executive Summary - competitorData:', !!competitorData);
+              console.log('🔍 uiComponents:', competitorData?.uiComponents);
+              
               const reportComponent = competitorData?.uiComponents?.find(comp => comp.type === 'report');
+              console.log('🔍 Found report component:', !!reportComponent);
+              console.log('🔍 Executive summary from report:', reportComponent?.executiveSummary);
+              
               const executiveSummary = reportComponent?.executiveSummary;
               
-              if (!executiveSummary) return null;
+              if (!executiveSummary) {
+                console.log('🔍 No executive summary found');
+                return (
+                  <div className="bg-red-100 p-4 rounded">
+                    <p>No executive summary found in data</p>
+                    <p>Report component: {!!reportComponent ? 'Found' : 'Not found'}</p>
+                  </div>
+                );
+              }
               
               return (
                 <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg mb-6">
