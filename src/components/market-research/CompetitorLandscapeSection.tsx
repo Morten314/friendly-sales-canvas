@@ -140,6 +140,31 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   const [editSwotAnalysis, setEditSwotAnalysis] = useState<string[]>([]);
 
   useEffect(() => {
+    // Load existing data from localStorage first
+    const loadStoredData = () => {
+      try {
+        const storedData = localStorage.getItem('competitorLandscapeData');
+        if (storedData) {
+          const parsedData = JSON.parse(storedData);
+          console.log('📦 Loading stored Competitor Landscape data with timestamp:', parsedData.timestamp);
+          setCompetitorData(parsedData);
+          // Initialize edit fields with stored data
+          if (parsedData) {
+            setEditMajorCompetitors(parsedData.majorCompetitors || []);
+            setEditMarketShares(parsedData.marketShares || {});
+            setEditCompetitiveAdvantages(parsedData.competitiveAdvantages || []);
+            setEditEmergingThreats(parsedData.emergingThreats || []);
+            setEditMarketPositioning(parsedData.marketPositioning || '');
+            setEditSwotAnalysis(parsedData.swotAnalysis || []);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading stored competitor data:', error);
+      }
+    };
+
+    loadStoredData();
+
     const fetchCompetitorData = async () => {
       try {
         setIsLoading(true);
@@ -251,6 +276,10 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
             console.log('✅ COMPETITOR LANDSCAPE DATA UPDATED - Component name:', reportData.component_name);
             
             setCompetitorData(updatedData);
+            
+            // Save updated data to localStorage with UTC timestamp
+            localStorage.setItem('competitorLandscapeData', JSON.stringify(updatedData));
+            console.log('💾 Saved Competitor Landscape data to localStorage with timestamp:', updatedData.timestamp);
             
             // Initialize edit fields with fetched data
             setEditMajorCompetitors(updatedData.majorCompetitors);
