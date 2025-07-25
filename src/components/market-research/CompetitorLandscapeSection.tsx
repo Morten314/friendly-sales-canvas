@@ -368,7 +368,20 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
           </div>
         </div>
 
-        {(competitorLandscapeExpanded || true) && (
+        {!competitorLandscapeExpanded && !isSplitView && (
+          <div className="flex justify-center pt-4">
+            <Button
+              onClick={() => onCompetitorLandscapeExpandToggle(true)}
+              variant="outline"
+              className="flex items-center space-x-2 text-sm"
+            >
+              <span>Read More</span>
+              <ChevronDown className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+
+        {(competitorLandscapeExpanded || isSplitView) && (
           <div className="space-y-6">
             
             {/* Edit field modal */}
@@ -679,6 +692,20 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                     Share
                   </Button>
                 </div>
+              </div>
+            )}
+
+            {/* Show Less Button - Only when not in split view */}
+            {!isSplitView && (
+              <div className="flex justify-center pt-4">
+                <Button
+                  onClick={() => onCompetitorLandscapeExpandToggle(false)}
+                  variant="outline"
+                  className="flex items-center space-x-2 text-sm"
+                >
+                  <span>Show Less</span>
+                  <ChevronUp className="h-4 w-4" />
+                </Button>
               </div>
             )}
           </div>
