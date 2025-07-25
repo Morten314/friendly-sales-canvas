@@ -499,7 +499,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   };
 
   const getCompetitorTags = () => {
-    return apiData.section?.tags || ["Microsoft Teams", "Slack", "Zoom", "Notion", "Asana"];
+    return competitorData?.majorCompetitors || apiData.section?.tags || ["Microsoft Teams", "Slack", "Zoom", "Notion", "Asana"];
   };
 
   const getNewsHeadlines = () => {
