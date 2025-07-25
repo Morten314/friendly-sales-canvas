@@ -106,8 +106,6 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
 
   // Fetch Industry Trends data from API
   const fetchIndustryTrendsData = async (refresh = true) => {
-    console.log('🚀 Starting fetchIndustryTrendsData with refresh:', refresh);
-    console.log('🌐 Testing CORS with Industry Trends API call...');
     try {
       setIsLoading(true);
       setError(null);
@@ -133,15 +131,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
         }
       };
 
-      console.log('📤 Sending API request to:', 'https://backend-11kr.onrender.com/market-research');
-      console.log('📦 Industry Trends Payload:', JSON.stringify(payload, null, 2));
-      console.log('📦 Payload keys:', Object.keys(payload));
-      console.log('📦 Data keys:', Object.keys(payload.data));
-
-      // Add debugging to track data freshness
       const requestTimestamp = Date.now();
-      console.log('⏰ INDUSTRY TRENDS REQUEST TIMESTAMP:', requestTimestamp);
-      console.log('🔄 FORCE_REFRESH in payload:', payload.refresh);
       
       const response = await fetch('https://backend-11kr.onrender.com/market-research', {
         method: 'POST',
@@ -151,15 +141,13 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
         body: JSON.stringify(payload)
       });
 
-      console.log('📥 Industry Trends API response:', response);
+      
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const result = await response.json();
-      console.log('📊 Full API Response Structure:', result);
-      console.log('📊 Industry Trends Data Keys:', Object.keys(result.data || {}));
       
       if (result.status === 'success' && result.data) {
         const reportData = result.data;
@@ -169,12 +157,6 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
         const newTimestampUTC = toUTCTimestamp(reportData.timestamp);
         const requestTimeUTC = getCurrentUTCTimestamp();
         
-        console.log('🔍 INDUSTRY TRENDS TIMESTAMP ANALYSIS (UTC):');
-        console.log('  - Current request time (UTC):', requestTimeUTC);
-        console.log('  - Frontend data time (UTC):', currentTimestampUTC || 'NO_TIMESTAMP');
-        console.log('  - Swagger data time (UTC):', newTimestampUTC || 'NO_TIMESTAMP');
-        console.log('  - Raw current timestamp:', industryTrendsData?.timestamp);
-        console.log('  - Raw new timestamp:', reportData.timestamp);
         
         // Determine if we should update
         let shouldUpdate = false;
@@ -194,14 +176,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
           updateReason = 'Current data is up to date or newer';
         }
         
-        console.log('🔄 INDUSTRY TRENDS UPDATE DECISION:');
-        console.log('  - Should update data:', shouldUpdate);
-        console.log('  - Current data timestamp:', currentTimestampUTC || 'NO_TIMESTAMP');
-        console.log('  - New data timestamp:', newTimestampUTC || 'NO_TIMESTAMP');
-        console.log('  - Reason for update:', updateReason);
-        
         if (shouldUpdate) {
-          console.log('✅ Found data in API response and data is newer - updating');
           
           // Generate trend snapshots if not provided
           const trendSnapshots = reportData.trendSnapshots || [
@@ -261,8 +236,6 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
             timestamp: newTimestampUTC
           };
 
-          console.log('🔄 Updating Industry Trends data with newer report');
-          console.log('✅ INDUSTRY TRENDS DATA UPDATED - Component name:', reportData.component_name);
           
           setIndustryTrendsData(dataWithFallbacks);
           
@@ -272,10 +245,6 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
           setEditCloudMigration(reportData.cloudMigration || '');
           setEditRegulatory(reportData.regulatory || '');
           setEditTrendSnapshots(dataWithFallbacks.trendSnapshots);
-        } else {
-          console.log('⏭️ Industry Trends data is up to date - no update needed');
-          console.log('  - Current timestamp (UTC):', currentTimestampUTC);
-          console.log('  - New timestamp (UTC):', newTimestampUTC);
         }
       }
     } catch (err) {
@@ -288,7 +257,6 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
 
   // Clear previous data and fetch fresh data on component mount
   useEffect(() => {
-    console.log('🚀 Component mounted - clearing previous data and fetching fresh');
     // Clear any existing data immediately to prevent showing stale data
     setIndustryTrendsData(null);
     setIsLoading(true);
@@ -296,7 +264,6 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
     
     // Reduced delay to improve user experience - 500ms is sufficient to avoid conflicts
     const timer = setTimeout(() => {
-      console.log('🕒 Starting Industry Trends API call for fresh data');
       fetchIndustryTrendsData(true);
     }, 500);
 
@@ -624,12 +591,6 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
             <div className="flex justify-center pt-4">
               <Button
                 onClick={() => {
-                  console.log('📋 Read More button clicked, current expanded:', industryTrendsExpanded);
-                  console.log('📋 Industry Trends Data:', industryTrendsData);
-                  console.log('📋 Executive Summary:', industryTrendsData?.executiveSummary);
-                  console.log('📋 Trend Snapshots:', industryTrendsData?.trendSnapshots);
-                  console.log('📋 Regional Hotspots:', industryTrendsData?.regionalHotspots);
-                  console.log('📋 Strategic Recommendations:', industryTrendsData?.strategicRecommendations);
                   onIndustryTrendsExpandToggle(true);
                 }}
                 variant="outline"
@@ -649,16 +610,6 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                   Industry Trends Report
                 </h2>
                 
-                {/* Debug Information */}
-                <div className="mb-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                  <h4 className="font-medium text-yellow-900 mb-2">Debug Info:</h4>
-                  <p className="text-sm text-yellow-700">
-                    Data available: {industryTrendsData ? 'Yes' : 'No'} | 
-                    Executive Summary: {industryTrendsData?.executiveSummary ? 'Available' : 'Missing'} |
-                    Trend Snapshots: {industryTrendsData?.trendSnapshots?.length || 0} items |
-                    Regional Hotspots: {industryTrendsData?.regionalHotspots ? 'Available' : 'Missing'}
-                  </p>
-                </div>
 
                 {/* Executive Summary */}
                 <div className="mb-8">

@@ -150,7 +150,6 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
 
   // Fetch Competitor Landscape data from API
   const fetchCompetitorLandscapeData = async (refresh = true) => {
-    console.log('🚀 Starting fetchCompetitorLandscapeData with refresh:', refresh);
     try {
       setIsLoading(true);
       setError(null);
@@ -176,12 +175,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         }
       };
 
-      console.log('📤 Sending API request to:', 'https://backend-11kr.onrender.com/market-research');
-      console.log('📦 Competitor Landscape Payload:', JSON.stringify(payload, null, 2));
-      
       const requestTimestamp = Date.now();
-      console.log('⏰ COMPETITOR LANDSCAPE REQUEST TIMESTAMP:', requestTimestamp);
-      console.log('🔄 FORCE_REFRESH in payload:', payload.refresh);
       
       const response = await fetch('https://backend-11kr.onrender.com/market-research', {
         method: 'POST',
@@ -191,21 +185,15 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         body: JSON.stringify(payload)
       });
 
-      console.log('📥 Competitor Landscape API response:', response);
+      
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const result = await response.json();
-      console.log('📊 Full API Response Structure:', result);
-      console.log('📊 Competitor Landscape Data Keys:', Object.keys(result.data || {}));
-      
+
       if (result.status === 'success' && result.data) {
-        console.log('🔍 COMPETITOR LANDSCAPE DEBUG - API RESPONSE RECEIVED:');
-        console.log('  - Full result:', JSON.stringify(result, null, 2));
-        console.log('  - result.data structure:', result.data);
-        console.log('  - result.data.uiComponents:', result.data.uiComponents);
         
         const reportData = result.data;
         
@@ -214,12 +202,6 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         const newTimestampUTC = toUTCTimestamp(reportData.timestamp);
         const requestTimeUTC = getCurrentUTCTimestamp();
         
-        console.log('🔍 COMPETITOR LANDSCAPE TIMESTAMP ANALYSIS (UTC):');
-        console.log('  - Current request time (UTC):', requestTimeUTC);
-        console.log('  - Frontend data time (UTC):', currentTimestampUTC || 'NO_TIMESTAMP');
-        console.log('  - Swagger data time (UTC):', newTimestampUTC || 'NO_TIMESTAMP');
-        console.log('  - Raw current timestamp:', competitorData?.timestamp);
-        console.log('  - Raw new timestamp:', reportData.timestamp);
         
         // Determine if we should update
         let shouldUpdate = false;
@@ -242,27 +224,12 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
           updateReason = 'Current data is up to date or newer';
         }
         
-        console.log('🔄 COMPETITOR LANDSCAPE UPDATE DECISION:');
-        console.log('  - Should update data:', shouldUpdate);
-        console.log('  - Current data timestamp:', currentTimestampUTC || 'NO_TIMESTAMP');
-        console.log('  - New data timestamp:', newTimestampUTC || 'NO_TIMESTAMP');
-        console.log('  - Reason for update:', updateReason);
-        
         if (shouldUpdate) {
-          console.log('✅ Found data in API response and data is newer - updating');
-          console.log('🔍 Setting competitor data:', reportData);
-          console.log('🔍 uiComponents count:', reportData.uiComponents?.length);
-          
           setCompetitorData(reportData);
           
           // Initialize edit fields with data from uiComponents
           const reportComponent = reportData.uiComponents?.find(comp => comp.type === 'report');
           setEditExecutiveSummary(reportComponent?.executiveSummary || '');
-          
-          console.log('🔍 Report component found:', !!reportComponent);
-          console.log('🔍 Executive summary:', reportComponent?.executiveSummary);
-        } else {
-          console.log('⏭️ Competitor Landscape data is up to date - no update needed');
         }
       }
     } catch (err) {
@@ -275,26 +242,17 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
 
   // Clear previous data and fetch fresh data on component mount
   useEffect(() => {
-    console.log('🚀 Component mounted - clearing previous data and fetching fresh');
     setCompetitorData(null);
     setIsLoading(true);
     setError(null);
     
     const timer = setTimeout(() => {
-      console.log('🕒 Starting Competitor Landscape API call for existing data');
       fetchCompetitorLandscapeData(false); // Changed to false to fetch existing data
     }, 500);
     
     return () => clearTimeout(timer);
   }, []);
 
-  // Add debug logging for render
-  console.log('🎨 CompetitorLandscapeSection RENDER DEBUG:');
-  console.log('  - isLoading:', isLoading);
-  console.log('  - error:', error);
-  console.log('  - competitorData exists:', !!competitorData);
-  console.log('  - competitorLandscapeExpanded:', competitorLandscapeExpanded);
-  console.log('  - uiComponents length:', competitorData?.uiComponents?.length);
 
   if (isLoading) {
     return (
@@ -333,9 +291,6 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
     );
   }
 
-  console.log('🎨 About to render main component');
-  console.log('  - competitorData:', competitorData);
-  console.log('  - competitorLandscapeExpanded:', competitorLandscapeExpanded);
 
   return (
     <div className={`${isSplitView ? 'flex gap-6' : ''}`}>
@@ -415,12 +370,6 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
 
         {(competitorLandscapeExpanded || true) && (
           <div className="space-y-6">
-            {/* Debug Info */}
-            <div className="bg-gray-100 p-4 rounded text-sm">
-              <p>Debug: Data loaded: {!!competitorData}</p>
-              <p>Debug: uiComponents count: {competitorData?.uiComponents?.length || 0}</p>
-              <p>Debug: Component types: {competitorData?.uiComponents?.map(c => c.type).join(', ')}</p>
-            </div>
             
             {/* Edit field modal */}
             {editingField && (
@@ -451,23 +400,11 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
 
             {/* Executive Summary */}
             {(() => {
-              console.log('🔍 Rendering Executive Summary - competitorData:', !!competitorData);
-              console.log('🔍 uiComponents:', competitorData?.uiComponents);
-              
               const reportComponent = competitorData?.uiComponents?.find(comp => comp.type === 'report');
-              console.log('🔍 Found report component:', !!reportComponent);
-              console.log('🔍 Executive summary from report:', reportComponent?.executiveSummary);
-              
               const executiveSummary = reportComponent?.executiveSummary;
               
               if (!executiveSummary) {
-                console.log('🔍 No executive summary found');
-                return (
-                  <div className="bg-red-100 p-4 rounded">
-                    <p>No executive summary found in data</p>
-                    <p>Report component: {!!reportComponent ? 'Found' : 'Not found'}</p>
-                  </div>
-                );
+                return null;
               }
               
               return (
