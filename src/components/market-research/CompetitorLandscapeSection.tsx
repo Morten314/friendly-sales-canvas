@@ -247,12 +247,17 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         
         if (shouldUpdate) {
           console.log('✅ Found data in API response and data is newer - updating');
+          console.log('🔍 Setting competitor data:', reportData);
+          console.log('🔍 uiComponents count:', reportData.uiComponents?.length);
           
           setCompetitorData(reportData);
           
           // Initialize edit fields with data from uiComponents
           const reportComponent = reportData.uiComponents?.find(comp => comp.type === 'report');
           setEditExecutiveSummary(reportComponent?.executiveSummary || '');
+          
+          console.log('🔍 Report component found:', !!reportComponent);
+          console.log('🔍 Executive summary:', reportComponent?.executiveSummary);
         } else {
           console.log('⏭️ Competitor Landscape data is up to date - no update needed');
         }
@@ -395,6 +400,13 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
 
         {competitorLandscapeExpanded && (
           <div className="space-y-6">
+            {/* Debug Info */}
+            <div className="bg-gray-100 p-4 rounded text-sm">
+              <p>Debug: Data loaded: {!!competitorData}</p>
+              <p>Debug: uiComponents count: {competitorData?.uiComponents?.length || 0}</p>
+              <p>Debug: Component types: {competitorData?.uiComponents?.map(c => c.type).join(', ')}</p>
+            </div>
+            
             {/* Edit field modal */}
             {editingField && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
