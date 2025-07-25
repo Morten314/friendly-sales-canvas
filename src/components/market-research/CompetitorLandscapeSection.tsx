@@ -527,7 +527,14 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   };
 
   const getCompetitorTags = () => {
-    return competitorData?.majorCompetitors || apiData.section?.tags || ["Microsoft Teams", "Slack", "Zoom", "Notion", "Asana"];
+    console.log('🏷️ getCompetitorTags called with:');
+    console.log('  - competitorData?.majorCompetitors:', competitorData?.majorCompetitors);
+    console.log('  - apiData.section?.tags:', apiData.section?.tags);
+    console.log('  - fallback tags:', ["Microsoft Teams", "Slack", "Zoom", "Notion", "Asana"]);
+    
+    const result = competitorData?.majorCompetitors || apiData.section?.tags || ["Microsoft Teams", "Slack", "Zoom", "Notion", "Asana"];
+    console.log('  - returning:', result);
+    return result;
   };
 
   const getNewsHeadlines = () => {
@@ -881,7 +888,10 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
 
             {/* Competitor Chips */}
             <div className="flex flex-wrap gap-2 mb-6">
-              {getCompetitorTags().map((tag, index) => (
+              {(() => {
+                const tags = getCompetitorTags();
+                console.log('🎯 About to render competitor tags:', tags);
+                return tags.map((tag, index) => (
                 <Badge 
                   key={index}
                   variant="outline" 
@@ -895,7 +905,8 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                 >
                   {tag}
                 </Badge>
-              ))}
+              ));
+              })()}
             </div>
           </div>
 
