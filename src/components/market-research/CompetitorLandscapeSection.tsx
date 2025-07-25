@@ -368,6 +368,41 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
           </div>
         </div>
 
+        {/* Always show metrics cards (Top Player Market Share, Emerging Players Added) */}
+        {(() => {
+          const sectionComponent = competitorData?.uiComponents?.find(comp => comp.type === 'section');
+          const metrics = sectionComponent?.metrics;
+          
+          if (!metrics || metrics.length === 0) return null;
+          
+          return (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              {metrics.map((metric, index) => (
+                <div key={index} className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-lg font-bold text-blue-600">
+                        {metric.value}
+                      </div>
+                      <div className="text-sm text-gray-700">{metric.label}</div>
+                    </div>
+                    {metric.trend === 'up' ? (
+                      <div className="text-green-500">
+                        <ChevronUp className="h-5 w-5" />
+                      </div>
+                    ) : metric.trend === 'down' ? (
+                      <div className="text-red-500">
+                        <ChevronDown className="h-5 w-5" />
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              ))}
+            </div>
+          );
+        })()}
+
+        {/* Read More button when collapsed */}
         {!competitorLandscapeExpanded && !isSplitView && (
           <div className="flex justify-center pt-4">
             <Button
@@ -381,6 +416,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
           </div>
         )}
 
+        {/* Expanded content */}
         {(competitorLandscapeExpanded || isSplitView) && (
           <div className="space-y-6">
             
@@ -440,36 +476,6 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                     )}
                   </div>
                   <p className="text-gray-700 leading-relaxed">{executiveSummary}</p>
-                </div>
-              );
-            })()}
-
-            {/* Market Size and Growth */}
-            {(() => {
-              const sectionComponent = competitorData?.uiComponents?.find(comp => comp.type === 'section');
-              const metrics = sectionComponent?.metrics;
-              
-              if (!metrics || metrics.length === 0) return null;
-              
-              return (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                  {metrics.map((metric, index) => (
-                    <div key={index} className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="text-lg font-bold text-blue-600">
-                            {metric.value}
-                          </div>
-                          <div className="text-sm text-gray-700">{metric.label}</div>
-                        </div>
-                        {metric.trend === 'up' ? (
-                          <ArrowUp className="h-4 w-4 text-green-500" />
-                        ) : (
-                          <ArrowDown className="h-4 w-4 text-red-500" />
-                        )}
-                      </div>
-                    </div>
-                  ))}
                 </div>
               );
             })()}
