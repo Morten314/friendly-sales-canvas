@@ -368,6 +368,39 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
           </div>
         </div>
 
+        {/* Executive Summary - Always visible */}
+        {(() => {
+          const reportComponent = competitorData?.uiComponents?.find(comp => comp.type === 'report');
+          const executiveSummary = reportComponent?.executiveSummary;
+          
+          if (!executiveSummary) {
+            return null;
+          }
+          
+          return (
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-blue-600" />
+                  Executive Summary
+                </h3>
+                {isCompetitorLandscapeEditing && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleEditField('executiveSummary', executiveSummary)}
+                    className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                  >
+                    <Edit className="h-4 w-4 mr-1" />
+                    Edit
+                  </Button>
+                )}
+              </div>
+              <p className="text-gray-700 leading-relaxed">{executiveSummary}</p>
+            </div>
+          );
+        })()}
+
         {/* Always show metrics cards (Top Player Market Share, Emerging Players Added) */}
         {(() => {
           const sectionComponent = competitorData?.uiComponents?.find(comp => comp.type === 'section');
@@ -447,38 +480,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
               </div>
             )}
 
-            {/* Executive Summary */}
-            {(() => {
-              const reportComponent = competitorData?.uiComponents?.find(comp => comp.type === 'report');
-              const executiveSummary = reportComponent?.executiveSummary;
-              
-              if (!executiveSummary) {
-                return null;
-              }
-              
-              return (
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg mb-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                      <FileText className="h-5 w-5 text-blue-600" />
-                      Executive Summary
-                    </h3>
-                    {isCompetitorLandscapeEditing && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEditField('executiveSummary', executiveSummary)}
-                        className="text-blue-600 border-blue-200 hover:bg-blue-50"
-                      >
-                        <Edit className="h-4 w-4 mr-1" />
-                        Edit
-                      </Button>
-                    )}
-                  </div>
-                  <p className="text-gray-700 leading-relaxed">{executiveSummary}</p>
-                </div>
-              );
-            })()}
+            {/* Executive Summary section is now moved above for collapsed view */}
 
             {/* Top Players */}
             {(() => {
