@@ -175,10 +175,10 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         const payload = {
           user_id: "brewra",
           component_name: "competitor landscape",
-          refresh: true,  // Request fresh data
-          force_refresh: true,  // Force refresh to get latest swagger report
-          cache_bypass: true,  // Bypass cache
-          bypass_all_cache: true,  // Bypass all caching layers
+          refresh: false,  // Fetch existing data instead of generating new
+          force_refresh: false,  // Don't force refresh
+          cache_bypass: false,  // Use cache
+          bypass_all_cache: false,  // Use all caching layers
           request_timestamp: currentTime,
           request_id: randomId,
           data: {
@@ -187,7 +187,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
             target_market: "Indian college students (Tier 2 & 3)",
             region: "India",
             timestamp: currentTime,
-            force_new_data: true  // Force new report generation
+            force_new_data: false  // Fetch existing report
           }
         };
         
@@ -731,7 +731,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                     </Label>
                     <Input
                       id="topPlayerShare"
-                      value={topPlayerShare || getTopPlayerShare()}
+                      value={topPlayerShare}
                       onChange={(e) => onTopPlayerShareChange(e.target.value)}
                       placeholder="e.g., 48%"
                     />
@@ -742,7 +742,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                     </Label>
                     <Input
                       id="emergingPlayers"
-                      value={emergingPlayers || getEmergingPlayers()}
+                      value={emergingPlayers}
                       onChange={(e) => onEmergingPlayersChange(e.target.value)}
                       placeholder="e.g., 2"
                     />
@@ -774,7 +774,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                 <Label className="text-sm font-medium text-gray-700 mb-2 block">
                   Funding News & Headlines
                 </Label>
-                {(fundingNews.length > 0 ? fundingNews : getNewsHeadlines()).map((news, index) => (
+                {fundingNews.map((news, index) => (
                   <Textarea
                     key={index}
                     value={news}
@@ -852,57 +852,73 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         </div>
       ) : (
         <div className="space-y-6">
-          {/* Executive Summary - Collapsed */}
-          <div>
-            <p className="text-gray-700 mb-4">
-              {getExecutiveSummary()}
-            </p>
-            
-            {/* Metric Tiles */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-lg font-bold text-blue-600">{getTopPlayerShare()}</div>
-                    <div className="text-sm text-gray-700">Top Player Market Share</div>
-                  </div>
-                  <ArrowUp className="h-4 w-4 text-green-500" />
-                </div>
-              </div>
-              <div className="border border-green-200 p-4 rounded-lg bg-amber-100">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-lg font-bold text-green-600">{getEmergingPlayers()}</div>
-                    <div className="text-sm text-gray-700">Emerging Players Added</div>
-                  </div>
-                  <ArrowDown className="h-4 w-4 text-red-500" />
-                </div>
-              </div>
+          {/* Display Raw API Data - Executive Summary */}
+          {competitorData?.marketPositioning && (
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <Crown className="h-5 w-5 text-orange-600" />
+                Executive Summary
+              </h3>
+              <p className="text-gray-700 mb-6">{competitorData.marketPositioning}</p>
             </div>
+          )}
 
-            {/* Competitor Chips */}
-            <div className="flex flex-wrap gap-2 mb-6">
-              {(() => {
-                const tags = getCompetitorTags();
-                console.log('🎯 About to render competitor tags:', tags);
-                return tags.map((tag, index) => (
-                <Badge 
-                  key={index}
-                  variant="outline" 
-                  className={`${
-                    index % 5 === 0 ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100' :
-                    index % 5 === 1 ? 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100' :
-                    index % 5 === 2 ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100' :
-                    index % 5 === 3 ? 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100' :
-                    'bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100'
-                  } cursor-pointer`}
-                >
-                  {tag}
-                </Badge>
-              ));
-              })()}
+          {/* Top Players */}
+          {competitorData?.majorCompetitors && competitorData.majorCompetitors.length > 0 && (
+            <div>
+              <h4 className="text-md font-semibold text-gray-900 mb-3">Top Players</h4>
+              <div className="flex flex-wrap gap-2 mb-4">
+                {competitorData.majorCompetitors.map((competitor, index) => (
+                  <Badge 
+                    key={index}
+                    variant="outline" 
+                    className={`${
+                      index % 5 === 0 ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100' :
+                      index % 5 === 1 ? 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100' :
+                      index % 5 === 2 ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100' :
+                      index % 5 === 3 ? 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100' :
+                      'bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100'
+                    } cursor-pointer`}
+                  >
+                    {competitor}
+                  </Badge>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Emerging Threats */}
+          {competitorData?.emergingThreats && competitorData.emergingThreats.length > 0 && (
+            <div>
+              <h4 className="text-md font-semibold text-gray-900 mb-3">Emerging Players</h4>
+              <div className="flex flex-wrap gap-2 mb-4">
+                {competitorData.emergingThreats.map((threat, index) => (
+                  <Badge 
+                    key={index}
+                    variant="outline" 
+                    className="bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100 cursor-pointer"
+                  >
+                    {threat}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Strategic Recommendations */}
+          {competitorData?.competitiveAdvantages && competitorData.competitiveAdvantages.length > 0 && (
+            <div>
+              <h4 className="text-md font-semibold text-gray-900 mb-3">Strategic Recommendations</h4>
+              <ul className="space-y-2">
+                {competitorData.competitiveAdvantages.map((advantage, index) => (
+                  <li key={index} className="flex items-start gap-2">
+                    <div className="w-2 h-2 rounded-full bg-green-500 mt-2 flex-shrink-0"></div>
+                    <span className="text-gray-700">{advantage}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {/* Read More Button */}
           {!isExpanded && (
