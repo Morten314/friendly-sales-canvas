@@ -219,6 +219,17 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         console.log('📊 Full API Response Structure:', result);
         console.log('📊 Competitor Landscape Data Keys:', Object.keys(result.data || {}));
         
+        // DEBUG: Let's see the complete API response
+        console.log('🔍 COMPLETE API RESPONSE ANALYSIS:');
+        console.log('  - result.status:', result.status);
+        console.log('  - result.data exists:', !!result.data);
+        if (result.data) {
+          console.log('  - result.data.timestamp:', result.data.timestamp);
+          console.log('  - result.data.company:', result.data.company);
+          console.log('  - result.data.component_name:', result.data.component_name);
+          console.log('  - Full result.data structure:', JSON.stringify(result.data, null, 2));
+        }
+        
         if (result.status === 'success' && result.data) {
           const reportData = result.data;
           
