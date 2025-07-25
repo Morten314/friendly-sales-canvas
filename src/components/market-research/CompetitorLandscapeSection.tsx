@@ -175,10 +175,10 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         const payload = {
           user_id: "brewra",
           component_name: "competitor landscape",
-          refresh: false,  // Changed to false to fetch existing data
-          force_refresh: false,  // Changed to false
-          cache_bypass: false,  // Changed to false
-          bypass_all_cache: false,  // Changed to false
+          refresh: true,  // Request fresh data
+          force_refresh: true,  // Force refresh to get latest swagger report
+          cache_bypass: true,  // Bypass cache
+          bypass_all_cache: true,  // Bypass all caching layers
           request_timestamp: currentTime,
           request_id: randomId,
           data: {
@@ -187,7 +187,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
             target_market: "Indian college students (Tier 2 & 3)",
             region: "India",
             timestamp: currentTime,
-            force_new_data: false  // Changed to false to fetch existing report
+            force_new_data: true  // Force new report generation
           }
         };
         
