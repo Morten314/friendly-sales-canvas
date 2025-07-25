@@ -288,7 +288,13 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
             
             // Store the raw API response directly like Industry Trends component
             const updatedData: CompetitorLandscapeData = {
-              ...reportData,
+              // Use the raw API response data without transformation
+              majorCompetitors: reportData.competitorLandscape?.topPlayers || [],
+              marketShares: reportData.competitorLandscape?.marketShares || {},
+              competitiveAdvantages: reportData.strategicRecommendations || [],
+              emergingThreats: reportData.competitorLandscape?.emergingPlayers || [],
+              marketPositioning: reportData.executiveSummary || '',
+              swotAnalysis: reportData.trends || [],
               timestamp: reportData.timestamp
             };
             
