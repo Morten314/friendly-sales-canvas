@@ -285,6 +285,14 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
     return () => clearTimeout(timer);
   }, []);
 
+  // Add debug logging for render
+  console.log('🎨 CompetitorLandscapeSection RENDER DEBUG:');
+  console.log('  - isLoading:', isLoading);
+  console.log('  - error:', error);
+  console.log('  - competitorData exists:', !!competitorData);
+  console.log('  - competitorLandscapeExpanded:', competitorLandscapeExpanded);
+  console.log('  - uiComponents length:', competitorData?.uiComponents?.length);
+
   if (isLoading) {
     return (
       <div className={`${isSplitView ? 'flex gap-6' : ''}`}>
@@ -321,6 +329,10 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
       </div>
     );
   }
+
+  console.log('🎨 About to render main component');
+  console.log('  - competitorData:', competitorData);
+  console.log('  - competitorLandscapeExpanded:', competitorLandscapeExpanded);
 
   return (
     <div className={`${isSplitView ? 'flex gap-6' : ''}`}>
