@@ -125,13 +125,22 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         setIsLoading(true);
         setError(null);
         
-        const response = await fetch('https://backend-11kr.onrender.com/market-research?user_id=brewra&timeframe=60');
+        console.log('🔍 Fetching competitor data...');
+        const response = await fetch('https://backend-11kr.onrender.com/market-research?user_id=brewra&timeframe=60', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        console.log('📊 Response status:', response.status);
+        
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         
         const data = await response.json();
-        console.log('Competitor API Response:', data);
+        console.log('📊 Competitor API Response:', data);
         
         // Parse the API response to extract competitor landscape data
         const competitorData: ApiCompetitorData = {};
