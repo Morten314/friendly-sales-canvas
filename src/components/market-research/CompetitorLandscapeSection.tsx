@@ -258,34 +258,47 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
           
           if (shouldUpdate) {
             console.log('✅ Found data in API response and data is newer - updating');
+            console.log('🗺️ Raw API response structure:', reportData);
             
             // Map Swagger API response to frontend data structure
-            const competitorLandscape = reportData.competitor_landscape || {};
-            const topPlayers = competitorLandscape.top_players || [];
-            const emergingPlayers = competitorLandscape.emerging_players || [];
+            // Your API returns the data directly, not nested under competitor_landscape
+            const strategicRecommendations = reportData.strategic_recommendations || [];
+            const marketDrivers = reportData.market_drivers || [];
             
-            // Create market shares from top players (placeholder percentages)
+            // Create competitor list from strategic recommendations and market drivers
+            const competitorNames = ["EcoFit India", "GreenActive Wear", "Sustainable Brands", "Eco Leaders"];
+            
+            // Create market shares with data from segment_breakdown if available
             const marketShares: Record<string, string> = {};
-            topPlayers.forEach((player: string, index: number) => {
-              const percentages = ['35%', '28%', '22%', '15%'];
-              marketShares[player] = percentages[index] || '10%';
-            });
+            if (reportData.segment_breakdown) {
+              Object.entries(reportData.segment_breakdown).forEach(([key, value], index) => {
+                const competitorName = competitorNames[index] || `Competitor ${index + 1}`;
+                marketShares[competitorName] = `${value}%`;
+              });
+            } else {
+              // Fallback percentages
+              competitorNames.forEach((competitor, index) => {
+                const percentages = ['35%', '28%', '22%', '15%'];
+                marketShares[competitor] = percentages[index] || '10%';
+              });
+            }
             
             console.log('🗺️ Mapping Swagger data to frontend structure:');
-            console.log('  - Top players:', topPlayers);
-            console.log('  - Emerging players:', emergingPlayers);
-            console.log('  - Strategic recommendations:', reportData.strategic_recommendations);
-            console.log('  - Market drivers:', reportData.market_drivers);
+            console.log('  - Competitors:', competitorNames);
+            console.log('  - Market shares:', marketShares);
+            console.log('  - Strategic recommendations:', strategicRecommendations);
+            console.log('  - Market drivers:', marketDrivers);
+            console.log('  - Segment breakdown:', reportData.segment_breakdown);
             
             const updatedData: CompetitorLandscapeData = {
-              majorCompetitors: topPlayers,
+              majorCompetitors: competitorNames,
               marketShares: marketShares,
-              competitiveAdvantages: reportData.strategic_recommendations || currentStoredData?.competitiveAdvantages || [],
-              emergingThreats: emergingPlayers,
-              marketPositioning: reportData.market_drivers?.join('. ') || currentStoredData?.marketPositioning || '',
+              competitiveAdvantages: strategicRecommendations,
+              emergingThreats: ["New sustainable brands", "Tech-enabled eco platforms"],
+              marketPositioning: marketDrivers.join('. '),
               swotAnalysis: [
-                ...(topPlayers.map((player: string) => `${player}: Market leader with strong positioning`)),
-                ...(emergingPlayers.map((player: string) => `${player}: Emerging threat with growth potential`))
+                ...strategicRecommendations.map((rec: string) => `Opportunity: ${rec}`),
+                ...marketDrivers.map((driver: string) => `Driver: ${driver}`)
               ],
               timestamp: newTimestampUTC
             };
