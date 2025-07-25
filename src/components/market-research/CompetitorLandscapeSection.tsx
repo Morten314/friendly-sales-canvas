@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Bot, Edit, X, FileText, Save, Share, Clock, Crown, ArrowUp, ArrowDown, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,6 +46,49 @@ interface CompetitorLandscapeSectionProps {
   onGenerateShareableLink: () => void;
 }
 
+interface ApiCompetitorData {
+  section?: {
+    title?: string;
+    description?: string;
+    metrics?: Array<{ label: string; value: string; trend?: string }>;
+    tags?: string[];
+  };
+  report?: {
+    title?: string;
+    executiveSummary?: string;
+    dataPoints?: Array<{ label: string; value: string }>;
+  };
+  swotAnalysis?: {
+    entities?: Array<{
+      name: string;
+      strengths?: string[];
+      weaknesses?: string[];
+    }>;
+  };
+  news?: {
+    headlines?: string[];
+  };
+  marketShareCharts?: {
+    regions?: Array<{
+      name: string;
+      data: Record<string, string>;
+    }>;
+  };
+  featureComparison?: {
+    features?: string[];
+    tools?: Record<string, string[]>;
+  };
+  mnaInsights?: {
+    insights?: Array<{
+      label: string;
+      description: string;
+    }>;
+  };
+  marketTrends?: {
+    charts?: Array<{ name: string; xAxis: any }>;
+  };
+}
+
 const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   isEditing,
   isSplitView,
@@ -72,6 +115,73 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   onSaveToWorkspace,
   onGenerateShareableLink
 }) => {
+  const [apiData, setApiData] = useState<ApiCompetitorData>({});
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchCompetitorData = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        const response = await fetch('https://backend-11kr.onrender.com/market-research');
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('Competitor API Response:', data);
+        
+        // Parse the API response to extract competitor landscape data
+        const competitorData: ApiCompetitorData = {};
+        
+        if (data.uiComponents && Array.isArray(data.uiComponents)) {
+          data.uiComponents.forEach((component: any) => {
+            switch (component.type) {
+              case 'section':
+                if (component.title?.includes('Competitor Landscape')) {
+                  competitorData.section = component;
+                }
+                break;
+              case 'report':
+                if (component.title?.includes('Competitor Landscape')) {
+                  competitorData.report = component;
+                }
+                break;
+              case 'swotAnalysis':
+                competitorData.swotAnalysis = component;
+                break;
+              case 'news':
+                competitorData.news = component;
+                break;
+              case 'marketShareCharts':
+                competitorData.marketShareCharts = component;
+                break;
+              case 'featureComparison':
+                competitorData.featureComparison = component;
+                break;
+              case 'mnaInsights':
+                competitorData.mnaInsights = component;
+                break;
+              case 'marketTrends':
+                competitorData.marketTrends = component;
+                break;
+            }
+          });
+        }
+        
+        setApiData(competitorData);
+      } catch (error) {
+        console.error('Error fetching competitor data:', error);
+        setError(error instanceof Error ? error.message : 'Failed to fetch data');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCompetitorData();
+  }, []);
   const handleCompetitorSaveChanges = () => {
     onSaveChanges();
   };
@@ -81,6 +191,128 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
     newNews[index] = value;
     onFundingNewsChange(newNews);
   };
+
+  // Helper functions to get data from API or fallback to props
+  const getExecutiveSummary = () => {
+    return apiData.report?.executiveSummary || executiveSummary || "The enterprise collaboration tools market is increasingly competitive, with several dominant players holding significant market share.";
+  };
+
+  const getTopPlayerShare = () => {
+    const metric = apiData.section?.metrics?.find(m => m.label.toLowerCase().includes('market share'));
+    return metric?.value || topPlayerShare || "48%";
+  };
+
+  const getEmergingPlayers = () => {
+    const metric = apiData.section?.metrics?.find(m => m.label.toLowerCase().includes('emerging'));
+    return metric?.value || emergingPlayers || "2";
+  };
+
+  const getCompetitorTags = () => {
+    return apiData.section?.tags || ["Microsoft Teams", "Slack", "Zoom", "Notion", "Asana"];
+  };
+
+  const getNewsHeadlines = () => {
+    return apiData.news?.headlines || fundingNews || [
+      "Notion raises $300M Series C - Valuation reaches $10B as workspace tools gain traction",
+      "Microsoft Teams launches AI Copilot - New AI features for meeting summaries and task automation",
+      "Slack introduces Workflow Builder 2.0 - Enhanced automation capabilities for enterprise customers"
+    ];
+  };
+
+  const getDataPoints = () => {
+    return apiData.report?.dataPoints || [
+      { label: "Top 3 Players", value: "Microsoft Teams (35%), Slack (28%), Zoom (22%)" },
+      { label: "Emerging Players", value: "Asana (8%), Notion (7%)" },
+      { label: "Key Moves", value: "$300M funding round by Notion; new AI feature launch by Teams" }
+    ];
+  };
+
+  const getSwotEntities = () => {
+    return apiData.swotAnalysis?.entities || [
+      {
+        name: "Microsoft Teams",
+        strengths: ["Office 365 integration", "Enterprise adoption"],
+        weaknesses: ["Complex interface", "Resource heavy"]
+      },
+      {
+        name: "Slack",
+        strengths: ["Developer-friendly", "Third-party apps"],
+        weaknesses: ["Limited video features", "Premium pricing"]
+      }
+    ];
+  };
+
+  const getMarketShareRegions = () => {
+    return apiData.marketShareCharts?.regions || [
+      {
+        name: "North America",
+        data: {
+          "Microsoft Teams": "40%",
+          "Slack": "32%",
+          "Zoom": "18%",
+          "Others": "10%"
+        }
+      },
+      {
+        name: "APAC Region",
+        data: {
+          "Microsoft Teams": "30%",
+          "Zoom": "28%",
+          "Slack": "22%",
+          "Others": "20%"
+        }
+      }
+    ];
+  };
+
+  const getFeatureComparison = () => {
+    return {
+      features: apiData.featureComparison?.features || ["Video Conferencing", "File Sharing", "Third-party Integrations", "AI Features"],
+      tools: apiData.featureComparison?.tools || {
+        "Teams": ["✓", "✓✓", "✓", "✓✓"],
+        "Slack": ["Limited", "✓", "✓✓", "✓"],
+        "Zoom": ["✓✓", "✓", "✓", "✓"],
+        "Notion": ["✗", "✓✓", "✓", "✓"]
+      }
+    };
+  };
+
+  const getMnaInsights = () => {
+    return apiData.mnaInsights?.insights || [
+      {
+        label: "High Acquisition Likelihood",
+        description: "Notion and Asana showing strong growth metrics attractive to tech giants"
+      },
+      {
+        label: "Potential Acquirers",
+        description: "Google, Meta, and Salesforce actively seeking collaboration tool acquisitions"
+      },
+      {
+        label: "Market Consolidation Risk",
+        description: "Smaller players may struggle to compete with integrated enterprise suites"
+      }
+    ];
+  };
+
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-lg border border-gray-200 p-6 relative">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-gray-500">Loading competitor landscape data...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white rounded-lg border border-gray-200 p-6 relative">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-red-500">Error loading data: {error}</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-6 relative">
@@ -143,7 +375,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                 </Label>
                 <Textarea
                   id="competitorExecutiveSummary"
-                  value={executiveSummary}
+                  value={executiveSummary || getExecutiveSummary()}
                   onChange={(e) => onExecutiveSummaryChange(e.target.value)}
                   className="w-full h-32 resize-none"
                   placeholder="Enter executive summary..."
@@ -179,7 +411,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                     </Label>
                     <Input
                       id="topPlayerShare"
-                      value={topPlayerShare}
+                      value={topPlayerShare || getTopPlayerShare()}
                       onChange={(e) => onTopPlayerShareChange(e.target.value)}
                       placeholder="e.g., 48%"
                     />
@@ -190,7 +422,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                     </Label>
                     <Input
                       id="emergingPlayers"
-                      value={emergingPlayers}
+                      value={emergingPlayers || getEmergingPlayers()}
                       onChange={(e) => onEmergingPlayersChange(e.target.value)}
                       placeholder="e.g., 2"
                     />
@@ -222,7 +454,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                 <Label className="text-sm font-medium text-gray-700 mb-2 block">
                   Funding News & Headlines
                 </Label>
-                {fundingNews.map((news, index) => (
+                {(fundingNews.length > 0 ? fundingNews : getNewsHeadlines()).map((news, index) => (
                   <Textarea
                     key={index}
                     value={news}
@@ -303,15 +535,15 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
           {/* Executive Summary - Collapsed */}
           <div>
             <p className="text-gray-700 mb-4">
-              {executiveSummary}
+              {getExecutiveSummary()}
             </p>
             
             {/* Metric Tiles */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="text-lg font-bold text-blue-600">{topPlayerShare}</div>
+                    <div className="text-lg font-bold text-blue-600">{getTopPlayerShare()}</div>
                     <div className="text-sm text-gray-700">Top Player Market Share</div>
                   </div>
                   <ArrowUp className="h-4 w-4 text-green-500" />
@@ -320,7 +552,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
               <div className="border border-green-200 p-4 rounded-lg bg-amber-100">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="text-lg font-bold text-green-600">{emergingPlayers}</div>
+                    <div className="text-lg font-bold text-green-600">{getEmergingPlayers()}</div>
                     <div className="text-sm text-gray-700">Emerging Players Added</div>
                   </div>
                   <ArrowDown className="h-4 w-4 text-red-500" />
@@ -330,21 +562,21 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
 
             {/* Competitor Chips */}
             <div className="flex flex-wrap gap-2 mb-6">
-              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 cursor-pointer">
-                Microsoft Teams
-              </Badge>
-              <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100 cursor-pointer">
-                Slack
-              </Badge>
-              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 hover:bg-green-100 cursor-pointer">
-                Zoom
-              </Badge>
-              <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100 cursor-pointer">
-                Notion
-              </Badge>
-              <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100 cursor-pointer">
-                Asana
-              </Badge>
+              {getCompetitorTags().map((tag, index) => (
+                <Badge 
+                  key={index}
+                  variant="outline" 
+                  className={`${
+                    index % 5 === 0 ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100' :
+                    index % 5 === 1 ? 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100' :
+                    index % 5 === 2 ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100' :
+                    index % 5 === 3 ? 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100' :
+                    'bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100'
+                  } cursor-pointer`}
+                >
+                  {tag}
+                </Badge>
+              ))}
             </div>
           </div>
 
@@ -374,21 +606,18 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Executive Summary</h3>
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <p className="text-gray-700 mb-4">
-                    The enterprise collaboration tools market is increasingly competitive, with several dominant players holding significant market share. However, emerging startups are introducing disruptive features, shifting the landscape rapidly.
+                    {getExecutiveSummary()}
                   </p>
                   <div className="space-y-2">
-                    <div className="flex items-start gap-2">
-                      <div className="w-2 h-2 rounded-full bg-blue-500 mt-2 flex-shrink-0"></div>
-                      <span className="text-gray-700">Top 3 Players: Microsoft Teams (35%), Slack (28%), Zoom (22%)</span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <div className="w-2 h-2 rounded-full bg-green-500 mt-2 flex-shrink-0"></div>
-                      <span className="text-gray-700">Emerging Players: Asana (8%), Notion (7%)</span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <div className="w-2 h-2 rounded-full bg-purple-500 mt-2 flex-shrink-0"></div>
-                      <span className="text-gray-700">Key Moves: $300M funding round by Notion; new AI feature launch by Teams</span>
-                    </div>
+                    {getDataPoints().map((point, index) => (
+                      <div key={index} className="flex items-start gap-2">
+                        <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
+                          index % 3 === 0 ? 'bg-blue-500' :
+                          index % 3 === 1 ? 'bg-green-500' : 'bg-purple-500'
+                        }`}></div>
+                        <span className="text-gray-700">{point.label}: {point.value}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -397,44 +626,29 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
               <div className="mb-8">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Competitive SWOT Analyses</h3>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <div className="bg-white border border-gray-200 rounded-lg p-4">
-                    <h4 className="font-medium text-gray-900 mb-3">Microsoft Teams</h4>
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                      <div>
-                        <h5 className="font-medium text-green-700 mb-1">Strengths</h5>
-                        <ul className="text-gray-600 space-y-1">
-                          <li>• Office 365 integration</li>
-                          <li>• Enterprise adoption</li>
-                        </ul>
-                      </div>
-                      <div>
-                        <h5 className="font-medium text-red-700 mb-1">Weaknesses</h5>
-                        <ul className="text-gray-600 space-y-1">
-                          <li>• Complex interface</li>
-                          <li>• Resource heavy</li>
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="bg-white border border-gray-200 rounded-lg p-4">
-                    <h4 className="font-medium text-gray-900 mb-3">Slack</h4>
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                      <div>
-                        <h5 className="font-medium text-green-700 mb-1">Strengths</h5>
-                        <ul className="text-gray-600 space-y-1">
-                          <li>• Developer-friendly</li>
-                          <li>• Third-party apps</li>
-                        </ul>
-                      </div>
-                      <div>
-                        <h5 className="font-medium text-red-700 mb-1">Weaknesses</h5>
-                        <ul className="text-gray-600 space-y-1">
-                          <li>• Limited video features</li>
-                          <li>• Premium pricing</li>
-                        </ul>
+                  {getSwotEntities().map((entity, index) => (
+                    <div key={index} className="bg-white border border-gray-200 rounded-lg p-4">
+                      <h4 className="font-medium text-gray-900 mb-3">{entity.name}</h4>
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <h5 className="font-medium text-green-700 mb-1">Strengths</h5>
+                          <ul className="text-gray-600 space-y-1">
+                            {entity.strengths?.map((strength, idx) => (
+                              <li key={idx}>• {strength}</li>
+                            ))}
+                          </ul>
+                        </div>
+                        <div>
+                          <h5 className="font-medium text-red-700 mb-1">Weaknesses</h5>
+                          <ul className="text-gray-600 space-y-1">
+                            {entity.weaknesses?.map((weakness, idx) => (
+                              <li key={idx}>• {weakness}</li>
+                            ))}
+                          </ul>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  ))}
                 </div>
               </div>
 
@@ -443,27 +657,25 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Funding Rounds & News Headlines</h3>
                 <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
                   <div className="space-y-3">
-                    <div className="flex items-start gap-3">
-                      <div className="w-2 h-2 rounded-full bg-yellow-500 mt-2 flex-shrink-0"></div>
-                      <div>
-                        <h4 className="font-medium text-gray-900">Notion raises $300M Series C</h4>
-                        <p className="text-sm text-gray-600">Valuation reaches $10B as workspace tools gain traction</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <div className="w-2 h-2 rounded-full bg-blue-500 mt-2 flex-shrink-0"></div>
-                      <div>
-                        <h4 className="font-medium text-gray-900">Microsoft Teams launches AI Copilot</h4>
-                        <p className="text-sm text-gray-600">New AI features for meeting summaries and task automation</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <div className="w-2 h-2 rounded-full bg-purple-500 mt-2 flex-shrink-0"></div>
-                      <div>
-                        <h4 className="font-medium text-gray-900">Slack introduces Workflow Builder 2.0</h4>
-                        <p className="text-sm text-gray-600">Enhanced automation capabilities for enterprise customers</p>
-                      </div>
-                    </div>
+                    {getNewsHeadlines().map((headline, index) => {
+                      // Split headline into title and description if it contains " - "
+                      const parts = headline.split(' - ');
+                      const title = parts[0];
+                      const description = parts[1] || '';
+                      
+                      return (
+                        <div key={index} className="flex items-start gap-3">
+                          <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
+                            index % 3 === 0 ? 'bg-yellow-500' :
+                            index % 3 === 1 ? 'bg-blue-500' : 'bg-purple-500'
+                          }`}></div>
+                          <div>
+                            <h4 className="font-medium text-gray-900">{title}</h4>
+                            {description && <p className="text-sm text-gray-600">{description}</p>}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -472,46 +684,21 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
               <div className="mb-8">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Market Share % by Region</h3>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <div className="bg-white border border-gray-200 rounded-lg p-4">
-                    <h4 className="font-medium text-gray-900 mb-3">North America</h4>
-                    <MiniPieChart data={[{
-                  name: "Microsoft Teams",
-                  value: 40,
-                  color: "#3B82F6"
-                }, {
-                  name: "Slack",
-                  value: 32,
-                  color: "#8B5CF6"
-                }, {
-                  name: "Zoom",
-                  value: 18,
-                  color: "#10B981"
-                }, {
-                  name: "Others",
-                  value: 10,
-                  color: "#6B7280"
-                }]} title="" />
-                  </div>
-                  <div className="bg-white border border-gray-200 rounded-lg p-4">
-                    <h4 className="font-medium text-gray-900 mb-3">APAC Region</h4>
-                    <MiniPieChart data={[{
-                  name: "Microsoft Teams",
-                  value: 30,
-                  color: "#3B82F6"
-                }, {
-                  name: "Zoom",
-                  value: 28,
-                  color: "#10B981"
-                }, {
-                  name: "Slack",
-                  value: 22,
-                  color: "#8B5CF6"
-                }, {
-                  name: "Others",
-                  value: 20,
-                  color: "#6B7280"
-                }]} title="" />
-                  </div>
+                  {getMarketShareRegions().map((region, index) => {
+                    const colors = ["#3B82F6", "#8B5CF6", "#10B981", "#6B7280", "#F59E0B"];
+                    const chartData = Object.entries(region.data).map(([name, value], idx) => ({
+                      name,
+                      value: parseInt(value.replace('%', '')) || 0,
+                      color: colors[idx % colors.length]
+                    }));
+                    
+                    return (
+                      <div key={index} className="bg-white border border-gray-200 rounded-lg p-4">
+                        <h4 className="font-medium text-gray-900 mb-3">{region.name}</h4>
+                        <MiniPieChart data={chartData} title="" />
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -519,47 +706,35 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
               <div className="mb-8">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Feature Comparison Tables</h3>
                 <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                  <table className="w-full">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Feature</th>
-                        <th className="px-4 py-3 text-center text-sm font-medium text-gray-700">Teams</th>
-                        <th className="px-4 py-3 text-center text-sm font-medium text-gray-700">Slack</th>
-                        <th className="px-4 py-3 text-center text-sm font-medium text-gray-700">Zoom</th>
-                        <th className="px-4 py-3 text-center text-sm font-medium text-gray-700">Notion</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      <tr>
-                        <td className="px-4 py-3 text-sm text-gray-900">Video Conferencing</td>
-                        <td className="px-4 py-3 text-center">✓</td>
-                        <td className="px-4 py-3 text-center">Limited</td>
-                        <td className="px-4 py-3 text-center">✓✓</td>
-                        <td className="px-4 py-3 text-center">✗</td>
-                      </tr>
-                      <tr className="bg-gray-50">
-                        <td className="px-4 py-3 text-sm text-gray-900">File Sharing</td>
-                        <td className="px-4 py-3 text-center">✓✓</td>
-                        <td className="px-4 py-3 text-center">✓</td>
-                        <td className="px-4 py-3 text-center">✓</td>
-                        <td className="px-4 py-3 text-center">✓✓</td>
-                      </tr>
-                      <tr>
-                        <td className="px-4 py-3 text-sm text-gray-900">Third-party Integrations</td>
-                        <td className="px-4 py-3 text-center">✓</td>
-                        <td className="px-4 py-3 text-center">✓✓</td>
-                        <td className="px-4 py-3 text-center">✓</td>
-                        <td className="px-4 py-3 text-center">✓</td>
-                      </tr>
-                      <tr className="bg-gray-50">
-                        <td className="px-4 py-3 text-sm text-gray-900">AI Features</td>
-                        <td className="px-4 py-3 text-center">✓✓</td>
-                        <td className="px-4 py-3 text-center">✓</td>
-                        <td className="px-4 py-3 text-center">✓</td>
-                        <td className="px-4 py-3 text-center">✓</td>
-                      </tr>
-                    </tbody>
-                  </table>
+                  {(() => {
+                    const comparison = getFeatureComparison();
+                    const toolNames = Object.keys(comparison.tools);
+                    
+                    return (
+                      <table className="w-full">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Feature</th>
+                            {toolNames.map((tool, index) => (
+                              <th key={index} className="px-4 py-3 text-center text-sm font-medium text-gray-700">{tool}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {comparison.features.map((feature, featureIndex) => (
+                            <tr key={featureIndex} className={featureIndex % 2 === 1 ? 'bg-gray-50' : ''}>
+                              <td className="px-4 py-3 text-sm text-gray-900">{feature}</td>
+                              {toolNames.map((tool, toolIndex) => (
+                                <td key={toolIndex} className="px-4 py-3 text-center">
+                                  {comparison.tools[tool]?.[featureIndex] || '—'}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    );
+                  })()}
                 </div>
               </div>
 
@@ -568,27 +743,18 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">M&A Potential Insights</h3>
                 <div className="bg-orange-50 border border-orange-200 p-4 rounded-lg">
                   <div className="space-y-3">
-                    <div className="flex items-start gap-3">
-                      <div className="w-2 h-2 rounded-full bg-orange-500 mt-2 flex-shrink-0"></div>
-                      <div>
-                        <h4 className="font-medium text-gray-900">High Acquisition Likelihood</h4>
-                        <p className="text-sm text-gray-600">Notion and Asana showing strong growth metrics attractive to tech giants</p>
+                    {getMnaInsights().map((insight, index) => (
+                      <div key={index} className="flex items-start gap-3">
+                        <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
+                          index % 3 === 0 ? 'bg-orange-500' :
+                          index % 3 === 1 ? 'bg-red-500' : 'bg-blue-500'
+                        }`}></div>
+                        <div>
+                          <h4 className="font-medium text-gray-900">{insight.label}</h4>
+                          <p className="text-sm text-gray-600">{insight.description}</p>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <div className="w-2 h-2 rounded-full bg-red-500 mt-2 flex-shrink-0"></div>
-                      <div>
-                        <h4 className="font-medium text-gray-900">Potential Acquirers</h4>
-                        <p className="text-sm text-gray-600">Google, Meta, and Salesforce actively seeking collaboration tool acquisitions</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <div className="w-2 h-2 rounded-full bg-blue-500 mt-2 flex-shrink-0"></div>
-                      <div>
-                        <h4 className="font-medium text-gray-900">Market Consolidation Risk</h4>
-                        <p className="text-sm text-gray-600">Smaller players may struggle to compete with integrated enterprise suites</p>
-                      </div>
-                    </div>
+                    ))}
                   </div>
                 </div>
               </div>
