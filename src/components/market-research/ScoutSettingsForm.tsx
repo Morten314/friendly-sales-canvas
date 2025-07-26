@@ -1,7 +1,4 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -14,8 +11,11 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
+import { CompanyProfile } from "@/components/settings/CompanyProfile";
+import { UserProfile } from "@/components/settings/UserProfile";
+import { AgentProfile } from "@/components/settings/AgentProfile";
+import { Label } from "@/components/ui/label";
 
 interface ScoutSettingsFormProps {
   isOpen: boolean;
@@ -23,110 +23,65 @@ interface ScoutSettingsFormProps {
 }
 
 export function ScoutSettingsForm({ isOpen, onOpenChange }: ScoutSettingsFormProps) {
-  const [formData, setFormData] = useState({
-    agentName: "Scout",
-    communicationTone: "",
-    checkinFrequency: "",
-    generalInstructions: "",
-  });
+  const [selectedProfile, setSelectedProfile] = useState<string>("");
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  // Function to handle company profile updates
+  const handleCompanyProfileUpdate = () => {
+    // Emit custom event to notify other components
+    const event = new CustomEvent('companyProfileUpdated', {
+      detail: { timestamp: new Date().toISOString() }
+    });
+    window.dispatchEvent(event);
   };
 
-  const handleSave = async () => {
-  try {
-    const response = await fetch("https://backend-11kr.onrender.com/profile/agent_name", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(formData),
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+  const renderProfileContent = () => {
+    switch (selectedProfile) {
+      case "company":
+        return <CompanyProfile onProfileUpdate={handleCompanyProfileUpdate} />;
+      case "user":
+        return <UserProfile />;
+      case "agent":
+        return <AgentProfile />;
+      default:
+        return (
+          <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+            <p className="text-sm text-gray-600">
+              Please select a profile type to manage its settings.
+            </p>
+          </div>
+        );
     }
-
-    const result = await response.json();
-    console.log("Scout settings saved:", result);
-
-    alert("Scout settings saved successfully!");
-    onOpenChange(false); // Close the dialog
-  } catch (error) {
-    console.error("Error saving Scout settings:", error);
-    alert("Failed to save settings. Please try again.");
-  }
-};
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Scout Settings</DialogTitle>
+          <DialogTitle>Settings</DialogTitle>
         </DialogHeader>
         
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="agentName">Agent Name</Label>
-            <Input
-              id="agentName"
-              value={formData.agentName}
-              disabled
-              className="bg-gray-100"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="communicationTone">Communication Tone</Label>
-            <Select value={formData.communicationTone} onValueChange={(value) => handleInputChange("communicationTone", value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select communication tone" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="analytical">Analytical</SelectItem>
-                <SelectItem value="professional">Professional</SelectItem>
-                <SelectItem value="friendly">Friendly</SelectItem>
-                <SelectItem value="neutral">Neutral</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="checkinFrequency">Check-in Frequency</Label>
-            <Select value={formData.checkinFrequency} onValueChange={(value) => handleInputChange("checkinFrequency", value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select check-in frequency" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="weekly">Weekly</SelectItem>
-                <SelectItem value="bi-weekly">Bi-weekly</SelectItem>
-                <SelectItem value="monthly">Monthly</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="generalInstructions">
-              General Instructions <span className="text-sm text-gray-500">(Prioritize high-signal data sources)</span>
-            </Label>
-            <Input
-              id="generalInstructions"
-              value={formData.generalInstructions}
-              onChange={(e) => handleInputChange("generalInstructions", e.target.value)}
-              placeholder="e.g., Crunchbase, G2, LinkedIn, analyst reports"
-            />
+        <div className="space-y-6 py-4">
+          <div>
+            <h2 className="text-xl font-semibold mb-4">Profiling</h2>
+            <div className="max-w-md">
+              <Label htmlFor="profile-select" className="block text-sm font-medium text-gray-700 mb-2">
+                Select Profile Type
+              </Label>
+              <Select value={selectedProfile} onValueChange={setSelectedProfile}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Choose a profile to manage" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="company">Company Profile</SelectItem>
+                  <SelectItem value="user">User Profile</SelectItem>
+                  <SelectItem value="agent">Agent Profile</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {renderProfileContent()}
           </div>
         </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button onClick={handleSave}>
-            Save Settings
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
