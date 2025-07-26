@@ -699,7 +699,7 @@ export function CompanyProfile({ onProfileUpdate }: CompanyProfileProps) {
 
         <div className="mt-6 pt-4 border-t border-blue-200">
           <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700">
-            Save Company Profile
+            Save and Reload
           </Button>
         </div>
       </div>
