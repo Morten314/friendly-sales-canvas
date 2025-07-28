@@ -10,6 +10,20 @@ interface ICPSummaryOpportunityProps {
 }
 
 export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProps) => {
+  // Sample data for the charts
+  const revenueData = [
+    { name: 'Q1', value: 2.1 },
+    { name: 'Q2', value: 2.3 },
+    { name: 'Q3', value: 2.5 },
+    { name: 'Q4', value: 2.8 }
+  ];
+
+  const penetrationData = [
+    { name: 'Captured', value: 15, color: '#3b82f6' },
+    { name: 'Addressable', value: 35, color: '#10b981' },
+    { name: 'Untapped', value: 50, color: '#f59e0b' }
+  ];
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
       {/* ICP Summary */}
@@ -83,14 +97,21 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
             <div>
               <h4 className="font-medium mb-2">Revenue Opportunity</h4>
               <div className="h-16">
-                <MiniLineChart />
+                <MiniLineChart 
+                  data={revenueData}
+                  title="Quarterly Revenue Growth"
+                  color="#10b981"
+                />
               </div>
             </div>
             
             <div>
               <h4 className="font-medium mb-2">Market Penetration</h4>
               <div className="h-16">
-                <MiniPieChart />
+                <MiniPieChart 
+                  data={penetrationData}
+                  title="Market Penetration"
+                />
               </div>
             </div>
           </div>
