@@ -3,7 +3,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, DollarSign, Target, Users, Edit } from "lucide-react";
 import MiniLineChart from "@/components/MiniLineChart";
-import MiniPieChart from "@/components/MiniPieChart";
 
 interface ICPSummaryOpportunityProps {
   selectedICP: any;
@@ -17,12 +16,6 @@ export const ICPSummaryOpportunity = ({ selectedICP, isEditMode = false }: ICPSu
     { name: 'Q2', value: 2.3 },
     { name: 'Q3', value: 2.5 },
     { name: 'Q4', value: 2.8 }
-  ];
-
-  const penetrationData = [
-    { name: 'Captured', value: 15, color: '#3b82f6' },
-    { name: 'Addressable', value: 35, color: '#10b981' },
-    { name: 'Untapped', value: 50, color: '#f59e0b' }
   ];
 
   return (
@@ -99,10 +92,10 @@ export const ICPSummaryOpportunity = ({ selectedICP, isEditMode = false }: ICPSu
             
             <div>
               <h4 className="font-medium mb-2">Revenue Opportunity</h4>
-              <div className="h-12 w-full overflow-hidden">
+              <div className="h-16 w-full">
                 <MiniLineChart 
                   data={revenueData}
-                  title="Quarterly Revenue Growth"
+                  title=""
                   color="#10b981"
                 />
               </div>
@@ -110,12 +103,18 @@ export const ICPSummaryOpportunity = ({ selectedICP, isEditMode = false }: ICPSu
             
             <div>
               <h4 className="font-medium mb-2">Market Penetration</h4>
-              <div className="h-12 w-full overflow-hidden flex items-center justify-center">
-                <div className="w-full max-w-[200px]">
-                  <MiniPieChart 
-                    data={penetrationData}
-                    title="Market Penetration"
-                  />
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Captured Market</span>
+                  <span className="font-medium">15%</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Addressable Market</span>
+                  <span className="font-medium">35%</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Untapped Market</span>
+                  <span className="font-medium">50%</span>
                 </div>
               </div>
             </div>

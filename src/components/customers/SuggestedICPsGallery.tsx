@@ -430,8 +430,8 @@ export const SuggestedICPsGallery = ({
 
       {/* Layout Logic */}
       {layoutMode === 'grid' ? (
-        /* Grid Layout - 3 cards per row */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        /* Grid Layout - 3 cards per row with proper spacing */
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           {suggestedICPs.map((icp) => (
             <ICPCard key={icp.id} icp={icp} />
           ))}

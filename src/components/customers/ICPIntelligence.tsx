@@ -37,7 +37,7 @@ export const ICPIntelligence = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-6">
       {/* Suggested ICPs Gallery - now in grid layout */}
       <SuggestedICPsGallery 
         onICPSelect={handleICPDetailsClick} 
@@ -72,14 +72,6 @@ export const ICPIntelligence = () => {
                 className="flex items-center gap-2"
               >
                 💬 Chat
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={() => setShowICPDetails(false)}
-                className="flex items-center gap-2"
-              >
-                <ChevronUp className="h-4 w-4" />
-                Hide Details
               </Button>
             </div>
           </div>
@@ -214,6 +206,18 @@ export const ICPIntelligence = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Show Less Button */}
+          <div className="flex justify-center mt-8">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowICPDetails(false)}
+              className="flex items-center gap-2"
+            >
+              <ChevronUp className="h-4 w-4" />
+              Show Less
+            </Button>
+          </div>
         </div>
       )}
 
