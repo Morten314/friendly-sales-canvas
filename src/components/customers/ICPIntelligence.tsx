@@ -14,6 +14,7 @@ export const ICPIntelligence = () => {
   const [selectedICP, setSelectedICP] = useState<any>(null);
   const [showProfilerChat, setShowProfilerChat] = useState(false);
   const [profilerMessage, setProfilerMessage] = useState("");
+  const [isEditMode, setIsEditMode] = useState(false);
 
   const handleICPDetailsClick = (icp: any) => {
     setSelectedICP(icp);
@@ -37,11 +38,11 @@ export const ICPIntelligence = () => {
 
   return (
     <div className="space-y-6">
-      {/* Suggested ICPs Gallery - now in vertical feed layout */}
+      {/* Suggested ICPs Gallery - now in grid layout */}
       <SuggestedICPsGallery 
         onICPSelect={handleICPDetailsClick} 
         onProfilerChatOpen={handleProfilerChatOpen}
-        layoutMode="vertical-feed"
+        layoutMode="grid"
       />
 
       {/* ICP Details Section - only shown when "View ICP Details" is clicked */}
@@ -56,20 +57,37 @@ export const ICPIntelligence = () => {
                 Strategic analysis and recommendations for {selectedICP?.industry || 'this ICP'}
               </p>
             </div>
-            <Button 
-              variant="outline" 
-              onClick={() => setShowICPDetails(false)}
-              className="flex items-center gap-2"
-            >
-              <ChevronUp className="h-4 w-4" />
-              Hide Details
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setIsEditMode(!isEditMode)}
+                className="flex items-center gap-2"
+              >
+                <Edit className="h-4 w-4" />
+                {isEditMode ? 'View Mode' : 'Edit Mode'}
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => handleProfilerChatOpen(`Let's discuss the ${selectedICP?.segment} ICP strategy`)}
+                className="flex items-center gap-2"
+              >
+                💬 Chat
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => setShowICPDetails(false)}
+                className="flex items-center gap-2"
+              >
+                <ChevronUp className="h-4 w-4" />
+                Hide Details
+              </Button>
+            </div>
           </div>
 
           {/* ICP Summary & Market Opportunity Section */}
-          <ICPSummaryOpportunity selectedICP={selectedICP} />
+          <ICPSummaryOpportunity selectedICP={selectedICP} isEditMode={isEditMode} />
 
-          {/* Additional strategic report sections would go here */}
+          {/* Additional strategic report sections */}
           <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Buyer Map, Roles, Pain Points, Triggers */}
             <Card className="animate-fade-in">
@@ -77,6 +95,7 @@ export const ICPIntelligence = () => {
                 <CardTitle className="flex items-center gap-2">
                   <Target className="h-5 w-5 text-blue-600" />
                   Buyer Map & Pain Points
+                  {isEditMode && <Edit className="h-4 w-4 text-gray-400" />}
                 </CardTitle>
                 <CardDescription>
                   Decision makers, roles, and trigger events for {selectedICP?.segment}
@@ -122,6 +141,7 @@ export const ICPIntelligence = () => {
                 <CardTitle className="flex items-center gap-2">
                   <TrendingUp className="h-5 w-5 text-green-600" />
                   Competitive Landscape
+                  {isEditMode && <Edit className="h-4 w-4 text-gray-400" />}
                 </CardTitle>
                 <CardDescription>
                   Market positioning and buying signals analysis
@@ -162,6 +182,7 @@ export const ICPIntelligence = () => {
               <CardTitle className="flex items-center gap-2">
                 <DollarSign className="h-5 w-5 text-purple-600" />
                 Regulatory & Compliance Recommendations
+                {isEditMode && <Edit className="h-4 w-4 text-gray-400" />}
               </CardTitle>
               <CardDescription>
                 Compliance requirements and strategic ICP recommendations

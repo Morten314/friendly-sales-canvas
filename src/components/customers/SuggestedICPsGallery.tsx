@@ -25,7 +25,7 @@ interface SuggestedICP {
 interface SuggestedICPsGalleryProps {
   onICPSelect?: (icp: SuggestedICP) => void;
   onProfilerChatOpen?: (context?: string) => void;
-  layoutMode?: 'horizontal' | 'vertical-feed';
+  layoutMode?: 'horizontal' | 'vertical-feed' | 'grid';
 }
 
 export const SuggestedICPsGallery = ({ 
@@ -100,26 +100,6 @@ export const SuggestedICPsGallery = ({
       regions: ["North America", "EU"],
       keyAttributes: ["SOC 2 compliance", "Cloud-native architecture"],
       growthIndicator: "15.3% CAGR"
-    },
-    {
-      id: "insurtech-platforms",
-      industry: "InsurTech",
-      segment: "Digital Claims Processing",
-      companySize: "100–350 employees",
-      decisionMakers: ["Chief Claims Officer", "Head of Technology"],
-      regions: ["North America", "UK"],
-      keyAttributes: ["Automation focus", "Regulatory expertise"],
-      growthIndicator: "11.7% CAGR"
-    },
-    {
-      id: "renewable-energy",
-      industry: "Clean Energy",
-      segment: "Solar Management Platforms",
-      companySize: "120–500 employees",
-      decisionMakers: ["VP Operations", "Chief Technology Officer"],
-      regions: ["North America", "EU", "ANZ"],
-      keyAttributes: ["IoT integration", "Sustainability reporting"],
-      growthIndicator: "18.2% CAGR"
     }
   ]);
 
@@ -225,15 +205,13 @@ export const SuggestedICPsGallery = ({
 
   const ICPCard = ({ icp }: { icp: SuggestedICP }) => (
     <Card 
-      className={`transition-all duration-200 hover:shadow-lg border ${
+      className={`transition-all duration-200 hover:shadow-lg border h-full ${
         selectedICP === icp.id 
           ? 'border-blue-500 bg-blue-50/40 shadow-md' 
           : editingICP === icp.id
           ? 'border-green-500 bg-green-50/20 shadow-md'
           : 'border-gray-200 hover:border-blue-300'
-      } ${editingICP !== icp.id ? 'hover:-translate-y-1 cursor-pointer' : ''} ${
-        layoutMode === 'vertical-feed' ? 'w-full max-w-4xl mx-auto' : 'h-full'
-      }`}
+      } ${editingICP !== icp.id ? 'hover:-translate-y-1 cursor-pointer' : ''}`}
       onClick={() => handleCardClick(icp)}
     >
       <CardHeader className="pb-3">
@@ -303,7 +281,7 @@ export const SuggestedICPsGallery = ({
         </div>
       </CardHeader>
       
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 flex-1">
         {/* Company Size */}
         <div className="flex items-center gap-2 text-sm">
           <Building className="h-4 w-4 text-gray-500 flex-shrink-0" />
@@ -411,7 +389,7 @@ export const SuggestedICPsGallery = ({
           <Button 
             variant="outline" 
             size="sm" 
-            className="w-full mt-4 text-blue-600 border-blue-200 hover:bg-blue-50"
+            className="w-full mt-auto text-blue-600 border-blue-200 hover:bg-blue-50"
             onClick={(e) => {
               e.stopPropagation();
               handleCardClick(icp);
@@ -451,11 +429,20 @@ export const SuggestedICPsGallery = ({
       </div>
 
       {/* Layout Logic */}
-      {layoutMode === 'vertical-feed' ? (
+      {layoutMode === 'grid' ? (
+        /* Grid Layout - 3 cards per row */
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {suggestedICPs.map((icp) => (
+            <ICPCard key={icp.id} icp={icp} />
+          ))}
+        </div>
+      ) : layoutMode === 'vertical-feed' ? (
         /* Vertical Feed Layout - 3 cards per screen */
         <div className="space-y-8">
           {suggestedICPs.slice(0, 3).map((icp) => (
-            <ICPCard key={icp.id} icp={icp} />
+            <div key={icp.id} className="w-full max-w-4xl mx-auto">
+              <ICPCard icp={icp} />
+            </div>
           ))}
           
           {suggestedICPs.length > 3 && (

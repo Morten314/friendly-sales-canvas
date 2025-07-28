@@ -1,15 +1,16 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, DollarSign, Target, Users } from "lucide-react";
+import { TrendingUp, DollarSign, Target, Users, Edit } from "lucide-react";
 import MiniLineChart from "@/components/MiniLineChart";
 import MiniPieChart from "@/components/MiniPieChart";
 
 interface ICPSummaryOpportunityProps {
   selectedICP: any;
+  isEditMode?: boolean;
 }
 
-export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProps) => {
+export const ICPSummaryOpportunity = ({ selectedICP, isEditMode = false }: ICPSummaryOpportunityProps) => {
   // Sample data for the charts
   const revenueData = [
     { name: 'Q1', value: 2.1 },
@@ -32,6 +33,7 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
           <CardTitle className="flex items-center gap-2">
             <Target className="h-5 w-5 text-blue-600" />
             ICP Summary
+            {isEditMode && <Edit className="h-4 w-4 text-gray-400" />}
           </CardTitle>
           <CardDescription>
             Strategic overview of {selectedICP?.segment || 'this ICP'}
@@ -74,6 +76,7 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
           <CardTitle className="flex items-center gap-2">
             <DollarSign className="h-5 w-5 text-green-600" />
             Market Opportunity
+            {isEditMode && <Edit className="h-4 w-4 text-gray-400" />}
           </CardTitle>
           <CardDescription>
             Revenue potential and market sizing for {selectedICP?.segment}
@@ -96,7 +99,7 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
             
             <div>
               <h4 className="font-medium mb-2">Revenue Opportunity</h4>
-              <div className="h-16">
+              <div className="h-12 w-full overflow-hidden">
                 <MiniLineChart 
                   data={revenueData}
                   title="Quarterly Revenue Growth"
@@ -107,11 +110,13 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
             
             <div>
               <h4 className="font-medium mb-2">Market Penetration</h4>
-              <div className="h-16">
-                <MiniPieChart 
-                  data={penetrationData}
-                  title="Market Penetration"
-                />
+              <div className="h-12 w-full overflow-hidden flex items-center justify-center">
+                <div className="w-full max-w-[200px]">
+                  <MiniPieChart 
+                    data={penetrationData}
+                    title="Market Penetration"
+                  />
+                </div>
               </div>
             </div>
           </div>
