@@ -143,6 +143,11 @@ export const ICPIntelligence = () => {
     setShowProfilerChat(true);
   };
 
+  const handleDetailsProfilerChat = (context: any) => {
+    setChatContext(context);
+    setShowProfilerChat(true);
+  };
+
   return (
     <div className="space-y-6 pb-6">
       {/* Top Bar - Sticky */}
@@ -224,6 +229,7 @@ export const ICPIntelligence = () => {
           <ICPDetailsReport 
             icp={selectedICP}
             onClose={() => setShowICPDetails(false)}
+            onProfilerChatOpen={handleDetailsProfilerChat}
           />
         </div>
       )}
