@@ -158,7 +158,7 @@ export const ICPDetailsReport = ({ icp, onClose, onProfilerChatOpen }: ICPDetail
                   <CardTitle className="text-lg flex items-center gap-2">
                     <DollarSign className="h-5 w-5 text-green-600" />
                     ICP Summary & Market Opportunity
-                    <Info className="h-4 w-4 text-gray-400" title="Market sizing and ICP overview" />
+                    <Info className="h-4 w-4 text-gray-400" />
                   </CardTitle>
                   <div className="flex items-center gap-2">
                     <Button 
@@ -218,7 +218,7 @@ export const ICPDetailsReport = ({ icp, onClose, onProfilerChatOpen }: ICPDetail
                   <CardTitle className="text-lg flex items-center gap-2">
                     <Users className="h-5 w-5 text-purple-600" />
                     Buyer Map & Pain Points
-                    <Info className="h-4 w-4 text-gray-400" title="Decision makers and buying triggers" />
+                    <Info className="h-4 w-4 text-gray-400" />
                   </CardTitle>
                   <div className="flex items-center gap-2">
                     <Button 
@@ -329,7 +329,7 @@ export const ICPDetailsReport = ({ icp, onClose, onProfilerChatOpen }: ICPDetail
                   <CardTitle className="text-lg flex items-center gap-2">
                     <TrendingUp className="h-5 w-5 text-blue-600" />
                     Competitive Landscape
-                    <Info className="h-4 w-4 text-gray-400" title="Market positioning and competitive analysis" />
+                    <Info className="h-4 w-4 text-gray-400" />
                   </CardTitle>
                   <div className="flex items-center gap-2">
                     <Button 
@@ -418,7 +418,7 @@ export const ICPDetailsReport = ({ icp, onClose, onProfilerChatOpen }: ICPDetail
                   <CardTitle className="text-lg flex items-center gap-2">
                     <Shield className="h-5 w-5 text-green-600" />
                     Regulatory & Compliance
-                    <Info className="h-4 w-4 text-gray-400" title="Compliance requirements and recommendations" />
+                    <Info className="h-4 w-4 text-gray-400" />
                   </CardTitle>
                   <div className="flex items-center gap-2">
                     <Button 
