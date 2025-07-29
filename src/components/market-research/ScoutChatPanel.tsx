@@ -52,19 +52,31 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
 
     try {
       // Make API call to the /ask endpoint
-      const response = await fetch(`https://backend-11kr.onrender.com/ask?question=${encodeURIComponent(textToSend)}`, {
+      console.log('🚀 Making API call to Scout with question:', textToSend);
+      const apiUrl = `https://backend-11kr.onrender.com/ask?question=${encodeURIComponent(textToSend)}`;
+      console.log('📡 API URL:', apiUrl);
+      
+      const response = await fetch(apiUrl, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
       });
 
+      console.log('📊 API Response status:', response.status);
+      console.log('📊 API Response ok:', response.ok);
+
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error('❌ API Error response:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
       }
 
       const data = await response.json();
-      const responseContent = data.response || data.message || "I'm having trouble processing your request right now. Please try again.";
+      console.log('✅ API Response data:', data);
+      
+      const responseContent = data.response || data.message || data.answer || "I'm having trouble processing your request right now. Please try again.";
+      console.log('💬 Final response content:', responseContent);
       
       // Add assistant response
       const assistantMessage = {
@@ -75,11 +87,11 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
       
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
-      console.error('Error calling API:', error);
+      console.error('❌ Error calling Scout API:', error);
       
       const errorMessage = {
         role: 'assistant' as const,
-        content: "I'm sorry, I'm having trouble connecting right now. Please check your internet connection and try again.",
+        content: `I'm sorry, I encountered an error: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
         timestamp: new Date().toLocaleTimeString(),
       };
       
