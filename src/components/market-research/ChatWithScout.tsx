@@ -72,8 +72,8 @@ export function ChatWithScout({ fullPage = false }: ChatWithScoutProps) {
     setIsLoading(true);
 
     try {
-      // Make API call to your backend using GET with question parameter
-      const response = await fetch(`https://backend-11kr.onrender.com/ask?question=${encodeURIComponent(currentInput)}`, {
+      // Make API call to your backend using GET with question parameter (with trailing slash)
+      const response = await fetch(`https://backend-11kr.onrender.com/ask/?question=${encodeURIComponent(currentInput)}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

@@ -51,9 +51,9 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
     setIsLoading(true);
 
     try {
-      // Make API call to the /ask endpoint
+      // Make API call to the /ask endpoint (with trailing slash to match redirect)
       console.log('🚀 Making API call to Scout with question:', textToSend);
-      const apiUrl = `https://backend-11kr.onrender.com/ask?question=${encodeURIComponent(textToSend)}`;
+      const apiUrl = `https://backend-11kr.onrender.com/ask/?question=${encodeURIComponent(textToSend)}`;
       console.log('📡 API URL:', apiUrl);
       
       const response = await fetch(apiUrl, {
