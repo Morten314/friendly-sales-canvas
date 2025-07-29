@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -103,6 +102,13 @@ export const ICPIntelligence = () => {
     }
   ];
 
+  // Auto-select the first ICP on component mount
+  useEffect(() => {
+    if (suggestedICPs.length > 0 && !selectedICPId) {
+      setSelectedICPId(suggestedICPs[0].id);
+    }
+  }, []);
+
   const selectedICP = suggestedICPs.find(icp => icp.id === selectedICPId);
 
   const handleICPSelect = (icpId: string) => {
@@ -196,7 +202,7 @@ export const ICPIntelligence = () => {
           />
         </div>
 
-        {/* Right Column - ICP Card or Placeholder */}
+        {/* Right Column - ICP Card */}
         <div className="min-h-[400px]">
           {selectedICP ? (
             <ICPCardView 
