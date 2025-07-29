@@ -1,6 +1,6 @@
 
-import React from 'react';
-import { Bot, X, Send } from 'lucide-react';
+import React, { useState } from 'react';
+import { Bot, X, Send, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -29,6 +29,65 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
   customMessage,
   onClose
 }) => {
+  // Add chat functionality
+  const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string; timestamp: string }>>([]);
+
+  // Handle sending messages to the API
+  const handleSendMessage = async (messageText?: string) => {
+    const textToSend = messageText || input;
+    if (!textToSend.trim() || isLoading) return;
+
+    // Add user message
+    const userMessage = {
+      role: 'user' as const,
+      content: textToSend,
+      timestamp: new Date().toLocaleTimeString(),
+    };
+    
+    setMessages((prev) => [...prev, userMessage]);
+    setInput("");
+    setIsLoading(true);
+
+    try {
+      // Make API call to the /ask endpoint
+      const response = await fetch(`https://backend-11kr.onrender.com/ask?question=${encodeURIComponent(textToSend)}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const responseContent = data.response || data.message || "I'm having trouble processing your request right now. Please try again.";
+      
+      // Add assistant response
+      const assistantMessage = {
+        role: 'assistant' as const,
+        content: responseContent,
+        timestamp: new Date().toLocaleTimeString(),
+      };
+      
+      setMessages((prev) => [...prev, assistantMessage]);
+    } catch (error) {
+      console.error('Error calling API:', error);
+      
+      const errorMessage = {
+        role: 'assistant' as const,
+        content: "I'm sorry, I'm having trouble connecting right now. Please check your internet connection and try again.",
+        timestamp: new Date().toLocaleTimeString(),
+      };
+      
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Fixed ScoutChatPanel getContextualScoutMessage function
 const getContextualScoutMessage = () => {
@@ -326,34 +385,90 @@ const getContextualScoutMessage = () => {
       </div>
 
       <div className="space-y-4 mb-4 flex-1 overflow-y-auto">
-        <div className="bg-gradient-to-r from-blue-50 to-green-50 p-4 rounded-lg border border-blue-200">
-          <p className="text-sm text-gray-700">
-            {getContextualScoutMessage()}
-          </p>
-        </div>
+        {/* Show contextual message if no messages yet */}
+        {messages.length === 0 && (
+          <div className="bg-gradient-to-r from-blue-50 to-green-50 p-4 rounded-lg border border-blue-200">
+            <p className="text-sm text-gray-700">
+              {getContextualScoutMessage()}
+            </p>
+          </div>
+        )}
 
-        <div className="flex flex-wrap gap-2">
-          {getContextualQuestions().map((question, index) => (
-            <Button
-              key={index}
-              variant="outline"
-              size="sm"
-              className="text-xs hover:bg-blue-50 hover:border-blue-300 transition-colors"
-              onClick={() => console.log(`Clicked: ${question}`)}
+        {/* Show chat messages */}
+        {messages.map((message, index) => (
+          <div
+            key={index}
+            className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+          >
+            <div
+              className={`max-w-[80%] rounded-lg p-3 ${
+                message.role === 'user'
+                  ? 'bg-blue-100 text-blue-900'
+                  : 'bg-gray-100'
+              }`}
             >
-              {question}
-            </Button>
-          ))}
-        </div>
+              <div className="text-sm whitespace-pre-line leading-relaxed">{message.content}</div>
+              <div className="text-xs mt-1 text-gray-500">{message.timestamp}</div>
+            </div>
+          </div>
+        ))}
+
+        {/* Loading indicator */}
+        {isLoading && (
+          <div className="flex justify-start">
+            <div className="bg-gray-100 rounded-lg p-3 max-w-[80%]">
+              <div className="flex items-center gap-2 text-gray-500">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="text-sm">Scout is typing...</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Suggestion buttons - only show if no messages */}
+        {messages.length === 0 && (
+          <div className="flex flex-wrap gap-2">
+            {getContextualQuestions().map((question, index) => (
+              <Button
+                key={index}
+                variant="outline"
+                size="sm"
+                className="text-xs hover:bg-blue-50 hover:border-blue-300 transition-colors"
+                onClick={() => handleSendMessage(question)}
+                disabled={isLoading}
+              >
+                {question}
+              </Button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="flex gap-2 mt-auto">
         <Input
           placeholder="Ask me anything about market opportunity..."
           className="flex-1"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              handleSendMessage();
+            }
+          }}
+          disabled={isLoading}
         />
-        <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
-          <Send className="h-4 w-4" />
+        <Button 
+          size="sm" 
+          className="bg-blue-600 hover:bg-blue-700"
+          onClick={() => handleSendMessage()}
+          disabled={!input.trim() || isLoading}
+        >
+          {isLoading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Send className="h-4 w-4" />
+          )}
         </Button>
       </div>
     </div>
