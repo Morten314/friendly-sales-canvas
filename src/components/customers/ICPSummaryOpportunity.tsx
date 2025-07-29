@@ -29,7 +29,7 @@ export const ICPSummaryOpportunity = ({ selectedICP, isEditMode = false }: ICPSu
             {isEditMode && <Edit className="h-4 w-4 text-gray-400" />}
           </CardTitle>
           <CardDescription>
-            Strategic overview of {selectedICP?.segment || 'this ICP'}
+            Strategic overview of {selectedICP?.name || 'this ICP'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -56,8 +56,19 @@ export const ICPSummaryOpportunity = ({ selectedICP, isEditMode = false }: ICPSu
             <div>
               <h4 className="font-medium mb-2">Geographic Focus</h4>
               <p className="text-sm text-gray-600">
-                Primary markets: {selectedICP?.regions?.join(', ') || 'Global'}
+                Primary markets: {selectedICP?.geography || 'Global'}
               </p>
+            </div>
+
+            <div>
+              <h4 className="font-medium mb-2">Lead Matches</h4>
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-blue-600" />
+                <span className="text-lg font-bold text-blue-600">
+                  {selectedICP?.leadCount || 0}
+                </span>
+                <span className="text-sm text-gray-600">qualified prospects</span>
+              </div>
             </div>
           </div>
         </CardContent>
@@ -72,7 +83,7 @@ export const ICPSummaryOpportunity = ({ selectedICP, isEditMode = false }: ICPSu
             {isEditMode && <Edit className="h-4 w-4 text-gray-400" />}
           </CardTitle>
           <CardDescription>
-            Revenue potential and market sizing for {selectedICP?.segment}
+            Revenue potential and market sizing for {selectedICP?.name}
           </CardDescription>
         </CardHeader>
         <CardContent>
