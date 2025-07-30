@@ -143,11 +143,11 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
     onEmergingPlayersChange(editEmergingPlayers);
     onFundingNewsChange(editFundingNews);
     
-    // Trigger chat with save notification
-    onScoutIconClick('competitor-landscape', true, "Great work saving your competitor updates! 🎉 Now that your analysis is saved, I can help you take it further. What would you like to explore next?");
-    
-    // Call parent save handler
+    // Call parent save handler first
     onCompetitorLandscapeSaveChanges();
+    
+    // Then trigger chat with save notification
+    onScoutIconClick('competitor-landscape', true, "Great work saving your competitor updates! 🎉 Now that your analysis is saved, I can help you take it further. What would you like to explore next?");
   };
 
   // Handle delete section with chat notification
@@ -259,6 +259,20 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
     }
   };
 
+  // Initialize edit fields when entering edit mode
+  useEffect(() => {
+    if (isCompetitorLandscapeEditing && competitorData) {
+      const reportComponent = competitorData.uiComponents?.find(comp => comp.type === 'report');
+      const sectionComponent = competitorData.uiComponents?.find(comp => comp.type === 'section');
+      const metrics = sectionComponent?.metrics;
+      
+      setEditExecutiveSummary(reportComponent?.executiveSummary || '');
+      setEditTopPlayerShare(metrics?.[0]?.value || '');
+      setEditEmergingPlayers('New emerging players in the market...');
+      setEditFundingNews(['Recent funding news 1', 'Recent funding news 2']);
+    }
+  }, [isCompetitorLandscapeEditing, competitorData]);
+
   // Clear previous data and fetch fresh data on component mount
   useEffect(() => {
     setCompetitorData(null);
@@ -349,14 +363,23 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
           }
           
           return (
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg mb-6">
+            <div className="p-6 rounded-lg mb-6 border border-gray-200">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                   <FileText className="h-5 w-5 text-blue-600" />
                   Executive Summary
                 </h3>
               </div>
-              <p className="text-gray-700 leading-relaxed">{executiveSummary}</p>
+              {isCompetitorLandscapeEditing ? (
+                <Textarea 
+                  value={editExecutiveSummary} 
+                  onChange={(e) => setEditExecutiveSummary(e.target.value)} 
+                  className="w-full h-32 resize-none" 
+                  placeholder="Enter executive summary..." 
+                />
+              ) : (
+                <p className="text-gray-700 leading-relaxed">{executiveSummary}</p>
+              )}
             </div>
           );
         })()}
@@ -371,13 +394,27 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
           return (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               {metrics.map((metric, index) => (
-                <div key={index} className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                <div key={index} className="border border-gray-200 p-4 rounded-lg">
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="text-lg font-bold text-blue-600">
-                        {metric.value}
-                      </div>
-                      <div className="text-sm text-gray-700">{metric.label}</div>
+                      {isCompetitorLandscapeEditing && index === 0 ? (
+                        <div>
+                          <Input 
+                            value={editTopPlayerShare} 
+                            onChange={(e) => setEditTopPlayerShare(e.target.value)} 
+                            className="text-lg font-bold text-blue-600 mb-2"
+                            placeholder="e.g., 35%" 
+                          />
+                          <div className="text-sm text-gray-700">{metric.label}</div>
+                        </div>
+                      ) : (
+                        <div>
+                          <div className="text-lg font-bold text-blue-600">
+                            {metric.value}
+                          </div>
+                          <div className="text-sm text-gray-700">{metric.label}</div>
+                        </div>
+                      )}
                     </div>
                     {metric.trend === 'up' ? (
                       <div className="text-green-500">
@@ -396,7 +433,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         })()}
 
         {/* Read More button when collapsed */}
-        {!competitorLandscapeExpanded && !isSplitView && (
+        {!competitorLandscapeExpanded && !isSplitView && !isCompetitorLandscapeEditing && (
           <div className="flex justify-center pt-4">
             <Button
               onClick={() => onCompetitorLandscapeExpandToggle(true)}
@@ -409,64 +446,9 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
           </div>
         )}
 
-        {/* Editing Mode */}
-        {isCompetitorLandscapeEditing ? (
+        {/* Editing Mode Additional Fields */}
+        {isCompetitorLandscapeEditing && (competitorLandscapeExpanded || isSplitView) && (
           <div className="space-y-8">
-            {/* Executive Summary Edit */}
-            {!competitorLandscapeDeletedSections.has('executive-summary') && (
-              <div className="relative group">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="sm" onClick={() => handleDeleteSection('executive-summary')} className="absolute -top-2 -right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50">
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Delete this section</p>
-                  </TooltipContent>
-                </Tooltip>
-                <div>
-                  <Label htmlFor="competitorExecutiveSummary" className="text-sm font-medium text-gray-700 mb-2 block">
-                    Executive Summary
-                  </Label>
-                  <Textarea 
-                    id="competitorExecutiveSummary" 
-                    value={editExecutiveSummary} 
-                    onChange={(e) => setEditExecutiveSummary(e.target.value)} 
-                    className="w-full h-32 resize-none" 
-                    placeholder="Enter executive summary..." 
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Top Player Share Edit */}
-            {!competitorLandscapeDeletedSections.has('top-player-share') && (
-              <div className="relative group">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="sm" onClick={() => handleDeleteSection('top-player-share')} className="absolute -top-2 -right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50">
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Delete this section</p>
-                  </TooltipContent>
-                </Tooltip>
-                <div>
-                  <Label htmlFor="topPlayerShare" className="text-sm font-medium text-gray-700 mb-2 block">
-                    Top Player Market Share
-                  </Label>
-                  <Input 
-                    id="topPlayerShare" 
-                    value={editTopPlayerShare} 
-                    onChange={(e) => setEditTopPlayerShare(e.target.value)} 
-                    placeholder="e.g., 35%" 
-                  />
-                </div>
-              </div>
-            )}
-
             {/* Emerging Players Edit */}
             {!competitorLandscapeDeletedSections.has('emerging-players') && (
               <div className="relative group">
@@ -579,9 +561,11 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
               </div>
             </div>
           </div>
-        ) : (
+        )}
+
+        {/* Normal Content View */}
+        {!isCompetitorLandscapeEditing && (competitorLandscapeExpanded || isSplitView) && (
           /* Expanded content - Read-only view */
-          (competitorLandscapeExpanded || isSplitView) && (
             <div className="space-y-6">
 
             {/* Top Players */}
@@ -819,7 +803,6 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
               </div>
             )}
             </div>
-          )
         )}
       </div>
       {scoutChatPanel}
