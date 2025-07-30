@@ -1565,7 +1565,19 @@ const MarketResearch = () => {
       value,
       'Updated AI adoption rate percentage'
     );
-    setIndustryTrendsData(prev => ({ ...prev, aiAdoption: value }));
+    setIndustryTrendsData(prev => {
+      // Update the corresponding trendSnapshot metric
+      const updatedSnapshots = prev.trendSnapshots.map(snapshot => 
+        snapshot.title === "AI Integration" 
+          ? { ...snapshot, metric: `${value}% adoption rate` }
+          : snapshot
+      );
+      return { 
+        ...prev, 
+        aiAdoption: value,
+        trendSnapshots: updatedSnapshots
+      };
+    });
   };
 
   const handleIndustryTrendsCloudMigrationChange = (value: string) => {
@@ -1576,7 +1588,19 @@ const MarketResearch = () => {
       value,
       'Updated cloud migration statistics'
     );
-    setIndustryTrendsData(prev => ({ ...prev, cloudMigration: value }));
+    setIndustryTrendsData(prev => {
+      // Update the corresponding trendSnapshot metric
+      const updatedSnapshots = prev.trendSnapshots.map(snapshot => 
+        snapshot.title === "Cloud Migration" 
+          ? { ...snapshot, metric: `${value}% increase YoY` }
+          : snapshot
+      );
+      return { 
+        ...prev, 
+        cloudMigration: value,
+        trendSnapshots: updatedSnapshots
+      };
+    });
   };
 
   const handleIndustryTrendsRegulatoryChange = (value: string) => {
@@ -1587,7 +1611,19 @@ const MarketResearch = () => {
       value,
       'Updated regulatory policies count'
     );
-    setIndustryTrendsData(prev => ({ ...prev, regulatory: value }));
+    setIndustryTrendsData(prev => {
+      // Update the corresponding trendSnapshot metric
+      const updatedSnapshots = prev.trendSnapshots.map(snapshot => 
+        snapshot.title === "Regulatory Impact" 
+          ? { ...snapshot, metric: `${value} new policies` }
+          : snapshot
+      );
+      return { 
+        ...prev, 
+        regulatory: value,
+        trendSnapshots: updatedSnapshots
+      };
+    });
   };
 
   const handleIndustryTrendSnapshotsChange = (snapshots: TrendSnapshot[]) => {
