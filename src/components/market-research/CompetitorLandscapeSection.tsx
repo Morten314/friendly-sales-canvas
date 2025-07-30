@@ -153,7 +153,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   // Handle delete section with chat notification
   const handleDeleteSection = (sectionId: string) => {
     onCompetitorLandscapeDeleteSection(sectionId);
-    onScoutIconClick('competitor-landscape', false, `I noticed you removed the ${sectionId.replace('-', ' ')} section. Would you like me to suggest alternative content or analyze why that section might not be relevant?`);
+    // Chat notification is handled by parent component to avoid duplicates
   };
 
   // Fetch Competitor Landscape data from API
