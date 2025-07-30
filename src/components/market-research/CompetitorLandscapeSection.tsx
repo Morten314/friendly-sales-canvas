@@ -47,6 +47,9 @@ interface CompetitorLandscapeSectionProps {
   onExportPDF: () => void;
   onSaveToWorkspace: () => void;
   onGenerateShareableLink: () => void;
+  // Scout chat panel props
+  showScoutChat?: boolean;
+  scoutChatPanel?: React.ReactNode;
 }
 
 interface UIComponent {
@@ -117,7 +120,9 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   onFundingNewsChange,
   onExportPDF,
   onSaveToWorkspace,
-  onGenerateShareableLink
+  onGenerateShareableLink,
+  showScoutChat,
+  scoutChatPanel
 }) => {
   // State for API data
   const [competitorData, setCompetitorData] = useState<CompetitorLandscapeData | null>(null);
@@ -293,78 +298,30 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
 
 
   return (
-    <div className={`${isSplitView ? 'flex gap-6' : ''}`}>
-      <div className={`bg-white rounded-lg border border-gray-200 p-6 ${isSplitView ? 'flex-1' : ''}`}>
+    <div className={`${showScoutChat ? 'flex gap-6' : ''}`}>
+      <div className={`bg-white rounded-lg border border-gray-200 p-6 ${showScoutChat ? 'flex-1' : ''}`}>
         <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+            <BarChart3 className="h-5 w-5 text-blue-600" />
+            Competitor Landscape
+          </h2>
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <BarChart3 className="h-6 w-6 text-blue-600" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-gray-900">Competitor Landscape</h2>
-              <p className="text-sm text-gray-600">Comprehensive analysis of competitive environment</p>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            {competitorLandscapeHasEdits && (
-              <Badge variant="secondary" className="bg-orange-100 text-orange-700 border-orange-200">
-                <Clock className="h-3 w-3 mr-1" />
-                Unsaved
-              </Badge>
-            )}
-            
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onScoutIconClick('competitor-landscape', competitorLandscapeHasEdits)}
-                  className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
-                >
-                  <Bot className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Chat with Scout about competitor landscape</p>
-              </TooltipContent>
-            </Tooltip>
-
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onCompetitorLandscapeEditHistoryOpen}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              <Clock className="h-4 w-4" />
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onCompetitorLandscapeToggleEdit}
-              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-            >
+            <Button variant="ghost" size="sm" onClick={onCompetitorLandscapeToggleEdit} className="text-blue-800 hover:text-blue-900">
               <Edit className="h-4 w-4" />
             </Button>
-
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onCompetitorLandscapeExpandToggle(!competitorLandscapeExpanded)}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              {competitorLandscapeExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onCompetitorLandscapeDeleteSection('competitor-landscape')}
-              className="text-red-500 hover:text-red-700 hover:bg-red-50"
-            >
-              <X className="h-4 w-4" />
-            </Button>
+            {!isSplitView && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="sm" onClick={() => onScoutIconClick('competitor-landscape')} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-all duration-200 hover:shadow-md hover:shadow-blue-200/50 relative">
+                    <div className="absolute inset-0 rounded-md bg-gradient-to-r from-blue-400/20 to-green-400/20 animate-pulse opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
+                    <Bot className="h-5 w-5 relative z-10" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Explore More with Scout</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
           </div>
         </div>
 
@@ -719,6 +676,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
           </div>
         )}
       </div>
+      {scoutChatPanel}
     </div>
   );
 };
