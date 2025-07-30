@@ -37,6 +37,7 @@ export interface MarketIntelligenceTabProps {
   industryTrendsRecommendations: IndustryTrendsRecommendations;
   industryTrendsRisks: string[];
   industryTrendsLastEditedField: string;
+  industryTrendsData?: any;
   
   // Competitor Landscape Section
   isCompetitorEditing: boolean;
@@ -48,6 +49,7 @@ export interface MarketIntelligenceTabProps {
   competitorTopPlayerShare: string;
   competitorEmergingPlayers: string;
   competitorFundingNews: string[];
+  competitorAnalysisData?: any;
   // Regulatory Compliance props
   isRegulatoryEditing?: boolean;
   regulatoryExpanded?: boolean;

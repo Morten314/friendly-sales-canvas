@@ -151,6 +151,7 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
             industryTrendsHasEdits={props.industryTrendsHasEdits}
             industryTrendsDeletedSections={props.industryTrendsDeletedSections}
             industryTrendsEditHistory={props.industryTrendsEditHistory}
+            industryTrendsData={props.industryTrendsData}
             onIndustryTrendsToggleEdit={props.onIndustryTrendsToggleEdit}
             onIndustryTrendsSaveChanges={props.onIndustryTrendsSaveChanges}
             onIndustryTrendsCancelEdit={props.onIndustryTrendsCancelEdit}
