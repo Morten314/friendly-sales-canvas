@@ -86,6 +86,7 @@ export interface MarketIntelligenceTabProps {
   onEditHistoryOpen: () => void;
   onDeleteSection: (sectionId: string) => void;
   onMarketSizeDeleteSection: (sectionId: string) => void;
+  onMarketSizeRestoreSection?: (sectionId: string) => void;
   onSaveChanges: () => void;
   onCancelEdit: () => void;
   onExpandToggle: (expanded: boolean) => void;
@@ -101,6 +102,7 @@ export interface MarketIntelligenceTabProps {
   onIndustryTrendsSaveChanges: () => void;
   onIndustryTrendsCancelEdit: () => void;
   onIndustryTrendsDeleteSection: (sectionId: string) => void;
+  onIndustryTrendsRestoreSection?: (sectionId: string) => void;
   onIndustryTrendsEditHistoryOpen: () => void;
   onIndustryTrendsExpandToggle: (expanded: boolean) => void;
   onIndustryTrendsExecutiveSummaryChange: (value: string) => void;
@@ -125,6 +127,7 @@ export interface MarketIntelligenceTabProps {
   onRegulatorySaveChanges?: () => void;
   onRegulatoryCancelEdit?: () => void;
   onRegulatoryDeleteSection?: (sectionId: string) => void;
+  onRegulatoryRestoreSection?: (sectionId: string) => void;
   onRegulatoryEditHistoryOpen?: () => void;
   onRegulatoryExpandToggle?: (expanded: boolean) => void;
   onRegulatoryExecutiveSummaryChange?: (value: string) => void;
@@ -137,6 +140,7 @@ export interface MarketIntelligenceTabProps {
   onMarketEntrySaveChanges?: () => void;
   onMarketEntryCancelEdit?: () => void;
   onMarketEntryDeleteSection?: (sectionId: string) => void;
+  onMarketEntryRestoreSection?: (sectionId: string) => void;
   onMarketEntryEditHistoryOpen?: () => void;
   onMarketEntryExpandToggle?: (expanded: boolean) => void;
   onMarketEntryExecutiveSummaryChange?: (value: string) => void;

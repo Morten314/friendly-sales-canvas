@@ -62,6 +62,7 @@ interface RegulatoryComplianceSectionProps {
   onScoutIconClick: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance', hasEdits?: boolean, customMessage?: string) => void;
   onEditHistoryOpen: () => void;
   onDeleteSection: (sectionId: string) => void;
+  onRestoreSection?: (sectionId: string) => void;
   onSaveChanges: () => void;
   onCancelEdit: () => void;
   onExpandToggle: (expanded: boolean) => void;
@@ -91,6 +92,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   onScoutIconClick,
   onEditHistoryOpen,
   onDeleteSection,
+  onRestoreSection,
   onSaveChanges,
   onCancelEdit,
   onExpandToggle,
@@ -712,6 +714,38 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                       </div>
                     </div>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* Deleted Sections */}
+            {deletedSections.size > 0 && onRestoreSection && (
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <h4 className="text-sm font-medium text-gray-700 mb-3">Deleted Sections</h4>
+                <div className="space-y-2">
+                  {Array.from(deletedSections).map((sectionId) => {
+                    const sectionNames: Record<string, string> = {
+                      'executive-summary': 'Executive Summary',
+                      'key-updates': 'Key Regulatory Updates',
+                      'compliance-analytics': 'Compliance Analytics',
+                      'regional-breakdown': 'Regional Compliance Overview',
+                      'strategic-recommendations': 'Strategic Recommendations'
+                    };
+                    
+                    return (
+                      <div key={sectionId} className="flex items-center justify-between bg-white p-3 rounded border border-gray-200">
+                        <span className="text-sm text-gray-600">{sectionNames[sectionId] || sectionId}</span>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => onRestoreSection(sectionId)}
+                          className="text-teal-600 border-teal-200 hover:bg-teal-50"
+                        >
+                          Restore
+                        </Button>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}

@@ -1513,6 +1513,42 @@ const MarketResearch = () => {
     });
   };
 
+  // Market Size restore handler
+  const handleMarketSizeRestoreSection = (sectionId: string) => {
+    setMarketSizeDeletedSections(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(sectionId);
+      return newSet;
+    });
+  };
+
+  // Industry Trends restore handler
+  const handleIndustryTrendsRestoreSection = (sectionId: string) => {
+    setIndustryTrendsDeletedSections(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(sectionId);
+      return newSet;
+    });
+  };
+
+  // Regulatory Compliance restore handler
+  const handleRegulatoryRestoreSection = (sectionId: string) => {
+    setRegulatoryDeletedSections(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(sectionId);
+      return newSet;
+    });
+  };
+
+  // Market Entry restore handler
+  const handleMarketEntryRestoreSection = (sectionId: string) => {
+    setMarketEntryDeletedSections(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(sectionId);
+      return newSet;
+    });
+  };
+
   // Market Size handlers
   const handleMarketSizeDeleteSection = (sectionId: string) => {
     const sectionNames: Record<string, string> = {
@@ -2461,8 +2497,9 @@ const MarketResearch = () => {
                       onCompetitorScoutIconClick={handleCompetitorScoutClick}
                       onEditHistoryOpen={handleEditHistoryOpen}
                       onDeleteSection={handleMarketIntelligenceDeleteSection}
-                      onMarketSizeDeleteSection={handleMarketSizeDeleteSection}
-                      onSaveChanges={handleMarketIntelligenceSaveChanges}
+                       onMarketSizeDeleteSection={handleMarketSizeDeleteSection}
+                       onMarketSizeRestoreSection={handleMarketSizeRestoreSection}
+                       onSaveChanges={handleMarketIntelligenceSaveChanges}
                       onCancelEdit={handleMarketIntelligenceCancelEdit}
                       onExpandToggle={handleMarketIntelligenceExpandToggle}
                       onExecutiveSummaryChange={handleMarketIntelligenceExecutiveSummaryChange}
@@ -2494,8 +2531,9 @@ const MarketResearch = () => {
                       onIndustryTrendsToggleEdit={handleIndustryTrendsToggleEdit}
                       onIndustryTrendsSaveChanges={handleIndustryTrendsSaveChanges}
                       onIndustryTrendsCancelEdit={handleIndustryTrendsCancelEdit}
-                      onIndustryTrendsDeleteSection={handleIndustryTrendsDeleteSection}
-                      onIndustryTrendsEditHistoryOpen={handleIndustryTrendsEditHistoryOpen}
+                       onIndustryTrendsDeleteSection={handleIndustryTrendsDeleteSection}
+                       onIndustryTrendsRestoreSection={handleIndustryTrendsRestoreSection}
+                       onIndustryTrendsEditHistoryOpen={handleIndustryTrendsEditHistoryOpen}
                       onIndustryTrendsExpandToggle={handleIndustryTrendsExpandToggle}
                       onIndustryTrendsExecutiveSummaryChange={handleIndustryTrendsExecutiveSummaryChange}
                       onIndustryTrendsAiAdoptionChange={handleIndustryTrendsAiAdoptionChange}
@@ -2518,8 +2556,9 @@ const MarketResearch = () => {
                       onRegulatoryToggleEdit={handleRegulatoryToggleEdit}
                       onRegulatorySaveChanges={handleRegulatorySaveChanges}
                       onRegulatoryCancelEdit={handleRegulatoryCancelEdit}
-                      onRegulatoryDeleteSection={handleRegulatoryDeleteSection}
-                      onRegulatoryEditHistoryOpen={handleRegulatoryEditHistoryOpen}
+                       onRegulatoryDeleteSection={handleRegulatoryDeleteSection}
+                       onRegulatoryRestoreSection={handleRegulatoryRestoreSection}
+                       onRegulatoryEditHistoryOpen={handleRegulatoryEditHistoryOpen}
                       onRegulatoryExpandToggle={handleRegulatoryExpandToggle}
                       onRegulatoryExecutiveSummaryChange={handleRegulatoryExecutiveSummaryChange}
                       onRegulatoryEuAiActDeadlineChange={handleRegulatoryEuAiActDeadlineChange}
@@ -2531,8 +2570,9 @@ const MarketResearch = () => {
                       onMarketEntryToggleEdit={handleMarketEntryToggleEdit}
                       onMarketEntrySaveChanges={handleMarketEntrySaveChanges}
                       onMarketEntryCancelEdit={handleMarketEntryCancelEdit}
-                      onMarketEntryDeleteSection={handleMarketEntryDeleteSection}
-                      onMarketEntryEditHistoryOpen={handleMarketEntryEditHistoryOpen}
+                       onMarketEntryDeleteSection={handleMarketEntryDeleteSection}
+                       onMarketEntryRestoreSection={handleMarketEntryRestoreSection}
+                       onMarketEntryEditHistoryOpen={handleMarketEntryEditHistoryOpen}
                       onMarketEntryExpandToggle={handleMarketEntryExpandToggle}
                       onMarketEntryExecutiveSummaryChange={handleMarketEntryExecutiveSummaryChange}
                       onMarketEntryBarriersChange={handleMarketEntryBarriersChange}

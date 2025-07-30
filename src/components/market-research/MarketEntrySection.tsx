@@ -27,6 +27,7 @@ interface MarketEntrySectionProps {
   onScoutIconClick: (context?: 'market-entry', hasEdits?: boolean, customMessage?: string) => void;
   onEditHistoryOpen: () => void;
   onDeleteSection: (sectionId: string) => void;
+  onRestoreSection?: (sectionId: string) => void;
   onSaveChanges: () => void;
   onCancelEdit: () => void;
   onExpandToggle: (expanded: boolean) => void;
@@ -62,6 +63,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
   onScoutIconClick,
   onEditHistoryOpen,
   onDeleteSection,
+  onRestoreSection,
   onSaveChanges,
   onCancelEdit,
   onExpandToggle,
@@ -575,6 +577,38 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
               </TooltipContent>
             </Tooltip>
           </div>
+
+          {/* Deleted Sections */}
+          {deletedSections.size > 0 && onRestoreSection && (
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <h4 className="text-sm font-medium text-gray-700 mb-3">Deleted Sections</h4>
+              <div className="space-y-2">
+                {Array.from(deletedSections).map((sectionId) => {
+                  const sectionNames: Record<string, string> = {
+                    'executive-summary': 'Executive Summary',
+                    'entry-barriers': 'Entry Barriers',
+                    'competitive-differentiation': 'Competitive Differentiation',
+                    'strategic-recommendations': 'Strategic Recommendations',
+                    'risk-assessment': 'Risk Assessment'
+                  };
+                  
+                  return (
+                    <div key={sectionId} className="flex items-center justify-between bg-white p-3 rounded border border-gray-200">
+                      <span className="text-sm text-gray-600">{sectionNames[sectionId] || sectionId}</span>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => onRestoreSection(sectionId)}
+                        className="text-purple-600 border-purple-200 hover:bg-purple-50"
+                      >
+                        Restore
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

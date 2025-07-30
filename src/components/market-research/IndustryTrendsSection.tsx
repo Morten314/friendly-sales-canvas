@@ -66,6 +66,7 @@ interface IndustryTrendsSectionProps {
   onIndustryTrendsSaveChanges: () => void;
   onIndustryTrendsCancelEdit: () => void;
   onIndustryTrendsDeleteSection: (sectionId: string) => void;
+  onIndustryTrendsRestoreSection?: (sectionId: string) => void;
   onIndustryTrendsEditHistoryOpen: () => void;
   onIndustryTrendsExpandToggle: (expanded: boolean) => void;
   onScoutIconClick: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape') => void;
@@ -85,6 +86,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
   onIndustryTrendsSaveChanges,
   onIndustryTrendsCancelEdit,
   onIndustryTrendsDeleteSection,
+  onIndustryTrendsRestoreSection,
   onIndustryTrendsEditHistoryOpen,
   onIndustryTrendsExpandToggle,
   onScoutIconClick,
@@ -506,6 +508,36 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                     </div>
                   ))}
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Deleted Sections */}
+          {industryTrendsDeletedSections.size > 0 && onIndustryTrendsRestoreSection && (
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <h4 className="text-sm font-medium text-gray-700 mb-3">Deleted Sections</h4>
+              <div className="space-y-2">
+                {Array.from(industryTrendsDeletedSections).map((sectionId) => {
+                  const sectionNames: Record<string, string> = {
+                    'executive-summary': 'Executive Summary',
+                    'key-metrics': 'Key Metrics',
+                    'trend-snapshots': 'Key Trend Snapshots'
+                  };
+                  
+                  return (
+                    <div key={sectionId} className="flex items-center justify-between bg-white p-3 rounded border border-gray-200">
+                      <span className="text-sm text-gray-600">{sectionNames[sectionId] || sectionId}</span>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => onIndustryTrendsRestoreSection(sectionId)}
+                        className="text-purple-600 border-purple-200 hover:bg-purple-50"
+                      >
+                        Restore
+                      </Button>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
