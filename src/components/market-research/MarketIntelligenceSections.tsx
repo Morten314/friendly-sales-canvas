@@ -176,6 +176,7 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
         onScoutIconClick={props.onCompetitorScoutIconClick}
         onEditHistoryOpen={props.onCompetitorEditHistoryOpen || (() => {})}
         onDeleteSection={props.onCompetitorDeleteSection || (() => {})}
+        onRestoreSection={props.onCompetitorRestoreSection || (() => {})}
         onSaveChanges={props.onCompetitorSaveChanges || (() => {})}
         onCancelEdit={props.onCompetitorCancelEdit || (() => {})}
         onExpandToggle={props.onCompetitorExpandToggle || (() => {})}

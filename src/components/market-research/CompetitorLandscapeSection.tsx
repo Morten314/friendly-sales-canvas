@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BarChart3, Bot, Edit, X, FileText, Save, Share, Clock, ChevronDown, ChevronUp, Zap, ArrowUp, ArrowDown, Loader2 } from 'lucide-react';
+import { BarChart3, Bot, Edit, X, FileText, Save, Share, Clock, ChevronDown, ChevronUp, Zap, ArrowUp, ArrowDown, Loader2, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -37,6 +37,7 @@ interface CompetitorLandscapeSectionProps {
   onScoutIconClick: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape', hasEdits?: boolean, customMessage?: string) => void;
   onEditHistoryOpen: () => void;
   onDeleteSection: (sectionId: string) => void;
+  onRestoreSection?: (sectionId: string) => void;
   onSaveChanges: () => void;
   onCancelEdit: () => void;
   onExpandToggle: (expanded: boolean) => void;
@@ -111,6 +112,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   onScoutIconClick,
   onEditHistoryOpen: onCompetitorLandscapeEditHistoryOpen,
   onDeleteSection: onCompetitorLandscapeDeleteSection,
+  onRestoreSection: onCompetitorLandscapeRestoreSection,
   onSaveChanges: onCompetitorLandscapeSaveChanges,
   onCancelEdit: onCompetitorLandscapeCancelEdit,
   onExpandToggle: onCompetitorLandscapeExpandToggle,
@@ -348,6 +350,39 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
             )}
           </div>
         </div>
+
+        {/* Deleted Sections - Show restore options in edit mode */}
+        {isCompetitorLandscapeEditing && competitorLandscapeDeletedSections.size > 0 && (
+          <div className="mb-6 p-4 border border-amber-200 bg-amber-50 rounded-lg">
+            <h4 className="text-sm font-medium text-amber-800 mb-3">Deleted Sections</h4>
+            <div className="space-y-2">
+              {Array.from(competitorLandscapeDeletedSections).map((sectionId) => {
+                const sectionNames: Record<string, string> = {
+                  'executive-summary': 'Executive Summary',
+                  'emerging-players': 'Emerging Players',
+                  'funding-news': 'Funding News & Headlines'
+                };
+                
+                const sectionName = sectionNames[sectionId] || sectionId;
+                
+                return (
+                  <div key={sectionId} className="flex items-center justify-between p-2 bg-white rounded border border-amber-200">
+                    <span className="text-sm text-amber-800">{sectionName}</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onCompetitorLandscapeRestoreSection?.(sectionId)}
+                      className="text-amber-600 hover:text-amber-700 hover:bg-amber-100"
+                    >
+                      <RotateCcw className="h-4 w-4 mr-1" />
+                      Restore
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Executive Summary - Always visible */}
         {(() => {

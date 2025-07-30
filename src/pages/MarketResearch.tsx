@@ -1505,6 +1505,14 @@ const MarketResearch = () => {
     }, 300);
   };
 
+  const handleCompetitorRestoreSection = (sectionId: string) => {
+    setCompetitorDeletedSections(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(sectionId);
+      return newSet;
+    });
+  };
+
   // Market Size handlers
   const handleMarketSizeDeleteSection = (sectionId: string) => {
     const sectionNames: Record<string, string> = {
@@ -2499,6 +2507,7 @@ const MarketResearch = () => {
                       onCompetitorSaveChanges={handleCompetitorSaveChanges}
                       onCompetitorCancelEdit={handleCompetitorCancelEdit}
                       onCompetitorDeleteSection={handleCompetitorDeleteSection}
+                      onCompetitorRestoreSection={handleCompetitorRestoreSection}
                       onCompetitorEditHistoryOpen={handleCompetitorEditHistoryOpen}
                       onCompetitorExpandToggle={handleCompetitorExpandToggle}
                       onCompetitorExecutiveSummaryChange={handleCompetitorExecutiveSummaryChange}

@@ -113,6 +113,7 @@ export interface MarketIntelligenceTabProps {
   onCompetitorSaveChanges?: () => void;
   onCompetitorCancelEdit?: () => void;
   onCompetitorDeleteSection?: (sectionId: string) => void;
+  onCompetitorRestoreSection?: (sectionId: string) => void;
   onCompetitorEditHistoryOpen?: () => void;
   onCompetitorExpandToggle?: (expanded: boolean) => void;
   onCompetitorExecutiveSummaryChange?: (value: string) => void;
