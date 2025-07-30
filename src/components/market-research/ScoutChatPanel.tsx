@@ -75,7 +75,20 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
       const data = await response.json();
       console.log('✅ API Response data:', data);
       
-      const responseContent = data.response || data.message || data.answer || "I'm having trouble processing your request right now. Please try again.";
+      // Handle response format: array containing JSON string
+      let responseContent = "I'm having trouble processing your request right now. Please try again.";
+      
+      if (Array.isArray(data) && data.length > 0) {
+        try {
+          const parsedResponse = JSON.parse(data[0]);
+          responseContent = parsedResponse.response_message || parsedResponse.response || parsedResponse.message || responseContent;
+        } catch (parseError) {
+          console.error('❌ Error parsing response JSON:', parseError);
+          responseContent = data[0]; // Use raw string if JSON parsing fails
+        }
+      } else if (data.response || data.message || data.answer) {
+        responseContent = data.response || data.message || data.answer;
+      }
       console.log('💬 Final response content:', responseContent);
       
       // Add assistant response
