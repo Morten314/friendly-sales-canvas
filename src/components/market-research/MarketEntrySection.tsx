@@ -580,7 +580,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
 
           {/* Deleted Sections */}
           {deletedSections.size > 0 && onRestoreSection && (
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 relative z-20">
               <h4 className="text-sm font-medium text-gray-700 mb-3">Deleted Sections</h4>
               <div className="space-y-2">
                 {Array.from(deletedSections).map((sectionId) => {

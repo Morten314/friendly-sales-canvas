@@ -110,6 +110,7 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
         onScoutIconClick={props.onMarketSizeScoutIconClick}
         onEditHistoryOpen={props.onEditHistoryOpen}
         onDeleteSection={props.onMarketSizeDeleteSection}
+        onRestoreSection={props.onMarketSizeRestoreSection}
         onSaveChanges={props.onSaveChanges}
         onCancelEdit={props.onCancelEdit}
         onExpandToggle={props.onExpandToggle}
@@ -144,6 +145,7 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
             onIndustryTrendsSaveChanges={props.onIndustryTrendsSaveChanges}
             onIndustryTrendsCancelEdit={props.onIndustryTrendsCancelEdit}
             onIndustryTrendsDeleteSection={props.onIndustryTrendsDeleteSection}
+            onIndustryTrendsRestoreSection={props.onIndustryTrendsRestoreSection}
             onIndustryTrendsEditHistoryOpen={props.onIndustryTrendsEditHistoryOpen}
             onIndustryTrendsExpandToggle={props.onIndustryTrendsExpandToggle}
             onScoutIconClick={props.onIndustryTrendsScoutIconClick}
@@ -211,6 +213,7 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
         onScoutIconClick={props.onRegulatoryScoutIconClick}
         onEditHistoryOpen={props.onRegulatoryEditHistoryOpen || (() => {})}
         onDeleteSection={props.onRegulatoryDeleteSection || (() => {})}
+        onRestoreSection={props.onRegulatoryRestoreSection}
         onSaveChanges={props.onRegulatorySaveChanges || (() => {})}
         onCancelEdit={props.onRegulatoryCancelEdit || (() => {})}
         onExpandToggle={props.onRegulatoryExpandToggle || (() => {})}
@@ -253,6 +256,7 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
         onScoutIconClick={props.onMarketEntryScoutIconClick}
         onEditHistoryOpen={props.onMarketEntryEditHistoryOpen || (() => {})}
         onDeleteSection={props.onMarketEntryDeleteSection || (() => {})}
+        onRestoreSection={props.onMarketEntryRestoreSection}
         onSaveChanges={props.onMarketEntrySaveChanges || (() => {})}
         onCancelEdit={props.onMarketEntryCancelEdit || (() => {})}
         onExpandToggle={props.onMarketEntryExpandToggle || (() => {})}

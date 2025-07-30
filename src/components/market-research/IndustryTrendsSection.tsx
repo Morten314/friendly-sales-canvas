@@ -514,7 +514,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
 
           {/* Deleted Sections */}
           {industryTrendsDeletedSections.size > 0 && onIndustryTrendsRestoreSection && (
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 relative z-20">
               <h4 className="text-sm font-medium text-gray-700 mb-3">Deleted Sections</h4>
               <div className="space-y-2">
                 {Array.from(industryTrendsDeletedSections).map((sectionId) => {
