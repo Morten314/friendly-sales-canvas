@@ -365,7 +365,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
       
       {/* Scout Chat Panel */}
       {showScoutChat && scoutChatPanel && (
-        <div className="w-96">
+        <div className="w-1/2 flex-shrink-0">
           {scoutChatPanel}
         </div>
       )}
