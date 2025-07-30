@@ -508,11 +508,12 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
               </div>
             )}
 
-            {/* Save/Cancel Buttons */}
-            <div className="flex items-center gap-3 pt-6 border-t">
-              <Button onClick={handleCompetitorSaveChanges}>Save Changes</Button>
-              <Button variant="outline" onClick={onCompetitorLandscapeCancelEdit}>Cancel</Button>
-              <div className="flex-1"></div>
+            {/* Save/Cancel Buttons - Only show if not in split view to avoid duplicates */}
+            {!isSplitView && (
+              <div className="flex items-center gap-3 pt-6 border-t">
+                <Button onClick={handleCompetitorSaveChanges}>Save Changes</Button>
+                <Button variant="outline" onClick={onCompetitorLandscapeCancelEdit}>Cancel</Button>
+                <div className="flex-1"></div>
               
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -537,7 +538,8 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                   <p>Explore More with Scout</p>
                 </TooltipContent>
               </Tooltip>
-            </div>
+              </div>
+            )}
 
             {/* Export Options in Edit Mode */}
             <div className="border-t pt-6">
@@ -753,38 +755,6 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
               );
             })()}
 
-            {/* Action Buttons */}
-            {isCompetitorLandscapeEditing && (
-              <div className="flex items-center justify-between pt-6 border-t border-gray-200">
-                <div className="flex gap-2">
-                  <Button 
-                    onClick={handleCompetitorSaveChanges}
-                    className="bg-blue-600 hover:bg-blue-700"
-                  >
-                    <Save className="h-4 w-4 mr-2" />
-                    Save Changes
-                  </Button>
-                  <Button variant="outline" onClick={onCompetitorLandscapeCancelEdit}>
-                    Cancel
-                  </Button>
-                </div>
-                
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={onExportPDF}>
-                    <FileText className="h-4 w-4 mr-1" />
-                    Export PDF
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={onSaveToWorkspace}>
-                    <Save className="h-4 w-4 mr-1" />
-                    Save to Workspace
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={onGenerateShareableLink}>
-                    <Share className="h-4 w-4 mr-1" />
-                    Share
-                  </Button>
-                </div>
-              </div>
-            )}
 
             {/* Show Less Button - Only when not in split view */}
             {!isSplitView && (
