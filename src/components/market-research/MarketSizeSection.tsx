@@ -208,7 +208,11 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                     <Input 
                       id="tamValue" 
                       value={tamValue} 
-                      onChange={(e) => onTamValueChange(e.target.value)} 
+                      onChange={(e) => {
+                        console.log('TAM input change:', e.target.value);
+                        onTamValueChange(e.target.value);
+                      }} 
+                      onKeyDown={(e) => console.log('TAM key pressed:', e.key)}
                       placeholder="e.g., $4.2B" 
                     />
                   </div>
@@ -219,7 +223,11 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                     <Input 
                       id="samValue" 
                       value={samValue} 
-                      onChange={(e) => onSamValueChange(e.target.value)} 
+                      onChange={(e) => {
+                        console.log('SAM input change:', e.target.value);
+                        onSamValueChange(e.target.value);
+                      }} 
+                      onKeyDown={(e) => console.log('SAM key pressed:', e.key)}
                       placeholder="e.g., $2.1B" 
                     />
                   </div>
@@ -230,7 +238,11 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                     <Input 
                       id="apacGrowthRate" 
                       value={apacGrowthRate} 
-                      onChange={(e) => onApacGrowthRateChange(e.target.value)} 
+                      onChange={(e) => {
+                        console.log('APAC input change:', e.target.value);
+                        onApacGrowthRateChange(e.target.value);
+                      }} 
+                      onKeyDown={(e) => console.log('APAC key pressed:', e.key)}
                       placeholder="e.g., 25%" 
                     />
                   </div>
