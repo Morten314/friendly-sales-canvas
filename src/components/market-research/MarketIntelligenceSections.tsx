@@ -135,7 +135,7 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
         <div className={`${props.showIndustryTrendsScoutChat ? 'w-1/2' : ''}`}>
           <IndustryTrendsSection
             isIndustryTrendsEditing={props.isIndustryTrendsEditing}
-            isSplitView={props.isSplitView}
+            isSplitView={props.showIndustryTrendsScoutChat}
             industryTrendsExpanded={props.industryTrendsExpanded}
             industryTrendsHasEdits={props.industryTrendsHasEdits}
             industryTrendsDeletedSections={props.industryTrendsDeletedSections}
@@ -164,7 +164,7 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
         <div className={`${props.showCompetitorScoutChat ? 'w-1/2' : ''}`}>
           <CompetitorLandscapeSection
         isEditing={props.isCompetitorEditing || false}
-        isSplitView={props.isSplitView}
+        isSplitView={props.showCompetitorScoutChat}
         isExpanded={props.competitorExpanded || false}
         hasEdits={props.competitorHasEdits || false}
         deletedSections={props.competitorDeletedSections || new Set()}
@@ -201,7 +201,7 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
         <div className={`${props.showRegulatoryScoutChat ? 'w-1/2' : ''}`}>
           <RegulatoryComplianceSection
         isEditing={props.isRegulatoryEditing || false}
-        isSplitView={props.isSplitView}
+        isSplitView={props.showRegulatoryScoutChat}
         isExpanded={props.regulatoryExpanded || false}
         hasEdits={props.regulatoryHasEdits || false}
         deletedSections={props.regulatoryDeletedSections || new Set()}
@@ -212,7 +212,7 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
         potentialFines={props.regulatoryPotentialFines || 'Up to 6% of annual revenue'}
         dataLocalization={props.regulatoryDataLocalization || 'Mandatory for customer data'}
         onToggleEdit={props.onRegulatoryToggleEdit || (() => {})}
-        onScoutIconClick={props.onRegulatoryScoutIconClick || props.onMarketSizeScoutIconClick}
+        onScoutIconClick={props.onRegulatoryScoutIconClick}
         onEditHistoryOpen={props.onRegulatoryEditHistoryOpen || (() => {})}
         onDeleteSection={props.onRegulatoryDeleteSection || (() => {})}
         onSaveChanges={props.onRegulatorySaveChanges || (() => {})}
@@ -240,7 +240,7 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
         <div className={`${props.showMarketEntryScoutChat ? 'w-1/2' : ''}`}>
           <MarketEntrySection
         isEditing={props.isMarketEntryEditing || false}
-        isSplitView={props.isSplitView}
+        isSplitView={props.showMarketEntryScoutChat}
         isExpanded={props.marketEntryExpanded || false}
         hasEdits={props.marketEntryHasEdits || false}
         deletedSections={props.marketEntryDeletedSections || new Set()}
@@ -254,7 +254,7 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
         strategicRecommendations={props.marketEntryStrategicRecommendations || ['Partner with local system integrators', 'Establish regional data centers', 'Develop compliance automation tools', 'Create localized go-to-market strategy']}
         riskAssessment={props.marketEntryRiskAssessment || ['Regulatory changes could impact timeline', 'Competition intensifying rapidly', 'Economic uncertainty affecting IT spending']}
         onToggleEdit={props.onMarketEntryToggleEdit || (() => {})}
-        onScoutIconClick={props.onMarketEntryScoutIconClick || props.onMarketSizeScoutIconClick}
+        onScoutIconClick={props.onMarketEntryScoutIconClick}
         onEditHistoryOpen={props.onMarketEntryEditHistoryOpen || (() => {})}
         onDeleteSection={props.onMarketEntryDeleteSection || (() => {})}
         onSaveChanges={props.onMarketEntrySaveChanges || (() => {})}
