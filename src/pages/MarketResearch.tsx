@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { RecentMarketResearch } from "@/components/market-research/RecentMarketResearch";
 import { ScoutCapabilities } from "@/components/market-research/ScoutCapabilities";
 import { MarketRankings } from "@/components/market-research/MarketRankings";
-import { CompetitorAnalysis } from "@/components/market-research/CompetitorAnalysis";
+import CompetitorAnalysisSection from "@/components/market-research/CompetitorAnalysis";
 import { MarketSegments } from "@/components/market-research/MarketSegments";
 import { SwotAnalysis } from "@/components/market-research/SwotAnalysis";
 import { EmergingTrends } from "@/components/market-research/EmergingTrends";
