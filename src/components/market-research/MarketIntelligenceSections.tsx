@@ -22,6 +22,8 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
       lastEditedField={props.marketSizeLastEditedField || ''}
       context="market-size"
       customMessage={props.marketSizeCustomMessage}
+      originalData={props.marketSizeOriginalData}
+      modifiedData={props.marketSizeModifiedData}
       onClose={props.onMarketSizeScoutClose || (() => {})}
     />
   ) : undefined;

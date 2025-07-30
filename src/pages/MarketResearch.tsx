@@ -254,6 +254,13 @@ const MarketResearch = () => {
   };
 
   const [marketIntelligenceData, setMarketIntelligenceData] = useState(getInitialMarketIntelligenceData());
+  
+  // State for storing original data before edits
+  const [marketIntelligenceOriginalData, setMarketIntelligenceOriginalData] = useState(getInitialMarketIntelligenceData());
+  
+  // State for storing JSON data for the /ask API
+  const [marketSizeOriginalData, setMarketSizeOriginalData] = useState<any>(null);
+  const [marketSizeModifiedData, setMarketSizeModifiedData] = useState<any>(null);
 
   // Helper function to save market intelligence data to localStorage
   const saveMarketIntelligenceToLocalStorage = (data: any) => {
@@ -1190,6 +1197,11 @@ const MarketResearch = () => {
 
   // MarketIntelligenceTab handlers
   const handleMarketIntelligenceToggleEdit = () => {
+    if (!isMarketIntelligenceEditing) {
+      // Capture original data when starting to edit
+      setMarketIntelligenceOriginalData({ ...marketIntelligenceData });
+      console.log('💾 Captured original data for editing:', marketIntelligenceData);
+    }
     setIsMarketIntelligenceEditing(!isMarketIntelligenceEditing);
   };
 
@@ -1290,15 +1302,48 @@ const MarketResearch = () => {
     setMarketSizeHasEdits(true);
     setMarketSizeLastEditedField('Market Intelligence');
 
+    // Capture original and modified data for the /ask API
+    const originalJson = {
+      marketName: "Market Intelligence Analysis",
+      executiveSummary: marketIntelligenceOriginalData?.executiveSummary || "Original executive summary",
+      tam: marketIntelligenceOriginalData?.tamValue || "$0B",
+      sam: marketIntelligenceOriginalData?.samValue || "$0B", 
+      apacGrowthRate: marketIntelligenceOriginalData?.apacGrowthRate || "0%",
+      strategicRecommendations: marketIntelligenceOriginalData?.strategicRecommendations || [],
+      marketEntry: marketIntelligenceOriginalData?.marketEntry || "Original market entry strategy",
+      marketDrivers: marketIntelligenceOriginalData?.marketDrivers || [],
+      timestamp: new Date().toISOString()
+    };
+
+    const modifiedJson = {
+      marketName: "Market Intelligence Analysis",
+      executiveSummary: marketIntelligenceData.executiveSummary,
+      tam: marketIntelligenceData.tamValue,
+      sam: marketIntelligenceData.samValue,
+      apacGrowthRate: marketIntelligenceData.apacGrowthRate,
+      strategicRecommendations: marketIntelligenceData.strategicRecommendations,
+      marketEntry: marketIntelligenceData.marketEntry,
+      marketDrivers: marketIntelligenceData.marketDrivers,
+      timestamp: new Date().toISOString()
+    };
+
+    // Log the JSON data to console
+    console.log('📄 ORIGINAL JSON:', JSON.stringify(originalJson, null, 2));
+    console.log('📄 MODIFIED JSON:', JSON.stringify(modifiedJson, null, 2));
+
+    // Store the JSON data for the chat interface
+    setMarketSizeOriginalData(originalJson);
+    setMarketSizeModifiedData(modifiedJson);
+
     // Create a new edit record
     const newEdit: EditRecord = {
       id: Date.now().toString(),
       timestamp: new Date().toISOString(),
       user: 'John Doe',
-      summary: 'Updated market analysis',
+      summary: 'Updated market analysis with JSON data captured',
       field: 'Market Intelligence',
-      oldValue: 'Previous values',
-      newValue: 'Updated values',
+      oldValue: JSON.stringify(originalJson),
+      newValue: JSON.stringify(modifiedJson),
     };
 
     // Add the new edit record to the edit history
@@ -2619,10 +2664,12 @@ const MarketResearch = () => {
                         setMarketEntryCustomMessage(undefined);
                         setIsChatOpen(false);
                       }}
-                      // Scout panel state props
-                      marketSizeHasEdits={marketSizeHasEdits}
-                      marketSizeLastEditedField={marketSizeLastEditedField}
-                      marketSizeCustomMessage={marketSizeCustomMessage}
+                       // Scout panel state props
+                       marketSizeHasEdits={marketSizeHasEdits}
+                       marketSizeLastEditedField={marketSizeLastEditedField}
+                       marketSizeCustomMessage={marketSizeCustomMessage}
+                       marketSizeOriginalData={marketSizeOriginalData}
+                       marketSizeModifiedData={marketSizeModifiedData}
                       industryTrendsCustomMessage={industryTrendsCustomMessage}
                       competitorCustomMessage={competitorCustomMessage}
                       regulatoryCustomMessage={regulatoryCustomMessage}

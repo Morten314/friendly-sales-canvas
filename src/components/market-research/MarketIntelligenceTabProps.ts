@@ -163,6 +163,8 @@ export interface MarketIntelligenceTabProps {
   marketSizeHasEdits?: boolean;
   marketSizeLastEditedField?: string;
   marketSizeCustomMessage?: string;
+  marketSizeOriginalData?: any;
+  marketSizeModifiedData?: any;
   // industryTrendsLastEditedField already defined above
   industryTrendsCustomMessage?: string;
   competitorLastEditedField?: string;

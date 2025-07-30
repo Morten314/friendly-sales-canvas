@@ -14,6 +14,8 @@ interface ScoutChatPanelProps {
   context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance' | 'market-entry';
   isPostSave?: boolean;
   customMessage?: string;
+  originalData?: any;
+  modifiedData?: any;
   onClose: () => void;
 }
 
@@ -27,6 +29,8 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
   context = 'market-size',
   isPostSave = false,
   customMessage,
+  originalData,
+  modifiedData,
   onClose
 }) => {
   // Add chat functionality
@@ -51,9 +55,24 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
     setIsLoading(true);
 
     try {
-      // Make API call to the /ask endpoint (with trailing slash to match redirect)
+      // Prepare URL parameters
+      const params = new URLSearchParams();
+      params.append('question', textToSend);
+
+      // Add original_json if available
+      if (originalData) {
+        console.log('📄 Adding original JSON to API call:', originalData);
+        params.append('original_json', JSON.stringify(originalData));
+      }
+
+      // Add modified_json if available
+      if (modifiedData) {
+        console.log('📄 Adding modified JSON to API call:', modifiedData);
+        params.append('modified_json', JSON.stringify(modifiedData));
+      }
+
+      const apiUrl = `https://backend-11kr.onrender.com/ask?${params.toString()}`;
       console.log('🚀 Making API call to Scout with question:', textToSend);
-      const apiUrl = `https://backend-11kr.onrender.com/ask/?question=${encodeURIComponent(textToSend)}`;
       console.log('📡 API URL:', apiUrl);
       
       const response = await fetch(apiUrl, {
@@ -238,6 +257,11 @@ const getContextualScoutMessage = () => {
   }
   
   if (hasEdits) {
+    // Special message when JSON data is available for comparison
+    if (originalData && modifiedData) {
+      return "🎉 Great work saving your market intelligence updates! I have both your original and modified data available for comparison. What would you like to explore about your changes?";
+    }
+    
     if (lastEditedField.includes("APAC") || lastEditedField.includes("apac")) {
       return "I noticed you updated the APAC growth rate. Would you like deeper insights on regional trends or competitor presence in APAC?";
     }
@@ -359,6 +383,18 @@ const getContextualScoutMessage = () => {
 
     // Default market-size questions
     if (hasEdits) {
+      // Special questions when JSON data is available for comparison
+      if (originalData && modifiedData) {
+        return [
+          "What are the key differences between original and modified data?",
+          "Analyze the impact of my changes",
+          "Which changes will have the biggest market impact?",
+          "Compare TAM and SAM values",
+          "Explain the strategic implications",
+          "Validate my market assumptions"
+        ];
+      }
+      
       return [
         "Show me drivers of TAM growth",
         "Break down mid-market vs enterprise TAM", 
@@ -405,9 +441,16 @@ const getContextualScoutMessage = () => {
             </div>
             <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-400/30 to-green-400/30 animate-pulse"></div>
           </div>
-          <h3 className="text-lg font-semibold text-gray-900">
-            {getScoutTitle()}
-          </h3>
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">
+              {getScoutTitle()}
+            </h3>
+            {originalData && modifiedData && (
+              <div className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full mt-1">
+                Data comparison active
+              </div>
+            )}
+          </div>
         </div>
         <Button
           variant="ghost"
