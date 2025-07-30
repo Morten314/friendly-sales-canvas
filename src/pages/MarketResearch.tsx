@@ -1296,9 +1296,23 @@ const MarketResearch = () => {
 
   const handleMarketIntelligenceSaveChanges = () => {
     console.log('💾 Saving Market Intelligence changes...');
-    console.log('📊 Current marketIntelligenceData:', marketIntelligenceData);
+    console.log('📊 Current marketIntelligenceData before update:', marketIntelligenceData);
     
-    // Update state immediately to reflect changes in UI
+    // Create updated data object with current form values
+    const updatedData = {
+      ...marketIntelligenceData,
+      executiveSummary: marketIntelligenceData.executiveSummary,
+      tamValue: marketIntelligenceData.tamValue,
+      samValue: marketIntelligenceData.samValue,
+      apacGrowthRate: marketIntelligenceData.apacGrowthRate,
+      strategicRecommendations: marketIntelligenceData.strategicRecommendations,
+      marketEntry: marketIntelligenceData.marketEntry,
+      marketDrivers: marketIntelligenceData.marketDrivers,
+      timestamp: new Date().toISOString()
+    };
+
+    // Update state immediately with new data
+    setMarketIntelligenceData(updatedData);
     setIsMarketIntelligenceEditing(false);
     setHasEdits(true);
     
@@ -1321,14 +1335,14 @@ const MarketResearch = () => {
 
     const modifiedJson = {
       marketName: "Market Intelligence Analysis",
-      executiveSummary: marketIntelligenceData.executiveSummary,
-      tam: marketIntelligenceData.tamValue,
-      sam: marketIntelligenceData.samValue,
-      apacGrowthRate: marketIntelligenceData.apacGrowthRate,
-      strategicRecommendations: marketIntelligenceData.strategicRecommendations,
-      marketEntry: marketIntelligenceData.marketEntry,
-      marketDrivers: marketIntelligenceData.marketDrivers,
-      timestamp: new Date().toISOString()
+      executiveSummary: updatedData.executiveSummary,
+      tam: updatedData.tamValue,
+      sam: updatedData.samValue,
+      apacGrowthRate: updatedData.apacGrowthRate,
+      strategicRecommendations: updatedData.strategicRecommendations,
+      marketEntry: updatedData.marketEntry,
+      marketDrivers: updatedData.marketDrivers,
+      timestamp: updatedData.timestamp
     };
 
     // Log the JSON data to console
@@ -1353,14 +1367,8 @@ const MarketResearch = () => {
     // Add the new edit record to the edit history
     setEditHistory(prevHistory => [...prevHistory, newEdit]);
     
-    // Create a new object to force re-render and update the state
-    const updatedData = {
-      ...marketIntelligenceData,
-      timestamp: new Date().toISOString()
-    };
-    setMarketIntelligenceData(updatedData);
-    
     console.log('✅ Market Intelligence data saved successfully');
+    console.log('🔄 Updated frontend state:', updatedData);
     
     // Automatically open Market Size Scout chat panel with contextual message
     setTimeout(() => {
