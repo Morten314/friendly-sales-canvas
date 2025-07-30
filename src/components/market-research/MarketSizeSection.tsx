@@ -176,12 +176,8 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                 </Label>
                 <Textarea 
                   id="executiveSummary" 
-                  key={`exec-${executiveSummary.slice(0, 10)}`}
-                  defaultValue={executiveSummary} 
-                  onBlur={(e) => {
-                    console.log('Executive Summary blur:', e.target.value);
-                    onExecutiveSummaryChange(e.target.value);
-                  }}
+                  value={executiveSummary} 
+                  onChange={(e) => onExecutiveSummaryChange(e.target.value)} 
                   className="w-full h-32 resize-none" 
                   placeholder="Enter executive summary..." 
                 />
@@ -292,10 +288,9 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                 </Label>
                 {strategicRecommendations.map((rec, index) => (
                   <Textarea 
-                    key={`rec-${index}-${rec.slice(0, 10)}`} 
-                    defaultValue={rec} 
-                    onBlur={e => {
-                      console.log(`Strategic Recommendation ${index + 1} blur:`, e.target.value);
+                    key={index} 
+                    value={rec} 
+                    onChange={e => {
                       const newRecs = [...strategicRecommendations];
                       newRecs[index] = e.target.value;
                       onStrategicRecommendationsChange(newRecs);
@@ -327,12 +322,8 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                 </Label>
                 <Textarea 
                   id="marketEntry" 
-                  key={`entry-${marketEntry.slice(0, 10)}`}
-                  defaultValue={marketEntry} 
-                  onBlur={e => {
-                    console.log('Market Entry blur:', e.target.value);
-                    onMarketEntryChange(e.target.value);
-                  }}
+                  value={marketEntry} 
+                  onChange={e => onMarketEntryChange(e.target.value)} 
                   className="w-full h-32 resize-none" 
                   placeholder="Enter market entry strategy..." 
                 />
@@ -359,10 +350,9 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                 </Label>
                 {marketDrivers.map((driver, index) => (
                   <Textarea 
-                    key={`driver-${index}-${driver.slice(0, 10)}`} 
-                    defaultValue={driver} 
-                    onBlur={e => {
-                      console.log(`Market Driver ${index + 1} blur:`, e.target.value);
+                    key={index} 
+                    value={driver} 
+                    onChange={e => {
                       const newDrivers = [...marketDrivers];
                       newDrivers[index] = e.target.value;
                       onMarketDriversChange(newDrivers);
