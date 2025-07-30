@@ -333,19 +333,6 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
             <Button variant="ghost" size="sm" onClick={onCompetitorLandscapeToggleEdit} className="text-blue-800 hover:text-blue-900">
               <Edit className="h-4 w-4" />
             </Button>
-            {!isSplitView && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="sm" onClick={() => onScoutIconClick('competitor-landscape')} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-all duration-200 hover:shadow-md hover:shadow-blue-200/50 relative">
-                    <div className="absolute inset-0 rounded-md bg-gradient-to-r from-blue-400/20 to-green-400/20 animate-pulse opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
-                    <Bot className="h-5 w-5 relative z-10" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Explore More with Scout</p>
-                </TooltipContent>
-              </Tooltip>
-            )}
           </div>
         </div>
 
