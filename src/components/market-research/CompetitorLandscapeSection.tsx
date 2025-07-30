@@ -361,10 +361,17 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
           return (
             <div className="p-6 rounded-lg mb-6 border border-gray-200">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <div className="flex items-center gap-2">
                   <FileText className="h-5 w-5 text-blue-600" />
-                  Executive Summary
-                </h3>
+                  <h3 className="text-lg font-semibold text-gray-900">Executive Summary</h3>
+                </div>
+                {(!competitorLandscapeDeletedSections.has('executive-summary')) && (
+                  <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="sm" onClick={() => onCompetitorLandscapeDeleteSection('executive-summary')} className="text-red-600 hover:text-red-700 hover:bg-red-50">
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
               </div>
               {isCompetitorLandscapeEditing ? (
                 <Textarea 
