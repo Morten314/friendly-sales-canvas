@@ -1353,8 +1353,12 @@ const MarketResearch = () => {
     // Add the new edit record to the edit history
     setEditHistory(prevHistory => [...prevHistory, newEdit]);
     
-    // Force re-render of the component by updating state
-    setMarketIntelligenceData({...marketIntelligenceData});
+    // Create a new object to force re-render and update the state
+    const updatedData = {
+      ...marketIntelligenceData,
+      timestamp: new Date().toISOString()
+    };
+    setMarketIntelligenceData(updatedData);
     
     console.log('✅ Market Intelligence data saved successfully');
     
