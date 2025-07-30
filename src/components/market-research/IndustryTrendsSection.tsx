@@ -94,8 +94,8 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
   onSaveToWorkspace,
   onGenerateShareableLink
 }) => {
-  // State for API data
-  const [industryTrendsData, setIndustryTrendsData] = useState<IndustryTrendsData | null>(null);
+  // Use props data when available, fallback to local state for loading
+  const industryTrendsData = propsIndustryTrendsData || null;
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -155,7 +155,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
         const reportData = result.data;
         
         // Convert timestamps to UTC for comparison  
-        const currentTimestampUTC = toUTCTimestamp(industryTrendsData?.timestamp);
+        const currentTimestampUTC = toUTCTimestamp(localData?.timestamp);
         const newTimestampUTC = toUTCTimestamp(reportData.timestamp);
         const requestTimeUTC = getCurrentUTCTimestamp();
         
@@ -238,8 +238,8 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
             timestamp: newTimestampUTC
           };
 
-          
-          setIndustryTrendsData(dataWithFallbacks);
+          // Note: When using props data, we don't set local state
+          // The parent component manages the data
           
           // Initialize edit fields with fetched data
           setEditExecutiveSummary(reportData.executiveSummary || '');
@@ -259,18 +259,15 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
 
   // Clear previous data and fetch fresh data on component mount
   useEffect(() => {
-    // Clear any existing data immediately to prevent showing stale data
-    setIndustryTrendsData(null);
-    setIsLoading(true);
-    setError(null);
-    
-    // Reduced delay to improve user experience - 500ms is sufficient to avoid conflicts
-    const timer = setTimeout(() => {
-      fetchIndustryTrendsData(true);
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, []);
+    if (industryTrendsData) {
+      setEditExecutiveSummary(industryTrendsData.executiveSummary || '');
+      setEditAiAdoption(industryTrendsData.aiAdoption || '');
+      setEditCloudMigration(industryTrendsData.cloudMigration || '');
+      setEditRegulatory(industryTrendsData.regulatory || '');
+      setEditTrendSnapshots(industryTrendsData.trendSnapshots || []);
+      setIsLoading(false);
+    }
+  }, [industryTrendsData]);
 
   // Handle save changes
   const handleSaveChanges = async () => {
@@ -323,7 +320,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
   }
 
   // Show no data state
-  if (!industryTrendsData) {
+  if (!localData) {
     return (
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-6">
@@ -596,22 +593,22 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
         <div className="space-y-6">
           {/* Default View */}
           <div>
-            <p className="text-gray-700 mb-6">{industryTrendsData.executiveSummary}</p>
+            <p className="text-gray-700 mb-6">{localData.executiveSummary}</p>
 
             {/* Key Metrics Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
-                <div className="text-2xl font-bold text-blue-600">{industryTrendsData.aiAdoption}</div>
+                <div className="text-2xl font-bold text-blue-600">{localData.aiAdoption}</div>
                 <div className="text-sm font-medium text-gray-900">AI Adoption Rate</div>
                 <div className="text-xs text-gray-600">Enterprise pilots</div>
               </div>
               <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded-r-lg">
-                <div className="text-2xl font-bold text-green-600">{industryTrendsData.cloudMigration}</div>
+                <div className="text-2xl font-bold text-green-600">{localData.cloudMigration}</div>
                 <div className="text-sm font-medium text-gray-900">Cloud Migration Increase</div>
                 <div className="text-xs text-gray-600">Year over year</div>
               </div>
               <div className="bg-purple-50 border-l-4 border-purple-500 p-4 rounded-r-lg">
-                <div className="text-2xl font-bold text-purple-600">{industryTrendsData.regulatory}</div>
+                <div className="text-2xl font-bold text-purple-600">{localData.regulatory}</div>
                 <div className="text-sm font-medium text-gray-900">Regulatory Changes</div>
                 <div className="text-xs text-gray-600">Impacting sector</div>
               </div>
@@ -647,7 +644,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                 <div className="mb-8">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Executive Summary</h3>
                   <p className="text-gray-700 bg-gray-50 p-4 rounded-lg">
-                    {industryTrendsData?.executiveSummary || 'No executive summary available'}
+                    {localData?.executiveSummary || 'No executive summary available'}
                   </p>
                 </div>
 
@@ -655,7 +652,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                 <div className="mb-8">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Key Trend Snapshots</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {industryTrendsData.trendSnapshots?.map((trend, index) => (
+                    {localData.trendSnapshots?.map((trend, index) => (
                       <div key={index} className="bg-white border border-gray-200 rounded-lg p-4">
                         <h4 className="font-medium text-gray-900 mb-2">{trend.title}</h4>
                         <p className="text-sm text-gray-600 mb-3">{trend.metric}</p>
@@ -669,18 +666,18 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                 <div className="mb-8">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Regional Hotspots</h3>
                   <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                    {industryTrendsData.regionalHotspots ? (
+                    {localData.regionalHotspots ? (
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="text-center">
-                          <div className="text-2xl font-bold text-blue-600">{industryTrendsData.regionalHotspots.APAC}</div>
+                          <div className="text-2xl font-bold text-blue-600">{localData.regionalHotspots.APAC}</div>
                           <div className="text-sm text-gray-700">APAC</div>
                         </div>
                         <div className="text-center">
-                          <div className="text-2xl font-bold text-blue-600">{industryTrendsData.regionalHotspots.Europe}</div>
+                          <div className="text-2xl font-bold text-blue-600">{localData.regionalHotspots.Europe}</div>
                           <div className="text-sm text-gray-700">Europe</div>
                         </div>
                         <div className="text-center">
-                          <div className="text-2xl font-bold text-blue-600">{industryTrendsData.regionalHotspots["North America"]}</div>
+                          <div className="text-2xl font-bold text-blue-600">{localData.regionalHotspots["North America"]}</div>
                           <div className="text-sm text-gray-700">North America</div>
                         </div>
                       </div>
@@ -696,11 +693,11 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="bg-green-50 p-4 rounded-lg border border-green-200">
                       <h4 className="font-medium text-green-900 mb-2">Primary Focus</h4>
-                      <p className="text-green-700 text-sm">{industryTrendsData.strategicRecommendations?.primaryFocus || 'No recommendations available'}</p>
+                      <p className="text-green-700 text-sm">{localData.strategicRecommendations?.primaryFocus || 'No recommendations available'}</p>
                     </div>
                     <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
                       <h4 className="font-medium text-blue-900 mb-2">Market Entry</h4>
-                      <p className="text-blue-700 text-sm">{industryTrendsData.strategicRecommendations?.marketEntry || 'No recommendations available'}</p>
+                      <p className="text-blue-700 text-sm">{localData.strategicRecommendations?.marketEntry || 'No recommendations available'}</p>
                     </div>
                   </div>
                 </div>
@@ -710,7 +707,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Risks & Watchouts</h3>
                   <div className="bg-red-50 p-4 rounded-lg border border-red-200">
                      <ul className="space-y-2">
-                      {industryTrendsData.risks?.map((risk, index) => (
+                      {localData.risks?.map((risk, index) => (
                         <li key={index} className="flex items-start gap-2 text-red-700 text-sm">
                           <div className="w-2 h-2 rounded-full bg-red-500 mt-2 flex-shrink-0"></div>
                           {risk}
@@ -723,13 +720,13 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                 {/* Visual Charts Section */}
                 <div className="mb-8">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Visual Charts</h3>
-                  {industryTrendsData && industryTrendsData.visualCharts ? (
+                  {localData && localData.visualCharts ? (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                       <div className="bg-white border border-gray-200 rounded-lg p-4">
                         <h4 className="font-medium text-gray-900 mb-3">AI Adoption Trends</h4>
-                        {industryTrendsData.visualCharts.aiAdoptionTrends && Array.isArray(industryTrendsData.visualCharts.aiAdoptionTrends) ? (
+                        {localData.visualCharts.aiAdoptionTrends && Array.isArray(localData.visualCharts.aiAdoptionTrends) ? (
                           <MiniLineChart 
-                            data={industryTrendsData.visualCharts.aiAdoptionTrends.map((quarter, index) => ({
+                            data={localData.visualCharts.aiAdoptionTrends.map((quarter, index) => ({
                               name: quarter || `Q${index + 1}`,
                               value: 45 + (index * 11) // Dynamic values based on quarters
                             }))} 
@@ -744,7 +741,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                         <h4 className="font-medium text-gray-900 mb-3">Technology Budget Allocation</h4>
                         {(() => {
                           try {
-                            const budgetData = industryTrendsData?.visualCharts?.technologyBudgetAllocation;
+                            const budgetData = localData?.visualCharts?.technologyBudgetAllocation;
                             if (!budgetData) {
                               return <p className="text-gray-500 text-sm">No budget allocation data available</p>;
                             }
