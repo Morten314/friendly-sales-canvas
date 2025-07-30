@@ -2119,7 +2119,8 @@ const MarketResearch = () => {
     if (!isMarketEntryEditing) {
       // Capture original data when starting to edit
       console.log('🎯 Starting Market Entry edit - capturing original data:', marketEntryData);
-      setMarketEntryOriginalData({
+      console.log('🎯 Current timeToMarket before edit:', marketEntryData.timeToMarket);
+      const originalData = {
         executiveSummary: marketEntryData.executiveSummary,
         entryBarriers: marketEntryData.entryBarriers,
         recommendedChannel: marketEntryData.recommendedChannel,
@@ -2129,7 +2130,9 @@ const MarketResearch = () => {
         strategicRecommendations: marketEntryData.strategicRecommendations,
         riskAssessment: marketEntryData.riskAssessment,
         timestamp: marketEntryData.timestamp
-      });
+      };
+      console.log('🎯 Captured original data:', originalData);
+      setMarketEntryOriginalData(originalData);
     }
     setIsMarketEntryEditing(!isMarketEntryEditing);
   };
@@ -2137,6 +2140,7 @@ const MarketResearch = () => {
   const handleMarketEntrySaveChanges = () => {
     console.log('💾 Saving Market Entry changes...');
     console.log('📊 Current marketEntryData:', marketEntryData);
+    console.log('📊 Market Entry Original Data for logging:', marketEntryOriginalData);
     
     // Exit editing mode
     setIsMarketEntryEditing(false);
