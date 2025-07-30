@@ -207,12 +207,18 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                     </Label>
                     <Input 
                       id="tamValue" 
-                      value={tamValue} 
-                      onChange={(e) => {
-                        console.log('TAM input change:', e.target.value);
+                      key={`tam-${tamValue}`}
+                      defaultValue={tamValue} 
+                      onBlur={(e) => {
+                        console.log('TAM input blur:', e.target.value);
                         onTamValueChange(e.target.value);
                       }} 
-                      onKeyDown={(e) => console.log('TAM key pressed:', e.key)}
+                      onKeyDown={(e) => {
+                        console.log('TAM key pressed:', e.key);
+                        if (e.key === 'Enter') {
+                          (e.target as HTMLInputElement).blur();
+                        }
+                      }}
                       placeholder="e.g., $4.2B" 
                     />
                   </div>
@@ -222,12 +228,18 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                     </Label>
                     <Input 
                       id="samValue" 
-                      value={samValue} 
-                      onChange={(e) => {
-                        console.log('SAM input change:', e.target.value);
+                      key={`sam-${samValue}`}
+                      defaultValue={samValue} 
+                      onBlur={(e) => {
+                        console.log('SAM input blur:', e.target.value);
                         onSamValueChange(e.target.value);
                       }} 
-                      onKeyDown={(e) => console.log('SAM key pressed:', e.key)}
+                      onKeyDown={(e) => {
+                        console.log('SAM key pressed:', e.key);
+                        if (e.key === 'Enter') {
+                          (e.target as HTMLInputElement).blur();
+                        }
+                      }}
                       placeholder="e.g., $2.1B" 
                     />
                   </div>
@@ -237,12 +249,18 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                     </Label>
                     <Input 
                       id="apacGrowthRate" 
-                      value={apacGrowthRate} 
-                      onChange={(e) => {
-                        console.log('APAC input change:', e.target.value);
+                      key={`apac-${apacGrowthRate}`}
+                      defaultValue={apacGrowthRate} 
+                      onBlur={(e) => {
+                        console.log('APAC input blur:', e.target.value);
                         onApacGrowthRateChange(e.target.value);
                       }} 
-                      onKeyDown={(e) => console.log('APAC key pressed:', e.key)}
+                      onKeyDown={(e) => {
+                        console.log('APAC key pressed:', e.key);
+                        if (e.key === 'Enter') {
+                          (e.target as HTMLInputElement).blur();
+                        }
+                      }}
                       placeholder="e.g., 25%" 
                     />
                   </div>
