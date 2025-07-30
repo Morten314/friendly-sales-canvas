@@ -80,11 +80,20 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
       
       if (Array.isArray(data) && data.length > 0) {
         try {
+          console.log('🔍 Attempting to parse first array element:', data[0]);
           const parsedResponse = JSON.parse(data[0]);
+          console.log('✅ Parsed response object:', parsedResponse);
           responseContent = parsedResponse.response_message || parsedResponse.response || parsedResponse.message || responseContent;
         } catch (parseError) {
           console.error('❌ Error parsing response JSON:', parseError);
-          responseContent = data[0]; // Use raw string if JSON parsing fails
+          console.log('🔍 Raw string content:', data[0]);
+          // Try to extract response_message using regex if JSON parsing fails
+          const match = data[0].match(/"response_message":\s*"([^"]+)"/);
+          if (match && match[1]) {
+            responseContent = match[1];
+          } else {
+            responseContent = data[0]; // Use raw string if all else fails
+          }
         }
       } else if (data.response || data.message || data.answer) {
         responseContent = data.response || data.message || data.answer;
