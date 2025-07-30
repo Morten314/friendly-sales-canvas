@@ -1538,6 +1538,9 @@ const MarketResearch = () => {
 
   // Competitor Landscape handlers - Add these new handlers
   const handleCompetitorToggleEdit = () => {
+    console.log('🔄 Competitor Toggle Edit - Current editing state:', isCompetitorEditing);
+    console.log('🔄 Current competitor data before toggle:', competitorData);
+    
     if (!isCompetitorEditing) {
       // Capture original state when starting to edit
       const originalJson = {
@@ -1547,6 +1550,7 @@ const MarketResearch = () => {
         fundingNews: competitorData.fundingNews,
         timestamp: competitorData.timestamp
       };
+      console.log('📦 Capturing original data:', originalJson);
       setCompetitorOriginalData(originalJson);
     }
     setIsCompetitorEditing(!isCompetitorEditing);
@@ -1623,6 +1627,8 @@ const MarketResearch = () => {
     };
 
     // Log the JSON data to console
+    console.log('📊 Original data state variable:', competitorOriginalData);
+    console.log('📊 Current competitor data:', competitorData);
     console.log('📄 ORIGINAL JSON:', JSON.stringify(competitorOriginalData, null, 2));
     console.log('📄 MODIFIED JSON:', JSON.stringify(modifiedJson, null, 2));
 
