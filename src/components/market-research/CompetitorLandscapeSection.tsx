@@ -147,10 +147,9 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
     onCompetitorLandscapeSaveChanges();
   };
 
-  // Handle delete section with chat notification
+  // Handle delete section - only call parent, no scout calls from child
   const handleDeleteSection = (sectionId: string) => {
     onCompetitorLandscapeDeleteSection(sectionId);
-    // Chat notification is handled by parent component to avoid duplicates
   };
 
   // Fetch Competitor Landscape data from API
@@ -527,17 +526,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                 </TooltipContent>
               </Tooltip>
 
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="sm" onClick={() => onScoutIconClick('competitor-landscape')} className="text-blue-600 hover:text-blue-700 bg-blue-50 border border-blue-200 hover:shadow-md hover:shadow-blue-200/50 transition-all duration-200 relative">
-                    <div className="absolute inset-0 rounded-md bg-gradient-to-r from-blue-400/20 to-green-400/20 opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
-                    <Bot className="h-4 w-4 relative z-10" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Explore More with Scout</p>
-                </TooltipContent>
-              </Tooltip>
+              {/* Scout button removed from edit mode to prevent duplicates */}
               </div>
             )}
 
