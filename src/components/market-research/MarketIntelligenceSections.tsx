@@ -187,6 +187,8 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
         onExportPDF={props.onExportPDF}
         onSaveToWorkspace={props.onSaveToWorkspace}
         onGenerateShareableLink={props.onGenerateShareableLink}
+        showScoutChat={props.showCompetitorScoutChat}
+        scoutChatPanel={competitorScoutChatPanel}
           />
         </div>
         {props.showCompetitorScoutChat && competitorScoutChatPanel && (

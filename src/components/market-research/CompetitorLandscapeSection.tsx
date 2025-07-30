@@ -131,26 +131,29 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   
   // Local editing state
   const [editExecutiveSummary, setEditExecutiveSummary] = useState('');
-  const [editingField, setEditingField] = useState<string | null>(null);
-  const [editingValue, setEditingValue] = useState<string>('');
-
-  // Handle field editing
-  const handleEditField = (fieldName: string, currentValue: string) => {
-    setEditingField(fieldName);
-    setEditingValue(currentValue);
+  const [editTopPlayerShare, setEditTopPlayerShare] = useState('');
+  const [editEmergingPlayers, setEditEmergingPlayers] = useState('');
+  const [editFundingNews, setEditFundingNews] = useState<string[]>([]);
+  
+  // Handle save changes with chat notification
+  const handleCompetitorSaveChanges = () => {
+    // Update the parent with changes
+    onExecutiveSummaryChange(editExecutiveSummary);
+    onTopPlayerShareChange(editTopPlayerShare);
+    onEmergingPlayersChange(editEmergingPlayers);
+    onFundingNewsChange(editFundingNews);
+    
+    // Trigger chat with save notification
+    onScoutIconClick('competitor-landscape', true, "Great work saving your competitor updates! 🎉 Now that your analysis is saved, I can help you take it further. What would you like to explore next?");
+    
+    // Call parent save handler
+    onCompetitorLandscapeSaveChanges();
   };
 
-  const handleSaveField = () => {
-    if (editingField === 'executiveSummary') {
-      setEditExecutiveSummary(editingValue);
-    }
-    setEditingField(null);
-    setEditingValue('');
-  };
-
-  const handleCancelEdit = () => {
-    setEditingField(null);
-    setEditingValue('');
+  // Handle delete section with chat notification
+  const handleDeleteSection = (sectionId: string) => {
+    onCompetitorLandscapeDeleteSection(sectionId);
+    onScoutIconClick('competitor-landscape', false, `I noticed you removed the ${sectionId.replace('-', ' ')} section. Would you like me to suggest alternative content or analyze why that section might not be relevant?`);
   };
 
   // Fetch Competitor Landscape data from API
@@ -235,6 +238,17 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
           // Initialize edit fields with data from uiComponents
           const reportComponent = reportData.uiComponents?.find(comp => comp.type === 'report');
           setEditExecutiveSummary(reportComponent?.executiveSummary || '');
+          
+          // Initialize other edit fields with default values or fetch from data
+          const sectionComponent = reportData.uiComponents?.find(comp => comp.type === 'section');
+          const metrics = sectionComponent?.metrics;
+          
+          if (metrics && metrics.length > 0) {
+            setEditTopPlayerShare(metrics[0]?.value || '');
+          }
+          
+          setEditEmergingPlayers('New emerging players in the market...');
+          setEditFundingNews(['Recent funding news 1', 'Recent funding news 2']);
         }
       }
     } catch (err) {
@@ -341,17 +355,6 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                   <FileText className="h-5 w-5 text-blue-600" />
                   Executive Summary
                 </h3>
-                {isCompetitorLandscapeEditing && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleEditField('executiveSummary', executiveSummary)}
-                    className="text-blue-600 border-blue-200 hover:bg-blue-50"
-                  >
-                    <Edit className="h-4 w-4 mr-1" />
-                    Edit
-                  </Button>
-                )}
               </div>
               <p className="text-gray-700 leading-relaxed">{executiveSummary}</p>
             </div>
@@ -406,38 +409,180 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
           </div>
         )}
 
-        {/* Expanded content */}
-        {(competitorLandscapeExpanded || isSplitView) && (
-          <div className="space-y-6">
-            
-            {/* Edit field modal */}
-            {editingField && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-medium text-blue-900">
-                    Editing {editingField.replace(/([A-Z])/g, ' $1').toLowerCase()}
-                  </h4>
-                  <div className="flex gap-2">
-                    <Button size="sm" onClick={handleSaveField} className="bg-blue-600 hover:bg-blue-700">
-                      <Save className="h-4 w-4 mr-1" />
-                      Save
+        {/* Editing Mode */}
+        {isCompetitorLandscapeEditing ? (
+          <div className="space-y-8">
+            {/* Executive Summary Edit */}
+            {!competitorLandscapeDeletedSections.has('executive-summary') && (
+              <div className="relative group">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="sm" onClick={() => handleDeleteSection('executive-summary')} className="absolute -top-2 -right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50">
+                      <X className="h-4 w-4" />
                     </Button>
-                    <Button size="sm" variant="outline" onClick={handleCancelEdit}>
-                      Cancel
-                    </Button>
-                  </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Delete this section</p>
+                  </TooltipContent>
+                </Tooltip>
+                <div>
+                  <Label htmlFor="competitorExecutiveSummary" className="text-sm font-medium text-gray-700 mb-2 block">
+                    Executive Summary
+                  </Label>
+                  <Textarea 
+                    id="competitorExecutiveSummary" 
+                    value={editExecutiveSummary} 
+                    onChange={(e) => setEditExecutiveSummary(e.target.value)} 
+                    className="w-full h-32 resize-none" 
+                    placeholder="Enter executive summary..." 
+                  />
                 </div>
-                <Textarea
-                  value={editingValue}
-                  onChange={(e) => setEditingValue(e.target.value)}
-                  className="w-full"
-                  rows={4}
-                  placeholder="Enter your content here..."
-                />
               </div>
             )}
 
-            {/* Executive Summary section is now moved above for collapsed view */}
+            {/* Top Player Share Edit */}
+            {!competitorLandscapeDeletedSections.has('top-player-share') && (
+              <div className="relative group">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="sm" onClick={() => handleDeleteSection('top-player-share')} className="absolute -top-2 -right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50">
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Delete this section</p>
+                  </TooltipContent>
+                </Tooltip>
+                <div>
+                  <Label htmlFor="topPlayerShare" className="text-sm font-medium text-gray-700 mb-2 block">
+                    Top Player Market Share
+                  </Label>
+                  <Input 
+                    id="topPlayerShare" 
+                    value={editTopPlayerShare} 
+                    onChange={(e) => setEditTopPlayerShare(e.target.value)} 
+                    placeholder="e.g., 35%" 
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Emerging Players Edit */}
+            {!competitorLandscapeDeletedSections.has('emerging-players') && (
+              <div className="relative group">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="sm" onClick={() => handleDeleteSection('emerging-players')} className="absolute -top-2 -right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50">
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Delete this section</p>
+                  </TooltipContent>
+                </Tooltip>
+                <div>
+                  <Label htmlFor="emergingPlayers" className="text-sm font-medium text-gray-700 mb-2 block">
+                    Emerging Players
+                  </Label>
+                  <Textarea 
+                    id="emergingPlayers" 
+                    value={editEmergingPlayers} 
+                    onChange={(e) => setEditEmergingPlayers(e.target.value)} 
+                    className="w-full h-24 resize-none" 
+                    placeholder="Enter emerging players information..." 
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Funding News Edit */}
+            {!competitorLandscapeDeletedSections.has('funding-news') && (
+              <div className="relative group">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="sm" onClick={() => handleDeleteSection('funding-news')} className="absolute -top-2 -right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50">
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Delete this section</p>
+                  </TooltipContent>
+                </Tooltip>
+                <div>
+                  <Label className="text-sm font-medium text-gray-700 mb-2 block">
+                    Funding News
+                  </Label>
+                  {editFundingNews.map((news, index) => (
+                    <Textarea 
+                      key={index} 
+                      value={news} 
+                      onChange={e => {
+                        const newFundingNews = [...editFundingNews];
+                        newFundingNews[index] = e.target.value;
+                        setEditFundingNews(newFundingNews);
+                      }} 
+                      className="w-full h-20 resize-none mb-3" 
+                      placeholder={`Funding news ${index + 1}...`} 
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Save/Cancel Buttons */}
+            <div className="flex items-center gap-3 pt-6 border-t">
+              <Button onClick={handleCompetitorSaveChanges}>Save Changes</Button>
+              <Button variant="outline" onClick={onCompetitorLandscapeCancelEdit}>Cancel</Button>
+              <div className="flex-1"></div>
+              
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="sm" onClick={onCompetitorLandscapeEditHistoryOpen} className={`text-gray-600 hover:text-gray-700 hover:bg-gray-50 transition-all duration-200 ${competitorLandscapeEditHistory.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={competitorLandscapeEditHistory.length === 0}>
+                    <Clock className="h-4 w-4" />
+                    Edit History
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>View changes made to this report</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="sm" onClick={() => onScoutIconClick('competitor-landscape')} className="text-blue-600 hover:text-blue-700 bg-blue-50 border border-blue-200 hover:shadow-md hover:shadow-blue-200/50 transition-all duration-200 relative">
+                    <div className="absolute inset-0 rounded-md bg-gradient-to-r from-blue-400/20 to-green-400/20 opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
+                    <Bot className="h-4 w-4 relative z-10" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Explore More with Scout</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+
+            {/* Export Options in Edit Mode */}
+            <div className="border-t pt-6">
+              <h4 className="text-sm font-medium text-gray-900 mb-3">Export Options</h4>
+              <div className="flex flex-wrap gap-3">
+                <Button variant="outline" size="sm" onClick={onExportPDF} className="flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  Save PDF
+                </Button>
+                <Button variant="outline" size="sm" onClick={onSaveToWorkspace} className="flex items-center gap-2">
+                  <Save className="h-4 w-4" />
+                  Save to Workspace
+                </Button>
+                <Button variant="outline" size="sm" onClick={onGenerateShareableLink} className="flex items-center gap-2">
+                  <Share className="h-4 w-4" />
+                  Shareable Link
+                </Button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* Expanded content - Read-only view */
+          (competitorLandscapeExpanded || isSplitView) && (
+            <div className="space-y-6">
 
             {/* Top Players */}
             {(() => {
@@ -673,7 +818,8 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                 </Button>
               </div>
             )}
-          </div>
+            </div>
+          )
         )}
       </div>
       {scoutChatPanel}
