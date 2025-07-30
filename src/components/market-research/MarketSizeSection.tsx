@@ -180,6 +180,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                   onChange={(e) => onExecutiveSummaryChange(e.target.value)} 
                   className="w-full h-32 resize-none" 
                   placeholder="Enter executive summary..." 
+                  disabled={!isEditing}
                 />
               </div>
             </div>
@@ -210,6 +211,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                       value={tamValue} 
                       onChange={(e) => onTamValueChange(e.target.value)} 
                       placeholder="e.g., $4.2B" 
+                      disabled={!isEditing}
                     />
                   </div>
                   <div>
@@ -221,6 +223,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                       value={samValue} 
                       onChange={(e) => onSamValueChange(e.target.value)} 
                       placeholder="e.g., $2.1B" 
+                      disabled={!isEditing}
                     />
                   </div>
                   <div>
@@ -232,6 +235,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                       value={apacGrowthRate} 
                       onChange={(e) => onApacGrowthRateChange(e.target.value)} 
                       placeholder="e.g., 25%" 
+                      disabled={!isEditing}
                     />
                   </div>
                 </div>
@@ -267,6 +271,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                     }} 
                     className="w-full h-20 resize-none mb-3" 
                     placeholder={`Strategic recommendation ${index + 1}...`} 
+                    disabled={!isEditing}
                   />
                 ))}
               </div>
@@ -296,6 +301,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                   onChange={e => onMarketEntryChange(e.target.value)} 
                   className="w-full h-32 resize-none" 
                   placeholder="Enter market entry strategy..." 
+                  disabled={!isEditing}
                 />
               </div>
             </div>
@@ -329,6 +335,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                     }} 
                     className="w-full h-16 resize-none mb-3" 
                     placeholder={`Market driver ${index + 1}...`} 
+                    disabled={!isEditing}
                   />
                 ))}
               </div>
