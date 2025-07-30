@@ -1295,6 +1295,10 @@ const MarketResearch = () => {
   };
 
   const handleMarketIntelligenceSaveChanges = () => {
+    console.log('💾 Saving Market Intelligence changes...');
+    console.log('📊 Current marketIntelligenceData:', marketIntelligenceData);
+    
+    // Update state immediately to reflect changes in UI
     setIsMarketIntelligenceEditing(false);
     setHasEdits(true);
     
@@ -1349,9 +1353,17 @@ const MarketResearch = () => {
     // Add the new edit record to the edit history
     setEditHistory(prevHistory => [...prevHistory, newEdit]);
     
+    // Force re-render of the component by updating state
+    setMarketIntelligenceData({...marketIntelligenceData});
+    
+    console.log('✅ Market Intelligence data saved successfully');
+    
     // Automatically open Market Size Scout chat panel with contextual message
-    setShowMarketSizeScoutChat(true);
-    setIsChatOpen(true);
+    setTimeout(() => {
+      setShowMarketSizeScoutChat(true);
+      setIsChatOpen(true);
+      console.log('🤖 Scout chat panel opened');
+    }, 100);
   };
 
   const handleMarketIntelligenceCancelEdit = () => {
