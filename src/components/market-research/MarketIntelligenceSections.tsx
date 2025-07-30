@@ -2,7 +2,7 @@
 import React from 'react';
 import MarketSizeSection from './MarketSizeSection';
 import IndustryTrendsSection from './IndustryTrendsSection';
-import CompetitorLandscapeSection from './CompetitorLandscapeSection';
+import CompetitorAnalysisSection from './CompetitorAnalysis';
 import RegulatoryComplianceSection from './RegulatoryComplianceSection';
 import MarketEntrySection from './MarketEntrySection';
 import ScoutChatPanel from './ScoutChatPanel';
@@ -144,25 +144,39 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
       {/* Industry Trends Section */}
       <div className={`${props.showIndustryTrendsScoutChat ? 'flex gap-6' : ''}`}>
         <div className={`${props.showIndustryTrendsScoutChat ? 'w-1/2' : ''}`}>
-          <IndustryTrendsSection
-            isIndustryTrendsEditing={props.isIndustryTrendsEditing}
-            isSplitView={props.showIndustryTrendsScoutChat}
-            industryTrendsExpanded={props.industryTrendsExpanded}
-            industryTrendsHasEdits={props.industryTrendsHasEdits}
-            industryTrendsDeletedSections={props.industryTrendsDeletedSections}
-            industryTrendsEditHistory={props.industryTrendsEditHistory}
-            onIndustryTrendsToggleEdit={props.onIndustryTrendsToggleEdit}
-            onIndustryTrendsSaveChanges={props.onIndustryTrendsSaveChanges}
-            onIndustryTrendsCancelEdit={props.onIndustryTrendsCancelEdit}
-            onIndustryTrendsDeleteSection={props.onIndustryTrendsDeleteSection}
-            onIndustryTrendsRestoreSection={props.onIndustryTrendsRestoreSection}
-            onIndustryTrendsEditHistoryOpen={props.onIndustryTrendsEditHistoryOpen}
-            onIndustryTrendsExpandToggle={props.onIndustryTrendsExpandToggle}
-            onScoutIconClick={props.onIndustryTrendsScoutIconClick}
-            onExportPDF={props.onExportPDF}
-            onSaveToWorkspace={props.onSaveToWorkspace}
-            onGenerateShareableLink={props.onGenerateShareableLink}
-          />
+        <IndustryTrendsSection
+          isIndustryTrendsEditing={props.isIndustryTrendsEditing}
+          isSplitView={props.showIndustryTrendsScoutChat}
+          industryTrendsExpanded={props.industryTrendsExpanded}
+          industryTrendsHasEdits={props.industryTrendsHasEdits}
+          industryTrendsDeletedSections={props.industryTrendsDeletedSections}
+          industryTrendsEditHistory={props.industryTrendsEditHistory}
+          industryTrendsExecutiveSummary={props.industryTrendsExecutiveSummary}
+          industryTrendsAiAdoption={props.industryTrendsAiAdoption}
+          industryTrendsCloudMigration={props.industryTrendsCloudMigration}
+          industryTrendsRegulatory={props.industryTrendsRegulatory}
+          industryTrendSnapshots={props.industryTrendSnapshots}
+          industryTrendsRecommendations={props.industryTrendsRecommendations}
+          industryTrendsRisks={props.industryTrendsRisks}
+          onIndustryTrendsToggleEdit={props.onIndustryTrendsToggleEdit}
+          onIndustryTrendsSaveChanges={props.onIndustryTrendsSaveChanges}
+          onIndustryTrendsCancelEdit={props.onIndustryTrendsCancelEdit}
+          onIndustryTrendsDeleteSection={props.onIndustryTrendsDeleteSection}
+          onIndustryTrendsRestoreSection={props.onIndustryTrendsRestoreSection}
+          onIndustryTrendsEditHistoryOpen={props.onIndustryTrendsEditHistoryOpen}
+          onIndustryTrendsExpandToggle={props.onIndustryTrendsExpandToggle}
+          onIndustryTrendsExecutiveSummaryChange={props.onIndustryTrendsExecutiveSummaryChange}
+          onIndustryTrendsAiAdoptionChange={props.onIndustryTrendsAiAdoptionChange}
+          onIndustryTrendsCloudMigrationChange={props.onIndustryTrendsCloudMigrationChange}
+          onIndustryTrendsRegulatoryChange={props.onIndustryTrendsRegulatoryChange}
+          onIndustryTrendSnapshotsChange={props.onIndustryTrendSnapshotsChange}
+          onScoutIconClick={props.onIndustryTrendsScoutIconClick}
+          onExportPDF={props.onExportPDF}
+          onSaveToWorkspace={props.onSaveToWorkspace}
+          onGenerateShareableLink={props.onGenerateShareableLink}
+          showScoutChat={props.showIndustryTrendsScoutChat}
+          scoutChatPanel={props.showIndustryTrendsScoutChat && industryTrendsScoutChatPanel}
+        />
         </div>
         {props.showIndustryTrendsScoutChat && industryTrendsScoutChatPanel && (
           <div className="w-1/2">
@@ -173,35 +187,35 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
 
       {/* Competitor Landscape Section */}
       <div>
-        <CompetitorLandscapeSection
-        isEditing={props.isCompetitorEditing || false}
-        isSplitView={props.showCompetitorScoutChat}
-        isExpanded={props.competitorExpanded || false}
-        hasEdits={props.competitorHasEdits || false}
-        deletedSections={props.competitorDeletedSections || new Set()}
-        editHistory={props.competitorEditHistory || []}
-        executiveSummary={props.competitorExecutiveSummary || ''}
-        topPlayerShare={props.competitorTopPlayerShare || ''}
-        emergingPlayers={props.competitorEmergingPlayers || ''}
-        fundingNews={props.competitorFundingNews || []}
-        onToggleEdit={props.onCompetitorToggleEdit || (() => {})}
-        onScoutIconClick={props.onCompetitorScoutIconClick}
-        onEditHistoryOpen={props.onCompetitorEditHistoryOpen || (() => {})}
-        onDeleteSection={props.onCompetitorDeleteSection || (() => {})}
-        onRestoreSection={props.onCompetitorRestoreSection || (() => {})}
-        onSaveChanges={props.onCompetitorSaveChanges || (() => {})}
-        onCancelEdit={props.onCompetitorCancelEdit || (() => {})}
-        onExpandToggle={props.onCompetitorExpandToggle || (() => {})}
-        onExecutiveSummaryChange={props.onCompetitorExecutiveSummaryChange || (() => {})}
-        onTopPlayerShareChange={props.onCompetitorTopPlayerShareChange || (() => {})}
-        onEmergingPlayersChange={props.onCompetitorEmergingPlayersChange || (() => {})}
-        onFundingNewsChange={props.onCompetitorFundingNewsChange || (() => {})}
-        onExportPDF={props.onExportPDF}
-        onSaveToWorkspace={props.onSaveToWorkspace}
-        onGenerateShareableLink={props.onGenerateShareableLink}
-        showScoutChat={props.showCompetitorScoutChat}
-        scoutChatPanel={competitorScoutChatPanel}
-          />
+        <CompetitorAnalysisSection
+          isCompetitorEditing={props.isCompetitorEditing || false}
+          isSplitView={props.showCompetitorScoutChat}
+          competitorExpanded={props.competitorExpanded || false}
+          competitorHasEdits={props.competitorHasEdits || false}
+          competitorDeletedSections={props.competitorDeletedSections || new Set()}
+          competitorEditHistory={props.competitorEditHistory || []}
+          competitorExecutiveSummary={props.competitorExecutiveSummary || ''}
+          competitorTopPlayerShare={props.competitorTopPlayerShare || ''}
+          competitorEmergingPlayers={props.competitorEmergingPlayers || ''}
+          competitorFundingNews={props.competitorFundingNews || []}
+          onCompetitorToggleEdit={props.onCompetitorToggleEdit || (() => {})}
+          onCompetitorSaveChanges={props.onCompetitorSaveChanges || (() => {})}
+          onCompetitorCancelEdit={props.onCompetitorCancelEdit || (() => {})}
+          onCompetitorDeleteSection={props.onCompetitorDeleteSection || (() => {})}
+          onCompetitorRestoreSection={props.onCompetitorRestoreSection}
+          onCompetitorEditHistoryOpen={props.onCompetitorEditHistoryOpen || (() => {})}
+          onCompetitorExpandToggle={props.onCompetitorExpandToggle || (() => {})}
+          onCompetitorExecutiveSummaryChange={props.onCompetitorExecutiveSummaryChange || (() => {})}
+          onCompetitorTopPlayerShareChange={props.onCompetitorTopPlayerShareChange || (() => {})}
+          onCompetitorEmergingPlayersChange={props.onCompetitorEmergingPlayersChange || (() => {})}
+          onCompetitorFundingNewsChange={props.onCompetitorFundingNewsChange || (() => {})}
+          onScoutIconClick={props.onCompetitorScoutIconClick || (() => {})}
+          onExportPDF={props.onExportPDF}
+          onSaveToWorkspace={props.onSaveToWorkspace}
+          onGenerateShareableLink={props.onGenerateShareableLink}
+          showScoutChat={props.showCompetitorScoutChat}
+          scoutChatPanel={props.showCompetitorScoutChat && competitorScoutChatPanel}
+        />
       </div>
 
       {/* Regulatory & Compliance Highlights Section */}
