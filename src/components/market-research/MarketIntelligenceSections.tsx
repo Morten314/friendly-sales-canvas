@@ -38,6 +38,8 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
       lastEditedField={props.industryTrendsLastEditedField || ''}
       context="industry-trends"
       customMessage={props.industryTrendsCustomMessage}
+      originalData={props.industryTrendsOriginalData}
+      modifiedData={props.industryTrendsModifiedData}
       onClose={props.onIndustryTrendsScoutClose || (() => {})}
     />
   ) : undefined;
@@ -52,6 +54,8 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
       lastEditedField=""
       context="competitor-landscape"
       customMessage={props.competitorCustomMessage}
+      originalData={props.competitorOriginalData}
+      modifiedData={props.competitorModifiedData}
       onClose={props.onCompetitorScoutClose || (() => {})}
     />
   ) : undefined;
@@ -67,6 +71,8 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
       context="regulatory-compliance"
       isPostSave={props.regulatoryIsPostSave}
       customMessage={props.regulatoryCustomMessage}
+      originalData={props.regulatoryOriginalData}
+      modifiedData={props.regulatoryModifiedData}
       onClose={props.onRegulatoryScoutClose || (() => {})}
     />
   ) : undefined;
@@ -82,6 +88,8 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
       context="market-entry"
       isPostSave={props.marketEntryIsPostSave}
       customMessage={props.marketEntryCustomMessage}
+      originalData={props.marketEntryOriginalData}
+      modifiedData={props.marketEntryModifiedData}
       onClose={props.onMarketEntryScoutClose || (() => {})}
     />
   ) : undefined;

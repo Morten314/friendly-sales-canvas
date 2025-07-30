@@ -261,6 +261,22 @@ const MarketResearch = () => {
   // State for storing JSON data for the /ask API
   const [marketSizeOriginalData, setMarketSizeOriginalData] = useState<any>(null);
   const [marketSizeModifiedData, setMarketSizeModifiedData] = useState<any>(null);
+  
+  // Industry Trends JSON data for /ask API
+  const [industryTrendsOriginalData, setIndustryTrendsOriginalData] = useState<any>(null);
+  const [industryTrendsModifiedData, setIndustryTrendsModifiedData] = useState<any>(null);
+  
+  // Competitor Analysis JSON data for /ask API
+  const [competitorOriginalData, setCompetitorOriginalData] = useState<any>(null);
+  const [competitorModifiedData, setCompetitorModifiedData] = useState<any>(null);
+  
+  // Regulatory Compliance JSON data for /ask API
+  const [regulatoryOriginalData, setRegulatoryOriginalData] = useState<any>(null);
+  const [regulatoryModifiedData, setRegulatoryModifiedData] = useState<any>(null);
+  
+  // Market Entry JSON data for /ask API
+  const [marketEntryOriginalData, setMarketEntryOriginalData] = useState<any>(null);
+  const [marketEntryModifiedData, setMarketEntryModifiedData] = useState<any>(null);
 
   // Helper function to save market intelligence data to localStorage
   const saveMarketIntelligenceToLocalStorage = (data: any) => {
@@ -331,7 +347,8 @@ const MarketResearch = () => {
     euAiActDeadline: 'February 2, 2025',
     gdprCompliance: '68%',
     potentialFines: 'Up to 6% of annual revenue',
-    dataLocalization: 'Mandatory for customer data'
+    dataLocalization: 'Mandatory for customer data',
+    timestamp: null as string | null
   });
 
   // Competitor Landscape state - Add these new state variables
@@ -348,7 +365,8 @@ const MarketResearch = () => {
       "Notion raises $300M Series C - Valuation reaches $10B as workspace tools gain traction",
       "Microsoft Teams launches AI Copilot - New AI features for meeting summaries and task automation",
       "Slack introduces Workflow Builder 2.0 - Enhanced automation capabilities for enterprise customers"
-    ]
+    ],
+    timestamp: null as string | null
   });
 
   // Market Size Scout Chat states (separate from Industry Trends)
@@ -1399,8 +1417,50 @@ const MarketResearch = () => {
   };
 
   const handleIndustryTrendsSaveChanges = () => {
+    console.log('💾 Saving Industry Trends changes...');
+    console.log('📊 Current industryTrendsData:', industryTrendsData);
+    
+    // Exit editing mode
     setIsIndustryTrendsEditing(false);
     
+    // Update timestamp - data is already updated via onChange handlers
+    const updatedData = {
+      ...industryTrendsData,
+      timestamp: new Date().toISOString()
+    };
+    setIndustryTrendsData(updatedData);
+    
+    // Prepare original and modified JSON data for console logging and /ask API
+    const originalJson = {
+      executiveSummary: industryTrendsData.executiveSummary,
+      aiAdoption: industryTrendsData.aiAdoption,
+      cloudMigration: industryTrendsData.cloudMigration,
+      regulatory: industryTrendsData.regulatory,
+      trendSnapshots: industryTrendsData.trendSnapshots,
+      recommendations: industryTrendsData.recommendations,
+      risks: industryTrendsData.risks,
+      timestamp: industryTrendsData.timestamp
+    };
+
+    const modifiedJson = {
+      executiveSummary: updatedData.executiveSummary,
+      aiAdoption: updatedData.aiAdoption,
+      cloudMigration: updatedData.cloudMigration,
+      regulatory: updatedData.regulatory,
+      trendSnapshots: updatedData.trendSnapshots,
+      recommendations: updatedData.recommendations,
+      risks: updatedData.risks,
+      timestamp: updatedData.timestamp
+    };
+
+    // Log the JSON data to console
+    console.log('📄 ORIGINAL JSON:', JSON.stringify(originalJson, null, 2));
+    console.log('📄 MODIFIED JSON:', JSON.stringify(modifiedJson, null, 2));
+
+    // Store the JSON data for the chat interface
+    setIndustryTrendsOriginalData(originalJson);
+    setIndustryTrendsModifiedData(modifiedJson);
+
     // Force contextual message state for Industry Trends Scout
     setIndustryTrendsHasEdits(true);
     setIndustryTrendsLastEditedField('Industry Trends');
@@ -1410,18 +1470,24 @@ const MarketResearch = () => {
       id: Date.now().toString(),
       timestamp: new Date().toISOString(),
       user: 'John Doe',
-      summary: 'Updated industry trends analysis',
+      summary: 'Updated industry trends data with JSON data captured',
       field: 'Industry Trends',
-      oldValue: 'Previous values',
-      newValue: 'Updated values',
+      oldValue: JSON.stringify(originalJson),
+      newValue: JSON.stringify(modifiedJson)
     };
 
     // Add the new edit record to the industry trends edit history
     setIndustryTrendsEditHistory(prevHistory => [...prevHistory, newEdit]);
     
+    console.log('✅ Industry Trends data saved successfully');
+    console.log('🔄 Updated frontend state:', updatedData);
+    
     // Automatically open Industry Trends Scout chat panel with contextual message
-    setShowIndustryTrendsScoutChat(true);
-    setIsChatOpen(true);
+    setTimeout(() => {
+      setShowIndustryTrendsScoutChat(true);
+      setIsChatOpen(true);
+      console.log('🤖 Industry Trends Scout chat panel opened');
+    }, 100);
   };
 
   const handleIndustryTrendsCancelEdit = () => {
@@ -1521,27 +1587,70 @@ const MarketResearch = () => {
   };
 
   const handleCompetitorSaveChanges = () => {
+    console.log('💾 Saving Competitor Analysis changes...');
+    console.log('📊 Current competitorData:', competitorData);
+    
+    // Exit editing mode
     setIsCompetitorEditing(false);
     
+    // Update timestamp - data is already updated via onChange handlers
+    const updatedData = {
+      ...competitorData,
+      timestamp: new Date().toISOString()
+    };
+    setCompetitorData(updatedData);
+    
+    // Prepare original and modified JSON data for console logging and /ask API
+    const originalJson = {
+      executiveSummary: competitorData.executiveSummary,
+      topPlayerShare: competitorData.topPlayerShare,
+      emergingPlayers: competitorData.emergingPlayers,
+      fundingNews: competitorData.fundingNews,
+      timestamp: competitorData.timestamp
+    };
+
+    const modifiedJson = {
+      executiveSummary: updatedData.executiveSummary,
+      topPlayerShare: updatedData.topPlayerShare,
+      emergingPlayers: updatedData.emergingPlayers,
+      fundingNews: updatedData.fundingNews,
+      timestamp: updatedData.timestamp
+    };
+
+    // Log the JSON data to console
+    console.log('📄 ORIGINAL JSON:', JSON.stringify(originalJson, null, 2));
+    console.log('📄 MODIFIED JSON:', JSON.stringify(modifiedJson, null, 2));
+
+    // Store the JSON data for the chat interface
+    setCompetitorOriginalData(originalJson);
+    setCompetitorModifiedData(modifiedJson);
+
     // Force contextual message state for Competitor Landscape Scout
     setCompetitorHasEdits(true);
 
     // Create a new edit record
     const newEdit: EditRecord = {
       id: Date.now().toString(),
-      timestamp: new Date().toLocaleString(),
-      user: 'Current User',
-      summary: 'Updated competitor landscape content',
+      timestamp: new Date().toISOString(),
+      user: 'John Doe',
+      summary: 'Updated competitor landscape data with JSON data captured',
       field: 'Competitor Landscape',
-      oldValue: 'Previous content',
-      newValue: 'Updated content'
+      oldValue: JSON.stringify(originalJson),
+      newValue: JSON.stringify(modifiedJson)
     };
     
     setCompetitorEditHistory(prev => [newEdit, ...prev]);
     setHasEdits(true);
     
+    console.log('✅ Competitor Analysis data saved successfully');
+    console.log('🔄 Updated frontend state:', updatedData);
+    
     // Automatically open Competitor Landscape Scout chat panel with contextual message
-    handleCompetitorScoutClick('competitor-landscape', true);
+    setTimeout(() => {
+      setShowCompetitorScoutChat(true);
+      setIsChatOpen(true);
+      console.log('🤖 Competitor Scout chat panel opened');
+    }, 100);
   };
 
   const handleCompetitorCancelEdit = () => {
@@ -1751,8 +1860,49 @@ const MarketResearch = () => {
   };
 
   const handleRegulatorySaveChanges = () => {
+    console.log('💾 Saving Regulatory Compliance changes...');
+    console.log('📊 Current regulatoryData:', regulatoryData);
+    
+    // Exit editing mode
     setIsRegulatoryEditing(false);
     setRegulatoryHasEdits(false);
+    
+    // Update timestamp - data is already updated via onChange handlers
+    const updatedData = {
+      ...regulatoryData,
+      timestamp: new Date().toISOString()
+    };
+    setRegulatoryData(updatedData);
+    
+    // Prepare original and modified JSON data for console logging and /ask API
+    const originalJson = {
+      executiveSummary: regulatoryData.executiveSummary,
+      euAiActDeadline: regulatoryData.euAiActDeadline,
+      gdprCompliance: regulatoryData.gdprCompliance,
+      potentialFines: regulatoryData.potentialFines,
+      dataLocalization: regulatoryData.dataLocalization,
+      timestamp: regulatoryData.timestamp
+    };
+
+    const modifiedJson = {
+      executiveSummary: updatedData.executiveSummary,
+      euAiActDeadline: updatedData.euAiActDeadline,
+      gdprCompliance: updatedData.gdprCompliance,
+      potentialFines: updatedData.potentialFines,
+      dataLocalization: updatedData.dataLocalization,
+      timestamp: updatedData.timestamp
+    };
+
+    // Log the JSON data to console
+    console.log('📄 ORIGINAL JSON:', JSON.stringify(originalJson, null, 2));
+    console.log('📄 MODIFIED JSON:', JSON.stringify(modifiedJson, null, 2));
+
+    // Store the JSON data for the chat interface
+    setRegulatoryOriginalData(originalJson);
+    setRegulatoryModifiedData(modifiedJson);
+    
+    console.log('✅ Regulatory Compliance data saved successfully');
+    console.log('🔄 Updated frontend state:', updatedData);
     
     // Close all other scout chats and open regulatory scout with specific contextual messages
     setShowMarketSizeScoutChat(false);
@@ -1764,6 +1914,7 @@ const MarketResearch = () => {
     setTimeout(() => {
       setIsRegulatoryPostSave(true);
       setShowRegulatoryScoutChat(true);
+      console.log('🤖 Regulatory Scout chat panel opened');
     }, 100);
   };
 
@@ -1921,11 +2072,63 @@ const MarketResearch = () => {
   const handleMarketEntryToggleEdit = () => setIsMarketEntryEditing(!isMarketEntryEditing);
   const handleMarketEntryExpandToggle = (expanded: boolean) => setMarketEntryExpanded(expanded);
   const handleMarketEntrySaveChanges = () => {
+    console.log('💾 Saving Market Entry changes...');
+    console.log('📊 Current marketEntryData:', marketEntryData);
+    
+    // Exit editing mode
     setIsMarketEntryEditing(false);
     setMarketEntryHasEdits(false);
+    
+    // Update timestamp - data is already updated via onChange handlers
+    const updatedData = {
+      ...marketEntryData,
+      timestamp: new Date().toISOString()
+    };
+    setMarketEntryData(updatedData);
+    
+    // Prepare original and modified JSON data for console logging and /ask API
+    const originalJson = {
+      executiveSummary: marketEntryData.executiveSummary,
+      entryBarriers: marketEntryData.entryBarriers,
+      recommendedChannel: marketEntryData.recommendedChannel,
+      timeToMarket: marketEntryData.timeToMarket,
+      topBarrier: marketEntryData.topBarrier,
+      competitiveDifferentiation: marketEntryData.competitiveDifferentiation,
+      strategicRecommendations: marketEntryData.strategicRecommendations,
+      riskAssessment: marketEntryData.riskAssessment,
+      timestamp: marketEntryData.timestamp
+    };
+
+    const modifiedJson = {
+      executiveSummary: updatedData.executiveSummary,
+      entryBarriers: updatedData.entryBarriers,
+      recommendedChannel: updatedData.recommendedChannel,
+      timeToMarket: updatedData.timeToMarket,
+      topBarrier: updatedData.topBarrier,
+      competitiveDifferentiation: updatedData.competitiveDifferentiation,
+      strategicRecommendations: updatedData.strategicRecommendations,
+      riskAssessment: updatedData.riskAssessment,
+      timestamp: updatedData.timestamp
+    };
+
+    // Log the JSON data to console
+    console.log('📄 ORIGINAL JSON:', JSON.stringify(originalJson, null, 2));
+    console.log('📄 MODIFIED JSON:', JSON.stringify(modifiedJson, null, 2));
+
+    // Store the JSON data for the chat interface
+    setMarketEntryOriginalData(originalJson);
+    setMarketEntryModifiedData(modifiedJson);
+    
+    console.log('✅ Market Entry data saved successfully');
+    console.log('🔄 Updated frontend state:', updatedData);
+    
     // Set post-save state and trigger Scout chat
     setIsMarketEntryPostSave(true);
-    handleMarketEntryScoutClick('market-entry', true);
+    setTimeout(() => {
+      setShowMarketEntryScoutChat(true);
+      setIsChatOpen(true);
+      console.log('🤖 Market Entry Scout chat panel opened');
+    }, 100);
   };
   const handleMarketEntryCancelEdit = () => setIsMarketEntryEditing(false);
   const handleMarketEntryDeleteSection = (sectionId: string) => {
@@ -2548,8 +2751,17 @@ const MarketResearch = () => {
                        // Market Entry loading states and handlers
                        isMarketEntryLoading={isMarketSizeLoading}
                        marketEntryError={marketSizeError}
-                       onMarketEntryRefresh={() => fetchMarketEntryData(true)}
-                       onToggleEdit={handleMarketIntelligenceToggleEdit}
+                        onMarketEntryRefresh={() => fetchMarketEntryData(true)}
+                        // JSON data for /ask API integration
+                        industryTrendsOriginalData={industryTrendsOriginalData}
+                        industryTrendsModifiedData={industryTrendsModifiedData}
+                        competitorOriginalData={competitorOriginalData}
+                        competitorModifiedData={competitorModifiedData}
+                        regulatoryOriginalData={regulatoryOriginalData}
+                        regulatoryModifiedData={regulatoryModifiedData}
+                        marketEntryOriginalData={marketEntryOriginalData}
+                        marketEntryModifiedData={marketEntryModifiedData}
+                        onToggleEdit={handleMarketIntelligenceToggleEdit}
                       onMarketSizeScoutIconClick={handleMarketSizeScoutClick}
                       onIndustryTrendsScoutIconClick={handleIndustryTrendsScoutClick}
                       onCompetitorScoutIconClick={handleCompetitorScoutClick}

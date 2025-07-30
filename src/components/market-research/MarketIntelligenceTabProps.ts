@@ -176,6 +176,16 @@ export interface MarketIntelligenceTabProps {
   marketEntryCustomMessage?: string;
   marketEntryIsPostSave?: boolean;
   
+  // Original and modified data for /ask API integration
+  industryTrendsOriginalData?: any;
+  industryTrendsModifiedData?: any;
+  competitorOriginalData?: any;
+  competitorModifiedData?: any;
+  regulatoryOriginalData?: any;
+  regulatoryModifiedData?: any;
+  marketEntryOriginalData?: any;
+  marketEntryModifiedData?: any;
+  
   // Scout panel close handlers
   onMarketSizeScoutClose?: () => void;
   onIndustryTrendsScoutClose?: () => void;
