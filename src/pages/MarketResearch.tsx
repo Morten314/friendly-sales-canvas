@@ -2476,16 +2476,13 @@ const MarketResearch = () => {
                       hasEdits={hasEdits}
                       deletedSections={deletedSections}
                       editHistory={editHistory}
-                       executiveSummary={marketData?.executiveSummary || marketIntelligenceData.executiveSummary}
-                       tamValue={marketData?.tamValue || marketIntelligenceData.tamValue}
-                       samValue={marketData?.samValue || marketIntelligenceData.samValue}
-                       apacGrowthRate={marketData?.apacGrowthRate || marketIntelligenceData.apacGrowthRate}
-                       strategicRecommendations={(() => {
-                         console.log('🔍 MarketResearch - passing strategicRecommendations:', marketData?.strategicRecommendations || marketIntelligenceData.strategicRecommendations);
-                         return marketData?.strategicRecommendations || marketIntelligenceData.strategicRecommendations;
-                       })()}
-                       marketEntry={marketData?.marketEntry || marketIntelligenceData.marketEntry}
-                       marketDrivers={marketData?.marketDrivers || marketIntelligenceData.marketDrivers}
+                       executiveSummary={marketIntelligenceData.executiveSummary}
+                       tamValue={marketIntelligenceData.tamValue}
+                       samValue={marketIntelligenceData.samValue}
+                       apacGrowthRate={marketIntelligenceData.apacGrowthRate}
+                       strategicRecommendations={marketIntelligenceData.strategicRecommendations}
+                       marketEntry={marketIntelligenceData.marketEntry}
+                       marketDrivers={marketIntelligenceData.marketDrivers}
                         marketSizeBySegment={(() => {
                          console.log('🔍 MarketResearch - passing marketSizeBySegment:', marketData?.marketSizeBySegment || marketIntelligenceData.marketSizeBySegment);
                          return marketData?.marketSizeBySegment || marketIntelligenceData.marketSizeBySegment;
