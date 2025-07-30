@@ -135,7 +135,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   const [editEmergingPlayers, setEditEmergingPlayers] = useState('');
   const [editFundingNews, setEditFundingNews] = useState<string[]>([]);
   
-  // Handle save changes with chat notification
+  // Handle save changes - following pattern from other components
   const handleCompetitorSaveChanges = () => {
     // Update the parent with changes
     onExecutiveSummaryChange(editExecutiveSummary);
@@ -143,11 +143,8 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
     onEmergingPlayersChange(editEmergingPlayers);
     onFundingNewsChange(editFundingNews);
     
-    // Call parent save handler first
+    // Call parent save handler only - parent handles chat notifications
     onCompetitorLandscapeSaveChanges();
-    
-    // Then trigger chat with save notification
-    onScoutIconClick('competitor-landscape', true, "Great work saving your competitor updates! 🎉 Now that your analysis is saved, I can help you take it further. What would you like to explore next?");
   };
 
   // Handle delete section with chat notification
@@ -761,7 +758,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
               <div className="flex items-center justify-between pt-6 border-t border-gray-200">
                 <div className="flex gap-2">
                   <Button 
-                    onClick={onCompetitorLandscapeSaveChanges}
+                    onClick={handleCompetitorSaveChanges}
                     className="bg-blue-600 hover:bg-blue-700"
                   >
                     <Save className="h-4 w-4 mr-2" />
