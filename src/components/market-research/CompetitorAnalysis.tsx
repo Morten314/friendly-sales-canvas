@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { BarChart3, Bot } from "lucide-react";
+import { useState } from "react";
 import { CompetitorAnalysisDrawer } from "./CompetitorAnalysisDrawer";
 
 interface Market {
@@ -26,20 +26,12 @@ interface Market {
 interface CompetitorAnalysisProps {
   competitorData: Market[];
   isAIViewActive?: boolean;
-  propsCompetitorData?: Market[];
 }
 
-export const CompetitorAnalysis = ({ competitorData, isAIViewActive = false, propsCompetitorData }: CompetitorAnalysisProps) => {
+export const CompetitorAnalysis = ({ competitorData, isAIViewActive = false }: CompetitorAnalysisProps) => {
   const [selectedCompetitor, setSelectedCompetitor] = useState<Market | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [localCompetitorData, setLocalCompetitorData] = useState<Market[]>(propsCompetitorData || competitorData);
-  
-  // Update local state when props change
-  useEffect(() => {
-    if (propsCompetitorData) {
-      setLocalCompetitorData(propsCompetitorData);
-    }
-  }, [propsCompetitorData]);
+  const [localCompetitorData, setLocalCompetitorData] = useState<Market[]>(competitorData);
 
   const handleRowClick = (competitor: Market) => {
     console.log('CompetitorAnalysis: Row clicked', competitor, 'AI View Active:', isAIViewActive);

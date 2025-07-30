@@ -62,7 +62,6 @@ interface IndustryTrendsSectionProps {
   industryTrendsHasEdits: boolean;
   industryTrendsDeletedSections: Set<string>;
   industryTrendsEditHistory: EditRecord[];
-  industryTrendsData?: IndustryTrendsData;
   onIndustryTrendsToggleEdit: () => void;
   onIndustryTrendsSaveChanges: () => void;
   onIndustryTrendsCancelEdit: () => void;
@@ -83,7 +82,6 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
   industryTrendsHasEdits,
   industryTrendsDeletedSections,
   industryTrendsEditHistory,
-  industryTrendsData: propsIndustryTrendsData,
   onIndustryTrendsToggleEdit,
   onIndustryTrendsSaveChanges,
   onIndustryTrendsCancelEdit,
@@ -96,17 +94,17 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
   onSaveToWorkspace,
   onGenerateShareableLink
 }) => {
-  // Use props data when available, fallback to local state for loading
-  const industryTrendsData = propsIndustryTrendsData || null;
+  // State for API data
+  const [industryTrendsData, setIndustryTrendsData] = useState<IndustryTrendsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  // Local editing state - initialize with data
-  const [editExecutiveSummary, setEditExecutiveSummary] = useState(industryTrendsData?.executiveSummary || '');
-  const [editAiAdoption, setEditAiAdoption] = useState(industryTrendsData?.aiAdoption || '');
-  const [editCloudMigration, setEditCloudMigration] = useState(industryTrendsData?.cloudMigration || '');
-  const [editRegulatory, setEditRegulatory] = useState(industryTrendsData?.regulatory || '');
-  const [editTrendSnapshots, setEditTrendSnapshots] = useState<TrendSnapshot[]>(industryTrendsData?.trendSnapshots || []);
+  // Local editing state
+  const [editExecutiveSummary, setEditExecutiveSummary] = useState('');
+  const [editAiAdoption, setEditAiAdoption] = useState('');
+  const [editCloudMigration, setEditCloudMigration] = useState('');
+  const [editRegulatory, setEditRegulatory] = useState('');
+  const [editTrendSnapshots, setEditTrendSnapshots] = useState<TrendSnapshot[]>([]);
 
   // Fetch Industry Trends data from API
   const fetchIndustryTrendsData = async (refresh = true) => {
@@ -240,8 +238,8 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
             timestamp: newTimestampUTC
           };
 
-          // Note: When using props data, we don't set local state
-          // The parent component manages the data
+          
+          setIndustryTrendsData(dataWithFallbacks);
           
           // Initialize edit fields with fetched data
           setEditExecutiveSummary(reportData.executiveSummary || '');
@@ -259,17 +257,20 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
     }
   };
 
-  // Initialize editing state when data changes
+  // Clear previous data and fetch fresh data on component mount
   useEffect(() => {
-    if (industryTrendsData) {
-      setEditExecutiveSummary(industryTrendsData.executiveSummary || '');
-      setEditAiAdoption(industryTrendsData.aiAdoption || '');
-      setEditCloudMigration(industryTrendsData.cloudMigration || '');
-      setEditRegulatory(industryTrendsData.regulatory || '');
-      setEditTrendSnapshots(industryTrendsData.trendSnapshots || []);
-      setIsLoading(false);
-    }
-  }, [industryTrendsData]);
+    // Clear any existing data immediately to prevent showing stale data
+    setIndustryTrendsData(null);
+    setIsLoading(true);
+    setError(null);
+    
+    // Reduced delay to improve user experience - 500ms is sufficient to avoid conflicts
+    const timer = setTimeout(() => {
+      fetchIndustryTrendsData(true);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   // Handle save changes
   const handleSaveChanges = async () => {
