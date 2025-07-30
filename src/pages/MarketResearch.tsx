@@ -2115,7 +2115,24 @@ const MarketResearch = () => {
   };
 
   // Market Entry handlers
-  const handleMarketEntryToggleEdit = () => setIsMarketEntryEditing(!isMarketEntryEditing);
+  const handleMarketEntryToggleEdit = () => {
+    if (!isMarketEntryEditing) {
+      // Capture original data when starting to edit
+      console.log('🎯 Starting Market Entry edit - capturing original data:', marketEntryData);
+      setMarketEntryOriginalData({
+        executiveSummary: marketEntryData.executiveSummary,
+        entryBarriers: marketEntryData.entryBarriers,
+        recommendedChannel: marketEntryData.recommendedChannel,
+        timeToMarket: marketEntryData.timeToMarket,
+        topBarrier: marketEntryData.topBarrier,
+        competitiveDifferentiation: marketEntryData.competitiveDifferentiation,
+        strategicRecommendations: marketEntryData.strategicRecommendations,
+        riskAssessment: marketEntryData.riskAssessment,
+        timestamp: marketEntryData.timestamp
+      });
+    }
+    setIsMarketEntryEditing(!isMarketEntryEditing);
+  };
   const handleMarketEntryExpandToggle = (expanded: boolean) => setMarketEntryExpanded(expanded);
   const handleMarketEntrySaveChanges = () => {
     console.log('💾 Saving Market Entry changes...');
@@ -2133,7 +2150,7 @@ const MarketResearch = () => {
     setMarketEntryData(updatedData);
     
     // Prepare original and modified JSON data for console logging and /ask API
-    const originalJson = {
+    const originalJson = marketEntryOriginalData || {
       executiveSummary: marketEntryData.executiveSummary,
       entryBarriers: marketEntryData.entryBarriers,
       recommendedChannel: marketEntryData.recommendedChannel,
