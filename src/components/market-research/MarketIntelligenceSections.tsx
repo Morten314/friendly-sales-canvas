@@ -160,9 +160,8 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
       </div>
 
       {/* Competitor Landscape Section */}
-      <div className={`${props.showCompetitorScoutChat ? 'flex gap-6' : ''}`}>
-        <div className={`${props.showCompetitorScoutChat ? 'w-1/2' : ''}`}>
-          <CompetitorLandscapeSection
+      <div>
+        <CompetitorLandscapeSection
         isEditing={props.isCompetitorEditing || false}
         isSplitView={props.showCompetitorScoutChat}
         isExpanded={props.competitorExpanded || false}
@@ -190,12 +189,6 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
         showScoutChat={props.showCompetitorScoutChat}
         scoutChatPanel={competitorScoutChatPanel}
           />
-        </div>
-        {props.showCompetitorScoutChat && competitorScoutChatPanel && (
-          <div className="w-1/2">
-            {competitorScoutChatPanel}
-          </div>
-        )}
       </div>
 
       {/* Regulatory & Compliance Highlights Section */}

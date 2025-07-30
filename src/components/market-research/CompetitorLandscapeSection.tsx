@@ -322,8 +322,8 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
 
 
   return (
-    <div className={`${showScoutChat ? 'flex gap-6' : ''}`}>
-      <div className={`bg-white rounded-lg border border-gray-200 p-6 ${showScoutChat ? 'flex-1' : ''}`}>
+    <div className={`${isSplitView ? 'flex gap-6' : ''}`}>
+      <div className={`bg-white rounded-lg border border-gray-200 p-6 ${isSplitView ? 'flex-1' : ''}`}>
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
             <BarChart3 className="h-5 w-5 text-blue-600" />
@@ -333,6 +333,19 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
             <Button variant="ghost" size="sm" onClick={onCompetitorLandscapeToggleEdit} className="text-blue-800 hover:text-blue-900">
               <Edit className="h-4 w-4" />
             </Button>
+            {!isSplitView && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="sm" onClick={() => onScoutIconClick('competitor-landscape')} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-all duration-200 hover:shadow-md hover:shadow-blue-200/50 relative">
+                    <div className="absolute inset-0 rounded-md bg-gradient-to-r from-blue-400/20 to-green-400/20 animate-pulse opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
+                    <Bot className="h-5 w-5 relative z-10" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Explore More with Scout</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
           </div>
         </div>
 
@@ -748,7 +761,11 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
             </div>
         )}
       </div>
-      {scoutChatPanel}
+      {isSplitView && scoutChatPanel && (
+        <div className="w-1/2">
+          {scoutChatPanel}
+        </div>
+      )}
     </div>
   );
 };
