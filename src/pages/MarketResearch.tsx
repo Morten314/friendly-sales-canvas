@@ -1480,7 +1480,7 @@ const MarketResearch = () => {
     setHasEdits(true);
     
     // Automatically open Competitor Landscape Scout chat panel with contextual message
-    setShowCompetitorScoutChat(true);
+    handleCompetitorScoutClick('competitor-landscape', true);
   };
 
   const handleCompetitorCancelEdit = () => {
