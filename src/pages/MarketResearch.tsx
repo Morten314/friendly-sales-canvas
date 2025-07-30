@@ -1296,22 +1296,14 @@ const MarketResearch = () => {
 
   const handleMarketIntelligenceSaveChanges = () => {
     console.log('💾 Saving Market Intelligence changes...');
-    console.log('📊 Current marketIntelligenceData before update:', marketIntelligenceData);
+    console.log('📊 Current marketIntelligenceData:', marketIntelligenceData);
     
-    // Create updated data object with current form values
+    // Update timestamp and exit editing mode - data is already updated via onChange handlers
     const updatedData = {
       ...marketIntelligenceData,
-      executiveSummary: marketIntelligenceData.executiveSummary,
-      tamValue: marketIntelligenceData.tamValue,
-      samValue: marketIntelligenceData.samValue,
-      apacGrowthRate: marketIntelligenceData.apacGrowthRate,
-      strategicRecommendations: marketIntelligenceData.strategicRecommendations,
-      marketEntry: marketIntelligenceData.marketEntry,
-      marketDrivers: marketIntelligenceData.marketDrivers,
       timestamp: new Date().toISOString()
     };
-
-    // Update state immediately with new data
+    
     setMarketIntelligenceData(updatedData);
     setIsMarketIntelligenceEditing(false);
     setHasEdits(true);
