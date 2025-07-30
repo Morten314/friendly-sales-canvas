@@ -1413,6 +1413,20 @@ const MarketResearch = () => {
 
   // Industry Trends handlers - Add these new handlers
   const handleIndustryTrendsToggleEdit = () => {
+    if (!isIndustryTrendsEditing) {
+      // Capture original state when starting to edit
+      const originalJson = {
+        executiveSummary: industryTrendsData.executiveSummary,
+        aiAdoption: industryTrendsData.aiAdoption,
+        cloudMigration: industryTrendsData.cloudMigration,
+        regulatory: industryTrendsData.regulatory,
+        trendSnapshots: industryTrendsData.trendSnapshots,
+        recommendations: industryTrendsData.recommendations,
+        risks: industryTrendsData.risks,
+        timestamp: industryTrendsData.timestamp
+      };
+      setIndustryTrendsOriginalData(originalJson);
+    }
     setIsIndustryTrendsEditing(!isIndustryTrendsEditing);
   };
 
@@ -1430,18 +1444,7 @@ const MarketResearch = () => {
     };
     setIndustryTrendsData(updatedData);
     
-    // Prepare original and modified JSON data for console logging and /ask API
-    const originalJson = {
-      executiveSummary: industryTrendsData.executiveSummary,
-      aiAdoption: industryTrendsData.aiAdoption,
-      cloudMigration: industryTrendsData.cloudMigration,
-      regulatory: industryTrendsData.regulatory,
-      trendSnapshots: industryTrendsData.trendSnapshots,
-      recommendations: industryTrendsData.recommendations,
-      risks: industryTrendsData.risks,
-      timestamp: industryTrendsData.timestamp
-    };
-
+    // Prepare modified JSON data (original was captured on edit start)
     const modifiedJson = {
       executiveSummary: updatedData.executiveSummary,
       aiAdoption: updatedData.aiAdoption,
@@ -1454,11 +1457,10 @@ const MarketResearch = () => {
     };
 
     // Log the JSON data to console
-    console.log('📄 ORIGINAL JSON:', JSON.stringify(originalJson, null, 2));
+    console.log('📄 ORIGINAL JSON:', JSON.stringify(industryTrendsOriginalData, null, 2));
     console.log('📄 MODIFIED JSON:', JSON.stringify(modifiedJson, null, 2));
 
-    // Store the JSON data for the chat interface
-    setIndustryTrendsOriginalData(originalJson);
+    // Store the modified JSON data for the chat interface
     setIndustryTrendsModifiedData(modifiedJson);
 
     // Force contextual message state for Industry Trends Scout
@@ -1472,7 +1474,7 @@ const MarketResearch = () => {
       user: 'John Doe',
       summary: 'Updated industry trends data with JSON data captured',
       field: 'Industry Trends',
-      oldValue: JSON.stringify(originalJson),
+      oldValue: JSON.stringify(industryTrendsOriginalData),
       newValue: JSON.stringify(modifiedJson)
     };
 
@@ -1536,6 +1538,17 @@ const MarketResearch = () => {
 
   // Competitor Landscape handlers - Add these new handlers
   const handleCompetitorToggleEdit = () => {
+    if (!isCompetitorEditing) {
+      // Capture original state when starting to edit
+      const originalJson = {
+        executiveSummary: competitorData.executiveSummary,
+        topPlayerShare: competitorData.topPlayerShare,
+        emergingPlayers: competitorData.emergingPlayers,
+        fundingNews: competitorData.fundingNews,
+        timestamp: competitorData.timestamp
+      };
+      setCompetitorOriginalData(originalJson);
+    }
     setIsCompetitorEditing(!isCompetitorEditing);
   };
 
@@ -1600,15 +1613,7 @@ const MarketResearch = () => {
     };
     setCompetitorData(updatedData);
     
-    // Prepare original and modified JSON data for console logging and /ask API
-    const originalJson = {
-      executiveSummary: competitorData.executiveSummary,
-      topPlayerShare: competitorData.topPlayerShare,
-      emergingPlayers: competitorData.emergingPlayers,
-      fundingNews: competitorData.fundingNews,
-      timestamp: competitorData.timestamp
-    };
-
+    // Prepare modified JSON data (original was captured on edit start)
     const modifiedJson = {
       executiveSummary: updatedData.executiveSummary,
       topPlayerShare: updatedData.topPlayerShare,
@@ -1618,11 +1623,10 @@ const MarketResearch = () => {
     };
 
     // Log the JSON data to console
-    console.log('📄 ORIGINAL JSON:', JSON.stringify(originalJson, null, 2));
+    console.log('📄 ORIGINAL JSON:', JSON.stringify(competitorOriginalData, null, 2));
     console.log('📄 MODIFIED JSON:', JSON.stringify(modifiedJson, null, 2));
 
-    // Store the JSON data for the chat interface
-    setCompetitorOriginalData(originalJson);
+    // Store the modified JSON data for the chat interface
     setCompetitorModifiedData(modifiedJson);
 
     // Force contextual message state for Competitor Landscape Scout
@@ -1635,7 +1639,7 @@ const MarketResearch = () => {
       user: 'John Doe',
       summary: 'Updated competitor landscape data with JSON data captured',
       field: 'Competitor Landscape',
-      oldValue: JSON.stringify(originalJson),
+      oldValue: JSON.stringify(competitorOriginalData),
       newValue: JSON.stringify(modifiedJson)
     };
     
