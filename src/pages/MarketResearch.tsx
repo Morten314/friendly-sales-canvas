@@ -341,7 +341,8 @@ const MarketResearch = () => {
       "Notion raises $300M Series C - Valuation reaches $10B as workspace tools gain traction",
       "Microsoft Teams launches AI Copilot - New AI features for meeting summaries and task automation",
       "Slack introduces Workflow Builder 2.0 - Enhanced automation capabilities for enterprise customers"
-    ]
+    ],
+    timestamp: null as string | null
   });
 
   // Market Size Scout Chat states (separate from Industry Trends)
@@ -611,10 +612,11 @@ const MarketResearch = () => {
       
       // Force refresh all market intelligence data - they will automatically
       // update the UI if their timestamps are newer than current data
-      const [marketSizeResponse, industryTrendsResponse, marketEntryResponse] = await Promise.allSettled([
+      const [marketSizeResponse, industryTrendsResponse, marketEntryResponse, competitorResponse] = await Promise.allSettled([
         fetchMarketSizeData(true, false), // This calls the correct market-research API
         fetchIndustryTrendsData(true, false), // Industry Trends data
         fetchMarketEntryData(true, false), // Market Entry data
+        fetchCompetitorData(true, false), // Competitor Landscape data
       ]);
       
       // Also trigger industry trends refresh to get latest data
@@ -878,6 +880,7 @@ const MarketResearch = () => {
 
       const result = await response.json();
       console.log('📊 Industry Trends API result:', result);
+      console.log('🔥 RAW Industry Trends Swagger Data:', JSON.stringify(result, null, 2));
 
       if (result.status === 'success' && result.data) {
         const apiData = result.data;
@@ -912,6 +915,87 @@ const MarketResearch = () => {
     } catch (error) {
       console.error('❌ Error fetching Industry Trends data:', error);
       setMarketSizeError('Failed to load industry trends data');
+    } finally {
+      if (showLoading) {
+        setIsMarketSizeLoading(false);
+      }
+    }
+  };
+
+  // Fetch Competitor Landscape data using backend API with correct component_name
+  const fetchCompetitorData = async (refresh = true, showLoading = true) => {
+    console.log('🚀 Starting fetchCompetitorData with refresh:', refresh, 'showLoading:', showLoading);
+    try {
+      console.log('📍 Fetching competitor landscape data with correct component_name');
+      if (showLoading) {
+        setIsMarketSizeLoading(true); // Reuse same loading state for now
+      }
+      setMarketSizeError(null);
+
+      // Payload specifically for Competitor Landscape
+      const payload = {
+        component_name: "Competitor Landscape",
+        refresh: refresh,
+        user_id: "brewra"
+      };
+
+      console.log('📤 Sending Competitor API request with payload:', payload);
+
+      const response = await fetch('https://swaggerapi.clodura.ai/backend/v1/market-research/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      });
+
+      console.log('📨 Competitor API response status:', response.status);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('📊 Competitor API result:', result);
+      console.log('🔥 RAW Competitor Swagger Data:', JSON.stringify(result, null, 2));
+
+      if (result.status === 'success' && result.data) {
+        const apiData = result.data;
+        console.log('🎯 Processing API data for Competitor Landscape:', apiData);
+
+        // Check timestamp comparison
+        const currentTimestamp = competitorData.timestamp || null;
+        const newTimestamp = apiData.timestamp;
+        
+        console.log('🔍 COMPETITOR TIMESTAMP ANALYSIS (UTC):');
+        console.log('  - Current request time (UTC):', new Date().toISOString());
+        console.log('  - Frontend data time (UTC):', currentTimestamp ? new Date(currentTimestamp).toISOString() : 'NO_TIMESTAMP');
+        console.log('  - Swagger data time (UTC):', newTimestamp ? new Date(newTimestamp).toISOString() : 'NO_TIMESTAMP');
+        console.log('  - Raw current timestamp:', currentTimestamp);
+        console.log('  - Raw new timestamp:', newTimestamp);
+        
+        if (!currentTimestamp || isTimestampNewer(newTimestamp, currentTimestamp)) {
+          console.log('✅ New Competitor data is newer, updating UI');
+          
+          // Update competitor data with API response
+          const updatedData = {
+            ...competitorData,
+            executiveSummary: apiData.executiveSummary || competitorData.executiveSummary,
+            topPlayerShare: apiData.topPlayerShare || competitorData.topPlayerShare,
+            emergingPlayers: apiData.emergingPlayers || competitorData.emergingPlayers,
+            fundingNews: apiData.fundingNews || competitorData.fundingNews,
+            timestamp: toUTCTimestamp(newTimestamp)
+          };
+          
+          setCompetitorData(updatedData);
+          console.log('✅ Competitor data updated successfully with mapped fields:', updatedData);
+        } else {
+          console.log('ℹ️ Current Competitor data is up to date');
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error fetching Competitor data:', error);
+      setMarketSizeError('Failed to load competitor data');
     } finally {
       if (showLoading) {
         setIsMarketSizeLoading(false);
@@ -1093,6 +1177,14 @@ const MarketResearch = () => {
     } else {
       console.log('📊 Market Entry data already loaded from localStorage');
     }
+
+    // Fetch Industry Trends data
+    console.log('📊 Fetching Industry Trends data...');
+    fetchIndustryTrendsData(false, true);
+
+    // Fetch Competitor Landscape data
+    console.log('📊 Fetching Competitor data...');
+    fetchCompetitorData(false, true);
   }, []);
 
   // Listen for company profile updates and trigger background refresh
