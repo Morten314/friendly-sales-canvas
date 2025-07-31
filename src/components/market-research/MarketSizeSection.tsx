@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { BarChart3, Bot, Edit, Target, TrendingUp, PieChart, X, FileText, Save, Share, Clock, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -92,6 +92,95 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
   error,
   onRefresh
 }) => {
+  // API integration state
+  const [marketSizeData, setMarketSizeData] = useState<any>(null);
+  const [marketSizeTimestamp, setMarketSizeTimestamp] = useState<string | null>(null);
+  const [apiLoading, setApiLoading] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
+
+  // API integration for Market Size
+  const fetchMarketSizeData = async (refresh: boolean = false) => {
+    console.log('🚀 Starting fetchMarketSizeData with refresh:', refresh);
+    
+    setApiLoading(true);
+    setApiError(null);
+    
+    try {
+      const requestTimestamp = Date.now();
+      const requestId = Math.random().toString(36).substring(2, 8);
+      
+      const payload = {
+        user_id: "brewra",
+        component_name: "market size",
+        refresh: false,
+        force_refresh: refresh,
+        cache_bypass: false,
+        bypass_all_cache: false,
+        request_timestamp: requestTimestamp,
+        request_id: requestId,
+        data: {
+          company: "OrbiSelf",
+          product: "Convoic.AI", 
+          target_market: "Indian college students (Tier 2 & 3)",
+          region: "India",
+          timestamp: requestTimestamp,
+          force_new_data: false
+        }
+      };
+
+      console.log('📤 Sending API request to: https://backend-11kr.onrender.com/market-research');
+      console.log('📦 Market Size Payload:', payload);
+
+      const response = await fetch('https://backend-11kr.onrender.com/market-research', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      });
+
+      console.log('📥 Market Size API response:', response);
+
+      if (!response.ok) {
+        throw new Error(`API request failed with status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('📊 Market Size API result:', result);
+
+      if (result.status === 'success' && result.data) {
+        const apiData = result.data;
+        console.log('✅ Market Size: Found data - updating component');
+        
+        // Update component data with API response
+        if (apiData.executiveSummary) onExecutiveSummaryChange(apiData.executiveSummary);
+        if (apiData.tamValue) onTamValueChange(apiData.tamValue);
+        if (apiData.samValue) onSamValueChange(apiData.samValue);
+        if (apiData.apacGrowthRate) onApacGrowthRateChange(apiData.apacGrowthRate);
+        if (apiData.strategicRecommendations) onStrategicRecommendationsChange(apiData.strategicRecommendations);
+        if (apiData.marketEntry) onMarketEntryChange(apiData.marketEntry);
+        if (apiData.marketDrivers) onMarketDriversChange(apiData.marketDrivers);
+        
+        setMarketSizeData(apiData);
+        setMarketSizeTimestamp(apiData.timestamp);
+      } else {
+        console.log('❌ No data in API response or error status');
+        setApiError('No data received from API');
+      }
+    } catch (error) {
+      console.error('❌ Error fetching Market Size data:', error);
+      setApiError('Failed to fetch data');
+    } finally {
+      setApiLoading(false);
+    }
+  };
+
+  // Fetch data on component mount
+  useEffect(() => {
+    console.log('🚀 Market Size component mounted - fetching fresh data');
+    fetchMarketSizeData(true);
+  }, []);
+
   const handleMarketSizeSaveChanges = () => {
     onSaveChanges();
   };
