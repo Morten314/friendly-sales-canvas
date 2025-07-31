@@ -704,16 +704,19 @@ const MarketResearch = () => {
       // Use UTC timestamp utilities for consistent comparison
       logTimestampComparison(currentDataTimestamp, newDataTimestamp, 'Market Size');
       
-      // Only update data if Swagger timestamp is newer than current UI timestamp
+      // Only update data if Swagger timestamp is newer than current UI timestamp OR if force refresh
       let shouldUpdateData = false;
       if (!currentDataTimestamp) {
         // No existing data, use new data
         shouldUpdateData = true;
         console.log('🔄 No existing data - will update');
       } else if (newDataTimestamp) {
-        // Use UTC comparison utility - check if NEW data is newer than CURRENT data
-        shouldUpdateData = isTimestampNewer(newDataTimestamp, currentDataTimestamp);
-        console.log('🔄 Timestamp comparison result:', shouldUpdateData ? 'Update needed' : 'Data is current');
+        // Check if this is a forced refresh or if data is actually newer
+        const isNewerData = isTimestampNewer(newDataTimestamp, currentDataTimestamp);
+        shouldUpdateData = refresh || isNewerData; // Force update if refresh=true
+        console.log('🔄 Timestamp comparison result:', isNewerData ? 'Update needed' : 'Data is current');
+        console.log('🔄 Force refresh:', refresh);
+        console.log('🔄 Final decision:', shouldUpdateData ? 'Will update' : 'Will skip');
         console.log('🔄 NEW timestamp:', newDataTimestamp);
         console.log('🔄 CURRENT timestamp:', currentDataTimestamp);
       }
@@ -879,10 +882,11 @@ const MarketResearch = () => {
         
         logTimestampComparison(currentTimestamp, newTimestamp, 'IndustryTrends');
         
-        if (!currentTimestamp || isTimestampNewer(newTimestamp, currentTimestamp)) {
-          console.log('✅ New Industry Trends data is newer, updating UI');
+        if (!currentTimestamp || isTimestampNewer(newTimestamp, currentTimestamp) || refresh) {
+          console.log('✅ New Industry Trends data is newer OR forced refresh, updating UI');
           console.log('🔄 Industry Trends - NEW timestamp:', newTimestamp);
           console.log('🔄 Industry Trends - CURRENT timestamp:', currentTimestamp);
+          console.log('🔄 Force refresh:', refresh);
           
           // Update industry trends data with API response - map to component state
           if (apiData.executiveSummary) {
@@ -991,7 +995,7 @@ const MarketResearch = () => {
         console.log('  - Raw current timestamp:', currentTimestamp);
         console.log('  - Raw new timestamp:', newTimestamp);
         
-        const shouldUpdate = !currentTimestamp || isTimestampNewer(newTimestamp, currentTimestamp);
+        const shouldUpdate = !currentTimestamp || isTimestampNewer(newTimestamp, currentTimestamp) || refresh;
         
         console.log('🔄 MARKET ENTRY UPDATE DECISION:');
         console.log('  - Should update data:', shouldUpdate);
@@ -1101,10 +1105,11 @@ const MarketResearch = () => {
         const currentTimestamp = competitorData.timestamp || null;
         const newTimestamp = apiData.timestamp;
         
-        if (!currentTimestamp || isTimestampNewer(newTimestamp, currentTimestamp)) {
-          console.log('✅ New Competitor data is newer, updating UI');
+        if (!currentTimestamp || isTimestampNewer(newTimestamp, currentTimestamp) || refresh) {
+          console.log('✅ New Competitor data is newer OR forced refresh, updating UI');
           console.log('🔄 Competitor - NEW timestamp:', newTimestamp);
           console.log('🔄 Competitor - CURRENT timestamp:', currentTimestamp);
+          console.log('🔄 Force refresh:', refresh);
           
           // Update competitor data with API response
           const updatedData = {
@@ -1188,10 +1193,11 @@ const MarketResearch = () => {
         const currentTimestamp = regulatoryData.timestamp || null;
         const newTimestamp = apiData.timestamp;
         
-        if (!currentTimestamp || isTimestampNewer(newTimestamp, currentTimestamp)) {
-          console.log('✅ New Regulatory data is newer, updating UI');
+        if (!currentTimestamp || isTimestampNewer(newTimestamp, currentTimestamp) || refresh) {
+          console.log('✅ New Regulatory data is newer OR forced refresh, updating UI');
           console.log('🔄 Regulatory - NEW timestamp:', newTimestamp);
           console.log('🔄 Regulatory - CURRENT timestamp:', currentTimestamp);
+          console.log('🔄 Force refresh:', refresh);
           
           // Update regulatory data with API response
           const updatedData = {
