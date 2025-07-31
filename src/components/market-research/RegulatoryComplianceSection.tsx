@@ -321,22 +321,12 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
 
   // Debug the exact values being used
   console.log('🔍 REGULATORY KEY DATA POINTS DEBUG:');
-  console.log('  - regulatoryData:', regulatoryData);
-  console.log('  - regulatoryData.keyUpdates:', regulatoryData?.keyUpdates);
   console.log('  - fallback euAiActDeadline:', euAiActDeadline);
   console.log('  - fallback gdprCompliance:', gdprCompliance);
   console.log('  - fallback potentialFines:', potentialFines);
   console.log('  - fallback dataLocalization:', dataLocalization);
 
-  const keyDataPoints = regulatoryData?.keyUpdates ? regulatoryData.keyUpdates.map((update: any, index: number) => ({
-    id: `update-${index}`,
-    icon: getIconForUpdate(update.icon || 'info'),
-    title: update.title,
-    value: update.description,
-    badge: update.tag || 'Info',
-    badgeColor: getBadgeColorForTag(update.tag),
-    tooltip: `${update.title}: ${update.description}`
-  })) : [
+  const keyDataPoints = [
     {
       id: 'eu-ai-act',
       icon: Scale,
@@ -375,7 +365,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     }
   ];
 
-  const visualDataCards = regulatoryData?.visualDataCards || [
+  const visualDataCards = [
     {
       title: 'Compliance Adoption Rates',
       type: 'bar-chart',
@@ -406,7 +396,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     }
   ];
 
-  const regionalData = regulatoryData?.regionalData || [
+  const regionalData = [
     {
       region: 'European Union',
       framework: 'GDPR + AI Act',
@@ -441,13 +431,11 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     }
   ];
 
-  const currentExecutiveSummary = regulatoryData?.executiveSummary || executiveSummary;
+  const currentExecutiveSummary = executiveSummary;
   
   // Debug what's actually being used in the component
   console.log('🎯 REGULATORY COMPONENT DATA DEBUG:');
-  console.log('  - regulatoryData exists:', !!regulatoryData);
   console.log('  - currentExecutiveSummary:', currentExecutiveSummary);
-  console.log('  - regulatoryData.keyUpdates:', regulatoryData?.keyUpdates);
   console.log('  - keyDataPoints length:', keyDataPoints?.length);
   console.log('  - first keyDataPoint:', keyDataPoints?.[0]);
 
@@ -1131,20 +1119,13 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                         <Shield className="h-5 w-5 text-blue-600 mt-0.5" />
                         <div>
                           <h5 className="font-medium text-blue-900 mb-2">
-                            {regulatoryData?.strategicRecommendations ? 'Mitigate Regulatory Risks' : 'Mitigate Regulatory Risks'}
+                            Mitigate Regulatory Risks
                           </h5>
                           <ul className="text-sm text-blue-700 space-y-1">
-                            {regulatoryData?.strategicRecommendations?.mitigateRegulatoryRisks ? 
-                              regulatoryData.strategicRecommendations.mitigateRegulatoryRisks.map((item: string, index: number) => (
-                                <li key={index}>• {item}</li>
-                              )) : (
-                              <>
-                                <li>• Implement privacy by design principles</li>
-                                <li>• Establish automated compliance monitoring</li>
-                                <li>• Regular risk assessments and audits</li>
-                                <li>• Cross-functional compliance team</li>
-                              </>
-                            )}
+                            <li>• Implement privacy by design principles</li>
+                            <li>• Establish automated compliance monitoring</li>
+                            <li>• Regular risk assessments and audits</li>
+                            <li>• Cross-functional compliance team</li>
                           </ul>
                         </div>
                       </div>
@@ -1155,20 +1136,13 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                         <Target className="h-5 w-5 text-green-600 mt-0.5" />
                         <div>
                           <h5 className="font-medium text-green-900 mb-2">
-                            {regulatoryData?.strategicRecommendations ? 'Competitive Positioning' : 'Competitive Positioning'}
+                            Competitive Positioning
                           </h5>
                           <ul className="text-sm text-green-700 space-y-1">
-                            {regulatoryData?.strategicRecommendations?.competitivePositioning ? 
-                              regulatoryData.strategicRecommendations.competitivePositioning.map((item: string, index: number) => (
-                                <li key={index}>• {item}</li>
-                              )) : (
-                              <>
-                                <li>• Market compliance as differentiator</li>
-                                <li>• Showcase security certifications</li>
-                                <li>• Transparent data handling practices</li>
-                                <li>• Industry-leading privacy standards</li>
-                              </>
-                            )}
+                            <li>• Market compliance as differentiator</li>
+                            <li>• Showcase security certifications</li>
+                            <li>• Transparent data handling practices</li>
+                            <li>• Industry-leading privacy standards</li>
                           </ul>
                         </div>
                       </div>
@@ -1179,20 +1153,13 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                         <Building className="h-5 w-5 text-purple-600 mt-0.5" />
                         <div>
                           <h5 className="font-medium text-purple-900 mb-2">
-                            {regulatoryData?.strategicRecommendations ? 'Go-to-Market Strategy' : 'Go-to-Market Strategy'}
+                            Go-to-Market Strategy
                           </h5>
                           <ul className="text-sm text-purple-700 space-y-1">
-                            {regulatoryData?.strategicRecommendations?.goToMarketStrategy ? 
-                              regulatoryData.strategicRecommendations.goToMarketStrategy.map((item: string, index: number) => (
-                                <li key={index}>• {item}</li>
-                              )) : (
-                              <>
-                                <li>• Regional deployment capabilities</li>
-                                <li>• Compliance-ready product offerings</li>
-                                <li>• Legal-friendly contract templates</li>
-                                <li>• Enterprise-grade data residency</li>
-                              </>
-                            )}
+                            <li>• Regional deployment capabilities</li>
+                            <li>• Compliance-ready product offerings</li>
+                            <li>• Legal-friendly contract templates</li>
+                            <li>• Enterprise-grade data residency</li>
                           </ul>
                         </div>
                       </div>
