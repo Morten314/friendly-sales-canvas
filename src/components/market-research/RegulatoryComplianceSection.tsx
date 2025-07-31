@@ -166,6 +166,10 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
       const result = await response.json();
       console.log('📊 Full API Response Structure:', result);
       console.log('📊 Regulatory Data Keys:', Object.keys(result.data || {}));
+      
+      // Log original_json and modified_json
+      console.log('🔍 REGULATORY ORIGINAL_JSON:', result.data?.original_json || 'Not available');
+      console.log('🔍 REGULATORY MODIFIED_JSON:', result.data?.modified_json || 'Not available');
 
       if (result.status === 'success' && result.data) {
         const currentTimestampUTC = toUTCTimestamp(regulatoryTimestamp);
