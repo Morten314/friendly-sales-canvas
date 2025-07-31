@@ -170,6 +170,11 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
       // Log original_json and modified_json
       console.log('🔍 REGULATORY ORIGINAL_JSON:', result.data?.original_json || 'Not available');
       console.log('🔍 REGULATORY MODIFIED_JSON:', result.data?.modified_json || 'Not available');
+      
+      // Debug the keyUpdates structure specifically
+      console.log('🔍 REGULATORY keyUpdates structure:', result.data?.keyUpdates);
+      console.log('🔍 REGULATORY executiveSummary from API:', result.data?.executiveSummary);
+      console.log('🔍 REGULATORY full data structure:', JSON.stringify(result.data, null, 2));
 
       if (result.status === 'success' && result.data) {
         const currentTimestampUTC = toUTCTimestamp(regulatoryTimestamp);
@@ -394,6 +399,14 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   ];
 
   const currentExecutiveSummary = regulatoryData?.executiveSummary || executiveSummary;
+  
+  // Debug what's actually being used in the component
+  console.log('🎯 REGULATORY COMPONENT DATA DEBUG:');
+  console.log('  - regulatoryData exists:', !!regulatoryData);
+  console.log('  - currentExecutiveSummary:', currentExecutiveSummary);
+  console.log('  - regulatoryData.keyUpdates:', regulatoryData?.keyUpdates);
+  console.log('  - keyDataPoints length:', keyDataPoints?.length);
+  console.log('  - first keyDataPoint:', keyDataPoints?.[0]);
 
   return (
     <Card className="border border-gray-200 shadow-sm">
