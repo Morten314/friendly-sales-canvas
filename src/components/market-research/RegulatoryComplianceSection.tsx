@@ -897,7 +897,10 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
             <div className="flex justify-between items-center pt-6 border-t border-gray-200">
               <div className="flex gap-3">
                 <Button 
-                  onClick={onSaveChanges}
+                  onClick={() => {
+                    console.log('🔥 SAVE BUTTON CLICKED - Regulatory Compliance');
+                    onSaveChanges();
+                  }}
                   className="bg-blue-600 hover:bg-blue-700 text-white"
                 >
                   <Save className="h-4 w-4 mr-2" />

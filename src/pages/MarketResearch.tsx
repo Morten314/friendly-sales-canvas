@@ -1903,16 +1903,20 @@ const MarketResearch = () => {
 
   // Regulatory Compliance handlers - Add these new handlers
   const handleRegulatoryToggleEdit = () => {
+    console.log('🎯 TOGGLE EDIT - Current isRegulatoryEditing:', isRegulatoryEditing);
     if (!isRegulatoryEditing) {
       // Capture original data when starting to edit
+      console.log('📸 CAPTURING ORIGINAL DATA SNAPSHOT:', regulatoryData);
       setRegulatoryOriginalDataSnapshot({...regulatoryData});
     }
     setIsRegulatoryEditing(!isRegulatoryEditing);
   };
 
   const handleRegulatorySaveChanges = () => {
+    console.log('🔥 SAVE FUNCTION CALLED - handleRegulatorySaveChanges');
     console.log('💾 Saving Regulatory Compliance changes...');
     console.log('📊 Current regulatoryData:', regulatoryData);
+    console.log('📸 Captured original snapshot:', regulatoryOriginalDataSnapshot);
     
     // Use captured original data or fallback to default values
     const originalJson = regulatoryOriginalDataSnapshot || {
