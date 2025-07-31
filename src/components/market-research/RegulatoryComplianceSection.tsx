@@ -282,18 +282,44 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     }
   };
 
-  const keyDataPoints = regulatoryData?.keyUpdates ? regulatoryData.keyUpdates.map((update: any) => {
-    const id = update.title.toLowerCase().replace(/\s+/g, '-');
-    return {
-      id,
-      icon: getIconByName(update.icon),
-      title: update.title,
-      value: dynamicFieldValues[id] !== undefined ? dynamicFieldValues[id] : update.description,
-      badge: update.tag,
-      badgeColor: getBadgeColor(update.tag),
-      tooltip: update.description
-    };
-  }) : [
+  const keyDataPoints = regulatoryData ? [
+    {
+      id: 'eu-ai-act',
+      icon: Scale,
+      title: 'EU AI Act enforcement starts Q1 2026',
+      value: regulatoryData.euAiActDeadline || euAiActDeadline,
+      badge: 'New',
+      badgeColor: 'bg-blue-100 text-blue-800',
+      tooltip: 'New European AI Act comes into effect with strict compliance requirements for AI systems.'
+    },
+    {
+      id: 'gdpr-compliance',
+      icon: Shield,
+      title: 'GDPR compliance among SaaS providers',
+      value: regulatoryData.gdprCompliance || gdprCompliance,
+      badge: 'Update',
+      badgeColor: 'bg-yellow-100 text-yellow-800',
+      tooltip: 'Current adoption rates show varying levels of GDPR compliance across different SaaS categories.'
+    },
+    {
+      id: 'potential-fines',
+      icon: AlertTriangle,
+      title: 'Potential fines: up to 6% revenue',
+      value: regulatoryData.potentialFines || potentialFines,
+      badge: 'Risk',
+      badgeColor: 'bg-red-100 text-red-800',
+      tooltip: 'Maximum penalty levels for non-compliance with major data protection regulations.'
+    },
+    {
+      id: 'data-localization',
+      icon: Globe,
+      title: 'China data localization laws impacting global SaaS',
+      value: regulatoryData.dataLocalization || dataLocalization,
+      badge: 'High Priority',
+      badgeColor: 'bg-purple-100 text-purple-800',
+      tooltip: 'New data residency requirements affecting international SaaS deployment strategies.'
+    }
+  ] : [
     {
       id: 'eu-ai-act',
       icon: Scale,
