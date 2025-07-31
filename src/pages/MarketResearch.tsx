@@ -1978,13 +1978,7 @@ const MarketResearch = () => {
     console.log('✅ Regulatory Compliance data saved successfully');
     console.log('🔄 Updated frontend state:', updatedData);
     
-    // Close all other scout chats first
-    setShowMarketSizeScoutChat(false);
-    setShowIndustryTrendsScoutChat(false);
-    setShowCompetitorScoutChat(false);
-    setIsChatOpen(false);
-    
-    // Open regulatory scout chat with post-save contextual messages (following competitor pattern)
+    // Automatically open Regulatory Scout chat panel with contextual message (following competitor pattern)
     setTimeout(() => {
       setIsRegulatoryPostSave(true);
       setShowRegulatoryScoutChat(true);
