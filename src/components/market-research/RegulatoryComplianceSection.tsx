@@ -497,6 +497,8 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                               type="text"
                               value={point.value}
                               onChange={(e) => {
+                                console.log('Input onChange triggered for ID:', point.id, 'New value:', e.target.value);
+                                
                                 // Handle both API data and fallback data IDs
                                 const idMatches = {
                                   'eu-ai-act': () => onEuAiActDeadlineChange(e.target.value),
@@ -511,8 +513,14 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                                 
                                 const handler = idMatches[point.id as keyof typeof idMatches];
                                 if (handler) {
+                                  console.log('Calling handler for ID:', point.id);
                                   handler();
+                                } else {
+                                  console.warn('No handler found for ID:', point.id);
                                 }
+                              }}
+                              onKeyDown={(e) => {
+                                console.log('Key pressed:', e.key, 'on field:', point.id);
                               }}
                               className="text-sm"
                             />
