@@ -282,6 +282,18 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     }
   };
 
+  // Debug the exact values being used
+  console.log('🔍 REGULATORY KEY DATA POINTS DEBUG:');
+  console.log('  - regulatoryData:', regulatoryData);
+  console.log('  - regulatoryData.euAiActDeadline:', regulatoryData?.euAiActDeadline);
+  console.log('  - regulatoryData.gdprCompliance:', regulatoryData?.gdprCompliance);
+  console.log('  - regulatoryData.potentialFines:', regulatoryData?.potentialFines);
+  console.log('  - regulatoryData.dataLocalization:', regulatoryData?.dataLocalization);
+  console.log('  - fallback euAiActDeadline:', euAiActDeadline);
+  console.log('  - fallback gdprCompliance:', gdprCompliance);
+  console.log('  - fallback potentialFines:', potentialFines);
+  console.log('  - fallback dataLocalization:', dataLocalization);
+
   const keyDataPoints = regulatoryData ? [
     {
       id: 'eu-ai-act',
