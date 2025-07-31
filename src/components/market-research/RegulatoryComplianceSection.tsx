@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { 
   Scale, 
   Shield, 
@@ -492,7 +493,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                                 {point.badge}
                               </Badge>
                             </div>
-                            <input
+                            <Input
                               type="text"
                               value={point.value}
                               onChange={(e) => {
@@ -501,7 +502,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                                 else if (point.id === 'potential-fines') onPotentialFinesChange(e.target.value);
                                 else if (point.id === 'data-localization') onDataLocalizationChange(e.target.value);
                               }}
-                              className="w-full p-2 border border-gray-300 rounded text-sm"
+                              className="text-sm"
                             />
                           </div>
                         </div>
