@@ -1,6 +1,4 @@
 import { useState, useEffect } from "react";
-console.log('🚨🚨🚨 MARKETRESEARCH FILE IS DEFINITELY LOADING 🚨🚨🚨');
-console.log('📁 MarketResearch.tsx file is loading!');
 import { Layout } from "@/components/layout/Layout";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { Button } from "@/components/ui/button";
@@ -162,7 +160,6 @@ const getCachedData = (): MarketIntelligenceData | null => {
 };
 
 const MarketResearch = () => {
-  console.log('🔥 MarketResearch component is mounting!');
   usePageTitle("🔍 Scout - Brewra");
   const [isChatOpen, setIsChatOpen] = useState(false);
   const navigate = useNavigate();
@@ -197,14 +194,12 @@ const MarketResearch = () => {
   // API data state - Always initialize with any available cached data
   const [marketData, setMarketData] = useState<MarketIntelligenceData | null>(() => {
     const cached = getCachedData();
-    console.log('Initial marketData state - cached data exists:', !!cached);
     return cached;
   });
   
   // Show loading when either initially loading OR refreshing
   const [isInitialLoading, setIsInitialLoading] = useState(() => {
     const hasData = !!getCachedData();
-    console.log('Initial loading state - has cached data:', hasData);
     return !hasData; // Only loading if no cached data exists
   });
   
@@ -220,13 +215,10 @@ const MarketResearch = () => {
       const stored = localStorage.getItem('marketIntelligenceData');
       if (stored) {
         const parsedData = JSON.parse(stored);
-        console.log('📦 Loading Market Intelligence data from localStorage:', parsedData);
         // Only return stored data if it has a timestamp (meaning it came from swagger)
         if (parsedData.timestamp) {
-          console.log('✅ Found persisted swagger data with timestamp:', parsedData.timestamp);
           return parsedData;
         } else {
-          console.log('⚠️ Found localStorage data but no timestamp - this is default data, clearing...');
           localStorage.removeItem('marketIntelligenceData');
         }
       }
@@ -236,7 +228,6 @@ const MarketResearch = () => {
     }
     
     // Return empty values if no stored data - let the API populate the data
-    console.log('📝 No stored data found - returning empty state, will load from API');
     return {
       executiveSummary: "",
       tamValue: "",
@@ -282,7 +273,6 @@ const MarketResearch = () => {
   const saveMarketIntelligenceToLocalStorage = (data: any) => {
     try {
       localStorage.setItem('marketIntelligenceData', JSON.stringify(data));
-      console.log('💾 Market Intelligence data saved to localStorage');
     } catch (error) {
       console.error('❌ Failed to save Market Intelligence data to localStorage:', error);
     }
@@ -402,10 +392,9 @@ const MarketResearch = () => {
       const stored = localStorage.getItem('marketEntryData');
       if (stored) {
         const parsedData = JSON.parse(stored);
-        console.log('📦 Loading Market Entry data from localStorage:', parsedData);
         // Only return stored data if it has a timestamp (meaning it came from API)
         if (parsedData.timestamp) {
-          console.log('✅ Found persisted Market Entry data with timestamp:', parsedData.timestamp);
+          console.log('✅ Market Entry data loaded with timestamp:', parsedData.timestamp);
           return parsedData;
         }
       }
@@ -464,7 +453,6 @@ const MarketResearch = () => {
 
   // Transform raw report data to our expected structure (for historical data only)
   const transformReportData = (reportData: any): MarketIntelligenceData => {
-    console.log('🔄 TRANSFORM: Input reportData for historical:', JSON.stringify(reportData, null, 2));
     
     // Only transform if this is historical data or general market data
     // Don't use this for component-specific API responses
@@ -495,13 +483,13 @@ const MarketResearch = () => {
       growthProjections: reportData.growthProjections || {}
     };
     
-    console.log('✅ TRANSFORM: Output transformed historical data:', JSON.stringify(transformed, null, 2));
+    
     return transformed;
   };
 
   // Handle historical report selection
   const handleHistoricalReportSelected = (reportData: any) => {
-    console.log('Historical report selected:', reportData);
+    
     
     const transformedData = transformReportData(reportData);
     
@@ -526,9 +514,6 @@ const MarketResearch = () => {
   // Fetch market intelligence data with graceful fallback
   const fetchMarketData = async (isRefresh = false) => {
     try {
-      console.log('fetchMarketData called with isRefresh:', isRefresh);
-      console.log('Current marketData exists:', !!marketData);
-      console.log('Cached data exists:', !!getCachedData());
       
       // Set loading states appropriately
       if (!isRefresh) {
@@ -567,30 +552,19 @@ const MarketResearch = () => {
       }
       
       const apiResponse = await response.json();
-      console.log('📊 Market intelligence data:', apiResponse);
-      console.log('🔍 DEBUGGING: Raw API response structure:', JSON.stringify(apiResponse, null, 2));
-      console.log('🔍 DEBUGGING: Response timestamp or ID:', apiResponse.timestamp || apiResponse.id || apiResponse.created_at || 'NO_TIMESTAMP');
-      console.log('🔍 DEBUGGING: Response headers:', [...response.headers.entries()]);
+      console.log('📊 Market intelligence API response received');
       
       // Extract the report data from the API response
       const reportData = apiResponse.report || apiResponse;
-      console.log('🔍 DEBUGGING: Extracted report data:', JSON.stringify(reportData, null, 2));
       
       // Transform the data to match our expected structure
       const transformedData = transformReportData(reportData);
-      
-      console.log('✅ Transformed data:', transformedData);
-      console.log('🔍 DEBUGGING: Key fields from transformed data:');
-      console.log('- Executive Summary:', transformedData.executiveSummary?.substring(0, 100) + '...');
-      console.log('- TAM Value:', transformedData.tamValue);
-      console.log('- SAM Value:', transformedData.samValue);
-      console.log('- Market Entry:', transformedData.marketEntry?.substring(0, 100) + '...');
       
         // Update both state and localStorage for persistence
         setMarketData(transformedData);
         // Save transformed data to localStorage for persistence
         saveMarketIntelligenceToLocalStorage(transformedData);
-        console.log('💾 Market data saved to localStorage for persistence');
+        
       
       // Reset historical data flags when fetching current data
       setIsShowingHistoricalData(false);
@@ -603,7 +577,7 @@ const MarketResearch = () => {
       // Always ensure we show any available data, even if the fetch failed
       const fallbackData = getCachedData();
       if (fallbackData && !marketData) {
-        console.log('Using cached data as fallback after error');
+        
         setMarketData(fallbackData);
       }
     } finally {
@@ -618,12 +592,12 @@ const MarketResearch = () => {
       setIsRefreshing(true);
       setError(null);
       
-      console.log('🔄 Refresh button clicked - refreshing ALL component data...');
+      
       
       // Refresh all components using the new function
       await refreshAllComponentsData();
       
-      console.log('✅ All backend data sources refreshed successfully');
+      
       
       // Reset historical data flags
       setIsShowingHistoricalData(false);
@@ -641,9 +615,7 @@ const MarketResearch = () => {
 
   // Fetch Market Size data using existing backend APIs with smart loading
   const fetchMarketSizeData = async (refresh = true, showLoading = true) => {
-    console.log('🚀 Starting fetchMarketSizeData with refresh:', refresh, 'showLoading:', showLoading);
     try {
-      console.log('📍 Fetching market size data without config dependency');
       if (showLoading) {
         setIsMarketSizeLoading(true);
       }
@@ -671,16 +643,10 @@ const MarketResearch = () => {
         }
       };
 
-      console.log('📤 Sending API request to:', 'https://backend-11kr.onrender.com/market-research');
-      console.log('📦 Market Size Complete Payload:', JSON.stringify(payload, null, 2));
-      console.log('📦 Market Size Payload component_name:', payload.component_name);
-      console.log('📦 Market Size Payload keys:', Object.keys(payload));
-      console.log('📦 Market Size Data keys:', Object.keys(payload.data));
+      console.log('📤 Market Size API request sent');
 
       // Add debugging to track data freshness
       const requestTimestamp = Date.now();
-      console.log('⏰ REQUEST TIMESTAMP:', requestTimestamp);
-      console.log('🔄 FORCE_REFRESH in payload:', payload.refresh);
       
       const response = await fetch('https://backend-11kr.onrender.com/market-research', {
         method: 'POST',
@@ -695,8 +661,7 @@ const MarketResearch = () => {
       }
 
       const apiResponse = await response.json();
-      console.log('📥 Market Size API response:', apiResponse);
-      console.log('🔍 API Response structure:', JSON.stringify(apiResponse, null, 2));
+      console.log('📥 Market Size API response received');
       // Extract timestamps for comparison - convert to UTC
       const newDataTimestamp = apiResponse.data?.timestamp || apiResponse.timestamp;
       const currentDataTimestamp = marketIntelligenceData.timestamp;
@@ -707,46 +672,15 @@ const MarketResearch = () => {
       // Only update data if Swagger timestamp is newer than current UI timestamp OR if force refresh
       let shouldUpdateData = false;
       if (!currentDataTimestamp) {
-        // No existing data, use new data
         shouldUpdateData = true;
-        console.log('🔄 No existing data - will update');
       } else if (newDataTimestamp) {
-        // Check if this is a forced refresh or if data is actually newer
         const isNewerData = isTimestampNewer(newDataTimestamp, currentDataTimestamp);
-        shouldUpdateData = refresh || isNewerData; // Force update if refresh=true
-        console.log('🔄 Timestamp comparison result:', isNewerData ? 'Update needed' : 'Data is current');
-        console.log('🔄 Force refresh:', refresh);
-        console.log('🔄 Final decision:', shouldUpdateData ? 'Will update' : 'Will skip');
-        console.log('🔄 NEW timestamp:', newDataTimestamp);
-        console.log('🔄 CURRENT timestamp:', currentDataTimestamp);
+        shouldUpdateData = refresh || isNewerData;
       }
-      
-      console.log('🔄 MARKET SIZE UPDATE DECISION:');
-      console.log('  - Should update data:', shouldUpdateData);
-      console.log('  - Current data timestamp (RAW):', currentDataTimestamp);
-      console.log('  - New data timestamp (RAW):', newDataTimestamp);
-      console.log('  - Current data timestamp (UTC):', toUTCTimestamp(currentDataTimestamp));
-      console.log('  - New data timestamp (UTC):', toUTCTimestamp(newDataTimestamp));
-      console.log('  - Reason for update:', !currentDataTimestamp ? 'No existing data' : shouldUpdateData ? 'Swagger data is newer' : 'Current data is up to date');
-      console.log('  - Reason for update:', !currentDataTimestamp ? 'No existing data' : shouldUpdateData ? 'Swagger data is newer' : 'Current data is up to date');
-      
-      console.log('🔍 DEBUGGING: Current marketIntelligenceData before update:', JSON.stringify(marketIntelligenceData, null, 2));
 
       // Update market intelligence data with API response only if data is newer
       if (apiResponse.data && shouldUpdateData) {
-        console.log('✅ Found data in API response and data is newer - updating');
         const report = apiResponse.data;
-        console.log('📊 Report data:', JSON.stringify(report, null, 2));
-        console.log('🔄 Updating marketIntelligenceData with report:', report);
-        
-        // Log specific field values to check for undefined
-        console.log('🔍 FIELD CHECK - executiveSummary:', report.executiveSummary);
-        console.log('🔍 FIELD CHECK - tamValue:', report.tamValue);
-        console.log('🔍 FIELD CHECK - samValue:', report.samValue);
-        console.log('🔍 FIELD CHECK - apacGrowthRate:', report.apacGrowthRate);
-        console.log('🔍 FIELD CHECK - strategicRecommendations:', report.strategicRecommendations);
-        console.log('🔍 TYPE CHECK - strategicRecommendations type:', typeof report.strategicRecommendations);
-        console.log('🔍 ARRAY CHECK - strategicRecommendations isArray:', Array.isArray(report.strategicRecommendations));
         console.log('🔍 FIELD CHECK - marketEntry:', report.marketEntry);
         console.log('🔍 FIELD CHECK - marketDrivers:', report.marketDrivers);
         console.log('🔍 FIELD CHECK - marketSizeBySegment:', report.marketSizeBySegment);
@@ -846,13 +780,7 @@ const MarketResearch = () => {
         refresh: refresh
       };
       
-      console.log('🔍 INDUSTRY TRENDS PAYLOAD DEBUG:');
-      console.log('  - user_id:', payload.user_id);
-      console.log('  - component_name:', payload.component_name);
-      console.log('  - data object:', payload.data);
-      console.log('  - refresh:', payload.refresh);
-
-      console.log('📤 Sending Industry Trends API request with payload:', payload);
+      console.log('📤 Industry Trends API request:', payload);
 
       const response = await fetch('https://backend-11kr.onrender.com/market-research', {
         method: 'POST',
@@ -873,7 +801,6 @@ const MarketResearch = () => {
 
       if (result.status === 'success' && result.data) {
         const apiData = result.data;
-        console.log('🎯 Processing API data for Industry Trends:', apiData);
 
         // Check timestamp comparison with timestampUtils
         const currentTimestamp = industryTrendsData.timestamp || null;
@@ -882,10 +809,6 @@ const MarketResearch = () => {
         logTimestampComparison(currentTimestamp, newTimestamp, 'IndustryTrends');
         
         if (!currentTimestamp || isTimestampNewer(newTimestamp, currentTimestamp) || refresh) {
-          console.log('✅ New Industry Trends data is newer OR forced refresh, updating UI');
-          console.log('🔄 Industry Trends - NEW timestamp:', newTimestamp);
-          console.log('🔄 Industry Trends - CURRENT timestamp:', currentTimestamp);
-          console.log('🔄 Force refresh:', refresh);
           
           // Update industry trends data with API response - map to component state
           if (apiData.executiveSummary) {

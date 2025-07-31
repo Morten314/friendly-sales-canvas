@@ -77,13 +77,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
   showScoutChat,
   scoutChatPanel
 }) => {
-  // Use data from parent MarketResearch.tsx component
-  console.log('🔍 Industry Trends Section: Received props data:', { 
-    industryTrendsExecutiveSummary,
-    industryTrendsAiAdoption,
-    industryTrendsCloudMigration,
-    industryTrendsRegulatory 
-  });
+  console.log('🚀 Industry Trends component loaded');
 
   const handleIndustryTrendsSaveChanges = () => {
     onIndustryTrendsSaveChanges();
