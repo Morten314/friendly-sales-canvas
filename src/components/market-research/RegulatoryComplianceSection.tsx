@@ -472,7 +472,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                 </button>
                 <h4 className="text-sm font-medium text-gray-700 mb-2">Executive Summary</h4>
                 <textarea
-                  value={executiveSummary}
+                  value={currentExecutiveSummary}
                   onChange={(e) => onExecutiveSummaryChange(e.target.value)}
                   className="w-full p-3 border border-gray-300 rounded-lg text-sm resize-none"
                   rows={4}
