@@ -350,6 +350,7 @@ const MarketResearch = () => {
     dataLocalization: 'Mandatory for customer data',
     timestamp: null as string | null
   });
+  const [regulatoryOriginalDataSnapshot, setRegulatoryOriginalDataSnapshot] = useState<any>(null);
 
   // Competitor Landscape state - Add these new state variables
   const [isCompetitorEditing, setIsCompetitorEditing] = useState(false);
@@ -1902,6 +1903,10 @@ const MarketResearch = () => {
 
   // Regulatory Compliance handlers - Add these new handlers
   const handleRegulatoryToggleEdit = () => {
+    if (!isRegulatoryEditing) {
+      // Capture original data when starting to edit
+      setRegulatoryOriginalDataSnapshot({...regulatoryData});
+    }
     setIsRegulatoryEditing(!isRegulatoryEditing);
   };
 
@@ -1909,9 +1914,15 @@ const MarketResearch = () => {
     console.log('💾 Saving Regulatory Compliance changes...');
     console.log('📊 Current regulatoryData:', regulatoryData);
     
-    // Exit editing mode
-    setIsRegulatoryEditing(false);
-    setRegulatoryHasEdits(false);
+    // Use captured original data or fallback to default values
+    const originalJson = regulatoryOriginalDataSnapshot || {
+      executiveSummary: 'The regulatory landscape for SaaS companies continues to evolve rapidly, with new compliance requirements emerging across multiple jurisdictions. Organizations must navigate an increasingly complex web of data protection, AI governance, and industry-specific regulations.',
+      euAiActDeadline: 'February 2, 2025',
+      gdprCompliance: '68%',
+      potentialFines: 'Up to 6% of annual revenue',
+      dataLocalization: 'Mandatory for customer data',
+      timestamp: null
+    };
     
     // Update timestamp - data is already updated via onChange handlers
     const updatedData = {
@@ -1920,16 +1931,7 @@ const MarketResearch = () => {
     };
     setRegulatoryData(updatedData);
     
-    // Prepare original and modified JSON data for console logging and /ask API
-    const originalJson = {
-      executiveSummary: regulatoryData.executiveSummary,
-      euAiActDeadline: regulatoryData.euAiActDeadline,
-      gdprCompliance: regulatoryData.gdprCompliance,
-      potentialFines: regulatoryData.potentialFines,
-      dataLocalization: regulatoryData.dataLocalization,
-      timestamp: regulatoryData.timestamp
-    };
-
+    // Prepare modified JSON data (current state with new timestamp)
     const modifiedJson = {
       executiveSummary: updatedData.executiveSummary,
       euAiActDeadline: updatedData.euAiActDeadline,
@@ -1938,6 +1940,10 @@ const MarketResearch = () => {
       dataLocalization: updatedData.dataLocalization,
       timestamp: updatedData.timestamp
     };
+    
+    // Exit editing mode
+    setIsRegulatoryEditing(false);
+    setRegulatoryHasEdits(false);
 
     // Log the JSON data to console
     console.log('📄 ORIGINAL JSON:', JSON.stringify(originalJson, null, 2));
