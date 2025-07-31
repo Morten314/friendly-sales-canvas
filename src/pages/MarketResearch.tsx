@@ -711,9 +711,11 @@ const MarketResearch = () => {
         shouldUpdateData = true;
         console.log('🔄 No existing data - will update');
       } else if (newDataTimestamp) {
-        // Use UTC comparison utility
+        // Use UTC comparison utility - check if NEW data is newer than CURRENT data
         shouldUpdateData = isTimestampNewer(newDataTimestamp, currentDataTimestamp);
         console.log('🔄 Timestamp comparison result:', shouldUpdateData ? 'Update needed' : 'Data is current');
+        console.log('🔄 NEW timestamp:', newDataTimestamp);
+        console.log('🔄 CURRENT timestamp:', currentDataTimestamp);
       }
       
       console.log('🔄 MARKET SIZE UPDATE DECISION:');
@@ -879,6 +881,8 @@ const MarketResearch = () => {
         
         if (!currentTimestamp || isTimestampNewer(newTimestamp, currentTimestamp)) {
           console.log('✅ New Industry Trends data is newer, updating UI');
+          console.log('🔄 Industry Trends - NEW timestamp:', newTimestamp);
+          console.log('🔄 Industry Trends - CURRENT timestamp:', currentTimestamp);
           
           // Update industry trends data with API response - map to component state
           if (apiData.executiveSummary) {
@@ -1099,6 +1103,8 @@ const MarketResearch = () => {
         
         if (!currentTimestamp || isTimestampNewer(newTimestamp, currentTimestamp)) {
           console.log('✅ New Competitor data is newer, updating UI');
+          console.log('🔄 Competitor - NEW timestamp:', newTimestamp);
+          console.log('🔄 Competitor - CURRENT timestamp:', currentTimestamp);
           
           // Update competitor data with API response
           const updatedData = {
@@ -1184,6 +1190,8 @@ const MarketResearch = () => {
         
         if (!currentTimestamp || isTimestampNewer(newTimestamp, currentTimestamp)) {
           console.log('✅ New Regulatory data is newer, updating UI');
+          console.log('🔄 Regulatory - NEW timestamp:', newTimestamp);
+          console.log('🔄 Regulatory - CURRENT timestamp:', currentTimestamp);
           
           // Update regulatory data with API response
           const updatedData = {
