@@ -1927,8 +1927,8 @@ const MarketResearch = () => {
       return;
     }
     
-    // Use captured original data
-    const originalJson = regulatoryOriginalDataSnapshot;
+    // Exit editing mode
+    setIsRegulatoryEditing(false);
     
     // Update timestamp for the current data
     const updatedData = {
@@ -1945,13 +1945,29 @@ const MarketResearch = () => {
     // Prepare modified JSON data (current state with new timestamp)
     const modifiedJson = updatedData;
     
-    // Exit editing mode
-    setIsRegulatoryEditing(false);
-    setRegulatoryHasEdits(false);
-    
     // Log the original and modified JSON for comparison
-    console.log('📄 ORIGINAL JSON:', JSON.stringify(originalJson, null, 2));
+    console.log('📄 ORIGINAL JSON:', JSON.stringify(regulatoryOriginalDataSnapshot, null, 2));
     console.log('📄 MODIFIED JSON:', JSON.stringify(modifiedJson, null, 2));
+    
+    // Store the modified JSON data for the chat interface
+    setRegulatoryModifiedData(modifiedJson);
+    
+    // Force contextual message state for Regulatory Scout
+    setRegulatoryHasEdits(true);
+    
+    // Create a new edit record
+    const newEdit: EditRecord = {
+      id: Date.now().toString(),
+      timestamp: new Date().toISOString(),
+      user: 'John Doe',
+      summary: 'Updated regulatory compliance data with JSON data captured',
+      field: 'Regulatory Compliance',
+      oldValue: JSON.stringify(regulatoryOriginalDataSnapshot),
+      newValue: JSON.stringify(modifiedJson)
+    };
+    
+    // Add the new edit record to the regulatory edit history
+    setRegulatoryEditHistory(prevHistory => [...prevHistory, newEdit]);
     
     // Save to localStorage
     localStorage.setItem('marketIntelligenceData', JSON.stringify({
@@ -1961,9 +1977,6 @@ const MarketResearch = () => {
     
     console.log('✅ Regulatory Compliance data saved successfully');
     console.log('🔄 Updated frontend state:', updatedData);
-    
-    // Open Scout chat panel
-    console.log('🤖 Regulatory Scout chat panel opened');
     
     // Close all other scout chats first
     setShowMarketSizeScoutChat(false);
@@ -1975,6 +1988,8 @@ const MarketResearch = () => {
     setTimeout(() => {
       setIsRegulatoryPostSave(true);
       setShowRegulatoryScoutChat(true);
+      setIsChatOpen(true);
+      console.log('🤖 Regulatory Scout chat panel opened');
     }, 100);
   };
 
