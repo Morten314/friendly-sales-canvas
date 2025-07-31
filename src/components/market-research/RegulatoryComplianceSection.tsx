@@ -111,6 +111,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   const [regulatoryTimestamp, setRegulatoryTimestamp] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dynamicFieldValues, setDynamicFieldValues] = useState<Record<string, string>>({});
   const [regulatoryExpanded, setRegulatoryExpanded] = useState(true);
 
   // API integration for Regulatory & Compliance Highlights
@@ -207,6 +208,17 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
           console.log('🔄 Updating Regulatory data with newer report');
           setRegulatoryData(result.data);
           setRegulatoryTimestamp(toUTCTimestamp(result.data.timestamp));
+          
+          // Initialize dynamic field values from API data
+          if (result.data.keyUpdates) {
+            const initialValues: Record<string, string> = {};
+            result.data.keyUpdates.forEach((update: any) => {
+              const id = update.title.toLowerCase().replace(/\s+/g, '-');
+              initialValues[id] = update.description;
+            });
+            setDynamicFieldValues(initialValues);
+          }
+          
           console.log('✅ REGULATORY DATA UPDATED - Component name:', result.data.component_name);
         } else {
           console.log('⏭️ Regulatory data is up to date - no update needed');
@@ -261,15 +273,18 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     }
   };
 
-  const keyDataPoints = regulatoryData?.keyUpdates ? regulatoryData.keyUpdates.map((update: any) => ({
-    id: update.title.toLowerCase().replace(/\s+/g, '-'),
-    icon: getIconByName(update.icon),
-    title: update.title,
-    value: update.description,
-    badge: update.tag,
-    badgeColor: getBadgeColor(update.tag),
-    tooltip: update.description
-  })) : [
+  const keyDataPoints = regulatoryData?.keyUpdates ? regulatoryData.keyUpdates.map((update: any) => {
+    const id = update.title.toLowerCase().replace(/\s+/g, '-');
+    return {
+      id,
+      icon: getIconByName(update.icon),
+      title: update.title,
+      value: dynamicFieldValues[id] !== undefined ? dynamicFieldValues[id] : update.description,
+      badge: update.tag,
+      badgeColor: getBadgeColor(update.tag),
+      tooltip: update.description
+    };
+  }) : [
     {
       id: 'eu-ai-act',
       icon: Scale,
@@ -497,26 +512,32 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                               type="text"
                               value={point.value}
                               onChange={(e) => {
-                                console.log('Input onChange triggered for ID:', point.id, 'New value:', e.target.value);
+                                const newValue = e.target.value;
+                                console.log('Input onChange triggered for ID:', point.id, 'New value:', newValue);
                                 
                                 // Handle both API data and fallback data IDs
                                 const idMatches = {
-                                  'eu-ai-act': () => onEuAiActDeadlineChange(e.target.value),
-                                  'eu-ai-act-enforcement-starts-q1-2026': () => onEuAiActDeadlineChange(e.target.value),
-                                  'gdpr-compliance': () => onGdprComplianceChange(e.target.value),
-                                  'gdpr-compliance-among-saas-providers': () => onGdprComplianceChange(e.target.value),
-                                  'potential-fines': () => onPotentialFinesChange(e.target.value),
-                                  'potential-fines-up-to-6%-revenue': () => onPotentialFinesChange(e.target.value),
-                                  'data-localization': () => onDataLocalizationChange(e.target.value),
-                                  'china-data-localization-laws-impacting-global-saas': () => onDataLocalizationChange(e.target.value)
+                                  'eu-ai-act': () => onEuAiActDeadlineChange(newValue),
+                                  'eu-ai-act-enforcement-starts-q1-2026': () => onEuAiActDeadlineChange(newValue),
+                                  'gdpr-compliance': () => onGdprComplianceChange(newValue),
+                                  'gdpr-compliance-among-saas-providers': () => onGdprComplianceChange(newValue),
+                                  'potential-fines': () => onPotentialFinesChange(newValue),
+                                  'potential-fines-up-to-6%-revenue': () => onPotentialFinesChange(newValue),
+                                  'data-localization': () => onDataLocalizationChange(newValue),
+                                  'china-data-localization-laws-impacting-global-saas': () => onDataLocalizationChange(newValue)
                                 };
                                 
                                 const handler = idMatches[point.id as keyof typeof idMatches];
                                 if (handler) {
-                                  console.log('Calling handler for ID:', point.id);
+                                  console.log('Calling predefined handler for ID:', point.id);
                                   handler();
                                 } else {
-                                  console.warn('No handler found for ID:', point.id);
+                                  console.log('Using dynamic field handler for ID:', point.id);
+                                  // Handle dynamic API fields with local state
+                                  setDynamicFieldValues(prev => ({
+                                    ...prev,
+                                    [point.id]: newValue
+                                  }));
                                 }
                               }}
                               onKeyDown={(e) => {
