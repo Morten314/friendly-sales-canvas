@@ -563,10 +563,10 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                             </div>
                             <Input
                               type="text"
-                              value={point.value}
+                              value={dynamicFieldValues[point.id] ?? point.value}
                               onChange={(e) => {
                                 const newValue = e.target.value;
-                                console.log('Input onChange triggered for ID:', point.id, 'New value:', newValue);
+                                console.log('🎯 Input onChange triggered for ID:', point.id, 'New value:', newValue);
                                 
                                 // Handle both API data and fallback data IDs
                                 const idMatches = {
@@ -582,10 +582,10 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                                 
                                 const handler = idMatches[point.id as keyof typeof idMatches];
                                 if (handler) {
-                                  console.log('Calling predefined handler for ID:', point.id);
+                                  console.log('📞 Calling predefined handler for ID:', point.id);
                                   handler(newValue);
                                 } else {
-                                  console.log('Using dynamic field handler for ID:', point.id);
+                                  console.log('🔄 Using dynamic field handler for ID:', point.id);
                                   // Handle dynamic API fields with local state
                                   setDynamicFieldValues(prev => ({
                                     ...prev,
@@ -594,7 +594,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                                 }
                               }}
                               onKeyDown={(e) => {
-                                console.log('Key pressed:', e.key, 'on field:', point.id);
+                                console.log('⌨️ Key pressed:', e.key, 'on field:', point.id);
                               }}
                               className="text-sm"
                             />
