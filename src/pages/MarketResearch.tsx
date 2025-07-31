@@ -791,9 +791,12 @@ const MarketResearch = () => {
       });
 
       console.log('📨 Industry Trends API response status:', response.status);
+      console.log('📨 Industry Trends API response headers:', Object.fromEntries(response.headers.entries()));
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error('❌ Industry Trends API error response:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
       }
 
       const result = await response.json();
