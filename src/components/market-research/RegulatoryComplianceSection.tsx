@@ -497,10 +497,22 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                               type="text"
                               value={point.value}
                               onChange={(e) => {
-                                if (point.id === 'eu-ai-act') onEuAiActDeadlineChange(e.target.value);
-                                else if (point.id === 'gdpr-compliance') onGdprComplianceChange(e.target.value);
-                                else if (point.id === 'potential-fines') onPotentialFinesChange(e.target.value);
-                                else if (point.id === 'data-localization') onDataLocalizationChange(e.target.value);
+                                // Handle both API data and fallback data IDs
+                                const idMatches = {
+                                  'eu-ai-act': () => onEuAiActDeadlineChange(e.target.value),
+                                  'eu-ai-act-enforcement-starts-q1-2026': () => onEuAiActDeadlineChange(e.target.value),
+                                  'gdpr-compliance': () => onGdprComplianceChange(e.target.value),
+                                  'gdpr-compliance-among-saas-providers': () => onGdprComplianceChange(e.target.value),
+                                  'potential-fines': () => onPotentialFinesChange(e.target.value),
+                                  'potential-fines-up-to-6%-revenue': () => onPotentialFinesChange(e.target.value),
+                                  'data-localization': () => onDataLocalizationChange(e.target.value),
+                                  'china-data-localization-laws-impacting-global-saas': () => onDataLocalizationChange(e.target.value)
+                                };
+                                
+                                const handler = idMatches[point.id as keyof typeof idMatches];
+                                if (handler) {
+                                  handler();
+                                }
                               }}
                               className="text-sm"
                             />
