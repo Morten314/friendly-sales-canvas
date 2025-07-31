@@ -570,20 +570,20 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                                 
                                 // Handle both API data and fallback data IDs
                                 const idMatches = {
-                                  'eu-ai-act': () => onEuAiActDeadlineChange(newValue),
-                                  'eu-ai-act-enforcement-starts-q1-2026': () => onEuAiActDeadlineChange(newValue),
-                                  'gdpr-compliance': () => onGdprComplianceChange(newValue),
-                                  'gdpr-compliance-among-saas-providers': () => onGdprComplianceChange(newValue),
-                                  'potential-fines': () => onPotentialFinesChange(newValue),
-                                  'potential-fines-up-to-6%-revenue': () => onPotentialFinesChange(newValue),
-                                  'data-localization': () => onDataLocalizationChange(newValue),
-                                  'china-data-localization-laws-impacting-global-saas': () => onDataLocalizationChange(newValue)
+                                  'eu-ai-act': (value: string) => onEuAiActDeadlineChange(value),
+                                  'eu-ai-act-enforcement-starts-q1-2026': (value: string) => onEuAiActDeadlineChange(value),
+                                  'gdpr-compliance': (value: string) => onGdprComplianceChange(value),
+                                  'gdpr-compliance-among-saas-providers': (value: string) => onGdprComplianceChange(value),
+                                  'potential-fines': (value: string) => onPotentialFinesChange(value),
+                                  'potential-fines-up-to-6%-revenue': (value: string) => onPotentialFinesChange(value),
+                                  'data-localization': (value: string) => onDataLocalizationChange(value),
+                                  'china-data-localization-laws-impacting-global-saas': (value: string) => onDataLocalizationChange(value)
                                 };
                                 
                                 const handler = idMatches[point.id as keyof typeof idMatches];
                                 if (handler) {
                                   console.log('Calling predefined handler for ID:', point.id);
-                                  handler();
+                                  handler(newValue);
                                 } else {
                                   console.log('Using dynamic field handler for ID:', point.id);
                                   // Handle dynamic API fields with local state
