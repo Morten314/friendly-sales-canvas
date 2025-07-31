@@ -1906,9 +1906,9 @@ const MarketResearch = () => {
     console.log('🎯 TOGGLE EDIT - Current isRegulatoryEditing:', isRegulatoryEditing);
     if (!isRegulatoryEditing) {
       // Capture original data when starting to edit - use the actual regulatory compliance data
-      const currentRegulatoryData = marketIntelligenceData?.regulatory_compliance || regulatoryData;
-      console.log('📸 CAPTURING ORIGINAL DATA SNAPSHOT:', currentRegulatoryData);
-      setRegulatoryOriginalDataSnapshot({...currentRegulatoryData});
+      const currentRegulatoryData = marketIntelligenceData?.regulatory_compliance;
+      console.log('📸 CAPTURING ORIGINAL DATA SNAPSHOT (regulatory_compliance):', currentRegulatoryData);
+      setRegulatoryOriginalDataSnapshot(currentRegulatoryData ? {...currentRegulatoryData} : null);
     }
     setIsRegulatoryEditing(!isRegulatoryEditing);
   };
@@ -1918,12 +1918,17 @@ const MarketResearch = () => {
     console.log('💾 Saving Regulatory Compliance changes...');
     
     // Use the actual regulatory compliance data that's being edited
-    const currentRegulatoryData = marketIntelligenceData?.regulatory_compliance || regulatoryData;
+    const currentRegulatoryData = marketIntelligenceData?.regulatory_compliance;
     console.log('📊 Current regulatoryData from intelligence:', currentRegulatoryData);
     console.log('📸 Captured original snapshot:', regulatoryOriginalDataSnapshot);
     
-    // Use captured original data or current data as fallback
-    const originalJson = regulatoryOriginalDataSnapshot || currentRegulatoryData;
+    if (!currentRegulatoryData) {
+      console.error('❌ No regulatory compliance data found');
+      return;
+    }
+    
+    // Use captured original data
+    const originalJson = regulatoryOriginalDataSnapshot;
     
     // Update timestamp for the current data
     const updatedData = {
