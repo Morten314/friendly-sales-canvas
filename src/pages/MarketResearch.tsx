@@ -1927,6 +1927,9 @@ const MarketResearch = () => {
       return;
     }
     
+    // Exit editing mode FIRST (following competitor pattern)
+    setIsRegulatoryEditing(false);
+    
     // Update timestamp for the current data
     const updatedData = {
       ...currentRegulatoryData,
@@ -1938,9 +1941,6 @@ const MarketResearch = () => {
       ...prevData,
       regulatory_compliance: updatedData
     }));
-    
-    // Exit editing mode AFTER updating the data to ensure UI reflects changes
-    setIsRegulatoryEditing(false);
     
     // Prepare modified JSON data (current state with new timestamp)
     const modifiedJson = updatedData;
@@ -1984,7 +1984,7 @@ const MarketResearch = () => {
     setShowCompetitorScoutChat(false);
     setIsChatOpen(false);
     
-    // Open regulatory scout chat with post-save contextual messages
+    // Open regulatory scout chat with post-save contextual messages (following competitor pattern)
     setTimeout(() => {
       setIsRegulatoryPostSave(true);
       setShowRegulatoryScoutChat(true);
