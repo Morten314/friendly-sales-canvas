@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { 
   Scale, 
   Shield, 
@@ -27,9 +26,7 @@ import {
   MessageSquare,
   Sun,
   BarChart3,
-  Factory,
-  Info,
-  MapPin
+  Factory
 } from 'lucide-react';
 import {
   Table,
@@ -65,7 +62,6 @@ interface RegulatoryComplianceSectionProps {
   onScoutIconClick: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance', hasEdits?: boolean, customMessage?: string) => void;
   onEditHistoryOpen: () => void;
   onDeleteSection: (sectionId: string) => void;
-  onRestoreSection?: (sectionId: string) => void;
   onSaveChanges: () => void;
   onCancelEdit: () => void;
   onExpandToggle: (expanded: boolean) => void;
@@ -95,7 +91,6 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   onScoutIconClick,
   onEditHistoryOpen,
   onDeleteSection,
-  onRestoreSection,
   onSaveChanges,
   onCancelEdit,
   onExpandToggle,
@@ -113,8 +108,6 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   const [regulatoryTimestamp, setRegulatoryTimestamp] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [dynamicFieldValues, setDynamicFieldValues] = useState<Record<string, string>>({});
-  const [localExecutiveSummary, setLocalExecutiveSummary] = useState<string>('');
   const [regulatoryExpanded, setRegulatoryExpanded] = useState(true);
 
   // API integration for Regulatory & Compliance Highlights
@@ -169,15 +162,6 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
       const result = await response.json();
       console.log('📊 Full API Response Structure:', result);
       console.log('📊 Regulatory Data Keys:', Object.keys(result.data || {}));
-      
-      // Log original_json and modified_json
-      console.log('🔍 REGULATORY ORIGINAL_JSON:', result.data?.original_json || 'Not available');
-      console.log('🔍 REGULATORY MODIFIED_JSON:', result.data?.modified_json || 'Not available');
-      
-      // Debug the keyUpdates structure specifically
-      console.log('🔍 REGULATORY keyUpdates structure:', result.data?.keyUpdates);
-      console.log('🔍 REGULATORY executiveSummary from API:', result.data?.executiveSummary);
-      console.log('🔍 REGULATORY full data structure:', JSON.stringify(result.data, null, 2));
 
       if (result.status === 'success' && result.data) {
         const currentTimestampUTC = toUTCTimestamp(regulatoryTimestamp);
@@ -220,22 +204,6 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
           console.log('🔄 Updating Regulatory data with newer report');
           setRegulatoryData(result.data);
           setRegulatoryTimestamp(toUTCTimestamp(result.data.timestamp));
-          
-          // Initialize local executive summary from API data
-          if (result.data.executiveSummary) {
-            setLocalExecutiveSummary(result.data.executiveSummary);
-          }
-          
-          // Initialize dynamic field values from API data
-          if (result.data.keyUpdates) {
-            const initialValues: Record<string, string> = {};
-            result.data.keyUpdates.forEach((update: any) => {
-              const id = update.title.toLowerCase().replace(/\s+/g, '-');
-              initialValues[id] = update.description;
-            });
-            setDynamicFieldValues(initialValues);
-          }
-          
           console.log('✅ REGULATORY DATA UPDATED - Component name:', result.data.component_name);
         } else {
           console.log('⏭️ Regulatory data is up to date - no update needed');
@@ -252,12 +220,11 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     }
   };
 
-  // Fetch data on component mount and initialize local state
+  // Fetch data on component mount
   useEffect(() => {
     console.log('🚀 Component mounted - clearing previous data and fetching fresh');
-    setLocalExecutiveSummary(executiveSummary); // Initialize with prop value
     fetchRegulatoryData(true);
-  }, [executiveSummary]);
+  }, []);
 
   console.log('🎨 RegulatoryComplianceSection RENDER DEBUG:');
   console.log('  - isLoading:', isLoading);
@@ -291,42 +258,15 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     }
   };
 
-  // Helper function to get icon based on update type
-  const getIconForUpdate = (iconType: string) => {
-    switch (iconType) {
-      case 'arrow-up': return TrendingUp;
-      case 'chart': return BarChart3;
-      case 'user': return Users;
-      case 'competition': return AlertTriangle;
-      case 'clock': return Clock;
-      case 'shield': return Shield;
-      case 'map': return Globe;
-      case 'info': return Scale;
-      default: return Scale;
-    }
-  };
-
-  // Helper function to get badge color based on tag
-  const getBadgeColorForTag = (tag: string) => {
-    switch (tag?.toLowerCase()) {
-      case 'growth': return 'bg-green-100 text-green-800';
-      case 'trend': return 'bg-blue-100 text-blue-800';
-      case 'demographics': return 'bg-purple-100 text-purple-800';
-      case 'market': return 'bg-orange-100 text-orange-800';
-      case 'risk': return 'bg-red-100 text-red-800';
-      case 'new': return 'bg-orange-100 text-orange-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  // Debug the exact values being used
-  console.log('🔍 REGULATORY KEY DATA POINTS DEBUG:');
-  console.log('  - fallback euAiActDeadline:', euAiActDeadline);
-  console.log('  - fallback gdprCompliance:', gdprCompliance);
-  console.log('  - fallback potentialFines:', potentialFines);
-  console.log('  - fallback dataLocalization:', dataLocalization);
-
-  const keyDataPoints = [
+  const keyDataPoints = regulatoryData?.keyUpdates ? regulatoryData.keyUpdates.map((update: any) => ({
+    id: update.title.toLowerCase().replace(/\s+/g, '-'),
+    icon: getIconByName(update.icon),
+    title: update.title,
+    value: update.description,
+    badge: update.tag,
+    badgeColor: getBadgeColor(update.tag),
+    tooltip: update.description
+  })) : [
     {
       id: 'eu-ai-act',
       icon: Scale,
@@ -365,7 +305,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     }
   ];
 
-  const visualDataCards = [
+  const visualDataCards = regulatoryData?.visualDataCards || [
     {
       title: 'Compliance Adoption Rates',
       type: 'bar-chart',
@@ -396,7 +336,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     }
   ];
 
-  const regionalData = [
+  const regionalData = regulatoryData?.regionalData || [
     {
       region: 'European Union',
       framework: 'GDPR + AI Act',
@@ -431,13 +371,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     }
   ];
 
-  const currentExecutiveSummary = executiveSummary;
-  
-  // Debug what's actually being used in the component
-  console.log('🎯 REGULATORY COMPONENT DATA DEBUG:');
-  console.log('  - currentExecutiveSummary:', currentExecutiveSummary);
-  console.log('  - keyDataPoints length:', keyDataPoints?.length);
-  console.log('  - first keyDataPoint:', keyDataPoints?.[0]);
+  const currentExecutiveSummary = regulatoryData?.executiveSummary || executiveSummary;
 
   return (
     <Card className="border border-gray-200 shadow-sm">
@@ -516,29 +450,8 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                 </button>
                 <h4 className="text-sm font-medium text-gray-700 mb-2">Executive Summary</h4>
                 <textarea
-                  value={localExecutiveSummary || currentExecutiveSummary}
-                  onChange={(e) => {
-                    const newValue = e.target.value;
-                    console.log('📝 Executive summary onChange:', newValue);
-                    
-                    // Log original and modified JSON for regulatory compliance
-                    const currentData = regulatoryData || {};
-                    const originalJson = {
-                      executiveSummary: currentData.executiveSummary || executiveSummary,
-                      keyUpdates: currentData.keyUpdates || [],
-                      ...currentData
-                    };
-                    const modifiedJson = {
-                      ...originalJson,
-                      executiveSummary: newValue
-                    };
-                    
-                    console.log('🔍 REGULATORY ORIGINAL_JSON (Executive Summary Edit):', JSON.stringify(originalJson, null, 2));
-                    console.log('🔍 REGULATORY MODIFIED_JSON (Executive Summary Edit):', JSON.stringify(modifiedJson, null, 2));
-                    
-                    setLocalExecutiveSummary(newValue);
-                    onExecutiveSummaryChange(newValue);
-                  }}
+                  value={executiveSummary}
+                  onChange={(e) => onExecutiveSummaryChange(e.target.value)}
                   className="w-full p-3 border border-gray-300 rounded-lg text-sm resize-none"
                   rows={4}
                   placeholder="Enter executive summary..."
@@ -577,62 +490,16 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                                 {point.badge}
                               </Badge>
                             </div>
-                            <Input
+                            <input
                               type="text"
-                              value={dynamicFieldValues[point.id] ?? point.value}
+                              value={point.value}
                               onChange={(e) => {
-                                const newValue = e.target.value;
-                                console.log('🎯 Input onChange triggered for ID:', point.id, 'New value:', newValue);
-                                
-                                // Handle both API data and fallback data IDs
-                                const idMatches = {
-                                  'eu-ai-act': (value: string) => onEuAiActDeadlineChange(value),
-                                  'eu-ai-act-enforcement-starts-q1-2026': (value: string) => onEuAiActDeadlineChange(value),
-                                  'gdpr-compliance': (value: string) => onGdprComplianceChange(value),
-                                  'gdpr-compliance-among-saas-providers': (value: string) => onGdprComplianceChange(value),
-                                  'potential-fines': (value: string) => onPotentialFinesChange(value),
-                                  'potential-fines-up-to-6%-revenue': (value: string) => onPotentialFinesChange(value),
-                                  'data-localization': (value: string) => onDataLocalizationChange(value),
-                                  'china-data-localization-laws-impacting-global-saas': (value: string) => onDataLocalizationChange(value)
-                                };
-                                
-                                const handler = idMatches[point.id as keyof typeof idMatches];
-                                if (handler) {
-                                  console.log('📞 Calling predefined handler for ID:', point.id);
-                                  handler(newValue);
-                                } else {
-                                  console.log('🔄 Using dynamic field handler for ID:', point.id);
-                                  
-                                  // Log original and modified JSON for regulatory compliance
-                                  const currentData = regulatoryData || {};
-                                  const originalJson = {
-                                    executiveSummary: currentData.executiveSummary || executiveSummary,
-                                    keyUpdates: currentData.keyUpdates || [],
-                                    dynamicFieldValues: dynamicFieldValues,
-                                    ...currentData
-                                  };
-                                  const modifiedJson = {
-                                    ...originalJson,
-                                    dynamicFieldValues: {
-                                      ...dynamicFieldValues,
-                                      [point.id]: newValue
-                                    }
-                                  };
-                                  
-                                  console.log('🔍 REGULATORY ORIGINAL_JSON (Dynamic Field Edit):', JSON.stringify(originalJson, null, 2));
-                                  console.log('🔍 REGULATORY MODIFIED_JSON (Dynamic Field Edit):', JSON.stringify(modifiedJson, null, 2));
-                                  
-                                  // Handle dynamic API fields with local state
-                                  setDynamicFieldValues(prev => ({
-                                    ...prev,
-                                    [point.id]: newValue
-                                  }));
-                                }
+                                if (point.id === 'eu-ai-act') onEuAiActDeadlineChange(e.target.value);
+                                else if (point.id === 'gdpr-compliance') onGdprComplianceChange(e.target.value);
+                                else if (point.id === 'potential-fines') onPotentialFinesChange(e.target.value);
+                                else if (point.id === 'data-localization') onDataLocalizationChange(e.target.value);
                               }}
-                              onKeyDown={(e) => {
-                                console.log('⌨️ Key pressed:', e.key, 'on field:', point.id);
-                              }}
-                              className="text-sm"
+                              className="w-full p-2 border border-gray-300 rounded text-sm"
                             />
                           </div>
                         </div>
@@ -849,46 +716,11 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
               </div>
             )}
 
-            {/* Deleted Sections */}
-            {deletedSections.size > 0 && onRestoreSection && (
-              <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4 relative z-50 shadow-lg">
-                <h4 className="text-sm font-medium text-gray-700 mb-3">Deleted Sections</h4>
-                <div className="space-y-2">
-                  {Array.from(deletedSections).map((sectionId) => {
-                    const sectionNames: Record<string, string> = {
-                      'executive-summary': 'Executive Summary',
-                      'key-updates': 'Key Regulatory Updates',
-                      'compliance-analytics': 'Compliance Analytics',
-                      'regional-breakdown': 'Regional Compliance Overview',
-                      'strategic-recommendations': 'Strategic Recommendations'
-                    };
-                    
-                    return (
-                      <div key={sectionId} className="flex items-center justify-between bg-white p-3 rounded border border-gray-200">
-                        <span className="text-sm text-gray-600">{sectionNames[sectionId] || sectionId}</span>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => onRestoreSection(sectionId)}
-                          className="text-teal-600 border-teal-200 hover:bg-teal-50"
-                        >
-                          Restore
-                        </Button>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
             {/* Save/Cancel buttons and Edit History - positioned at bottom */}
             <div className="flex justify-between items-center pt-6 border-t border-gray-200">
               <div className="flex gap-3">
                 <Button 
-                  onClick={() => {
-                    console.log('🔥 SAVE BUTTON CLICKED - Regulatory Compliance');
-                    onSaveChanges();
-                  }}
+                  onClick={onSaveChanges}
                   className="bg-blue-600 hover:bg-blue-700 text-white"
                 >
                   <Save className="h-4 w-4 mr-2" />
@@ -1119,13 +951,20 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                         <Shield className="h-5 w-5 text-blue-600 mt-0.5" />
                         <div>
                           <h5 className="font-medium text-blue-900 mb-2">
-                            Mitigate Regulatory Risks
+                            {regulatoryData?.strategicRecommendations ? 'Mitigate Regulatory Risks' : 'Mitigate Regulatory Risks'}
                           </h5>
                           <ul className="text-sm text-blue-700 space-y-1">
-                            <li>• Implement privacy by design principles</li>
-                            <li>• Establish automated compliance monitoring</li>
-                            <li>• Regular risk assessments and audits</li>
-                            <li>• Cross-functional compliance team</li>
+                            {regulatoryData?.strategicRecommendations?.mitigateRegulatoryRisks ? 
+                              regulatoryData.strategicRecommendations.mitigateRegulatoryRisks.map((item: string, index: number) => (
+                                <li key={index}>• {item}</li>
+                              )) : (
+                              <>
+                                <li>• Implement privacy by design principles</li>
+                                <li>• Establish automated compliance monitoring</li>
+                                <li>• Regular risk assessments and audits</li>
+                                <li>• Cross-functional compliance team</li>
+                              </>
+                            )}
                           </ul>
                         </div>
                       </div>
@@ -1136,13 +975,20 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                         <Target className="h-5 w-5 text-green-600 mt-0.5" />
                         <div>
                           <h5 className="font-medium text-green-900 mb-2">
-                            Competitive Positioning
+                            {regulatoryData?.strategicRecommendations ? 'Competitive Positioning' : 'Competitive Positioning'}
                           </h5>
                           <ul className="text-sm text-green-700 space-y-1">
-                            <li>• Market compliance as differentiator</li>
-                            <li>• Showcase security certifications</li>
-                            <li>• Transparent data handling practices</li>
-                            <li>• Industry-leading privacy standards</li>
+                            {regulatoryData?.strategicRecommendations?.competitivePositioning ? 
+                              regulatoryData.strategicRecommendations.competitivePositioning.map((item: string, index: number) => (
+                                <li key={index}>• {item}</li>
+                              )) : (
+                              <>
+                                <li>• Market compliance as differentiator</li>
+                                <li>• Showcase security certifications</li>
+                                <li>• Transparent data handling practices</li>
+                                <li>• Industry-leading privacy standards</li>
+                              </>
+                            )}
                           </ul>
                         </div>
                       </div>
@@ -1153,13 +999,20 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                         <Building className="h-5 w-5 text-purple-600 mt-0.5" />
                         <div>
                           <h5 className="font-medium text-purple-900 mb-2">
-                            Go-to-Market Strategy
+                            {regulatoryData?.strategicRecommendations ? 'Go-to-Market Strategy' : 'Go-to-Market Strategy'}
                           </h5>
                           <ul className="text-sm text-purple-700 space-y-1">
-                            <li>• Regional deployment capabilities</li>
-                            <li>• Compliance-ready product offerings</li>
-                            <li>• Legal-friendly contract templates</li>
-                            <li>• Enterprise-grade data residency</li>
+                            {regulatoryData?.strategicRecommendations?.goToMarketStrategy ? 
+                              regulatoryData.strategicRecommendations.goToMarketStrategy.map((item: string, index: number) => (
+                                <li key={index}>• {item}</li>
+                              )) : (
+                              <>
+                                <li>• Regional deployment capabilities</li>
+                                <li>• Compliance-ready product offerings</li>
+                                <li>• Legal-friendly contract templates</li>
+                                <li>• Enterprise-grade data residency</li>
+                              </>
+                            )}
                           </ul>
                         </div>
                       </div>

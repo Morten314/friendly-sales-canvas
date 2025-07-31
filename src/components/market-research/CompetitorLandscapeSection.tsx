@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BarChart3, Bot, Edit, X, FileText, Save, Share, Clock, ChevronDown, ChevronUp, Zap, ArrowUp, ArrowDown, Loader2, RotateCcw } from 'lucide-react';
+import { BarChart3, Bot, Edit, X, FileText, Save, Share, Clock, ChevronDown, ChevronUp, Zap, ArrowUp, ArrowDown, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -37,7 +37,6 @@ interface CompetitorLandscapeSectionProps {
   onScoutIconClick: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape', hasEdits?: boolean, customMessage?: string) => void;
   onEditHistoryOpen: () => void;
   onDeleteSection: (sectionId: string) => void;
-  onRestoreSection?: (sectionId: string) => void;
   onSaveChanges: () => void;
   onCancelEdit: () => void;
   onExpandToggle: (expanded: boolean) => void;
@@ -48,9 +47,6 @@ interface CompetitorLandscapeSectionProps {
   onExportPDF: () => void;
   onSaveToWorkspace: () => void;
   onGenerateShareableLink: () => void;
-  // Scout chat panel props
-  showScoutChat?: boolean;
-  scoutChatPanel?: React.ReactNode;
 }
 
 interface UIComponent {
@@ -112,7 +108,6 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   onScoutIconClick,
   onEditHistoryOpen: onCompetitorLandscapeEditHistoryOpen,
   onDeleteSection: onCompetitorLandscapeDeleteSection,
-  onRestoreSection: onCompetitorLandscapeRestoreSection,
   onSaveChanges: onCompetitorLandscapeSaveChanges,
   onCancelEdit: onCompetitorLandscapeCancelEdit,
   onExpandToggle: onCompetitorLandscapeExpandToggle,
@@ -122,9 +117,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   onFundingNewsChange,
   onExportPDF,
   onSaveToWorkspace,
-  onGenerateShareableLink,
-  showScoutChat,
-  scoutChatPanel
+  onGenerateShareableLink
 }) => {
   // State for API data
   const [competitorData, setCompetitorData] = useState<CompetitorLandscapeData | null>(null);
@@ -133,25 +126,26 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   
   // Local editing state
   const [editExecutiveSummary, setEditExecutiveSummary] = useState('');
-  const [editTopPlayerShare, setEditTopPlayerShare] = useState('');
-  const [editEmergingPlayers, setEditEmergingPlayers] = useState('');
-  const [editFundingNews, setEditFundingNews] = useState<string[]>([]);
-  
-  // Handle save changes - following pattern from other components
-  const handleCompetitorSaveChanges = () => {
-    // Update the parent with changes
-    onExecutiveSummaryChange(editExecutiveSummary);
-    onTopPlayerShareChange(editTopPlayerShare);
-    onEmergingPlayersChange(editEmergingPlayers);
-    onFundingNewsChange(editFundingNews);
-    
-    // Call parent save handler only - parent handles chat notifications
-    onCompetitorLandscapeSaveChanges();
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [editingValue, setEditingValue] = useState<string>('');
+
+  // Handle field editing
+  const handleEditField = (fieldName: string, currentValue: string) => {
+    setEditingField(fieldName);
+    setEditingValue(currentValue);
   };
 
-  // Handle delete section - only call parent, no scout calls from child
-  const handleDeleteSection = (sectionId: string) => {
-    onCompetitorLandscapeDeleteSection(sectionId);
+  const handleSaveField = () => {
+    if (editingField === 'executiveSummary') {
+      setEditExecutiveSummary(editingValue);
+    }
+    setEditingField(null);
+    setEditingValue('');
+  };
+
+  const handleCancelEdit = () => {
+    setEditingField(null);
+    setEditingValue('');
   };
 
   // Fetch Competitor Landscape data from API
@@ -236,17 +230,6 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
           // Initialize edit fields with data from uiComponents
           const reportComponent = reportData.uiComponents?.find(comp => comp.type === 'report');
           setEditExecutiveSummary(reportComponent?.executiveSummary || '');
-          
-          // Initialize other edit fields with default values or fetch from data
-          const sectionComponent = reportData.uiComponents?.find(comp => comp.type === 'section');
-          const metrics = sectionComponent?.metrics;
-          
-          if (metrics && metrics.length > 0) {
-            setEditTopPlayerShare(metrics[0]?.value || '');
-          }
-          
-          setEditEmergingPlayers('New emerging players in the market...');
-          setEditFundingNews(['Recent funding news 1', 'Recent funding news 2']);
         }
       }
     } catch (err) {
@@ -256,20 +239,6 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
       setIsLoading(false);
     }
   };
-
-  // Initialize edit fields when entering edit mode
-  useEffect(() => {
-    if (isCompetitorLandscapeEditing && competitorData) {
-      const reportComponent = competitorData.uiComponents?.find(comp => comp.type === 'report');
-      const sectionComponent = competitorData.uiComponents?.find(comp => comp.type === 'section');
-      const metrics = sectionComponent?.metrics;
-      
-      setEditExecutiveSummary(reportComponent?.executiveSummary || '');
-      setEditTopPlayerShare(metrics?.[0]?.value || '');
-      setEditEmergingPlayers('New emerging players in the market...');
-      setEditFundingNews(['Recent funding news 1', 'Recent funding news 2']);
-    }
-  }, [isCompetitorLandscapeEditing, competitorData]);
 
   // Clear previous data and fetch fresh data on component mount
   useEffect(() => {
@@ -327,62 +296,77 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
     <div className={`${isSplitView ? 'flex gap-6' : ''}`}>
       <div className={`bg-white rounded-lg border border-gray-200 p-6 ${isSplitView ? 'flex-1' : ''}`}>
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 text-blue-600" />
-            Competitor Landscape
-          </h2>
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" onClick={onCompetitorLandscapeToggleEdit} className="text-blue-800 hover:text-blue-900">
-              <Edit className="h-4 w-4" />
-            </Button>
-            {!isSplitView && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="sm" onClick={() => onScoutIconClick('competitor-landscape')} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-all duration-200 hover:shadow-md hover:shadow-blue-200/50 relative">
-                    <div className="absolute inset-0 rounded-md bg-gradient-to-r from-blue-400/20 to-green-400/20 animate-pulse opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
-                    <Bot className="h-5 w-5 relative z-10" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Explore More with Scout</p>
-                </TooltipContent>
-              </Tooltip>
-            )}
-          </div>
-        </div>
-
-        {/* Deleted Sections - Show restore options in edit mode */}
-        {isCompetitorLandscapeEditing && competitorLandscapeDeletedSections.size > 0 && (
-          <div className="mb-6 p-4 border border-amber-200 bg-amber-50 rounded-lg">
-            <h4 className="text-sm font-medium text-amber-800 mb-3">Deleted Sections</h4>
-            <div className="space-y-2">
-              {Array.from(competitorLandscapeDeletedSections).map((sectionId) => {
-                const sectionNames: Record<string, string> = {
-                  'executive-summary': 'Executive Summary',
-                  'emerging-players': 'Emerging Players',
-                  'funding-news': 'Funding News & Headlines'
-                };
-                
-                const sectionName = sectionNames[sectionId] || sectionId;
-                
-                return (
-                  <div key={sectionId} className="flex items-center justify-between p-2 bg-white rounded border border-amber-200">
-                    <span className="text-sm text-amber-800">{sectionName}</span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onCompetitorLandscapeRestoreSection?.(sectionId)}
-                      className="text-amber-600 hover:text-amber-700 hover:bg-amber-100"
-                    >
-                      <RotateCcw className="h-4 w-4 mr-1" />
-                      Restore
-                    </Button>
-                  </div>
-                );
-              })}
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <BarChart3 className="h-6 w-6 text-blue-600" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">Competitor Landscape</h2>
+              <p className="text-sm text-gray-600">Comprehensive analysis of competitive environment</p>
             </div>
           </div>
-        )}
+          
+          <div className="flex items-center gap-2">
+            {competitorLandscapeHasEdits && (
+              <Badge variant="secondary" className="bg-orange-100 text-orange-700 border-orange-200">
+                <Clock className="h-3 w-3 mr-1" />
+                Unsaved
+              </Badge>
+            )}
+            
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onScoutIconClick('competitor-landscape', competitorLandscapeHasEdits)}
+                  className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                >
+                  <Bot className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Chat with Scout about competitor landscape</p>
+              </TooltipContent>
+            </Tooltip>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onCompetitorLandscapeEditHistoryOpen}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <Clock className="h-4 w-4" />
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onCompetitorLandscapeToggleEdit}
+              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onCompetitorLandscapeExpandToggle(!competitorLandscapeExpanded)}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              {competitorLandscapeExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onCompetitorLandscapeDeleteSection('competitor-landscape')}
+              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
 
         {/* Executive Summary - Always visible */}
         {(() => {
@@ -394,30 +378,25 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
           }
           
           return (
-            <div className="p-6 rounded-lg mb-6 border border-gray-200">
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg mb-6">
               <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
+                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                   <FileText className="h-5 w-5 text-blue-600" />
-                  <h3 className="text-lg font-semibold text-gray-900">Executive Summary</h3>
-                </div>
-                {(!competitorLandscapeDeletedSections.has('executive-summary')) && (
-                  <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="sm" onClick={() => onCompetitorLandscapeDeleteSection('executive-summary')} className="text-red-600 hover:text-red-700 hover:bg-red-50">
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  Executive Summary
+                </h3>
+                {isCompetitorLandscapeEditing && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleEditField('executiveSummary', executiveSummary)}
+                    className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                  >
+                    <Edit className="h-4 w-4 mr-1" />
+                    Edit
+                  </Button>
                 )}
               </div>
-              {isCompetitorLandscapeEditing ? (
-                <Textarea 
-                  value={editExecutiveSummary} 
-                  onChange={(e) => setEditExecutiveSummary(e.target.value)} 
-                  className="w-full h-32 resize-none" 
-                  placeholder="Enter executive summary..." 
-                />
-              ) : (
-                <p className="text-gray-700 leading-relaxed">{executiveSummary}</p>
-              )}
+              <p className="text-gray-700 leading-relaxed">{executiveSummary}</p>
             </div>
           );
         })()}
@@ -432,27 +411,13 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
           return (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               {metrics.map((metric, index) => (
-                <div key={index} className="border border-gray-200 p-4 rounded-lg">
+                <div key={index} className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
                   <div className="flex items-center justify-between">
                     <div>
-                      {isCompetitorLandscapeEditing && index === 0 ? (
-                        <div>
-                          <Input 
-                            value={editTopPlayerShare} 
-                            onChange={(e) => setEditTopPlayerShare(e.target.value)} 
-                            className="text-lg font-bold text-blue-600 mb-2"
-                            placeholder="e.g., 35%" 
-                          />
-                          <div className="text-sm text-gray-700">{metric.label}</div>
-                        </div>
-                      ) : (
-                        <div>
-                          <div className="text-lg font-bold text-blue-600">
-                            {metric.value}
-                          </div>
-                          <div className="text-sm text-gray-700">{metric.label}</div>
-                        </div>
-                      )}
+                      <div className="text-lg font-bold text-blue-600">
+                        {metric.value}
+                      </div>
+                      <div className="text-sm text-gray-700">{metric.label}</div>
                     </div>
                     {metric.trend === 'up' ? (
                       <div className="text-green-500">
@@ -471,7 +436,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         })()}
 
         {/* Read More button when collapsed */}
-        {!competitorLandscapeExpanded && !isSplitView && !isCompetitorLandscapeEditing && (
+        {!competitorLandscapeExpanded && !isSplitView && (
           <div className="flex justify-center pt-4">
             <Button
               onClick={() => onCompetitorLandscapeExpandToggle(true)}
@@ -484,119 +449,38 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
           </div>
         )}
 
-        {/* Editing Mode Additional Fields */}
-        {isCompetitorLandscapeEditing && (competitorLandscapeExpanded || isSplitView) && (
-          <div className="space-y-8">
-            {/* Emerging Players Edit */}
-            {!competitorLandscapeDeletedSections.has('emerging-players') && (
-              <div className="relative group">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="sm" onClick={() => handleDeleteSection('emerging-players')} className="absolute -top-2 -right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50">
-                      <X className="h-4 w-4" />
+        {/* Expanded content */}
+        {(competitorLandscapeExpanded || isSplitView) && (
+          <div className="space-y-6">
+            
+            {/* Edit field modal */}
+            {editingField && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-medium text-blue-900">
+                    Editing {editingField.replace(/([A-Z])/g, ' $1').toLowerCase()}
+                  </h4>
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={handleSaveField} className="bg-blue-600 hover:bg-blue-700">
+                      <Save className="h-4 w-4 mr-1" />
+                      Save
                     </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Delete this section</p>
-                  </TooltipContent>
-                </Tooltip>
-                <div>
-                  <Label htmlFor="emergingPlayers" className="text-sm font-medium text-gray-700 mb-2 block">
-                    Emerging Players
-                  </Label>
-                  <Textarea 
-                    id="emergingPlayers" 
-                    value={editEmergingPlayers} 
-                    onChange={(e) => setEditEmergingPlayers(e.target.value)} 
-                    className="w-full h-24 resize-none" 
-                    placeholder="Enter emerging players information..." 
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Funding News Edit */}
-            {!competitorLandscapeDeletedSections.has('funding-news') && (
-              <div className="relative group">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="sm" onClick={() => handleDeleteSection('funding-news')} className="absolute -top-2 -right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50">
-                      <X className="h-4 w-4" />
+                    <Button size="sm" variant="outline" onClick={handleCancelEdit}>
+                      Cancel
                     </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Delete this section</p>
-                  </TooltipContent>
-                </Tooltip>
-                <div>
-                  <Label className="text-sm font-medium text-gray-700 mb-2 block">
-                    Funding News
-                  </Label>
-                  {editFundingNews.map((news, index) => (
-                    <Textarea 
-                      key={index} 
-                      value={news} 
-                      onChange={e => {
-                        const newFundingNews = [...editFundingNews];
-                        newFundingNews[index] = e.target.value;
-                        setEditFundingNews(newFundingNews);
-                      }} 
-                      className="w-full h-20 resize-none mb-3" 
-                      placeholder={`Funding news ${index + 1}...`} 
-                    />
-                  ))}
+                  </div>
                 </div>
+                <Textarea
+                  value={editingValue}
+                  onChange={(e) => setEditingValue(e.target.value)}
+                  className="w-full"
+                  rows={4}
+                  placeholder="Enter your content here..."
+                />
               </div>
             )}
 
-            {/* Save/Cancel Buttons - Only show if not in split view to avoid duplicates */}
-            {!isSplitView && (
-              <div className="flex items-center gap-3 pt-6 border-t">
-                <Button onClick={handleCompetitorSaveChanges}>Save Changes</Button>
-                <Button variant="outline" onClick={onCompetitorLandscapeCancelEdit}>Cancel</Button>
-                <div className="flex-1"></div>
-              
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="sm" onClick={onCompetitorLandscapeEditHistoryOpen} className={`text-gray-600 hover:text-gray-700 hover:bg-gray-50 transition-all duration-200 ${competitorLandscapeEditHistory.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={competitorLandscapeEditHistory.length === 0}>
-                    <Clock className="h-4 w-4" />
-                    Edit History
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>View changes made to this report</p>
-                </TooltipContent>
-              </Tooltip>
-
-              {/* Scout button removed from edit mode to prevent duplicates */}
-              </div>
-            )}
-
-            {/* Export Options in Edit Mode */}
-            <div className="border-t pt-6">
-              <h4 className="text-sm font-medium text-gray-900 mb-3">Export Options</h4>
-              <div className="flex flex-wrap gap-3">
-                <Button variant="outline" size="sm" onClick={onExportPDF} className="flex items-center gap-2">
-                  <FileText className="h-4 w-4" />
-                  Save PDF
-                </Button>
-                <Button variant="outline" size="sm" onClick={onSaveToWorkspace} className="flex items-center gap-2">
-                  <Save className="h-4 w-4" />
-                  Save to Workspace
-                </Button>
-                <Button variant="outline" size="sm" onClick={onGenerateShareableLink} className="flex items-center gap-2">
-                  <Share className="h-4 w-4" />
-                  Shareable Link
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Normal Content View */}
-        {!isCompetitorLandscapeEditing && (competitorLandscapeExpanded || isSplitView) && (
-          /* Expanded content - Read-only view */
-            <div className="space-y-6">
+            {/* Executive Summary section is now moved above for collapsed view */}
 
             {/* Top Players */}
             {(() => {
@@ -786,6 +670,38 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
               );
             })()}
 
+            {/* Action Buttons */}
+            {isCompetitorLandscapeEditing && (
+              <div className="flex items-center justify-between pt-6 border-t border-gray-200">
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={onCompetitorLandscapeSaveChanges}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    Save Changes
+                  </Button>
+                  <Button variant="outline" onClick={onCompetitorLandscapeCancelEdit}>
+                    Cancel
+                  </Button>
+                </div>
+                
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={onExportPDF}>
+                    <FileText className="h-4 w-4 mr-1" />
+                    Export PDF
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={onSaveToWorkspace}>
+                    <Save className="h-4 w-4 mr-1" />
+                    Save to Workspace
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={onGenerateShareableLink}>
+                    <Share className="h-4 w-4 mr-1" />
+                    Share
+                  </Button>
+                </div>
+              </div>
+            )}
 
             {/* Show Less Button - Only when not in split view */}
             {!isSplitView && (
@@ -800,14 +716,9 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                 </Button>
               </div>
             )}
-            </div>
+          </div>
         )}
       </div>
-      {isSplitView && scoutChatPanel && (
-        <div className="w-1/2">
-          {scoutChatPanel}
-        </div>
-      )}
     </div>
   );
 };

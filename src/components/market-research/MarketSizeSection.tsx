@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { BarChart3, Bot, Edit, Target, TrendingUp, PieChart, X, FileText, Save, Share, Clock, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,7 +29,6 @@ interface MarketSizeSectionProps {
   onScoutIconClick: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape', hasEdits?: boolean, customMessage?: string) => void;
   onEditHistoryOpen: () => void;
   onDeleteSection: (sectionId: string) => void;
-  onRestoreSection?: (sectionId: string) => void;
   onSaveChanges: () => void;
   onCancelEdit: () => void;
   onExpandToggle: (expanded: boolean) => void;
@@ -72,7 +71,6 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
   onScoutIconClick,
   onEditHistoryOpen,
   onDeleteSection,
-  onRestoreSection,
   onSaveChanges,
   onCancelEdit,
   onExpandToggle,
@@ -92,95 +90,6 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
   error,
   onRefresh
 }) => {
-  // API integration state
-  const [marketSizeData, setMarketSizeData] = useState<any>(null);
-  const [marketSizeTimestamp, setMarketSizeTimestamp] = useState<string | null>(null);
-  const [apiLoading, setApiLoading] = useState(false);
-  const [apiError, setApiError] = useState<string | null>(null);
-
-  // API integration for Market Size
-  const fetchMarketSizeData = async (refresh: boolean = false) => {
-    console.log('🚀 Starting fetchMarketSizeData with refresh:', refresh);
-    
-    setApiLoading(true);
-    setApiError(null);
-    
-    try {
-      const requestTimestamp = Date.now();
-      const requestId = Math.random().toString(36).substring(2, 8);
-      
-      const payload = {
-        user_id: "brewra",
-        component_name: "market size",
-        refresh: false,
-        force_refresh: refresh,
-        cache_bypass: false,
-        bypass_all_cache: false,
-        request_timestamp: requestTimestamp,
-        request_id: requestId,
-        data: {
-          company: "OrbiSelf",
-          product: "Convoic.AI", 
-          target_market: "Indian college students (Tier 2 & 3)",
-          region: "India",
-          timestamp: requestTimestamp,
-          force_new_data: false
-        }
-      };
-
-      console.log('📤 Sending API request to: https://backend-11kr.onrender.com/market-research');
-      console.log('📦 Market Size Payload:', payload);
-
-      const response = await fetch('https://backend-11kr.onrender.com/market-research', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload)
-      });
-
-      console.log('📥 Market Size API response:', response);
-
-      if (!response.ok) {
-        throw new Error(`API request failed with status: ${response.status}`);
-      }
-
-      const result = await response.json();
-      console.log('📊 Market Size API result:', result);
-
-      if (result.status === 'success' && result.data) {
-        const apiData = result.data;
-        console.log('✅ Market Size: Found data - updating component');
-        
-        // Update component data with API response
-        if (apiData.executiveSummary) onExecutiveSummaryChange(apiData.executiveSummary);
-        if (apiData.tamValue) onTamValueChange(apiData.tamValue);
-        if (apiData.samValue) onSamValueChange(apiData.samValue);
-        if (apiData.apacGrowthRate) onApacGrowthRateChange(apiData.apacGrowthRate);
-        if (apiData.strategicRecommendations) onStrategicRecommendationsChange(apiData.strategicRecommendations);
-        if (apiData.marketEntry) onMarketEntryChange(apiData.marketEntry);
-        if (apiData.marketDrivers) onMarketDriversChange(apiData.marketDrivers);
-        
-        setMarketSizeData(apiData);
-        setMarketSizeTimestamp(apiData.timestamp);
-      } else {
-        console.log('❌ No data in API response or error status');
-        setApiError('No data received from API');
-      }
-    } catch (error) {
-      console.error('❌ Error fetching Market Size data:', error);
-      setApiError('Failed to fetch data');
-    } finally {
-      setApiLoading(false);
-    }
-  };
-
-  // Fetch data on component mount
-  useEffect(() => {
-    console.log('🚀 Market Size component mounted - fetching fresh data');
-    fetchMarketSizeData(true);
-  }, []);
-
   const handleMarketSizeSaveChanges = () => {
     onSaveChanges();
   };
@@ -296,18 +205,8 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                     </Label>
                     <Input 
                       id="tamValue" 
-                      key={`tam-${tamValue}`}
-                      defaultValue={tamValue} 
-                      onBlur={(e) => {
-                        console.log('TAM input blur:', e.target.value);
-                        onTamValueChange(e.target.value);
-                      }} 
-                      onKeyDown={(e) => {
-                        console.log('TAM key pressed:', e.key);
-                        if (e.key === 'Enter') {
-                          (e.target as HTMLInputElement).blur();
-                        }
-                      }}
+                      value={tamValue} 
+                      onChange={(e) => onTamValueChange(e.target.value)} 
                       placeholder="e.g., $4.2B" 
                     />
                   </div>
@@ -317,18 +216,8 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                     </Label>
                     <Input 
                       id="samValue" 
-                      key={`sam-${samValue}`}
-                      defaultValue={samValue} 
-                      onBlur={(e) => {
-                        console.log('SAM input blur:', e.target.value);
-                        onSamValueChange(e.target.value);
-                      }} 
-                      onKeyDown={(e) => {
-                        console.log('SAM key pressed:', e.key);
-                        if (e.key === 'Enter') {
-                          (e.target as HTMLInputElement).blur();
-                        }
-                      }}
+                      value={samValue} 
+                      onChange={(e) => onSamValueChange(e.target.value)} 
                       placeholder="e.g., $2.1B" 
                     />
                   </div>
@@ -338,18 +227,8 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                     </Label>
                     <Input 
                       id="apacGrowthRate" 
-                      key={`apac-${apacGrowthRate}`}
-                      defaultValue={apacGrowthRate} 
-                      onBlur={(e) => {
-                        console.log('APAC input blur:', e.target.value);
-                        onApacGrowthRateChange(e.target.value);
-                      }} 
-                      onKeyDown={(e) => {
-                        console.log('APAC key pressed:', e.key);
-                        if (e.key === 'Enter') {
-                          (e.target as HTMLInputElement).blur();
-                        }
-                      }}
+                      value={apacGrowthRate} 
+                      onChange={(e) => onApacGrowthRateChange(e.target.value)} 
                       placeholder="e.g., 25%" 
                     />
                   </div>
@@ -450,38 +329,6 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                     placeholder={`Market driver ${index + 1}...`} 
                   />
                 ))}
-              </div>
-            </div>
-          )}
-
-          {/* Deleted Sections */}
-          {deletedSections.size > 0 && onRestoreSection && (
-            <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4 relative z-50 shadow-lg">
-              <h4 className="text-sm font-medium text-gray-700 mb-3">Deleted Sections</h4>
-              <div className="space-y-2">
-                {Array.from(deletedSections).map((sectionId) => {
-                  const sectionNames: Record<string, string> = {
-                    'executive-summary': 'Executive Summary',
-                    'key-metrics': 'Key Metrics',
-                    'strategic-recommendations': 'Strategic Recommendations',
-                    'market-entry': 'Market Entry Strategy',
-                    'market-drivers': 'Key Market Drivers'
-                  };
-                  
-                  return (
-                    <div key={sectionId} className="flex items-center justify-between bg-white p-3 rounded border border-gray-200">
-                      <span className="text-sm text-gray-600">{sectionNames[sectionId] || sectionId}</span>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => onRestoreSection(sectionId)}
-                        className="text-blue-600 border-blue-200 hover:bg-blue-50"
-                      >
-                        Restore
-                      </Button>
-                    </div>
-                  );
-                })}
               </div>
             </div>
           )}

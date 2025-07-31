@@ -86,7 +86,6 @@ export interface MarketIntelligenceTabProps {
   onEditHistoryOpen: () => void;
   onDeleteSection: (sectionId: string) => void;
   onMarketSizeDeleteSection: (sectionId: string) => void;
-  onMarketSizeRestoreSection?: (sectionId: string) => void;
   onSaveChanges: () => void;
   onCancelEdit: () => void;
   onExpandToggle: (expanded: boolean) => void;
@@ -102,7 +101,6 @@ export interface MarketIntelligenceTabProps {
   onIndustryTrendsSaveChanges: () => void;
   onIndustryTrendsCancelEdit: () => void;
   onIndustryTrendsDeleteSection: (sectionId: string) => void;
-  onIndustryTrendsRestoreSection?: (sectionId: string) => void;
   onIndustryTrendsEditHistoryOpen: () => void;
   onIndustryTrendsExpandToggle: (expanded: boolean) => void;
   onIndustryTrendsExecutiveSummaryChange: (value: string) => void;
@@ -115,7 +113,6 @@ export interface MarketIntelligenceTabProps {
   onCompetitorSaveChanges?: () => void;
   onCompetitorCancelEdit?: () => void;
   onCompetitorDeleteSection?: (sectionId: string) => void;
-  onCompetitorRestoreSection?: (sectionId: string) => void;
   onCompetitorEditHistoryOpen?: () => void;
   onCompetitorExpandToggle?: (expanded: boolean) => void;
   onCompetitorExecutiveSummaryChange?: (value: string) => void;
@@ -127,7 +124,6 @@ export interface MarketIntelligenceTabProps {
   onRegulatorySaveChanges?: () => void;
   onRegulatoryCancelEdit?: () => void;
   onRegulatoryDeleteSection?: (sectionId: string) => void;
-  onRegulatoryRestoreSection?: (sectionId: string) => void;
   onRegulatoryEditHistoryOpen?: () => void;
   onRegulatoryExpandToggle?: (expanded: boolean) => void;
   onRegulatoryExecutiveSummaryChange?: (value: string) => void;
@@ -140,7 +136,6 @@ export interface MarketIntelligenceTabProps {
   onMarketEntrySaveChanges?: () => void;
   onMarketEntryCancelEdit?: () => void;
   onMarketEntryDeleteSection?: (sectionId: string) => void;
-  onMarketEntryRestoreSection?: (sectionId: string) => void;
   onMarketEntryEditHistoryOpen?: () => void;
   onMarketEntryExpandToggle?: (expanded: boolean) => void;
   onMarketEntryExecutiveSummaryChange?: (value: string) => void;
@@ -163,8 +158,6 @@ export interface MarketIntelligenceTabProps {
   marketSizeHasEdits?: boolean;
   marketSizeLastEditedField?: string;
   marketSizeCustomMessage?: string;
-  marketSizeOriginalData?: any;
-  marketSizeModifiedData?: any;
   // industryTrendsLastEditedField already defined above
   industryTrendsCustomMessage?: string;
   competitorLastEditedField?: string;
@@ -175,16 +168,6 @@ export interface MarketIntelligenceTabProps {
   marketEntryLastEditedField?: string;
   marketEntryCustomMessage?: string;
   marketEntryIsPostSave?: boolean;
-  
-  // Original and modified data for /ask API integration
-  industryTrendsOriginalData?: any;
-  industryTrendsModifiedData?: any;
-  competitorOriginalData?: any;
-  competitorModifiedData?: any;
-  regulatoryOriginalData?: any;
-  regulatoryModifiedData?: any;
-  marketEntryOriginalData?: any;
-  marketEntryModifiedData?: any;
   
   // Scout panel close handlers
   onMarketSizeScoutClose?: () => void;

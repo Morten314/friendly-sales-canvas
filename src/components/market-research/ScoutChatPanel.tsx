@@ -1,6 +1,6 @@
 
-import React, { useState } from 'react';
-import { Bot, X, Send, Loader2 } from 'lucide-react';
+import React from 'react';
+import { Bot, X, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -14,8 +14,6 @@ interface ScoutChatPanelProps {
   context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance' | 'market-entry';
   isPostSave?: boolean;
   customMessage?: string;
-  originalData?: any;
-  modifiedData?: any;
   onClose: () => void;
 }
 
@@ -29,118 +27,8 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
   context = 'market-size',
   isPostSave = false,
   customMessage,
-  originalData,
-  modifiedData,
   onClose
 }) => {
-  // Add chat functionality
-  const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string; timestamp: string }>>([]);
-
-  // Handle sending messages to the API
-  const handleSendMessage = async (messageText?: string) => {
-    const textToSend = messageText || input;
-    if (!textToSend.trim() || isLoading) return;
-
-    // Add user message
-    const userMessage = {
-      role: 'user' as const,
-      content: textToSend,
-      timestamp: new Date().toLocaleTimeString(),
-    };
-    
-    setMessages((prev) => [...prev, userMessage]);
-    setInput("");
-    setIsLoading(true);
-
-    try {
-      // Prepare URL parameters
-      const params = new URLSearchParams();
-      params.append('question', textToSend);
-
-      // Add original_json if available
-      if (originalData) {
-        console.log('📄 Adding original JSON to API call:', originalData);
-        params.append('original_json', JSON.stringify(originalData));
-      }
-
-      // Add modified_json if available
-      if (modifiedData) {
-        console.log('📄 Adding modified JSON to API call:', modifiedData);
-        params.append('modified_json', JSON.stringify(modifiedData));
-      }
-
-      const apiUrl = `https://backend-11kr.onrender.com/ask?${params.toString()}`;
-      console.log('🚀 Making API call to Scout with question:', textToSend);
-      console.log('📡 API URL:', apiUrl);
-      
-      const response = await fetch(apiUrl, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      console.log('📊 API Response status:', response.status);
-      console.log('📊 API Response ok:', response.ok);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ API Error response:', errorText);
-        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
-      }
-
-      const data = await response.json();
-      console.log('✅ API Response data:', data);
-      
-      // Handle response format: array containing JSON string
-      let responseContent = "I'm having trouble processing your request right now. Please try again.";
-      
-      if (Array.isArray(data) && data.length > 0) {
-        try {
-          console.log('🔍 Attempting to parse first array element:', data[0]);
-          const parsedResponse = JSON.parse(data[0]);
-          console.log('✅ Parsed response object:', parsedResponse);
-          responseContent = parsedResponse.response_message || parsedResponse.response || parsedResponse.message || responseContent;
-        } catch (parseError) {
-          console.error('❌ Error parsing response JSON:', parseError);
-          console.log('🔍 Raw string content:', data[0]);
-          // Try to extract response_message using regex if JSON parsing fails
-          const match = data[0].match(/"response_message":\s*"([^"]+)"/);
-          if (match && match[1]) {
-            responseContent = match[1];
-          } else {
-            responseContent = data[0]; // Use raw string if all else fails
-          }
-        }
-      } else if (data.response || data.message || data.answer) {
-        responseContent = data.response || data.message || data.answer;
-      }
-      console.log('💬 Final response content:', responseContent);
-      
-      // Add assistant response
-      const assistantMessage = {
-        role: 'assistant' as const,
-        content: responseContent,
-        timestamp: new Date().toLocaleTimeString(),
-      };
-      
-      setMessages((prev) => [...prev, assistantMessage]);
-    } catch (error) {
-      console.error('❌ Error calling Scout API:', error);
-      
-      const errorMessage = {
-        role: 'assistant' as const,
-        content: `I'm sorry, I encountered an error: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
-        timestamp: new Date().toLocaleTimeString(),
-      };
-      
-      setMessages((prev) => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   // Fixed ScoutChatPanel getContextualScoutMessage function
 const getContextualScoutMessage = () => {
@@ -257,11 +145,6 @@ const getContextualScoutMessage = () => {
   }
   
   if (hasEdits) {
-    // Special message when JSON data is available for comparison
-    if (originalData && modifiedData) {
-      return "🎉 Great work saving your market intelligence updates! I have both your original and modified data available for comparison. What would you like to explore about your changes?";
-    }
-    
     if (lastEditedField.includes("APAC") || lastEditedField.includes("apac")) {
       return "I noticed you updated the APAC growth rate. Would you like deeper insights on regional trends or competitor presence in APAC?";
     }
@@ -383,18 +266,6 @@ const getContextualScoutMessage = () => {
 
     // Default market-size questions
     if (hasEdits) {
-      // Special questions when JSON data is available for comparison
-      if (originalData && modifiedData) {
-        return [
-          "What are the key differences between original and modified data?",
-          "Analyze the impact of my changes",
-          "Which changes will have the biggest market impact?",
-          "Compare TAM and SAM values",
-          "Explain the strategic implications",
-          "Validate my market assumptions"
-        ];
-      }
-      
       return [
         "Show me drivers of TAM growth",
         "Break down mid-market vs enterprise TAM", 
@@ -441,16 +312,9 @@ const getContextualScoutMessage = () => {
             </div>
             <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-400/30 to-green-400/30 animate-pulse"></div>
           </div>
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">
-              {getScoutTitle()}
-            </h3>
-            {originalData && modifiedData && (
-              <div className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full mt-1">
-                Data comparison active
-              </div>
-            )}
-          </div>
+          <h3 className="text-lg font-semibold text-gray-900">
+            {getScoutTitle()}
+          </h3>
         </div>
         <Button
           variant="ghost"
@@ -462,90 +326,34 @@ const getContextualScoutMessage = () => {
       </div>
 
       <div className="space-y-4 mb-4 flex-1 overflow-y-auto">
-        {/* Show contextual message if no messages yet */}
-        {messages.length === 0 && (
-          <div className="bg-gradient-to-r from-blue-50 to-green-50 p-4 rounded-lg border border-blue-200">
-            <p className="text-sm text-gray-700">
-              {getContextualScoutMessage()}
-            </p>
-          </div>
-        )}
+        <div className="bg-gradient-to-r from-blue-50 to-green-50 p-4 rounded-lg border border-blue-200">
+          <p className="text-sm text-gray-700">
+            {getContextualScoutMessage()}
+          </p>
+        </div>
 
-        {/* Show chat messages */}
-        {messages.map((message, index) => (
-          <div
-            key={index}
-            className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-          >
-            <div
-              className={`max-w-[80%] rounded-lg p-3 ${
-                message.role === 'user'
-                  ? 'bg-blue-100 text-blue-900'
-                  : 'bg-gray-100'
-              }`}
+        <div className="flex flex-wrap gap-2">
+          {getContextualQuestions().map((question, index) => (
+            <Button
+              key={index}
+              variant="outline"
+              size="sm"
+              className="text-xs hover:bg-blue-50 hover:border-blue-300 transition-colors"
+              onClick={() => console.log(`Clicked: ${question}`)}
             >
-              <div className="text-sm whitespace-pre-line leading-relaxed">{message.content}</div>
-              <div className="text-xs mt-1 text-gray-500">{message.timestamp}</div>
-            </div>
-          </div>
-        ))}
-
-        {/* Loading indicator */}
-        {isLoading && (
-          <div className="flex justify-start">
-            <div className="bg-gray-100 rounded-lg p-3 max-w-[80%]">
-              <div className="flex items-center gap-2 text-gray-500">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span className="text-sm">Scout is typing...</span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Suggestion buttons - only show if no messages */}
-        {messages.length === 0 && (
-          <div className="flex flex-wrap gap-2">
-            {getContextualQuestions().map((question, index) => (
-              <Button
-                key={index}
-                variant="outline"
-                size="sm"
-                className="text-xs hover:bg-blue-50 hover:border-blue-300 transition-colors"
-                onClick={() => handleSendMessage(question)}
-                disabled={isLoading}
-              >
-                {question}
-              </Button>
-            ))}
-          </div>
-        )}
+              {question}
+            </Button>
+          ))}
+        </div>
       </div>
 
       <div className="flex gap-2 mt-auto">
         <Input
           placeholder="Ask me anything about market opportunity..."
           className="flex-1"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              handleSendMessage();
-            }
-          }}
-          disabled={isLoading}
         />
-        <Button 
-          size="sm" 
-          className="bg-blue-600 hover:bg-blue-700"
-          onClick={() => handleSendMessage()}
-          disabled={!input.trim() || isLoading}
-        >
-          {isLoading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Send className="h-4 w-4" />
-          )}
+        <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+          <Send className="h-4 w-4" />
         </Button>
       </div>
     </div>
