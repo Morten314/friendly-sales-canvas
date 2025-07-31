@@ -1916,31 +1916,18 @@ const MarketResearch = () => {
   const handleRegulatorySaveChanges = () => {
     console.log('🔥 SAVE FUNCTION CALLED - handleRegulatorySaveChanges');
     console.log('💾 Saving Regulatory Compliance changes...');
-    
-    // Use the actual regulatory compliance data that's being edited
-    const currentRegulatoryData = marketIntelligenceData?.regulatory_compliance;
-    console.log('📊 Current regulatoryData from intelligence:', currentRegulatoryData);
+    console.log('📊 Current regulatoryData:', regulatoryData);
     console.log('📸 Captured original snapshot:', regulatoryOriginalDataSnapshot);
-    
-    if (!currentRegulatoryData) {
-      console.error('❌ No regulatory compliance data found');
-      return;
-    }
     
     // Exit editing mode FIRST (following competitor pattern)
     setIsRegulatoryEditing(false);
     
-    // Update timestamp for the current data
+    // Update timestamp - data is already updated via onChange handlers
     const updatedData = {
-      ...currentRegulatoryData,
+      ...regulatoryData,
       timestamp: new Date().toISOString()
     };
-    
-    // Update the market intelligence data state
-    setMarketIntelligenceData(prevData => ({
-      ...prevData,
-      regulatory_compliance: updatedData
-    }));
+    setRegulatoryData(updatedData);
     
     // Prepare modified JSON data (current state with new timestamp)
     const modifiedJson = updatedData;
@@ -1969,11 +1956,7 @@ const MarketResearch = () => {
     // Add the new edit record to the regulatory edit history
     setRegulatoryEditHistory(prevHistory => [...prevHistory, newEdit]);
     
-    // Save to localStorage
-    localStorage.setItem('marketIntelligenceData', JSON.stringify({
-      ...marketIntelligenceData,
-      regulatory_compliance: updatedData
-    }));
+    // Note: Regulatory data is stored in component state, similar to competitor data
     
     console.log('✅ Regulatory Compliance data saved successfully');
     console.log('🔄 Updated frontend state:', updatedData);
