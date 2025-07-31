@@ -836,22 +836,21 @@ const MarketResearch = () => {
 
       const payload = {
         user_id: "brewra",
-        component_name: "industry trends",
-        refresh: refresh,
-        force_refresh: false,
-        cache_bypass: false,
-        bypass_all_cache: false,
-        request_timestamp: Date.now(),
-        request_id: Math.random().toString(36).substr(2, 6),
+        component_name: "industry trends report",
         data: {
           company: "OrbiSelf",
-          product: "Convoic.AI", 
+          product: "Convoic.AI",
           target_market: "Indian college students (Tier 2 & 3)",
-          region: "India",
-          timestamp: Date.now(),
-          force_new_data: false
-        }
+          region: "India"
+        },
+        refresh: refresh
       };
+      
+      console.log('🔍 INDUSTRY TRENDS PAYLOAD DEBUG:');
+      console.log('  - user_id:', payload.user_id);
+      console.log('  - component_name:', payload.component_name);
+      console.log('  - data object:', payload.data);
+      console.log('  - refresh:', payload.refresh);
 
       console.log('📤 Sending Industry Trends API request with payload:', payload);
 
