@@ -114,6 +114,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dynamicFieldValues, setDynamicFieldValues] = useState<Record<string, string>>({});
+  const [localExecutiveSummary, setLocalExecutiveSummary] = useState<string>('');
   const [regulatoryExpanded, setRegulatoryExpanded] = useState(true);
 
   // API integration for Regulatory & Compliance Highlights
@@ -220,6 +221,11 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
           setRegulatoryData(result.data);
           setRegulatoryTimestamp(toUTCTimestamp(result.data.timestamp));
           
+          // Initialize local executive summary from API data
+          if (result.data.executiveSummary) {
+            setLocalExecutiveSummary(result.data.executiveSummary);
+          }
+          
           // Initialize dynamic field values from API data
           if (result.data.keyUpdates) {
             const initialValues: Record<string, string> = {};
@@ -246,11 +252,12 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     }
   };
 
-  // Fetch data on component mount
+  // Fetch data on component mount and initialize local state
   useEffect(() => {
     console.log('🚀 Component mounted - clearing previous data and fetching fresh');
+    setLocalExecutiveSummary(executiveSummary); // Initialize with prop value
     fetchRegulatoryData(true);
-  }, []);
+  }, [executiveSummary]);
 
   console.log('🎨 RegulatoryComplianceSection RENDER DEBUG:');
   console.log('  - isLoading:', isLoading);
@@ -521,8 +528,13 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                 </button>
                 <h4 className="text-sm font-medium text-gray-700 mb-2">Executive Summary</h4>
                 <textarea
-                  value={currentExecutiveSummary}
-                  onChange={(e) => onExecutiveSummaryChange(e.target.value)}
+                  value={localExecutiveSummary || currentExecutiveSummary}
+                  onChange={(e) => {
+                    const newValue = e.target.value;
+                    console.log('📝 Executive summary onChange:', newValue);
+                    setLocalExecutiveSummary(newValue);
+                    onExecutiveSummaryChange(newValue);
+                  }}
                   className="w-full p-3 border border-gray-300 rounded-lg text-sm resize-none"
                   rows={4}
                   placeholder="Enter executive summary..."
