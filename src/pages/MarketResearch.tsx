@@ -1927,9 +1927,6 @@ const MarketResearch = () => {
       return;
     }
     
-    // Exit editing mode
-    setIsRegulatoryEditing(false);
-    
     // Update timestamp for the current data
     const updatedData = {
       ...currentRegulatoryData,
@@ -1941,6 +1938,9 @@ const MarketResearch = () => {
       ...prevData,
       regulatory_compliance: updatedData
     }));
+    
+    // Exit editing mode AFTER updating the data to ensure UI reflects changes
+    setIsRegulatoryEditing(false);
     
     // Prepare modified JSON data (current state with new timestamp)
     const modifiedJson = updatedData;
