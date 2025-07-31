@@ -618,61 +618,11 @@ const MarketResearch = () => {
       setIsRefreshing(true);
       setError(null);
       
-      console.log('🔄 Refresh button clicked - fetching fresh data from Swagger...');
+      console.log('🔄 Refresh button clicked - refreshing ALL component data...');
       
-      // Get current UI data timestamp for comparison
-      const currentUIData = getInitialMarketIntelligenceData();
-      let currentUITimestamp = 0;
-      if (currentUIData?.timestamp) {
-        // Handle both ISO string and timestamp number formats
-        currentUITimestamp = typeof currentUIData.timestamp === 'string' ? 
-          new Date(currentUIData.timestamp).getTime() : 
-          parseInt(currentUIData.timestamp);
-      }
-      console.log('📊 Current UI data timestamp:', currentUIData?.timestamp);
-      console.log('📊 Current UI data time:', currentUITimestamp ? new Date(currentUITimestamp).toISOString() : 'No timestamp');
+      // Refresh all components using the new function
+      await refreshAllComponentsData();
       
-      // Always fetch fresh data from Swagger API when refresh is clicked  
-      console.log('🔄 Fetching fresh data from Swagger API...');
-      
-      // Force refresh all market intelligence data - they will automatically
-      // update the UI if their timestamps are newer than current data
-      const [marketSizeResponse, industryTrendsResponse, marketEntryResponse] = await Promise.allSettled([
-        fetchMarketSizeData(true, false), // This calls the correct market-research API
-        fetchIndustryTrendsData(true, false), // Industry Trends data
-        fetchMarketEntryData(true, false), // Market Entry data
-      ]);
-      
-      // Also trigger industry trends refresh to get latest data
-      // The IndustryTrendsSection component will handle its own refresh and data updates
-      
-      console.log('🔄 All API calls completed - checking if any updates were applied');
-      
-      // Check if we have any fresh data in localStorage after the API calls
-      const updatedData = getInitialMarketIntelligenceData();
-      if (updatedData && updatedData.timestamp) {
-        let updatedTimestamp = 0;
-        if (updatedData.timestamp) {
-          updatedTimestamp = typeof updatedData.timestamp === 'string' ? 
-            new Date(updatedData.timestamp).getTime() : 
-            parseInt(updatedData.timestamp);
-        }
-        
-        console.log('🔄 POST-REFRESH TIMESTAMP COMPARISON:');
-        console.log('  - Original UI timestamp:', currentUITimestamp, new Date(currentUITimestamp).toISOString());
-        console.log('  - Updated data timestamp:', updatedTimestamp, new Date(updatedTimestamp).toISOString());
-        
-        // If we have newer data, force update the UI states
-        if (updatedTimestamp > currentUITimestamp) {
-          console.log('✅ Fresh data found after refresh - updating UI states');
-          setMarketData(updatedData);
-          setMarketIntelligenceData(updatedData);
-          cachedMarketData = updatedData;
-          cacheTimestamp = updatedTimestamp;
-        }
-      }
-      
-      // Market size data is handled by fetchMarketSizeData call above
       console.log('✅ All backend data sources refreshed successfully');
       
       // Reset historical data flags
@@ -1067,58 +1017,203 @@ const MarketResearch = () => {
     }
   };
 
-  // Initial data fetch and synchronization
-  useEffect(() => {
-    console.log('🔥 Setting up initial data load and sync');
-    
-    // Check if we have persistent data from previous session
-    const storedMarketData = localStorage.getItem('marketIntelligenceData');
-    if (storedMarketData) {
-      try {
-        const parsedData = JSON.parse(storedMarketData);
-        if (parsedData.timestamp) {
-          console.log('📦 Found persistent Market Size data from previous session - preserving it');
-          console.log('🔧 Not clearing data - user will see last Swagger data until new data arrives');
-          console.log('💾 Persistent data timestamp:', parsedData.timestamp);
-          
-          // Make sure the persistent data is properly set in marketData state too
-          setMarketData(prev => {
-            const restoredData = {
-              ...prev,
-              executiveSummary: parsedData.executiveSummary,
-              tamValue: parsedData.tamValue,
-              samValue: parsedData.samValue,
-              apacGrowthRate: parsedData.apacGrowthRate,
-              strategicRecommendations: parsedData.strategicRecommendations,
-              marketEntry: parsedData.marketEntry,
-              marketDrivers: parsedData.marketDrivers,
-              marketSizeBySegment: parsedData.marketSizeBySegment,
-              growthProjections: parsedData.growthProjections,
-              timestamp: parsedData.timestamp
-            };
-            console.log('🔄 Restored persistent data to marketData state:', restoredData);
-            return restoredData;
-          });
-          setIsInitialLoading(false); // Turn off loading since we have data
-          return; // Exit early - don't clear data
+  // Fetch Competitor Landscape data using backend API with correct component_name
+  const fetchCompetitorData = async (refresh = false, showLoading = true) => {
+    console.log('🚀 Starting fetchCompetitorData with refresh:', refresh, 'showLoading:', showLoading);
+    try {
+      console.log('📍 Fetching competitor landscape data with correct component_name');
+      if (showLoading) {
+        setIsMarketSizeLoading(true);
+      }
+      setMarketSizeError(null);
+
+      const payload = {
+        user_id: "brewra",
+        component_name: "Competitor Landscape",
+        refresh: refresh,
+        force_refresh: false,
+        cache_bypass: false,
+        bypass_all_cache: false,
+        request_timestamp: Date.now(),
+        request_id: Math.random().toString(36).substr(2, 6),
+        data: {
+          company: "OrbiSelf",
+          product: "Convoic.AI", 
+          target_market: "Indian college students (Tier 2 & 3)",
+          region: "India",
+          timestamp: Date.now(),
+          force_new_data: false
         }
-      } catch (error) {
-        console.error('Error parsing stored market data:', error);
+      };
+
+      console.log('📤 Sending Competitor API request with payload:', payload);
+
+      const response = await fetch('https://backend-11kr.onrender.com/market-research', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      });
+
+      console.log('📨 Competitor API response status:', response.status);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('📊 Competitor API result:', result);
+
+      if (result.status === 'success' && result.data) {
+        const apiData = result.data;
+        console.log('🎯 Processing API data for Competitor Landscape:', apiData);
+
+        // Check timestamp comparison 
+        const currentTimestamp = competitorData.timestamp || null;
+        const newTimestamp = apiData.timestamp;
+        
+        if (!currentTimestamp || isTimestampNewer(newTimestamp, currentTimestamp)) {
+          console.log('✅ New Competitor data is newer, updating UI');
+          
+          // Update competitor data with API response
+          const updatedData = {
+            ...competitorData,
+            executiveSummary: apiData.executiveSummary || competitorData.executiveSummary,
+            topPlayerShare: apiData.topPlayerShare || competitorData.topPlayerShare,
+            emergingPlayers: apiData.emergingPlayers || competitorData.emergingPlayers,
+            fundingNews: apiData.fundingNews || competitorData.fundingNews,
+            timestamp: toUTCTimestamp(newTimestamp)
+          };
+          
+          setCompetitorData(updatedData);
+          console.log('✅ Competitor Landscape data updated successfully');
+        } else {
+          console.log('ℹ️ Current Competitor data is up to date');
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error fetching Competitor data:', error);
+      setMarketSizeError('Failed to load competitor data');
+    } finally {
+      if (showLoading) {
+        setIsMarketSizeLoading(false);
       }
     }
-    
-    console.log('🧹 No valid persistent data found - fetching fresh data from backend');
-    // If no valid cached data, fetch from backend
-    fetchMarketSizeData(false, true); // Call the correct API function for Market Size & Opportunity
-    
-    // Check if we have Market Entry data, if not fetch it
-    const storedMarketEntry = localStorage.getItem('marketEntryData');
-    if (!storedMarketEntry || !JSON.parse(storedMarketEntry).timestamp) {
-      console.log('📊 No Market Entry data found, fetching from API...');
-      fetchMarketEntryData(false, true); // Don't refresh, but show loading
-    } else {
-      console.log('📊 Market Entry data already loaded from localStorage');
+  };
+
+  // Fetch Regulatory Compliance data using backend API with correct component_name
+  const fetchRegulatoryComplianceData = async (refresh = false, showLoading = true) => {
+    console.log('🚀 Starting fetchRegulatoryComplianceData with refresh:', refresh, 'showLoading:', showLoading);
+    try {
+      console.log('📍 Fetching regulatory compliance data with correct component_name');
+      if (showLoading) {
+        setIsMarketSizeLoading(true);
+      }
+      setMarketSizeError(null);
+
+      const payload = {
+        user_id: "brewra",
+        component_name: "Regulatory & Compliance Highlights", 
+        refresh: refresh,
+        force_refresh: false,
+        cache_bypass: false,
+        bypass_all_cache: false,
+        request_timestamp: Date.now(),
+        request_id: Math.random().toString(36).substr(2, 6),
+        data: {
+          company: "OrbiSelf",
+          product: "Convoic.AI", 
+          target_market: "Indian college students (Tier 2 & 3)",
+          region: "India",
+          timestamp: Date.now(),
+          force_new_data: false
+        }
+      };
+
+      console.log('📤 Sending Regulatory API request with payload:', payload);
+
+      const response = await fetch('https://backend-11kr.onrender.com/market-research', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      });
+
+      console.log('📨 Regulatory API response status:', response.status);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('📊 Regulatory API result:', result);
+
+      if (result.status === 'success' && result.data) {
+        const apiData = result.data;
+        console.log('🎯 Processing API data for Regulatory Compliance:', apiData);
+
+        // Check timestamp comparison 
+        const currentTimestamp = regulatoryData.timestamp || null;
+        const newTimestamp = apiData.timestamp;
+        
+        if (!currentTimestamp || isTimestampNewer(newTimestamp, currentTimestamp)) {
+          console.log('✅ New Regulatory data is newer, updating UI');
+          
+          // Update regulatory data with API response
+          const updatedData = {
+            ...regulatoryData,
+            executiveSummary: apiData.executiveSummary || regulatoryData.executiveSummary,
+            euAiActDeadline: apiData.euAiActDeadline || regulatoryData.euAiActDeadline,
+            gdprCompliance: apiData.gdprCompliance || regulatoryData.gdprCompliance,
+            potentialFines: apiData.potentialFines || regulatoryData.potentialFines,
+            dataLocalization: apiData.dataLocalization || regulatoryData.dataLocalization,
+            timestamp: toUTCTimestamp(newTimestamp)
+          };
+          
+          setRegulatoryData(updatedData);
+          console.log('✅ Regulatory Compliance data updated successfully');
+        } else {
+          console.log('ℹ️ Current Regulatory data is up to date');
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error fetching Regulatory data:', error);
+      setMarketSizeError('Failed to load regulatory compliance data');
+    } finally {
+      if (showLoading) {
+        setIsMarketSizeLoading(false);
+      }
     }
+  };
+
+  // Refresh all components data from backend API
+  const refreshAllComponentsData = async () => {
+    console.log('🔄 Refreshing ALL component data from backend...');
+    
+    try {
+      // Fetch fresh data for all 5 components with refresh=true
+      await Promise.all([
+        fetchMarketSizeData(true, true),        // Market Size & Opportunity
+        fetchIndustryTrendsData(true, true),    // Industry Trends  
+        fetchMarketEntryData(true, true),       // Market Entry & Growth Strategy
+        fetchCompetitorData(true, true),        // Competitor Landscape
+        fetchRegulatoryComplianceData(true, true) // Regulatory Compliance
+      ]);
+      
+      console.log('✅ All component data refreshed successfully');
+    } catch (error) {
+      console.error('❌ Error refreshing component data:', error);
+    }
+  };
+
+  // Initial data fetch and synchronization - Fetch ALL components on initial load
+  useEffect(() => {
+    console.log('🔥 Setting up initial data load and sync for ALL components');
+    
+    // Always fetch fresh data for all components on mount
+    refreshAllComponentsData();
   }, []);
 
   // Listen for company profile updates and trigger background refresh
