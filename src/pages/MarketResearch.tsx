@@ -798,6 +798,7 @@ const MarketResearch = () => {
 
       const result = await response.json();
       console.log('📊 Industry Trends API result:', result);
+      console.log('🔍 Raw Swagger Data for Industry Trends:', JSON.stringify(result, null, 2));
 
       if (result.status === 'success' && result.data) {
         const apiData = result.data;

@@ -15,7 +15,7 @@ export const ScoutLoadingAnimation = () => {
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentStep((prev) => (prev + 1) % steps.length);
-    }, 150); // Much faster for testing
+    }, 800);
 
     return () => clearInterval(interval);
   }, []);
