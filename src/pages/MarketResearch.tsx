@@ -880,19 +880,31 @@ const MarketResearch = () => {
         if (!currentTimestamp || isTimestampNewer(newTimestamp, currentTimestamp)) {
           console.log('✅ New Industry Trends data is newer, updating UI');
           
-          // Update industry trends data with API response
+          // Update industry trends data with API response - map to component state
+          if (apiData.executiveSummary) {
+            handleIndustryTrendsExecutiveSummaryChange(apiData.executiveSummary);
+          }
+          
+          // Map other API data fields to appropriate component states
+          if (apiData.marketDrivers && apiData.marketDrivers.length > 0) {
+            handleIndustryTrendsAiAdoptionChange(apiData.marketDrivers[0] || '');
+            handleIndustryTrendsCloudMigrationChange(apiData.marketDrivers[1] || '');
+            handleIndustryTrendsRegulatoryChange(apiData.marketDrivers[2] || '');
+          }
+          
           const updatedData = {
             ...industryTrendsData,
-            executiveSummary: apiData.executiveSummary || industryTrendsData.executiveSummary,
-            aiAdoption: apiData.aiAdoption || industryTrendsData.aiAdoption,
-            cloudMigration: apiData.cloudMigration || industryTrendsData.cloudMigration,
-            regulatory: apiData.regulatory || industryTrendsData.regulatory,
-            risks: apiData.risks || industryTrendsData.risks,
+            executiveSummary: apiData.executiveSummary,
+            marketDrivers: apiData.marketDrivers,
+            strategicRecommendations: apiData.strategicRecommendations,
+            risks: apiData.risks,
+            regionalHotspots: apiData.regionalHotspots,
+            visualCharts: apiData.visualCharts,
             timestamp: toUTCTimestamp(newTimestamp)
           };
           
           setIndustryTrendsData(updatedData);
-          console.log('✅ Industry Trends data updated successfully');
+          console.log('✅ Industry Trends data updated successfully with mapped fields:', updatedData);
         } else {
           console.log('ℹ️ Current Industry Trends data is up to date');
         }

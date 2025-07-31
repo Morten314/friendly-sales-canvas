@@ -77,91 +77,13 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
   showScoutChat,
   scoutChatPanel
 }) => {
-  // API integration state
-  const [industryTrendsData, setIndustryTrendsData] = useState<any>(null);
-  const [industryTrendsTimestamp, setIndustryTrendsTimestamp] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // API integration for Industry Trends
-  const fetchIndustryTrendsData = async (refresh: boolean = false) => {
-    console.log('🚀 Starting fetchIndustryTrendsData with refresh:', refresh);
-    
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      const requestTimestamp = Date.now();
-      const requestId = Math.random().toString(36).substring(2, 8);
-      
-      const payload = {
-        user_id: "brewra",
-        component_name: "industry trends",
-        refresh: false,
-        force_refresh: refresh,
-        cache_bypass: false,
-        bypass_all_cache: false,
-        request_timestamp: requestTimestamp,
-        request_id: requestId,
-        data: {
-          company: "OrbiSelf",
-          product: "Convoic.AI", 
-          target_market: "Indian college students (Tier 2 & 3)",
-          region: "India",
-          timestamp: requestTimestamp,
-          force_new_data: false
-        }
-      };
-
-      console.log('📤 Sending API request to: https://backend-11kr.onrender.com/market-research');
-      console.log('📦 Industry Trends Payload:', payload);
-
-      const response = await fetch('https://backend-11kr.onrender.com/market-research', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload)
-      });
-
-      console.log('📥 Industry Trends API response:', response);
-
-      if (!response.ok) {
-        throw new Error(`API request failed with status: ${response.status}`);
-      }
-
-      const result = await response.json();
-      console.log('📊 Industry Trends API result:', result);
-
-      if (result.status === 'success' && result.data) {
-        const apiData = result.data;
-        console.log('✅ Industry Trends: Found data - updating component');
-        
-        // Update component data with API response
-        if (apiData.executiveSummary) onIndustryTrendsExecutiveSummaryChange(apiData.executiveSummary);
-        if (apiData.aiAdoption) onIndustryTrendsAiAdoptionChange(apiData.aiAdoption);
-        if (apiData.cloudMigration) onIndustryTrendsCloudMigrationChange(apiData.cloudMigration);
-        if (apiData.regulatory) onIndustryTrendsRegulatoryChange(apiData.regulatory);
-        
-        setIndustryTrendsData(apiData);
-        setIndustryTrendsTimestamp(apiData.timestamp);
-      } else {
-        console.log('❌ No data in API response or error status');
-        setError('No data received from API');
-      }
-    } catch (error) {
-      console.error('❌ Error fetching Industry Trends data:', error);
-      setError('Failed to fetch data');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Fetch data on component mount
-  useEffect(() => {
-    console.log('🚀 Industry Trends component mounted - fetching fresh data');
-    fetchIndustryTrendsData(true);
-  }, []);
+  // Use data from parent MarketResearch.tsx component
+  console.log('🔍 Industry Trends Section: Received props data:', { 
+    industryTrendsExecutiveSummary,
+    industryTrendsAiAdoption,
+    industryTrendsCloudMigration,
+    industryTrendsRegulatory 
+  });
 
   const handleIndustryTrendsSaveChanges = () => {
     onIndustryTrendsSaveChanges();
