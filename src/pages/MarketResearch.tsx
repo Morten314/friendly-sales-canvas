@@ -829,16 +829,28 @@ const MarketResearch = () => {
       }
       setMarketSizeError(null);
 
-      // Payload specifically for Industry Trends
       const payload = {
-        component_name: "Industry Trends",
+        user_id: "brewra",
+        component_name: "industry trends",
         refresh: refresh,
-        user_id: "brewra"
+        force_refresh: false,
+        cache_bypass: false,
+        bypass_all_cache: false,
+        request_timestamp: Date.now(),
+        request_id: Math.random().toString(36).substr(2, 6),
+        data: {
+          company: "OrbiSelf",
+          product: "Convoic.AI", 
+          target_market: "Indian college students (Tier 2 & 3)",
+          region: "India",
+          timestamp: Date.now(),
+          force_new_data: false
+        }
       };
 
       console.log('📤 Sending Industry Trends API request with payload:', payload);
 
-      const response = await fetch('https://swaggerapi.clodura.ai/backend/v1/market-research/generate', {
+      const response = await fetch('https://backend-11kr.onrender.com/market-research', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
