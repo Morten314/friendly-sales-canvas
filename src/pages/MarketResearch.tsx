@@ -1948,19 +1948,24 @@ const MarketResearch = () => {
     // Exit editing mode
     setIsRegulatoryEditing(false);
     setRegulatoryHasEdits(false);
-
-    // Log the JSON data to console
+    
+    // Log the original and modified JSON for comparison
     console.log('📄 ORIGINAL JSON:', JSON.stringify(originalJson, null, 2));
     console.log('📄 MODIFIED JSON:', JSON.stringify(modifiedJson, null, 2));
-
-    // Store the JSON data for the chat interface
-    setRegulatoryOriginalData(originalJson);
-    setRegulatoryModifiedData(modifiedJson);
+    
+    // Save to localStorage
+    localStorage.setItem('marketIntelligenceData', JSON.stringify({
+      ...marketIntelligenceData,
+      regulatory_compliance: updatedData
+    }));
     
     console.log('✅ Regulatory Compliance data saved successfully');
     console.log('🔄 Updated frontend state:', updatedData);
     
-    // Close all other scout chats and open regulatory scout with specific contextual messages
+    // Open Scout chat panel
+    console.log('🤖 Regulatory Scout chat panel opened');
+    
+    // Close all other scout chats first
     setShowMarketSizeScoutChat(false);
     setShowIndustryTrendsScoutChat(false);
     setShowCompetitorScoutChat(false);
@@ -1970,7 +1975,6 @@ const MarketResearch = () => {
     setTimeout(() => {
       setIsRegulatoryPostSave(true);
       setShowRegulatoryScoutChat(true);
-      console.log('🤖 Regulatory Scout chat panel opened');
     }, 100);
   };
 
