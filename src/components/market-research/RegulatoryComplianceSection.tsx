@@ -532,6 +532,22 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                   onChange={(e) => {
                     const newValue = e.target.value;
                     console.log('📝 Executive summary onChange:', newValue);
+                    
+                    // Log original and modified JSON for regulatory compliance
+                    const currentData = regulatoryData || {};
+                    const originalJson = {
+                      executiveSummary: currentData.executiveSummary || executiveSummary,
+                      keyUpdates: currentData.keyUpdates || [],
+                      ...currentData
+                    };
+                    const modifiedJson = {
+                      ...originalJson,
+                      executiveSummary: newValue
+                    };
+                    
+                    console.log('🔍 REGULATORY ORIGINAL_JSON (Executive Summary Edit):', JSON.stringify(originalJson, null, 2));
+                    console.log('🔍 REGULATORY MODIFIED_JSON (Executive Summary Edit):', JSON.stringify(modifiedJson, null, 2));
+                    
                     setLocalExecutiveSummary(newValue);
                     onExecutiveSummaryChange(newValue);
                   }}
@@ -598,6 +614,26 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                                   handler(newValue);
                                 } else {
                                   console.log('🔄 Using dynamic field handler for ID:', point.id);
+                                  
+                                  // Log original and modified JSON for regulatory compliance
+                                  const currentData = regulatoryData || {};
+                                  const originalJson = {
+                                    executiveSummary: currentData.executiveSummary || executiveSummary,
+                                    keyUpdates: currentData.keyUpdates || [],
+                                    dynamicFieldValues: dynamicFieldValues,
+                                    ...currentData
+                                  };
+                                  const modifiedJson = {
+                                    ...originalJson,
+                                    dynamicFieldValues: {
+                                      ...dynamicFieldValues,
+                                      [point.id]: newValue
+                                    }
+                                  };
+                                  
+                                  console.log('🔍 REGULATORY ORIGINAL_JSON (Dynamic Field Edit):', JSON.stringify(originalJson, null, 2));
+                                  console.log('🔍 REGULATORY MODIFIED_JSON (Dynamic Field Edit):', JSON.stringify(modifiedJson, null, 2));
+                                  
                                   // Handle dynamic API fields with local state
                                   setDynamicFieldValues(prev => ({
                                     ...prev,
