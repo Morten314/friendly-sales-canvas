@@ -27,7 +27,9 @@ import {
   MessageSquare,
   Sun,
   BarChart3,
-  Factory
+  Factory,
+  Info,
+  MapPin
 } from 'lucide-react';
 import {
   Table,
@@ -282,56 +284,52 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     }
   };
 
+  // Helper function to get icon based on update type
+  const getIconForUpdate = (iconType: string) => {
+    switch (iconType) {
+      case 'arrow-up': return TrendingUp;
+      case 'chart': return BarChart3;
+      case 'user': return Users;
+      case 'competition': return AlertTriangle;
+      case 'clock': return Clock;
+      case 'shield': return Shield;
+      case 'map': return Globe;
+      case 'info': return Scale;
+      default: return Scale;
+    }
+  };
+
+  // Helper function to get badge color based on tag
+  const getBadgeColorForTag = (tag: string) => {
+    switch (tag?.toLowerCase()) {
+      case 'growth': return 'bg-green-100 text-green-800';
+      case 'trend': return 'bg-blue-100 text-blue-800';
+      case 'demographics': return 'bg-purple-100 text-purple-800';
+      case 'market': return 'bg-orange-100 text-orange-800';
+      case 'risk': return 'bg-red-100 text-red-800';
+      case 'new': return 'bg-orange-100 text-orange-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
   // Debug the exact values being used
   console.log('🔍 REGULATORY KEY DATA POINTS DEBUG:');
   console.log('  - regulatoryData:', regulatoryData);
-  console.log('  - regulatoryData.euAiActDeadline:', regulatoryData?.euAiActDeadline);
-  console.log('  - regulatoryData.gdprCompliance:', regulatoryData?.gdprCompliance);
-  console.log('  - regulatoryData.potentialFines:', regulatoryData?.potentialFines);
-  console.log('  - regulatoryData.dataLocalization:', regulatoryData?.dataLocalization);
+  console.log('  - regulatoryData.keyUpdates:', regulatoryData?.keyUpdates);
   console.log('  - fallback euAiActDeadline:', euAiActDeadline);
   console.log('  - fallback gdprCompliance:', gdprCompliance);
   console.log('  - fallback potentialFines:', potentialFines);
   console.log('  - fallback dataLocalization:', dataLocalization);
 
-  const keyDataPoints = regulatoryData ? [
-    {
-      id: 'eu-ai-act',
-      icon: Scale,
-      title: 'EU AI Act enforcement starts Q1 2026',
-      value: regulatoryData.euAiActDeadline || euAiActDeadline,
-      badge: 'New',
-      badgeColor: 'bg-blue-100 text-blue-800',
-      tooltip: 'New European AI Act comes into effect with strict compliance requirements for AI systems.'
-    },
-    {
-      id: 'gdpr-compliance',
-      icon: Shield,
-      title: 'GDPR compliance among SaaS providers',
-      value: regulatoryData.gdprCompliance || gdprCompliance,
-      badge: 'Update',
-      badgeColor: 'bg-yellow-100 text-yellow-800',
-      tooltip: 'Current adoption rates show varying levels of GDPR compliance across different SaaS categories.'
-    },
-    {
-      id: 'potential-fines',
-      icon: AlertTriangle,
-      title: 'Potential fines: up to 6% revenue',
-      value: regulatoryData.potentialFines || potentialFines,
-      badge: 'Risk',
-      badgeColor: 'bg-red-100 text-red-800',
-      tooltip: 'Maximum penalty levels for non-compliance with major data protection regulations.'
-    },
-    {
-      id: 'data-localization',
-      icon: Globe,
-      title: 'China data localization laws impacting global SaaS',
-      value: regulatoryData.dataLocalization || dataLocalization,
-      badge: 'High Priority',
-      badgeColor: 'bg-purple-100 text-purple-800',
-      tooltip: 'New data residency requirements affecting international SaaS deployment strategies.'
-    }
-  ] : [
+  const keyDataPoints = regulatoryData?.keyUpdates ? regulatoryData.keyUpdates.map((update: any, index: number) => ({
+    id: `update-${index}`,
+    icon: getIconForUpdate(update.icon || 'info'),
+    title: update.title,
+    value: update.description,
+    badge: update.tag || 'Info',
+    badgeColor: getBadgeColorForTag(update.tag),
+    tooltip: `${update.title}: ${update.description}`
+  })) : [
     {
       id: 'eu-ai-act',
       icon: Scale,
