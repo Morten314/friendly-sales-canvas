@@ -1905,9 +1905,10 @@ const MarketResearch = () => {
   const handleRegulatoryToggleEdit = () => {
     console.log('🎯 TOGGLE EDIT - Current isRegulatoryEditing:', isRegulatoryEditing);
     if (!isRegulatoryEditing) {
-      // Capture original data when starting to edit
-      console.log('📸 CAPTURING ORIGINAL DATA SNAPSHOT:', regulatoryData);
-      setRegulatoryOriginalDataSnapshot({...regulatoryData});
+      // Capture original data when starting to edit - use the actual regulatory compliance data
+      const currentRegulatoryData = marketIntelligenceData?.regulatory_compliance || regulatoryData;
+      console.log('📸 CAPTURING ORIGINAL DATA SNAPSHOT:', currentRegulatoryData);
+      setRegulatoryOriginalDataSnapshot({...currentRegulatoryData});
     }
     setIsRegulatoryEditing(!isRegulatoryEditing);
   };
@@ -1915,35 +1916,29 @@ const MarketResearch = () => {
   const handleRegulatorySaveChanges = () => {
     console.log('🔥 SAVE FUNCTION CALLED - handleRegulatorySaveChanges');
     console.log('💾 Saving Regulatory Compliance changes...');
-    console.log('📊 Current regulatoryData:', regulatoryData);
+    
+    // Use the actual regulatory compliance data that's being edited
+    const currentRegulatoryData = marketIntelligenceData?.regulatory_compliance || regulatoryData;
+    console.log('📊 Current regulatoryData from intelligence:', currentRegulatoryData);
     console.log('📸 Captured original snapshot:', regulatoryOriginalDataSnapshot);
     
-    // Use captured original data or fallback to default values
-    const originalJson = regulatoryOriginalDataSnapshot || {
-      executiveSummary: 'The regulatory landscape for SaaS companies continues to evolve rapidly, with new compliance requirements emerging across multiple jurisdictions. Organizations must navigate an increasingly complex web of data protection, AI governance, and industry-specific regulations.',
-      euAiActDeadline: 'February 2, 2025',
-      gdprCompliance: '68%',
-      potentialFines: 'Up to 6% of annual revenue',
-      dataLocalization: 'Mandatory for customer data',
-      timestamp: null
-    };
+    // Use captured original data or current data as fallback
+    const originalJson = regulatoryOriginalDataSnapshot || currentRegulatoryData;
     
-    // Update timestamp - data is already updated via onChange handlers
+    // Update timestamp for the current data
     const updatedData = {
-      ...regulatoryData,
+      ...currentRegulatoryData,
       timestamp: new Date().toISOString()
     };
-    setRegulatoryData(updatedData);
+    
+    // Update the market intelligence data state
+    setMarketIntelligenceData(prevData => ({
+      ...prevData,
+      regulatory_compliance: updatedData
+    }));
     
     // Prepare modified JSON data (current state with new timestamp)
-    const modifiedJson = {
-      executiveSummary: updatedData.executiveSummary,
-      euAiActDeadline: updatedData.euAiActDeadline,
-      gdprCompliance: updatedData.gdprCompliance,
-      potentialFines: updatedData.potentialFines,
-      dataLocalization: updatedData.dataLocalization,
-      timestamp: updatedData.timestamp
-    };
+    const modifiedJson = updatedData;
     
     // Exit editing mode
     setIsRegulatoryEditing(false);
