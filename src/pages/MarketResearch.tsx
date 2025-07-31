@@ -2825,11 +2825,11 @@ const MarketResearch = () => {
                       regulatoryHasEdits={regulatoryHasEdits}
                       regulatoryDeletedSections={regulatoryDeletedSections}
                       regulatoryEditHistory={regulatoryEditHistory}
-                      regulatoryExecutiveSummary={regulatoryData.executiveSummary}
-                      regulatoryEuAiActDeadline={regulatoryData.euAiActDeadline}
-                      regulatoryGdprCompliance={regulatoryData.gdprCompliance}
-                      regulatoryPotentialFines={regulatoryData.potentialFines}
-                      regulatoryDataLocalization={regulatoryData.dataLocalization}
+                      regulatoryExecutiveSummary={marketIntelligenceData?.regulatory_compliance?.executiveSummary || regulatoryData.executiveSummary}
+                      regulatoryEuAiActDeadline={marketIntelligenceData?.regulatory_compliance?.euAiActDeadline || regulatoryData.euAiActDeadline}
+                      regulatoryGdprCompliance={marketIntelligenceData?.regulatory_compliance?.gdprCompliance || regulatoryData.gdprCompliance}
+                      regulatoryPotentialFines={marketIntelligenceData?.regulatory_compliance?.potentialFines || regulatoryData.potentialFines}
+                      regulatoryDataLocalization={marketIntelligenceData?.regulatory_compliance?.dataLocalization || regulatoryData.dataLocalization}
                       // Market Entry props
                       isMarketEntryEditing={isMarketEntryEditing}
                       marketEntryExpanded={marketEntryExpanded}
