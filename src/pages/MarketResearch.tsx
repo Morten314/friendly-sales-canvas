@@ -1152,23 +1152,23 @@ const MarketResearch = () => {
     }
   };
 
-  // Refresh all components data from backend API
+  // Refresh all components data from backend API - Load sequentially to prevent timeout
   const refreshAllComponentsData = async () => {
     console.log('🔄 Refreshing ALL component data from backend...');
     
     try {
-      // Fetch fresh data for all 5 components with refresh=true
-      await Promise.all([
-        fetchMarketSizeData(true, true),        // Market Size & Opportunity
-        fetchIndustryTrendsData(true, true),    // Industry Trends  
-        fetchMarketEntryData(true, true),       // Market Entry & Growth Strategy
-        fetchCompetitorData(true, true),        // Competitor Landscape
-        fetchRegulatoryComplianceData(true, true) // Regulatory Compliance
-      ]);
+      // Load components sequentially to prevent server overload
+      await fetchMarketSizeData(true, true);        // Market Size & Opportunity
+      await fetchIndustryTrendsData(true, true);    // Industry Trends  
+      await fetchMarketEntryData(true, true);       // Market Entry & Growth Strategy
+      await fetchCompetitorData(true, true);        // Competitor Landscape
+      await fetchRegulatoryComplianceData(true, true); // Regulatory Compliance
       
       console.log('✅ All component data refreshed successfully');
+      setIsInitialLoading(false); // Stop loading after all components are loaded
     } catch (error) {
       console.error('❌ Error refreshing component data:', error);
+      setIsInitialLoading(false); // Stop loading even on error
     }
   };
 
@@ -1176,8 +1176,16 @@ const MarketResearch = () => {
   useEffect(() => {
     console.log('🔥 Setting up initial data load and sync for ALL components');
     
+    // Set timeout to stop loading after 30 seconds
+    const loadingTimeout = setTimeout(() => {
+      console.log('⚠️ Loading timeout - stopping initial loading');
+      setIsInitialLoading(false);
+    }, 30000);
+
     // Always fetch fresh data for all components on mount
-    refreshAllComponentsData();
+    refreshAllComponentsData().finally(() => {
+      clearTimeout(loadingTimeout);
+    });
   }, []);
 
   // Listen for company profile updates and trigger background refresh
