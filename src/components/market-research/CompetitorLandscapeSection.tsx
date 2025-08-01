@@ -420,7 +420,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
           );
         })()}
 
-        {/* Always show metrics cards (Top Player Market Share, Emerging Players Added) */}
+        {/* Key Metrics Section - Always visible */}
         {(() => {
           const sectionComponent = competitorData?.uiComponents?.find(comp => comp.type === 'section');
           const apiMetrics = sectionComponent?.metrics;
@@ -437,45 +437,55 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
           if (!displayMetrics || displayMetrics.length === 0) return null;
           
           return (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              {displayMetrics.map((metric, index) => (
-                <div key={index} className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-lg font-bold text-blue-600">
-                        {metric.value}
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Key Metrics</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {displayMetrics.map((metric, index) => (
+                  <div key={index} className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-lg font-bold text-blue-600">
+                          {metric.value}
+                        </div>
+                        <div className="text-sm text-gray-700">{metric.label}</div>
                       </div>
-                      <div className="text-sm text-gray-700">{metric.label}</div>
+                      {metric.trend === 'up' ? (
+                        <div className="text-green-500">
+                          <ChevronUp className="h-5 w-5" />
+                        </div>
+                      ) : metric.trend === 'down' ? (
+                        <div className="text-red-500">
+                          <ChevronDown className="h-5 w-5" />
+                        </div>
+                      ) : null}
                     </div>
-                    {metric.trend === 'up' ? (
-                      <div className="text-green-500">
-                        <ChevronUp className="h-5 w-5" />
-                      </div>
-                    ) : metric.trend === 'down' ? (
-                      <div className="text-red-500">
-                        <ChevronDown className="h-5 w-5" />
-                      </div>
-                    ) : null}
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           );
         })()}
 
-        {/* Read More button when collapsed */}
-        {!competitorLandscapeExpanded && !isSplitView && (
-          <div className="flex justify-center pt-4">
-            <Button
-              onClick={() => onCompetitorLandscapeExpandToggle(true)}
-              variant="outline"
-              className="flex items-center space-x-2 text-sm"
-            >
-              <span>Read More</span>
-              <ChevronDown className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
+        {/* Read More / Show Less Button */}
+        <div className="flex justify-center mb-6">
+          <Button
+            variant="outline"
+            onClick={() => onCompetitorLandscapeExpandToggle(!competitorLandscapeExpanded)}
+            className="text-blue-600 border-blue-200 hover:bg-blue-50"
+          >
+            {competitorLandscapeExpanded ? (
+              <>
+                <ChevronUp className="h-4 w-4 mr-2" />
+                Show Less
+              </>
+            ) : (
+              <>
+                <ChevronDown className="h-4 w-4 mr-2" />
+                Read More
+              </>
+            )}
+          </Button>
+        </div>
 
         {/* Expanded content */}
         {(competitorLandscapeExpanded || isSplitView) && (
