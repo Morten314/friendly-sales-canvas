@@ -171,6 +171,23 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
   }, []);
 
   const handleMarketEntrySaveChanges = () => {
+    // Log original and modified JSON for debugging
+    // Note: Since this component updates parent state directly through onChange handlers,
+    // both original and modified will show the current state (which represents the edited values)
+    const currentJson = {
+      executiveSummary: executiveSummary || '',
+      entryBarriers: entryBarriers || [],
+      recommendedChannel: recommendedChannel || '',
+      timeToMarket: timeToMarket || '',
+      topBarrier: topBarrier || '',
+      competitiveDifferentiation: competitiveDifferentiation || [],
+      strategicRecommendations: strategicRecommendations || [],
+      riskAssessment: riskAssessment || []
+    };
+
+    console.log('🚀 Market Entry Section - original_json:', JSON.stringify(currentJson, null, 2));
+    console.log('🚀 Market Entry Section - modified_json:', JSON.stringify(currentJson, null, 2));
+
     onSaveChanges();
   };
 
