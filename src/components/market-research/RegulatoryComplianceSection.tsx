@@ -110,12 +110,15 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   const [error, setError] = useState<string | null>(null);
   const [regulatoryExpanded, setRegulatoryExpanded] = useState(true);
 
-  // Local state for editing
+  // Local state for editing - dynamic for all key data points
   const [localExecutiveSummary, setLocalExecutiveSummary] = useState(executiveSummary || '');
   const [localEuAiActDeadline, setLocalEuAiActDeadline] = useState(euAiActDeadline || '');
   const [localGdprCompliance, setLocalGdprCompliance] = useState(gdprCompliance || '');
   const [localPotentialFines, setLocalPotentialFines] = useState(potentialFines || '');
   const [localDataLocalization, setLocalDataLocalization] = useState(dataLocalization || '');
+  
+  // Dynamic local state for all key data points
+  const [localKeyDataValues, setLocalKeyDataValues] = useState<Record<string, string>>({});
 
   // Sync local state with props when they change (but only when not editing)
   useEffect(() => {
@@ -127,6 +130,18 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
       setLocalDataLocalization(dataLocalization || '');
     }
   }, [executiveSummary, euAiActDeadline, gdprCompliance, potentialFines, dataLocalization, isEditing]);
+
+  // Initialize dynamic key data values after keyDataPoints is available
+  useEffect(() => {
+    if (!isEditing && regulatoryData?.keyUpdates) {
+      const initialValues: Record<string, string> = {};
+      regulatoryData.keyUpdates.forEach((update: any) => {
+        const id = update.title.toLowerCase().replace(/\s+/g, '-');
+        initialValues[id] = update.description || '';
+      });
+      setLocalKeyDataValues(initialValues);
+    }
+  }, [regulatoryData?.keyUpdates, isEditing]);
 
   // API integration for Regulatory & Compliance Highlights
   const fetchRegulatoryData = async (refresh: boolean = false) => {
@@ -518,7 +533,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                                 point.id === 'gdpr-compliance' ? localGdprCompliance :
                                 point.id === 'potential-fines' ? localPotentialFines :
                                 point.id === 'data-localization' ? localDataLocalization :
-                                point.value
+                                localKeyDataValues[point.id] || point.value
                               }
                               onKeyDown={(e) => {
                                 console.log(`🔍 Key Regulatory Updates - Key pressed: ${e.key} for field: ${point.id}`);
@@ -545,6 +560,13 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                                   console.log(`🔍 Setting localDataLocalization to: ${newValue}`);
                                   setLocalDataLocalization(newValue);
                                   onDataLocalizationChange(newValue);
+                                } else {
+                                  // Handle dynamic fields
+                                  console.log(`🔍 Setting dynamic field ${point.id} to: ${newValue}`);
+                                  setLocalKeyDataValues(prev => ({
+                                    ...prev,
+                                    [point.id]: newValue
+                                  }));
                                 }
                               }}
                               className="w-full p-2 border border-gray-300 rounded text-sm"
