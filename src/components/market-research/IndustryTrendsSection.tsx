@@ -273,6 +273,26 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
   // Handle save changes
   const handleSaveChanges = async () => {
     try {
+      // Log original and modified JSON for debugging
+      const originalJson = {
+        executiveSummary: industryTrendsData?.executiveSummary || '',
+        aiAdoption: industryTrendsData?.aiAdoption || '',
+        cloudMigration: industryTrendsData?.cloudMigration || '',
+        regulatory: industryTrendsData?.regulatory || '',
+        trendSnapshots: industryTrendsData?.trendSnapshots || []
+      };
+
+      const modifiedJson = {
+        executiveSummary: editExecutiveSummary,
+        aiAdoption: editAiAdoption,
+        cloudMigration: editCloudMigration,
+        regulatory: editRegulatory,
+        trendSnapshots: editTrendSnapshots
+      };
+
+      console.log('📈 Industry Trends Section - original_json:', originalJson);
+      console.log('📈 Industry Trends Section - modified_json:', modifiedJson);
+
       // Update the displayed data with the edited values immediately
       setIndustryTrendsData(prev => {
         if (!prev) return prev;

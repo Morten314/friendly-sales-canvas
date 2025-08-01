@@ -100,6 +100,30 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
   const [localMarketDrivers, setLocalMarketDrivers] = useState<string[]>(marketDrivers || []);
 
   const handleMarketSizeSaveChanges = () => {
+    // Log original and modified JSON for debugging
+    const originalJson = {
+      executiveSummary: executiveSummary || '',
+      tamValue: tamValue || '',
+      samValue: samValue || '',
+      apacGrowthRate: apacGrowthRate || '',
+      marketEntry: marketEntry || '',
+      strategicRecommendations: strategicRecommendations || [],
+      marketDrivers: marketDrivers || []
+    };
+
+    const modifiedJson = {
+      executiveSummary: localExecutiveSummary,
+      tamValue: localTamValue,
+      samValue: localSamValue,
+      apacGrowthRate: localApacGrowthRate,
+      marketEntry: localMarketEntry,
+      strategicRecommendations: localStrategicRecommendations,
+      marketDrivers: localMarketDrivers
+    };
+
+    console.log('📊 Market Size Section - original_json:', originalJson);
+    console.log('📊 Market Size Section - modified_json:', modifiedJson);
+
     // First, call the change handlers to update parent state with local values
     onExecutiveSummaryChange(localExecutiveSummary);
     onTamValueChange(localTamValue);

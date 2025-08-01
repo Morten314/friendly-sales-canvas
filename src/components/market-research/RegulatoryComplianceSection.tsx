@@ -792,6 +792,35 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
               <div className="flex gap-3">
                 <Button 
                   onClick={() => {
+                    // Log original and modified JSON for debugging
+                    const originalJson = {
+                      executiveSummary: executiveSummary || '',
+                      euAiActDeadline: euAiActDeadline || '',
+                      gdprCompliance: gdprCompliance || '',
+                      potentialFines: potentialFines || '',
+                      dataLocalization: dataLocalization || '',
+                      keyUpdates: regulatoryData?.keyUpdates || []
+                    };
+
+                    const modifiedJson = {
+                      executiveSummary: localExecutiveSummary,
+                      euAiActDeadline: localEuAiActDeadline,
+                      gdprCompliance: localGdprCompliance,
+                      potentialFines: localPotentialFines,
+                      dataLocalization: localDataLocalization,
+                      keyUpdates: regulatoryData?.keyUpdates?.map((update: any) => {
+                        const id = update.title.toLowerCase().replace(/\s+/g, '-');
+                        const localValue = localKeyDataValues[id];
+                        if (localValue !== undefined) {
+                          return { ...update, description: localValue };
+                        }
+                        return update;
+                      }) || []
+                    };
+
+                    console.log('⚖️ Regulatory Compliance Section - original_json:', originalJson);
+                    console.log('⚖️ Regulatory Compliance Section - modified_json:', modifiedJson);
+
                     // First, call all the change handlers to update parent state with local values
                     onExecutiveSummaryChange(localExecutiveSummary);
                     onEuAiActDeadlineChange(localEuAiActDeadline);

@@ -657,6 +657,24 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                 <div className="flex gap-2">
                   <Button 
                     onClick={() => {
+                      // Log original and modified JSON for debugging
+                      const originalJson = {
+                        executiveSummary: executiveSummary || '',
+                        topPlayerShare: topPlayerShare || '',
+                        emergingPlayers: emergingPlayers || '',
+                        fundingNews: fundingNews || []
+                      };
+
+                      const modifiedJson = {
+                        executiveSummary: localExecutiveSummary,
+                        topPlayerShare: localTopPlayerShare,
+                        emergingPlayers: localEmergingPlayers,
+                        fundingNews: fundingNews || []
+                      };
+
+                      console.log('🏆 Competitor Landscape Section - original_json:', originalJson);
+                      console.log('🏆 Competitor Landscape Section - modified_json:', modifiedJson);
+
                       // First, call the change handlers to update parent state with local values
                       onExecutiveSummaryChange(localExecutiveSummary);
                       onTopPlayerShareChange(localTopPlayerShare);
