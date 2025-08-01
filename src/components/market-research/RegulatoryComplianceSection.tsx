@@ -120,21 +120,19 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   // Dynamic local state for all key data points
   const [localKeyDataValues, setLocalKeyDataValues] = useState<Record<string, string>>({});
 
-  // Sync local state with props when they change (but only when not editing)
+  // Sync local state with props when they change
   useEffect(() => {
-    if (!isEditing) {
-      const currentExecutiveSummary = regulatoryData?.executiveSummary || executiveSummary;
-      setLocalExecutiveSummary(currentExecutiveSummary || '');
-      setLocalEuAiActDeadline(euAiActDeadline || '');
-      setLocalGdprCompliance(gdprCompliance || '');
-      setLocalPotentialFines(potentialFines || '');
-      setLocalDataLocalization(dataLocalization || '');
-    }
-  }, [executiveSummary, euAiActDeadline, gdprCompliance, potentialFines, dataLocalization, regulatoryData?.executiveSummary, isEditing]);
+    const currentExecutiveSummary = regulatoryData?.executiveSummary || executiveSummary;
+    setLocalExecutiveSummary(currentExecutiveSummary || '');
+    setLocalEuAiActDeadline(euAiActDeadline || '');
+    setLocalGdprCompliance(gdprCompliance || '');
+    setLocalPotentialFines(potentialFines || '');
+    setLocalDataLocalization(dataLocalization || '');
+  }, [executiveSummary, euAiActDeadline, gdprCompliance, potentialFines, dataLocalization, regulatoryData?.executiveSummary]);
 
   // Initialize dynamic key data values after keyDataPoints is available
   useEffect(() => {
-    if (!isEditing && regulatoryData?.keyUpdates) {
+    if (regulatoryData?.keyUpdates) {
       const initialValues: Record<string, string> = {};
       regulatoryData.keyUpdates.forEach((update: any) => {
         const id = update.title.toLowerCase().replace(/\s+/g, '-');
@@ -142,7 +140,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
       });
       setLocalKeyDataValues(initialValues);
     }
-  }, [regulatoryData?.keyUpdates, isEditing]);
+  }, [regulatoryData?.keyUpdates]);
 
   // API integration for Regulatory & Compliance Highlights
   const fetchRegulatoryData = async (refresh: boolean = false) => {
