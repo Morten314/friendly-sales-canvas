@@ -98,16 +98,18 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
   const [localStrategicRecommendations, setLocalStrategicRecommendations] = React.useState([...strategicRecommendations]);
   const [localMarketDrivers, setLocalMarketDrivers] = React.useState([...marketDrivers]);
 
-  // Sync local state with props when they change
+  // Sync local state with props when they change (but only when not editing)
   React.useEffect(() => {
-    setLocalExecutiveSummary(executiveSummary || '');
-    setLocalTamValue(tamValue || '');
-    setLocalSamValue(samValue || '');
-    setLocalApacGrowthRate(apacGrowthRate || '');
-    setLocalMarketEntry(marketEntry || '');
-    setLocalStrategicRecommendations([...strategicRecommendations]);
-    setLocalMarketDrivers([...marketDrivers]);
-  }, [executiveSummary, tamValue, samValue, apacGrowthRate, marketEntry, strategicRecommendations, marketDrivers]);
+    if (!isEditing) {
+      setLocalExecutiveSummary(executiveSummary || '');
+      setLocalTamValue(tamValue || '');
+      setLocalSamValue(samValue || '');
+      setLocalApacGrowthRate(apacGrowthRate || '');
+      setLocalMarketEntry(marketEntry || '');
+      setLocalStrategicRecommendations([...strategicRecommendations]);
+      setLocalMarketDrivers([...marketDrivers]);
+    }
+  }, [executiveSummary, tamValue, samValue, apacGrowthRate, marketEntry, strategicRecommendations, marketDrivers, isEditing]);
 
   // Debug logging
   React.useEffect(() => {
