@@ -791,7 +791,30 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
             <div className="flex justify-between items-center pt-6 border-t border-gray-200">
               <div className="flex gap-3">
                 <Button 
-                  onClick={onSaveChanges}
+                  onClick={() => {
+                    // Call the parent's save function
+                    onSaveChanges();
+                    
+                    // Force sync local state with current prop values after save
+                    setTimeout(() => {
+                      const currentExecutiveSummary = regulatoryData?.executiveSummary || executiveSummary;
+                      setLocalExecutiveSummary(currentExecutiveSummary || '');
+                      setLocalEuAiActDeadline(euAiActDeadline || '');
+                      setLocalGdprCompliance(gdprCompliance || '');
+                      setLocalPotentialFines(potentialFines || '');
+                      setLocalDataLocalization(dataLocalization || '');
+                      
+                      // Sync key data values too
+                      if (regulatoryData?.keyUpdates) {
+                        const updatedValues: Record<string, string> = {};
+                        regulatoryData.keyUpdates.forEach((update: any) => {
+                          const id = update.title.toLowerCase().replace(/\s+/g, '-');
+                          updatedValues[id] = update.description || '';
+                        });
+                        setLocalKeyDataValues(updatedValues);
+                      }
+                    }, 100); // Small delay to allow parent state to update
+                  }}
                   className="bg-blue-600 hover:bg-blue-700 text-white"
                 >
                   <Save className="h-4 w-4 mr-2" />
