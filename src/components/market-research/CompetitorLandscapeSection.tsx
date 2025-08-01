@@ -385,88 +385,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
           </div>
         </div>
 
-        {/* Executive Summary - Always visible */}
-        {(() => {
-          // Use API data first, then fallback to props
-          const reportComponent = competitorData?.uiComponents?.find(comp => comp.type === 'report');
-          const apiExecutiveSummary = reportComponent?.executiveSummary;
-          const displayExecutiveSummary = apiExecutiveSummary || executiveSummary;
-          
-          if (!displayExecutiveSummary) {
-            return null;
-          }
-          
-          return (
-            <div className="mb-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-blue-600" />
-                  Executive Summary
-                </h3>
-                {isCompetitorLandscapeEditing && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleEditField('executiveSummary', displayExecutiveSummary)}
-                    className="text-blue-600 border-blue-200 hover:bg-blue-50"
-                  >
-                    <Edit className="h-4 w-4 mr-1" />
-                    Edit
-                  </Button>
-                )}
-              </div>
-              <p className="text-gray-700 leading-relaxed">{displayExecutiveSummary}</p>
-            </div>
-          );
-        })()}
-
-        {/* Key Metrics Section - Always visible */}
-        {(() => {
-          const sectionComponent = competitorData?.uiComponents?.find(comp => comp.type === 'section');
-          const apiMetrics = sectionComponent?.metrics;
-          
-          // Fallback to props data if no API data
-          const fallbackMetrics = [
-            { label: "Top Player Market Share", value: topPlayerShare, trend: "up" },
-            { label: "Emerging Players Added", value: emergingPlayers, trend: "up" }
-          ];
-          
-          const displayMetrics = apiMetrics && apiMetrics.length > 0 ? apiMetrics : 
-            (topPlayerShare || emergingPlayers) ? fallbackMetrics.filter(m => m.value) : null;
-          
-          if (!displayMetrics || displayMetrics.length === 0) return null;
-          
-          return (
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Key Metrics</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {displayMetrics.map((metric, index) => (
-                  <div key={index} className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-lg font-bold text-blue-600">
-                          {metric.value}
-                        </div>
-                        <div className="text-sm text-gray-700">{metric.label}</div>
-                      </div>
-                      {metric.trend === 'up' ? (
-                        <div className="text-green-500">
-                          <ChevronUp className="h-5 w-5" />
-                        </div>
-                      ) : metric.trend === 'down' ? (
-                        <div className="text-red-500">
-                          <ChevronDown className="h-5 w-5" />
-                        </div>
-                      ) : null}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        })()}
-
-        {/* Read More Button - Only show when collapsed */}
+        {/* Read More Button - Show when collapsed */}
         {!competitorLandscapeExpanded && !isSplitView && (
           <div className="flex justify-center mb-6">
             <Button
@@ -483,6 +402,86 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         {/* Expanded content */}
         {(competitorLandscapeExpanded || isSplitView) && (
           <div className="space-y-6">
+            
+            {/* Executive Summary */}
+            {(() => {
+              // Use API data first, then fallback to props
+              const reportComponent = competitorData?.uiComponents?.find(comp => comp.type === 'report');
+              const apiExecutiveSummary = reportComponent?.executiveSummary;
+              const displayExecutiveSummary = apiExecutiveSummary || executiveSummary;
+              
+              if (!displayExecutiveSummary) {
+                return null;
+              }
+              
+              return (
+                <div className="mb-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                      <FileText className="h-5 w-5 text-blue-600" />
+                      Executive Summary
+                    </h3>
+                    {isCompetitorLandscapeEditing && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditField('executiveSummary', displayExecutiveSummary)}
+                        className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                      >
+                        <Edit className="h-4 w-4 mr-1" />
+                        Edit
+                      </Button>
+                    )}
+                  </div>
+                  <p className="text-gray-700 leading-relaxed">{displayExecutiveSummary}</p>
+                </div>
+              );
+            })()}
+
+            {/* Key Metrics Section */}
+            {(() => {
+              const sectionComponent = competitorData?.uiComponents?.find(comp => comp.type === 'section');
+              const apiMetrics = sectionComponent?.metrics;
+              
+              // Fallback to props data if no API data
+              const fallbackMetrics = [
+                { label: "Top Player Market Share", value: topPlayerShare, trend: "up" },
+                { label: "Emerging Players Added", value: emergingPlayers, trend: "up" }
+              ];
+              
+              const displayMetrics = apiMetrics && apiMetrics.length > 0 ? apiMetrics : fallbackMetrics;
+              
+              if (!displayMetrics || displayMetrics.length === 0) return null;
+              
+              return (
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Key Metrics</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {displayMetrics.map((metric, index) => (
+                      <div key={index} className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="text-lg font-bold text-blue-600">
+                              {metric.value}
+                            </div>
+                            <div className="text-sm text-gray-700">{metric.label}</div>
+                          </div>
+                          {metric.trend === 'up' ? (
+                            <div className="text-green-500">
+                              <ChevronUp className="h-5 w-5" />
+                            </div>
+                          ) : metric.trend === 'down' ? (
+                            <div className="text-red-500">
+                              <ChevronDown className="h-5 w-5" />
+                            </div>
+                          ) : null}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
             
             {/* Edit field modal */}
             {editingField && (
