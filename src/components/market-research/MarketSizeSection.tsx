@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { BarChart3, Bot, Edit, Target, TrendingUp, PieChart, X, FileText, Save, Share, Clock, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -90,7 +90,39 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
   error,
   onRefresh
 }) => {
+  // Local editing state for inline editing
+  const [localExecutiveSummary, setLocalExecutiveSummary] = useState('');
+  const [localTamValue, setLocalTamValue] = useState('');
+  const [localSamValue, setLocalSamValue] = useState('');
+  const [localApacGrowthRate, setLocalApacGrowthRate] = useState('');
+  const [localMarketEntry, setLocalMarketEntry] = useState('');
+  const [localStrategicRecommendations, setLocalStrategicRecommendations] = useState<string[]>([]);
+  const [localMarketDrivers, setLocalMarketDrivers] = useState<string[]>([]);
+
+  // Sync local state with props when they change (but not while editing)
+  useEffect(() => {
+    if (!isEditing) {
+      setLocalExecutiveSummary(executiveSummary || '');
+      setLocalTamValue(tamValue || '');
+      setLocalSamValue(samValue || '');
+      setLocalApacGrowthRate(apacGrowthRate || '');
+      setLocalMarketEntry(marketEntry || '');
+      setLocalStrategicRecommendations(strategicRecommendations || []);
+      setLocalMarketDrivers(marketDrivers || []);
+    }
+  }, [executiveSummary, tamValue, samValue, apacGrowthRate, marketEntry, strategicRecommendations, marketDrivers, isEditing]);
+
   const handleMarketSizeSaveChanges = () => {
+    // First, call the change handlers to update parent state with local values
+    onExecutiveSummaryChange(localExecutiveSummary);
+    onTamValueChange(localTamValue);
+    onSamValueChange(localSamValue);
+    onApacGrowthRateChange(localApacGrowthRate);
+    onMarketEntryChange(localMarketEntry);
+    onStrategicRecommendationsChange(localStrategicRecommendations);
+    onMarketDriversChange(localMarketDrivers);
+    
+    // Then call the parent's save function
     onSaveChanges();
   };
 
@@ -174,8 +206,8 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                 </Label>
                 <Textarea 
                   id="executiveSummary" 
-                  value={executiveSummary} 
-                  onChange={(e) => onExecutiveSummaryChange(e.target.value)} 
+                  value={localExecutiveSummary} 
+                  onChange={(e) => setLocalExecutiveSummary(e.target.value)} 
                   className="w-full h-32 resize-none" 
                   placeholder="Enter executive summary..." 
                 />
@@ -205,8 +237,8 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                     </Label>
                     <Input 
                       id="tamValue" 
-                      value={tamValue} 
-                      onChange={(e) => onTamValueChange(e.target.value)} 
+                      value={localTamValue} 
+                      onChange={(e) => setLocalTamValue(e.target.value)} 
                       placeholder="e.g., $4.2B" 
                     />
                   </div>
@@ -216,8 +248,8 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                     </Label>
                     <Input 
                       id="samValue" 
-                      value={samValue} 
-                      onChange={(e) => onSamValueChange(e.target.value)} 
+                      value={localSamValue} 
+                      onChange={(e) => setLocalSamValue(e.target.value)} 
                       placeholder="e.g., $2.1B" 
                     />
                   </div>
@@ -227,8 +259,8 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                     </Label>
                     <Input 
                       id="apacGrowthRate" 
-                      value={apacGrowthRate} 
-                      onChange={(e) => onApacGrowthRateChange(e.target.value)} 
+                      value={localApacGrowthRate} 
+                      onChange={(e) => setLocalApacGrowthRate(e.target.value)} 
                       placeholder="e.g., 25%" 
                     />
                   </div>
@@ -254,14 +286,14 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                 <Label className="text-sm font-medium text-gray-700 mb-2 block">
                   Strategic Recommendations
                 </Label>
-                {strategicRecommendations.map((rec, index) => (
+                {localStrategicRecommendations.map((rec, index) => (
                   <Textarea 
                     key={index} 
                     value={rec} 
                     onChange={e => {
-                      const newRecs = [...strategicRecommendations];
+                      const newRecs = [...localStrategicRecommendations];
                       newRecs[index] = e.target.value;
-                      onStrategicRecommendationsChange(newRecs);
+                      setLocalStrategicRecommendations(newRecs);
                     }} 
                     className="w-full h-20 resize-none mb-3" 
                     placeholder={`Strategic recommendation ${index + 1}...`} 
@@ -290,8 +322,8 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                 </Label>
                 <Textarea 
                   id="marketEntry" 
-                  value={marketEntry} 
-                  onChange={e => onMarketEntryChange(e.target.value)} 
+                  value={localMarketEntry} 
+                  onChange={e => setLocalMarketEntry(e.target.value)} 
                   className="w-full h-32 resize-none" 
                   placeholder="Enter market entry strategy..." 
                 />
@@ -316,14 +348,14 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                 <Label className="text-sm font-medium text-gray-700 mb-2 block">
                   Key Market Drivers
                 </Label>
-                {marketDrivers.map((driver, index) => (
+                {localMarketDrivers.map((driver, index) => (
                   <Textarea 
                     key={index} 
                     value={driver} 
                     onChange={e => {
-                      const newDrivers = [...marketDrivers];
+                      const newDrivers = [...localMarketDrivers];
                       newDrivers[index] = e.target.value;
-                      onMarketDriversChange(newDrivers);
+                      setLocalMarketDrivers(newDrivers);
                     }} 
                     className="w-full h-16 resize-none mb-3" 
                     placeholder={`Market driver ${index + 1}...`} 
@@ -391,22 +423,58 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
               <BarChart3 className="h-5 w-5 text-blue-600" />
               Executive Summary
             </h3>
-            <p className="text-gray-700 mb-6">{executiveSummary}</p>
+            {isEditing ? (
+              <Textarea
+                value={localExecutiveSummary}
+                onChange={(e) => setLocalExecutiveSummary(e.target.value)}
+                className="w-full h-24 resize-none mb-6"
+                placeholder="Enter executive summary..."
+              />
+            ) : (
+              <p className="text-gray-700 mb-6">{localExecutiveSummary || executiveSummary}</p>
+            )}
 
             {/* Key Metrics Cards - Always Visible */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
-                <div className="text-2xl font-bold text-blue-600">{tamValue}</div>
+                {isEditing ? (
+                  <Input
+                    value={localTamValue}
+                    onChange={(e) => setLocalTamValue(e.target.value)}
+                    className="text-2xl font-bold text-blue-600 bg-white mb-2"
+                    placeholder="e.g., $4.2B"
+                  />
+                ) : (
+                  <div className="text-2xl font-bold text-blue-600">{localTamValue || tamValue}</div>
+                )}
                 <div className="text-sm font-medium text-gray-900">Total Addressable Market</div>
                 <div className="text-xs text-gray-600">Growing 15% YoY</div>
               </div>
               <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded-r-lg">
-                <div className="text-2xl font-bold text-green-600">{samValue}</div>
+                {isEditing ? (
+                  <Input
+                    value={localSamValue}
+                    onChange={(e) => setLocalSamValue(e.target.value)}
+                    className="text-2xl font-bold text-green-600 bg-white mb-2"
+                    placeholder="e.g., $2.1B"
+                  />
+                ) : (
+                  <div className="text-2xl font-bold text-green-600">{localSamValue || samValue}</div>
+                )}
                 <div className="text-sm font-medium text-gray-900">Serviceable Addressable Market</div>
                 <div className="text-xs text-gray-600">Mid-market focus</div>
               </div>
               <div className="bg-purple-50 border-l-4 border-purple-500 p-4 rounded-r-lg">
-                <div className="text-2xl font-bold text-purple-600">{apacGrowthRate}</div>
+                {isEditing ? (
+                  <Input
+                    value={localApacGrowthRate}
+                    onChange={(e) => setLocalApacGrowthRate(e.target.value)}
+                    className="text-2xl font-bold text-purple-600 bg-white mb-2"
+                    placeholder="e.g., 25%"
+                  />
+                ) : (
+                  <div className="text-2xl font-bold text-purple-600">{localApacGrowthRate || apacGrowthRate}</div>
+                )}
                 <div className="text-sm font-medium text-gray-900">APAC Growth Rate</div>
                 <div className="text-xs text-gray-600">Fastest growing region</div>
               </div>
@@ -450,17 +518,37 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                          console.log('🎯 RENDER CHECK - Length:', strategicRecommendations?.length);
                          return null;
                        })()}
-                       {Array.isArray(strategicRecommendations) ? strategicRecommendations.map((rec, index) => (
-                        <li key={index} className="flex items-start gap-2">
-                          <div className="w-2 h-2 rounded-full bg-green-500 mt-2 flex-shrink-0"></div>
-                          {rec}
-                        </li>
-                      )) : (
-                        <li className="flex items-start gap-2">
-                          <div className="w-2 h-2 rounded-full bg-green-500 mt-2 flex-shrink-0"></div>
-                          No strategic recommendations available
-                        </li>
-                      )}
+                        {Array.isArray(strategicRecommendations) ? (
+                          isEditing ? (
+                            <div className="space-y-3">
+                              {localStrategicRecommendations.map((rec, index) => (
+                                <Textarea 
+                                  key={index} 
+                                  value={rec} 
+                                  onChange={e => {
+                                    const newRecs = [...localStrategicRecommendations];
+                                    newRecs[index] = e.target.value;
+                                    setLocalStrategicRecommendations(newRecs);
+                                  }} 
+                                  className="w-full h-20 resize-none bg-white" 
+                                  placeholder={`Strategic recommendation ${index + 1}...`} 
+                                />
+                              ))}
+                            </div>
+                          ) : (
+                            strategicRecommendations.map((rec, index) => (
+                              <li key={index} className="flex items-start gap-2">
+                                <div className="w-2 h-2 rounded-full bg-green-500 mt-2 flex-shrink-0"></div>
+                                {rec}
+                              </li>
+                            ))
+                          )
+                        ) : (
+                         <li className="flex items-start gap-2">
+                           <div className="w-2 h-2 rounded-full bg-green-500 mt-2 flex-shrink-0"></div>
+                           No strategic recommendations available
+                         </li>
+                       )}
                     </ul>
                   </div>
                 </div>
@@ -471,9 +559,18 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                     <TrendingUp className="h-5 w-5 text-blue-600" />
                     Market Entry
                   </h3>
-                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                    <p className="text-gray-700 mb-4">{marketEntry}</p>
-                  </div>
+                   <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                     {isEditing ? (
+                       <Textarea
+                         value={localMarketEntry}
+                         onChange={(e) => setLocalMarketEntry(e.target.value)}
+                         className="w-full h-24 resize-none bg-white"
+                         placeholder="Enter market entry strategy..."
+                       />
+                     ) : (
+                       <p className="text-gray-700 mb-4">{localMarketEntry || marketEntry}</p>
+                     )}
+                   </div>
                 </div>
 
                 {/* Market Opportunity Breakdown */}
@@ -551,14 +648,32 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
 
                   <div className="bg-gray-50 p-4 rounded-lg">
                     <h4 className="font-medium text-gray-900 mb-3">Key Market Drivers</h4>
-                    <ul className="space-y-2 text-gray-700">
-                      {marketDrivers.map((driver, index) => (
-                        <li key={index} className="flex items-start gap-2">
-                          <div className="w-2 h-2 rounded-full bg-purple-500 mt-2 flex-shrink-0"></div>
-                          {driver}
-                        </li>
-                      ))}
-                    </ul>
+                     {isEditing ? (
+                       <div className="space-y-3">
+                         {localMarketDrivers.map((driver, index) => (
+                           <Textarea 
+                             key={index} 
+                             value={driver} 
+                             onChange={e => {
+                               const newDrivers = [...localMarketDrivers];
+                               newDrivers[index] = e.target.value;
+                               setLocalMarketDrivers(newDrivers);
+                             }} 
+                             className="w-full h-16 resize-none bg-white" 
+                             placeholder={`Market driver ${index + 1}...`} 
+                           />
+                         ))}
+                       </div>
+                     ) : (
+                       <ul className="space-y-2 text-gray-700">
+                         {marketDrivers.map((driver, index) => (
+                           <li key={index} className="flex items-start gap-2">
+                             <div className="w-2 h-2 rounded-full bg-purple-500 mt-2 flex-shrink-0"></div>
+                             {driver}
+                           </li>
+                         ))}
+                       </ul>
+                     )}
                   </div>
                 </div>
 
