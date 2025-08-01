@@ -290,6 +290,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
         trendSnapshots: editTrendSnapshots
       };
 
+      // JSON logging with formatted output
       console.log('📈 Industry Trends Section - original_json:', JSON.stringify(originalJson, null, 2));
       console.log('📈 Industry Trends Section - modified_json:', JSON.stringify(modifiedJson, null, 2));
 
