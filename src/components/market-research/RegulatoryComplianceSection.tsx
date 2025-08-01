@@ -818,8 +818,8 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                       }) || []
                     };
 
-                    console.log('⚖️ Regulatory Compliance Section - original_json:', originalJson);
-                    console.log('⚖️ Regulatory Compliance Section - modified_json:', modifiedJson);
+                    console.log('⚖️ Regulatory Compliance Section - original_json:', JSON.stringify(originalJson, null, 2));
+                    console.log('⚖️ Regulatory Compliance Section - modified_json:', JSON.stringify(modifiedJson, null, 2));
 
                     // First, call all the change handlers to update parent state with local values
                     onExecutiveSummaryChange(localExecutiveSummary);
