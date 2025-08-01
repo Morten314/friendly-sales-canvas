@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 console.log('🚨🚨🚨 MARKETRESEARCH FILE IS DEFINITELY LOADING 🚨🚨🚨');
 console.log('📁 MarketResearch.tsx file is loading!');
 import { Layout } from "@/components/layout/Layout";
@@ -161,7 +161,7 @@ const getCachedData = (): MarketIntelligenceData | null => {
   return cachedMarketData;
 };
 
-const MarketResearch = () => {
+const MarketResearch = React.memo(() => {
   console.log('🔥 MarketResearch component is mounting!');
   usePageTitle("🔍 Scout - Brewra");
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -255,15 +255,15 @@ const MarketResearch = () => {
 
   const [marketIntelligenceData, setMarketIntelligenceData] = useState(getInitialMarketIntelligenceData());
 
-  // Helper function to save market intelligence data to localStorage
-  const saveMarketIntelligenceToLocalStorage = (data: any) => {
+  // Helper function to save market intelligence data to localStorage (debounced)
+  const saveMarketIntelligenceToLocalStorage = React.useCallback((data: any) => {
     try {
       localStorage.setItem('marketIntelligenceData', JSON.stringify(data));
       console.log('💾 Market Intelligence data saved to localStorage');
     } catch (error) {
       console.error('❌ Failed to save Market Intelligence data to localStorage:', error);
     }
-  };
+  }, []);
 
   // Market Size API state
   const [isMarketSizeLoading, setIsMarketSizeLoading] = useState(false);
@@ -1125,67 +1125,90 @@ const MarketResearch = () => {
     }
   };
 
-  // Initial data fetch and synchronization
+  // Initial data fetch and synchronization with mounting guard
   useEffect(() => {
     console.log('🔥 Setting up initial data load and sync');
     
-    // Check if we have persistent data from previous session
-    const storedMarketData = localStorage.getItem('marketIntelligenceData');
-    if (storedMarketData) {
-      try {
-        const parsedData = JSON.parse(storedMarketData);
-        if (parsedData.timestamp) {
-          console.log('📦 Found persistent Market Size data from previous session - preserving it');
-          console.log('🔧 Not clearing data - user will see last Swagger data until new data arrives');
-          console.log('💾 Persistent data timestamp:', parsedData.timestamp);
-          
-          // Make sure the persistent data is properly set in marketData state too
-          setMarketData(prev => {
-            const restoredData = {
-              ...prev,
-              executiveSummary: parsedData.executiveSummary,
-              tamValue: parsedData.tamValue,
-              samValue: parsedData.samValue,
-              apacGrowthRate: parsedData.apacGrowthRate,
-              strategicRecommendations: parsedData.strategicRecommendations,
-              marketEntry: parsedData.marketEntry,
-              marketDrivers: parsedData.marketDrivers,
-              marketSizeBySegment: parsedData.marketSizeBySegment,
-              growthProjections: parsedData.growthProjections,
-              timestamp: parsedData.timestamp
-            };
-            console.log('🔄 Restored persistent data to marketData state:', restoredData);
-            return restoredData;
-          });
-          setIsInitialLoading(false); // Turn off loading since we have data
-          return; // Exit early - don't clear data
+    // Add mounting guard to prevent infinite loops
+    let isMounted = true;
+    
+    const setupInitialData = async () => {
+      if (!isMounted) return;
+      
+      // Check if we have persistent data from previous session
+      const storedMarketData = localStorage.getItem('marketIntelligenceData');
+      if (storedMarketData) {
+        try {
+          const parsedData = JSON.parse(storedMarketData);
+          if (parsedData.timestamp) {
+            console.log('📦 Found persistent Market Size data from previous session - preserving it');
+            console.log('🔧 Not clearing data - user will see last Swagger data until new data arrives');
+            console.log('💾 Persistent data timestamp:', parsedData.timestamp);
+            
+            // Make sure the persistent data is properly set in marketData state too
+            if (isMounted) {
+              setMarketData(prev => {
+                const restoredData = {
+                  ...prev,
+                  executiveSummary: parsedData.executiveSummary,
+                  tamValue: parsedData.tamValue,
+                  samValue: parsedData.samValue,
+                  apacGrowthRate: parsedData.apacGrowthRate,
+                  strategicRecommendations: parsedData.strategicRecommendations,
+                  marketEntry: parsedData.marketEntry,
+                  marketDrivers: parsedData.marketDrivers,
+                  marketSizeBySegment: parsedData.marketSizeBySegment,
+                  growthProjections: parsedData.growthProjections,
+                  timestamp: parsedData.timestamp
+                };
+                console.log('🔄 Restored persistent data to marketData state:', restoredData);
+                return restoredData;
+              });
+              setIsInitialLoading(false); // Turn off loading since we have data
+            }
+            return; // Exit early - don't clear data
+          }
+        } catch (error) {
+          console.error('Error parsing stored market data:', error);
         }
-      } catch (error) {
-        console.error('Error parsing stored market data:', error);
       }
-    }
-    
-    console.log('🧹 No valid persistent data found - fetching fresh data from backend');
-    // If no valid cached data, fetch from backend
-    fetchMarketData();
-    
-    // Check if we have Market Entry data, if not fetch it
-    const storedMarketEntry = localStorage.getItem('marketEntryData');
-    if (!storedMarketEntry || !JSON.parse(storedMarketEntry).timestamp) {
-      console.log('📊 No Market Entry data found, fetching from API...');
-      fetchMarketEntryData(false, true); // Don't refresh, but show loading
-    } else {
-      console.log('📊 Market Entry data already loaded from localStorage');
-    }
+      
+      if (!isMounted) return;
+      
+      console.log('🧹 No valid persistent data found - fetching fresh data from backend');
+      // If no valid cached data, fetch from backend
+      await fetchMarketData();
+      
+      if (!isMounted) return;
+      
+      // Check if we have Market Entry data, if not fetch it
+      const storedMarketEntry = localStorage.getItem('marketEntryData');
+      if (!storedMarketEntry || !JSON.parse(storedMarketEntry).timestamp) {
+        console.log('📊 No Market Entry data found, fetching from API...');
+        await fetchMarketEntryData(false, true); // Don't refresh, but show loading
+      } else {
+        console.log('📊 Market Entry data already loaded from localStorage');
+      }
 
-    // Fetch Industry Trends data
-    console.log('📊 Fetching Industry Trends data...');
-    fetchIndustryTrendsData(false, true);
+      if (!isMounted) return;
 
-    // Fetch Competitor Landscape data
-    console.log('📊 Fetching Competitor data...');
-    fetchCompetitorData(false, true);
-  }, []);
+      // Fetch Industry Trends data
+      console.log('📊 Fetching Industry Trends data...');
+      await fetchIndustryTrendsData(false, true);
+
+      if (!isMounted) return;
+
+      // Fetch Competitor Landscape data
+      console.log('📊 Fetching Competitor data...');
+      await fetchCompetitorData(false, true);
+    };
+    
+    setupInitialData();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, []); // Empty dependency array ensures this only runs once
 
   // Listen for company profile updates and trigger background refresh
   useEffect(() => {
@@ -2748,6 +2771,6 @@ const MarketResearch = () => {
       />
     </Layout>
   );
-};
+});
 
 export default MarketResearch;
