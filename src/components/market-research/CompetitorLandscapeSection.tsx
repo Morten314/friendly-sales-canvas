@@ -291,6 +291,23 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
     );
   }
 
+  // Debug logging
+  console.log('🔍 CompetitorLandscapeSection Debug Info:');
+  console.log('- competitorData:', competitorData);
+  console.log('- isLoading:', isLoading);
+  console.log('- error:', error);
+  console.log('- competitorLandscapeExpanded:', competitorLandscapeExpanded);
+  console.log('- isSplitView:', isSplitView);
+
+  // If no API data, show fallback content with props data
+  if (!competitorData) {
+    console.log('⚠️ No competitorData found, showing fallback content with props:', {
+      executiveSummary,
+      topPlayerShare,
+      emergingPlayers,
+      fundingNews
+    });
+  }
 
   return (
     <div className={`${isSplitView ? 'flex gap-6' : ''}`}>
@@ -370,10 +387,12 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
 
         {/* Executive Summary - Always visible */}
         {(() => {
+          // Use API data first, then fallback to props
           const reportComponent = competitorData?.uiComponents?.find(comp => comp.type === 'report');
-          const executiveSummary = reportComponent?.executiveSummary;
+          const apiExecutiveSummary = reportComponent?.executiveSummary;
+          const displayExecutiveSummary = apiExecutiveSummary || executiveSummary;
           
-          if (!executiveSummary) {
+          if (!displayExecutiveSummary) {
             return null;
           }
           
@@ -388,7 +407,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleEditField('executiveSummary', executiveSummary)}
+                    onClick={() => handleEditField('executiveSummary', displayExecutiveSummary)}
                     className="text-blue-600 border-blue-200 hover:bg-blue-50"
                   >
                     <Edit className="h-4 w-4 mr-1" />
@@ -396,7 +415,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                   </Button>
                 )}
               </div>
-              <p className="text-gray-700 leading-relaxed">{executiveSummary}</p>
+              <p className="text-gray-700 leading-relaxed">{displayExecutiveSummary}</p>
             </div>
           );
         })()}
@@ -404,13 +423,22 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         {/* Always show metrics cards (Top Player Market Share, Emerging Players Added) */}
         {(() => {
           const sectionComponent = competitorData?.uiComponents?.find(comp => comp.type === 'section');
-          const metrics = sectionComponent?.metrics;
+          const apiMetrics = sectionComponent?.metrics;
           
-          if (!metrics || metrics.length === 0) return null;
+          // Fallback to props data if no API data
+          const fallbackMetrics = [
+            { label: "Top Player Market Share", value: topPlayerShare, trend: "up" },
+            { label: "Emerging Players Added", value: emergingPlayers, trend: "up" }
+          ];
+          
+          const displayMetrics = apiMetrics && apiMetrics.length > 0 ? apiMetrics : 
+            (topPlayerShare || emergingPlayers) ? fallbackMetrics.filter(m => m.value) : null;
+          
+          if (!displayMetrics || displayMetrics.length === 0) return null;
           
           return (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              {metrics.map((metric, index) => (
+              {displayMetrics.map((metric, index) => (
                 <div key={index} className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
                   <div className="flex items-center justify-between">
                     <div>
@@ -591,15 +619,19 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
             {/* News Headlines */}
             {(() => {
               const newsComponent = competitorData?.uiComponents?.find(comp => comp.type === 'news');
-              const headlines = newsComponent?.headlines;
+              const apiHeadlines = newsComponent?.headlines;
               
-              if (!headlines || headlines.length === 0) return null;
+              // Fallback to props data if no API data
+              const displayHeadlines = apiHeadlines && apiHeadlines.length > 0 ? apiHeadlines : 
+                fundingNews && fundingNews.length > 0 ? fundingNews : null;
+              
+              if (!displayHeadlines || displayHeadlines.length === 0) return null;
               
               return (
                 <div className="mb-8">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Latest News</h3>
                   <div className="space-y-3">
-                    {headlines.map((headline, index) => (
+                    {displayHeadlines.map((headline, index) => (
                       <div key={index} className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                         <p className="text-gray-900">{headline}</p>
                       </div>
