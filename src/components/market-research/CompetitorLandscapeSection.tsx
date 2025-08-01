@@ -672,8 +672,8 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                         fundingNews: fundingNews || []
                       };
 
-                      console.log('🏆 Competitor Landscape Section - original_json:', originalJson);
-                      console.log('🏆 Competitor Landscape Section - modified_json:', modifiedJson);
+                       console.log('🏆 Competitor Landscape Section - original_json:', JSON.stringify(originalJson, null, 2));
+                       console.log('🏆 Competitor Landscape Section - modified_json:', JSON.stringify(modifiedJson, null, 2));
 
                       // First, call the change handlers to update parent state with local values
                       onExecutiveSummaryChange(localExecutiveSummary);
