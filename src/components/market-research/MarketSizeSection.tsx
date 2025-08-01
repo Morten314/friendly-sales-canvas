@@ -90,28 +90,14 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
   error,
   onRefresh
 }) => {
-  // Local editing state for inline editing
-  const [localExecutiveSummary, setLocalExecutiveSummary] = useState('');
-  const [localTamValue, setLocalTamValue] = useState('');
-  const [localSamValue, setLocalSamValue] = useState('');
-  const [localApacGrowthRate, setLocalApacGrowthRate] = useState('');
-  const [localMarketEntry, setLocalMarketEntry] = useState('');
-  const [localStrategicRecommendations, setLocalStrategicRecommendations] = useState<string[]>([]);
-  const [localMarketDrivers, setLocalMarketDrivers] = useState<string[]>([]);
-
-  // Sync local state with props when they change (but not while editing)
-  useEffect(() => {
-    // Only sync from props when not editing
-    if (!isEditing) {
-      setLocalExecutiveSummary(executiveSummary || '');
-      setLocalTamValue(tamValue || '');
-      setLocalSamValue(samValue || '');
-      setLocalApacGrowthRate(apacGrowthRate || '');
-      setLocalMarketEntry(marketEntry || '');
-      setLocalStrategicRecommendations(strategicRecommendations || []);
-      setLocalMarketDrivers(marketDrivers || []);
-    }
-  }, [executiveSummary, tamValue, samValue, apacGrowthRate, marketEntry, strategicRecommendations, marketDrivers, isEditing]);
+  // Local editing state for inline editing - initialize once and keep values
+  const [localExecutiveSummary, setLocalExecutiveSummary] = useState(executiveSummary || '');
+  const [localTamValue, setLocalTamValue] = useState(tamValue || '');
+  const [localSamValue, setLocalSamValue] = useState(samValue || '');
+  const [localApacGrowthRate, setLocalApacGrowthRate] = useState(apacGrowthRate || '');
+  const [localMarketEntry, setLocalMarketEntry] = useState(marketEntry || '');
+  const [localStrategicRecommendations, setLocalStrategicRecommendations] = useState<string[]>(strategicRecommendations || []);
+  const [localMarketDrivers, setLocalMarketDrivers] = useState<string[]>(marketDrivers || []);
 
   const handleMarketSizeSaveChanges = () => {
     // First, call the change handlers to update parent state with local values
