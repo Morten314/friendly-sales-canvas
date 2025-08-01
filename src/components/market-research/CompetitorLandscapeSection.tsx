@@ -466,26 +466,19 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
           );
         })()}
 
-        {/* Read More / Show Less Button */}
-        <div className="flex justify-center mb-6">
-          <Button
-            variant="outline"
-            onClick={() => onCompetitorLandscapeExpandToggle(!competitorLandscapeExpanded)}
-            className="text-blue-600 border-blue-200 hover:bg-blue-50"
-          >
-            {competitorLandscapeExpanded ? (
-              <>
-                <ChevronUp className="h-4 w-4 mr-2" />
-                Show Less
-              </>
-            ) : (
-              <>
-                <ChevronDown className="h-4 w-4 mr-2" />
-                Read More
-              </>
-            )}
-          </Button>
-        </div>
+        {/* Read More Button - Only show when collapsed */}
+        {!competitorLandscapeExpanded && !isSplitView && (
+          <div className="flex justify-center mb-6">
+            <Button
+              variant="outline"
+              onClick={() => onCompetitorLandscapeExpandToggle(true)}
+              className="text-blue-600 border-blue-200 hover:bg-blue-50"
+            >
+              <ChevronDown className="h-4 w-4 mr-2" />
+              Read More
+            </Button>
+          </div>
+        )}
 
         {/* Expanded content */}
         {(competitorLandscapeExpanded || isSplitView) && (
