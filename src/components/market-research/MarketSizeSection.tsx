@@ -98,12 +98,11 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
   const [localMarketEntry, setLocalMarketEntry] = useState('');
   const [localStrategicRecommendations, setLocalStrategicRecommendations] = useState<string[]>([]);
   const [localMarketDrivers, setLocalMarketDrivers] = useState<string[]>([]);
-  const [justSaved, setJustSaved] = useState(false);
 
   // Sync local state with props when they change (but not while editing)
   useEffect(() => {
-    // Only sync from props when not editing AND not just saved (to prevent overwriting with old values)
-    if (!isEditing && !justSaved) {
+    // Only sync from props when not editing
+    if (!isEditing) {
       setLocalExecutiveSummary(executiveSummary || '');
       setLocalTamValue(tamValue || '');
       setLocalSamValue(samValue || '');
@@ -112,18 +111,9 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
       setLocalStrategicRecommendations(strategicRecommendations || []);
       setLocalMarketDrivers(marketDrivers || []);
     }
-    
-    // Reset the justSaved flag after a short delay to allow parent state to update
-    if (justSaved) {
-      const timer = setTimeout(() => setJustSaved(false), 100);
-      return () => clearTimeout(timer);
-    }
-  }, [executiveSummary, tamValue, samValue, apacGrowthRate, marketEntry, strategicRecommendations, marketDrivers, isEditing, justSaved]);
+  }, [executiveSummary, tamValue, samValue, apacGrowthRate, marketEntry, strategicRecommendations, marketDrivers, isEditing]);
 
   const handleMarketSizeSaveChanges = () => {
-    // Set flag to prevent immediate sync with old props
-    setJustSaved(true);
-    
     // First, call the change handlers to update parent state with local values
     onExecutiveSummaryChange(localExecutiveSummary);
     onTamValueChange(localTamValue);
