@@ -89,28 +89,35 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
   showScoutChat,
   scoutChatPanel
 }) => {
-  // Debug logging to track prop changes
-  console.log('🔍 DEBUGGING: MarketSizeOpportunityComponent received props:', {
-    isEditing,
-    executiveSummary: executiveSummary?.substring(0, 50) + '...',
-    tamValue,
-    samValue,
-    apacGrowthRate,
-    strategicRecommendations: strategicRecommendations?.length,
-    marketEntry: marketEntry?.substring(0, 50) + '...',
-    marketDrivers: marketDrivers?.length,
-    timestamp: Date.now()
-  });
+  // Local state for editing
+  const [localExecutiveSummary, setLocalExecutiveSummary] = React.useState(executiveSummary || '');
+  const [localTamValue, setLocalTamValue] = React.useState(tamValue || '');
+  const [localSamValue, setLocalSamValue] = React.useState(samValue || '');
+  const [localApacGrowthRate, setLocalApacGrowthRate] = React.useState(apacGrowthRate || '');
+  const [localMarketEntry, setLocalMarketEntry] = React.useState(marketEntry || '');
+  const [localStrategicRecommendations, setLocalStrategicRecommendations] = React.useState([...strategicRecommendations]);
+  const [localMarketDrivers, setLocalMarketDrivers] = React.useState([...marketDrivers]);
 
-  // Log when editing mode changes
+  // Sync local state with props when they change
   React.useEffect(() => {
-    console.log('🔧 EDITING MODE CHANGED:', { isEditing, timestamp: Date.now() });
-  }, [isEditing]);
+    setLocalExecutiveSummary(executiveSummary || '');
+    setLocalTamValue(tamValue || '');
+    setLocalSamValue(samValue || '');
+    setLocalApacGrowthRate(apacGrowthRate || '');
+    setLocalMarketEntry(marketEntry || '');
+    setLocalStrategicRecommendations([...strategicRecommendations]);
+    setLocalMarketDrivers([...marketDrivers]);
+  }, [executiveSummary, tamValue, samValue, apacGrowthRate, marketEntry, strategicRecommendations, marketDrivers]);
 
-  // Log component mount
+  // Debug logging
   React.useEffect(() => {
-    console.log('🚀 MarketSizeOpportunityComponent MOUNTED');
-  }, []);
+    console.log('🔍 DEBUGGING: Component state and props:', {
+      isEditing,
+      localExecutiveSummary: localExecutiveSummary.substring(0, 50) + '...',
+      propExecutiveSummary: (executiveSummary || '').substring(0, 50) + '...',
+      timestamp: Date.now()
+    });
+  }, [isEditing, localExecutiveSummary, executiveSummary]);
 
   const handleMarketSizeSaveChanges = () => {
     onSaveChanges();
@@ -190,9 +197,10 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
                 </Label>
                 <Textarea 
                   id="executiveSummary" 
-                  value={executiveSummary || ''} 
+                  value={localExecutiveSummary} 
                   onChange={(e) => {
-                    console.log('Executive Summary onChange:', e.target.value);
+                    console.log('🔧 Executive Summary onChange:', e.target.value);
+                    setLocalExecutiveSummary(e.target.value);
                     onExecutiveSummaryChange(e.target.value);
                   }} 
                   className="w-full h-32 resize-none" 
@@ -225,9 +233,10 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
                     </Label>
                     <Input 
                       id="tamValue" 
-                      value={tamValue || ''} 
+                      value={localTamValue} 
                       onChange={(e) => {
-                        console.log('TAM Value onChange:', e.target.value);
+                        console.log('🔧 TAM Value onChange:', e.target.value);
+                        setLocalTamValue(e.target.value);
                         onTamValueChange(e.target.value);
                       }} 
                       placeholder="e.g., $4.2B" 
@@ -239,9 +248,10 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
                     </Label>
                     <Input 
                       id="samValue" 
-                      value={samValue || ''} 
+                      value={localSamValue} 
                       onChange={(e) => {
-                        console.log('SAM Value onChange:', e.target.value);
+                        console.log('🔧 SAM Value onChange:', e.target.value);
+                        setLocalSamValue(e.target.value);
                         onSamValueChange(e.target.value);
                       }} 
                       placeholder="e.g., $2.1B" 
@@ -253,9 +263,10 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
                     </Label>
                     <Input 
                       id="apacGrowthRate" 
-                      value={apacGrowthRate || ''} 
+                      value={localApacGrowthRate} 
                       onChange={(e) => {
-                        console.log('APAC Growth Rate onChange:', e.target.value);
+                        console.log('🔧 APAC Growth Rate onChange:', e.target.value);
+                        setLocalApacGrowthRate(e.target.value);
                         onApacGrowthRateChange(e.target.value);
                       }} 
                       placeholder="e.g., 25%" 
@@ -283,14 +294,15 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
                 <Label className="text-sm font-medium text-gray-700 mb-2 block">
                   Strategic Recommendations
                 </Label>
-                {strategicRecommendations.map((rec, index) => (
+                {localStrategicRecommendations.map((rec, index) => (
                   <Textarea 
                     key={index} 
                     value={rec || ''} 
                     onChange={e => {
-                      console.log(`Strategic Recommendation ${index} onChange:`, e.target.value);
-                      const newRecs = [...strategicRecommendations];
+                      console.log(`🔧 Strategic Recommendation ${index} onChange:`, e.target.value);
+                      const newRecs = [...localStrategicRecommendations];
                       newRecs[index] = e.target.value;
+                      setLocalStrategicRecommendations(newRecs);
                       onStrategicRecommendationsChange(newRecs);
                     }} 
                     className="w-full h-20 resize-none mb-3" 
@@ -320,9 +332,10 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
                 </Label>
                 <Textarea 
                   id="marketEntry" 
-                  value={marketEntry || ''} 
+                  value={localMarketEntry} 
                   onChange={(e) => {
-                    console.log('Market Entry onChange:', e.target.value);
+                    console.log('🔧 Market Entry onChange:', e.target.value);
+                    setLocalMarketEntry(e.target.value);
                     onMarketEntryChange(e.target.value);
                   }} 
                   className="w-full h-32 resize-none" 
@@ -349,14 +362,15 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
                 <Label className="text-sm font-medium text-gray-700 mb-2 block">
                   Key Market Drivers
                 </Label>
-                {marketDrivers.map((driver, index) => (
+                {localMarketDrivers.map((driver, index) => (
                   <Textarea 
                     key={index} 
                     value={driver || ''} 
                     onChange={e => {
-                      console.log(`Market Driver ${index} onChange:`, e.target.value);
-                      const newDrivers = [...marketDrivers];
+                      console.log(`🔧 Market Driver ${index} onChange:`, e.target.value);
+                      const newDrivers = [...localMarketDrivers];
                       newDrivers[index] = e.target.value;
+                      setLocalMarketDrivers(newDrivers);
                       onMarketDriversChange(newDrivers);
                     }} 
                     className="w-full h-16 resize-none mb-3" 
