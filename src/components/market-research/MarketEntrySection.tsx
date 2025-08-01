@@ -171,6 +171,8 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
   }, []);
 
   const handleMarketEntrySaveChanges = () => {
+    console.log('🚀 Market Entry Section - Save function called!');
+    
     // Log original and modified JSON for debugging
     // Note: Since this component updates parent state directly through onChange handlers,
     // both original and modified will show the current state (which represents the edited values)
