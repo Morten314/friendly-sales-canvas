@@ -387,8 +387,8 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
           
           // Fallback to props data if no API data
           const fallbackMetrics = [
-            { label: "Top Player Market Share", value: localTopPlayerShare || topPlayerShare, trend: "up" },
-            { label: "Emerging Players Added", value: localEmergingPlayers || emergingPlayers, trend: "up" }
+            { label: "Top Player Market Share", value: localTopPlayerShare || topPlayerShare || '', trend: "up" },
+            { label: "Emerging Players Added", value: localEmergingPlayers || emergingPlayers || '', trend: "up" }
           ];
           
           const displayMetrics = apiMetrics && apiMetrics.length > 0 ? apiMetrics : fallbackMetrics;
@@ -416,7 +416,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                         ) : (
                           <>
                             <div className="text-lg font-bold text-blue-600">
-                              {metric.value}
+                              {index === 0 ? (localTopPlayerShare || topPlayerShare || metric.value) : (localEmergingPlayers || emergingPlayers || metric.value)}
                             </div>
                             <div className="text-sm text-gray-700">{metric.label}</div>
                           </>
