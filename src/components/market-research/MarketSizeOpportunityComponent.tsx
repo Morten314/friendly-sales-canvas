@@ -242,14 +242,15 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
                       Total Addressable Market
                     </Label>
                     <Input 
-                      id="tamValue" 
+                      id="tamValue"
                       value={localTamValue} 
                       onChange={(e) => {
                         console.log('🔧 TAM Value onChange:', e.target.value);
                         setLocalTamValue(e.target.value);
                         onTamValueChange(e.target.value);
-                      }} 
-                      placeholder="e.g., $4.2B" 
+                      }}
+                      className="text-2xl font-bold text-blue-600 border-blue-200 focus:border-blue-400"
+                      placeholder="e.g., $4.2B"
                     />
                   </div>
                   <div>
@@ -257,14 +258,15 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
                       Serviceable Addressable Market
                     </Label>
                     <Input 
-                      id="samValue" 
+                      id="samValue"
                       value={localSamValue} 
                       onChange={(e) => {
                         console.log('🔧 SAM Value onChange:', e.target.value);
                         setLocalSamValue(e.target.value);
                         onSamValueChange(e.target.value);
-                      }} 
-                      placeholder="e.g., $2.1B" 
+                      }}
+                      className="text-2xl font-bold text-green-600 border-green-200 focus:border-green-400"
+                      placeholder="e.g., $2.1B"
                     />
                   </div>
                   <div>
@@ -272,14 +274,15 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
                       APAC Growth Rate
                     </Label>
                     <Input 
-                      id="apacGrowthRate" 
+                      id="apacGrowthRate"
                       value={localApacGrowthRate} 
                       onChange={(e) => {
                         console.log('🔧 APAC Growth Rate onChange:', e.target.value);
                         setLocalApacGrowthRate(e.target.value);
                         onApacGrowthRateChange(e.target.value);
-                      }} 
-                      placeholder="e.g., 25%" 
+                      }}
+                      className="text-2xl font-bold text-purple-600 border-purple-200 focus:border-purple-400"
+                      placeholder="e.g., 25%"
                     />
                   </div>
                 </div>
