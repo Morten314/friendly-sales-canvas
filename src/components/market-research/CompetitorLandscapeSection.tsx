@@ -319,6 +319,15 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
               </Badge>
             )}
             
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onCompetitorLandscapeToggleEdit}
+              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -334,15 +343,6 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                 <p>Chat with Scout about competitor landscape</p>
               </TooltipContent>
             </Tooltip>
-
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onCompetitorLandscapeToggleEdit}
-              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-            >
-              <Edit className="h-4 w-4" />
-            </Button>
           </div>
         </div>
 
@@ -387,8 +387,8 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
           
           // Fallback to props data if no API data
           const fallbackMetrics = [
-            { label: "Top Player Market Share", value: topPlayerShare, trend: "up" },
-            { label: "Emerging Players Added", value: emergingPlayers, trend: "up" }
+            { label: "Top Player Market Share", value: localTopPlayerShare || topPlayerShare, trend: "up" },
+            { label: "Emerging Players Added", value: localEmergingPlayers || emergingPlayers, trend: "up" }
           ];
           
           const displayMetrics = apiMetrics && apiMetrics.length > 0 ? apiMetrics : fallbackMetrics;
@@ -402,11 +402,25 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                 {displayMetrics.map((metric, index) => (
                   <div key={index} className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
                     <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-lg font-bold text-blue-600">
-                          {metric.value}
-                        </div>
-                        <div className="text-sm text-gray-700">{metric.label}</div>
+                      <div className="flex-1">
+                        {isCompetitorLandscapeEditing ? (
+                          <div className="space-y-2">
+                            <Input
+                              value={index === 0 ? localTopPlayerShare : localEmergingPlayers}
+                              onChange={(e) => index === 0 ? setLocalTopPlayerShare(e.target.value) : setLocalEmergingPlayers(e.target.value)}
+                              className="text-lg font-bold text-blue-600 bg-white"
+                              placeholder={metric.label}
+                            />
+                            <div className="text-sm text-gray-700">{metric.label}</div>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="text-lg font-bold text-blue-600">
+                              {metric.value}
+                            </div>
+                            <div className="text-sm text-gray-700">{metric.label}</div>
+                          </>
+                        )}
                       </div>
                       {metric.trend === 'up' ? (
                         <div className="text-green-500">
