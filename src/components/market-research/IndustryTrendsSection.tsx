@@ -290,8 +290,8 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
         trendSnapshots: editTrendSnapshots
       };
 
-      console.log('📈 Industry Trends Section - original_json:', originalJson);
-      console.log('📈 Industry Trends Section - modified_json:', modifiedJson);
+      console.log('📈 Industry Trends Section - original_json:', JSON.stringify(originalJson, null, 2));
+      console.log('📈 Industry Trends Section - modified_json:', JSON.stringify(modifiedJson, null, 2));
 
       // Update the displayed data with the edited values immediately
       setIndustryTrendsData(prev => {
