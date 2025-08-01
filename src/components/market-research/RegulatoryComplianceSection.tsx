@@ -520,18 +520,29 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                                 point.id === 'data-localization' ? localDataLocalization :
                                 point.value
                               }
+                              onKeyDown={(e) => {
+                                console.log(`🔍 Key Regulatory Updates - Key pressed: ${e.key} for field: ${point.id}`);
+                              }}
+                              onInput={(e) => {
+                                console.log(`🔍 Key Regulatory Updates - Input event for field: ${point.id}, value: ${(e.target as HTMLInputElement).value}`);
+                              }}
                               onChange={(e) => {
                                 const newValue = e.target.value;
+                                console.log(`🔍 Key Regulatory Updates - onChange for field: ${point.id}, newValue: ${newValue}`);
                                 if (point.id === 'eu-ai-act') {
+                                  console.log(`🔍 Setting localEuAiActDeadline to: ${newValue}`);
                                   setLocalEuAiActDeadline(newValue);
                                   onEuAiActDeadlineChange(newValue);
                                 } else if (point.id === 'gdpr-compliance') {
+                                  console.log(`🔍 Setting localGdprCompliance to: ${newValue}`);
                                   setLocalGdprCompliance(newValue);
                                   onGdprComplianceChange(newValue);
                                 } else if (point.id === 'potential-fines') {
+                                  console.log(`🔍 Setting localPotentialFines to: ${newValue}`);
                                   setLocalPotentialFines(newValue);
                                   onPotentialFinesChange(newValue);
                                 } else if (point.id === 'data-localization') {
+                                  console.log(`🔍 Setting localDataLocalization to: ${newValue}`);
                                   setLocalDataLocalization(newValue);
                                   onDataLocalizationChange(newValue);
                                 }
