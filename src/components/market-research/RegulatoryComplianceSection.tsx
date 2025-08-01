@@ -111,7 +111,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   const [regulatoryExpanded, setRegulatoryExpanded] = useState(true);
 
   // Local state for editing - dynamic for all key data points
-  const [localExecutiveSummary, setLocalExecutiveSummary] = useState(executiveSummary || '');
+  const [localExecutiveSummary, setLocalExecutiveSummary] = useState('');
   const [localEuAiActDeadline, setLocalEuAiActDeadline] = useState(euAiActDeadline || '');
   const [localGdprCompliance, setLocalGdprCompliance] = useState(gdprCompliance || '');
   const [localPotentialFines, setLocalPotentialFines] = useState(potentialFines || '');
@@ -123,13 +123,14 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   // Sync local state with props when they change (but only when not editing)
   useEffect(() => {
     if (!isEditing) {
-      setLocalExecutiveSummary(executiveSummary || '');
+      const currentExecutiveSummary = regulatoryData?.executiveSummary || executiveSummary;
+      setLocalExecutiveSummary(currentExecutiveSummary || '');
       setLocalEuAiActDeadline(euAiActDeadline || '');
       setLocalGdprCompliance(gdprCompliance || '');
       setLocalPotentialFines(potentialFines || '');
       setLocalDataLocalization(dataLocalization || '');
     }
-  }, [executiveSummary, euAiActDeadline, gdprCompliance, potentialFines, dataLocalization, isEditing]);
+  }, [executiveSummary, euAiActDeadline, gdprCompliance, potentialFines, dataLocalization, regulatoryData?.executiveSummary, isEditing]);
 
   // Initialize dynamic key data values after keyDataPoints is available
   useEffect(() => {
