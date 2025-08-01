@@ -120,6 +120,16 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
   }, [isEditing, localExecutiveSummary, executiveSummary]);
 
   const handleMarketSizeSaveChanges = () => {
+    // Update parent state with local changes
+    onExecutiveSummaryChange(localExecutiveSummary);
+    onTamValueChange(localTamValue);
+    onSamValueChange(localSamValue);
+    onApacGrowthRateChange(localApacGrowthRate);
+    onStrategicRecommendationsChange(localStrategicRecommendations);
+    onMarketEntryChange(localMarketEntry);
+    onMarketDriversChange(localMarketDrivers);
+    
+    // Call the parent save function
     onSaveChanges();
   };
 
