@@ -91,6 +91,7 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
 }) => {
   // Debug logging to track prop changes
   console.log('🔍 DEBUGGING: MarketSizeOpportunityComponent received props:', {
+    isEditing,
     executiveSummary: executiveSummary?.substring(0, 50) + '...',
     tamValue,
     samValue,
@@ -100,6 +101,16 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
     marketDrivers: marketDrivers?.length,
     timestamp: Date.now()
   });
+
+  // Log when editing mode changes
+  React.useEffect(() => {
+    console.log('🔧 EDITING MODE CHANGED:', { isEditing, timestamp: Date.now() });
+  }, [isEditing]);
+
+  // Log component mount
+  React.useEffect(() => {
+    console.log('🚀 MarketSizeOpportunityComponent MOUNTED');
+  }, []);
 
   const handleMarketSizeSaveChanges = () => {
     onSaveChanges();
@@ -131,7 +142,15 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
           Market Size & Opportunity
         </h2>
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={onToggleEdit} className="text-blue-800 hover:text-blue-900">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => {
+              console.log('🔧 EDIT BUTTON CLICKED - Current isEditing:', isEditing);
+              onToggleEdit();
+            }} 
+            className="text-blue-800 hover:text-blue-900"
+          >
             <Edit className="h-4 w-4" />
           </Button>
           {!isSplitView && (
