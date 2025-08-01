@@ -273,7 +273,22 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
   // Handle save changes
   const handleSaveChanges = async () => {
     try {
-      await fetchIndustryTrendsData(true); // Refresh data
+      // Update the displayed data with the edited values immediately
+      setIndustryTrendsData(prev => {
+        if (!prev) return prev;
+        
+        return {
+          ...prev,
+          executiveSummary: editExecutiveSummary,
+          aiAdoption: editAiAdoption,
+          cloudMigration: editCloudMigration,
+          regulatory: editRegulatory,
+          trendSnapshots: editTrendSnapshots,
+          timestamp: prev.timestamp // Keep the existing timestamp
+        };
+      });
+      
+      console.log('✅ Industry Trends data updated with local edits');
       onIndustryTrendsSaveChanges();
     } catch (err) {
       console.error('Error saving changes:', err);
