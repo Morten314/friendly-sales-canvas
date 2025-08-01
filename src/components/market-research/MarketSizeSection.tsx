@@ -121,8 +121,8 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
       marketDrivers: localMarketDrivers
     };
 
-    console.log('📊 Market Size Section - original_json:', originalJson);
-    console.log('📊 Market Size Section - modified_json:', modifiedJson);
+    console.log('📊 Market Size Section - original_json:', JSON.stringify(originalJson, null, 2));
+    console.log('📊 Market Size Section - modified_json:', JSON.stringify(modifiedJson, null, 2));
 
     // First, call the change handlers to update parent state with local values
     onExecutiveSummaryChange(localExecutiveSummary);
