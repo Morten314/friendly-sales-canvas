@@ -513,7 +513,13 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                             </div>
                             <input
                               type="text"
-                              value={point.value}
+                              value={
+                                point.id === 'eu-ai-act' ? localEuAiActDeadline :
+                                point.id === 'gdpr-compliance' ? localGdprCompliance :
+                                point.id === 'potential-fines' ? localPotentialFines :
+                                point.id === 'data-localization' ? localDataLocalization :
+                                point.value
+                              }
                               onChange={(e) => {
                                 const newValue = e.target.value;
                                 if (point.id === 'eu-ai-act') {
