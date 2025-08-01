@@ -122,6 +122,30 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
   }, [isEditing, localExecutiveSummary, executiveSummary]);
 
   const handleMarketSizeSaveChanges = () => {
+    // Log original and modified JSON for debugging
+    const originalJson = {
+      executiveSummary: executiveSummary || '',
+      tamValue: tamValue || '',
+      samValue: samValue || '',
+      apacGrowthRate: apacGrowthRate || '',
+      strategicRecommendations: strategicRecommendations || [],
+      marketEntry: marketEntry || '',
+      marketDrivers: marketDrivers || []
+    };
+
+    const modifiedJson = {
+      executiveSummary: localExecutiveSummary,
+      tamValue: localTamValue,
+      samValue: localSamValue,
+      apacGrowthRate: localApacGrowthRate,
+      strategicRecommendations: localStrategicRecommendations,
+      marketEntry: localMarketEntry,
+      marketDrivers: localMarketDrivers
+    };
+
+    console.log('📊 Market Size & Opportunity Component - original_json:', originalJson);
+    console.log('📊 Market Size & Opportunity Component - modified_json:', modifiedJson);
+
     // Update parent state with local changes
     onExecutiveSummaryChange(localExecutiveSummary);
     onTamValueChange(localTamValue);
