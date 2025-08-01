@@ -329,7 +329,7 @@ const MarketResearch = () => {
 
   // Competitor Landscape state - Add these new state variables
   const [isCompetitorEditing, setIsCompetitorEditing] = useState(false);
-  const [competitorExpanded, setCompetitorExpanded] = useState(false);
+  const [competitorExpanded, setCompetitorExpanded] = useState(true);
   const [competitorHasEdits, setCompetitorHasEdits] = useState(false);
   const [competitorDeletedSections, setCompetitorDeletedSections] = useState<Set<string>>(new Set());
   const [competitorEditHistory, setCompetitorEditHistory] = useState<EditRecord[]>([]);
