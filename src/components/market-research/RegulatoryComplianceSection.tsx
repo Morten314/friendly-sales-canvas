@@ -110,6 +110,24 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   const [error, setError] = useState<string | null>(null);
   const [regulatoryExpanded, setRegulatoryExpanded] = useState(true);
 
+  // Local state for editing
+  const [localExecutiveSummary, setLocalExecutiveSummary] = useState(executiveSummary || '');
+  const [localEuAiActDeadline, setLocalEuAiActDeadline] = useState(euAiActDeadline || '');
+  const [localGdprCompliance, setLocalGdprCompliance] = useState(gdprCompliance || '');
+  const [localPotentialFines, setLocalPotentialFines] = useState(potentialFines || '');
+  const [localDataLocalization, setLocalDataLocalization] = useState(dataLocalization || '');
+
+  // Sync local state with props when they change (but only when not editing)
+  useEffect(() => {
+    if (!isEditing) {
+      setLocalExecutiveSummary(executiveSummary || '');
+      setLocalEuAiActDeadline(euAiActDeadline || '');
+      setLocalGdprCompliance(gdprCompliance || '');
+      setLocalPotentialFines(potentialFines || '');
+      setLocalDataLocalization(dataLocalization || '');
+    }
+  }, [executiveSummary, euAiActDeadline, gdprCompliance, potentialFines, dataLocalization, isEditing]);
+
   // API integration for Regulatory & Compliance Highlights
   const fetchRegulatoryData = async (refresh: boolean = false) => {
     console.log('🚀 Starting fetchRegulatoryData with refresh:', refresh);
@@ -450,8 +468,11 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                 </button>
                 <h4 className="text-sm font-medium text-gray-700 mb-2">Executive Summary</h4>
                 <textarea
-                  value={executiveSummary}
-                  onChange={(e) => onExecutiveSummaryChange(e.target.value)}
+                  value={localExecutiveSummary}
+                  onChange={(e) => {
+                    setLocalExecutiveSummary(e.target.value);
+                    onExecutiveSummaryChange(e.target.value);
+                  }}
                   className="w-full p-3 border border-gray-300 rounded-lg text-sm resize-none"
                   rows={4}
                   placeholder="Enter executive summary..."
@@ -494,10 +515,20 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                               type="text"
                               value={point.value}
                               onChange={(e) => {
-                                if (point.id === 'eu-ai-act') onEuAiActDeadlineChange(e.target.value);
-                                else if (point.id === 'gdpr-compliance') onGdprComplianceChange(e.target.value);
-                                else if (point.id === 'potential-fines') onPotentialFinesChange(e.target.value);
-                                else if (point.id === 'data-localization') onDataLocalizationChange(e.target.value);
+                                const newValue = e.target.value;
+                                if (point.id === 'eu-ai-act') {
+                                  setLocalEuAiActDeadline(newValue);
+                                  onEuAiActDeadlineChange(newValue);
+                                } else if (point.id === 'gdpr-compliance') {
+                                  setLocalGdprCompliance(newValue);
+                                  onGdprComplianceChange(newValue);
+                                } else if (point.id === 'potential-fines') {
+                                  setLocalPotentialFines(newValue);
+                                  onPotentialFinesChange(newValue);
+                                } else if (point.id === 'data-localization') {
+                                  setLocalDataLocalization(newValue);
+                                  onDataLocalizationChange(newValue);
+                                }
                               }}
                               className="w-full p-2 border border-gray-300 rounded text-sm"
                             />
