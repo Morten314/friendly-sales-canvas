@@ -171,10 +171,14 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
                 </Label>
                 <Textarea 
                   id="executiveSummary" 
-                  value={executiveSummary} 
-                  onChange={(e) => onExecutiveSummaryChange(e.target.value)} 
+                  value={executiveSummary || ''} 
+                  onChange={(e) => {
+                    console.log('Executive Summary onChange:', e.target.value);
+                    onExecutiveSummaryChange(e.target.value);
+                  }} 
                   className="w-full h-32 resize-none" 
                   placeholder="Enter executive summary..." 
+                  autoFocus={false}
                 />
               </div>
             </div>
@@ -202,8 +206,11 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
                     </Label>
                     <Input 
                       id="tamValue" 
-                      value={tamValue} 
-                      onChange={(e) => onTamValueChange(e.target.value)} 
+                      value={tamValue || ''} 
+                      onChange={(e) => {
+                        console.log('TAM Value onChange:', e.target.value);
+                        onTamValueChange(e.target.value);
+                      }} 
                       placeholder="e.g., $4.2B" 
                     />
                   </div>
@@ -213,8 +220,11 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
                     </Label>
                     <Input 
                       id="samValue" 
-                      value={samValue} 
-                      onChange={(e) => onSamValueChange(e.target.value)} 
+                      value={samValue || ''} 
+                      onChange={(e) => {
+                        console.log('SAM Value onChange:', e.target.value);
+                        onSamValueChange(e.target.value);
+                      }} 
                       placeholder="e.g., $2.1B" 
                     />
                   </div>
@@ -224,8 +234,11 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
                     </Label>
                     <Input 
                       id="apacGrowthRate" 
-                      value={apacGrowthRate} 
-                      onChange={(e) => onApacGrowthRateChange(e.target.value)} 
+                      value={apacGrowthRate || ''} 
+                      onChange={(e) => {
+                        console.log('APAC Growth Rate onChange:', e.target.value);
+                        onApacGrowthRateChange(e.target.value);
+                      }} 
                       placeholder="e.g., 25%" 
                     />
                   </div>
@@ -254,8 +267,9 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
                 {strategicRecommendations.map((rec, index) => (
                   <Textarea 
                     key={index} 
-                    value={rec} 
+                    value={rec || ''} 
                     onChange={e => {
+                      console.log(`Strategic Recommendation ${index} onChange:`, e.target.value);
                       const newRecs = [...strategicRecommendations];
                       newRecs[index] = e.target.value;
                       onStrategicRecommendationsChange(newRecs);
@@ -287,8 +301,11 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
                 </Label>
                 <Textarea 
                   id="marketEntry" 
-                  value={marketEntry} 
-                  onChange={e => onMarketEntryChange(e.target.value)} 
+                  value={marketEntry || ''} 
+                  onChange={(e) => {
+                    console.log('Market Entry onChange:', e.target.value);
+                    onMarketEntryChange(e.target.value);
+                  }} 
                   className="w-full h-32 resize-none" 
                   placeholder="Enter market entry strategy..." 
                 />
@@ -316,8 +333,9 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
                 {marketDrivers.map((driver, index) => (
                   <Textarea 
                     key={index} 
-                    value={driver} 
+                    value={driver || ''} 
                     onChange={e => {
+                      console.log(`Market Driver ${index} onChange:`, e.target.value);
                       const newDrivers = [...marketDrivers];
                       newDrivers[index] = e.target.value;
                       onMarketDriversChange(newDrivers);
