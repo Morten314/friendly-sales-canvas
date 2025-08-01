@@ -124,29 +124,21 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  // Local editing state
-  const [editExecutiveSummary, setEditExecutiveSummary] = useState('');
-  const [editingField, setEditingField] = useState<string | null>(null);
-  const [editingValue, setEditingValue] = useState<string>('');
+  // Local editing state for inline editing
+  const [localExecutiveSummary, setLocalExecutiveSummary] = useState('');
+  const [localTopPlayerShare, setLocalTopPlayerShare] = useState('');
+  const [localEmergingPlayers, setLocalEmergingPlayers] = useState('');
 
-  // Handle field editing
-  const handleEditField = (fieldName: string, currentValue: string) => {
-    setEditingField(fieldName);
-    setEditingValue(currentValue);
-  };
-
-  const handleSaveField = () => {
-    if (editingField === 'executiveSummary') {
-      setEditExecutiveSummary(editingValue);
+  // Sync local state with props when they change (but not while editing)
+  useEffect(() => {
+    if (!isCompetitorLandscapeEditing) {
+      const reportComponent = competitorData?.uiComponents?.find(comp => comp.type === 'report');
+      const currentExecutiveSummary = reportComponent?.executiveSummary || executiveSummary;
+      setLocalExecutiveSummary(currentExecutiveSummary || '');
+      setLocalTopPlayerShare(topPlayerShare || '');
+      setLocalEmergingPlayers(emergingPlayers || '');
     }
-    setEditingField(null);
-    setEditingValue('');
-  };
-
-  const handleCancelEdit = () => {
-    setEditingField(null);
-    setEditingValue('');
-  };
+  }, [executiveSummary, topPlayerShare, emergingPlayers, competitorData?.uiComponents, isCompetitorLandscapeEditing]);
 
   // Fetch Competitor Landscape data from API
   const fetchCompetitorLandscapeData = async (refresh = true) => {
@@ -226,10 +218,6 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         
         if (shouldUpdate) {
           setCompetitorData(reportData);
-          
-          // Initialize edit fields with data from uiComponents
-          const reportComponent = reportData.uiComponents?.find(comp => comp.type === 'report');
-          setEditExecutiveSummary(reportComponent?.executiveSummary || '');
         }
       }
     } catch (err) {
@@ -350,37 +338,10 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
             <Button
               variant="ghost"
               size="sm"
-              onClick={onCompetitorLandscapeEditHistoryOpen}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              <Clock className="h-4 w-4" />
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="sm"
               onClick={onCompetitorLandscapeToggleEdit}
               className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
             >
               <Edit className="h-4 w-4" />
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onCompetitorLandscapeExpandToggle(!competitorLandscapeExpanded)}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              {competitorLandscapeExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onCompetitorLandscapeDeleteSection('competitor-landscape')}
-              className="text-red-500 hover:text-red-700 hover:bg-red-50"
-            >
-              <X className="h-4 w-4" />
             </Button>
           </div>
         </div>
@@ -403,19 +364,18 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                   <FileText className="h-5 w-5 text-blue-600" />
                   Executive Summary
                 </h3>
-                {isCompetitorLandscapeEditing && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleEditField('executiveSummary', displayExecutiveSummary)}
-                    className="text-blue-600 border-blue-200 hover:bg-blue-50"
-                  >
-                    <Edit className="h-4 w-4 mr-1" />
-                    Edit
-                  </Button>
-                )}
               </div>
-              <p className="text-gray-700 leading-relaxed">{displayExecutiveSummary}</p>
+              {isCompetitorLandscapeEditing ? (
+                <Textarea
+                  value={localExecutiveSummary}
+                  onChange={(e) => setLocalExecutiveSummary(e.target.value)}
+                  className="w-full"
+                  rows={4}
+                  placeholder="Enter executive summary..."
+                />
+              ) : (
+                <p className="text-gray-700 leading-relaxed">{localExecutiveSummary || displayExecutiveSummary}</p>
+              )}
             </div>
           );
         })()}
@@ -482,34 +442,6 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         {/* Expanded content */}
         {(competitorLandscapeExpanded || isSplitView) && (
           <div className="space-y-6">
-            
-            
-            {/* Edit field modal */}
-            {editingField && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-medium text-blue-900">
-                    Editing {editingField.replace(/([A-Z])/g, ' $1').toLowerCase()}
-                  </h4>
-                  <div className="flex gap-2">
-                    <Button size="sm" onClick={handleSaveField} className="bg-blue-600 hover:bg-blue-700">
-                      <Save className="h-4 w-4 mr-1" />
-                      Save
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={handleCancelEdit}>
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
-                <Textarea
-                  value={editingValue}
-                  onChange={(e) => setEditingValue(e.target.value)}
-                  className="w-full"
-                  rows={4}
-                  placeholder="Enter your content here..."
-                />
-              </div>
-            )}
 
             {/* Executive Summary section is now moved above for collapsed view */}
 
@@ -710,7 +642,15 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
               <div className="flex items-center justify-between pt-6 border-t border-gray-200">
                 <div className="flex gap-2">
                   <Button 
-                    onClick={onCompetitorLandscapeSaveChanges}
+                    onClick={() => {
+                      // First, call the change handlers to update parent state with local values
+                      onExecutiveSummaryChange(localExecutiveSummary);
+                      onTopPlayerShareChange(localTopPlayerShare);
+                      onEmergingPlayersChange(localEmergingPlayers);
+                      
+                      // Then call the parent's save function
+                      onCompetitorLandscapeSaveChanges();
+                    }}
                     className="bg-blue-600 hover:bg-blue-700"
                   >
                     <Save className="h-4 w-4 mr-2" />
