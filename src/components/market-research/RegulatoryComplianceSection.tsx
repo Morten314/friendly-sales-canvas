@@ -792,28 +792,31 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
               <div className="flex gap-3">
                 <Button 
                   onClick={() => {
-                    // Call the parent's save function
-                    onSaveChanges();
+                    // First, call all the change handlers to update parent state with local values
+                    onExecutiveSummaryChange(localExecutiveSummary);
+                    onEuAiActDeadlineChange(localEuAiActDeadline);
+                    onGdprComplianceChange(localGdprCompliance);
+                    onPotentialFinesChange(localPotentialFines);
+                    onDataLocalizationChange(localDataLocalization);
                     
-                    // Force sync local state with current prop values after save
-                    setTimeout(() => {
-                      const currentExecutiveSummary = regulatoryData?.executiveSummary || executiveSummary;
-                      setLocalExecutiveSummary(currentExecutiveSummary || '');
-                      setLocalEuAiActDeadline(euAiActDeadline || '');
-                      setLocalGdprCompliance(gdprCompliance || '');
-                      setLocalPotentialFines(potentialFines || '');
-                      setLocalDataLocalization(dataLocalization || '');
+                    // Update key data points if regulatoryData exists
+                    if (regulatoryData?.keyUpdates) {
+                      // For key updates, we need to update the regulatoryData directly since there's no individual change handlers
+                      const updatedKeyUpdates = regulatoryData.keyUpdates.map((update: any) => {
+                        const id = update.title.toLowerCase().replace(/\s+/g, '-');
+                        const localValue = localKeyDataValues[id];
+                        if (localValue !== undefined) {
+                          return { ...update, description: localValue };
+                        }
+                        return update;
+                      });
                       
-                      // Sync key data values too
-                      if (regulatoryData?.keyUpdates) {
-                        const updatedValues: Record<string, string> = {};
-                        regulatoryData.keyUpdates.forEach((update: any) => {
-                          const id = update.title.toLowerCase().replace(/\s+/g, '-');
-                          updatedValues[id] = update.description || '';
-                        });
-                        setLocalKeyDataValues(updatedValues);
-                      }
-                    }, 100); // Small delay to allow parent state to update
+                      // Update the regulatory data with new key updates
+                      setRegulatoryData(prev => prev ? { ...prev, keyUpdates: updatedKeyUpdates } : prev);
+                    }
+                    
+                    // Then call the parent's save function
+                    onSaveChanges();
                   }}
                   className="bg-blue-600 hover:bg-blue-700 text-white"
                 >
