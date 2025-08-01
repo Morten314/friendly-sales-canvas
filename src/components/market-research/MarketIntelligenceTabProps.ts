@@ -78,11 +78,11 @@ export interface MarketIntelligenceTabProps {
   marketEntryError?: string | null;
   onMarketEntryRefresh?: () => void;
   onToggleEdit: () => void;
-  onMarketSizeScoutIconClick: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance' | 'market-entry', hasEdits?: boolean, lastEditedField?: string) => void;
-  onIndustryTrendsScoutIconClick: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance' | 'market-entry', hasEdits?: boolean, lastEditedField?: string) => void;
-  onCompetitorScoutIconClick: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance' | 'market-entry', hasEdits?: boolean, lastEditedField?: string) => void;
-  onRegulatoryScoutIconClick?: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance' | 'market-entry', hasEdits?: boolean, lastEditedField?: string) => void;
-  onMarketEntryScoutIconClick?: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance' | 'market-entry', hasEdits?: boolean, customMessage?: string) => void;
+  onMarketSizeScoutIconClick: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance' | 'market-entry', hasEdits?: boolean, lastEditedField?: string) => void | Promise<void>;
+  onIndustryTrendsScoutIconClick: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance' | 'market-entry', hasEdits?: boolean, lastEditedField?: string) => void | Promise<void>;
+  onCompetitorScoutIconClick: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance' | 'market-entry', hasEdits?: boolean, lastEditedField?: string) => void | Promise<void>;
+  onRegulatoryScoutIconClick?: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance' | 'market-entry', hasEdits?: boolean, lastEditedField?: string) => void | Promise<void>;
+  onMarketEntryScoutIconClick?: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance' | 'market-entry', hasEdits?: boolean, customMessage?: string) => void | Promise<void>;
   onEditHistoryOpen: () => void;
   onDeleteSection: (sectionId: string) => void;
   onMarketSizeDeleteSection: (sectionId: string) => void;
