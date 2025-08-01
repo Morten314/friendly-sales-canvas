@@ -1,6 +1,6 @@
-
-import React from 'react';
-import { Bot, X, Send } from 'lucide-react';
+import React, { useState } from 'react';
+import { Card } from '@/components/ui/card';
+import { Bot, X, Send, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -29,6 +29,48 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
   customMessage,
   onClose
 }) => {
+  const [userInput, setUserInput] = useState('');
+  const [chatResponse, setChatResponse] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Helper functions for API integration
+  const handleQuestionClick = async (question: string) => {
+    await callChatAPI(question);
+  };
+
+  const handleSendMessage = async () => {
+    if (!userInput.trim()) return;
+    const question = userInput;
+    setUserInput('');
+    await callChatAPI(question);
+  };
+
+  const callChatAPI = async (question: string) => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(`https://backend-11kr.onrender.com/chat/?question=${encodeURIComponent(question)}`, {
+        method: 'GET',
+        headers: {
+          'accept': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const answer = data.response || data.answer || 'I received your question but couldn\'t generate a proper response.';
+        setChatResponse(answer);
+        console.log('Scout Chat API Response:', data);
+      } else {
+        setChatResponse('Sorry, I\'m having trouble connecting right now. Please try again later.');
+        console.error('Failed to get response from chat API');
+      }
+    } catch (error) {
+      setChatResponse('Sorry, I encountered an error. Please try again later.');
+      console.error('Error calling chat API:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Fixed ScoutChatPanel getContextualScoutMessage function
 const getContextualScoutMessage = () => {
@@ -339,21 +381,43 @@ const getContextualScoutMessage = () => {
               variant="outline"
               size="sm"
               className="text-xs hover:bg-blue-50 hover:border-blue-300 transition-colors"
-              onClick={() => console.log(`Clicked: ${question}`)}
+              onClick={() => handleQuestionClick(question)}
+              disabled={isLoading}
             >
               {question}
             </Button>
           ))}
         </div>
+
+        {/* Display chat response if available */}
+        {chatResponse && (
+          <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+            <div className="flex items-start gap-2">
+              <Bot className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+              <div className="text-sm text-blue-800 leading-relaxed whitespace-pre-wrap">
+                {chatResponse}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex gap-2 mt-auto">
         <Input
-          placeholder="Ask me anything about market opportunity..."
+          value={userInput}
+          onChange={(e) => setUserInput(e.target.value)}
+          placeholder="Ask Scout anything..."
           className="flex-1"
+          onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+          disabled={isLoading}
         />
-        <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
-          <Send className="h-4 w-4" />
+        <Button 
+          size="sm" 
+          onClick={handleSendMessage}
+          disabled={isLoading || !userInput.trim()}
+          className="bg-blue-600 hover:bg-blue-700"
+        >
+          {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
         </Button>
       </div>
     </div>
