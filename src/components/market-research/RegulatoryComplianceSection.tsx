@@ -810,7 +810,19 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                       dataLocalization: localDataLocalization,
                       keyUpdates: regulatoryData?.keyUpdates?.map((update: any) => {
                         const id = update.title.toLowerCase().replace(/\s+/g, '-');
-                        const localValue = localKeyDataValues[id];
+                        let localValue = localKeyDataValues[id];
+                        
+                        // Check for specific fixed fields that have their own local state
+                        if (id === 'eu-ai-act-deadline' || id === 'eu-ai-act') {
+                          localValue = localEuAiActDeadline;
+                        } else if (id === 'gdpr-compliance') {
+                          localValue = localGdprCompliance;
+                        } else if (id === 'potential-fines') {
+                          localValue = localPotentialFines;
+                        } else if (id === 'data-localization') {
+                          localValue = localDataLocalization;
+                        }
+                        
                         if (localValue !== undefined) {
                           return { ...update, description: localValue };
                         }
