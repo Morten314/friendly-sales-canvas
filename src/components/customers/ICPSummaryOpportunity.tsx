@@ -7,6 +7,20 @@ import MiniLineChart from "@/components/MiniLineChart";
 import MiniPieChart from "@/components/MiniPieChart";
 
 export const ICPSummaryOpportunity = () => {
+  const icpPieData = [
+    { name: "Enterprise SaaS", value: 45, color: "#3b82f6" },
+    { name: "Mid-Market", value: 30, color: "#10b981" },
+    { name: "SMB", value: 25, color: "#f59e0b" }
+  ];
+
+  const marketGrowthData = [
+    { name: "2021", value: 380 },
+    { name: "2022", value: 420 },
+    { name: "2023", value: 450 },
+    { name: "2024", value: 480 },
+    { name: "2025", value: 520 }
+  ];
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
       {/* ICP Summary */}
@@ -40,7 +54,10 @@ export const ICPSummaryOpportunity = () => {
             </div>
             <div className="pt-2">
               <div className="h-32 bg-gray-50 rounded-lg flex items-center justify-center">
-                <MiniPieChart />
+                <MiniPieChart 
+                  data={icpPieData} 
+                  title="ICP Distribution" 
+                />
               </div>
             </div>
           </div>
@@ -83,7 +100,11 @@ export const ICPSummaryOpportunity = () => {
             </div>
             <div className="pt-2">
               <div className="h-32 bg-gray-50 rounded-lg flex items-center justify-center">
-                <MiniLineChart />
+                <MiniLineChart 
+                  data={marketGrowthData} 
+                  title="Market Growth" 
+                  color="#10b981" 
+                />
               </div>
             </div>
           </div>
