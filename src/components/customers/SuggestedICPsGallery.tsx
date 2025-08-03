@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -36,6 +35,7 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
   const [originalValues, setOriginalValues] = useState<Record<string, any>>({});
   const { toast } = useToast();
 
+  // Limit to 5 ICPs
   const [suggestedICPs, setSuggestedICPs] = useState<SuggestedICP[]>([
     {
       id: "fintech-neobanks",
@@ -68,26 +68,6 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
       growthIndicator: "12.1% CAGR"
     },
     {
-      id: "edtech-platforms",
-      industry: "EdTech",
-      segment: "Learning Management",
-      companySize: "80–300 employees",
-      decisionMakers: ["Chief Academic Officer", "IT Manager"],
-      regions: ["Global", "LATAM"],
-      keyAttributes: ["Mobile-first", "Analytics-driven"],
-      growthIndicator: "9.4% CAGR"
-    },
-    {
-      id: "proptech-crm",
-      industry: "PropTech",
-      segment: "Real Estate CRM",
-      companySize: "150–600 employees",
-      decisionMakers: ["VP Sales", "Technology Director"],
-      regions: ["North America", "ANZ"],
-      keyAttributes: ["Integration capabilities", "Workflow automation"],
-      growthIndicator: "6.8% CAGR"
-    },
-    {
       id: "cybersecurity-startups",
       industry: "Cybersecurity",
       segment: "Zero Trust Solutions",
@@ -96,16 +76,6 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
       regions: ["North America", "EU"],
       keyAttributes: ["SOC 2 compliance", "Cloud-native architecture"],
       growthIndicator: "15.3% CAGR"
-    },
-    {
-      id: "insurtech-platforms",
-      industry: "InsurTech",
-      segment: "Digital Claims Processing",
-      companySize: "100–350 employees",
-      decisionMakers: ["Chief Claims Officer", "Head of Technology"],
-      regions: ["North America", "UK"],
-      keyAttributes: ["Automation focus", "Regulatory expertise"],
-      growthIndicator: "11.7% CAGR"
     },
     {
       id: "renewable-energy",
@@ -228,7 +198,7 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
         <div className="space-y-2">
           <h2 className="text-xl font-semibold text-gray-900">Suggested ICPs</h2>
           <p className="text-sm text-gray-600">
-            Agent-curated ideal customer profiles based on your product and market patterns
+            Agent-curated ideal customer profiles based on your product and market patterns (5 most relevant)
           </p>
         </div>
         
@@ -445,7 +415,12 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
                         variant="outline" 
                         size="sm" 
                         className="w-full mt-4 text-blue-600 border-blue-200 hover:bg-blue-50"
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (onICPSelect) {
+                            onICPSelect(icp);
+                          }
+                        }}
                       >
                         View ICP Details
                       </Button>
