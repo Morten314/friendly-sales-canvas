@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Users, Filter, UserPlus, Download, MessageSquare, Send, Search, Database } from "lucide-react";
+import { User, Users, Filter, UserPlus, Download, MessageSquare, Send, Search, Database, Target } from "lucide-react";
 import { ICPIntelligence } from "@/components/customers/ICPIntelligence";
 
 const Customers = () => {
@@ -126,9 +126,9 @@ const Customers = () => {
                 <Users className="h-4 w-4" />
                 ICP Intelligence
               </TabsTrigger>
-              <TabsTrigger value="find-enrich" className="flex items-center gap-2">
-                <Search className="h-4 w-4" />
-                Find & Enrich
+              <TabsTrigger value="icp-battlemap" className="flex items-center gap-2">
+                <Target className="h-4 w-4" />
+                ICP Battlemap
               </TabsTrigger>
               <TabsTrigger value="chat-profiler" className="flex items-center gap-2">
                 <MessageSquare className="h-4 w-4" />
@@ -140,33 +140,33 @@ const Customers = () => {
               <ICPIntelligence />
             </TabsContent>
             
-            <TabsContent value="find-enrich" className="h-full w-full m-0">
+            <TabsContent value="icp-battlemap" className="h-full w-full m-0">
               <Card className="h-full">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Database className="h-5 w-5" />
-                    Find & Enrich Prospects
+                    <Target className="h-5 w-5" />
+                    ICP Battlemap
                   </CardTitle>
                   <CardDescription>
-                    Discover and enrich prospect data based on your ICP definitions
+                    Analyze competitive landscape and identify buying signals for your ideal customer profiles
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <Card className="p-4">
-                      <h3 className="font-semibold mb-2">Prospect Search</h3>
-                      <p className="text-sm text-gray-600 mb-4">Find prospects matching your ICP criteria</p>
+                      <h3 className="font-semibold mb-2">Competitive Analysis</h3>
+                      <p className="text-sm text-gray-600 mb-4">Map competitive overlaps and positioning strategies</p>
                       <Button className="w-full">
-                        <Search className="h-4 w-4 mr-2" />
-                        Start Search
+                        <Target className="h-4 w-4 mr-2" />
+                        Analyze Competition
                       </Button>
                     </Card>
                     <Card className="p-4">
-                      <h3 className="font-semibold mb-2">Data Enrichment</h3>
-                      <p className="text-sm text-gray-600 mb-4">Enhance existing prospect data with additional insights</p>
+                      <h3 className="font-semibold mb-2">Buying Signals</h3>
+                      <p className="text-sm text-gray-600 mb-4">Identify key indicators of purchase intent</p>
                       <Button className="w-full" variant="outline">
-                        <Database className="h-4 w-4 mr-2" />
-                        Enrich Data
+                        <Search className="h-4 w-4 mr-2" />
+                        Find Signals
                       </Button>
                     </Card>
                   </div>
