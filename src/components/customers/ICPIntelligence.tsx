@@ -64,7 +64,7 @@ export const ICPIntelligence = () => {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Card className="p-4">
-                <h3 className="font-semibold mb-2">Competitive Analysis</h3>
+                <h3 className="font-semibold mb-2">ICP Battlemap</h3>
                 <p className="text-sm text-gray-600 mb-4">Map competitive overlaps and positioning strategies</p>
                 <Button className="w-full bg-purple-600 hover:bg-purple-700">
                   <Target className="h-4 w-4 mr-2" />
