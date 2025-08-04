@@ -56,32 +56,26 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
       let requestOptions: RequestInit;
       
       if (isEditMode) {
-        // Use /ask endpoint with POST method for edit context
-        url = `${baseUrl}/ask/`;
+        // Use /ask endpoint with GET method for edit context
+        url = `${baseUrl}/ask/?question=${encodeURIComponent(question)}`;
         
         // Get the stored JSON data from localStorage
         const storedOriginalJson = localStorage.getItem(`${context}_original_json`);
         const storedModifiedJson = localStorage.getItem(`${context}_modified_json`);
         
-        let requestBody: any = { question };
-        
         if (storedOriginalJson && storedModifiedJson) {
-          requestBody.original_json = JSON.parse(storedOriginalJson);
-          requestBody.modified_json = JSON.parse(storedModifiedJson);
           console.log('📤 Sending to /ask API with JSON context:', { 
             question, 
-            original_json: requestBody.original_json, 
-            modified_json: requestBody.modified_json 
+            original_json: JSON.parse(storedOriginalJson), 
+            modified_json: JSON.parse(storedModifiedJson) 
           });
         }
         
         requestOptions = {
-          method: 'POST',
+          method: 'GET',
           headers: {
-            'Content-Type': 'application/json',
             'accept': 'application/json'
-          },
-          body: JSON.stringify(requestBody)
+          }
         };
       } else {
         // Use /chat endpoint with GET method for general questions
