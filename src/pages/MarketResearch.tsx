@@ -1330,6 +1330,8 @@ const MarketResearch = React.memo(() => {
       }
     }
 
+    console.log('🤖 Making Scout API call with question:', question);
+
     try {
       // Call the chat API
       const response = await fetch(`https://backend-11kr.onrender.com/chat/?question=${encodeURIComponent(question)}`, {
@@ -1339,9 +1341,11 @@ const MarketResearch = React.memo(() => {
         }
       });
 
+      console.log('🌐 Scout API response status:', response.status, response.ok);
+
       if (response.ok) {
         const chatResponse = await response.json();
-        console.log('Market Size Scout API Response:', chatResponse);
+        console.log('✅ Market Size Scout API Response:', chatResponse);
         
         // Close all other scout chats first
         setShowIndustryTrendsScoutChat(false);
@@ -1354,23 +1358,27 @@ const MarketResearch = React.memo(() => {
         setMarketSizeCustomMessage(chatResponse.response || chatResponse.answer || 'Here are the insights from Scout');
         setMarketSizeHasEdits(hasEdits || false);
         
+        console.log('📝 Setting scout chat state to open...');
         setTimeout(() => {
           setShowMarketSizeScoutChat(true);
+          console.log('🎯 Scout chat should now be visible');
         }, 100);
       } else {
-        console.error('Failed to get response from chat API');
+        console.error('❌ Failed to get response from chat API, status:', response.status);
         // Fallback to original behavior
         setMarketSizeCustomMessage(customMessage || 'Unable to get Scout insights at the moment');
         setTimeout(() => {
           setShowMarketSizeScoutChat(true);
+          console.log('🎯 Scout chat opened with fallback message');
         }, 100);
       }
     } catch (error) {
-      console.error('Error calling chat API:', error);
+      console.error('💥 Error calling chat API:', error);
       // Fallback to original behavior
       setMarketSizeCustomMessage(customMessage || 'Unable to get Scout insights at the moment');
       setTimeout(() => {
         setShowMarketSizeScoutChat(true);
+        console.log('🎯 Scout chat opened with error fallback');
       }, 100);
     }
   };
