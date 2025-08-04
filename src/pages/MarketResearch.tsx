@@ -1396,7 +1396,9 @@ const MarketResearch = React.memo(() => {
     // Add the new edit record to the edit history
     setEditHistory(prevHistory => [...prevHistory, newEdit]);
     
-    // Automatically open Market Size Scout chat panel with contextual message
+    // Set custom message and automatically open Market Size Scout chat panel
+    const customMessage = "Great! I see you've made changes to the Market Size & Opportunity section. Do you need any assistance analyzing these changes or want me to provide additional insights?";
+    setMarketSizeCustomMessage(customMessage);
     setShowMarketSizeScoutChat(true);
     setIsChatOpen(true);
   };
@@ -1450,7 +1452,9 @@ const MarketResearch = React.memo(() => {
     // Add the new edit record to the industry trends edit history
     setIndustryTrendsEditHistory(prevHistory => [...prevHistory, newEdit]);
     
-    // Automatically open Industry Trends Scout chat panel with contextual message
+    // Set custom message and automatically open Industry Trends Scout chat panel
+    const customMessage = "Excellent! I see you've updated the Industry Trends section. Do you need any assistance analyzing these changes or want me to provide additional market insights?";
+    setIndustryTrendsCustomMessage(customMessage);
     setShowIndustryTrendsScoutChat(true);
     setIsChatOpen(true);
   };
@@ -1571,7 +1575,9 @@ const MarketResearch = React.memo(() => {
     setCompetitorEditHistory(prev => [newEdit, ...prev]);
     setHasEdits(true);
     
-    // Automatically open Competitor Landscape Scout chat panel with contextual message
+    // Set custom message and automatically open Competitor Landscape Scout chat panel
+    const customMessage = "Perfect! I see you've updated the Competitor Landscape section. Do you need any assistance analyzing these changes or want me to provide additional competitive intelligence?";
+    setCompetitorCustomMessage(customMessage);
     setShowCompetitorScoutChat(true);
     setIsChatOpen(true);
   };
@@ -1740,18 +1746,16 @@ const MarketResearch = React.memo(() => {
 
   const handleRegulatorySaveChanges = () => {
     setIsRegulatoryEditing(false);
-    setRegulatoryHasEdits(false);
+    setRegulatoryHasEdits(true); // Changed to true to indicate edits were made
     
-    // Close all other scout chats and open regulatory scout with specific contextual messages
-    setShowMarketSizeScoutChat(false);
-    setShowIndustryTrendsScoutChat(false);
-    setShowCompetitorScoutChat(false);
-    setIsChatOpen(false);
+    // Set custom message and open regulatory scout chat with post-save contextual messages
+    const customMessage = "Great work! I see you've updated the Regulatory Compliance section. Do you need any assistance analyzing these changes or want me to provide additional compliance insights?";
+    setRegulatoryCustomMessage(customMessage);
     
-    // Open regulatory scout chat with post-save contextual messages
     setTimeout(() => {
       setIsRegulatoryPostSave(true);
       setShowRegulatoryScoutChat(true);
+      setIsChatOpen(true);
     }, 100);
   };
 

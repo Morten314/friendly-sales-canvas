@@ -48,25 +48,68 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
   const callChatAPI = async (question: string) => {
     setIsLoading(true);
     try {
-      const response = await fetch(`https://backend-11kr.onrender.com/chat/?question=${encodeURIComponent(question)}`, {
-        method: 'GET',
-        headers: {
-          'accept': 'application/json'
+      // Determine API endpoint based on context and edit state
+      const isEditMode = hasEdits || isPostSave;
+      const baseUrl = 'https://backend-11kr.onrender.com';
+      
+      let url: string;
+      let requestOptions: RequestInit;
+      
+      if (isEditMode) {
+        // Use /ask endpoint with POST method for edit context
+        url = `${baseUrl}/ask`;
+        
+        // Get the stored JSON data from localStorage
+        const storedOriginalJson = localStorage.getItem(`${context}_original_json`);
+        const storedModifiedJson = localStorage.getItem(`${context}_modified_json`);
+        
+        let requestBody: any = { question };
+        
+        if (storedOriginalJson && storedModifiedJson) {
+          requestBody.original_json = JSON.parse(storedOriginalJson);
+          requestBody.modified_json = JSON.parse(storedModifiedJson);
+          console.log('📤 Sending to /ask API with JSON context:', { 
+            question, 
+            original_json: requestBody.original_json, 
+            modified_json: requestBody.modified_json 
+          });
         }
-      });
+        
+        requestOptions = {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'accept': 'application/json'
+          },
+          body: JSON.stringify(requestBody)
+        };
+      } else {
+        // Use /chat endpoint with GET method for general questions
+        url = `${baseUrl}/chat/?question=${encodeURIComponent(question)}`;
+        requestOptions = {
+          method: 'GET',
+          headers: {
+            'accept': 'application/json'
+          }
+        };
+      }
+
+      console.log(`🤖 Making Scout API call to ${isEditMode ? '/ask' : '/chat'} with question:`, question);
+      
+      const response = await fetch(url, requestOptions);
 
       if (response.ok) {
         const data = await response.json();
         const answer = data.response || data.answer || 'I received your question but couldn\'t generate a proper response.';
         setChatResponse(answer);
-        console.log('Scout Chat API Response:', data);
+        console.log('Scout API Response:', data);
       } else {
         setChatResponse('Sorry, I\'m having trouble connecting right now. Please try again later.');
-        console.error('Failed to get response from chat API');
+        console.error('Failed to get response from Scout API');
       }
     } catch (error) {
       setChatResponse('Sorry, I encountered an error. Please try again later.');
-      console.error('Error calling chat API:', error);
+      console.error('Error calling Scout API:', error);
     } finally {
       setIsLoading(false);
     }

@@ -830,10 +830,14 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                       }) || []
                     };
 
-                    console.log('⚖️ Regulatory Compliance Section - original_json:', JSON.stringify(originalJson, null, 2));
-                    console.log('⚖️ Regulatory Compliance Section - modified_json:', JSON.stringify(modifiedJson, null, 2));
+                     console.log('⚖️ Regulatory Compliance Section - original_json:', JSON.stringify(originalJson, null, 2));
+                     console.log('⚖️ Regulatory Compliance Section - modified_json:', JSON.stringify(modifiedJson, null, 2));
 
-                    // First, call all the change handlers to update parent state with local values
+                     // Store JSON data in localStorage for Scout API
+                     localStorage.setItem('regulatory-compliance_original_json', JSON.stringify(originalJson));
+                     localStorage.setItem('regulatory-compliance_modified_json', JSON.stringify(modifiedJson));
+
+                     // First, call all the change handlers to update parent state with local values
                     onExecutiveSummaryChange(localExecutiveSummary);
                     onEuAiActDeadlineChange(localEuAiActDeadline);
                     onGdprComplianceChange(localGdprCompliance);

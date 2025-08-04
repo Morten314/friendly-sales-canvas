@@ -294,6 +294,10 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
       console.log('📈 Industry Trends Section - original_json:', JSON.stringify(originalJson, null, 2));
       console.log('📈 Industry Trends Section - modified_json:', JSON.stringify(modifiedJson, null, 2));
 
+      // Store JSON data in localStorage for Scout API
+      localStorage.setItem('industry-trends_original_json', JSON.stringify(originalJson));
+      localStorage.setItem('industry-trends_modified_json', JSON.stringify(modifiedJson));
+
       // Update the displayed data with the edited values immediately
       setIndustryTrendsData(prev => {
         if (!prev) return prev;

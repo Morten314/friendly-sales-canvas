@@ -124,6 +124,10 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
     console.log('📊 Market Size Section - original_json:', JSON.stringify(originalJson, null, 2));
     console.log('📊 Market Size Section - modified_json:', JSON.stringify(modifiedJson, null, 2));
 
+    // Store JSON data in localStorage for Scout API
+    localStorage.setItem('market-size_original_json', JSON.stringify(originalJson));
+    localStorage.setItem('market-size_modified_json', JSON.stringify(modifiedJson));
+
     // First, call the change handlers to update parent state with local values
     onExecutiveSummaryChange(localExecutiveSummary);
     onTamValueChange(localTamValue);

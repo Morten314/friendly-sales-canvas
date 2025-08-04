@@ -672,11 +672,15 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                         fundingNews: fundingNews || []
                       };
 
-                        // Logging original and modified JSON data
-                        console.log('🏆 Competitor Landscape Section - original_json:', JSON.stringify(originalJson, null, 2));
-                        console.log('🏆 Competitor Landscape Section - modified_json:', JSON.stringify(modifiedJson, null, 2));
+                         // Logging original and modified JSON data
+                         console.log('🏆 Competitor Landscape Section - original_json:', JSON.stringify(originalJson, null, 2));
+                         console.log('🏆 Competitor Landscape Section - modified_json:', JSON.stringify(modifiedJson, null, 2));
 
-                      // First, call the change handlers to update parent state with local values
+                       // Store JSON data in localStorage for Scout API
+                       localStorage.setItem('competitor-landscape_original_json', JSON.stringify(originalJson));
+                       localStorage.setItem('competitor-landscape_modified_json', JSON.stringify(modifiedJson));
+
+                       // First, call the change handlers to update parent state with local values
                       onExecutiveSummaryChange(localExecutiveSummary);
                       onTopPlayerShareChange(localTopPlayerShare);
                       onEmergingPlayersChange(localEmergingPlayers);
