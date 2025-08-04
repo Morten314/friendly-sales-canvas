@@ -1333,14 +1333,21 @@ const MarketResearch = React.memo(() => {
     console.log('🤖 Making Scout API call with question:', question);
 
     try {
-      // Call the chat API
+      // Call the chat API with timeout
+      console.log('🌐 Calling API endpoint:', `https://backend-11kr.onrender.com/chat/?question=${encodeURIComponent(question)}`);
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
       const response = await fetch(`https://backend-11kr.onrender.com/chat/?question=${encodeURIComponent(question)}`, {
         method: 'GET',
         headers: {
           'accept': 'application/json'
-        }
+        },
+        signal: controller.signal
       });
 
+      clearTimeout(timeoutId);
       console.log('🌐 Scout API response status:', response.status, response.ok);
 
       if (response.ok) {
@@ -1364,7 +1371,8 @@ const MarketResearch = React.memo(() => {
           console.log('🎯 Scout chat should now be visible');
         }, 100);
       } else {
-        console.error('❌ Failed to get response from chat API, status:', response.status);
+        const errorText = await response.text();
+        console.error('❌ Failed to get response from chat API, status:', response.status, 'error:', errorText);
         // Fallback to original behavior
         setMarketSizeCustomMessage(customMessage || 'Unable to get Scout insights at the moment');
         setTimeout(() => {
@@ -1374,8 +1382,15 @@ const MarketResearch = React.memo(() => {
       }
     } catch (error) {
       console.error('💥 Error calling chat API:', error);
-      // Fallback to original behavior
-      setMarketSizeCustomMessage(customMessage || 'Unable to get Scout insights at the moment');
+      
+      // Check if it was a timeout
+      if (error.name === 'AbortError') {
+        console.error('⏰ API call timed out after 10 seconds');
+        setMarketSizeCustomMessage('Scout is taking longer than usual to respond. Please try again.');
+      } else {
+        setMarketSizeCustomMessage(customMessage || 'Unable to get Scout insights at the moment');
+      }
+      
       setTimeout(() => {
         setShowMarketSizeScoutChat(true);
         console.log('🎯 Scout chat opened with error fallback');
