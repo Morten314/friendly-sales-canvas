@@ -94,23 +94,35 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
 
       if (response.ok) {
         const data = await response.json();
-        console.log('Scout API Response:', data);
+        console.log('Raw Scout API Response:', data);
+        console.log('Response type:', typeof data);
+        console.log('Is array:', Array.isArray(data));
         
         // Handle different response formats
         let answer = '';
         if (Array.isArray(data) && data.length > 0) {
-          // If response is an array, take the first element
-          answer = data[0].response || data[0].answer || data[0] || 'No response available';
-        } else if (typeof data === 'object') {
-          // If response is an object, look for response/answer properties
-          answer = data.response || data.answer || 'No response available';
+          console.log('Processing as array, first element:', data[0]);
+          console.log('First element type:', typeof data[0]);
+          
+          if (typeof data[0] === 'string') {
+            answer = data[0];
+          } else if (typeof data[0] === 'object') {
+            answer = data[0].response || data[0].answer || data[0].message || JSON.stringify(data[0]);
+          } else {
+            answer = String(data[0]);
+          }
+        } else if (typeof data === 'object' && data !== null) {
+          console.log('Processing as object, keys:', Object.keys(data));
+          answer = data.response || data.answer || data.message || JSON.stringify(data);
         } else if (typeof data === 'string') {
-          // If response is a string, use it directly
+          console.log('Processing as string');
           answer = data;
         } else {
+          console.log('Unknown data format, falling back');
           answer = 'I received your question but couldn\'t generate a proper response.';
         }
         
+        console.log('Final answer:', answer);
         setChatResponse(answer);
       } else {
         setChatResponse('Sorry, I\'m having trouble connecting right now. Please try again later.');
