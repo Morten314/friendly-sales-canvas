@@ -50,38 +50,8 @@ export const ICPIntelligence = () => {
         {/* ICP Summary & Market Opportunity Section */}
         <ICPSummaryOpportunity />
 
-        {/* ICP Battlemap Section */}
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Target className="h-5 w-5 text-purple-600" />
-              ICP Battlemap
-            </CardTitle>
-            <CardDescription>
-              Analyze competitive landscape and identify buying signals for your ideal customer profiles
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card className="p-4">
-                <h3 className="font-semibold mb-2">Competitive Analysis</h3>
-                <p className="text-sm text-gray-600 mb-4">Map competitive overlaps and positioning strategies</p>
-                <Button className="w-full bg-purple-600 hover:bg-purple-700">
-                  <Target className="h-4 w-4 mr-2" />
-                  Analyze Competition
-                </Button>
-              </Card>
-              <Card className="p-4">
-                <h3 className="font-semibold mb-2">Buying Signals</h3>
-                <p className="text-sm text-gray-600 mb-4">Identify key indicators of purchase intent</p>
-                <Button className="w-full" variant="outline">
-                  <TrendingUp className="h-4 w-4 mr-2" />
-                  Find Signals
-                </Button>
-              </Card>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Agent-Level Contextual Mini Report */}
+        
 
         {/* ICP Profiles and Profile Analytics section removed */}
       </div>
