@@ -1312,224 +1312,60 @@ const MarketResearch = React.memo(() => {
   const handleMarketSizeScoutClick = async (context?: 'market-size' | 'industry-trends' | 'competitor-landscape', hasEdits?: boolean, customMessage?: string) => {
     console.log('Market Size Scout clicked with context:', context, 'hasEdits:', hasEdits, 'customMessage:', customMessage);
     
-    // Determine the question based on context and custom message
-    let question = customMessage;
-    if (!question) {
-      switch (context) {
-        case 'market-size':
-          question = 'What are the key market size insights and opportunities for my business?';
-          break;
-        case 'industry-trends':
-          question = 'What are the current industry trends affecting market size?';
-          break;
-        case 'competitor-landscape':
-          question = 'How does market size relate to the competitive landscape?';
-          break;
-        default:
-          question = 'What are the market size insights for this analysis?';
-      }
-    }
-
-    console.log('🤖 Making Scout API call with question:', question);
-
-    try {
-      // Call the chat API with timeout
-      console.log('🌐 Calling API endpoint:', `https://backend-11kr.onrender.com/chat/?question=${encodeURIComponent(question)}`);
-      
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-      
-      const response = await fetch(`https://backend-11kr.onrender.com/chat/?question=${encodeURIComponent(question)}`, {
-        method: 'GET',
-        headers: {
-          'accept': 'application/json'
-        },
-        signal: controller.signal
-      });
-
-      clearTimeout(timeoutId);
-      console.log('🌐 Scout API response status:', response.status, response.ok);
-
-      if (response.ok) {
-        const chatResponse = await response.json();
-        console.log('✅ Market Size Scout API Response:', chatResponse);
-        
-        // Close all other scout chats first
-        setShowIndustryTrendsScoutChat(false);
-        setShowCompetitorScoutChat(false);
-        setShowRegulatoryScoutChat(false);
-        setShowMarketEntryScoutChat(false);
-        setIsChatOpen(false);
-        
-        // Set up state with API response
-        setMarketSizeCustomMessage(chatResponse.response || chatResponse.answer || 'Here are the insights from Scout');
-        setMarketSizeHasEdits(hasEdits || false);
-        
-        console.log('📝 Setting scout chat state to open...');
-        setTimeout(() => {
-          setShowMarketSizeScoutChat(true);
-          console.log('🎯 Scout chat should now be visible');
-        }, 100);
-      } else {
-        const errorText = await response.text();
-        console.error('❌ Failed to get response from chat API, status:', response.status, 'error:', errorText);
-        // Fallback to original behavior
-        setMarketSizeCustomMessage(customMessage || 'Unable to get Scout insights at the moment');
-        setTimeout(() => {
-          setShowMarketSizeScoutChat(true);
-          console.log('🎯 Scout chat opened with fallback message');
-        }, 100);
-      }
-    } catch (error) {
-      console.error('💥 Error calling chat API:', error);
-      
-      // Check if it was a timeout
-      if (error.name === 'AbortError') {
-        console.error('⏰ API call timed out after 10 seconds');
-        setMarketSizeCustomMessage('Scout is taking longer than usual to respond. Please try again.');
-      } else {
-        setMarketSizeCustomMessage(customMessage || 'Unable to get Scout insights at the moment');
-      }
-      
-      setTimeout(() => {
-        setShowMarketSizeScoutChat(true);
-        console.log('🎯 Scout chat opened with error fallback');
-      }, 100);
-    }
+    // Close all other scout chats first
+    setShowIndustryTrendsScoutChat(false);
+    setShowCompetitorScoutChat(false);
+    setShowRegulatoryScoutChat(false);
+    setShowMarketEntryScoutChat(false);
+    setIsChatOpen(false);
+    
+    // Set up state for the chat panel
+    setMarketSizeCustomMessage(customMessage);
+    setMarketSizeHasEdits(hasEdits || false);
+    
+    // Open the scout chat panel immediately
+    setShowMarketSizeScoutChat(true);
+    console.log('🎯 Market Size Scout chat panel opened');
   };
 
   // Industry Trends Scout icon click handler  
   const handleIndustryTrendsScoutClick = async (context?: 'market-size' | 'industry-trends' | 'competitor-landscape', hasEdits?: boolean, customMessage?: string) => {
     console.log('Industry Trends Scout clicked with context:', context, 'hasEdits:', hasEdits, 'customMessage:', customMessage);
     
-    // Determine the question based on context and custom message
-    let question = customMessage;
-    if (!question) {
-      switch (context) {
-        case 'industry-trends':
-          question = 'What are the key industry trends and their impact on my business?';
-          break;
-        case 'market-size':
-          question = 'How do industry trends affect market size and growth potential?';
-          break;
-        case 'competitor-landscape':
-          question = 'What industry trends are shaping the competitive landscape?';
-          break;
-        default:
-          question = 'What are the current industry trends for this analysis?';
-      }
-    }
-
-    try {
-      // Call the chat API
-      const response = await fetch(`https://backend-11kr.onrender.com/chat/?question=${encodeURIComponent(question)}`, {
-        method: 'GET',
-        headers: {
-          'accept': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const chatResponse = await response.json();
-        console.log('Industry Trends Scout API Response:', chatResponse);
-        
-        // Close all other scout chats first
-        setShowMarketSizeScoutChat(false);
-        setShowCompetitorScoutChat(false);
-        setShowRegulatoryScoutChat(false);
-        setShowMarketEntryScoutChat(false);
-        setIsChatOpen(false);
-        
-        // Set up state with API response
-        setIndustryTrendsCustomMessage(chatResponse.response || chatResponse.answer || 'Here are the insights from Scout');
-        setIndustryTrendsHasEdits(hasEdits || false);
-        
-        setTimeout(() => {
-          setShowIndustryTrendsScoutChat(true);
-        }, 100);
-      } else {
-        console.error('Failed to get response from chat API');
-        // Fallback to original behavior
-        setIndustryTrendsCustomMessage(customMessage || 'Unable to get Scout insights at the moment');
-        setTimeout(() => {
-          setShowIndustryTrendsScoutChat(true);
-        }, 100);
-      }
-    } catch (error) {
-      console.error('Error calling chat API:', error);
-      // Fallback to original behavior
-      setIndustryTrendsCustomMessage(customMessage || 'Unable to get Scout insights at the moment');
-      setTimeout(() => {
-        setShowIndustryTrendsScoutChat(true);
-      }, 100);
-    }
+    // Close all other scout chats first
+    setShowMarketSizeScoutChat(false);
+    setShowCompetitorScoutChat(false);
+    setShowRegulatoryScoutChat(false);
+    setShowMarketEntryScoutChat(false);
+    setIsChatOpen(false);
+    
+    // Set up state for the chat panel
+    setIndustryTrendsCustomMessage(customMessage);
+    setIndustryTrendsHasEdits(hasEdits || false);
+    
+    // Open the scout chat panel immediately
+    setShowIndustryTrendsScoutChat(true);
+    console.log('🎯 Industry Trends Scout chat panel opened');
   };
 
   // Competitor Landscape Scout icon click handler  
   const handleCompetitorScoutClick = async (context?: 'market-size' | 'industry-trends' | 'competitor-landscape', hasEdits?: boolean, customMessage?: string) => {
     console.log('Competitor Scout clicked with context:', context, 'hasEdits:', hasEdits, 'customMessage:', customMessage);
     
-    // Determine the question based on context and custom message
-    let question = customMessage;
-    if (!question) {
-      switch (context) {
-        case 'competitor-landscape':
-          question = 'What is the competitive landscape analysis and key competitor insights?';
-          break;
-        case 'market-size':
-          question = 'How does the competitive landscape affect market size and opportunities?';
-          break;
-        case 'industry-trends':
-          question = 'What competitive trends are emerging in the industry?';
-          break;
-        default:
-          question = 'What are the key competitive insights for this analysis?';
-      }
-    }
-
-    try {
-      // Call the chat API
-      const response = await fetch(`https://backend-11kr.onrender.com/chat/?question=${encodeURIComponent(question)}`, {
-        method: 'GET',
-        headers: {
-          'accept': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const chatResponse = await response.json();
-        console.log('Competitor Scout API Response:', chatResponse);
-        
-        // Close all other scout chats first
-        setShowMarketSizeScoutChat(false);
-        setShowIndustryTrendsScoutChat(false);
-        setShowRegulatoryScoutChat(false);
-        setShowMarketEntryScoutChat(false);
-        setIsChatOpen(false);
-        
-        // Set up state with API response
-        setCompetitorCustomMessage(chatResponse.response || chatResponse.answer || 'Here are the insights from Scout');
-        setCompetitorHasEdits(hasEdits || false);
-        
-        setTimeout(() => {
-          setShowCompetitorScoutChat(true);
-        }, 100);
-      } else {
-        console.error('Failed to get response from chat API');
-        // Fallback to original behavior
-        setCompetitorCustomMessage(customMessage || 'Unable to get Scout insights at the moment');
-        setTimeout(() => {
-          setShowCompetitorScoutChat(true);
-        }, 100);
-      }
-    } catch (error) {
-      console.error('Error calling chat API:', error);
-      // Fallback to original behavior
-      setCompetitorCustomMessage(customMessage || 'Unable to get Scout insights at the moment');
-      setTimeout(() => {
-        setShowCompetitorScoutChat(true);
-      }, 100);
-    }
+    // Close all other scout chats first
+    setShowMarketSizeScoutChat(false);
+    setShowIndustryTrendsScoutChat(false);
+    setShowRegulatoryScoutChat(false);
+    setShowMarketEntryScoutChat(false);
+    setIsChatOpen(false);
+    
+    // Set up state for the chat panel
+    setCompetitorCustomMessage(customMessage);
+    setCompetitorHasEdits(hasEdits || false);
+    
+    // Open the scout chat panel immediately
+    setShowCompetitorScoutChat(true);
+    console.log('🎯 Competitor Scout chat panel opened');
   };
 
   const handleMarketIntelligenceDeleteSection = (sectionId: string) => {
@@ -2048,70 +1884,20 @@ const MarketResearch = React.memo(() => {
   const handleRegulatoryScoutClick = async (context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance', hasEdits?: boolean, customMessage?: string) => {
     console.log('Regulatory scout clicked with context:', context, 'hasEdits:', hasEdits, 'customMessage:', customMessage);
     
-    // Determine the question based on context and custom message
-    let question = customMessage;
-    if (!question) {
-      switch (context) {
-        case 'regulatory-compliance':
-          question = 'What are the key regulatory compliance requirements and implications?';
-          break;
-        case 'market-size':
-          question = 'How do regulatory requirements affect market size and opportunities?';
-          break;
-        case 'industry-trends':
-          question = 'What regulatory trends are shaping the industry?';
-          break;
-        case 'competitor-landscape':
-          question = 'How do regulatory requirements affect the competitive landscape?';
-          break;
-        default:
-          question = 'What are the regulatory compliance insights for this analysis?';
-      }
-    }
-
-    try {
-      // Call the chat API
-      const response = await fetch(`https://backend-11kr.onrender.com/chat/?question=${encodeURIComponent(question)}`, {
-        method: 'GET',
-        headers: {
-          'accept': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const chatResponse = await response.json();
-        console.log('Regulatory Scout API Response:', chatResponse);
-        
-        // Close all other scout chats first to prevent state overlap
-        setShowMarketSizeScoutChat(false);
-        setShowIndustryTrendsScoutChat(false);
-        setShowCompetitorScoutChat(false);
-        setIsChatOpen(false);
-        
-        // Reset any previous chat states to ensure clean start
-        setTimeout(() => {
-          setIsRegulatoryPostSave(false); // Reset post-save state when manually clicking scout
-          setRegulatoryCustomMessage(chatResponse.response || chatResponse.answer || 'Here are the insights from Scout'); // Set API response
-          setShowRegulatoryScoutChat(true);
-        }, 100);
-      } else {
-        console.error('Failed to get response from chat API');
-        // Fallback to original behavior
-        setTimeout(() => {
-          setIsRegulatoryPostSave(false);
-          setRegulatoryCustomMessage(customMessage || 'Unable to get Scout insights at the moment');
-          setShowRegulatoryScoutChat(true);
-        }, 100);
-      }
-    } catch (error) {
-      console.error('Error calling chat API:', error);
-      // Fallback to original behavior
-      setTimeout(() => {
-        setIsRegulatoryPostSave(false);
-        setRegulatoryCustomMessage(customMessage || 'Unable to get Scout insights at the moment');
-        setShowRegulatoryScoutChat(true);
-      }, 100);
-    }
+    // Close all other scout chats first
+    setShowMarketSizeScoutChat(false);
+    setShowIndustryTrendsScoutChat(false);
+    setShowCompetitorScoutChat(false);
+    setShowMarketEntryScoutChat(false);
+    setIsChatOpen(false);
+    
+    // Set up state for the chat panel
+    setRegulatoryCustomMessage(customMessage);
+    setIsRegulatoryPostSave(false);
+    
+    // Open the scout chat panel immediately
+    setShowRegulatoryScoutChat(true);
+    console.log('🎯 Regulatory Scout chat panel opened');
   };
 
 
@@ -2343,84 +2129,22 @@ const MarketResearch = React.memo(() => {
   const handleMarketEntryScoutClick = async (context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance' | 'market-entry', hasEdits?: boolean, customMessage?: string) => {
     console.log('Market Entry scout clicked with context:', context);
     
-    // Determine the question based on context and custom message
-    let question = customMessage;
-    if (!question) {
-      switch (context) {
-        case 'market-entry':
-          question = 'What are the key market entry strategies and growth opportunities?';
-          break;
-        case 'market-size':
-          question = 'How does market size affect entry strategies and growth potential?';
-          break;
-        case 'industry-trends':
-          question = 'What industry trends should inform market entry strategy?';
-          break;
-        case 'competitor-landscape':
-          question = 'How should competitive landscape influence market entry approach?';
-          break;
-        case 'regulatory-compliance':
-          question = 'What regulatory considerations are important for market entry?';
-          break;
-        default:
-          question = 'What are the market entry insights for this analysis?';
-      }
+    // Close all other scout chats first
+    setShowMarketSizeScoutChat(false);
+    setShowIndustryTrendsScoutChat(false);
+    setShowCompetitorScoutChat(false);
+    setShowRegulatoryScoutChat(false);
+    setIsChatOpen(false);
+    
+    // Set up state for the chat panel
+    if (!hasEdits) {
+      setIsMarketEntryPostSave(false);
     }
-
-    try {
-      // Call the chat API
-      const response = await fetch(`https://backend-11kr.onrender.com/chat/?question=${encodeURIComponent(question)}`, {
-        method: 'GET',
-        headers: {
-          'accept': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const chatResponse = await response.json();
-        console.log('Market Entry Scout API Response:', chatResponse);
-        
-        // Close all other scout chats first
-        setShowMarketSizeScoutChat(false);
-        setShowIndustryTrendsScoutChat(false);
-        setShowCompetitorScoutChat(false);
-        setShowRegulatoryScoutChat(false);
-        setIsChatOpen(false);
-        
-        // Reset post-save state when manually clicking scout (not triggered by save)
-        setTimeout(() => {
-          if (!hasEdits) {
-            setIsMarketEntryPostSave(false); // Reset post-save state when manually clicking scout
-          }
-          
-          // Set API response as custom message
-          setMarketEntryCustomMessage(chatResponse.response || chatResponse.answer || 'Here are the insights from Scout');
-          
-          // Open Market Entry scout chat
-          setShowMarketEntryScoutChat(true);
-        }, 100);
-      } else {
-        console.error('Failed to get response from chat API');
-        // Fallback to original behavior
-        setTimeout(() => {
-          if (!hasEdits) {
-            setIsMarketEntryPostSave(false);
-          }
-          setMarketEntryCustomMessage(customMessage || 'Unable to get Scout insights at the moment');
-          setShowMarketEntryScoutChat(true);
-        }, 100);
-      }
-    } catch (error) {
-      console.error('Error calling chat API:', error);
-      // Fallback to original behavior
-      setTimeout(() => {
-        if (!hasEdits) {
-          setIsMarketEntryPostSave(false);
-        }
-        setMarketEntryCustomMessage(customMessage || 'Unable to get Scout insights at the moment');
-        setShowMarketEntryScoutChat(true);
-      }, 100);
-    }
+    setMarketEntryCustomMessage(customMessage);
+    
+    // Open the scout chat panel immediately
+    setShowMarketEntryScoutChat(true);
+    console.log('🎯 Market Entry Scout chat panel opened');
   };
 
   const handleEditHistoryClose = () => {
