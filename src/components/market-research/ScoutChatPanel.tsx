@@ -57,7 +57,7 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
       
       if (isEditMode) {
         // Use /ask endpoint with POST method for edit context
-        url = `${baseUrl}/ask`;
+        url = `${baseUrl}/ask/`;
         
         // Get the stored JSON data from localStorage
         const storedOriginalJson = localStorage.getItem(`${context}_original_json`);
