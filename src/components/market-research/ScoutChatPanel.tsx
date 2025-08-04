@@ -94,9 +94,24 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
 
       if (response.ok) {
         const data = await response.json();
-        const answer = data.response || data.answer || 'I received your question but couldn\'t generate a proper response.';
-        setChatResponse(answer);
         console.log('Scout API Response:', data);
+        
+        // Handle different response formats
+        let answer = '';
+        if (Array.isArray(data) && data.length > 0) {
+          // If response is an array, take the first element
+          answer = data[0].response || data[0].answer || data[0] || 'No response available';
+        } else if (typeof data === 'object') {
+          // If response is an object, look for response/answer properties
+          answer = data.response || data.answer || 'No response available';
+        } else if (typeof data === 'string') {
+          // If response is a string, use it directly
+          answer = data;
+        } else {
+          answer = 'I received your question but couldn\'t generate a proper response.';
+        }
+        
+        setChatResponse(answer);
       } else {
         setChatResponse('Sorry, I\'m having trouble connecting right now. Please try again later.');
         console.error('Failed to get response from Scout API');
