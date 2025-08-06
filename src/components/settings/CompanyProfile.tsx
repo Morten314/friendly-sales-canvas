@@ -349,7 +349,7 @@
 
 
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -370,9 +370,11 @@ interface SocialMediaUrl {
 
 interface CompanyProfileProps {
   onProfileUpdate?: () => void;
+  isEditMode?: boolean;
+  profileData?: any;
 }
 
-export function CompanyProfile({ onProfileUpdate }: CompanyProfileProps) {
+export function CompanyProfile({ onProfileUpdate, isEditMode = false, profileData }: CompanyProfileProps) {
   const [formData, setFormData] = useState({
     industry: "",
     companySize: "",
@@ -386,6 +388,23 @@ export function CompanyProfile({ onProfileUpdate }: CompanyProfileProps) {
   const [targetMarkets, setTargetMarkets] = useState<string[]>([""]);
   const [socialMediaUrls, setSocialMediaUrls] = useState<SocialMediaUrl[]>([]);
   const [selectedPlatform, setSelectedPlatform] = useState<string>("");
+
+  // Update form data when profileData changes
+  useEffect(() => {
+    if (profileData) {
+      setFormData({
+        industry: profileData.industry || "",
+        companySize: profileData.companySize || "",
+        companyUrl: profileData.companyUrl || "",
+        strategicGoals: profileData.strategicGoals || "",
+        primaryGTMModel: profileData.primaryGTMModel || "",
+        revenueStage: profileData.revenueStage || "",
+        keyBuyerPersona: profileData.keyBuyerPersona || "",
+      });
+      setTargetMarkets(profileData.targetMarkets || [""]);
+      setSocialMediaUrls(profileData.socialMediaUrls || []);
+    }
+  }, [profileData]);
 
   const socialPlatforms = [
     { value: "linkedin", label: "LinkedIn" },
@@ -512,7 +531,7 @@ export function CompanyProfile({ onProfileUpdate }: CompanyProfileProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
             <Label htmlFor="industry">Industry</Label>
-            <Select value={formData.industry} onValueChange={(value) => handleInputChange("industry", value)}>
+            <Select value={formData.industry} onValueChange={(value) => handleInputChange("industry", value)} disabled={!isEditMode}>
               <SelectTrigger>
                 <SelectValue placeholder="Select your industry" />
               </SelectTrigger>
@@ -531,7 +550,7 @@ export function CompanyProfile({ onProfileUpdate }: CompanyProfileProps) {
 
           <div className="space-y-2">
             <Label htmlFor="companySize">Company Size</Label>
-            <Select value={formData.companySize} onValueChange={(value) => handleInputChange("companySize", value)}>
+            <Select value={formData.companySize} onValueChange={(value) => handleInputChange("companySize", value)} disabled={!isEditMode}>
               <SelectTrigger>
                 <SelectValue placeholder="Select company size" />
               </SelectTrigger>
@@ -552,6 +571,7 @@ export function CompanyProfile({ onProfileUpdate }: CompanyProfileProps) {
               value={formData.companyUrl}
               onChange={(e) => handleInputChange("companyUrl", e.target.value)}
               placeholder="Enter your Company url"
+              disabled={!isEditMode}
             />
           </div>
 
@@ -568,6 +588,7 @@ export function CompanyProfile({ onProfileUpdate }: CompanyProfileProps) {
                   onChange={(e) => handleSocialMediaUrlChange(index, e.target.value)}
                   placeholder={`Enter your ${getPlatformLabel(socialUrl.platform)} URL`}
                   className="flex-1"
+                  disabled={!isEditMode}
                 />
                 <Button
                   type="button"
@@ -618,6 +639,7 @@ export function CompanyProfile({ onProfileUpdate }: CompanyProfileProps) {
                   onChange={(e) => handleTargetMarketChange(index, e.target.value)}
                   placeholder="e.g., North America – Mid-Market SaaS companies in cybersecurity and cloud infrastructure"
                   className="flex-1"
+                  disabled={!isEditMode}
                 />
                 {targetMarkets.length > 1 && (
                   <Button
@@ -654,12 +676,13 @@ export function CompanyProfile({ onProfileUpdate }: CompanyProfileProps) {
               onChange={(e) => handleInputChange("strategicGoals", e.target.value)}
               placeholder="e.g., Expand to the APAC region within 12 months"
               rows={3}
+              disabled={!isEditMode}
             />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="primaryGTMModel">Primary GTM Model</Label>
-            <Select value={formData.primaryGTMModel} onValueChange={(value) => handleInputChange("primaryGTMModel", value)}>
+            <Select value={formData.primaryGTMModel} onValueChange={(value) => handleInputChange("primaryGTMModel", value)} disabled={!isEditMode}>
               <SelectTrigger>
                 <SelectValue placeholder="Select GTM model" />
               </SelectTrigger>
@@ -673,7 +696,7 @@ export function CompanyProfile({ onProfileUpdate }: CompanyProfileProps) {
 
           <div className="space-y-2">
             <Label htmlFor="revenueStage">Revenue Stage</Label>
-            <Select value={formData.revenueStage} onValueChange={(value) => handleInputChange("revenueStage", value)}>
+            <Select value={formData.revenueStage} onValueChange={(value) => handleInputChange("revenueStage", value)} disabled={!isEditMode}>
               <SelectTrigger>
                 <SelectValue placeholder="Select revenue stage" />
               </SelectTrigger>
@@ -693,15 +716,18 @@ export function CompanyProfile({ onProfileUpdate }: CompanyProfileProps) {
               value={formData.keyBuyerPersona}
               onChange={(e) => handleInputChange("keyBuyerPersona", e.target.value)}
               placeholder="e.g., IT Director, VP of Marketing"
+              disabled={!isEditMode}
             />
           </div>
         </div>
 
-        <div className="mt-6 pt-4 border-t border-blue-200">
-          <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700">
-            Save Company Profile
-          </Button>
-        </div>
+        {isEditMode && (
+          <div className="mt-6 pt-4 border-t border-blue-200">
+            <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700">
+              Save Company Profile
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

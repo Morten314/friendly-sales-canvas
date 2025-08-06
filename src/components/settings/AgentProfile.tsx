@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,7 +12,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export function AgentProfile() {
+interface AgentProfileProps {
+  onProfileUpdate?: () => void;
+  isEditMode?: boolean;
+  profileData?: any;
+}
+
+export function AgentProfile({ onProfileUpdate, isEditMode = false, profileData }: AgentProfileProps) {
   const [formData, setFormData] = useState({
     agentName: "",
     assignedTasks: "",
@@ -31,6 +37,28 @@ export function AgentProfile() {
     reporting: false,
   });
 
+  // Update form data when profileData changes
+  useEffect(() => {
+    if (profileData) {
+      setFormData({
+        agentName: profileData.agentName || "",
+        assignedTasks: profileData.assignedTasks || "",
+        domain: profileData.domain || "",
+        generalInstructions: profileData.generalInstructions || "",
+        tone: profileData.tone || "",
+        autonomyLevel: profileData.autonomyLevel || "",
+        frequency: profileData.frequency || "",
+      });
+      setCheckedItems(profileData.checkedItems || {
+        leadGeneration: false,
+        customerSupport: false,
+        contentCreation: false,
+        dataAnalysis: false,
+        reporting: false,
+      });
+    }
+  }, [profileData]);
+
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
@@ -39,9 +67,62 @@ export function AgentProfile() {
     setCheckedItems(prev => ({ ...prev, [item]: checked }));
   };
 
-  const handleSave = () => {
-    console.log("Agent Profile saved:", { ...formData, checkedItems });
-    // Implementation for saving agent profile
+  const handleSave = async () => {
+    const payload = {
+      agentName: formData.agentName,
+      assignedTasks: formData.assignedTasks,
+      domain: formData.domain,
+      generalInstructions: formData.generalInstructions,
+      tone: formData.tone,
+      autonomyLevel: formData.autonomyLevel,
+      frequency: formData.frequency,
+      checkedItems: checkedItems,
+    };
+
+    try {
+      const response = await fetch("https://backend-11kr.onrender.com/profile/agent", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log("Agent profile saved successfully:", result);
+      alert("Agent profile saved successfully!");
+
+      // Reset form fields
+      setFormData({
+        agentName: "",
+        assignedTasks: "",
+        domain: "",
+        generalInstructions: "",
+        tone: "",
+        autonomyLevel: "",
+        frequency: "",
+      });
+      setCheckedItems({
+        leadGeneration: false,
+        customerSupport: false,
+        contentCreation: false,
+        dataAnalysis: false,
+        reporting: false,
+      });
+
+      // Call the callback to notify parent component
+      if (onProfileUpdate) {
+        onProfileUpdate();
+      }
+
+    } catch (error) {
+      console.error("Error saving agent profile:", error);
+      alert("Failed to save agent profile. Please try again.");
+    }
   };
 
   return (
@@ -56,7 +137,7 @@ export function AgentProfile() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label htmlFor="agentName">Agent Name</Label>
-              <Select value={formData.agentName} onValueChange={(value) => handleInputChange("agentName", value)}>
+              <Select value={formData.agentName} onValueChange={(value) => handleInputChange("agentName", value)} disabled={!isEditMode}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select agent" />
                 </SelectTrigger>
@@ -77,12 +158,13 @@ export function AgentProfile() {
                 value={formData.domain}
                 onChange={(e) => handleInputChange("domain", e.target.value)}
                 placeholder="e.g., Lead generation agent, Customer support"
+                disabled={!isEditMode}
               />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="tone">Communication Tone</Label>
-              <Select value={formData.tone} onValueChange={(value) => handleInputChange("tone", value)}>
+              <Select value={formData.tone} onValueChange={(value) => handleInputChange("tone", value)} disabled={!isEditMode}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select tone" />
                 </SelectTrigger>
@@ -98,7 +180,7 @@ export function AgentProfile() {
 
             <div className="space-y-2">
               <Label htmlFor="autonomyLevel">Autonomy Level</Label>
-              <Select value={formData.autonomyLevel} onValueChange={(value) => handleInputChange("autonomyLevel", value)}>
+              <Select value={formData.autonomyLevel} onValueChange={(value) => handleInputChange("autonomyLevel", value)} disabled={!isEditMode}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select autonomy level" />
                 </SelectTrigger>
@@ -112,7 +194,7 @@ export function AgentProfile() {
 
             <div className="space-y-2">
               <Label htmlFor="frequency">Check-in Frequency</Label>
-              <Select value={formData.frequency} onValueChange={(value) => handleInputChange("frequency", value)}>
+              <Select value={formData.frequency} onValueChange={(value) => handleInputChange("frequency", value)} disabled={!isEditMode}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select frequency" />
                 </SelectTrigger>
@@ -134,6 +216,7 @@ export function AgentProfile() {
               onChange={(e) => handleInputChange("assignedTasks", e.target.value)}
               placeholder="Describe the specific tasks and responsibilities for this agent"
               rows={3}
+              disabled={!isEditMode}
             />
           </div>
 
@@ -146,6 +229,7 @@ export function AgentProfile() {
                     id={key}
                     checked={value}
                     onCheckedChange={(checked) => handleCheckboxChange(key, checked as boolean)}
+                    disabled={!isEditMode}
                   />
                   <Label htmlFor={key} className="text-sm">
                     {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
@@ -163,17 +247,20 @@ export function AgentProfile() {
               onChange={(e) => handleInputChange("generalInstructions", e.target.value)}
               placeholder="Specific guidelines and instructions for how the agent should operate"
               rows={4}
+              disabled={!isEditMode}
             />
           </div>
         </div>
 
-        <div className="mt-6 pt-4 border-t border-purple-200">
-          <div className="flex justify-between items-center">
-            <Button onClick={handleSave} className="bg-purple-600 hover:bg-purple-700">
-              Save Agent Profile
-            </Button>
+        {isEditMode && (
+          <div className="mt-6 pt-4 border-t border-purple-200">
+            <div className="flex justify-between items-center">
+              <Button onClick={handleSave} className="bg-purple-600 hover:bg-purple-700">
+                Save Agent Profile
+              </Button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

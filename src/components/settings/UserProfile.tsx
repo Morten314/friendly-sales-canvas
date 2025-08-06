@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,7 +18,13 @@ interface SocialMediaUrl {
   url: string;
 }
 
-export function UserProfile() {
+interface UserProfileProps {
+  onProfileUpdate?: () => void;
+  isEditMode?: boolean;
+  profileData?: any;
+}
+
+export function UserProfile({ onProfileUpdate, isEditMode = false, profileData }: UserProfileProps) {
   const [formData, setFormData] = useState({
     name: "",
     role: "",
@@ -30,6 +36,21 @@ export function UserProfile() {
 
   const [socialMediaUrls, setSocialMediaUrls] = useState<SocialMediaUrl[]>([]);
   const [selectedPlatform, setSelectedPlatform] = useState<string>("");
+
+  // Update form data when profileData changes
+  useEffect(() => {
+    if (profileData) {
+      setFormData({
+        name: profileData.name || "",
+        role: profileData.role || "",
+        department: profileData.department || "",
+        experienceLevel: profileData.experienceLevel || "",
+        professionalBackground: profileData.professionalBackground || "",
+        personalKPIs: profileData.personalKPIs || "",
+      });
+      setSocialMediaUrls(profileData.socialMediaUrls || []);
+    }
+  }, [profileData]);
 
   const socialPlatforms = [
     { value: "linkedin", label: "LinkedIn" },
@@ -70,40 +91,58 @@ export function UserProfile() {
   // };
 
   const handleSave = async () => {
-  try {
-    const response = await fetch("https://backend-11kr.onrender.com/profile/user", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ ...formData, socialMediaUrls }),
-    });
+    const payload = {
+      name: formData.name,
+      role: formData.role,
+      department: formData.department,
+      experienceLevel: formData.experienceLevel,
+      professionalBackground: formData.professionalBackground,
+      personalKPIs: formData.personalKPIs,
+      socialMediaUrls: socialMediaUrls.map(url => ({
+        platform: url.platform,
+        url: url.url,
+      })),
+    };
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    try {
+      const response = await fetch("https://backend-11kr.onrender.com/profile/user", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log("Profile saved successfully:", result);
+      alert("User profile saved successfully!");
+
+      // Reset form fields
+      setFormData({
+        name: "",
+        role: "",
+        department: "",
+        experienceLevel: "",
+        professionalBackground: "",
+        personalKPIs: "",
+      });
+      setSocialMediaUrls([]);
+      setSelectedPlatform("");
+
+      // Call the callback to notify parent component
+      if (onProfileUpdate) {
+        onProfileUpdate();
+      }
+
+    } catch (error) {
+      console.error("Error saving profile:", error);
+      alert("Failed to save profile. Please try again.");
     }
-
-    const result = await response.json();
-    console.log("Profile saved successfully:", result);
-
-    alert("User profile saved successfully!");
-
-    // Reset form fields
-    setFormData({
-      name: "",
-      role: "",
-      department: "",
-      experienceLevel: "",
-      professionalBackground: "",
-      personalKPIs: "",
-    });
-    setSocialMediaUrls([]);
-    setSelectedPlatform("");
-  } catch (error) {
-    console.error("Error saving profile:", error);
-    alert("Failed to save profile. Please try again.");
-  }
-};
+  };
 
   return (
     <div className="mt-6 space-y-6">
@@ -121,6 +160,7 @@ export function UserProfile() {
               value={formData.name}
               onChange={(e) => handleInputChange("name", e.target.value)}
               placeholder="Your full name"
+              disabled={!isEditMode}
             />
           </div>
 
@@ -131,12 +171,13 @@ export function UserProfile() {
               value={formData.role}
               onChange={(e) => handleInputChange("role", e.target.value)}
               placeholder="E.g., Sales Development Representative, Head of Marketing, RevOps Analyst, Founder & CEO"
+              disabled={!isEditMode}
             />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="department">Department</Label>
-            <Select value={formData.department} onValueChange={(value) => handleInputChange("department", value)}>
+            <Select value={formData.department} onValueChange={(value) => handleInputChange("department", value)} disabled={!isEditMode}>
               <SelectTrigger>
                 <SelectValue placeholder="Select department" />
               </SelectTrigger>
@@ -152,7 +193,7 @@ export function UserProfile() {
 
           <div className="space-y-2">
             <Label htmlFor="experienceLevel">Experience Level</Label>
-            <Select value={formData.experienceLevel} onValueChange={(value) => handleInputChange("experienceLevel", value)}>
+            <Select value={formData.experienceLevel} onValueChange={(value) => handleInputChange("experienceLevel", value)} disabled={!isEditMode}>
               <SelectTrigger>
                 <SelectValue placeholder="Select experience level" />
               </SelectTrigger>
@@ -172,6 +213,7 @@ export function UserProfile() {
               value={formData.professionalBackground}
               onChange={(e) => handleInputChange("professionalBackground", e.target.value)}
               placeholder="Brief, 1-2 sentence description."
+              disabled={!isEditMode}
             />
           </div>
 
@@ -182,6 +224,7 @@ export function UserProfile() {
               value={formData.personalKPIs}
               onChange={(e) => handleInputChange("personalKPIs", e.target.value)}
               placeholder="E.g.: SQL (Sales Qualified Lead) generation rate"
+              disabled={!isEditMode}
             />
           </div>
 
@@ -197,6 +240,7 @@ export function UserProfile() {
                   onChange={(e) => handleSocialMediaUrlChange(index, e.target.value)}
                   placeholder={`Enter your ${getPlatformLabel(socialUrl.platform)} URL`}
                   className="flex-1"
+                  disabled={!isEditMode}
                 />
                 <Button
                   type="button"
@@ -239,11 +283,13 @@ export function UserProfile() {
           </div>
         </div>
 
-        <div className="mt-6 pt-4 border-t border-green-200">
-          <Button onClick={handleSave} className="bg-green-600 hover:bg-green-700">
-            Save User Profile
-          </Button>
-        </div>
+        {isEditMode && (
+          <div className="mt-6 pt-4 border-t border-green-200">
+            <Button onClick={handleSave} className="bg-green-600 hover:bg-green-700">
+              Save User Profile
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
