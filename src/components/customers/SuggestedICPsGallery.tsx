@@ -254,9 +254,9 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
     try {
       console.log("=== MANUAL ICP REFRESH TRIGGERED ===");
       
-      // Add cache-busting parameter and force refresh
+      // Use the same endpoint as initial fetch but with cache busting
       const timestamp = Date.now();
-      const response = await fetch(`https://backend-11kr.onrender.com/icp?dynamic=true&cache=${timestamp}&force_regenerate=true`, {
+      const response = await fetch(`https://backend-11kr.onrender.com/icp?dynamic=true&refresh=true&t=${timestamp}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
