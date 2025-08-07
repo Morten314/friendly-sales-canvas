@@ -9,17 +9,30 @@ import MiniPieChart from "@/components/MiniPieChart";
 import { ICPSummaryOpportunity } from "./ICPSummaryOpportunity";
 import { SuggestedICPsGallery } from "./SuggestedICPsGallery";
 
+interface SuggestedICP {
+  id: string;
+  industry: string;
+  segment: string;
+  companySize: string;
+  decisionMakers: string[];
+  regions: string[];
+  keyAttributes: string[];
+  growthIndicator?: string;
+}
+
 export const ICPIntelligence = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [showProfilerChat, setShowProfilerChat] = useState(false);
   const [profilerMessage, setProfilerMessage] = useState("");
+  const [selectedICP, setSelectedICP] = useState<SuggestedICP | null>(null);
 
   const handleEditToggle = () => {
     setIsEditing(!isEditing);
     // TODO: Trigger context-specific chat suggestions after saving
   };
 
-  const handleICPSelect = (icp: any) => {
+  const handleICPSelect = (icp: SuggestedICP) => {
+    setSelectedICP(icp);
     // Scroll to ICP details section
     const detailsSection = document.getElementById('icp-details-section');
     if (detailsSection) {
@@ -48,7 +61,7 @@ export const ICPIntelligence = () => {
       {/* ICP Details Section */}
       <div id="icp-details-section">
         {/* ICP Summary & Market Opportunity Section */}
-        <ICPSummaryOpportunity />
+        <ICPSummaryOpportunity selectedICP={selectedICP} />
 
         {/* Agent-Level Contextual Mini Report */}
         

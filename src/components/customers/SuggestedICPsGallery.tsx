@@ -76,6 +76,13 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
         }));
         
         setSuggestedICPs(transformedData);
+        
+        // Auto-select the first ICP when data loads
+        if (transformedData.length > 0 && onICPSelect) {
+          setSelectedICP(transformedData[0].id);
+          onICPSelect(transformedData[0]);
+        }
+        
         setError(null);
       } catch (err) {
         console.error("Error fetching ICPs:", err);

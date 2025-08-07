@@ -8,7 +8,22 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import MiniLineChart from "@/components/MiniLineChart";
 import MiniPieChart from "@/components/MiniPieChart";
 
-export const ICPSummaryOpportunity = () => {
+interface SuggestedICP {
+  id: string;
+  industry: string;
+  segment: string;
+  companySize: string;
+  decisionMakers: string[];
+  regions: string[];
+  keyAttributes: string[];
+  growthIndicator?: string;
+}
+
+interface ICPSummaryOpportunityProps {
+  selectedICP: SuggestedICP | null;
+}
+
+export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProps) => {
   const [isMarketExpanded, setIsMarketExpanded] = useState(false);
   const [isBuyerMapExpanded, setIsBuyerMapExpanded] = useState(false);
   const [isCompetitiveExpanded, setIsCompetitiveExpanded] = useState(false);
@@ -362,7 +377,140 @@ export const ICPSummaryOpportunity = () => {
     }
   };
 
-  const currentData = mockData[activeCard as keyof typeof mockData];
+  // Generate dynamic data based on selectedICP
+  const generateICPData = (icp: SuggestedICP | null) => {
+    if (!icp) {
+      return {
+        title: "Select an ICP to view details",
+        blurb: "Choose an ICP card above to see detailed market analysis and opportunity assessment.",
+        marketSize: "--",
+        growth: "--",
+        urgency: "--",
+        timeToClose: "--",
+        corePersonas: 0,
+        topPainPoint: "--",
+        buyingTriggers: 0,
+        buyingTriggersArray: [],
+        competitors: 0,
+        winLossChange: "--",
+        buyingSignals: 0,
+        marketAnalysis: {
+          totalMarketSize: "--",
+          servicableMarket: "--",
+          targetableMarket: "--",
+          marketGrowth: "--",
+          segments: [],
+          keyChallenges: [],
+          strategicRecommendations: [],
+          signalsToMonitor: []
+        },
+        competitiveData: {
+          mainCompetitors: [],
+          marketShareShifts: "",
+          recentSignals: [],
+          competitiveMap: [],
+          competitiveNews: [],
+          buyingSignalsData: []
+        }
+      };
+    }
+
+    return {
+      title: `${icp.industry} - ${icp.segment}`,
+      blurb: `Target companies in ${icp.industry} sector, specifically ${icp.segment} segment, with ${icp.companySize} seeking solutions for their key challenges.`,
+      marketSize: icp.growthIndicator ? `€${Math.floor(Math.random() * 20 + 5)}B` : "€8.5B",
+      growth: icp.growthIndicator || "+15%",
+      urgency: "High",
+      timeToClose: "4-6 months",
+      corePersonas: icp.decisionMakers.length,
+      topPainPoint: icp.keyAttributes[0] || "Technology Modernization",
+      buyingTriggers: Math.floor(Math.random() * 5 + 3),
+      buyingTriggersArray: [
+        { trigger: "Digital Transformation", description: "Modernization initiatives drive technology investment." },
+        { trigger: "Regulatory Changes", description: "New compliance requirements push system upgrades." },
+        { trigger: "Market Expansion", description: "Growth into new markets requires scalable infrastructure." },
+        { trigger: "Competitive Pressure", description: "Need to match or exceed competitor capabilities." }
+      ],
+      competitors: Math.floor(Math.random() * 3 + 3),
+      winLossChange: `+${Math.floor(Math.random() * 15 + 5)}%`,
+      buyingSignals: Math.floor(Math.random() * 5 + 5),
+      marketAnalysis: {
+        totalMarketSize: `€${Math.floor(Math.random() * 15 + 8)}B`,
+        servicableMarket: `€${Math.floor(Math.random() * 6 + 3)}B`,
+        targetableMarket: `€${Math.floor(Math.random() * 2 + 1)}B`,
+        marketGrowth: icp.growthIndicator || "+18%",
+        segments: [
+          { name: "Enterprise", size: "€4.2B", growth: "+20%", share: "45%" },
+          { name: "Mid-Market", size: "€3.1B", growth: "+16%", share: "35%" },
+          { name: "SMB", size: "€1.8B", growth: "+22%", share: "20%" }
+        ],
+        keyChallenges: icp.keyAttributes,
+        strategicRecommendations: [
+          `Focus on ${icp.industry} sector-specific messaging and use cases`,
+          `Target ${icp.regions.join(", ")} regions for expansion opportunities`,
+          `Develop partnerships with key players in ${icp.segment} segment`,
+          "Build case studies showcasing successful implementations"
+        ],
+        signalsToMonitor: [
+          "Technology modernization announcements",
+          "Executive leadership changes in target companies",
+          "Regulatory updates affecting the industry",
+          "Funding rounds and growth initiatives"
+        ]
+      },
+      competitiveData: {
+        mainCompetitors: ["Market Leader A", "Emerging Player B", "Traditional Provider C"],
+        marketShareShifts: `${icp.industry} sector seeing 20% shift toward cloud-native solutions`,
+        recentSignals: [
+          { signal: "Technology Adoption", count: 12, trend: "up" },
+          { signal: "Market Expansion", count: 8, trend: "up" },
+          { signal: "Digital Initiatives", count: 15, trend: "up" },
+          { signal: "Partnership Activity", count: 6, trend: "stable" }
+        ],
+        competitiveMap: [
+          {
+            competitor: "Market Leader A",
+            segment: icp.segment,
+            share: "25%",
+            winsLosses: "Strong market presence",
+            differentiators: "Established ecosystem, proven track record"
+          },
+          {
+            competitor: "Emerging Player B",
+            segment: icp.segment,
+            share: "18%",
+            winsLosses: "Growing rapidly",
+            differentiators: "Modern technology, competitive pricing"
+          }
+        ],
+        competitiveNews: [
+          `Major ${icp.industry} company announces digital transformation initiative`,
+          `New regulations affecting ${icp.segment} segment create compliance opportunities`,
+          "Industry leader expands into new geographic markets"
+        ],
+        buyingSignalsData: [
+          {
+            signalType: "Executive Hiring",
+            description: `New ${icp.decisionMakers[0]} appointments in target companies`,
+            source: "LinkedIn",
+            recency: "2 weeks ago",
+            region: icp.regions[0],
+            type: "Hiring"
+          },
+          {
+            signalType: "Technology Investment",
+            description: `${icp.industry} companies investing in digital infrastructure`,
+            source: "Industry Report",
+            recency: "1 month ago",
+            region: icp.regions[0],
+            type: "Investment"
+          }
+        ]
+      }
+    };
+  };
+
+  const currentData = generateICPData(selectedICP);
 
   const filteredBuyingSignals = currentData.competitiveData.buyingSignalsData.filter(signal => {
     const regionMatch = signalRegionFilter === "all" || signal.region === signalRegionFilter;
@@ -383,23 +531,11 @@ export const ICPSummaryOpportunity = () => {
                   Overview of target customer profile and market dynamics
                 </CardDescription>
               </div>
-              <div className="flex gap-2">
-                {[1, 2, 3].map((cardNum) => (
-                  <Button
-                    key={cardNum}
-                    variant={activeCard === cardNum ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setActiveCard(cardNum)}
-                    className={`text-xs ${
-                      activeCard === cardNum 
-                        ? "bg-blue-600 text-white hover:bg-blue-700" 
-                        : "hover:bg-gray-50"
-                    }`}
-                  >
-                    Card {cardNum}
-                  </Button>
-                ))}
-              </div>
+              {selectedICP && (
+                <Badge variant="secondary" className="bg-blue-100 text-blue-700">
+                  {selectedICP.industry} - {selectedICP.segment}
+                </Badge>
+              )}
             </div>
           </CardHeader>
           
