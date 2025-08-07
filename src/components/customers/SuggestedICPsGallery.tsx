@@ -61,6 +61,11 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
         
         const data = await response.json();
         console.log("Raw API response:", data);
+        console.log("Data type:", typeof data);
+        console.log("Data keys:", Object.keys(data || {}));
+        console.log("Data.data exists:", !!data?.data);
+        console.log("Data.icps exists:", !!data?.icps);
+        console.log("Data.profiles exists:", !!data?.profiles);
         
         // Ensure data is an array before transforming
         const icpArray = Array.isArray(data) ? data : Array.isArray(data.data) ? data.data : [];
