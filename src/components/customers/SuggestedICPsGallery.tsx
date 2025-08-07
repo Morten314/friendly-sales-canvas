@@ -74,23 +74,26 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
         console.log("ICP Array:", icpArray);
         
         // Transform backend data to match our interface
-        const transformedData = icpArray.map((icp: any, index: number) => ({
-          id: icp.id || `icp-${index}`,
-          industry: icp.industry || "",
-          segment: icp.segment || "",
-          companySize: icp.companySize || icp.company_size || "",
-          decisionMakers: Array.isArray(icp.decisionMakers) ? icp.decisionMakers : 
-                         Array.isArray(icp.decision_makers) ? icp.decision_makers :
-                         typeof icp.decisionMakers === 'string' ? icp.decisionMakers.split(',').map((s: string) => s.trim()) :
-                         typeof icp.decision_makers === 'string' ? icp.decision_makers.split(',').map((s: string) => s.trim()) : [],
-          regions: Array.isArray(icp.regions) ? icp.regions :
-                   typeof icp.regions === 'string' ? icp.regions.split(',').map((s: string) => s.trim()) : [],
-          keyAttributes: Array.isArray(icp.keyAttributes) ? icp.keyAttributes :
-                        Array.isArray(icp.key_attributes) ? icp.key_attributes :
-                        typeof icp.keyAttributes === 'string' ? icp.keyAttributes.split(',').map((s: string) => s.trim()) :
-                        typeof icp.key_attributes === 'string' ? icp.key_attributes.split(',').map((s: string) => s.trim()) : [],
-          growthIndicator: icp.growthIndicator || icp.growth_indicator || undefined
-        }));
+        const transformedData = icpArray.map((icp: any, index: number) => {
+          console.log("Processing ICP item:", icp);
+          return {
+            id: icp.id || `icp-${index}`,
+            industry: icp.industry || "",
+            segment: icp.segment || "",
+            companySize: icp.companySize || icp.company_size || "",
+            decisionMakers: Array.isArray(icp.decisionMakers) ? icp.decisionMakers : 
+                           Array.isArray(icp.decision_makers) ? icp.decision_makers :
+                           typeof icp.decisionMakers === 'string' ? icp.decisionMakers.split(',').map((s: string) => s.trim()) :
+                           typeof icp.decision_makers === 'string' ? icp.decision_makers.split(',').map((s: string) => s.trim()) : [],
+            regions: Array.isArray(icp.regions) ? icp.regions :
+                     typeof icp.regions === 'string' ? icp.regions.split(',').map((s: string) => s.trim()) : [],
+            keyAttributes: Array.isArray(icp.keyAttributes) ? icp.keyAttributes :
+                          Array.isArray(icp.key_attributes) ? icp.key_attributes :
+                          typeof icp.keyAttributes === 'string' ? icp.keyAttributes.split(',').map((s: string) => s.trim()) :
+                          typeof icp.key_attributes === 'string' ? icp.key_attributes.split(',').map((s: string) => s.trim()) : [],
+            growthIndicator: icp.growthIndicator || icp.growth_indicator || undefined
+          };
+        });
         
         console.log("Transformed ICP data:", transformedData);
         
