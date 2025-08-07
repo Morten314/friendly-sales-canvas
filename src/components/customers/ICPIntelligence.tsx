@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +25,22 @@ export const ICPIntelligence = () => {
   const [showProfilerChat, setShowProfilerChat] = useState(false);
   const [profilerMessage, setProfilerMessage] = useState("");
   const [selectedICP, setSelectedICP] = useState<SuggestedICP | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // Listen for company profile updates
+  useEffect(() => {
+    const handleCompanyProfileUpdate = (event: CustomEvent) => {
+      console.log("=== COMPANY PROFILE UPDATED - TRIGGERING ICP REFRESH ===");
+      console.log("Profile update event:", event.detail);
+      setRefreshTrigger(prev => prev + 1);
+    };
+
+    window.addEventListener('companyProfileUpdated', handleCompanyProfileUpdate as EventListener);
+    
+    return () => {
+      window.removeEventListener('companyProfileUpdated', handleCompanyProfileUpdate as EventListener);
+    };
+  }, []);
 
   const handleEditToggle = () => {
     setIsEditing(!isEditing);
@@ -57,7 +73,11 @@ export const ICPIntelligence = () => {
       </div>
 
       {/* Suggested ICPs Gallery */}
-      <SuggestedICPsGallery onICPSelect={handleICPSelect} onProfilerChatOpen={handleProfilerChatOpen} />
+      <SuggestedICPsGallery 
+        onICPSelect={handleICPSelect} 
+        onProfilerChatOpen={handleProfilerChatOpen}
+        refreshTrigger={refreshTrigger}
+      />
 
       {/* ICP Details Section */}
       <div id="icp-details-section">
