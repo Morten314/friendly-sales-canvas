@@ -112,30 +112,7 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
       } catch (err) {
         console.error("Error fetching ICPs:", err);
         setError(err instanceof Error ? err.message : "Failed to load ICPs");
-        
-        // Only use fallback data on actual error
-        const fallbackData = [
-          {
-            id: "fintech-neobanks",
-            industry: "Fintech",
-            segment: "Neobanks",
-            companySize: "50–200 employees",
-            decisionMakers: ["CTO", "Head of Digital"],
-            regions: ["North America", "DACH"],
-            keyAttributes: ["High cloud adoption", "Regulatory compliance focus"],
-            growthIndicator: "5.6% CAGR"
-          }
-        ];
-        
-        console.log("Using fallback data due to error:", fallbackData);
-        setSuggestedICPs(fallbackData);
-        
-        // Auto-select the first ICP
-        if (fallbackData.length > 0 && onICPSelect) {
-          console.log("Auto-selecting first ICP from fallback:", fallbackData[0]);
-          setSelectedICP(fallbackData[0].id);
-          onICPSelect(fallbackData[0]);
-        }
+        setSuggestedICPs([]); // Clear ICPs on error instead of using fallback
       } finally {
         setLoading(false);
       }
@@ -366,7 +343,30 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
           <p className="text-red-600 mb-2">Failed to load ICPs from backend</p>
           <p className="text-sm text-gray-600">{error}</p>
-          <p className="text-sm text-gray-500 mt-2">Showing fallback data</p>
+          <Button 
+            onClick={refreshICPs}
+            className="mt-3"
+            size="sm"
+          >
+            Try Again
+          </Button>
+        </div>
+      )}
+
+      {/* No ICPs State */}
+      {!loading && !error && suggestedICPs.length === 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-8 text-center">
+          <Bot className="h-12 w-12 text-blue-600 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">No ICPs Found</h3>
+          <p className="text-sm text-gray-600 mb-4">
+            Update your company profile in Settings and click "Refresh ICPs" to generate personalized ideal customer profiles.
+          </p>
+          <Button 
+            onClick={refreshICPs}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            Generate ICPs
+          </Button>
         </div>
       )}
 
