@@ -76,7 +76,8 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
         // Transform backend data to match our interface
         const transformedData = icpArray.map((icp: any, index: number) => {
           console.log("Processing ICP item:", icp);
-          return {
+          console.log("ICP keys:", Object.keys(icp));
+          const transformed = {
             id: icp.id || `icp-${index}`,
             industry: icp.industry || "",
             segment: icp.segment || "",
@@ -93,6 +94,8 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
                           typeof icp.key_attributes === 'string' ? icp.key_attributes.split(',').map((s: string) => s.trim()) : [],
             growthIndicator: icp.growthIndicator || icp.growth_indicator || undefined
           };
+          console.log("Transformed item:", transformed);
+          return transformed;
         });
         
         console.log("Transformed ICP data:", transformedData);
@@ -133,6 +136,7 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
         
         const finalData = transformedData.length > 0 ? transformedData : fallbackData;
         console.log("Final data to display:", finalData);
+        console.log("Setting suggestedICPs state with:", finalData.map(item => ({ id: item.id, industry: item.industry, segment: item.segment })));
         setSuggestedICPs(finalData);
         
         // Auto-select the first ICP when data loads
