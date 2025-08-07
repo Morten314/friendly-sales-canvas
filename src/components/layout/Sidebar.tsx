@@ -438,8 +438,10 @@ export function Sidebar() {
                   {/* Individual agents */}
                   {navItems.slice(1, 6).map((item) => (
                     <li key={item.label}>
-                      <Link 
-                        to={item.href}
+                      <a 
+                        href={item.href} 
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className={cn(
                           "flex items-center px-4 py-2 text-sm text-gray-600 hover:bg-sales-gray hover:text-sales-blue rounded-lg transition-colors ml-9",
                           window.location.pathname === item.href && "bg-blue-50 text-sales-blue"
@@ -447,7 +449,7 @@ export function Sidebar() {
                       >
                         <item.icon className="h-4 w-4" />
                         <span className="ml-3">{item.label}</span>
-                      </Link>
+                      </a>
                     </li>
                   ))}
                 </CollapsibleContent>
