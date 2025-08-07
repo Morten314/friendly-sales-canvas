@@ -252,20 +252,19 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
     try {
       console.log("Manual ICP refresh triggered...");
       
-      // First try to trigger ICP generation
-      const generateResponse = await fetch("https://backend-11kr.onrender.com/generate-icp", {
+      // Try to send company profile data to ICP endpoint
+      const generateResponse = await fetch("https://backend-11kr.onrender.com/icp", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ action: "regenerate" }),
       });
       
-      if (generateResponse.ok) {
-        console.log("ICP generation triggered, waiting 2 seconds...");
-        // Wait a bit for generation to complete
-        await new Promise(resolve => setTimeout(resolve, 2000));
-      }
+      console.log("ICP POST response:", generateResponse.status);
+      
+      // Wait a bit then fetch updated ICPs
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Then fetch updated ICPs
       const response = await fetch("https://backend-11kr.onrender.com/icp", {

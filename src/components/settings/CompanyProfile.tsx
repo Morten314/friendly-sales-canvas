@@ -491,7 +491,8 @@ export function CompanyProfile({ onProfileUpdate, isEditMode = false, profileDat
       // Trigger ICP regeneration after saving company profile
       try {
         console.log("Triggering ICP regeneration with company data...");
-        const icpResponse = await fetch("https://backend-11kr.onrender.com/generate-icp", {
+        // Since /generate-icp doesn't exist, let's try updating the ICP endpoint directly
+        const icpResponse = await fetch("https://backend-11kr.onrender.com/icp", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -502,7 +503,7 @@ export function CompanyProfile({ onProfileUpdate, isEditMode = false, profileDat
         if (icpResponse.ok) {
           console.log("ICP regeneration triggered successfully");
         } else {
-          console.warn("ICP regeneration failed but company profile was saved");
+          console.warn("ICP endpoint returned:", icpResponse.status);
         }
       } catch (icpError) {
         console.warn("Failed to trigger ICP regeneration:", icpError);
