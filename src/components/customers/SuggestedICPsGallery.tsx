@@ -53,8 +53,11 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
         
         const data = await response.json();
         
+        // Ensure data is an array before transforming
+        const icpArray = Array.isArray(data) ? data : Array.isArray(data.data) ? data.data : [];
+        
         // Transform backend data to match our interface
-        const transformedData = data.map((icp: any, index: number) => ({
+        const transformedData = icpArray.map((icp: any, index: number) => ({
           id: icp.id || `icp-${index}`,
           industry: icp.industry || "",
           segment: icp.segment || "",
