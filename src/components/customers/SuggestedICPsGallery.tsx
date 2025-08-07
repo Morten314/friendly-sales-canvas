@@ -254,8 +254,19 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
     try {
       console.log("=== MANUAL ICP REFRESH TRIGGERED ===");
       
-      // Fetch with refresh=true to trigger new generation
-      const response = await fetch("https://backend-11kr.onrender.com/icp?dynamic=true&refresh=true", {
+      // First trigger regeneration with POST
+      const regenResponse = await fetch("https://backend-11kr.onrender.com/icp", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ regenerate: true })
+      });
+      
+      console.log("Regeneration API Response status:", regenResponse.status);
+      
+      // Then fetch the new data
+      const response = await fetch("https://backend-11kr.onrender.com/icp?dynamic=true", {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
