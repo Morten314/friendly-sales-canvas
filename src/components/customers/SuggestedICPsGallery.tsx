@@ -68,7 +68,9 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
         console.log("Data.profiles exists:", !!data?.profiles);
         
         // Ensure data is an array before transforming
-        const icpArray = Array.isArray(data) ? data : Array.isArray(data.data) ? data.data : [];
+        const icpArray = Array.isArray(data) ? data : 
+                        Array.isArray(data.suggestedICPs) ? data.suggestedICPs :
+                        Array.isArray(data.data) ? data.data : [];
         console.log("ICP Array:", icpArray);
         
         // Transform backend data to match our interface
@@ -190,7 +192,7 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
     };
 
     fetchICPs();
-  }, [onICPSelect]);
+  }, []); // Remove onICPSelect dependency to prevent infinite loop
 
   const industryOptions = ["Fintech", "Healthcare SaaS", "Logistics Tech", "EdTech", "PropTech", "Cybersecurity", "InsurTech", "Clean Energy"];
   const companySizeOptions = ["10–50 employees", "50–200 employees", "100–500 employees", "200–800 employees", "150–600 employees"];
