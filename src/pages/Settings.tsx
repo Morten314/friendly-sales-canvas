@@ -159,7 +159,7 @@ const Settings = () => {
         return <CompanyProfile {...commonProps} />;
       case "user":
         return <UserProfile {...commonProps} />;
-      case "agent":
+      case "agent_name":
         return <AgentProfile {...commonProps} />;
       default:
         return null;
@@ -185,7 +185,7 @@ const Settings = () => {
                 <SelectContent>
                   <SelectItem value="company">Company Profile</SelectItem>
                   <SelectItem value="user">User Profile</SelectItem>
-                  <SelectItem value="agent">Agent Profile</SelectItem>
+                  <SelectItem value="agent_name">Agent Profile</SelectItem>
                 </SelectContent>
               </Select>
             </div>
