@@ -32,6 +32,7 @@ export const ICPIntelligence = () => {
   };
 
   const handleICPSelect = (icp: SuggestedICP) => {
+    console.log("ICP selected in ICPIntelligence:", icp);
     setSelectedICP(icp);
     // Scroll to ICP details section
     const detailsSection = document.getElementById('icp-details-section');

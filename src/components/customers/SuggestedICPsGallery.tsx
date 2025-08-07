@@ -44,17 +44,27 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
   useEffect(() => {
     const fetchICPs = async () => {
       try {
+        console.log("Starting ICP fetch from API...");
         setLoading(true);
-        const response = await fetch("https://backend-11kr.onrender.com/icp");
+        const response = await fetch("https://backend-11kr.onrender.com/icp", {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        console.log("API Response status:", response.status);
         
         if (!response.ok) {
           throw new Error(`Failed to fetch ICPs: ${response.status}`);
         }
         
         const data = await response.json();
+        console.log("Raw API response:", data);
         
         // Ensure data is an array before transforming
         const icpArray = Array.isArray(data) ? data : Array.isArray(data.data) ? data.data : [];
+        console.log("ICP Array:", icpArray);
         
         // Transform backend data to match our interface
         const transformedData = icpArray.map((icp: any, index: number) => ({
@@ -75,10 +85,12 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
           growthIndicator: icp.growthIndicator || icp.growth_indicator || undefined
         }));
         
+        console.log("Transformed ICP data:", transformedData);
         setSuggestedICPs(transformedData);
         
         // Auto-select the first ICP when data loads
         if (transformedData.length > 0 && onICPSelect) {
+          console.log("Auto-selecting first ICP:", transformedData[0]);
           setSelectedICP(transformedData[0].id);
           onICPSelect(transformedData[0]);
         }
