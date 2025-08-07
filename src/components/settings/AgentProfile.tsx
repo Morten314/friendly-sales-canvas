@@ -80,7 +80,7 @@ export function AgentProfile({ onProfileUpdate, isEditMode = false, profileData 
     };
 
     try {
-      const response = await fetch("https://backend-11kr.onrender.com/profile/agent", {
+      const response = await fetch("https://backend-11kr.onrender.com/profile/agent_name", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
