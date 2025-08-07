@@ -46,7 +46,7 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
       try {
         console.log("Starting ICP fetch from API...");
         setLoading(true);
-        const response = await fetch("https://backend-11kr.onrender.com/icp", {
+        const response = await fetch("https://backend-11kr.onrender.com/icp?dynamic=true", {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -266,8 +266,8 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
       // Wait a bit then fetch updated ICPs
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Then fetch updated ICPs
-      const response = await fetch("https://backend-11kr.onrender.com/icp", {
+      // Then fetch updated ICPs with dynamic parameter
+      const response = await fetch("https://backend-11kr.onrender.com/icp?dynamic=true&refresh=true", {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
