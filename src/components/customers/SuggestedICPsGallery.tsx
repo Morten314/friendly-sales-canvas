@@ -264,40 +264,12 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
     try {
       console.log("=== MANUAL ICP REFRESH TRIGGERED ===");
       
-      // First, fetch the current company profile to include in the regeneration request
-      let companyProfile = null;
-      try {
-        const profileResponse = await fetch("https://backend-11kr.onrender.com/profile/company", {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' },
-        });
-        if (profileResponse.ok) {
-          companyProfile = await profileResponse.json();
-          console.log("=== FETCHED COMPANY PROFILE FOR REGENERATION ===", companyProfile);
-        }
-      } catch (error) {
-        console.log("Could not fetch company profile, proceeding without it");
-      }
-
-      // Use POST with profile data to force regeneration
-      const timestamp = Date.now();
-      const payload = {
-        action: 'regenerate',
-        forceRefresh: true,
-        timestamp: timestamp,
-        companyProfile: companyProfile,
-        cacheBust: Math.random()
-      };
-
-      const response = await fetch(`https://backend-11kr.onrender.com/icp/regenerate`, {
-        method: 'POST',
+      // Simple GET request to /icp endpoint
+      const response = await fetch(`https://backend-11kr.onrender.com/icp`, {
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0',
         },
-        body: JSON.stringify(payload),
       });
       
       console.log("Refresh API Response status:", response.status);
