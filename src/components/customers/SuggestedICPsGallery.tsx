@@ -46,7 +46,7 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
       try {
         console.log("Starting ICP fetch from API...");
         setLoading(true);
-        const response = await fetch("https://backend-11kr.onrender.com/icp?dynamic=true", {
+        const response = await fetch("https://backend-11kr.onrender.com/icp?dynamic=true&refresh=false", {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
