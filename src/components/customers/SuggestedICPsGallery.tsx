@@ -246,6 +246,85 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
     setChatOpen(true);
   };
 
+  // Add refresh function
+  const refreshICPs = async () => {
+    setLoading(true);
+    try {
+      console.log("Manual ICP refresh triggered...");
+      
+      // First try to trigger ICP generation
+      const generateResponse = await fetch("https://backend-11kr.onrender.com/generate-icp", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({}),
+      });
+      
+      if (generateResponse.ok) {
+        console.log("ICP generation triggered, waiting 2 seconds...");
+        // Wait a bit for generation to complete
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+      
+      // Then fetch updated ICPs
+      const response = await fetch("https://backend-11kr.onrender.com/icp", {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        const icpArray = Array.isArray(data) ? data : 
+                        Array.isArray(data.suggestedICPs) ? data.suggestedICPs :
+                        Array.isArray(data.data) ? data.data : [];
+        
+        if (icpArray.length > 0) {
+          const transformedData = icpArray.map((icp: any, index: number) => ({
+            id: icp.id || `icp-${index}`,
+            industry: icp.industry || "",
+            segment: icp.segment || "",
+            companySize: icp.companySize || icp.company_size || "",
+            decisionMakers: Array.isArray(icp.decisionMakers) ? icp.decisionMakers : 
+                           Array.isArray(icp.decision_makers) ? icp.decision_makers :
+                           typeof icp.decisionMakers === 'string' ? icp.decisionMakers.split(',').map((s: string) => s.trim()) :
+                           typeof icp.decision_makers === 'string' ? icp.decision_makers.split(',').map((s: string) => s.trim()) : [],
+            regions: Array.isArray(icp.regions) ? icp.regions :
+                     typeof icp.regions === 'string' ? icp.regions.split(',').map((s: string) => s.trim()) : [],
+            keyAttributes: Array.isArray(icp.keyAttributes) ? icp.keyAttributes :
+                          Array.isArray(icp.key_attributes) ? icp.key_attributes :
+                          typeof icp.keyAttributes === 'string' ? icp.keyAttributes.split(',').map((s: string) => s.trim()) :
+                          typeof icp.key_attributes === 'string' ? icp.key_attributes.split(',').map((s: string) => s.trim()) : [],
+            growthIndicator: icp.growthIndicator || icp.growth_indicator || undefined
+          }));
+          
+          console.log("Refreshed ICP data:", transformedData);
+          setSuggestedICPs(transformedData);
+          
+          if (transformedData.length > 0 && onICPSelect) {
+            setSelectedICP(transformedData[0].id);
+            onICPSelect(transformedData[0]);
+          }
+          
+          toast({
+            title: "ICPs refreshed",
+            description: "New ICP suggestions loaded successfully",
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Failed to refresh ICPs:", error);
+      toast({
+        title: "Refresh failed",
+        description: "Could not load new ICP suggestions",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Section Header */}
@@ -257,19 +336,36 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
           </p>
         </div>
         
-        {/* Persistent Profiler Chat Icon */}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={openProfilerChat}
-          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 flex items-center gap-2 relative"
-          title="Chat with Profiler"
-        >
-          <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center animate-pulse">
-            <Bot className="h-4 w-4 text-white" />
-          </div>
-          Chat with Profiler
-        </Button>
+        <div className="flex gap-2">
+          {/* Refresh Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={refreshICPs}
+            disabled={loading}
+            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 flex items-center gap-2"
+            title="Generate new ICPs"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            {loading ? "Generating..." : "Refresh ICPs"}
+          </Button>
+          
+          {/* Persistent Profiler Chat Icon */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={openProfilerChat}
+            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 flex items-center gap-2 relative"
+            title="Chat with Profiler"
+          >
+            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center animate-pulse">
+              <Bot className="h-4 w-4 text-white" />
+            </div>
+            Chat with Profiler
+          </Button>
+        </div>
       </div>
 
       {/* Loading State */}
