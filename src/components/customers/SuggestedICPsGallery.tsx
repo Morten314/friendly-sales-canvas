@@ -91,13 +91,50 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
         }));
         
         console.log("Transformed ICP data:", transformedData);
-        setSuggestedICPs(transformedData);
+        
+        // If no data from API, use fallback data
+        const fallbackData = [
+          {
+            id: "fintech-neobanks",
+            industry: "Fintech",
+            segment: "Neobanks",
+            companySize: "50–200 employees",
+            decisionMakers: ["CTO", "Head of Digital"],
+            regions: ["North America", "DACH"],
+            keyAttributes: ["High cloud adoption", "Regulatory compliance focus"],
+            growthIndicator: "5.6% CAGR"
+          },
+          {
+            id: "healthcare-saas",
+            industry: "Healthcare SaaS", 
+            segment: "Patient Data Analytics",
+            companySize: "100–500 employees",
+            decisionMakers: ["Chief Medical Officer", "IT Director"],
+            regions: ["North America", "EU"],
+            keyAttributes: ["HIPAA compliance", "AI/ML integration"],
+            growthIndicator: "8.2% CAGR"
+          },
+          {
+            id: "logistics-tech",
+            industry: "Logistics Tech",
+            segment: "Last-Mile Delivery",
+            companySize: "200–800 employees", 
+            decisionMakers: ["VP Operations", "Technology Director"],
+            regions: ["SEA", "LATAM"],
+            keyAttributes: ["API-first approach", "Real-time tracking"],
+            growthIndicator: "12.1% CAGR"
+          }
+        ];
+        
+        const finalData = transformedData.length > 0 ? transformedData : fallbackData;
+        console.log("Final data to display:", finalData);
+        setSuggestedICPs(finalData);
         
         // Auto-select the first ICP when data loads
-        if (transformedData.length > 0 && onICPSelect) {
-          console.log("Auto-selecting first ICP:", transformedData[0]);
-          setSelectedICP(transformedData[0].id);
-          onICPSelect(transformedData[0]);
+        if (finalData.length > 0 && onICPSelect) {
+          console.log("Auto-selecting first ICP:", finalData[0]);
+          setSelectedICP(finalData[0].id);
+          onICPSelect(finalData[0]);
         }
         
         setError(null);
