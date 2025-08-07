@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -36,88 +36,78 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
   const [originalValues, setOriginalValues] = useState<Record<string, any>>({});
   const { toast } = useToast();
 
-  const [suggestedICPs, setSuggestedICPs] = useState<SuggestedICP[]>([
-    {
-      id: "fintech-neobanks",
-      industry: "Fintech",
-      segment: "Neobanks",
-      companySize: "50–200 employees",
-      decisionMakers: ["CTO", "Head of Digital"],
-      regions: ["North America", "DACH"],
-      keyAttributes: ["High cloud adoption", "Regulatory compliance focus"],
-      growthIndicator: "5.6% CAGR"
-    },
-    {
-      id: "healthcare-saas",
-      industry: "Healthcare SaaS", 
-      segment: "Patient Data Analytics",
-      companySize: "100–500 employees",
-      decisionMakers: ["Chief Medical Officer", "IT Director"],
-      regions: ["North America", "EU"],
-      keyAttributes: ["HIPAA compliance", "AI/ML integration"],
-      growthIndicator: "8.2% CAGR"
-    },
-    {
-      id: "logistics-tech",
-      industry: "Logistics Tech",
-      segment: "Last-Mile Delivery",
-      companySize: "200–800 employees",
-      decisionMakers: ["VP Operations", "CTO"],
-      regions: ["SEA", "North America"],
-      keyAttributes: ["Real-time tracking", "API-first approach"],
-      growthIndicator: "12.1% CAGR"
-    },
-    {
-      id: "edtech-platforms",
-      industry: "EdTech",
-      segment: "Learning Management",
-      companySize: "80–300 employees",
-      decisionMakers: ["Chief Academic Officer", "IT Manager"],
-      regions: ["Global", "LATAM"],
-      keyAttributes: ["Mobile-first", "Analytics-driven"],
-      growthIndicator: "9.4% CAGR"
-    },
-    {
-      id: "proptech-crm",
-      industry: "PropTech",
-      segment: "Real Estate CRM",
-      companySize: "150–600 employees",
-      decisionMakers: ["VP Sales", "Technology Director"],
-      regions: ["North America", "ANZ"],
-      keyAttributes: ["Integration capabilities", "Workflow automation"],
-      growthIndicator: "6.8% CAGR"
-    },
-    {
-      id: "cybersecurity-startups",
-      industry: "Cybersecurity",
-      segment: "Zero Trust Solutions",
-      companySize: "75–400 employees",
-      decisionMakers: ["CISO", "VP Engineering"],
-      regions: ["North America", "EU"],
-      keyAttributes: ["SOC 2 compliance", "Cloud-native architecture"],
-      growthIndicator: "15.3% CAGR"
-    },
-    {
-      id: "insurtech-platforms",
-      industry: "InsurTech",
-      segment: "Digital Claims Processing",
-      companySize: "100–350 employees",
-      decisionMakers: ["Chief Claims Officer", "Head of Technology"],
-      regions: ["North America", "UK"],
-      keyAttributes: ["Automation focus", "Regulatory expertise"],
-      growthIndicator: "11.7% CAGR"
-    },
-    {
-      id: "renewable-energy",
-      industry: "Clean Energy",
-      segment: "Solar Management Platforms",
-      companySize: "120–500 employees",
-      decisionMakers: ["VP Operations", "Chief Technology Officer"],
-      regions: ["North America", "EU", "ANZ"],
-      keyAttributes: ["IoT integration", "Sustainability reporting"],
-      growthIndicator: "18.2% CAGR"
-    }
-  ]);
+  const [suggestedICPs, setSuggestedICPs] = useState<SuggestedICP[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch ICPs from backend
+  useEffect(() => {
+    const fetchICPs = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch("https://backend-11kr.onrender.com/icp");
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch ICPs: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        // Transform backend data to match our interface
+        const transformedData = data.map((icp: any, index: number) => ({
+          id: icp.id || `icp-${index}`,
+          industry: icp.industry || "",
+          segment: icp.segment || "",
+          companySize: icp.companySize || icp.company_size || "",
+          decisionMakers: Array.isArray(icp.decisionMakers) ? icp.decisionMakers : 
+                         Array.isArray(icp.decision_makers) ? icp.decision_makers :
+                         typeof icp.decisionMakers === 'string' ? icp.decisionMakers.split(',').map((s: string) => s.trim()) :
+                         typeof icp.decision_makers === 'string' ? icp.decision_makers.split(',').map((s: string) => s.trim()) : [],
+          regions: Array.isArray(icp.regions) ? icp.regions :
+                   typeof icp.regions === 'string' ? icp.regions.split(',').map((s: string) => s.trim()) : [],
+          keyAttributes: Array.isArray(icp.keyAttributes) ? icp.keyAttributes :
+                        Array.isArray(icp.key_attributes) ? icp.key_attributes :
+                        typeof icp.keyAttributes === 'string' ? icp.keyAttributes.split(',').map((s: string) => s.trim()) :
+                        typeof icp.key_attributes === 'string' ? icp.key_attributes.split(',').map((s: string) => s.trim()) : [],
+          growthIndicator: icp.growthIndicator || icp.growth_indicator || undefined
+        }));
+        
+        setSuggestedICPs(transformedData);
+        setError(null);
+      } catch (err) {
+        console.error("Error fetching ICPs:", err);
+        setError(err instanceof Error ? err.message : "Failed to load ICPs");
+        
+        // Fallback to mock data if API fails
+        setSuggestedICPs([
+          {
+            id: "fintech-neobanks",
+            industry: "Fintech",
+            segment: "Neobanks",
+            companySize: "50–200 employees",
+            decisionMakers: ["CTO", "Head of Digital"],
+            regions: ["North America", "DACH"],
+            keyAttributes: ["High cloud adoption", "Regulatory compliance focus"],
+            growthIndicator: "5.6% CAGR"
+          },
+          {
+            id: "healthcare-saas",
+            industry: "Healthcare SaaS", 
+            segment: "Patient Data Analytics",
+            companySize: "100–500 employees",
+            decisionMakers: ["Chief Medical Officer", "IT Director"],
+            regions: ["North America", "EU"],
+            keyAttributes: ["HIPAA compliance", "AI/ML integration"],
+            growthIndicator: "8.2% CAGR"
+          }
+        ]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchICPs();
+  }, []);
 
   const industryOptions = ["Fintech", "Healthcare SaaS", "Logistics Tech", "EdTech", "PropTech", "Cybersecurity", "InsurTech", "Clean Energy"];
   const companySizeOptions = ["10–50 employees", "50–200 employees", "100–500 employees", "200–800 employees", "150–600 employees"];
@@ -247,17 +237,35 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
         </Button>
       </div>
 
+      {/* Loading State */}
+      {loading && (
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <span className="ml-3 text-gray-600">Loading ICPs...</span>
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && !loading && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+          <p className="text-red-600 mb-2">Failed to load ICPs from backend</p>
+          <p className="text-sm text-gray-600">{error}</p>
+          <p className="text-sm text-gray-500 mt-2">Showing fallback data</p>
+        </div>
+      )}
+
       {/* Carousel Container */}
-      <div className="relative px-16">
-        <Carousel
-          opts={{
-            align: "start",
-            loop: false,
-          }}
-          className="w-full"
-        >
-          <CarouselContent className="-ml-4">
-            {suggestedICPs.map((icp) => (
+      {!loading && (
+        <div className="relative px-16">
+          <Carousel
+            opts={{
+              align: "start",
+              loop: false,
+            }}
+            className="w-full"
+          >
+            <CarouselContent className="-ml-4">
+              {suggestedICPs.map((icp) => (
               <CarouselItem key={icp.id} className="pl-4 basis-[420px]">
                 <Card 
                   className={`h-full transition-all duration-200 hover:shadow-lg border ${
@@ -458,7 +466,8 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
           <CarouselPrevious className="-left-12 bg-white shadow-md border border-gray-200 hover:bg-gray-50 text-gray-700 h-10 w-10" />
           <CarouselNext className="-right-12 bg-white shadow-md border border-gray-200 hover:bg-gray-50 text-gray-700 h-10 w-10" />
         </Carousel>
-      </div>
+        </div>
+      )}
 
       {/* Profiler Chat Panel */}
       <ProfilerChatPanel 
