@@ -100,8 +100,8 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
         console.error("Error fetching ICPs:", err);
         setError(err instanceof Error ? err.message : "Failed to load ICPs");
         
-        // Fallback to mock data if API fails
-        setSuggestedICPs([
+        // Always show fallback data to ensure cards are displayed
+        const fallbackData = [
           {
             id: "fintech-neobanks",
             industry: "Fintech",
@@ -121,15 +121,34 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen }: Sugges
             regions: ["North America", "EU"],
             keyAttributes: ["HIPAA compliance", "AI/ML integration"],
             growthIndicator: "8.2% CAGR"
+          },
+          {
+            id: "logistics-tech",
+            industry: "Logistics Tech",
+            segment: "Last-Mile Delivery",
+            companySize: "200–800 employees", 
+            decisionMakers: ["VP Operations", "Technology Director"],
+            regions: ["SEA", "LATAM"],
+            keyAttributes: ["API-first approach", "Real-time tracking"],
+            growthIndicator: "12.1% CAGR"
           }
-        ]);
+        ];
+        
+        setSuggestedICPs(fallbackData);
+        
+        // Auto-select the first ICP
+        if (fallbackData.length > 0 && onICPSelect) {
+          console.log("Auto-selecting first ICP from fallback:", fallbackData[0]);
+          setSelectedICP(fallbackData[0].id);
+          onICPSelect(fallbackData[0]);
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchICPs();
-  }, []);
+  }, [onICPSelect]);
 
   const industryOptions = ["Fintech", "Healthcare SaaS", "Logistics Tech", "EdTech", "PropTech", "Cybersecurity", "InsurTech", "Clean Energy"];
   const companySizeOptions = ["10–50 employees", "50–200 employees", "100–500 employees", "200–800 employees", "150–600 employees"];
