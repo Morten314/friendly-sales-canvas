@@ -143,7 +143,7 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
     };
 
     fetchICPs();
-  }, []); // Empty dependency array - only run once on mount
+  }, [refreshTrigger]); // Re-fetch when refreshTrigger changes
 
   const industryOptions = ["Fintech", "Healthcare SaaS", "Logistics Tech", "EdTech", "PropTech", "Cybersecurity", "InsurTech", "Clean Energy"];
   const companySizeOptions = ["10–50 employees", "50–200 employees", "100–500 employees", "200–800 employees", "150–600 employees"];
