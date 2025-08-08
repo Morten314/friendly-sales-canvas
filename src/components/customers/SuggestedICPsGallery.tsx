@@ -45,6 +45,7 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
   const fetchICPs = async () => {
     try {
       console.log("=== FETCHING ICPs FROM BACKEND ===");
+      console.log("Timestamp:", new Date().toISOString());
       setLoading(true);
       setError(null);
       
@@ -55,7 +56,10 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
         },
       });
       
-      console.log("API Response status:", response.status);
+      console.log("=== ICP API CALL DETAILS ===");
+      console.log("URL:", "https://backend-11kr.onrender.com/icp");
+      console.log("Response Status:", response.status);
+      console.log("Response OK:", response.ok);
       
       if (!response.ok) {
         throw new Error(`API returned ${response.status}`);
