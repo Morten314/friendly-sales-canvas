@@ -42,108 +42,109 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
   const [error, setError] = useState<string | null>(null);
 
   // Fetch ICPs from backend
-  useEffect(() => {
-    const fetchICPs = async () => {
-      try {
-        console.log("=== FETCHING ICPs FROM BACKEND ===");
-        setLoading(true);
-        setError(null);
-        
-        const response = await fetch("https://backend-11kr.onrender.com/icp", {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-        
-        console.log("API Response status:", response.status);
-        
-        if (!response.ok) {
-          throw new Error(`API returned ${response.status}`);
-        }
-        
-        const data = await response.json();
-        console.log("=== RAW BACKEND RESPONSE ===");
-        console.log("Full response:", data);
-        console.log("Response type:", typeof data);
-        console.log("Is array:", Array.isArray(data));
-        
-        // Extract ICPs from various possible response formats
-        let icpArray = [];
-        if (Array.isArray(data)) {
-          icpArray = data;
-        } else if (data.icps && Array.isArray(data.icps)) {
-          icpArray = data.icps;
-        } else if (data.suggestedICPs && Array.isArray(data.suggestedICPs)) {
-          icpArray = data.suggestedICPs;
-        } else if (data.data && Array.isArray(data.data)) {
-          icpArray = data.data;
-        } else if (data.profiles && Array.isArray(data.profiles)) {
-          icpArray = data.profiles;
-        }
-        
-        console.log("=== EXTRACTED ICP ARRAY ===");
-        console.log("ICP count:", icpArray.length);
-        console.log("ICPs:", icpArray);
-        
-        if (icpArray.length === 0) {
-          console.log("No ICPs found in backend response");
-          setError("No ICPs available from backend");
-          return;
-        }
-        
-        // Transform backend data to match component interface
-        const transformedData = icpArray.map((icp: any, index: number) => {
-          console.log(`Processing ICP ${index + 1}:`, icp);
-          return {
-            id: icp.id || `backend-icp-${Date.now()}-${index}`,
-            industry: icp.industry || icp.Industry || "",
-            segment: icp.segment || icp.Segment || "",
-            companySize: icp.companySize || icp.company_size || icp.CompanySize || "",
-            decisionMakers: Array.isArray(icp.decisionMakers) ? icp.decisionMakers : 
-                           Array.isArray(icp.decision_makers) ? icp.decision_makers :
-                           Array.isArray(icp.DecisionMakers) ? icp.DecisionMakers :
-                           typeof icp.decisionMakers === 'string' ? icp.decisionMakers.split(',').map((s: string) => s.trim()) :
-                           typeof icp.decision_makers === 'string' ? icp.decision_makers.split(',').map((s: string) => s.trim()) : 
-                           typeof icp.DecisionMakers === 'string' ? icp.DecisionMakers.split(',').map((s: string) => s.trim()) : [],
-            regions: Array.isArray(icp.regions) ? icp.regions :
-                     Array.isArray(icp.Regions) ? icp.Regions :
-                     typeof icp.regions === 'string' ? icp.regions.split(',').map((s: string) => s.trim()) :
-                     typeof icp.Regions === 'string' ? icp.Regions.split(',').map((s: string) => s.trim()) : [],
-            keyAttributes: Array.isArray(icp.keyAttributes) ? icp.keyAttributes :
-                          Array.isArray(icp.key_attributes) ? icp.key_attributes :
-                          Array.isArray(icp.KeyAttributes) ? icp.KeyAttributes :
-                          typeof icp.keyAttributes === 'string' ? icp.keyAttributes.split(',').map((s: string) => s.trim()) :
-                          typeof icp.key_attributes === 'string' ? icp.key_attributes.split(',').map((s: string) => s.trim()) :
-                          typeof icp.KeyAttributes === 'string' ? icp.KeyAttributes.split(',').map((s: string) => s.trim()) : [],
-            growthIndicator: icp.growthIndicator || icp.growth_indicator || icp.GrowthIndicator || undefined
-          };
-        });
-        
-        console.log("=== FINAL TRANSFORMED DATA ===");
-        console.log("Transformed ICP count:", transformedData.length);
-        console.log("Transformed ICPs:", transformedData);
-        
-        setSuggestedICPs(transformedData);
-        
-        // Auto-select the first ICP
-        if (transformedData.length > 0 && onICPSelect) {
-          console.log("Auto-selecting first ICP:", transformedData[0]);
-          setSelectedICP(transformedData[0].id);
-          onICPSelect(transformedData[0]);
-        }
-        
-      } catch (err) {
-        console.error("=== ERROR FETCHING ICPs ===", err);
-        setError(err instanceof Error ? err.message : "Failed to load ICPs from backend");
-        setSuggestedICPs([]);
-      } finally {
-        setLoading(false);
+  const fetchICPs = async () => {
+    try {
+      console.log("=== FETCHING ICPs FROM BACKEND ===");
+      setLoading(true);
+      setError(null);
+      
+      const response = await fetch("https://backend-11kr.onrender.com/icp", {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      console.log("API Response status:", response.status);
+      
+      if (!response.ok) {
+        throw new Error(`API returned ${response.status}`);
       }
-    };
+      
+      const data = await response.json();
+      console.log("=== RAW BACKEND RESPONSE ===");
+      console.log("Full response:", data);
+      console.log("Response type:", typeof data);
+      console.log("Is array:", Array.isArray(data));
+      
+      // Extract ICPs from various possible response formats
+      let icpArray = [];
+      if (Array.isArray(data)) {
+        icpArray = data;
+      } else if (data.icps && Array.isArray(data.icps)) {
+        icpArray = data.icps;
+      } else if (data.suggestedICPs && Array.isArray(data.suggestedICPs)) {
+        icpArray = data.suggestedICPs;
+      } else if (data.data && Array.isArray(data.data)) {
+        icpArray = data.data;
+      } else if (data.profiles && Array.isArray(data.profiles)) {
+        icpArray = data.profiles;
+      }
+      
+      console.log("=== EXTRACTED ICP ARRAY ===");
+      console.log("ICP count:", icpArray.length);
+      console.log("ICPs:", icpArray);
+      
+      if (icpArray.length === 0) {
+        console.log("No ICPs found in backend response");
+        setError("No ICPs available from backend");
+        return;
+      }
+      
+      // Transform backend data to match component interface
+      const transformedData = icpArray.map((icp: any, index: number) => {
+        console.log(`Processing ICP ${index + 1}:`, icp);
+        return {
+          id: icp.id || `backend-icp-${Date.now()}-${index}`,
+          industry: icp.industry || icp.Industry || "",
+          segment: icp.segment || icp.Segment || "",
+          companySize: icp.companySize || icp.company_size || icp.CompanySize || "",
+          decisionMakers: Array.isArray(icp.decisionMakers) ? icp.decisionMakers : 
+                         Array.isArray(icp.decision_makers) ? icp.decision_makers :
+                         Array.isArray(icp.DecisionMakers) ? icp.DecisionMakers :
+                         typeof icp.decisionMakers === 'string' ? icp.decisionMakers.split(',').map((s: string) => s.trim()) :
+                         typeof icp.decision_makers === 'string' ? icp.decision_makers.split(',').map((s: string) => s.trim()) : 
+                         typeof icp.DecisionMakers === 'string' ? icp.DecisionMakers.split(',').map((s: string) => s.trim()) : [],
+          regions: Array.isArray(icp.regions) ? icp.regions :
+                   Array.isArray(icp.Regions) ? icp.Regions :
+                   typeof icp.regions === 'string' ? icp.regions.split(',').map((s: string) => s.trim()) :
+                   typeof icp.Regions === 'string' ? icp.Regions.split(',').map((s: string) => s.trim()) : [],
+          keyAttributes: Array.isArray(icp.keyAttributes) ? icp.keyAttributes :
+                        Array.isArray(icp.key_attributes) ? icp.key_attributes :
+                        Array.isArray(icp.KeyAttributes) ? icp.KeyAttributes :
+                        typeof icp.keyAttributes === 'string' ? icp.keyAttributes.split(',').map((s: string) => s.trim()) :
+                        typeof icp.key_attributes === 'string' ? icp.key_attributes.split(',').map((s: string) => s.trim()) :
+                        typeof icp.KeyAttributes === 'string' ? icp.KeyAttributes.split(',').map((s: string) => s.trim()) : [],
+          growthIndicator: icp.growthIndicator || icp.growth_indicator || icp.GrowthIndicator || undefined
+        };
+      });
+      
+      console.log("=== FINAL TRANSFORMED DATA ===");
+      console.log("Transformed ICP count:", transformedData.length);
+      console.log("Transformed ICPs:", transformedData);
+      
+      setSuggestedICPs(transformedData);
+      
+      // Auto-select the first ICP
+      if (transformedData.length > 0 && onICPSelect) {
+        console.log("Auto-selecting first ICP:", transformedData[0]);
+        setSelectedICP(transformedData[0].id);
+        onICPSelect(transformedData[0]);
+      }
+      
+    } catch (err) {
+      console.error("=== ERROR FETCHING ICPs ===", err);
+      setError(err instanceof Error ? err.message : "Failed to load ICPs from backend");
+      setSuggestedICPs([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
+    // Only fetch on initial load, not when refreshTrigger changes
     fetchICPs();
-  }, [refreshTrigger]); // Re-fetch when refreshTrigger changes
+  }, []); // Empty dependency array - only run once on mount
 
   const industryOptions = ["Fintech", "Healthcare SaaS", "Logistics Tech", "EdTech", "PropTech", "Cybersecurity", "InsurTech", "Clean Energy"];
   const companySizeOptions = ["10–50 employees", "50–200 employees", "100–500 employees", "200–800 employees", "150–600 employees"];
@@ -259,6 +260,17 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
         </div>
         
         <div className="flex gap-2">
+          {/* Refresh Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={fetchICPs}
+            className="text-gray-600 hover:text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+            title="Refresh ICPs"
+          >
+            Refresh
+          </Button>
+          
           {/* Persistent Profiler Chat Icon */}
           <Button
             variant="ghost"
