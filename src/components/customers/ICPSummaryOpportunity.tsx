@@ -104,7 +104,6 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
       ],
       competitors: Math.floor(Math.random() * 3) + 3,
       winLossChange: `+${Math.floor(Math.random() * 20) + 5}%`,
-      buyingSignals: Math.floor(Math.random() * 5) + 6,
       marketAnalysis: {
         totalMarketSize: `€${randomMarketSize}.${Math.floor(Math.random() * 9)}B`,
         servicableMarket: `€${Math.floor(randomMarketSize * 0.4)}.${Math.floor(Math.random() * 9)}B`,
