@@ -27,9 +27,11 @@ interface SuggestedICPsGalleryProps {
   onICPSelect?: (icp: SuggestedICP) => void;
   onProfilerChatOpen?: (context?: string) => void;
   refreshTrigger?: number;
+  onManualRefresh?: () => void;
+  isRefreshing?: boolean;
 }
 
-export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshTrigger }: SuggestedICPsGalleryProps) => {
+export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshTrigger, onManualRefresh, isRefreshing = false }: SuggestedICPsGalleryProps) => {
   const [selectedICP, setSelectedICP] = useState<string | null>(null);
   const [editingICP, setEditingICP] = useState<string | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
@@ -269,11 +271,19 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
           <Button
             variant="outline"
             size="sm"
-            onClick={fetchICPs}
+            onClick={onManualRefresh}
+            disabled={isRefreshing || loading}
             className="text-gray-600 hover:text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-            title="Refresh ICPs"
+            title="Refresh ICPs from latest company profile"
           >
-            Refresh
+            {isRefreshing ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
+                Refreshing...
+              </>
+            ) : (
+              "Refresh"
+            )}
           </Button>
           
           {/* Persistent Profiler Chat Icon */}

@@ -26,6 +26,7 @@ export const ICPIntelligence = () => {
   const [profilerMessage, setProfilerMessage] = useState("");
   const [selectedICP, setSelectedICP] = useState<SuggestedICP | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Listen for company profile updates
   useEffect(() => {
@@ -64,6 +65,14 @@ export const ICPIntelligence = () => {
     setShowProfilerChat(true);
   };
 
+  const handleManualRefresh = () => {
+    console.log("=== MANUAL REFRESH TRIGGERED ===");
+    setIsRefreshing(true);
+    setRefreshTrigger(prev => prev + 1);
+    // Reset refreshing state after a delay
+    setTimeout(() => setIsRefreshing(false), 2000);
+  };
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -77,6 +86,8 @@ export const ICPIntelligence = () => {
         onICPSelect={handleICPSelect} 
         onProfilerChatOpen={handleProfilerChatOpen}
         refreshTrigger={refreshTrigger}
+        onManualRefresh={handleManualRefresh}
+        isRefreshing={isRefreshing}
       />
 
       {/* ICP Details Section */}
