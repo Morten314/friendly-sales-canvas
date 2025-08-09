@@ -44,18 +44,10 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
       setError(null);
       
       const response = await fetch(`https://backend-11kr.onrender.com/icp`, {
-        method: 'POST',
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          industry: icp.industry,
-          segment: icp.segment,
-          companySize: icp.companySize,
-          regions: icp.regions,
-          keyAttributes: icp.keyAttributes,
-          decisionMakers: icp.decisionMakers
-        })
+        }
       });
       
       console.log("ICP Analysis API Response status:", response.status);
