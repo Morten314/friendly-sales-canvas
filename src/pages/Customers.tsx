@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { User, Users, Filter, UserPlus, Download, MessageSquare, Send, Search, Database, Target } from "lucide-react";
 import { ICPIntelligence } from "@/components/customers/ICPIntelligence";
+import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 
 const Customers = () => {
   usePageTitle("👤 Profiler - Brewra");
@@ -16,6 +17,18 @@ const Customers = () => {
     { role: "ai", content: "I'm Profiler, your ICP research assistant. I can help you define ideal customer profiles, find prospects, and enrich your data. What would you like to work on today?" }
   ]);
   const [inputValue, setInputValue] = useState("");
+
+  console.log("=== CUSTOMERS PAGE RENDERING ===");
+  console.log("isChatOpen:", isChatOpen);
+  console.log("messages:", messages.length);
+
+  useEffect(() => {
+    console.log("=== CUSTOMERS PAGE MOUNTED ===");
+    
+    return () => {
+      console.log("=== CUSTOMERS PAGE UNMOUNTING ===");
+    };
+  }, []);
 
   const handleSendMessage = () => {
     if (!inputValue.trim()) return;
@@ -137,7 +150,9 @@ const Customers = () => {
             </TabsList>
             
             <TabsContent value="icp-intelligence" className="h-full w-full m-0">
-              <ICPIntelligence />
+              <ErrorBoundary fallbackMessage="There was an error loading the ICP Intelligence section">
+                <ICPIntelligence />
+              </ErrorBoundary>
             </TabsContent>
             
             <TabsContent value="icp-battlemap" className="h-full w-full m-0">

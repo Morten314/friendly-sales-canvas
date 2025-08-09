@@ -65,6 +65,7 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
     } catch (err) {
       console.error("=== ERROR FETCHING ICP ANALYSIS ===", err);
       console.log("Using fallback data due to error");
+      setError("Failed to fetch ICP analysis");
       setIcpAnalysisData(generateFallbackData(icp));
     } finally {
       setLoading(false);
