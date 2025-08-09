@@ -35,6 +35,18 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Early return if no ICP is selected
+  if (!selectedICP) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="text-center text-gray-500">
+          <p className="text-lg font-medium">Select an ICP card above</p>
+          <p className="text-sm">to view detailed market analysis and insights</p>
+        </div>
+      </div>
+    );
+  }
+
   // Fetch dynamic ICP analysis data from backend
   const fetchICPAnalysis = async (icp: SuggestedICP) => {
     try {

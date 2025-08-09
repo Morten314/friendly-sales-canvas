@@ -29,9 +29,10 @@ interface SuggestedICPsGalleryProps {
   refreshTrigger?: number;
   onManualRefresh?: () => void;
   isRefreshing?: boolean;
+  onRefreshComplete?: () => void; // Callback to notify when refresh is complete
 }
 
-export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshTrigger, onManualRefresh, isRefreshing = false }: SuggestedICPsGalleryProps) => {
+export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshTrigger, onManualRefresh, isRefreshing = false, onRefreshComplete }: SuggestedICPsGalleryProps) => {
   const [selectedICP, setSelectedICP] = useState<string | null>(null);
   const [editingICP, setEditingICP] = useState<string | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
@@ -42,6 +43,22 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
   const [suggestedICPs, setSuggestedICPs] = useState<SuggestedICP[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [renderKey, setRenderKey] = useState(0); // Force re-render key
+
+  console.log("=== SUGGESTED ICPS GALLERY RENDER ===");
+  console.log("Current suggestedICPs count:", suggestedICPs.length);
+  console.log("Loading:", loading);
+  console.log("Error:", error);
+  console.log("RefreshTrigger:", refreshTrigger);
+  console.log("RenderKey:", renderKey);
+
+  // Track when suggestedICPs state changes
+  useEffect(() => {
+    console.log("=== SUGGESTED ICPS STATE CHANGED ===");
+    console.log("New suggestedICPs count:", suggestedICPs.length);
+    console.log("New suggestedICPs data:", suggestedICPs);
+    setRenderKey(prev => prev + 1); // Force re-render
+  }, [suggestedICPs]);
 
   // Fetch ICPs from backend
   const fetchICPs = async () => {
@@ -51,7 +68,14 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
       setLoading(true);
       setError(null);
       
-      const response = await fetch("https://backend-11kr.onrender.com/icp", {
+      // Clear existing data while loading new data
+      setSuggestedICPs([]);
+      
+      // Add timestamp to force fresh data and avoid caching
+      const timestamp = new Date().getTime();
+      const apiUrl = `https://backend-11kr.onrender.com/icp?t=${timestamp}&fresh=true`;
+      
+      const response = await fetch(apiUrl, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -59,7 +83,7 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
       });
       
       console.log("=== ICP API CALL DETAILS ===");
-      console.log("URL:", "https://backend-11kr.onrender.com/icp");
+      console.log("URL:", apiUrl);
       console.log("Response Status:", response.status);
       console.log("Response OK:", response.ok);
       
@@ -129,7 +153,39 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
       console.log("Transformed ICP count:", transformedData.length);
       console.log("Transformed ICPs:", transformedData);
       
+      // Add detailed logging of ICP content
+      transformedData.forEach((icp, index) => {
+        console.log(`ICP ${index + 1} Details:`, {
+          id: icp.id,
+          industry: icp.industry,
+          segment: icp.segment,
+          companySize: icp.companySize,
+          decisionMakers: icp.decisionMakers,
+          regions: icp.regions,
+          keyAttributes: icp.keyAttributes,
+          growthIndicator: icp.growthIndicator
+        });
+      });
+      
+      // Compare with existing data to see if anything changed
+      if (suggestedICPs.length > 0) {
+        console.log("=== COMPARING WITH EXISTING ICPs ===");
+        const isDataDifferent = JSON.stringify(transformedData) !== JSON.stringify(suggestedICPs);
+        console.log("Data has changed:", isDataDifferent);
+        if (!isDataDifferent) {
+          console.log("⚠️ WARNING: Backend returned identical data - no new ICPs generated");
+        }
+      }
+      
+      console.log("=== SETTING NEW SUGGESTED ICPS STATE ===");
+      console.log("About to set suggestedICPs to:", transformedData);
       setSuggestedICPs(transformedData);
+      
+      // Force immediate state update verification
+      setTimeout(() => {
+        console.log("=== STATE UPDATE VERIFICATION ===");
+        console.log("State should now contain:", transformedData.length, "ICPs");
+      }, 100);
       
       // Auto-select the first ICP
       if (transformedData.length > 0 && onICPSelect) {
@@ -141,16 +197,64 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
     } catch (err) {
       console.error("=== ERROR FETCHING ICPs ===", err);
       setError(err instanceof Error ? err.message : "Failed to load ICPs from backend");
-      setSuggestedICPs([]);
+      
+      // Fallback to mock data if backend is unavailable
+      console.log("=== FALLING BACK TO MOCK DATA ===");
+      const mockICPs = [
+        {
+          id: "mock-1",
+          industry: "SaaS/Software",
+          segment: "Mid-Market SaaS in Cybersecurity",
+          companySize: "50–200 employees",
+          decisionMakers: ["CISO", "IT Director", "VP Security"],
+          regions: ["North America", "EU"],
+          keyAttributes: [
+            "Annual revenue $10M–$100M",
+            "Cloud-first infrastructure",
+            "Regulatory compliance requirements",
+            "Remote workforce"
+          ],
+          growthIndicator: "5.6% CAGR"
+        },
+        {
+          id: "mock-2", 
+          industry: "Fintech",
+          segment: "Digital Banking Platforms",
+          companySize: "100–500 employees",
+          decisionMakers: ["CTO", "Head of Engineering", "Product Manager"],
+          regions: ["Global", "North America"],
+          keyAttributes: [
+            "API-first architecture",
+            "Mobile-first customer base",
+            "Real-time transaction processing",
+            "Strong security focus"
+          ],
+          growthIndicator: "8.2% CAGR"
+        }
+      ];
+      setSuggestedICPs(mockICPs);
     } finally {
       setLoading(false);
+      // Notify parent that refresh is complete
+      if (onRefreshComplete) {
+        onRefreshComplete();
+      }
     }
   };
 
+  // Initial data load when component mounts
   useEffect(() => {
-    console.log("=== USEEFFECT TRIGGERED ===");
-    console.log("refreshTrigger value:", refreshTrigger);
+    console.log("=== INITIAL USEEFFECT TRIGGERED ===");
     fetchICPs();
+  }, []); // Load data once when component mounts
+
+  // Refetch when refresh is triggered
+  useEffect(() => {
+    if (refreshTrigger > 0) {
+      console.log("=== REFRESH TRIGGERED USEEFFECT ===");
+      console.log("refreshTrigger value:", refreshTrigger);
+      fetchICPs();
+    }
   }, [refreshTrigger]); // Depend on refreshTrigger to refetch when company profile updates
 
   const industryOptions = ["Fintech", "Healthcare SaaS", "Logistics Tech", "EdTech", "PropTech", "Cybersecurity", "InsurTech", "Clean Energy"];
@@ -286,6 +390,22 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
             )}
           </Button>
           
+          {/* Debug Refresh Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              console.log("=== DEBUG REFRESH TRIGGERED ===");
+              setSuggestedICPs([]); // Clear current data
+              setRenderKey(prev => prev + 1); // Force re-render
+              fetchICPs(); // Fetch fresh data
+            }}
+            className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 flex items-center gap-2"
+            title="Debug: Force clear and refresh"
+          >
+            Debug Refresh
+          </Button>
+          
           {/* Persistent Profiler Chat Icon */}
           <Button
             variant="ghost"
@@ -311,7 +431,15 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
       )}
 
       {/* Error State */}
-      {error && !loading && (
+      {error && !loading && suggestedICPs.length > 0 && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
+          <p className="text-yellow-700 mb-2">Backend unavailable - showing sample data</p>
+          <p className="text-sm text-gray-600">Save a company profile to generate personalized ICPs</p>
+        </div>
+      )}
+
+      {/* Error State with no fallback data */}
+      {error && !loading && suggestedICPs.length === 0 && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
           <p className="text-red-600 mb-2">Failed to load ICPs from backend</p>
           <p className="text-sm text-gray-600">{error}</p>
@@ -329,10 +457,22 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
         </div>
       )}
 
+      {/* Debug Info */}
+      {!loading && (
+        <div className="text-xs text-gray-500 mb-2 p-2 bg-gray-50 rounded">
+          Debug: Found {suggestedICPs.length} ICPs | Loading: {loading.toString()} | Error: {error ? 'Yes' : 'No'}
+          {suggestedICPs.length > 0 && (
+            <div>First ICP: {suggestedICPs[0].segment} | Last Update: {new Date().toLocaleTimeString()}</div>
+          )}
+          <div>RenderKey: {renderKey} | RefreshTrigger: {refreshTrigger}</div>
+        </div>
+      )}
+
       {/* Carousel Container */}
       {!loading && !error && suggestedICPs.length > 0 && (
         <div className="relative px-16">
           <Carousel
+            key={`carousel-${renderKey}-${suggestedICPs.length}`} // Force re-render when data changes
             opts={{
               align: "start",
               loop: false,
@@ -340,8 +480,8 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
             className="w-full"
           >
             <CarouselContent className="-ml-4">
-              {suggestedICPs.map((icp) => (
-              <CarouselItem key={icp.id} className="pl-4 basis-[420px]">
+              {suggestedICPs.map((icp, index) => (
+              <CarouselItem key={`${icp.id}-${renderKey}-${index}`} className="pl-4 basis-[420px]">
                 <Card 
                   className={`h-full transition-all duration-200 hover:shadow-lg border ${
                     selectedICP === icp.id 
