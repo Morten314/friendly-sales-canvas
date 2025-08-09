@@ -43,7 +43,7 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
       setLoading(true);
       setError(null);
       
-      const response = await fetch(`https://backend-11kr.onrender.com/icp-analysis`, {
+      const response = await fetch(`https://backend-11kr.onrender.com/icp`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
