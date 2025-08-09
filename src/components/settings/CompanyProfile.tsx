@@ -150,38 +150,24 @@ export function CompanyProfile({ onProfileUpdate, isEditMode = false, profileDat
         throw new Error(`API error: ${response.statusText}`);
       }
 
-      const result = await response.json();
-      console.log("Company profile saved successfully:", result);
+      const data = await response.json();
+      console.log("Company profile saved successfully:", data);
+      alert("Company profile saved successfully!");
       
-      alert("Company profile saved successfully! New ICP suggestions will be generated.");
-
-      // ✅ Reset form fields after success
-      setFormData({
-        industry: "",
-        companySize: "",
-        companyUrl: "",
-        strategicGoals: "",
-        primaryGTMModel: "",
-        revenueStage: "",
-        keyBuyerPersona: "",
-      });
-      setTargetMarkets([""]);
-      setSocialMediaUrls([]);
-      setSelectedPlatform("");
-
-      // Call the callback to notify parent component
-      if (onProfileUpdate) {
-        onProfileUpdate();
-      }
-
-      // ✅ Dispatch the global event for ICP refresh
-      console.log("=== DISPATCHING COMPANY PROFILE UPDATED EVENT ===");
+      // Dispatch a global event to notify other components
+      console.log("=== DISPATCHING COMPANY PROFILE UPDATE EVENT ===");
+      console.log("Profile data being dispatched:", profileData);
       const event = new CustomEvent('companyProfileUpdated', {
-        detail: { profileData: result, timestamp: new Date().toISOString() }
+        detail: {
+          profileData,
+          timestamp: new Date().toISOString(),
+          action: 'PROFILE_SAVED',
+          triggerICPRefresh: true
+        }
       });
       window.dispatchEvent(event);
-      console.log("Event dispatched successfully");
-
+      console.log("Company profile event dispatched");
+      
     } catch (error) {
       console.error("Error saving company profile:", error);
       alert("Failed to save company profile. Please try again.");

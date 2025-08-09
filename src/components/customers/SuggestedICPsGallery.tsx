@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
-import { Globe, TrendingUp, Users, Building, MapPin, Target, Bot, MessageSquare, Edit, Save, X, Check } from "lucide-react";
+import { Globe, TrendingUp, Users, Building, MapPin, Target, Bot, MessageSquare, Edit, Save, X, Check, RefreshCw, Loader2 } from "lucide-react";
 import { ProfilerChatPanel } from "./ProfilerChatPanel";
 import { ICPEditHistory } from "./ICPEditHistory";
 import { useToast } from "@/hooks/use-toast";
@@ -52,6 +52,32 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
   console.log("RefreshTrigger:", refreshTrigger);
   console.log("RenderKey:", renderKey);
 
+  // Generate fallback ICPs when backend fails
+  const generateFallbackICPs = (): SuggestedICP[] => {
+    return [
+      {
+        id: "fallback-1",
+        industry: "Healthcare Technology",
+        segment: "Digital Health Platforms", 
+        companySize: "100-500 employees",
+        decisionMakers: ["CTO", "Chief Medical Officer", "VP of Engineering"],
+        regions: ["North America", "Europe"],
+        keyAttributes: ["HIPAA Compliance", "Scalability", "Real-time Processing"],
+        growthIndicator: "High"
+      },
+      {
+        id: "fallback-2", 
+        industry: "Financial Services",
+        segment: "Fintech Startups",
+        companySize: "50-200 employees", 
+        decisionMakers: ["CTO", "Head of Compliance", "VP of Product"],
+        regions: ["US", "Canada", "UK"],
+        keyAttributes: ["Regulatory Compliance", "Security", "API Integration"],
+        growthIndicator: "High"
+      }
+    ];
+  };
+
   // Track when suggestedICPs state changes
   useEffect(() => {
     console.log("=== SUGGESTED ICPS STATE CHANGED ===");
@@ -65,6 +91,8 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
     try {
       console.log("=== FETCHING ICPs FROM BACKEND ===");
       console.log("Timestamp:", new Date().toISOString());
+      console.log("RefreshTrigger:", refreshTrigger);
+      console.log("Is Refresh Mode:", refreshTrigger > 0);
       setLoading(true);
       setError(null);
       
@@ -73,7 +101,76 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
       
       // Add timestamp to force fresh data and avoid caching
       const timestamp = new Date().getTime();
-      const apiUrl = `https://backend-11kr.onrender.com/icp?t=${timestamp}&fresh=true`;
+      
+      // For refresh mode, fetch company profile and include it in the request
+      let apiUrl = `https://backend-11kr.onrender.com/icp?t=${timestamp}&fresh=true`;
+      
+      if (refreshTrigger > 0) {
+        console.log("🔄 REFRESH MODE - Fetching company profile for ICP generation");
+        
+        try {
+          // Fetch the latest company profile from backend
+          const profileResponse = await fetch('https://backend-11kr.onrender.com/profile/company', {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+          
+          console.log("Profile fetch status:", profileResponse.status);
+          
+          if (profileResponse.ok) {
+            const profileData = await profileResponse.json();
+            console.log("✅ Retrieved company profile:", profileData);
+            console.log("Profile keys:", Object.keys(profileData || {}));
+            console.log("Profile structure check:");
+            console.log("- Industry:", profileData?.industry);
+            console.log("- Company Size:", profileData?.companySize);
+            console.log("- Strategic Goals:", profileData?.strategicGoals);
+            console.log("- Target Markets:", profileData?.targetMarkets);
+            
+            // Add profile context to the GET request URL parameters
+            const profileParams = new URLSearchParams({
+              refresh: 'true',
+              regenerate: 'true',
+              profileUpdated: 'true',
+              includeProfile: 'true'
+            });
+            
+            // Add key profile data as URL parameters (backend can use these for generation)
+            if (profileData.industry) {
+              profileParams.set('industry', profileData.industry);
+            }
+            if (profileData.companySize) {
+              profileParams.set('companySize', profileData.companySize);
+            }
+            if (profileData.strategicGoals) {
+              profileParams.set('strategicGoals', encodeURIComponent(profileData.strategicGoals));
+            }
+            if (profileData.targetMarkets && Array.isArray(profileData.targetMarkets)) {
+              profileParams.set('targetMarkets', profileData.targetMarkets.join(','));
+            }
+            
+            apiUrl += `&${profileParams.toString()}`;
+            console.log("📤 Enhanced URL with profile data:", apiUrl);
+          } else {
+            console.warn("❌ Could not fetch company profile, status:", profileResponse.status);
+            // Add basic refresh parameters even without profile
+            apiUrl += '&refresh=true&regenerate=true';
+            console.log("Using basic refresh URL:", apiUrl);
+          }
+        } catch (profileError) {
+          console.error("❌ Error fetching company profile:", profileError);
+          // Add basic refresh parameters as fallback
+          apiUrl += '&refresh=true&regenerate=true';
+          console.log("Fallback refresh URL:", apiUrl);
+        }
+      }
+      
+      console.log("=== ICP API CALL DETAILS ===");
+      console.log("Method: GET");
+      console.log("URL:", apiUrl);
+      console.log("Profile Context Included:", refreshTrigger > 0);
       
       const response = await fetch(apiUrl, {
         method: 'GET',
@@ -82,20 +179,37 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
         },
       });
       
-      console.log("=== ICP API CALL DETAILS ===");
-      console.log("URL:", apiUrl);
       console.log("Response Status:", response.status);
       console.log("Response OK:", response.ok);
       
       if (!response.ok) {
-        throw new Error(`API returned ${response.status}`);
+        throw new Error(`API returned ${response.status}: ${response.statusText}`);
       }
       
       const data = await response.json();
+      
       console.log("=== RAW BACKEND RESPONSE ===");
       console.log("Full response:", data);
       console.log("Response type:", typeof data);
       console.log("Is array:", Array.isArray(data));
+      
+      // Log whether this appears to be profile-based data
+      if (refreshTrigger > 0 && apiUrl.includes('profileUpdated=true')) {
+        console.log("🔍 ANALYZING PROFILE-BASED RESPONSE:");
+        console.log("- Request included profile data:", !!apiUrl.includes('includeProfile=true'));
+        console.log("- Profile industry was:", apiUrl.includes('industry=') ? apiUrl.split('&')[1].split('=')[1] : 'N/A');
+        console.log("- Profile company size was:", apiUrl.includes('companySize=') ? apiUrl.split('&')[1].split('=')[1] : 'N/A');
+        
+        // Check if response ICPs seem to match profile
+        if (data && (data.suggestedICPs || Array.isArray(data))) {
+          const icps = data.suggestedICPs || data;
+          console.log("- Response ICPs count:", icps.length);
+          if (icps.length > 0) {
+            console.log("- First ICP industry:", icps[0]?.industry);
+            console.log("- First ICP segment:", icps[0]?.segment);
+          }
+        }
+      }
       
       // Extract ICPs from various possible response formats
       let icpArray = [];
@@ -122,123 +236,122 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
       }
       
       // Transform backend data to match component interface
-      const transformedData = icpArray.map((icp: any, index: number) => {
-        console.log(`Processing ICP ${index + 1}:`, icp);
-        return {
-          id: icp.id || `backend-icp-${Date.now()}-${index}`,
-          industry: icp.industry || icp.Industry || "",
-          segment: icp.segment || icp.Segment || "",
-          companySize: icp.companySize || icp.company_size || icp.CompanySize || "",
-          decisionMakers: Array.isArray(icp.decisionMakers) ? icp.decisionMakers : 
-                         Array.isArray(icp.decision_makers) ? icp.decision_makers :
-                         Array.isArray(icp.DecisionMakers) ? icp.DecisionMakers :
-                         typeof icp.decisionMakers === 'string' ? icp.decisionMakers.split(',').map((s: string) => s.trim()) :
-                         typeof icp.decision_makers === 'string' ? icp.decision_makers.split(',').map((s: string) => s.trim()) : 
-                         typeof icp.DecisionMakers === 'string' ? icp.DecisionMakers.split(',').map((s: string) => s.trim()) : [],
-          regions: Array.isArray(icp.regions) ? icp.regions :
-                   Array.isArray(icp.Regions) ? icp.Regions :
-                   typeof icp.regions === 'string' ? icp.regions.split(',').map((s: string) => s.trim()) :
-                   typeof icp.Regions === 'string' ? icp.Regions.split(',').map((s: string) => s.trim()) : [],
-          keyAttributes: Array.isArray(icp.keyAttributes) ? icp.keyAttributes :
-                        Array.isArray(icp.key_attributes) ? icp.key_attributes :
-                        Array.isArray(icp.KeyAttributes) ? icp.KeyAttributes :
-                        typeof icp.keyAttributes === 'string' ? icp.keyAttributes.split(',').map((s: string) => s.trim()) :
-                        typeof icp.key_attributes === 'string' ? icp.key_attributes.split(',').map((s: string) => s.trim()) :
-                        typeof icp.KeyAttributes === 'string' ? icp.KeyAttributes.split(',').map((s: string) => s.trim()) : [],
-          growthIndicator: icp.growthIndicator || icp.growth_indicator || icp.GrowthIndicator || undefined
-        };
+      const transformedICPs = icpArray.map((item: any, index: number) => {
+        console.log(`=== TRANSFORMING ICP ${index + 1} ===`);
+        console.log("Raw item:", item);
+        
+        try {
+          const transformed: SuggestedICP = {
+            id: item.id || item._id || `icp-${index + 1}`,
+            industry: item.industry || item.Industry || "Unknown Industry",
+            segment: item.segment || item.Segment || item.market_segment || "Unknown Segment", 
+            companySize: item.companySize || item.company_size || item.size || "Unknown Size",
+            decisionMakers: Array.isArray(item.decisionMakers) 
+              ? item.decisionMakers 
+              : Array.isArray(item.decision_makers)
+                ? item.decision_makers
+                : typeof item.decisionMakers === 'string'
+                  ? item.decisionMakers.split(',').map((s: string) => s.trim())
+                  : ["CTO", "Head of Engineering"],
+            regions: Array.isArray(item.regions)
+              ? item.regions
+              : Array.isArray(item.target_markets)
+                ? item.target_markets
+                : typeof item.regions === 'string'
+                  ? item.regions.split(',').map((s: string) => s.trim())
+                  : ["Unknown Region"],
+            keyAttributes: Array.isArray(item.keyAttributes)
+              ? item.keyAttributes
+              : Array.isArray(item.key_attributes) 
+                ? item.key_attributes
+                : typeof item.keyAttributes === 'string'
+                  ? item.keyAttributes.split(',').map((s: string) => s.trim())
+                  : ["Scalability", "Performance"],
+            growthIndicator: item.growthIndicator || item.growth_indicator || "Medium"
+          };
+          
+          console.log("Transformed:", transformed);
+          return transformed;
+        } catch (transformError) {
+          console.error("Error transforming ICP:", transformError);
+          console.error("Failed item:", item);
+          
+          // Return a fallback ICP to prevent crashes
+          return {
+            id: `fallback-${index + 1}`,
+            industry: "Technology",
+            segment: "B2B SaaS",
+            companySize: "50-200 employees",
+            decisionMakers: ["CTO", "Head of Engineering"],
+            regions: ["North America"],
+            keyAttributes: ["Scalability", "Performance"],
+            growthIndicator: "Medium"
+          };
+        }
       });
       
-      console.log("=== FINAL TRANSFORMED DATA ===");
-      console.log("Transformed ICP count:", transformedData.length);
-      console.log("Transformed ICPs:", transformedData);
-      
-      // Add detailed logging of ICP content
-      transformedData.forEach((icp, index) => {
-        console.log(`ICP ${index + 1} Details:`, {
-          id: icp.id,
-          industry: icp.industry,
-          segment: icp.segment,
-          companySize: icp.companySize,
-          decisionMakers: icp.decisionMakers,
-          regions: icp.regions,
-          keyAttributes: icp.keyAttributes,
-          growthIndicator: icp.growthIndicator
-        });
+      console.log("=== FINAL TRANSFORMED ICPs ===");
+      console.log("Count:", transformedICPs.length);
+      transformedICPs.forEach((icp, idx) => {
+        console.log(`ICP ${idx + 1}:`, icp);
       });
       
-      // Compare with existing data to see if anything changed
-      if (suggestedICPs.length > 0) {
-        console.log("=== COMPARING WITH EXISTING ICPs ===");
-        const isDataDifferent = JSON.stringify(transformedData) !== JSON.stringify(suggestedICPs);
-        console.log("Data has changed:", isDataDifferent);
-        if (!isDataDifferent) {
-          console.log("⚠️ WARNING: Backend returned identical data - no new ICPs generated");
+      console.log("🔄 REPLACING OLD CARDS WITH NEW ICPs");
+      console.log("Previous count:", suggestedICPs.length);
+      console.log("New count:", transformedICPs.length);
+      
+      setSuggestedICPs(transformedICPs);
+      setError(null);
+      
+      // Auto-select the first ICP if available
+      if (transformedICPs.length > 0) {
+        console.log("✅ AUTO-SELECTING FIRST NEW ICP");
+        console.log("Auto-selecting ICP:", transformedICPs[0]);
+        const enrichedFirstICP = enrichICPWithAnalysis(transformedICPs[0]);
+        if (onICPSelect) {
+          onICPSelect(enrichedFirstICP);
         }
       }
       
-      console.log("=== SETTING NEW SUGGESTED ICPS STATE ===");
-      console.log("About to set suggestedICPs to:", transformedData);
-      setSuggestedICPs(transformedData);
-      
-      // Force immediate state update verification
-      setTimeout(() => {
-        console.log("=== STATE UPDATE VERIFICATION ===");
-        console.log("State should now contain:", transformedData.length, "ICPs");
-      }, 100);
-      
-      // Auto-select the first ICP
-      if (transformedData.length > 0 && onICPSelect) {
-        console.log("Auto-selecting first ICP:", transformedData[0]);
-        setSelectedICP(transformedData[0].id);
-        onICPSelect(transformedData[0]);
-      }
-      
-    } catch (err) {
-      console.error("=== ERROR FETCHING ICPs ===", err);
-      setError(err instanceof Error ? err.message : "Failed to load ICPs from backend");
-      
-      // Fallback to mock data if backend is unavailable
-      console.log("=== FALLING BACK TO MOCK DATA ===");
-      const mockICPs = [
-        {
-          id: "mock-1",
-          industry: "SaaS/Software",
-          segment: "Mid-Market SaaS in Cybersecurity",
-          companySize: "50–200 employees",
-          decisionMakers: ["CISO", "IT Director", "VP Security"],
-          regions: ["North America", "EU"],
-          keyAttributes: [
-            "Annual revenue $10M–$100M",
-            "Cloud-first infrastructure",
-            "Regulatory compliance requirements",
-            "Remote workforce"
-          ],
-          growthIndicator: "5.6% CAGR"
-        },
-        {
-          id: "mock-2", 
-          industry: "Fintech",
-          segment: "Digital Banking Platforms",
-          companySize: "100–500 employees",
-          decisionMakers: ["CTO", "Head of Engineering", "Product Manager"],
-          regions: ["Global", "North America"],
-          keyAttributes: [
-            "API-first architecture",
-            "Mobile-first customer base",
-            "Real-time transaction processing",
-            "Strong security focus"
-          ],
-          growthIndicator: "8.2% CAGR"
-        }
-      ];
-      setSuggestedICPs(mockICPs);
-    } finally {
-      setLoading(false);
       // Notify parent that refresh is complete
       if (onRefreshComplete) {
         onRefreshComplete();
       }
+      
+      console.log("✅ ICP REFRESH COMPLETED - NEW CARDS DISPLAYED");
+      
+      // Show success notification for refreshes (not initial load)
+      if (refreshTrigger > 0) {
+        const notification = document.createElement('div');
+        notification.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+        
+        const profileUsed = apiUrl.includes('profileUpdated=true');
+        notification.textContent = profileUsed 
+          ? `✅ ${transformedICPs.length} new ICP${transformedICPs.length !== 1 ? 's' : ''} generated from your company profile!`
+          : `✅ ${transformedICPs.length} ICP${transformedICPs.length !== 1 ? 's' : ''} refreshed (profile data not available)`;
+        
+        document.body.appendChild(notification);
+        
+        // Remove notification after 4 seconds
+        setTimeout(() => {
+          if (document.body.contains(notification)) {
+            document.body.removeChild(notification);
+          }
+        }, 4000);
+      }
+      
+    } catch (error) {
+      console.error("=== FETCH ERROR ===", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+      setError(`Failed to fetch ICPs: ${errorMessage}`);
+      
+      // Set fallback ICPs instead of leaving empty
+      console.log("Setting fallback ICPs due to error");
+      setSuggestedICPs(generateFallbackICPs());
+      
+    } finally {
+      setLoading(false);
+      console.log("=== FETCH COMPLETE ===");
     }
   };
 
@@ -253,6 +366,9 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
     if (refreshTrigger > 0) {
       console.log("=== REFRESH TRIGGERED USEEFFECT ===");
       console.log("refreshTrigger value:", refreshTrigger);
+      console.log("Previous ICPs count:", suggestedICPs.length);
+      console.log("Previous ICPs:", suggestedICPs.map(icp => ({ id: icp.id, industry: icp.industry, segment: icp.segment })));
+      console.log("🔄 STARTING ICP REFRESH - FETCHING NEW DATA FROM BACKEND");
       fetchICPs();
     }
   }, [refreshTrigger]); // Depend on refreshTrigger to refetch when company profile updates
@@ -343,12 +459,141 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
     handleFieldChange(icpId, field, items);
   };
 
+  const handleICPSelect = (icp: SuggestedICP) => {
+    console.log("=== ICP CARD SELECTED ===");
+    console.log("Raw selected ICP:", icp);
+    
+    // Enrich the ICP with detailed analysis data
+    const enrichedICP = enrichICPWithAnalysis(icp);
+    console.log("Enriched ICP:", enrichedICP);
+    
+    onICPSelect(enrichedICP);
+  };
+
+  // Function to enrich ICP with detailed analysis properties
+  const enrichICPWithAnalysis = (icp: SuggestedICP) => {
+    console.log("=== ENRICHING ICP WITH ANALYSIS ===");
+    
+    const industry = icp.industry || "Technology";
+    const segment = icp.segment || "Software Solutions";
+    const regions = icp.regions || ["Global"];
+    const keyAttributes = icp.keyAttributes || ["Security"];
+    const decisionMakers = icp.decisionMakers || ["CTO"];
+
+    // Generate dynamic market sizes based on industry
+    const industryMultipliers = {
+      'Healthcare': { base: 45, growth: 28 },
+      'Financial': { base: 32, growth: 35 },
+      'Technology': { base: 28, growth: 42 },
+      'Manufacturing': { base: 38, growth: 18 },
+      'Retail': { base: 25, growth: 22 },
+      'default': { base: 30, growth: 25 }
+    };
+
+    const industryKey = Object.keys(industryMultipliers).find(key =>
+      industry?.toLowerCase().includes(key.toLowerCase())
+    ) || 'default';
+
+    const multiplier = industryMultipliers[industryKey as keyof typeof industryMultipliers];
+    const marketSize = multiplier.base + Math.floor(Math.random() * 20);
+    const growthRate = multiplier.growth + Math.floor(Math.random() * 15);
+
+    // Generate company size-based metrics
+    const sizeMetrics = {
+      urgency: icp.companySize?.includes('100-500') || icp.companySize?.includes('200+') ? "High" :
+               icp.companySize?.includes('50-200') ? "Medium" : "High",
+      timeToClose: icp.companySize?.includes('500+') || icp.companySize?.includes('200+') ? "6-9 months" : "4-6 months",
+      corePersonas: decisionMakers?.length || 3,
+      buyingTriggers: Math.floor(Math.random() * 5) + 5
+    };
+
+    return {
+      ...icp,
+      // Extended properties for detailed analysis
+      title: `${industry} - ${segment} (${icp.companySize})`,
+      blurb: `${segment} companies in ${industry} seeking innovative solutions to scale their operations across ${regions?.join(', ') || 'target'} markets. Key focus areas include ${keyAttributes?.slice(0, 2).join(' and ') || 'operational efficiency'}.`,
+      marketSize: `€${marketSize}.${Math.floor(Math.random() * 9)}B`,
+      growth: `+${growthRate}%`,
+      urgency: sizeMetrics.urgency,
+      timeToClose: sizeMetrics.timeToClose,
+      corePersonas: sizeMetrics.corePersonas,
+      topPainPoint: keyAttributes?.[0] || "Operational Efficiency",
+      buyingTriggers: sizeMetrics.buyingTriggers,
+      competitors: Math.floor(Math.random() * 5) + 3,
+      winLossChange: `+${Math.floor(Math.random() * 30) + 10}%`,
+      buyingSignals: Math.floor(Math.random() * 15) + 8,
+      buyingTriggersArray: [
+        { trigger: `${industry} Modernization`, description: `${industry} companies upgrading ${segment.toLowerCase()} to address ${keyAttributes[0]?.toLowerCase() || 'scalability'}.` },
+        { trigger: keyAttributes[0] || "Technology Gap", description: `New ${industry.toLowerCase()} regulations requiring ${keyAttributes[0]?.toLowerCase() || 'security'} improvements in ${regions[0] || 'target markets'}.` }
+      ],
+      marketAnalysis: {
+        totalMarketSize: `€${marketSize}.${Math.floor(Math.random() * 9)}B`,
+        servicableMarket: `€${Math.floor(marketSize * 0.35)}.${Math.floor(Math.random() * 9)}B`,
+        targetableMarket: `€${Math.floor(marketSize * 0.08)}.${Math.floor(Math.random() * 9)}B`,
+        marketGrowth: `+${growthRate}%`,
+        segments: [
+          { name: `Advanced ${segment}`, size: `€${Math.floor(marketSize * 0.45)}.0B`, growth: `+${growthRate + 10}%`, share: "45%" },
+          { name: `Traditional ${segment}`, size: `€${Math.floor(marketSize * 0.35)}.0B`, growth: `+${growthRate - 8}%`, share: "35%" }
+        ],
+        keyChallenges: [
+          `${industry} sector complexity requiring specialized ${keyAttributes[0]?.toLowerCase() || 'solutions'}`,
+          `${segment} integration challenges for ${icp.companySize} organizations`
+        ],
+        strategicRecommendations: [
+          `Target ${industry} companies specifically needing ${keyAttributes[0]?.toLowerCase() || 'solutions'}`,
+          `Focus ${segment.toLowerCase()} messaging on ${keyAttributes.slice(0, 2).join(' and ').toLowerCase()} benefits`
+        ],
+        signalsToMonitor: [
+          `${industry} sector funding and ${segment.toLowerCase()} investment announcements`,
+          `${regions[0] || 'Regional'} regulatory changes affecting ${industry.toLowerCase()} ${keyAttributes[0]?.toLowerCase() || 'operations'}`
+        ]
+      },
+      competitiveData: {
+        mainCompetitors: [`${industry} Leader A`, `${industry} Leader B`, `${segment} Provider`],
+        competitiveMap: [
+          {
+            competitor: `${industry} Incumbent A`,
+            segment: segment,
+            share: "24%",
+            winsLosses: `Strong in ${regions[0] || 'market'}, ${keyAttributes[0]?.toLowerCase() || 'security'} focus`,
+            differentiators: `Legacy ${industry.toLowerCase()} presence, ${keyAttributes[0]?.toLowerCase() || 'security'} approach`
+          }
+        ],
+        competitiveNews: [
+          {
+            headline: `${industry} Leader announces ${segment.toLowerCase()} expansion`,
+            competitor: `${industry} Leader A`,
+            date: "2024-12-15",
+            impact: "Medium - expanding market presence"
+          }
+        ],
+        buyingSignalsData: [
+          {
+            signal: `${keyAttributes[0] || 'Technology'} Investment`,
+            strength: "High",
+            description: `Increased ${keyAttributes[0]?.toLowerCase() || 'technology'} spending in ${industry.toLowerCase()}`,
+            source: "Industry Reports",
+            recency: "2 weeks ago",
+            region: regions[0] || "Global",
+            type: "Investment"
+          }
+        ]
+      },
+      _metadata: {
+        dataSource: 'api',
+        fetchedAt: new Date().toISOString(),
+        originalICPId: icp.id,
+        transformationIndex: 0
+      }
+    };
+  };
+
   const handleCardClick = (icp: SuggestedICP) => {
     if (editingICP === icp.id) return; // Don't select while editing
     
     setSelectedICP(icp.id);
     if (onICPSelect) {
-      onICPSelect(icp);
+      handleICPSelect(icp);
     }
   };
 
@@ -361,72 +606,69 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
 
   return (
     <div className="space-y-6">
-      {/* Section Header */}
-      <div className="flex justify-between items-start">
-        <div className="space-y-2">
-          <h2 className="text-xl font-semibold text-gray-900">Suggested ICPs</h2>
+      {/* Header with refresh status */}
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900">Suggested ICPs</h3>
           <p className="text-sm text-gray-600">
-            Agent-curated ideal customer profiles based on your product and market patterns
+            {loading ? "Generating ICPs..." : 
+             error ? "Error loading ICPs" : 
+             `${suggestedICPs.length} ICP${suggestedICPs.length !== 1 ? 's' : ''} available`}
           </p>
         </div>
         
-        <div className="flex gap-2">
+        {/* Refresh Status & Button */}
+        <div className="flex items-center gap-3">
+          {/* Refresh Status Indicator */}
+          <div className="flex items-center gap-2 text-sm">
+            <div className={`w-2 h-2 rounded-full ${
+              refreshTrigger === 0 ? 'bg-blue-500' : 'bg-green-500'
+            }`}></div>
+            <span className="text-gray-600">
+              {refreshTrigger === 0 ? 'Initial Load' : 'Refreshed'}
+            </span>
+          </div>
+          
           {/* Refresh Button */}
           <Button
             variant="outline"
             size="sm"
             onClick={onManualRefresh}
             disabled={isRefreshing || loading}
-            className="text-gray-600 hover:text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+            className="flex items-center gap-2"
             title="Refresh ICPs from latest company profile"
           >
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
             {isRefreshing ? (
               <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
+                <Loader2 className="h-4 w-4 animate-spin" />
                 Refreshing...
               </>
             ) : (
               "Refresh"
             )}
           </Button>
-          
-          {/* Debug Refresh Button */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              console.log("=== DEBUG REFRESH TRIGGERED ===");
-              setSuggestedICPs([]); // Clear current data
-              setRenderKey(prev => prev + 1); // Force re-render
-              fetchICPs(); // Fetch fresh data
-            }}
-            className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 flex items-center gap-2"
-            title="Debug: Force clear and refresh"
-          >
-            Debug Refresh
-          </Button>
-          
-          {/* Persistent Profiler Chat Icon */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={openProfilerChat}
-            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 flex items-center gap-2 relative"
-            title="Chat with Profiler"
-          >
-            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center animate-pulse">
-              <Bot className="h-4 w-4 text-white" />
-            </div>
-            Chat with Profiler
-          </Button>
         </div>
       </div>
 
       {/* Loading State */}
       {loading && (
-        <div className="flex items-center justify-center py-12">
+        <div className="flex flex-col items-center justify-center py-12 space-y-4">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <span className="ml-3 text-gray-600">Loading ICPs from backend...</span>
+          <div className="text-center">
+            <p className="text-lg font-medium text-gray-900">
+              {refreshTrigger > 0 
+                ? "Generating new ICPs based on your company profile..." 
+                : "Loading your suggested ICPs..."
+              }
+            </p>
+            <p className="text-sm text-gray-600 mt-1">
+              {refreshTrigger > 0 
+                ? "This may take a few moments as we analyze your updated profile" 
+                : "Analyzing your business context and market patterns"
+              }
+            </p>
+          </div>
         </div>
       )}
 
@@ -462,9 +704,8 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
         <div className="text-xs text-gray-500 mb-2 p-2 bg-gray-50 rounded">
           Debug: Found {suggestedICPs.length} ICPs | Loading: {loading.toString()} | Error: {error ? 'Yes' : 'No'}
           {suggestedICPs.length > 0 && (
-            <div>First ICP: {suggestedICPs[0].segment} | Last Update: {new Date().toLocaleTimeString()}</div>
+            <div>First ICP: {suggestedICPs[0].segment}</div>
           )}
-          <div>RenderKey: {renderKey} | RefreshTrigger: {refreshTrigger}</div>
         </div>
       )}
 

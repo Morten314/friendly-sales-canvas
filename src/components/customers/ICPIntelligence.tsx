@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Edit, TrendingUp, Clock, Target, DollarSign } from "lucide-react";
 import MiniLineChart from "@/components/MiniLineChart";
 import MiniPieChart from "@/components/MiniPieChart";
-// import { ICPSummaryOpportunity } from "./ICPSummaryOpportunity"; // Temporarily disabled for debugging
+import { ICPSummaryOpportunity } from "./ICPSummaryOpportunity"; // Re-enabled with null handling
 import { SuggestedICPsGallery } from "./SuggestedICPsGallery";
 
 interface SuggestedICP {
@@ -18,6 +18,71 @@ interface SuggestedICP {
   regions: string[];
   keyAttributes: string[];
   growthIndicator?: string;
+  // Extended properties for detailed analysis
+  title?: string;
+  blurb?: string;
+  marketSize?: string;
+  growth?: string;
+  urgency?: string;
+  timeToClose?: string;
+  corePersonas?: number;
+  topPainPoint?: string;
+  buyingTriggers?: number;
+  competitors?: number;
+  winLossChange?: string;
+  buyingSignals?: number;
+  buyingTriggersArray?: Array<{
+    trigger: string;
+    description: string;
+  }>;
+  marketAnalysis?: {
+    totalMarketSize: string;
+    servicableMarket: string;
+    targetableMarket: string;
+    marketGrowth: string;
+    segments: Array<{
+      name: string;
+      size: string;
+      growth: string;
+      share: string;
+    }>;
+    keyChallenges: string[];
+    strategicRecommendations: string[];
+    signalsToMonitor: string[];
+  };
+  competitiveData?: {
+    mainCompetitors: string[];
+    competitiveMap: Array<{
+      competitor: string;
+      segment: string;
+      share: string;
+      winsLosses: string;
+      differentiators: string;
+    }>;
+    competitiveNews: Array<{
+      headline: string;
+      competitor: string;
+      date: string;
+      impact: string;
+    }>;
+    buyingSignalsData: Array<{
+      signal: string;
+      strength: string;
+      description: string;
+      source: string;
+      recency: string;
+      region: string;
+      type: string;
+    }>;
+  };
+  _metadata?: {
+    dataSource: 'api' | 'fallback';
+    fetchedAt?: string;
+    generatedAt?: string;
+    originalICPId?: string;
+    fallbackReason?: string;
+    transformationIndex?: number;
+  };
 }
 
 export const ICPIntelligence = () => {
@@ -57,14 +122,33 @@ export const ICPIntelligence = () => {
   };
 
   const handleICPSelect = (icp: SuggestedICP) => {
-    console.log("ICP selected in ICPIntelligence:", icp);
-    setSelectedICP(icp);
-    // Scroll to ICP details section
-    const detailsSection = document.getElementById('icp-details-section');
-    if (detailsSection) {
-      detailsSection.scrollIntoView({
-        behavior: 'smooth'
-      });
+    try {
+      console.log("=== ICP SELECTION ATTEMPT ===");
+      console.log("ICP selected in ICPIntelligence:", icp);
+      console.log("ICP type:", typeof icp);
+      console.log("ICP properties:", Object.keys(icp || {}));
+      
+      if (!icp) {
+        throw new Error("No ICP provided to handleICPSelect");
+      }
+      
+      setSelectedICP(icp);
+      setRenderError(null); // Clear any previous errors
+      
+      // Scroll to ICP details section
+      const detailsSection = document.getElementById('icp-details-section');
+      if (detailsSection) {
+        detailsSection.scrollIntoView({
+          behavior: 'smooth'
+        });
+      }
+      
+      console.log("ICP selection successful");
+    } catch (error) {
+      console.error("=== ERROR IN ICP SELECTION ===", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+      setRenderError(`Failed to select ICP: ${errorMessage}`);
+      setSelectedICP(null);
     }
   };
 
@@ -105,62 +189,6 @@ export const ICPIntelligence = () => {
       {/* Debug Info */}
       <div className="text-xs text-gray-500 p-2 bg-gray-50 rounded">
         Debug: selectedICP = {selectedICP ? selectedICP.segment : 'null'} | refreshTrigger = {refreshTrigger} | isRefreshing = {isRefreshing.toString()}
-        <div className="mt-2 flex gap-2">
-          <button 
-            onClick={() => {
-              console.log("=== MANUAL REFRESH TEST ===");
-              setRefreshTrigger(prev => prev + 1);
-            }}
-            className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs"
-          >
-            Test Refresh
-          </button>
-          <button 
-            onClick={() => {
-              console.log("=== MANUAL EVENT DISPATCH TEST ===");
-              const event = new CustomEvent('companyProfileUpdated', {
-                detail: { test: true, timestamp: new Date().toISOString() }
-              });
-              window.dispatchEvent(event);
-            }}
-            className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs"
-          >
-            Test Event
-          </button>
-          <button 
-            onClick={() => {
-              console.log("=== SIMULATING COMPANY PROFILE SAVE ===");
-              // Simulate saving a company profile with different data
-              const testProfile = {
-                industry: "Healthcare",
-                companySize: "100-500 employees", 
-                companyUrl: "https://test-company.com",
-                strategicGoals: "Expand into European markets",
-                primaryGTMModel: "sales-led",
-                revenueStage: "10m-plus",
-                keyBuyerPersona: "CTO, Head of Digital Health",
-                targetMarkets: ["Europe", "North America"],
-                socialMediaUrls: []
-              };
-              
-              console.log("Test profile data:", testProfile);
-              
-              // Dispatch the event that should trigger ICP refresh
-              const event = new CustomEvent('companyProfileUpdated', {
-                detail: { 
-                  profileData: testProfile, 
-                  timestamp: new Date().toISOString(),
-                  source: 'test'
-                }
-              });
-              window.dispatchEvent(event);
-              console.log("Test company profile event dispatched");
-            }}
-            className="px-2 py-1 bg-purple-100 text-purple-800 rounded text-xs"
-          >
-            Test Save Profile
-          </button>
-        </div>
       </div>
 
       {/* Page Header */}
@@ -181,17 +209,19 @@ export const ICPIntelligence = () => {
 
       {/* ICP Details Section */}
       <div id="icp-details-section">
-        {/* ICP Summary & Market Opportunity Section - Temporarily Disabled */}
-        <div className="flex items-center justify-center py-8">
-          <div className="text-center text-gray-500">
-            <p className="text-lg font-medium">
-              {selectedICP ? `Analysis for ${selectedICP.segment}` : 'Select an ICP card above'}
-            </p>
-            <p className="text-sm">
-              {selectedICP ? 'Detailed analysis temporarily disabled for debugging' : 'to view detailed market analysis and insights'}
-            </p>
+        {/* ICP Summary & Market Opportunity Section - Re-enabled */}
+        {selectedICP ? (
+          <div className="mt-4">
+            <ICPSummaryOpportunity selectedICP={selectedICP} />
           </div>
-        </div>
+        ) : (
+          <div className="flex items-center justify-center py-8">
+            <div className="text-center text-gray-500">
+              <p className="text-lg font-medium">Select an ICP card above</p>
+              <p className="text-sm">to view detailed market analysis and insights</p>
+            </div>
+          </div>
+        )}
 
         {/* Agent-Level Contextual Mini Report */}
         
