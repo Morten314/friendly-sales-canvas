@@ -285,19 +285,8 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
   // Handle save changes
   const handleSaveChanges = async () => {
     try {
-      console.log('🚀 Industry Trends - Starting save operation');
-      console.log('🚀 POST /edit - Request initiated from IndustryTrendsSection');
-      console.log('📡 POST /edit - Response status: 200 (simulated)');
-      console.log('✅ POST /edit - Success response: {"success": true}');
-      
-      console.log('🔄 GET /market_intelligence - Request initiated');
-      console.log('📡 GET /market_intelligence - Response status: 200 (simulated)');
-      console.log('✅ GET /market_intelligence - Success response: {"data": "refreshed"}');
-      console.log('✅ API flow completed successfully for IndustryTrendsSection');
-      
       // Prepare original data
       const originalData = {
-        section: 'industry-trends',
         executiveSummary: industryTrendsData?.executiveSummary || '',
         aiAdoption: industryTrendsData?.aiAdoption || '',
         cloudMigration: industryTrendsData?.cloudMigration || '',
@@ -307,7 +296,6 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
 
       // Prepare modified data
       const modifiedData = {
-        section: 'industry-trends',
         executiveSummary: editExecutiveSummary,
         aiAdoption: editAiAdoption,
         cloudMigration: editCloudMigration,
@@ -322,7 +310,12 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
         edit_type: "modification"
       };
 
-      console.log('📤 Industry Trends - Sending POST to /edit:', editData);
+      console.log('📤 Industry Trends - original_json:', originalData);
+      console.log('📤 Industry Trends - modified_json:', modifiedData);
+
+      // Store data for /ask API
+      localStorage.setItem('industry-trends_original_json', JSON.stringify(originalData));
+      localStorage.setItem('industry-trends_modified_json', JSON.stringify(modifiedData));
 
       // Call POST API to save edits
       const response = await fetch('https://backend-11kr.onrender.com/edit', {
@@ -333,38 +326,25 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
         body: JSON.stringify(editData),
       });
 
-      console.log('📥 Industry Trends - POST /edit response status:', response.status);
+      console.log('📥 POST /edit status:', response.status);
 
       if (!response.ok) {
         throw new Error(`Failed to save: ${response.status}`);
       }
 
-      const result = await response.json();
-      console.log('✅ Industry Trends - POST /edit successful:', result);
-
-      toast({
-        title: "Changes saved successfully",
-        description: "Industry trends data has been updated.",
-      });
-
-      console.log('📤 Industry Trends - Fetching updated data from GET /market_intelligence');
-      
-      // After successful save, fetch updated data from GET API
+      // Fetch updated data using GET API
       const getResponse = await fetch('https://backend-11kr.onrender.com/market_intelligence', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-        }
+        },
       });
 
-      console.log('📥 Industry Trends - GET /market_intelligence response status:', getResponse.status);
+      console.log('📥 GET /market_intelligence status:', getResponse.status);
 
       if (!getResponse.ok) {
         throw new Error(`Failed to fetch updated data: ${getResponse.status}`);
       }
-
-      const getData = await getResponse.json();
-      console.log('✅ Industry Trends - GET /market_intelligence successful:', getData);
 
       // Update the displayed data with the edited values immediately
       setIndustryTrendsData(prev => {

@@ -184,7 +184,12 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
         edit_type: "modification"
       };
 
-      console.log('📤 Regulatory Compliance - Sending POST to /edit:', editData);
+      console.log('📤 Regulatory Compliance - original_json:', originalData);
+      console.log('📤 Regulatory Compliance - modified_json:', modifiedData);
+
+      // Store data for /ask API
+      localStorage.setItem('regulatory-compliance_original_json', JSON.stringify(originalData));
+      localStorage.setItem('regulatory-compliance_modified_json', JSON.stringify(modifiedData));
 
       // Call POST API to save edits
       const response = await fetch('https://backend-11kr.onrender.com/edit', {
@@ -195,33 +200,25 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
         body: JSON.stringify(editData)
       });
 
-      console.log('📥 Regulatory Compliance - POST /edit response status:', response.status);
+      console.log('📥 POST /edit status:', response.status);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const result = await response.json();
-      console.log('✅ Regulatory Compliance - POST /edit successful:', result);
-      
-      console.log('📤 Regulatory Compliance - Fetching updated data from GET /market_intelligence');
-      
-      // After successful save, fetch updated data from GET API
-      const getResponse = await fetch('/market_intelligence', {
+      // Fetch updated data using GET API
+      const getResponse = await fetch('https://backend-11kr.onrender.com/market_intelligence', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         }
       });
 
-      console.log('📥 Regulatory Compliance - GET /market_intelligence response status:', getResponse.status);
+      console.log('📥 GET /market_intelligence status:', getResponse.status);
 
       if (!getResponse.ok) {
         throw new Error(`HTTP error! status: ${getResponse.status}`);
       }
-
-      const getData = await getResponse.json();
-      console.log('✅ Regulatory Compliance - GET /market_intelligence successful:', getData);
       
       // Update component with fresh data
       await fetchRegulatoryData();

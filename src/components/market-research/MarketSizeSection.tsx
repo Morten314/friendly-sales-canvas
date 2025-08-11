@@ -100,6 +100,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
   const [localMarketEntry, setLocalMarketEntry] = useState(marketEntry || '');
   const [localStrategicRecommendations, setLocalStrategicRecommendations] = useState<string[]>(strategicRecommendations || []);
   const [localMarketDrivers, setLocalMarketDrivers] = useState<string[]>(marketDrivers || []);
+  const [localError, setLocalError] = useState<string | null>(null);
 
   const { toast } = useToast();
 
@@ -142,40 +143,18 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
 
   const handleSave = async () => {
     try {
-      console.log('🚀 Market Size - Starting save operation');
-      console.log('🚀 POST /edit - Request initiated from MarketSizeSection');
-      console.log('📡 POST /edit - Response status: 200 (simulated)');
-      console.log('✅ POST /edit - Success response: {"success": true}');
-      
-      console.log('🔄 GET /market_intelligence - Request initiated');
-      console.log('📡 GET /market_intelligence - Response status: 200 (simulated)');
-      console.log('✅ GET /market_intelligence - Success response: {"data": "refreshed"}');
-      console.log('✅ API flow completed successfully for MarketSizeSection');
-      
-      // First, update parent state with local values
-      onExecutiveSummaryChange(localExecutiveSummary);
-      onTamValueChange(localTamValue);
-      onSamValueChange(localSamValue);
-      onApacGrowthRateChange(localApacGrowthRate);
-      onMarketEntryChange(localMarketEntry);
-      onStrategicRecommendationsChange(localStrategicRecommendations);
-      onMarketDriversChange(localMarketDrivers);
-      
-      // Prepare original data
+      // Prepare original and modified data
       const originalData = {
-        section: 'market-size',
-        executiveSummary: executiveSummary,
-        tamValue: tamValue,
-        samValue: samValue,
-        apacGrowthRate: apacGrowthRate,
-        marketEntry: marketEntry,
-        strategicRecommendations: strategicRecommendations,
-        marketDrivers: marketDrivers
+        executiveSummary,
+        tamValue,
+        samValue,
+        apacGrowthRate,
+        marketEntry,
+        strategicRecommendations,
+        marketDrivers
       };
 
-      // Prepare modified data
       const modifiedData = {
-        section: 'market-size',
         executiveSummary: localExecutiveSummary,
         tamValue: localTamValue,
         samValue: localSamValue,
@@ -185,14 +164,18 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
         marketDrivers: localMarketDrivers
       };
 
-      // Prepare data for API according to schema
       const editData = {
         original_json: originalData,
         modified_json: modifiedData,
         edit_type: "modification"
       };
 
-      console.log('📤 Market Size - Sending POST to /edit:', editData);
+      console.log('📤 Market Size - original_json:', originalData);
+      console.log('📤 Market Size - modified_json:', modifiedData);
+
+      // Store data for /ask API
+      localStorage.setItem('market-size_original_json', JSON.stringify(originalData));
+      localStorage.setItem('market-size_modified_json', JSON.stringify(modifiedData));
 
       // Call POST API to save edits
       const response = await fetch('https://backend-11kr.onrender.com/edit', {
@@ -203,46 +186,41 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
         body: JSON.stringify(editData),
       });
 
-      console.log('📥 Market Size - POST /edit response status:', response.status);
+      console.log('📥 POST /edit status:', response.status);
 
       if (!response.ok) {
         throw new Error(`Failed to save: ${response.status}`);
       }
 
-      const result = await response.json();
-      console.log('✅ Market Size - POST /edit successful:', result);
-
-      toast({
-        title: "Changes saved successfully",
-        description: "Market size data has been updated.",
-      });
-
-      // Then call the parent's save function
-      onSaveChanges();
-
-      console.log('📤 Market Size - Fetching updated data from GET /market_intelligence');
-
-      // Fetch updated data from GET API
+      // Fetch updated data using GET API
       const getResponse = await fetch('https://backend-11kr.onrender.com/market_intelligence', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-        }
+        },
       });
 
-      console.log('📥 Market Size - GET /market_intelligence response status:', getResponse.status);
+      console.log('📥 GET /market_intelligence status:', getResponse.status);
 
       if (!getResponse.ok) {
         throw new Error(`Failed to fetch updated data: ${getResponse.status}`);
       }
 
-      const getData = await getResponse.json();
-      console.log('✅ Market Size - GET /market_intelligence successful:', getData);
+      // Update parent state with local values
+      onExecutiveSummaryChange(localExecutiveSummary);
+      onTamValueChange(localTamValue);
+      onSamValueChange(localSamValue);
+      onApacGrowthRateChange(localApacGrowthRate);
+      onMarketEntryChange(localMarketEntry);
+      onStrategicRecommendationsChange(localStrategicRecommendations);
+      onMarketDriversChange(localMarketDrivers);
+      onSaveChanges();
 
       await fetchUpdatedData();
       
     } catch (error) {
-      console.error('Error saving market size data:', error);
+      console.error('❌ Error saving changes:', error);
+      setLocalError('Failed to save changes. Please try again.');
       toast({
         title: "Error saving changes",
         description: "Failed to save market size data. Please try again.",
