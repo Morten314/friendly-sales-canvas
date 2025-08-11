@@ -179,7 +179,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
       console.log('📤 Competitor Landscape - Sending POST to /edit:', editData);
 
       // Call POST API to save edits
-      const response = await fetch('/edit', {
+      const response = await fetch('https://backend-11kr.onrender.com/edit', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
