@@ -766,8 +766,8 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                       onTopPlayerShareChange(localTopPlayerShare);
                       onEmergingPlayersChange(localEmergingPlayers);
                       
-                      // Then call the parent's save function
-                      onCompetitorLandscapeSaveChanges();
+                       // Then call the API save function
+                       handleCompetitorLandscapeSaveChanges();
                     }}
                     className="bg-blue-600 hover:bg-blue-700"
                   >

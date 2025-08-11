@@ -938,8 +938,8 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                       setRegulatoryData(prev => prev ? { ...prev, keyUpdates: updatedKeyUpdates } : prev);
                     }
                     
-                    // Then call the parent's save function
-                    onSaveChanges();
+                    // Then call the API save function
+                    handleRegulatoryComplianceSaveChanges();
                   }}
                   className="bg-blue-600 hover:bg-blue-700 text-white"
                 >
