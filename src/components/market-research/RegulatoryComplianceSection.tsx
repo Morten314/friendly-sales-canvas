@@ -219,8 +219,32 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
       if (!getResponse.ok) {
         throw new Error(`HTTP error! status: ${getResponse.status}`);
       }
+
+      const getData = await getResponse.json();
+      console.log('✅ Regulatory Compliance - GET /market_intelligence successful:', getData);
       
-      // Update component with fresh data
+      // Update component with fresh data from API response
+      if (getData && getData.regulatory_compliance_data) {
+        const apiData = getData.regulatory_compliance_data;
+        
+        // Update local state with API response data
+        setLocalExecutiveSummary(apiData.executiveSummary || '');
+        setLocalEuAiActDeadline(apiData.euAiActDeadline || '');
+        setLocalGdprCompliance(apiData.gdprCompliance || '');
+        setLocalPotentialFines(apiData.potentialFines || '');
+        setLocalDataLocalization(apiData.dataLocalization || '');
+        
+        // Update parent state with API response data
+        onExecutiveSummaryChange(apiData.executiveSummary || '');
+        onEuAiActDeadlineChange(apiData.euAiActDeadline || '');
+        onGdprComplianceChange(apiData.gdprCompliance || '');
+        onPotentialFinesChange(apiData.potentialFines || '');
+        onDataLocalizationChange(apiData.dataLocalization || '');
+        
+        console.log('✅ Regulatory Compliance - State updated with API response data');
+      }
+      
+      // Also refresh the component data
       await fetchRegulatoryData();
       
       // Call the original save function

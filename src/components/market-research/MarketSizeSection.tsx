@@ -206,16 +206,44 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
         throw new Error(`Failed to fetch updated data: ${getResponse.status}`);
       }
 
-      // Update parent state with local values
-      onExecutiveSummaryChange(localExecutiveSummary);
-      onTamValueChange(localTamValue);
-      onSamValueChange(localSamValue);
-      onApacGrowthRateChange(localApacGrowthRate);
-      onMarketEntryChange(localMarketEntry);
-      onStrategicRecommendationsChange(localStrategicRecommendations);
-      onMarketDriversChange(localMarketDrivers);
+      const getData = await getResponse.json();
+      console.log('✅ Market Size - GET /market_intelligence successful:', getData);
+      
+      // Update component with fresh data from API response
+      if (getData && getData.market_size_data) {
+        const apiData = getData.market_size_data;
+        
+        // Update local state with API response data
+        setLocalExecutiveSummary(apiData.executiveSummary || '');
+        setLocalTamValue(apiData.tamValue || '');
+        setLocalSamValue(apiData.samValue || '');
+        setLocalApacGrowthRate(apiData.apacGrowthRate || '');
+        setLocalMarketEntry(apiData.marketEntry || '');
+        setLocalStrategicRecommendations(apiData.strategicRecommendations || []);
+        setLocalMarketDrivers(apiData.marketDrivers || []);
+        
+        // Update parent state with API response data
+        onExecutiveSummaryChange(apiData.executiveSummary || '');
+        onTamValueChange(apiData.tamValue || '');
+        onSamValueChange(apiData.samValue || '');
+        onApacGrowthRateChange(apiData.apacGrowthRate || '');
+        onMarketEntryChange(apiData.marketEntry || '');
+        onStrategicRecommendationsChange(apiData.strategicRecommendations || []);
+        onMarketDriversChange(apiData.marketDrivers || []);
+        
+        console.log('✅ Market Size - State updated with API response data');
+      } else {
+        // Fallback: Update parent state with local values
+        onExecutiveSummaryChange(localExecutiveSummary);
+        onTamValueChange(localTamValue);
+        onSamValueChange(localSamValue);
+        onApacGrowthRateChange(localApacGrowthRate);
+        onMarketEntryChange(localMarketEntry);
+        onStrategicRecommendationsChange(localStrategicRecommendations);
+        onMarketDriversChange(localMarketDrivers);
+      }
+      
       onSaveChanges();
-
       await fetchUpdatedData();
       
     } catch (error) {

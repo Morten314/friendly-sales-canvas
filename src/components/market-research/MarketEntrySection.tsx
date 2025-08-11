@@ -271,7 +271,24 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
       const getData = await getResponse.json();
       console.log('✅ Market Entry - GET /market_intelligence successful:', getData);
       
-      // Update component with fresh data
+      // Update component with fresh data from API response
+      if (getData && getData.market_entry_data) {
+        const apiData = getData.market_entry_data;
+        
+        // Update local state with API response data
+        onExecutiveSummaryChange(apiData.executiveSummary || '');
+        onEntryBarriersChange(apiData.entryBarriers || []);
+        onRecommendedChannelChange(apiData.recommendedChannel || '');
+        onTimeToMarketChange(apiData.timeToMarket || '');
+        onTopBarrierChange(apiData.topBarrier || '');
+        onCompetitiveDifferentiationChange(apiData.competitiveDifferentiation || []);
+        onStrategicRecommendationsChange(apiData.strategicRecommendations || []);
+        onRiskAssessmentChange(apiData.riskAssessment || []);
+        
+        console.log('✅ Market Entry - State updated with API response data');
+      }
+      
+      // Also refresh the component data
       await fetchMarketEntryData();
       
       // Call the original save function

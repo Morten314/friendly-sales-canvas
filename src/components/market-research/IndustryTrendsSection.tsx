@@ -346,20 +346,45 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
         throw new Error(`Failed to fetch updated data: ${getResponse.status}`);
       }
 
-      // Update the displayed data with the edited values immediately
-      setIndustryTrendsData(prev => {
-        if (!prev) return prev;
+      const getData = await getResponse.json();
+      console.log('✅ Industry Trends - GET /market_intelligence successful:', getData);
+      
+      // Check if API returned updated data, otherwise use local edited values
+      if (getData && getData.industry_trends_data) {
+        const apiData = getData.industry_trends_data;
         
-        return {
-          ...prev,
-          executiveSummary: editExecutiveSummary,
-          aiAdoption: editAiAdoption,
-          cloudMigration: editCloudMigration,
-          regulatory: editRegulatory,
-          trendSnapshots: editTrendSnapshots,
-          timestamp: prev.timestamp // Keep the existing timestamp
-        };
-      });
+        // Update the displayed data with API response
+        setIndustryTrendsData(prev => {
+          if (!prev) return prev;
+          
+          return {
+            ...prev,
+            executiveSummary: apiData.executiveSummary || editExecutiveSummary,
+            aiAdoption: apiData.aiAdoption || editAiAdoption,
+            cloudMigration: apiData.cloudMigration || editCloudMigration,
+            regulatory: apiData.regulatory || editRegulatory,
+            trendSnapshots: apiData.trendSnapshots || editTrendSnapshots,
+            timestamp: prev.timestamp // Keep the existing timestamp
+          };
+        });
+        
+        console.log('✅ Industry Trends - State updated with API response data');
+      } else {
+        // Fallback: Update the displayed data with the edited values
+        setIndustryTrendsData(prev => {
+          if (!prev) return prev;
+          
+          return {
+            ...prev,
+            executiveSummary: editExecutiveSummary,
+            aiAdoption: editAiAdoption,
+            cloudMigration: editCloudMigration,
+            regulatory: editRegulatory,
+            trendSnapshots: editTrendSnapshots,
+            timestamp: prev.timestamp // Keep the existing timestamp
+          };
+        });
+      }
       
       // Call the parent save function
       onIndustryTrendsSaveChanges();

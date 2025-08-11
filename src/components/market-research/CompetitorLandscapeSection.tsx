@@ -206,13 +206,33 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         }
       });
 
-      console.log('📥 GET /market_intelligence status:', getResponse.status);
+       console.log('📥 GET /market_intelligence status:', getResponse.status);
 
       if (!getResponse.ok) {
         throw new Error(`HTTP error! status: ${getResponse.status}`);
       }
+
+      const getData = await getResponse.json();
+      console.log('✅ Competitor Landscape - GET /market_intelligence successful:', getData);
       
-      // Update component with fresh data
+      // Update component with fresh data from API response
+      if (getData && getData.competitor_landscape_data) {
+        const apiData = getData.competitor_landscape_data;
+        
+        // Update local state with API response data
+        setLocalExecutiveSummary(apiData.executiveSummary || '');
+        setLocalTopPlayerShare(apiData.topPlayerShare || '');
+        setLocalEmergingPlayers(apiData.emergingPlayers || '');
+        
+        // Update parent state with API response data
+        onExecutiveSummaryChange(apiData.executiveSummary || '');
+        onTopPlayerShareChange(apiData.topPlayerShare || '');
+        onEmergingPlayersChange(apiData.emergingPlayers || '');
+        
+        console.log('✅ Competitor Landscape - State updated with API response data');
+      }
+      
+      // Also refresh the component data
       await fetchCompetitorLandscapeData();
       
       // Call the original save function
