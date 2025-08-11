@@ -5,9 +5,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useToast } from '@/hooks/use-toast';
 import MiniPieChart from '@/components/ui/MiniPieChart';
 import MiniLineChart from '@/components/ui/MiniLineChart';
 import { EditRecord } from './types';
+import { EditDropdownMenu } from './EditDropdownMenu';
 
 interface MarketSizeSectionProps {
   isEditing: boolean;
@@ -99,46 +101,116 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
   const [localStrategicRecommendations, setLocalStrategicRecommendations] = useState<string[]>(strategicRecommendations || []);
   const [localMarketDrivers, setLocalMarketDrivers] = useState<string[]>(marketDrivers || []);
 
-  const handleMarketSizeSaveChanges = () => {
-    // Log original and modified JSON for debugging
-    const originalJson = {
-      executiveSummary: executiveSummary || '',
-      tamValue: tamValue || '',
-      samValue: samValue || '',
-      apacGrowthRate: apacGrowthRate || '',
-      marketEntry: marketEntry || '',
-      strategicRecommendations: strategicRecommendations || [],
-      marketDrivers: marketDrivers || []
-    };
+  const { toast } = useToast();
 
-    const modifiedJson = {
-      executiveSummary: localExecutiveSummary,
-      tamValue: localTamValue,
-      samValue: localSamValue,
-      apacGrowthRate: localApacGrowthRate,
-      marketEntry: localMarketEntry,
-      strategicRecommendations: localStrategicRecommendations,
-      marketDrivers: localMarketDrivers
-    };
+  // Handle section delete
+  const handleSectionDelete = () => {
+    // Implementation for section deletion
+    onDeleteSection('market-size');
+  };
 
-    console.log('📊 Market Size Section - original_json:', JSON.stringify(originalJson, null, 2));
-    console.log('📊 Market Size Section - modified_json:', JSON.stringify(modifiedJson, null, 2));
+  const handleModify = () => {
+    onToggleEdit();
+  };
 
-    // Store JSON data in localStorage for Scout API
-    localStorage.setItem('market-size_original_json', JSON.stringify(originalJson));
-    localStorage.setItem('market-size_modified_json', JSON.stringify(modifiedJson));
+  const handleComment = () => {
+    onScoutIconClick('market-size', hasEdits, 'I have a comment about this section');
+  };
 
-    // First, call the change handlers to update parent state with local values
-    onExecutiveSummaryChange(localExecutiveSummary);
-    onTamValueChange(localTamValue);
-    onSamValueChange(localSamValue);
-    onApacGrowthRateChange(localApacGrowthRate);
-    onMarketEntryChange(localMarketEntry);
-    onStrategicRecommendationsChange(localStrategicRecommendations);
-    onMarketDriversChange(localMarketDrivers);
-    
-    // Then call the parent's save function
-    onSaveChanges();
+  // Reset local values when editing starts
+  useEffect(() => {
+    if (isEditing) {
+      console.log('📝 Editing started - Setting local values:', {
+        executiveSummary,
+        tamValue,
+        samValue,
+        apacGrowthRate,
+        marketEntry,
+        strategicRecommendations,
+        marketDrivers
+      });
+      
+      setLocalExecutiveSummary(executiveSummary || '');
+      setLocalTamValue(tamValue || '');
+      setLocalSamValue(samValue || '');
+      setLocalApacGrowthRate(apacGrowthRate || '');
+      setLocalMarketEntry(marketEntry || '');
+      setLocalStrategicRecommendations(strategicRecommendations || []);
+      setLocalMarketDrivers(marketDrivers || []);
+    }
+  }, [isEditing, executiveSummary, tamValue, samValue, apacGrowthRate, marketEntry, strategicRecommendations, marketDrivers]);
+
+  const handleSave = async () => {
+    try {
+      // First, update parent state with local values
+      onExecutiveSummaryChange(localExecutiveSummary);
+      onTamValueChange(localTamValue);
+      onSamValueChange(localSamValue);
+      onApacGrowthRateChange(localApacGrowthRate);
+      onMarketEntryChange(localMarketEntry);
+      onStrategicRecommendationsChange(localStrategicRecommendations);
+      onMarketDriversChange(localMarketDrivers);
+      
+      // Prepare data for API
+      const editData = {
+        section: 'market-size',
+        executiveSummary: localExecutiveSummary,
+        tamValue: localTamValue,
+        samValue: localSamValue,
+        apacGrowthRate: localApacGrowthRate,
+        marketEntry: localMarketEntry,
+        strategicRecommendations: localStrategicRecommendations,
+        marketDrivers: localMarketDrivers
+      };
+
+      // Call POST API to save edits
+      const response = await fetch('https://backend-11kr.onrender.com/edit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(editData),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to save: ${response.status}`);
+      }
+
+      toast({
+        title: "Changes saved successfully",
+        description: "Market size data has been updated.",
+      });
+
+      // Then call the parent's save function
+      onSaveChanges();
+
+      // Fetch updated data from GET API
+      await fetchUpdatedData();
+      
+    } catch (error) {
+      console.error('Error saving market size data:', error);
+      toast({
+        title: "Error saving changes",
+        description: "Failed to save market size data. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const fetchUpdatedData = async () => {
+    try {
+      const response = await fetch('https://backend-11kr.onrender.com/market_intelligence');
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Updated data fetched:', data);
+        // The parent component should handle updating the data
+        if (onRefresh) {
+          onRefresh();
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching updated data:', error);
+    }
   };
 
   return (
@@ -150,9 +222,11 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
           Market Size & Opportunity
         </h2>
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={onToggleEdit} className="text-blue-800 hover:text-blue-900">
-            <Edit className="h-4 w-4" />
-          </Button>
+          <EditDropdownMenu
+            onModify={handleModify}
+            onComment={handleComment}
+            className="text-blue-800 hover:text-blue-900"
+          />
           {!isSplitView && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -382,7 +456,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
 
           {/* Save/Cancel Buttons */}
           <div className="flex items-center gap-3 pt-6 border-t">
-            <Button onClick={handleMarketSizeSaveChanges}>Save Changes</Button>
+            <Button onClick={handleSave}>Save Changes</Button>
             <Button variant="outline" onClick={onCancelEdit}>Cancel</Button>
             <div className="flex-1"></div>
             

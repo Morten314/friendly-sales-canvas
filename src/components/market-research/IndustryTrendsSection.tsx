@@ -6,9 +6,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useToast } from '@/hooks/use-toast';
 import MiniPieChart from '@/components/ui/MiniPieChart';
 import MiniLineChart from '@/components/ui/MiniLineChart';
 import { toUTCTimestamp, isTimestampNewer, getCurrentUTCTimestamp, logTimestampComparison } from '@/lib/timestampUtils';
+import { EditDropdownMenu } from './EditDropdownMenu';
 
 interface EditRecord {
   id: string;
@@ -97,12 +99,22 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
+  const { toast } = useToast();
+
   // Local editing state
   const [editExecutiveSummary, setEditExecutiveSummary] = useState('');
   const [editAiAdoption, setEditAiAdoption] = useState('');
   const [editCloudMigration, setEditCloudMigration] = useState('');
   const [editRegulatory, setEditRegulatory] = useState('');
   const [editTrendSnapshots, setEditTrendSnapshots] = useState<TrendSnapshot[]>([]);
+
+  const handleModify = () => {
+    onIndustryTrendsToggleEdit();
+  };
+
+  const handleComment = () => {
+    onScoutIconClick('industry-trends');
+  };
 
   // Fetch Industry Trends data from API
   const fetchIndustryTrendsData = async (refresh = true) => {
@@ -273,16 +285,9 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
   // Handle save changes
   const handleSaveChanges = async () => {
     try {
-      // Log original and modified JSON for debugging
-      const originalJson = {
-        executiveSummary: industryTrendsData?.executiveSummary || '',
-        aiAdoption: industryTrendsData?.aiAdoption || '',
-        cloudMigration: industryTrendsData?.cloudMigration || '',
-        regulatory: industryTrendsData?.regulatory || '',
-        trendSnapshots: industryTrendsData?.trendSnapshots || []
-      };
-
-      const modifiedJson = {
+      // Prepare data for API
+      const editData = {
+        section: 'industry-trends',
         executiveSummary: editExecutiveSummary,
         aiAdoption: editAiAdoption,
         cloudMigration: editCloudMigration,
@@ -290,13 +295,23 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
         trendSnapshots: editTrendSnapshots
       };
 
-      // JSON logging with formatted output
-      console.log('📈 Industry Trends Section - original_json:', JSON.stringify(originalJson, null, 2));
-      console.log('📈 Industry Trends Section - modified_json:', JSON.stringify(modifiedJson, null, 2));
+      // Call POST API to save edits
+      const response = await fetch('https://backend-11kr.onrender.com/edit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(editData),
+      });
 
-      // Store JSON data in localStorage for Scout API
-      localStorage.setItem('industry-trends_original_json', JSON.stringify(originalJson));
-      localStorage.setItem('industry-trends_modified_json', JSON.stringify(modifiedJson));
+      if (!response.ok) {
+        throw new Error(`Failed to save: ${response.status}`);
+      }
+
+      toast({
+        title: "Changes saved successfully",
+        description: "Industry trends data has been updated.",
+      });
 
       // Update the displayed data with the edited values immediately
       setIndustryTrendsData(prev => {
@@ -313,10 +328,33 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
         };
       });
       
-      console.log('✅ Industry Trends data updated with local edits');
+      // Call the parent save function
       onIndustryTrendsSaveChanges();
-    } catch (err) {
-      console.error('Error saving changes:', err);
+
+      // Fetch updated data from GET API
+      await fetchUpdatedData();
+      
+    } catch (error) {
+      console.error('Error saving industry trends data:', error);
+      toast({
+        title: "Error saving changes",
+        description: "Failed to save industry trends data. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const fetchUpdatedData = async () => {
+    try {
+      const response = await fetch('https://backend-11kr.onrender.com/market_intelligence');
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Updated data fetched:', data);
+        // Refresh the data if needed
+        fetchIndustryTrendsData(false);
+      }
+    } catch (error) {
+      console.error('Error fetching updated data:', error);
     }
   };
 
@@ -387,9 +425,11 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
           Industry Trends
         </h2>
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={onIndustryTrendsToggleEdit} className="text-purple-800 hover:text-purple-900">
-            <Edit className="h-4 w-4" />
-          </Button>
+          <EditDropdownMenu
+            onModify={handleModify}
+            onComment={handleComment}
+            className="text-purple-800 hover:text-purple-900"
+          />
           {!isSplitView && (
             <Tooltip>
               <TooltipTrigger asChild>
