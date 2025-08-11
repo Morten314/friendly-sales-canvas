@@ -285,14 +285,31 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
   // Handle save changes
   const handleSaveChanges = async () => {
     try {
-      // Prepare data for API
-      const editData = {
+      // Prepare original data
+      const originalData = {
+        section: 'industry-trends',
+        executiveSummary: industryTrendsData?.executiveSummary || '',
+        aiAdoption: industryTrendsData?.aiAdoption || '',
+        cloudMigration: industryTrendsData?.cloudMigration || '',
+        regulatory: industryTrendsData?.regulatory || '',
+        trendSnapshots: industryTrendsData?.trendSnapshots || []
+      };
+
+      // Prepare modified data
+      const modifiedData = {
         section: 'industry-trends',
         executiveSummary: editExecutiveSummary,
         aiAdoption: editAiAdoption,
         cloudMigration: editCloudMigration,
         regulatory: editRegulatory,
         trendSnapshots: editTrendSnapshots
+      };
+
+      // Prepare data for API according to schema
+      const editData = {
+        original_json: originalData,
+        modified_json: modifiedData,
+        edit_type: "modification"
       };
 
       // Call POST API to save edits

@@ -151,8 +151,20 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
       onStrategicRecommendationsChange(localStrategicRecommendations);
       onMarketDriversChange(localMarketDrivers);
       
-      // Prepare data for API
-      const editData = {
+      // Prepare original data
+      const originalData = {
+        section: 'market-size',
+        executiveSummary: executiveSummary,
+        tamValue: tamValue,
+        samValue: samValue,
+        apacGrowthRate: apacGrowthRate,
+        marketEntry: marketEntry,
+        strategicRecommendations: strategicRecommendations,
+        marketDrivers: marketDrivers
+      };
+
+      // Prepare modified data
+      const modifiedData = {
         section: 'market-size',
         executiveSummary: localExecutiveSummary,
         tamValue: localTamValue,
@@ -161,6 +173,13 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
         marketEntry: localMarketEntry,
         strategicRecommendations: localStrategicRecommendations,
         marketDrivers: localMarketDrivers
+      };
+
+      // Prepare data for API according to schema
+      const editData = {
+        original_json: originalData,
+        modified_json: modifiedData,
+        edit_type: "modification"
       };
 
       // Call POST API to save edits
