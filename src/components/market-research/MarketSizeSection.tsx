@@ -142,6 +142,8 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
 
   const handleSave = async () => {
     try {
+      console.log('🚀 Market Size - Starting save operation');
+      
       // First, update parent state with local values
       onExecutiveSummaryChange(localExecutiveSummary);
       onTamValueChange(localTamValue);
@@ -182,6 +184,8 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
         edit_type: "modification"
       };
 
+      console.log('📤 Market Size - Sending POST to /edit:', editData);
+
       // Call POST API to save edits
       const response = await fetch('https://backend-11kr.onrender.com/edit', {
         method: 'POST',
@@ -191,9 +195,14 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
         body: JSON.stringify(editData),
       });
 
+      console.log('📥 Market Size - POST /edit response status:', response.status);
+
       if (!response.ok) {
         throw new Error(`Failed to save: ${response.status}`);
       }
+
+      const result = await response.json();
+      console.log('✅ Market Size - POST /edit successful:', result);
 
       toast({
         title: "Changes saved successfully",
@@ -203,7 +212,25 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
       // Then call the parent's save function
       onSaveChanges();
 
+      console.log('📤 Market Size - Fetching updated data from GET /market_intelligence');
+
       // Fetch updated data from GET API
+      const getResponse = await fetch('https://backend-11kr.onrender.com/market_intelligence', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      console.log('📥 Market Size - GET /market_intelligence response status:', getResponse.status);
+
+      if (!getResponse.ok) {
+        throw new Error(`Failed to fetch updated data: ${getResponse.status}`);
+      }
+
+      const getData = await getResponse.json();
+      console.log('✅ Market Size - GET /market_intelligence successful:', getData);
+
       await fetchUpdatedData();
       
     } catch (error) {

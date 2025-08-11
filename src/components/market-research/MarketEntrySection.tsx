@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { MapPin, Bot, Edit, Target, Clock, AlertTriangle, X, FileText, Save, Share, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
+import { EditDropdownMenu } from './EditDropdownMenu';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -193,6 +194,95 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
     onSaveChanges();
   };
 
+  // Handle save changes with API integration
+  const handleMarketEntryFullSaveChanges = async () => {
+    try {
+      console.log('🚀 Market Entry - Starting save operation');
+      
+      // Prepare original data
+      const originalData = {
+        section: 'market-entry',
+        executiveSummary: executiveSummary,
+        entryBarriers: entryBarriers,
+        recommendedChannel: recommendedChannel,
+        timeToMarket: timeToMarket,
+        topBarrier: topBarrier,
+        competitiveDifferentiation: competitiveDifferentiation,
+        strategicRecommendations: strategicRecommendations,
+        riskAssessment: riskAssessment
+      };
+
+      // Prepare modified data (same since onChange handlers update immediately)
+      const modifiedData = {
+        section: 'market-entry',
+        executiveSummary: executiveSummary,
+        entryBarriers: entryBarriers,
+        recommendedChannel: recommendedChannel,
+        timeToMarket: timeToMarket,
+        topBarrier: topBarrier,
+        competitiveDifferentiation: competitiveDifferentiation,
+        strategicRecommendations: strategicRecommendations,
+        riskAssessment: riskAssessment
+      };
+
+      // Prepare data for API according to schema
+      const editData = {
+        original_json: originalData,
+        modified_json: modifiedData,
+        edit_type: "modification"
+      };
+
+      console.log('📤 Market Entry - Sending POST to /edit:', editData);
+
+      // Call POST API to save edits
+      const response = await fetch('/edit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(editData)
+      });
+
+      console.log('📥 Market Entry - POST /edit response status:', response.status);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Market Entry - POST /edit successful:', result);
+      
+      console.log('📤 Market Entry - Fetching updated data from GET /market_intelligence');
+      
+      // After successful save, fetch updated data from GET API
+      const getResponse = await fetch('/market_intelligence', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      console.log('📥 Market Entry - GET /market_intelligence response status:', getResponse.status);
+
+      if (!getResponse.ok) {
+        throw new Error(`HTTP error! status: ${getResponse.status}`);
+      }
+
+      const getData = await getResponse.json();
+      console.log('✅ Market Entry - GET /market_intelligence successful:', getData);
+      
+      // Update component with fresh data
+      await fetchMarketEntryData();
+      
+      // Call the original save function
+      onSaveChanges();
+    } catch (error) {
+      console.error('❌ Market Entry - Error saving changes:', error);
+      // Still call the original save function even if API fails
+      onSaveChanges();
+    }
+  };
+
   const SwotQuadrant = () => (
     <div className="grid grid-cols-2 gap-2 text-xs">
       <div className="bg-green-50 p-2 rounded border">
@@ -239,9 +329,11 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
           Market Entry & Growth Strategy
         </h2>
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={onToggleEdit} className="text-purple-800 hover:text-purple-900">
-            <Edit className="h-4 w-4" />
-          </Button>
+          <EditDropdownMenu
+            onModify={onToggleEdit}
+            onComment={() => onScoutIconClick('market-entry', hasEdits)}
+            className="text-purple-800 hover:text-purple-900"
+          />
           {hasEdits && (
             <Button variant="ghost" size="sm" onClick={onEditHistoryOpen} className="text-gray-600 hover:text-gray-700">
               <Clock className="h-4 w-4" />
@@ -561,7 +653,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
 
           {/* Save/Cancel Buttons */}
           <div className="flex items-center gap-3 pt-6 border-t">
-            <Button onClick={handleMarketEntrySaveChanges}>Save Changes</Button>
+            <Button onClick={handleMarketEntryFullSaveChanges}>Save Changes</Button>
             <Button variant="outline" onClick={onCancelEdit}>Cancel</Button>
             <div className="flex-1"></div>
             

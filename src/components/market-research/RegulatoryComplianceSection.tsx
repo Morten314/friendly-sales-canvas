@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { EditDropdownMenu } from './EditDropdownMenu';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { 
@@ -143,6 +144,96 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
       setLocalKeyDataValues(initialValues);
     }
   }, [regulatoryData?.keyUpdates, isEditing]);
+
+  // Handle save changes
+  const handleRegulatoryComplianceSaveChanges = async () => {
+    try {
+      console.log('🚀 Regulatory Compliance - Starting save operation');
+      
+      // Apply local edits to props
+      onExecutiveSummaryChange(localExecutiveSummary);
+      onEuAiActDeadlineChange(localEuAiActDeadline);
+      onGdprComplianceChange(localGdprCompliance);
+      onPotentialFinesChange(localPotentialFines);
+      onDataLocalizationChange(localDataLocalization);
+      
+      // Prepare original data
+      const originalData = {
+        section: 'regulatory-compliance',
+        executiveSummary: executiveSummary,
+        euAiActDeadline: euAiActDeadline,
+        gdprCompliance: gdprCompliance,
+        potentialFines: potentialFines,
+        dataLocalization: dataLocalization
+      };
+
+      // Prepare modified data
+      const modifiedData = {
+        section: 'regulatory-compliance',
+        executiveSummary: localExecutiveSummary,
+        euAiActDeadline: localEuAiActDeadline,
+        gdprCompliance: localGdprCompliance,
+        potentialFines: localPotentialFines,
+        dataLocalization: localDataLocalization
+      };
+
+      // Prepare data for API according to schema
+      const editData = {
+        original_json: originalData,
+        modified_json: modifiedData,
+        edit_type: "modification"
+      };
+
+      console.log('📤 Regulatory Compliance - Sending POST to /edit:', editData);
+
+      // Call POST API to save edits
+      const response = await fetch('/edit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(editData)
+      });
+
+      console.log('📥 Regulatory Compliance - POST /edit response status:', response.status);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Regulatory Compliance - POST /edit successful:', result);
+      
+      console.log('📤 Regulatory Compliance - Fetching updated data from GET /market_intelligence');
+      
+      // After successful save, fetch updated data from GET API
+      const getResponse = await fetch('/market_intelligence', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      console.log('📥 Regulatory Compliance - GET /market_intelligence response status:', getResponse.status);
+
+      if (!getResponse.ok) {
+        throw new Error(`HTTP error! status: ${getResponse.status}`);
+      }
+
+      const getData = await getResponse.json();
+      console.log('✅ Regulatory Compliance - GET /market_intelligence successful:', getData);
+      
+      // Update component with fresh data
+      await fetchRegulatoryData();
+      
+      // Call the original save function
+      onSaveChanges();
+    } catch (error) {
+      console.error('❌ Regulatory Compliance - Error saving changes:', error);
+      // Still call the original save function even if API fails
+      onSaveChanges();
+    }
+  };
 
   // API integration for Regulatory & Compliance Highlights
   const fetchRegulatoryData = async (refresh: boolean = false) => {
@@ -427,22 +518,12 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
           
           <div className="flex items-center space-x-2">
             
-            {/* Edit Icon */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-8 w-8"
-                  onClick={onToggleEdit}
-                >
-                  <Edit className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{isEditing ? 'Exit Edit Mode' : 'Edit Section'}</p>
-              </TooltipContent>
-            </Tooltip>
+            {/* Edit Dropdown */}
+            <EditDropdownMenu
+              onModify={onToggleEdit}
+              onComment={() => onScoutIconClick('regulatory-compliance', hasEdits)}
+              className="h-8 w-8"
+            />
 
             {/* Scout Chat Icon */}
             <Tooltip>

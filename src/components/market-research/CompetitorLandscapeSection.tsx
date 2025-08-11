@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BarChart3, Bot, Edit, X, FileText, Save, Share, Clock, ChevronDown, ChevronUp, Zap, ArrowUp, ArrowDown, Loader2 } from 'lucide-react';
+import { EditDropdownMenu } from './EditDropdownMenu';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -139,6 +140,92 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
       setLocalEmergingPlayers(emergingPlayers || '');
     }
   }, [executiveSummary, topPlayerShare, emergingPlayers, competitorData?.uiComponents, isCompetitorLandscapeEditing]);
+
+  // Handle save changes
+  const handleCompetitorLandscapeSaveChanges = async () => {
+    try {
+      console.log('🚀 Competitor Landscape - Starting save operation');
+      
+      // Apply local edits to props
+      onExecutiveSummaryChange(localExecutiveSummary);
+      onTopPlayerShareChange(localTopPlayerShare);
+      onEmergingPlayersChange(localEmergingPlayers);
+      
+      // Prepare original data
+      const originalData = {
+        section: 'competitor-landscape',
+        executiveSummary: executiveSummary,
+        topPlayerShare: topPlayerShare,
+        emergingPlayers: emergingPlayers,
+        fundingNews: fundingNews
+      };
+
+      // Prepare modified data
+      const modifiedData = {
+        section: 'competitor-landscape',
+        executiveSummary: localExecutiveSummary,
+        topPlayerShare: localTopPlayerShare,
+        emergingPlayers: localEmergingPlayers,
+        fundingNews: fundingNews
+      };
+
+      // Prepare data for API according to schema
+      const editData = {
+        original_json: originalData,
+        modified_json: modifiedData,
+        edit_type: "modification"
+      };
+
+      console.log('📤 Competitor Landscape - Sending POST to /edit:', editData);
+
+      // Call POST API to save edits
+      const response = await fetch('/edit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(editData)
+      });
+
+      console.log('📥 Competitor Landscape - POST /edit response status:', response.status);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Competitor Landscape - POST /edit successful:', result);
+      
+      console.log('📤 Competitor Landscape - Fetching updated data from GET /market_intelligence');
+      
+      // After successful save, fetch updated data from GET API
+      const getResponse = await fetch('/market_intelligence', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      console.log('📥 Competitor Landscape - GET /market_intelligence response status:', getResponse.status);
+
+      if (!getResponse.ok) {
+        throw new Error(`HTTP error! status: ${getResponse.status}`);
+      }
+
+      const getData = await getResponse.json();
+      console.log('✅ Competitor Landscape - GET /market_intelligence successful:', getData);
+      
+      // Update component with fresh data
+      await fetchCompetitorLandscapeData();
+      
+      // Call the original save function
+      onCompetitorLandscapeSaveChanges();
+    } catch (error) {
+      console.error('❌ Competitor Landscape - Error saving changes:', error);
+      // Still call the original save function even if API fails
+      onCompetitorLandscapeSaveChanges();
+    }
+  };
 
   // Fetch Competitor Landscape data from API
   const fetchCompetitorLandscapeData = async (refresh = true) => {
@@ -319,14 +406,11 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
               </Badge>
             )}
             
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onCompetitorLandscapeToggleEdit}
+            <EditDropdownMenu
+              onModify={onCompetitorLandscapeToggleEdit}
+              onComment={() => onScoutIconClick('competitor-landscape', competitorLandscapeHasEdits)}
               className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-            >
-              <Edit className="h-4 w-4" />
-            </Button>
+            />
 
             <Tooltip>
               <TooltipTrigger asChild>
