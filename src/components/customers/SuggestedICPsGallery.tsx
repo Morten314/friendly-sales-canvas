@@ -138,6 +138,7 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
             });
             
             // Add key profile data as URL parameters (backend can use these for generation)
+            // URLSearchParams automatically handles encoding, so no need for double encoding
             if (profileData.industry) {
               profileParams.set('industry', profileData.industry);
             }
@@ -145,7 +146,11 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
               profileParams.set('companySize', profileData.companySize);
             }
             if (profileData.strategicGoals) {
-              profileParams.set('strategicGoals', encodeURIComponent(profileData.strategicGoals));
+              // Truncate very long strategic goals to prevent URL length issues
+              const goals = profileData.strategicGoals.length > 200 
+                ? profileData.strategicGoals.substring(0, 200) + '...'
+                : profileData.strategicGoals;
+              profileParams.set('strategicGoals', goals);
             }
             if (profileData.targetMarkets && Array.isArray(profileData.targetMarkets)) {
               profileParams.set('targetMarkets', profileData.targetMarkets.join(','));
@@ -153,6 +158,8 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
             
             apiUrl += `&${profileParams.toString()}`;
             console.log("📤 Enhanced URL with profile data:", apiUrl);
+            console.log("📏 URL length:", apiUrl.length);
+            console.log("🏷️ Profile parameters:", Object.fromEntries(profileParams));
           } else {
             console.warn("❌ Could not fetch company profile, status:", profileResponse.status);
             // Add basic refresh parameters even without profile
@@ -183,7 +190,86 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
       console.log("Response OK:", response.ok);
       
       if (!response.ok) {
-        throw new Error(`API returned ${response.status}: ${response.statusText}`);
+        // Try to get error details from response
+        let errorDetails = response.statusText;
+        let isRateLimit = false;
+        try {
+          const errorBody = await response.text();
+          if (errorBody) {
+            console.log("Error response body:", errorBody);
+            errorDetails = errorBody;
+            
+            // Check if this is a rate limit error
+            if (errorBody.includes('rate limit') || errorBody.includes('429')) {
+              isRateLimit = true;
+              console.log("🚫 Detected rate limit error from AI model");
+            }
+          }
+        } catch (e) {
+          console.log("Could not read error response body");
+        }
+        
+        // If this was a profile-enhanced request that failed with 500, try a basic request
+        if (response.status === 500 && apiUrl.includes('profileUpdated=true')) {
+          console.log("🔄 Profile-enhanced request failed with 500, trying basic request...");
+          
+          // Only try basic request if it's not a rate limit (rate limits affect all requests)
+          if (!isRateLimit) {
+            const basicUrl = `https://backend-11kr.onrender.com/icp?t=${Date.now()}&refresh=true`;
+            console.log("Basic fallback URL:", basicUrl);
+            
+            try {
+              const basicResponse = await fetch(basicUrl, {
+                method: 'GET',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+              });
+              
+              console.log("Basic request status:", basicResponse.status);
+              
+              if (basicResponse.ok) {
+                console.log("✅ Basic request succeeded, using basic data");
+                const basicData = await basicResponse.json();
+                
+                // Process basic data and continue with normal flow
+                console.log("=== RAW BACKEND RESPONSE (BASIC) ===");
+                console.log("Full response:", basicData);
+                
+                const transformedICPs = Array.isArray(basicData) 
+                  ? basicData 
+                  : basicData?.suggestedICPs || basicData?.icps || [];
+                
+                if (transformedICPs.length > 0) {
+                  setSuggestedICPs(transformedICPs);
+                  setError(null);
+                  console.log(`✅ Loaded ${transformedICPs.length} ICPs from basic request`);
+                  
+                  // Show warning notification that profile data wasn't used
+                  const notification = document.createElement('div');
+                  notification.className = 'fixed top-4 right-4 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+                  notification.style.backgroundColor = '#f59e0b';
+                  notification.textContent = "⚠️ Profile data couldn't be processed, showing general ICPs instead";
+                  
+                  document.body.appendChild(notification);
+                  setTimeout(() => {
+                    if (document.body.contains(notification)) {
+                      document.body.removeChild(notification);
+                    }
+                  }, 5000);
+                  
+                  return; // Exit successfully with basic data
+                }
+              }
+            } catch (basicError) {
+              console.log("Basic fallback request also failed:", basicError);
+            }
+          } else {
+            console.log("⏭️ Skipping basic request fallback due to rate limit - will use mock data");
+          }
+        }
+        
+        throw new Error(`API returned ${response.status}: ${errorDetails}`);
       }
       
       const data = await response.json();
@@ -343,7 +429,29 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
     } catch (error) {
       console.error("=== FETCH ERROR ===", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
-      setError(`Failed to fetch ICPs: ${errorMessage}`);
+      
+      // Check if this is a rate limit error for better user messaging
+      const isRateLimit = errorMessage.includes('rate limit') || errorMessage.includes('429');
+      
+      if (isRateLimit) {
+        console.log("🕐 Rate limit detected - showing user-friendly message");
+        setError("AI service is temporarily busy. Showing sample data instead.");
+        
+        // Show informative notification for rate limits
+        const notification = document.createElement('div');
+        notification.className = 'fixed top-4 right-4 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+        notification.style.backgroundColor = '#f59e0b';
+        notification.textContent = "🕐 AI service is at capacity. Sample ICPs shown - try again in a few minutes.";
+        
+        document.body.appendChild(notification);
+        setTimeout(() => {
+          if (document.body.contains(notification)) {
+            document.body.removeChild(notification);
+          }
+        }, 7000); // Longer timeout for rate limit messages
+      } else {
+        setError(`Failed to fetch ICPs: ${errorMessage}`);
+      }
       
       // Set fallback ICPs instead of leaving empty
       console.log("Setting fallback ICPs due to error");
