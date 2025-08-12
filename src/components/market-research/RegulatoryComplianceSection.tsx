@@ -390,7 +390,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
       setIsLoading(true);
       fetchRegulatoryData(true);
     }
-  }, [isRefreshing]);
+  }, [isRefreshing, companyProfile]);
 
   console.log('🎨 RegulatoryComplianceSection RENDER DEBUG:');
   console.log('  - isLoading:', isLoading);

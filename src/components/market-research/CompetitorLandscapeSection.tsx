@@ -364,7 +364,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
       setIsLoading(true);
       fetchCompetitorLandscapeData(true);
     }
-  }, [isRefreshing]);
+  }, [isRefreshing, companyProfile]);
 
 
   if (isLoading) {
