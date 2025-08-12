@@ -74,6 +74,9 @@ interface IndustryTrendsSectionProps {
   onExportPDF: () => void;
   onSaveToWorkspace: () => void;
   onGenerateShareableLink: () => void;
+  // Add refresh props
+  isRefreshing?: boolean;
+  companyProfile?: any;
 }
 
 const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
@@ -92,7 +95,9 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
   onScoutIconClick,
   onExportPDF,
   onSaveToWorkspace,
-  onGenerateShareableLink
+  onGenerateShareableLink,
+  isRefreshing = false,
+  companyProfile
 }) => {
   // State for API data
   const [industryTrendsData, setIndustryTrendsData] = useState<IndustryTrendsData | null>(null);
@@ -124,22 +129,27 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
 
       const currentTime = Date.now();
       const randomId = Math.random().toString(36).substring(7);
+      
+      // Get company profile data for dynamic reports
+      const profile = companyProfile || JSON.parse(localStorage.getItem('companyProfile') || '{}');
+      
       const payload = {
         user_id: "brewra",
         component_name: "industry trends report",
-        refresh: false,  // Changed to false to fetch existing data
-        force_refresh: false,  // Changed to false
-        cache_bypass: false,  // Changed to false
-        bypass_all_cache: false,  // Changed to false
+        refresh: refresh,
+        force_refresh: refresh,
+        cache_bypass: refresh,
+        bypass_all_cache: refresh,
         request_timestamp: currentTime,
         request_id: randomId,
+        additionalPrompt: profile.companyUrl ? `Company: ${profile.companyUrl}, Industry: ${profile.industry}, Size: ${profile.companySize}, GTM: ${profile.primaryGTMModel}, Goals: ${profile.strategicGoals}` : "",
         data: {
-          company: "OrbiSelf",
+          company: profile.companyUrl || "OrbiSelf",
           product: "Convoic.AI", 
-          target_market: "Indian college students (Tier 2 & 3)",
-          region: "India",
+          target_market: profile.targetMarkets?.[0] || "Indian college students (Tier 2 & 3)",
+          region: profile.targetMarkets?.[0] || "India",
           timestamp: currentTime,
-          force_new_data: false  // Changed to false to fetch existing report
+          force_new_data: refresh
         }
       };
 
@@ -276,11 +286,19 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
     
     // Reduced delay to improve user experience - 500ms is sufficient to avoid conflicts
     const timer = setTimeout(() => {
-      fetchIndustryTrendsData(true);
+      fetchIndustryTrendsData(false);
     }, 500);
 
     return () => clearTimeout(timer);
   }, []);
+  
+  // Handle refresh when isRefreshing prop changes
+  useEffect(() => {
+    if (isRefreshing) {
+      console.log('🔄 Industry Trends - Refresh triggered by parent');
+      fetchIndustryTrendsData(true);
+    }
+  }, [isRefreshing]);
 
   // Handle save changes
   const handleSaveChanges = async () => {

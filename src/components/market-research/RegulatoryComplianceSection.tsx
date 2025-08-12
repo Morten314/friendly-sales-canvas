@@ -74,6 +74,9 @@ interface RegulatoryComplianceSectionProps {
   onExportPDF: () => void;
   onSaveToWorkspace: () => void;
   onGenerateShareableLink: () => void;
+  // Add refresh props
+  isRefreshing?: boolean;
+  companyProfile?: any;
 }
 
 const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = ({
@@ -102,7 +105,9 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   onDataLocalizationChange,
   onExportPDF,
   onSaveToWorkspace,
-  onGenerateShareableLink
+  onGenerateShareableLink,
+  isRefreshing = false,
+  companyProfile
 }) => {
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
   const [regulatoryData, setRegulatoryData] = useState<any>(null);
@@ -267,22 +272,26 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
       const requestTimestamp = Date.now();
       const requestId = Math.random().toString(36).substring(2, 8);
       
+      // Get company profile data for dynamic reports
+      const profile = companyProfile || JSON.parse(localStorage.getItem('companyProfile') || '{}');
+      
       const payload = {
         user_id: 'brewra',
         component_name: 'regulatory & compliance highlights',
-        refresh: false,
-        force_refresh: false,
-        cache_bypass: false,
-        bypass_all_cache: false,
+        refresh: refresh,
+        force_refresh: refresh,
+        cache_bypass: refresh,
+        bypass_all_cache: refresh,
         request_timestamp: requestTimestamp,
         request_id: requestId,
+        additionalPrompt: profile.companyUrl ? `Company: ${profile.companyUrl}, Industry: ${profile.industry}, Size: ${profile.companySize}, GTM: ${profile.primaryGTMModel}, Goals: ${profile.strategicGoals}` : "",
         data: {
-          company: 'OrbiSelf',
+          company: profile.companyUrl || 'OrbiSelf',
           product: 'Convoic.AI',
-          target_market: 'Indian college students (Tier 2 & 3)',
-          region: 'India',
+          target_market: profile.targetMarkets?.[0] || 'Indian college students (Tier 2 & 3)',
+          region: profile.targetMarkets?.[0] || 'India',
           timestamp: requestTimestamp,
-          force_new_data: false
+          force_new_data: refresh
         }
       };
 
@@ -369,8 +378,16 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   // Fetch data on component mount
   useEffect(() => {
     console.log('🚀 Component mounted - clearing previous data and fetching fresh');
-    fetchRegulatoryData(true);
+    fetchRegulatoryData(false);
   }, []);
+  
+  // Handle refresh when isRefreshing prop changes
+  useEffect(() => {
+    if (isRefreshing) {
+      console.log('🔄 Regulatory Compliance - Refresh triggered by parent');
+      fetchRegulatoryData(true);
+    }
+  }, [isRefreshing]);
 
   console.log('🎨 RegulatoryComplianceSection RENDER DEBUG:');
   console.log('  - isLoading:', isLoading);

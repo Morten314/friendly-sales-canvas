@@ -48,6 +48,9 @@ interface CompetitorLandscapeSectionProps {
   onExportPDF: () => void;
   onSaveToWorkspace: () => void;
   onGenerateShareableLink: () => void;
+  // Add refresh props
+  isRefreshing?: boolean;
+  companyProfile?: any;
 }
 
 interface UIComponent {
@@ -118,7 +121,9 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   onFundingNewsChange,
   onExportPDF,
   onSaveToWorkspace,
-  onGenerateShareableLink
+  onGenerateShareableLink,
+  isRefreshing = false,
+  companyProfile
 }) => {
   // State for API data
   const [competitorData, setCompetitorData] = useState<CompetitorLandscapeData | null>(null);
@@ -252,22 +257,27 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
 
       const currentTime = Date.now();
       const randomId = Math.random().toString(36).substring(7);
+      
+      // Get company profile data for dynamic reports
+      const profile = companyProfile || JSON.parse(localStorage.getItem('companyProfile') || '{}');
+      
       const payload = {
         user_id: "brewra",
         component_name: "competitor landscape",
-        refresh: false, // Changed to false to fetch existing data
-        force_refresh: false,
-        cache_bypass: false,
-        bypass_all_cache: false,
+        refresh: refresh,
+        force_refresh: refresh,
+        cache_bypass: refresh,
+        bypass_all_cache: refresh,
         request_timestamp: currentTime,
         request_id: randomId,
+        additionalPrompt: profile.companyUrl ? `Company: ${profile.companyUrl}, Industry: ${profile.industry}, Size: ${profile.companySize}, GTM: ${profile.primaryGTMModel}, Goals: ${profile.strategicGoals}` : "",
         data: {
-          company: "OrbiSelf",
+          company: profile.companyUrl || "OrbiSelf",
           product: "Convoic.AI", 
-          target_market: "Indian college students (Tier 2 & 3)",
-          region: "India",
+          target_market: profile.targetMarkets?.[0] || "Indian college students (Tier 2 & 3)",
+          region: profile.targetMarkets?.[0] || "India",
           timestamp: currentTime,
-          force_new_data: false // Changed to false to fetch existing report
+          force_new_data: refresh
         }
       };
 
@@ -339,11 +349,19 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
     setError(null);
     
     const timer = setTimeout(() => {
-      fetchCompetitorLandscapeData(false); // Changed to false to fetch existing data
+      fetchCompetitorLandscapeData(false);
     }, 500);
     
     return () => clearTimeout(timer);
   }, []);
+  
+  // Handle refresh when isRefreshing prop changes
+  useEffect(() => {
+    if (isRefreshing) {
+      console.log('🔄 Competitor Landscape - Refresh triggered by parent');
+      fetchCompetitorLandscapeData(true);
+    }
+  }, [isRefreshing]);
 
 
   if (isLoading) {

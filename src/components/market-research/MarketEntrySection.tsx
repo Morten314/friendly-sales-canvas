@@ -42,6 +42,9 @@ interface MarketEntrySectionProps {
   onExportPDF: () => void;
   onSaveToWorkspace: () => void;
   onGenerateShareableLink: () => void;
+  // Add refresh props
+  isRefreshing?: boolean;
+  companyProfile?: any;
 }
 
 const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
@@ -76,7 +79,9 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
   onRiskAssessmentChange,
   onExportPDF,
   onSaveToWorkspace,
-  onGenerateShareableLink
+  onGenerateShareableLink,
+  isRefreshing = false,
+  companyProfile
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -89,22 +94,26 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
       setIsLoading(true);
       setError(null);
 
+      // Get company profile data for dynamic reports
+      const profile = companyProfile || JSON.parse(localStorage.getItem('companyProfile') || '{}');
+      
       const payload = {
         user_id: "brewra",
         component_name: "Market Entry & Growth Strategy", // Exact match from swagger
-        refresh: false,
-        force_refresh: false,
-        cache_bypass: false,
-        bypass_all_cache: false,
+        refresh: refresh,
+        force_refresh: refresh,
+        cache_bypass: refresh,
+        bypass_all_cache: refresh,
         request_timestamp: Date.now(),
         request_id: Math.random().toString(36).substr(2, 6),
+        additionalPrompt: profile.companyUrl ? `Company: ${profile.companyUrl}, Industry: ${profile.industry}, Size: ${profile.companySize}, GTM: ${profile.primaryGTMModel}, Goals: ${profile.strategicGoals}` : "",
         data: {
-          company: "OrbiSelf",
+          company: profile.companyUrl || "OrbiSelf",
           product: "Convoic.AI", 
-          target_market: "Indian college students (Tier 2 & 3)",
-          region: "India",
+          target_market: profile.targetMarkets?.[0] || "Indian college students (Tier 2 & 3)",
+          region: profile.targetMarkets?.[0] || "India",
           timestamp: Date.now(),
-          force_new_data: false
+          force_new_data: refresh
         }
       };
 
@@ -170,6 +179,14 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
     
     return () => clearTimeout(timer);
   }, []);
+  
+  // Handle refresh when isRefreshing prop changes
+  useEffect(() => {
+    if (isRefreshing) {
+      console.log('🔄 Market Entry - Refresh triggered by parent');
+      fetchMarketEntryData(true);
+    }
+  }, [isRefreshing]);
 
   const handleMarketEntrySaveChanges = () => {
     console.log('🚀 Market Entry Section - Save function called!');
