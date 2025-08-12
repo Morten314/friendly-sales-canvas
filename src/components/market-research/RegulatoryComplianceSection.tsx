@@ -315,9 +315,49 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     }
   };
 
+  // Create fallback key data points using regulatoryData properties
+  const fallbackKeyDataPoints = [
+    {
+      id: 'eu-ai-act-deadline',
+      icon: Scale,
+      title: 'EU AI Act Deadline',
+      value: regulatoryData?.euAiActDeadline || euAiActDeadline || 'February 2, 2025',
+      badge: 'New',
+      badgeColor: 'bg-blue-100 text-blue-800',
+      tooltip: 'Upcoming deadline for EU AI Act compliance'
+    },
+    {
+      id: 'gdpr-compliance',
+      icon: Building,
+      title: 'GDPR Compliance',
+      value: regulatoryData?.gdprCompliance || gdprCompliance || '68%',
+      badge: 'Update',
+      badgeColor: 'bg-yellow-100 text-yellow-800',
+      tooltip: 'Current GDPR compliance percentage'
+    },
+    {
+      id: 'potential-fines',
+      icon: Factory,
+      title: 'Potential Fines',
+      value: regulatoryData?.potentialFines || potentialFines || 'Up to 6% of annual revenue',
+      badge: 'Risk',
+      badgeColor: 'bg-red-100 text-red-800',
+      tooltip: 'Maximum regulatory fines'
+    },
+    {
+      id: 'data-localization',
+      icon: BarChart3,
+      title: 'Data Localization',
+      value: regulatoryData?.dataLocalization || dataLocalization || 'Mandatory for customer data',
+      badge: 'Support',
+      badgeColor: 'bg-green-100 text-green-800',
+      tooltip: 'Data storage requirements'
+    }
+  ];
+
   const keyDataPoints = regulatoryData?.keyUpdates ? regulatoryData.keyUpdates.map((update: any) => ({
-    id: update.title.toLowerCase().replace(/\s+/g, '-'),
-    icon: getIconByName(update.icon),
+    id: update.title?.toLowerCase().replace(/\s+/g, '-') || '',
+    icon: getIconByName(update.icon || 'scale'),
     title: update.title,
     value: update.description,
     badge: update.tag,
@@ -428,7 +468,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     }
   ];
 
-  const currentExecutiveSummary = regulatoryData?.executiveSummary;
+  const currentExecutiveSummary = regulatoryData?.executiveSummary || executiveSummary;
 
   return (
     <Card className="border border-gray-200 shadow-sm">
@@ -909,9 +949,9 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
             {/* Executive Summary */}
             <div>
               <h4 className="text-sm font-medium text-gray-700 mb-2">Executive Summary</h4>
-              <p className="text-gray-600 text-sm leading-relaxed">
-                {currentExecutiveSummary}
-              </p>
+                <p className="text-gray-600 text-sm leading-relaxed">
+                 {currentExecutiveSummary || 'The regulatory landscape for SaaS companies continues to evolve rapidly, with new compliance requirements emerging across multiple jurisdictions.'}
+               </p>
             </div>
 
             {/* Key Data Points */}

@@ -370,11 +370,10 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
 
         {/* Executive Summary - Always visible */}
         {(() => {
-          // Use centralized competitorData only
-          const reportComponent = competitorData?.uiComponents?.find(comp => comp.type === 'report');
-          const displayExecutiveSummary = reportComponent?.executiveSummary;
+          // Use centralized competitorData directly
+          const displayExecutiveSummary = competitorData?.executiveSummary;
           
-          if (!displayExecutiveSummary) {
+          if (!displayExecutiveSummary && !localExecutiveSummary && !executiveSummary) {
             return null;
           }
           
@@ -395,7 +394,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                   placeholder="Enter executive summary..."
                 />
               ) : (
-                <p className="text-gray-700 leading-relaxed">{localExecutiveSummary || displayExecutiveSummary}</p>
+                <p className="text-gray-700 leading-relaxed">{localExecutiveSummary || displayExecutiveSummary || executiveSummary}</p>
               )}
             </div>
           );
@@ -403,13 +402,13 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
 
         {/* Key Metrics Section - Always visible */}
         {(() => {
-          const sectionComponent = competitorData?.uiComponents?.find(comp => comp.type === 'section');
-          const apiMetrics = sectionComponent?.metrics;
+          // Use competitorData directly for metrics
+          const apiMetrics = null; // No metrics in current data structure
           
-          // Fallback to props data if no API data
+          // Use competitorData values
           const fallbackMetrics = [
-            { label: "Top Player Market Share", value: localTopPlayerShare || topPlayerShare || '', trend: "up" },
-            { label: "Emerging Players Added", value: localEmergingPlayers || emergingPlayers || '', trend: "up" }
+            { label: "Top Player Market Share", value: localTopPlayerShare || competitorData?.topPlayerShare || topPlayerShare || '', trend: "up" },
+            { label: "Emerging Players Added", value: localEmergingPlayers || competitorData?.emergingPlayers || emergingPlayers || '', trend: "up" }
           ];
           
           const displayMetrics = apiMetrics && apiMetrics.length > 0 ? apiMetrics : fallbackMetrics;
@@ -435,9 +434,9 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                             <div className="text-sm text-gray-700">{metric.label}</div>
                           </div>
                         ) : (
-                          <>
+                           <>
                             <div className="text-lg font-bold text-blue-600">
-                              {index === 0 ? (localTopPlayerShare || topPlayerShare || metric.value) : (localEmergingPlayers || emergingPlayers || metric.value)}
+                              {index === 0 ? (localTopPlayerShare || competitorData?.topPlayerShare || topPlayerShare || metric.value) : (localEmergingPlayers || competitorData?.emergingPlayers || emergingPlayers || metric.value)}
                             </div>
                             <div className="text-sm text-gray-700">{metric.label}</div>
                           </>
@@ -586,14 +585,15 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
               );
             })()}
 
-            {/* News Headlines */}
+             {/* News Headlines */}
             {(() => {
               const newsComponent = competitorData?.uiComponents?.find(comp => comp.type === 'news');
               const apiHeadlines = newsComponent?.headlines;
               
-              // Fallback to props data if no API data
+              // Use competitorData funding news directly
               const displayHeadlines = apiHeadlines && apiHeadlines.length > 0 ? apiHeadlines : 
-                fundingNews && fundingNews.length > 0 ? fundingNews : null;
+                (competitorData?.fundingNews && competitorData.fundingNews.length > 0) ? competitorData.fundingNews :
+                (fundingNews && fundingNews.length > 0) ? fundingNews : null;
               
               if (!displayHeadlines || displayHeadlines.length === 0) return null;
               
