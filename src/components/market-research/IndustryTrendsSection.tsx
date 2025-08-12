@@ -296,6 +296,9 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
   useEffect(() => {
     if (isRefreshing) {
       console.log('🔄 Industry Trends - Refresh triggered by parent');
+      // Immediately start fetching without showing error state
+      setError(null);
+      setIsLoading(true);
       fetchIndustryTrendsData(true);
     }
   }, [isRefreshing]);

@@ -359,6 +359,9 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   useEffect(() => {
     if (isRefreshing) {
       console.log('🔄 Competitor Landscape - Refresh triggered by parent');
+      // Immediately start fetching without showing error state
+      setError(null);
+      setIsLoading(true);
       fetchCompetitorLandscapeData(true);
     }
   }, [isRefreshing]);

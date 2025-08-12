@@ -385,6 +385,9 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   useEffect(() => {
     if (isRefreshing) {
       console.log('🔄 Regulatory Compliance - Refresh triggered by parent');
+      // Immediately start fetching without showing error state
+      setError(null);
+      setIsLoading(true);
       fetchRegulatoryData(true);
     }
   }, [isRefreshing]);

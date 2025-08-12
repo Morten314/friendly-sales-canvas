@@ -184,6 +184,9 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
   useEffect(() => {
     if (isRefreshing) {
       console.log('🔄 Market Entry - Refresh triggered by parent');
+      // Immediately start fetching without showing error state
+      setError(null);
+      setIsLoading(true);
       fetchMarketEntryData(true);
     }
   }, [isRefreshing]);
