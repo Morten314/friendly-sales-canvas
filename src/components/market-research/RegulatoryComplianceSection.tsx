@@ -252,9 +252,6 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
         console.log('✅ Regulatory Compliance - State updated with API response data');
       }
       
-      // Also refresh the component data
-      await fetchRegulatoryData();
-      
       // Call the original save function
       onSaveChanges();
     } catch (error) {
@@ -264,135 +261,19 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     }
   };
 
-  // Don't fetch data - use props from parent component
-  const fetchRegulatoryData = async (refresh: boolean = false) => {
-    console.log('🔄 Regulatory Compliance - Using parent data, refresh:', refresh);
-    // This component no longer fetches its own data
-    // It receives data through props from the parent MarketResearch component
+  // Initialize component - no data fetching needed, using centralized data
+  useEffect(() => {
+    console.log('🚀 Regulatory Compliance Component mounted - using centralized data');
     setIsLoading(false);
     setError(null);
-    
-    try {
-      const requestTimestamp = Date.now();
-      const requestId = Math.random().toString(36).substring(2, 8);
-      
-      // Get company profile data for dynamic reports
-      const profile = companyProfile || JSON.parse(localStorage.getItem('companyProfile') || '{}');
-      
-      const payload = {
-        user_id: 'brewra',
-        component_name: 'regulatory & compliance highlights',
-        refresh: refresh,
-        force_refresh: refresh,
-        cache_bypass: refresh,
-        bypass_all_cache: refresh,
-        request_timestamp: requestTimestamp,
-        request_id: requestId,
-        additionalPrompt: profile.companyUrl ? `Company: ${profile.companyUrl}, Industry: ${profile.industry}, Size: ${profile.companySize}, GTM: ${profile.primaryGTMModel}, Goals: ${profile.strategicGoals}` : "",
-        data: {
-          company: profile.companyUrl || 'OrbiSelf',
-          product: 'Convoic.AI',
-          target_market: profile.targetMarkets?.[0] || 'Indian college students (Tier 2 & 3)',
-          region: profile.targetMarkets?.[0] || 'India',
-          timestamp: requestTimestamp,
-          force_new_data: refresh
-        }
-      };
-
-      console.log('📤 Sending API request to: https://backend-11kr.onrender.com/market-research');
-      console.log('📦 Regulatory Payload:', payload);
-      console.log('⏰ REGULATORY REQUEST TIMESTAMP:', requestTimestamp);
-      console.log('🔄 FORCE_REFRESH in payload:', payload.force_refresh);
-
-      const response = await fetch('https://backend-11kr.onrender.com/market-research', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload)
-      });
-
-      console.log('📥 Regulatory API response:', response);
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-      console.log('📊 Full API Response Structure:', result);
-      console.log('📊 Regulatory Data Keys:', Object.keys(result.data || {}));
-
-      if (result.status === 'success' && result.data) {
-        const currentTimestampUTC = toUTCTimestamp(regulatoryTimestamp);
-        const newTimestampUTC = toUTCTimestamp(result.data.timestamp);
-
-        logTimestampComparison(
-          regulatoryTimestamp,
-          result.data.timestamp,
-          'REGULATORY COMPLIANCE'
-        );
-
-        let shouldUpdate = false;
-        let updateReason = '';
-        
-        if (!regulatoryData) {
-          shouldUpdate = true;
-          updateReason = 'No existing data - first load';
-        } else if (!currentTimestampUTC) {
-          shouldUpdate = true;
-          updateReason = 'No existing timestamp - first load';
-        } else if (!newTimestampUTC) {
-          shouldUpdate = false;
-          updateReason = 'No timestamp in API response - keeping current data';
-        } else if (newTimestampUTC > currentTimestampUTC) {
-          shouldUpdate = true;
-          updateReason = 'New data is newer than current data';
-        } else {
-          shouldUpdate = false;
-          updateReason = 'Current data is up to date or newer';
-        }
-
-        console.log('🔄 REGULATORY UPDATE DECISION:');
-        console.log('  - Should update data:', shouldUpdate);
-        console.log('  - Current data timestamp:', currentTimestampUTC || 'NO_TIMESTAMP');
-        console.log('  - New data timestamp:', newTimestampUTC || 'NO_TIMESTAMP');
-        console.log('  - Reason for update:', updateReason);
-
-        if (shouldUpdate) {
-          console.log('✅ Found data in API response and data is newer - updating');
-          console.log('🔄 Updating Regulatory data with newer report');
-          setRegulatoryData(result.data);
-          setRegulatoryTimestamp(toUTCTimestamp(result.data.timestamp));
-          console.log('✅ REGULATORY DATA UPDATED - Component name:', result.data.component_name);
-        } else {
-          console.log('⏭️ Regulatory data is up to date - no update needed');
-        }
-      } else {
-        console.log('❌ No data in API response or error status');
-        setError('No data received from API');
-      }
-    } catch (error) {
-      console.error('❌ Error fetching Regulatory data:', error);
-      setError('Failed to fetch data');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Fetch data on component mount
-  useEffect(() => {
-    console.log('🚀 Component mounted - clearing previous data and fetching fresh');
-    fetchRegulatoryData(false);
   }, []);
   
   // Handle refresh when isRefreshing prop changes
   useEffect(() => {
     if (isRefreshing) {
-      console.log('🔄 Regulatory Compliance - Refresh triggered by parent');
-      // Immediately start fetching without showing error state
+      console.log('🔄 Regulatory Compliance - Refresh triggered by parent, using centralized data');
       setError(null);
-      setIsLoading(true);
-      fetchRegulatoryData(true);
+      setIsLoading(false);
     }
   }, [isRefreshing, companyProfile]);
 

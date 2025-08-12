@@ -242,9 +242,6 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         console.log('✅ Competitor Landscape - State updated with API response data');
       }
       
-      // Also refresh the component data
-      await fetchCompetitorLandscapeData();
-      
       // Call the original save function
       onCompetitorLandscapeSaveChanges();
     } catch (error) {
@@ -254,17 +251,9 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
     }
   };
 
-  // Don't fetch data - use props from parent component
-  const fetchCompetitorLandscapeData = async (refresh = true) => {
-    // This component no longer fetches its own data
-    // It receives data through props from the parent MarketResearch component
-    console.log('🔄 Competitor Landscape - Using parent data, refresh:', refresh);
-    setIsLoading(false);
-    setError(null);
-  };
-
-  // Initialize component
+  // Initialize component - using centralized data from props
   useEffect(() => {
+    console.log('🚀 Competitor Landscape Component mounted - using centralized data');
     setIsLoading(false);
     setError(null);
   }, []);
@@ -272,11 +261,9 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   // Handle refresh when isRefreshing prop changes
   useEffect(() => {
     if (isRefreshing) {
-      console.log('🔄 Competitor Landscape - Refresh triggered by parent');
-      // Immediately start fetching without showing error state
+      console.log('🔄 Competitor Landscape - Refresh triggered by parent, using centralized data');
       setError(null);
-      setIsLoading(true);
-      fetchCompetitorLandscapeData(true);
+      setIsLoading(false);
     }
   }, [isRefreshing, companyProfile]);
 
@@ -306,7 +293,10 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
               <p className="text-red-600 mb-4">Error loading competitor landscape data</p>
               <p className="text-gray-600 text-sm mb-4">{error}</p>
               <Button 
-                onClick={() => fetchCompetitorLandscapeData(false)}
+                onClick={() => {
+                  setError(null);
+                  setIsLoading(false);
+                }}
                 variant="outline"
               >
                 Retry
