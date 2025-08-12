@@ -171,6 +171,8 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
             onExportPDF={props.onExportPDF}
             onSaveToWorkspace={props.onSaveToWorkspace}
             onGenerateShareableLink={props.onGenerateShareableLink}
+            isRefreshing={props.isRefreshing}
+            companyProfile={props.companyProfile}
           />
         </div>
         {props.showIndustryTrendsScoutChat && industryTrendsScoutChatPanel && (
@@ -208,6 +210,8 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
         onExportPDF={props.onExportPDF}
         onSaveToWorkspace={props.onSaveToWorkspace}
         onGenerateShareableLink={props.onGenerateShareableLink}
+        isRefreshing={props.isRefreshing}
+        companyProfile={props.companyProfile}
           />
         </div>
         {props.showCompetitorScoutChat && competitorScoutChatPanel && (
@@ -247,6 +251,8 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
         onExportPDF={props.onExportPDF}
         onSaveToWorkspace={props.onSaveToWorkspace}
         onGenerateShareableLink={props.onGenerateShareableLink}
+        isRefreshing={props.isRefreshing}
+        companyProfile={props.companyProfile}
           />
         </div>
         {props.showRegulatoryScoutChat && regulatoryScoutChatPanel && (
@@ -292,6 +298,8 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
         onExportPDF={props.onExportPDF}
         onSaveToWorkspace={props.onSaveToWorkspace}
         onGenerateShareableLink={props.onGenerateShareableLink}
+        isRefreshing={props.isRefreshing}
+        companyProfile={props.companyProfile}
           />
         </div>
         {props.showMarketEntryScoutChat && marketEntryScoutChatPanel && (

@@ -4,6 +4,7 @@ import { EditRecord, TrendSnapshot, IndustryTrendsRecommendations } from './type
 export interface MarketIntelligenceTabProps {
   // General refresh state for all components
   isRefreshing?: boolean;
+  companyProfile?: any;
   
   // Market Size Section
   isEditing: boolean;
