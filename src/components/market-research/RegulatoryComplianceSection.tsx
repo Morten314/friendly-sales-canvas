@@ -129,17 +129,17 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   // Dynamic local state for all key data points
   const [localKeyDataValues, setLocalKeyDataValues] = useState<Record<string, string>>({});
 
-  // Sync local state with props when they change (but not while editing)
+  // Sync local state with centralized regulatoryData only (not props)
   useEffect(() => {
-    if (!isEditing) {
-      const currentExecutiveSummary = regulatoryData?.executiveSummary || executiveSummary;
+    if (!isEditing && regulatoryData) {
+      const currentExecutiveSummary = regulatoryData?.executiveSummary;
       setLocalExecutiveSummary(currentExecutiveSummary || '');
-      setLocalEuAiActDeadline(euAiActDeadline || '');
-      setLocalGdprCompliance(gdprCompliance || '');
-      setLocalPotentialFines(potentialFines || '');
-      setLocalDataLocalization(dataLocalization || '');
+      setLocalEuAiActDeadline(regulatoryData?.euAiActDeadline || '');
+      setLocalGdprCompliance(regulatoryData?.gdprCompliance || '');
+      setLocalPotentialFines(regulatoryData?.potentialFines || '');
+      setLocalDataLocalization(regulatoryData?.dataLocalization || '');
     }
-  }, [executiveSummary, euAiActDeadline, gdprCompliance, potentialFines, dataLocalization, regulatoryData?.executiveSummary, isEditing]);
+  }, [isEditing, regulatoryData]);
 
   // Initialize dynamic key data values after keyDataPoints is available
   useEffect(() => {
@@ -287,6 +287,12 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     return null;
   }
 
+  // Always use regulatoryData when available
+  if (!regulatoryData) {
+    console.log('⚠️ No regulatoryData found - this should not happen with centralized data');
+    return null; // Don't show fallback data
+  }
+
   // Use API data if available, otherwise fall back to props
   const getIconByName = (iconName: string) => {
     switch (iconName) {
@@ -422,7 +428,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     }
   ];
 
-  const currentExecutiveSummary = regulatoryData?.executiveSummary || executiveSummary;
+  const currentExecutiveSummary = regulatoryData?.executiveSummary;
 
   return (
     <Card className="border border-gray-200 shadow-sm">

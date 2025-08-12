@@ -316,14 +316,10 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   console.log('- competitorLandscapeExpanded:', competitorLandscapeExpanded);
   console.log('- isSplitView:', isSplitView);
 
-  // If no API data, show fallback content with props data
+  // Always use competitorData when available
   if (!competitorData) {
-    console.log('⚠️ No competitorData found, showing fallback content with props:', {
-      executiveSummary,
-      topPlayerShare,
-      emergingPlayers,
-      fundingNews
-    });
+    console.log('⚠️ No competitorData found - this should not happen with centralized data');
+    return null; // Don't show fallback data
   }
 
   return (
@@ -374,10 +370,9 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
 
         {/* Executive Summary - Always visible */}
         {(() => {
-          // Use API data first, then fallback to props
+          // Use centralized competitorData only
           const reportComponent = competitorData?.uiComponents?.find(comp => comp.type === 'report');
-          const apiExecutiveSummary = reportComponent?.executiveSummary;
-          const displayExecutiveSummary = apiExecutiveSummary || executiveSummary;
+          const displayExecutiveSummary = reportComponent?.executiveSummary;
           
           if (!displayExecutiveSummary) {
             return null;
