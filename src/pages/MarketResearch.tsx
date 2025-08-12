@@ -593,7 +593,22 @@ const MarketResearch = React.memo(() => {
       setIsRefreshing(true);
       setError(null);
       
-      console.log('🔄 Refresh button clicked - fetching fresh data from Swagger...');
+      console.log('🔄 Refresh button clicked - fetching fresh data with company profile context...');
+      
+      // Get company profile data to send to backend
+      let companyProfileData = null;
+      try {
+        const profileResponse = await fetch('https://backend-11kr.onrender.com/profile/company', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        if (profileResponse.ok) {
+          companyProfileData = await profileResponse.json();
+          console.log('📋 Retrieved company profile for context:', companyProfileData);
+        }
+      } catch (error) {
+        console.warn('⚠️ Could not retrieve company profile, proceeding without context:', error);
+      }
       
       // Get current UI data timestamp for comparison
       const currentUIData = getInitialMarketIntelligenceData();
@@ -610,8 +625,12 @@ const MarketResearch = React.memo(() => {
       // Always fetch fresh data from Swagger API when refresh is clicked  
       console.log('🔄 Fetching fresh data from Swagger API...');
       
-      // Force refresh all market intelligence data - they will automatically
-      // update the UI if their timestamps are newer than current data
+      // Force refresh all market intelligence data with company profile context
+      // Store company profile data in localStorage so components can access it
+      if (companyProfileData) {
+        localStorage.setItem('companyProfileForRefresh', JSON.stringify(companyProfileData));
+      }
+      
       const [marketSizeResponse, industryTrendsResponse, marketEntryResponse, competitorResponse] = await Promise.allSettled([
         fetchMarketSizeData(true, false), // This calls the correct market-research API
         fetchIndustryTrendsData(true, false), // Industry Trends data
@@ -623,6 +642,12 @@ const MarketResearch = React.memo(() => {
       // The IndustryTrendsSection component will handle its own refresh and data updates
       
       console.log('🔄 All API calls completed - checking if any updates were applied');
+      console.log('📊 API responses:', {
+        marketSize: marketSizeResponse.status,
+        industryTrends: industryTrendsResponse.status,
+        marketEntry: marketEntryResponse.status,
+        competitor: competitorResponse.status,
+      });
       
       // Check if we have any fresh data in localStorage after the API calls
       const updatedData = getInitialMarketIntelligenceData();
@@ -2457,6 +2482,7 @@ const MarketResearch = React.memo(() => {
                     
                     {/* Market Intelligence Tab with embedded scout chats */}
                     <MarketIntelligenceTab
+                      isRefreshing={isRefreshing}
                       isEditing={isMarketIntelligenceEditing}
                       isSplitView={false}
                       isExpanded={isMarketIntelligenceExpanded}
@@ -2533,13 +2559,12 @@ const MarketResearch = React.memo(() => {
                       marketEntryTimeToMarket={marketEntryData.timeToMarket}
                       marketEntryTopBarrier={marketEntryData.topBarrier}
                       marketEntryCompetitiveDifferentiation={marketEntryData.competitiveDifferentiation}
-                       marketEntryStrategicRecommendations={marketEntryData.strategicRecommendations}
-                       marketEntryRiskAssessment={marketEntryData.riskAssessment}
-                       // Market Entry loading states and handlers
-                       isMarketEntryLoading={isMarketSizeLoading}
-                       marketEntryError={marketSizeError}
-                       onMarketEntryRefresh={() => fetchMarketEntryData(true)}
-                       onToggleEdit={handleMarketIntelligenceToggleEdit}
+                        marketEntryStrategicRecommendations={marketEntryData.strategicRecommendations}
+                        marketEntryRiskAssessment={marketEntryData.riskAssessment}
+                        // Market Entry loading states and handlers
+                        isMarketEntryLoading={isMarketSizeLoading}
+                        marketEntryError={marketSizeError}
+                        onToggleEdit={handleMarketIntelligenceToggleEdit}
                       onMarketSizeScoutIconClick={handleMarketSizeScoutClick}
                       onIndustryTrendsScoutIconClick={handleIndustryTrendsScoutClick}
                       onCompetitorScoutIconClick={handleCompetitorScoutClick}
@@ -2610,14 +2635,15 @@ const MarketResearch = React.memo(() => {
                       onRegulatoryPotentialFinesChange={handleRegulatoryPotentialFinesChange}
                       onRegulatoryDataLocalizationChange={handleRegulatoryDataLocalizationChange}
                       onRegulatoryScoutIconClick={handleRegulatoryScoutClick}
-                      // Market Entry handlers
-                      onMarketEntryToggleEdit={handleMarketEntryToggleEdit}
-                      onMarketEntrySaveChanges={handleMarketEntrySaveChanges}
-                      onMarketEntryCancelEdit={handleMarketEntryCancelEdit}
-                      onMarketEntryDeleteSection={handleMarketEntryDeleteSection}
-                      onMarketEntryEditHistoryOpen={handleMarketEntryEditHistoryOpen}
-                      onMarketEntryExpandToggle={handleMarketEntryExpandToggle}
-                      onMarketEntryExecutiveSummaryChange={handleMarketEntryExecutiveSummaryChange}
+                       // Market Entry handlers
+                       onMarketEntryToggleEdit={handleMarketEntryToggleEdit}
+                       onMarketEntrySaveChanges={handleMarketEntrySaveChanges}
+                       onMarketEntryRefresh={() => fetchMarketEntryData(true)}
+                       onMarketEntryCancelEdit={handleMarketEntryCancelEdit}
+                       onMarketEntryDeleteSection={handleMarketEntryDeleteSection}
+                       onMarketEntryEditHistoryOpen={handleMarketEntryEditHistoryOpen}
+                       onMarketEntryExpandToggle={handleMarketEntryExpandToggle}
+                       onMarketEntryExecutiveSummaryChange={handleMarketEntryExecutiveSummaryChange}
                       onMarketEntryBarriersChange={handleMarketEntryBarriersChange}
                       onMarketEntryRecommendedChannelChange={handleMarketEntryRecommendedChannelChange}
                       onMarketEntryTimeToMarketChange={handleMarketEntryTimeToMarketChange}

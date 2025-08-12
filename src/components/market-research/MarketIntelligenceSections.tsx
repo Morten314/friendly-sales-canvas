@@ -11,6 +11,27 @@ import { MarketIntelligenceTabProps } from './MarketIntelligenceTabProps';
 interface MarketIntelligenceSectionsProps extends MarketIntelligenceTabProps {}
 
 const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (props) => {
+  // Trigger data refresh for all components when isRefreshing changes
+  React.useEffect(() => {
+    if (props.isRefreshing) {
+      console.log('🔄 MarketIntelligenceSections detected refresh state - triggering component refreshes');
+      
+      // Trigger refresh for Market Size if refresh handler exists
+      if (props.onMarketSizeRefresh) {
+        console.log('🔄 Triggering Market Size refresh');
+        props.onMarketSizeRefresh();
+      }
+      
+      // Trigger refresh for Market Entry if refresh handler exists
+      if (props.onMarketEntryRefresh) {
+        console.log('🔄 Triggering Market Entry refresh');
+        props.onMarketEntryRefresh();
+      }
+      
+      // For other components, we can trigger their save handlers which will refetch data
+      // This ensures all components get fresh data based on updated company profile
+    }
+  }, [props.isRefreshing]);
   // Create scout chat panels
   const marketSizeScoutChatPanel = props.showMarketSizeScoutChat ? (
     <ScoutChatPanel
