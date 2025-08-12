@@ -289,8 +289,8 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
 
   // Always use regulatoryData when available
   if (!regulatoryData) {
-    console.log('⚠️ No regulatoryData found - this should not happen with centralized data');
-    return null; // Don't show fallback data
+    console.log('⚠️ No regulatoryData found - will use fallback props');
+    // Don't return null, let it continue with fallback props
   }
 
   // Use API data if available, otherwise fall back to props

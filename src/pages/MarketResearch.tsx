@@ -327,7 +327,8 @@ const MarketResearch = React.memo(() => {
     euAiActDeadline: 'February 2, 2025',
     gdprCompliance: '68%',
     potentialFines: 'Up to 6% of annual revenue',
-    dataLocalization: 'Mandatory for customer data'
+    dataLocalization: 'Mandatory for customer data',
+    timestamp: null as string | null
   });
 
   // Competitor Landscape state - Add these new state variables

@@ -318,8 +318,8 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
 
   // Always use competitorData when available
   if (!competitorData) {
-    console.log('⚠️ No competitorData found - this should not happen with centralized data');
-    return null; // Don't show fallback data
+    console.log('⚠️ No competitorData found - will use fallback props');
+    // Don't return null, let it continue with fallback props
   }
 
   return (
