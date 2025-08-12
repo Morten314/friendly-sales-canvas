@@ -700,26 +700,35 @@ const MarketResearch = React.memo(() => {
       }
       setMarketSizeError(null);
 
-      // Modified payload to fetch existing reports instead of generating new ones
-      const currentTime = Date.now();
-      const randomId = Math.random().toString(36).substring(7);
-      const payload = {
-        user_id: "brewra",
-        component_name: "Market Size & Opportunity",
-        refresh: false,  // Changed to false to fetch existing data
-        force_refresh: false,  // Changed to false
-        cache_bypass: false,  // Changed to false
-        bypass_all_cache: false,  // Changed to false
-        request_timestamp: currentTime,
-        request_id: randomId,
-        data: {
-          company: "OrbiSelf",
-          product: "Convoic.AI",
-          target_market: "Indian college students (Tier 2 & 3)",
-          region: "India",
-          timestamp: currentTime,
-          force_new_data: false  // Changed to false to fetch existing report
+      // Get company profile data for dynamic payload
+      let companyData = null;
+      try {
+        const profileData = localStorage.getItem('companyProfileForRefresh');
+        if (profileData) {
+          companyData = JSON.parse(profileData);
+          console.log('📋 Using company profile data for market size request:', companyData);
         }
+      } catch (error) {
+        console.warn('⚠️ Could not get company profile data:', error);
+      }
+
+      // Build payload based on the API structure shown in the image
+      const payload = {
+        user_id: "string",
+        component_name: "market size & opportunity",
+        data: {
+          additionalPrompt: companyData ? {
+            industry: companyData.industry,
+            companySize: companyData.companySize,
+            targetMarkets: companyData.targetMarkets,
+            strategicGoals: companyData.strategicGoals,
+            website: companyData.website,
+            gtmModel: companyData.gtmModel,
+            revenueStage: companyData.revenueStage,
+            keyBuyerPersona: companyData.keyBuyerPersona
+          } : {}
+        },
+        refresh: refresh // Use the refresh parameter passed to function
       };
 
       console.log('📤 Sending API request to:', 'https://backend-11kr.onrender.com/market-research');
@@ -880,16 +889,40 @@ const MarketResearch = React.memo(() => {
       }
       setMarketSizeError(null);
 
-      // Payload specifically for Industry Trends
+      // Get company profile data for dynamic payload
+      let companyData = null;
+      try {
+        const profileData = localStorage.getItem('companyProfileForRefresh');
+        if (profileData) {
+          companyData = JSON.parse(profileData);
+          console.log('📋 Using company profile data for industry trends request:', companyData);
+        }
+      } catch (error) {
+        console.warn('⚠️ Could not get company profile data:', error);
+      }
+
+      // Payload specifically for Industry Trends using API structure
       const payload = {
-        component_name: "Industry Trends",
-        refresh: refresh,
-        user_id: "brewra"
+        user_id: "string",
+        component_name: "industry trends",
+        data: {
+          additionalPrompt: companyData ? {
+            industry: companyData.industry,
+            companySize: companyData.companySize,
+            targetMarkets: companyData.targetMarkets,
+            strategicGoals: companyData.strategicGoals,
+            website: companyData.website,
+            gtmModel: companyData.gtmModel,
+            revenueStage: companyData.revenueStage,
+            keyBuyerPersona: companyData.keyBuyerPersona
+          } : {}
+        },
+        refresh: refresh
       };
 
       console.log('📤 Sending Industry Trends API request with payload:', payload);
 
-      const response = await fetch('https://swaggerapi.clodura.ai/backend/v1/market-research/generate', {
+      const response = await fetch('https://backend-11kr.onrender.com/market-research', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -957,16 +990,40 @@ const MarketResearch = React.memo(() => {
       }
       setMarketSizeError(null);
 
-      // Payload specifically for Competitor Landscape
+      // Get company profile data for dynamic payload
+      let companyData = null;
+      try {
+        const profileData = localStorage.getItem('companyProfileForRefresh');
+        if (profileData) {
+          companyData = JSON.parse(profileData);
+          console.log('📋 Using company profile data for competitor request:', companyData);
+        }
+      } catch (error) {
+        console.warn('⚠️ Could not get company profile data:', error);
+      }
+
+      // Payload specifically for Competitor Landscape using API structure
       const payload = {
-        component_name: "Competitor Landscape",
-        refresh: refresh,
-        user_id: "brewra"
+        user_id: "string",
+        component_name: "competitor landscape",
+        data: {
+          additionalPrompt: companyData ? {
+            industry: companyData.industry,
+            companySize: companyData.companySize,
+            targetMarkets: companyData.targetMarkets,
+            strategicGoals: companyData.strategicGoals,
+            website: companyData.website,
+            gtmModel: companyData.gtmModel,
+            revenueStage: companyData.revenueStage,
+            keyBuyerPersona: companyData.keyBuyerPersona
+          } : {}
+        },
+        refresh: refresh
       };
 
       console.log('📤 Sending Competitor API request with payload:', payload);
 
-      const response = await fetch('https://swaggerapi.clodura.ai/backend/v1/market-research/generate', {
+      const response = await fetch('https://backend-11kr.onrender.com/market-research', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1038,29 +1095,39 @@ const MarketResearch = React.memo(() => {
       }
       setMarketSizeError(null);
 
-      // Payload specifically for Market Entry & Growth Strategy (matching other components pattern)
-      const payload = {
-        user_id: "brewra",
-        component_name: "Market Entry & Growth Strategy", // Exact match from your swagger
-        refresh: false, // Always false initially to get existing data
-        force_refresh: false,
-        cache_bypass: false,
-        bypass_all_cache: false,
-        request_timestamp: Date.now(),
-        request_id: Math.random().toString(36).substr(2, 6),
-        data: {
-          company: "OrbiSelf",
-          product: "Convoic.AI", 
-          target_market: "Indian college students (Tier 2 & 3)",
-          region: "India",
-          timestamp: Date.now(),
-          force_new_data: false
+      // Get company profile data for dynamic payload
+      let companyData = null;
+      try {
+        const profileData = localStorage.getItem('companyProfileForRefresh');
+        if (profileData) {
+          companyData = JSON.parse(profileData);
+          console.log('📋 Using company profile data for market entry request:', companyData);
         }
+      } catch (error) {
+        console.warn('⚠️ Could not get company profile data:', error);
+      }
+
+      // Payload specifically for Market Entry & Growth Strategy using API structure
+      const payload = {
+        user_id: "string",
+        component_name: "market entry & growth strategy",
+        data: {
+          additionalPrompt: companyData ? {
+            industry: companyData.industry,
+            companySize: companyData.companySize,
+            targetMarkets: companyData.targetMarkets,
+            strategicGoals: companyData.strategicGoals,
+            website: companyData.website,
+            gtmModel: companyData.gtmModel,
+            revenueStage: companyData.revenueStage,
+            keyBuyerPersona: companyData.keyBuyerPersona
+          } : {}
+        },
+        refresh: refresh
       };
 
       console.log('📤 Sending Market Entry API request with payload:', payload);
-      console.log('⏰ MARKET ENTRY REQUEST TIMESTAMP:', payload.request_timestamp);
-      console.log('🔄 FORCE_REFRESH in payload:', payload.force_refresh);
+      console.log('🔄 REFRESH in payload:', payload.refresh);
 
       const response = await fetch('https://backend-11kr.onrender.com/market-research', {
         method: 'POST',
