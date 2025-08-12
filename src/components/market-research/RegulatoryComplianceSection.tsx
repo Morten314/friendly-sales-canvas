@@ -77,6 +77,9 @@ interface RegulatoryComplianceSectionProps {
   // Add refresh props
   isRefreshing?: boolean;
   companyProfile?: any;
+  
+  // Add centralized data prop
+  regulatoryData?: any;
 }
 
 const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = ({
@@ -261,11 +264,12 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     }
   };
 
-  // API integration for Regulatory & Compliance Highlights
+  // Don't fetch data - use props from parent component
   const fetchRegulatoryData = async (refresh: boolean = false) => {
-    console.log('🚀 Starting fetchRegulatoryData with refresh:', refresh);
-    
-    setIsLoading(true);
+    console.log('🔄 Regulatory Compliance - Using parent data, refresh:', refresh);
+    // This component no longer fetches its own data
+    // It receives data through props from the parent MarketResearch component
+    setIsLoading(false);
     setError(null);
     
     try {

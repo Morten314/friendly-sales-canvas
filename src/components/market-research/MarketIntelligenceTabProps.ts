@@ -6,6 +6,10 @@ export interface MarketIntelligenceTabProps {
   isRefreshing?: boolean;
   companyProfile?: any;
   
+  // Add centralized data props
+  competitorData?: any;
+  regulatoryData?: any;
+  
   // Market Size Section
   isEditing: boolean;
   isSplitView: boolean;

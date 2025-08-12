@@ -212,6 +212,7 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
         onGenerateShareableLink={props.onGenerateShareableLink}
         isRefreshing={props.isRefreshing}
         companyProfile={props.companyProfile}
+        competitorData={props.competitorData}
           />
         </div>
         {props.showCompetitorScoutChat && competitorScoutChatPanel && (
@@ -253,6 +254,7 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
         onGenerateShareableLink={props.onGenerateShareableLink}
         isRefreshing={props.isRefreshing}
         companyProfile={props.companyProfile}
+        regulatoryData={props.regulatoryData}
           />
         </div>
         {props.showRegulatoryScoutChat && regulatoryScoutChatPanel && (

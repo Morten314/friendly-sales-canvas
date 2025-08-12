@@ -51,6 +51,9 @@ interface CompetitorLandscapeSectionProps {
   // Add refresh props
   isRefreshing?: boolean;
   companyProfile?: any;
+  
+  // Add centralized data prop
+  competitorData?: any;
 }
 
 interface UIComponent {
@@ -123,12 +126,14 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   onSaveToWorkspace,
   onGenerateShareableLink,
   isRefreshing = false,
-  companyProfile
+  companyProfile,
+  competitorData: propCompetitorData
 }) => {
   // State for API data
-  const [competitorData, setCompetitorData] = useState<CompetitorLandscapeData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // Use centralized data from parent instead of local state
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const competitorData = propCompetitorData;
   
   // Local editing state for inline editing
   const [localExecutiveSummary, setLocalExecutiveSummary] = useState('');
@@ -249,110 +254,19 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
     }
   };
 
-  // Fetch Competitor Landscape data from API
+  // Don't fetch data - use props from parent component
   const fetchCompetitorLandscapeData = async (refresh = true) => {
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      const currentTime = Date.now();
-      const randomId = Math.random().toString(36).substring(7);
-      
-      // Get company profile data for dynamic reports
-      const profile = companyProfile || JSON.parse(localStorage.getItem('companyProfile') || '{}');
-      
-      const payload = {
-        user_id: "brewra",
-        component_name: "competitor landscape",
-        refresh: refresh,
-        force_refresh: refresh,
-        cache_bypass: refresh,
-        bypass_all_cache: refresh,
-        request_timestamp: currentTime,
-        request_id: randomId,
-        additionalPrompt: profile.companyUrl ? `Company: ${profile.companyUrl}, Industry: ${profile.industry}, Size: ${profile.companySize}, GTM: ${profile.primaryGTMModel}, Goals: ${profile.strategicGoals}` : "",
-        data: {
-          company: profile.companyUrl || "OrbiSelf",
-          product: "Convoic.AI", 
-          target_market: profile.targetMarkets?.[0] || "Indian college students (Tier 2 & 3)",
-          region: profile.targetMarkets?.[0] || "India",
-          timestamp: currentTime,
-          force_new_data: refresh
-        }
-      };
-
-      const requestTimestamp = Date.now();
-      
-      const response = await fetch('https://backend-11kr.onrender.com/market-research', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload)
-      });
-
-      
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-
-      if (result.status === 'success' && result.data) {
-        
-        const reportData = result.data;
-        
-        // Convert timestamps to UTC for comparison
-        const currentTimestampUTC = toUTCTimestamp(competitorData?.timestamp);
-        const newTimestampUTC = toUTCTimestamp(reportData.timestamp);
-        const requestTimeUTC = getCurrentUTCTimestamp();
-        
-        
-        // Determine if we should update
-        let shouldUpdate = false;
-        let updateReason = '';
-        
-        if (!competitorData) {
-          shouldUpdate = true;
-          updateReason = 'No existing data - first load';
-        } else if (!currentTimestampUTC) {
-          shouldUpdate = true;
-          updateReason = 'No existing timestamp - first load';
-        } else if (!newTimestampUTC) {
-          shouldUpdate = false;
-          updateReason = 'Invalid new timestamp';
-        } else if (newTimestampUTC > currentTimestampUTC) {
-          shouldUpdate = true;
-          updateReason = 'Swagger data is newer';
-        } else {
-          shouldUpdate = false;
-          updateReason = 'Current data is up to date or newer';
-        }
-        
-        if (shouldUpdate) {
-          setCompetitorData(reportData);
-        }
-      }
-    } catch (err) {
-      console.error('Error fetching competitor landscape data:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch competitor landscape data');
-    } finally {
-      setIsLoading(false);
-    }
+    // This component no longer fetches its own data
+    // It receives data through props from the parent MarketResearch component
+    console.log('🔄 Competitor Landscape - Using parent data, refresh:', refresh);
+    setIsLoading(false);
+    setError(null);
   };
 
-  // Clear previous data and fetch fresh data on component mount
+  // Initialize component
   useEffect(() => {
-    setCompetitorData(null);
-    setIsLoading(true);
+    setIsLoading(false);
     setError(null);
-    
-    const timer = setTimeout(() => {
-      fetchCompetitorLandscapeData(false);
-    }, 500);
-    
-    return () => clearTimeout(timer);
   }, []);
   
   // Handle refresh when isRefreshing prop changes
@@ -631,7 +545,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                           {Object.entries(region.data).map(([company, share]) => (
                             <div key={company} className="flex justify-between items-center">
                               <span className="text-sm text-gray-700">{company}</span>
-                              <span className="text-sm font-medium text-blue-600">{share}</span>
+                              <span className="text-sm font-medium text-blue-600">{String(share)}</span>
                             </div>
                           ))}
                         </div>
