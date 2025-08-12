@@ -2613,27 +2613,27 @@ const MarketResearch = React.memo(() => {
                       industryTrendsRecommendations={industryTrendsData.recommendations}
                       industryTrendsRisks={industryTrendsData.risks}
                       industryTrendsLastEditedField={industryTrendsLastEditedField}
-                      // Competitor Landscape props
-                      isCompetitorEditing={isCompetitorEditing}
-                      competitorExpanded={competitorExpanded}
-                      competitorHasEdits={competitorHasEdits}
-                      competitorDeletedSections={competitorDeletedSections}
-                      competitorEditHistory={competitorEditHistory}
-                      competitorExecutiveSummary={competitorData.executiveSummary}
-                      competitorTopPlayerShare={competitorData.topPlayerShare}
-                      competitorEmergingPlayers={competitorData.emergingPlayers}
-                      competitorFundingNews={competitorData.fundingNews}
-                      // Regulatory Compliance props
-                      isRegulatoryEditing={isRegulatoryEditing}
-                      regulatoryExpanded={regulatoryExpanded}
-                      regulatoryHasEdits={regulatoryHasEdits}
-                      regulatoryDeletedSections={regulatoryDeletedSections}
-                      regulatoryEditHistory={regulatoryEditHistory}
-                      regulatoryExecutiveSummary={regulatoryData.executiveSummary}
-                      regulatoryEuAiActDeadline={regulatoryData.euAiActDeadline}
-                      regulatoryGdprCompliance={regulatoryData.gdprCompliance}
-                      regulatoryPotentialFines={regulatoryData.potentialFines}
-                      regulatoryDataLocalization={regulatoryData.dataLocalization}
+                       // Competitor Landscape props - pass structured data
+                       isCompetitorEditing={isCompetitorEditing}
+                       competitorExpanded={competitorExpanded}
+                       competitorHasEdits={competitorHasEdits}
+                       competitorDeletedSections={competitorDeletedSections}
+                       competitorEditHistory={competitorEditHistory}
+                        competitorExecutiveSummary={competitorData.executiveSummary}
+                       competitorTopPlayerShare={competitorData.topPlayerShare}
+                       competitorEmergingPlayers={competitorData.emergingPlayers}
+                       competitorFundingNews={competitorData.fundingNews}
+                       // Regulatory Compliance props - pass structured data
+                       isRegulatoryEditing={isRegulatoryEditing}
+                       regulatoryExpanded={regulatoryExpanded}
+                       regulatoryHasEdits={regulatoryHasEdits}
+                       regulatoryDeletedSections={regulatoryDeletedSections}
+                       regulatoryEditHistory={regulatoryEditHistory}
+                        regulatoryExecutiveSummary={regulatoryData.executiveSummary}
+                       regulatoryEuAiActDeadline={regulatoryData.euAiActDeadline}
+                       regulatoryGdprCompliance={regulatoryData.gdprCompliance}
+                       regulatoryPotentialFines={regulatoryData.potentialFines}
+                       regulatoryDataLocalization={regulatoryData.dataLocalization}
                       // Market Entry props
                       isMarketEntryEditing={isMarketEntryEditing}
                       marketEntryExpanded={marketEntryExpanded}

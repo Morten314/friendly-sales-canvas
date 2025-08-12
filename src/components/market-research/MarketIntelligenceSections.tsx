@@ -192,10 +192,10 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
         hasEdits={props.competitorHasEdits || false}
         deletedSections={props.competitorDeletedSections || new Set()}
         editHistory={props.competitorEditHistory || []}
-        executiveSummary={props.competitorExecutiveSummary || ''}
-        topPlayerShare={props.competitorTopPlayerShare || ''}
-        emergingPlayers={props.competitorEmergingPlayers || ''}
-        fundingNews={props.competitorFundingNews || []}
+         executiveSummary={props.competitorData?.executiveSummary || props.competitorExecutiveSummary || ''}
+         topPlayerShare={props.competitorData?.topPlayerShare || props.competitorTopPlayerShare || ''}
+         emergingPlayers={props.competitorData?.emergingPlayers || props.competitorEmergingPlayers || ''}
+         fundingNews={props.competitorData?.fundingNews || props.competitorFundingNews || []}
         onToggleEdit={props.onCompetitorToggleEdit || (() => {})}
         onScoutIconClick={props.onCompetitorScoutIconClick}
         onEditHistoryOpen={props.onCompetitorEditHistoryOpen || (() => {})}
@@ -232,11 +232,11 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
         hasEdits={props.regulatoryHasEdits || false}
         deletedSections={props.regulatoryDeletedSections || new Set()}
         editHistory={props.regulatoryEditHistory || []}
-        executiveSummary={props.regulatoryExecutiveSummary || 'The regulatory landscape for SaaS companies continues to evolve rapidly, with new compliance requirements emerging across multiple jurisdictions. Organizations must navigate an increasingly complex web of data protection, AI governance, and industry-specific regulations.'}
-        euAiActDeadline={props.regulatoryEuAiActDeadline || 'February 2, 2025'}
-        gdprCompliance={props.regulatoryGdprCompliance || '68%'}
-        potentialFines={props.regulatoryPotentialFines || 'Up to 6% of annual revenue'}
-        dataLocalization={props.regulatoryDataLocalization || 'Mandatory for customer data'}
+         executiveSummary={props.regulatoryData?.executiveSummary || props.regulatoryExecutiveSummary || 'The regulatory landscape for SaaS companies continues to evolve rapidly, with new compliance requirements emerging across multiple jurisdictions. Organizations must navigate an increasingly complex web of data protection, AI governance, and industry-specific regulations.'}
+         euAiActDeadline={props.regulatoryData?.euAiActDeadline || props.regulatoryEuAiActDeadline || 'February 2, 2025'}
+         gdprCompliance={props.regulatoryData?.gdprCompliance || props.regulatoryGdprCompliance || '68%'}
+         potentialFines={props.regulatoryData?.potentialFines || props.regulatoryPotentialFines || 'Up to 6% of annual revenue'}
+         dataLocalization={props.regulatoryData?.dataLocalization || props.regulatoryDataLocalization || 'Mandatory for customer data'}
         onToggleEdit={props.onRegulatoryToggleEdit || (() => {})}
         onScoutIconClick={props.onRegulatoryScoutIconClick || props.onMarketSizeScoutIconClick}
         onEditHistoryOpen={props.onRegulatoryEditHistoryOpen || (() => {})}
