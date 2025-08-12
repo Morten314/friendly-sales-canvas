@@ -211,6 +211,9 @@ const MarketResearch = React.memo(() => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
+  // Company profile state for centralized data context
+  const [companyProfile, setCompanyProfile] = useState<any>(null);
+  
   // MarketIntelligenceTab state
   const [isMarketIntelligenceEditing, setIsMarketIntelligenceEditing] = useState(false);
   const [isMarketIntelligenceExpanded, setIsMarketIntelligenceExpanded] = useState(false);
@@ -1302,10 +1305,24 @@ const MarketResearch = React.memo(() => {
     };
   }, []); // Empty dependency array ensures this only runs once
 
-  // Listen for company profile updates and trigger background refresh
+  // Load company profile data on mount and listen for updates
   useEffect(() => {
+    const loadCompanyProfile = () => {
+      try {
+        const profileData = localStorage.getItem('companyProfileForRefresh');
+        if (profileData) {
+          setCompanyProfile(JSON.parse(profileData));
+        }
+      } catch (error) {
+        console.warn('Could not load company profile data:', error);
+      }
+    };
+    
+    loadCompanyProfile();
+    
     const handleCompanyProfileUpdate = () => {
-      console.log('Company profile updated, triggering Scout refresh...');
+      console.log('Company profile updated, reloading profile data and triggering Scout refresh...');
+      loadCompanyProfile();
       triggerScoutAndRefresh();
     };
 
@@ -2550,6 +2567,9 @@ const MarketResearch = React.memo(() => {
                     {/* Market Intelligence Tab with embedded scout chats */}
                     <MarketIntelligenceTab
                       isRefreshing={isRefreshing}
+                      companyProfile={companyProfile}
+                      competitorData={competitorData}
+                      regulatoryData={regulatoryData}
                       isEditing={isMarketIntelligenceEditing}
                       isSplitView={false}
                       isExpanded={isMarketIntelligenceExpanded}
