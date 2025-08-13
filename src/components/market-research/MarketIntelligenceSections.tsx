@@ -213,6 +213,7 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
         isRefreshing={props.isRefreshing}
         companyProfile={props.companyProfile}
         competitorData={props.competitorData}
+        error={props.competitorError}
           />
         </div>
         {props.showCompetitorScoutChat && competitorScoutChatPanel && (

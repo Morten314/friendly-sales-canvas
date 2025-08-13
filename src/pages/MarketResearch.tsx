@@ -271,6 +271,10 @@ const MarketResearch = React.memo(() => {
   // Market Size API state
   const [isMarketSizeLoading, setIsMarketSizeLoading] = useState(false);
   const [marketSizeError, setMarketSizeError] = useState<string | null>(null);
+  
+  // Competitor Landscape API state
+  const [isCompetitorLoading, setIsCompetitorLoading] = useState(false);
+  const [competitorError, setCompetitorError] = useState<string | null>(null);
   const [deletedSections, setDeletedSections] = useState<Set<string>>(new Set());
   
   
@@ -1124,9 +1128,9 @@ const MarketResearch = React.memo(() => {
     try {
       console.log('📍 Fetching competitor landscape data with correct component_name');
       if (showLoading) {
-        setIsMarketSizeLoading(true); // Reuse same loading state for now
+        setIsCompetitorLoading(true);
       }
-      setMarketSizeError(null);
+      setCompetitorError(null);
 
       // Get company profile data for dynamic payload
       let companyData = null;
@@ -1185,10 +1189,49 @@ const MarketResearch = React.memo(() => {
         const apiData = result.data;
         console.log('🎯🏆 Processing API data for Competitor Landscape:', apiData);
         console.log('🎯🏆 API Data Keys:', Object.keys(apiData));
-        console.log('🎯🏆 API Data executiveSummary:', apiData.executiveSummary);
-        console.log('🎯🏆 API Data topPlayerShare:', apiData.topPlayerShare);
-        console.log('🎯🏆 API Data emergingPlayers:', apiData.emergingPlayers);
-        console.log('🎯🏆 API Data fundingNews:', apiData.fundingNews);
+        console.log('🎯🏆 API Data uiComponents:', apiData.uiComponents);
+        
+        // Extract data from uiComponents array (like other working components)
+        let executiveSummary = '';
+        let topPlayerShare = '';
+        let emergingPlayers = '';
+        let fundingNews = [];
+        
+        if (apiData.uiComponents && Array.isArray(apiData.uiComponents)) {
+          console.log('🔍🏆 Found uiComponents array:', apiData.uiComponents);
+          
+          // Extract data from uiComponents
+          const executiveSummaryComponent = apiData.uiComponents.find(comp => 
+            comp.name === 'executiveSummary' || comp.name === 'Executive Summary'
+          );
+          const topPlayerShareComponent = apiData.uiComponents.find(comp => 
+            comp.name === 'topPlayerShare' || comp.name === 'Top Player Share'
+          );
+          const emergingPlayersComponent = apiData.uiComponents.find(comp => 
+            comp.name === 'emergingPlayers' || comp.name === 'Emerging Players'
+          );
+          const fundingNewsComponent = apiData.uiComponents.find(comp => 
+            comp.name === 'fundingNews' || comp.name === 'Funding News'
+          );
+          
+          executiveSummary = executiveSummaryComponent?.content || executiveSummaryComponent?.value || '';
+          topPlayerShare = topPlayerShareComponent?.content || topPlayerShareComponent?.value || '';
+          emergingPlayers = emergingPlayersComponent?.content || emergingPlayersComponent?.value || '';
+          fundingNews = fundingNewsComponent?.content || fundingNewsComponent?.value || [];
+          
+          console.log('🔍🏆 Extracted from uiComponents:');
+          console.log('  - executiveSummary:', executiveSummary);
+          console.log('  - topPlayerShare:', topPlayerShare);
+          console.log('  - emergingPlayers:', emergingPlayers);
+          console.log('  - fundingNews:', fundingNews);
+        } else {
+          // Fallback to direct properties
+          executiveSummary = apiData.executiveSummary || '';
+          topPlayerShare = apiData.topPlayerShare || '';
+          emergingPlayers = apiData.emergingPlayers || '';
+          fundingNews = apiData.fundingNews || [];
+          console.log('🔍🏆 Using direct properties as fallback');
+        }
 
         // Check timestamp comparison
         const currentTimestamp = competitorData.timestamp || null;
@@ -1214,10 +1257,10 @@ const MarketResearch = React.memo(() => {
           // Update competitor data with API response
           const updatedData = {
             ...competitorData,
-            executiveSummary: apiData.executiveSummary || competitorData.executiveSummary,
-            topPlayerShare: apiData.topPlayerShare || competitorData.topPlayerShare,
-            emergingPlayers: apiData.emergingPlayers || competitorData.emergingPlayers,
-            fundingNews: apiData.fundingNews || competitorData.fundingNews,
+            executiveSummary: executiveSummary || competitorData.executiveSummary,
+            topPlayerShare: topPlayerShare || competitorData.topPlayerShare,
+            emergingPlayers: emergingPlayers || competitorData.emergingPlayers,
+            fundingNews: fundingNews || competitorData.fundingNews,
             timestamp: toUTCTimestamp(newTimestamp)
           };
           
@@ -1227,6 +1270,7 @@ const MarketResearch = React.memo(() => {
           console.log('✅🏆🏆🏆 COMPETITOR DATA STATE UPDATED:', updatedData);
           console.log('✅🏆🏆🏆 COMPETITOR - Old data:', competitorData);
           console.log('✅🏆🏆🏆 COMPETITOR - New data:', updatedData);
+          console.log('✅🏆🏆🏆 COMPETITOR - State update triggered with refresh:', refresh);
         } else {
           console.log('ℹ️🏆 Current Competitor data is up to date - no update needed');
         }
@@ -1239,10 +1283,10 @@ const MarketResearch = React.memo(() => {
       console.error('❌🏆 Error details:', error.message);
       
       // Set error state - no fallback data generation
-      setMarketSizeError('Failed to load competitor data');
+      setCompetitorError('Failed to load competitor data');
     } finally {
       if (showLoading) {
-        setIsMarketSizeLoading(false);
+        setIsCompetitorLoading(false);
       }
     }
   };
@@ -2788,6 +2832,7 @@ const MarketResearch = React.memo(() => {
                        competitorTopPlayerShare={competitorData.topPlayerShare}
                        competitorEmergingPlayers={competitorData.emergingPlayers}
                        competitorFundingNews={competitorData.fundingNews}
+                       competitorError={competitorError}
                        // Regulatory Compliance props - pass structured data
                        isRegulatoryEditing={isRegulatoryEditing}
                        regulatoryExpanded={regulatoryExpanded}

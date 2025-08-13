@@ -121,15 +121,61 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   const [error, setError] = useState<string | null>(null);
   const [regulatoryExpanded, setRegulatoryExpanded] = useState(true);
 
-  // Local state for editing - dynamic for all key data points - initialize with prop values
-  const [localExecutiveSummary, setLocalExecutiveSummary] = useState(executiveSummary || regulatoryData?.executiveSummary || '');
-  const [localEuAiActDeadline, setLocalEuAiActDeadline] = useState(euAiActDeadline || regulatoryData?.euAiActDeadline || '');
-  const [localGdprCompliance, setLocalGdprCompliance] = useState(gdprCompliance || regulatoryData?.gdprCompliance || '');
-  const [localPotentialFines, setLocalPotentialFines] = useState(potentialFines || regulatoryData?.potentialFines || '');
-  const [localDataLocalization, setLocalDataLocalization] = useState(dataLocalization || regulatoryData?.dataLocalization || '');
+  // Local state for editing - dynamic for all key data points - initialize with prop values or saved state
+  const [localExecutiveSummary, setLocalExecutiveSummary] = useState(() => {
+    const saved = localStorage.getItem('regulatory_executiveSummary');
+    return saved || executiveSummary || regulatoryData?.executiveSummary || '';
+  });
+  const [localEuAiActDeadline, setLocalEuAiActDeadline] = useState(() => {
+    const saved = localStorage.getItem('regulatory_euAiActDeadline');
+    return saved || euAiActDeadline || regulatoryData?.euAiActDeadline || '';
+  });
+  const [localGdprCompliance, setLocalGdprCompliance] = useState(() => {
+    const saved = localStorage.getItem('regulatory_gdprCompliance');
+    return saved || gdprCompliance || regulatoryData?.gdprCompliance || '';
+  });
+  const [localPotentialFines, setLocalPotentialFines] = useState(() => {
+    const saved = localStorage.getItem('regulatory_potentialFines');
+    return saved || potentialFines || regulatoryData?.potentialFines || '';
+  });
+  const [localDataLocalization, setLocalDataLocalization] = useState(() => {
+    const saved = localStorage.getItem('regulatory_dataLocalization');
+    return saved || dataLocalization || regulatoryData?.dataLocalization || '';
+  });
   
   // Dynamic local state for all key data points
   const [localKeyDataValues, setLocalKeyDataValues] = useState<Record<string, string>>({});
+
+  // Save local state to localStorage whenever it changes
+  useEffect(() => {
+    if (localExecutiveSummary) {
+      localStorage.setItem('regulatory_executiveSummary', localExecutiveSummary);
+    }
+  }, [localExecutiveSummary]);
+
+  useEffect(() => {
+    if (localEuAiActDeadline) {
+      localStorage.setItem('regulatory_euAiActDeadline', localEuAiActDeadline);
+    }
+  }, [localEuAiActDeadline]);
+
+  useEffect(() => {
+    if (localGdprCompliance) {
+      localStorage.setItem('regulatory_gdprCompliance', localGdprCompliance);
+    }
+  }, [localGdprCompliance]);
+
+  useEffect(() => {
+    if (localPotentialFines) {
+      localStorage.setItem('regulatory_potentialFines', localPotentialFines);
+    }
+  }, [localPotentialFines]);
+
+  useEffect(() => {
+    if (localDataLocalization) {
+      localStorage.setItem('regulatory_dataLocalization', localDataLocalization);
+    }
+  }, [localDataLocalization]);
 
   // Sync local state with centralized regulatoryData and props
   useEffect(() => {
@@ -138,40 +184,93 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
       console.log('  - executiveSummary prop:', executiveSummary);
       console.log('  - euAiActDeadline prop:', euAiActDeadline);
       console.log('  - regulatoryData:', regulatoryData);
+      console.log('  - Current localExecutiveSummary:', localExecutiveSummary);
+      console.log('  - Current localEuAiActDeadline:', localEuAiActDeadline);
       
-      // Use props data first, then fall back to regulatoryData
-      setLocalExecutiveSummary(executiveSummary || regulatoryData?.executiveSummary || '');
-      setLocalEuAiActDeadline(euAiActDeadline || regulatoryData?.euAiActDeadline || '');
-      setLocalGdprCompliance(gdprCompliance || regulatoryData?.gdprCompliance || '');
-      setLocalPotentialFines(potentialFines || regulatoryData?.potentialFines || '');
-      setLocalDataLocalization(dataLocalization || regulatoryData?.dataLocalization || '');
+      // Only update if we have new data and current local state is empty
+      if (executiveSummary && !localExecutiveSummary) {
+        setLocalExecutiveSummary(executiveSummary);
+        console.log('📝 Updated localExecutiveSummary from prop:', executiveSummary);
+      }
+      if (regulatoryData?.executiveSummary && !localExecutiveSummary) {
+        setLocalExecutiveSummary(regulatoryData.executiveSummary);
+        console.log('📝 Updated localExecutiveSummary from regulatoryData:', regulatoryData.executiveSummary);
+      }
       
-      console.log('✅ Updated local state:');
-      console.log('  - localExecutiveSummary set to:', executiveSummary || regulatoryData?.executiveSummary || '');
-      console.log('  - localEuAiActDeadline set to:', euAiActDeadline || regulatoryData?.euAiActDeadline || '');
+      if (euAiActDeadline && !localEuAiActDeadline) {
+        setLocalEuAiActDeadline(euAiActDeadline);
+        console.log('📝 Updated localEuAiActDeadline from prop:', euAiActDeadline);
+      }
+      if (regulatoryData?.euAiActDeadline && !localEuAiActDeadline) {
+        setLocalEuAiActDeadline(regulatoryData.euAiActDeadline);
+        console.log('📝 Updated localEuAiActDeadline from regulatoryData:', regulatoryData.euAiActDeadline);
+      }
+      
+      if (gdprCompliance && !localGdprCompliance) {
+        setLocalGdprCompliance(gdprCompliance);
+        console.log('📝 Updated localGdprCompliance from prop:', gdprCompliance);
+      }
+      if (regulatoryData?.gdprCompliance && !localGdprCompliance) {
+        setLocalGdprCompliance(regulatoryData.gdprCompliance);
+        console.log('📝 Updated localGdprCompliance from regulatoryData:', regulatoryData.gdprCompliance);
+      }
+      
+      if (potentialFines && !localPotentialFines) {
+        setLocalPotentialFines(potentialFines);
+        console.log('📝 Updated localPotentialFines from prop:', potentialFines);
+      }
+      if (regulatoryData?.potentialFines && !localPotentialFines) {
+        setLocalPotentialFines(regulatoryData.potentialFines);
+        console.log('📝 Updated localPotentialFines from regulatoryData:', regulatoryData.potentialFines);
+      }
+      
+      if (dataLocalization && !localDataLocalization) {
+        setLocalDataLocalization(dataLocalization);
+        console.log('📝 Updated localDataLocalization from prop:', dataLocalization);
+      }
+      if (regulatoryData?.dataLocalization && !localDataLocalization) {
+        setLocalDataLocalization(regulatoryData.dataLocalization);
+        console.log('📝 Updated localDataLocalization from regulatoryData:', regulatoryData.dataLocalization);
+      }
     }
-  }, [isEditing, regulatoryData, executiveSummary, euAiActDeadline, gdprCompliance, potentialFines, dataLocalization]);
+  }, [isEditing, regulatoryData, executiveSummary, euAiActDeadline, gdprCompliance, potentialFines, dataLocalization, localExecutiveSummary, localEuAiActDeadline, localGdprCompliance, localPotentialFines, localDataLocalization]);
 
   // Also sync when regulatoryData changes
   useEffect(() => {
     if (!isEditing && regulatoryData) {
       console.log('🔄 Regulatory Compliance - regulatoryData updated:', regulatoryData);
+      console.log('🔍 Regulatory Compliance - Data analysis:');
+      console.log('  - regulatoryData.executiveSummary:', regulatoryData.executiveSummary);
+      console.log('  - regulatoryData.euAiActDeadline:', regulatoryData.euAiActDeadline);
+      console.log('  - regulatoryData.gdprCompliance:', regulatoryData.gdprCompliance);
+      console.log('  - regulatoryData.timestamp:', regulatoryData.timestamp);
+      console.log('  - Current localExecutiveSummary:', localExecutiveSummary);
+      console.log('  - Current localEuAiActDeadline:', localEuAiActDeadline);
+      console.log('  - Current localGdprCompliance:', localGdprCompliance);
       
-      // Update local state with regulatoryData if props are empty
-      if (!executiveSummary && regulatoryData.executiveSummary) {
+      // Only update if we have new data and current local state is empty
+      if (regulatoryData.executiveSummary && !localExecutiveSummary) {
         setLocalExecutiveSummary(regulatoryData.executiveSummary);
         console.log('📝 Updated executiveSummary from regulatoryData:', regulatoryData.executiveSummary);
       }
-      if (!euAiActDeadline && regulatoryData.euAiActDeadline) {
+      if (regulatoryData.euAiActDeadline && !localEuAiActDeadline) {
         setLocalEuAiActDeadline(regulatoryData.euAiActDeadline);
         console.log('📝 Updated euAiActDeadline from regulatoryData:', regulatoryData.euAiActDeadline);
       }
-      if (!gdprCompliance && regulatoryData.gdprCompliance) {
+      if (regulatoryData.gdprCompliance && !localGdprCompliance) {
         setLocalGdprCompliance(regulatoryData.gdprCompliance);
         console.log('📝 Updated gdprCompliance from regulatoryData:', regulatoryData.gdprCompliance);
       }
+      if (regulatoryData.potentialFines && !localPotentialFines) {
+        setLocalPotentialFines(regulatoryData.potentialFines);
+        console.log('📝 Updated potentialFines from regulatoryData:', regulatoryData.potentialFines);
+      }
+      if (regulatoryData.dataLocalization && !localDataLocalization) {
+        setLocalDataLocalization(regulatoryData.dataLocalization);
+        console.log('📝 Updated dataLocalization from regulatoryData:', regulatoryData.dataLocalization);
+      }
     }
-  }, [regulatoryData, isEditing, executiveSummary, euAiActDeadline, gdprCompliance, potentialFines, dataLocalization]);
+  }, [regulatoryData, isEditing, localExecutiveSummary, localEuAiActDeadline, localGdprCompliance, localPotentialFines, localDataLocalization]);
 
   // Initialize dynamic key data values after keyDataPoints is available
   useEffect(() => {

@@ -56,6 +56,7 @@ export interface MarketIntelligenceTabProps {
   competitorTopPlayerShare: string;
   competitorEmergingPlayers: string;
   competitorFundingNews: string[];
+  competitorError?: string | null;
   // Regulatory Compliance props
   isRegulatoryEditing?: boolean;
   regulatoryExpanded?: boolean;

@@ -54,6 +54,7 @@ interface CompetitorLandscapeSectionProps {
   
   // Add centralized data prop
   competitorData?: any;
+  error?: string | null;
 }
 
 interface UIComponent {
@@ -127,12 +128,13 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   onGenerateShareableLink,
   isRefreshing = false,
   companyProfile,
-  competitorData: propCompetitorData
+  competitorData: propCompetitorData,
+  error: propError
 }) => {
   // State for API data
   // Use centralized data from parent instead of local state
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const error = propError; // Use prop error instead of local state
   const competitorData = propCompetitorData;
   
   // Local editing state for inline editing - initialize with prop values
@@ -148,6 +150,8 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
       console.log('  - topPlayerShare prop:', topPlayerShare);
       console.log('  - emergingPlayers prop:', emergingPlayers);
       console.log('  - competitorData:', competitorData);
+      console.log('  - competitorData.executiveSummary:', competitorData?.executiveSummary);
+      console.log('  - competitorData.timestamp:', competitorData?.timestamp);
       
       // Use props data first, then fall back to competitorData
       setLocalExecutiveSummary(executiveSummary || competitorData?.executiveSummary || '');
@@ -164,22 +168,33 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   useEffect(() => {
     if (!isCompetitorLandscapeEditing && competitorData) {
       console.log('🔄 Competitor Landscape - competitorData updated:', competitorData);
+      console.log('🔍 Competitor Landscape - Data analysis:');
+      console.log('  - competitorData.executiveSummary:', competitorData.executiveSummary);
+      console.log('  - competitorData.topPlayerShare:', competitorData.topPlayerShare);
+      console.log('  - competitorData.emergingPlayers:', competitorData.emergingPlayers);
+      console.log('  - competitorData.timestamp:', competitorData.timestamp);
+      console.log('  - executiveSummary prop:', executiveSummary);
+      console.log('  - topPlayerShare prop:', topPlayerShare);
+      console.log('  - emergingPlayers prop:', emergingPlayers);
+      console.log('  - Current localExecutiveSummary:', localExecutiveSummary);
+      console.log('  - Current localTopPlayerShare:', localTopPlayerShare);
+      console.log('  - Current localEmergingPlayers:', localEmergingPlayers);
       
-      // Update local state with competitorData if props are empty
-      if (!executiveSummary && competitorData.executiveSummary) {
+      // Always update local state with competitorData (prioritize API data)
+      if (competitorData.executiveSummary && competitorData.executiveSummary !== localExecutiveSummary) {
         setLocalExecutiveSummary(competitorData.executiveSummary);
         console.log('📝 Updated executiveSummary from competitorData:', competitorData.executiveSummary);
       }
-      if (!topPlayerShare && competitorData.topPlayerShare) {
+      if (competitorData.topPlayerShare && competitorData.topPlayerShare !== localTopPlayerShare) {
         setLocalTopPlayerShare(competitorData.topPlayerShare);
         console.log('📝 Updated topPlayerShare from competitorData:', competitorData.topPlayerShare);
       }
-      if (!emergingPlayers && competitorData.emergingPlayers) {
+      if (competitorData.emergingPlayers && competitorData.emergingPlayers !== localEmergingPlayers) {
         setLocalEmergingPlayers(competitorData.emergingPlayers);
         console.log('📝 Updated emergingPlayers from competitorData:', competitorData.emergingPlayers);
       }
     }
-  }, [competitorData, isCompetitorLandscapeEditing, executiveSummary, topPlayerShare, emergingPlayers]);
+  }, [competitorData, isCompetitorLandscapeEditing, executiveSummary, topPlayerShare, emergingPlayers, localExecutiveSummary, localTopPlayerShare, localEmergingPlayers]);
 
   // Handle save changes
   const handleCompetitorLandscapeSaveChanges = async () => {
@@ -294,8 +309,16 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
     if (isRefreshing) {
       console.log('🔄 Competitor Landscape - Parent refresh triggered');
       setIsLoading(true);
-      setError(null);
+      
+      // Add timeout to prevent infinite loading
+      const timeout = setTimeout(() => {
+        console.log('⚠️ Competitor Landscape - Loading timeout, forcing completion');
+        setIsLoading(false);
+      }, 30000); // 30 second timeout
+      
+      return () => clearTimeout(timeout);
     } else {
+      console.log('🔄 Competitor Landscape - Parent refresh completed');
       setIsLoading(false);
     }
   }, [isRefreshing]);
@@ -341,7 +364,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
               <p className="text-gray-600 text-sm mb-4">{error}</p>
               <Button 
                 onClick={() => {
-                  setError(null);
+                  // Reset loading state - error will be cleared by parent
                   setIsLoading(false);
                 }}
                 variant="outline"
@@ -370,8 +393,12 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   // Always use competitorData when available
   if (!competitorData) {
     console.log('⚠️ No competitorData found - will use fallback props');
-    // Don't return null, let it continue with fallback props
   }
+
+  // Ensure we have some data to display
+  const displayExecutiveSummary = localExecutiveSummary || executiveSummary || competitorData?.executiveSummary || 'No data available';
+  const displayTopPlayerShare = localTopPlayerShare || topPlayerShare || competitorData?.topPlayerShare || 'No data available';
+  const displayEmergingPlayers = localEmergingPlayers || emergingPlayers || competitorData?.emergingPlayers || 'No data available';
 
   return (
     <div className={`${isSplitView ? 'flex gap-6' : ''}`}>
@@ -420,95 +447,85 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         </div>
 
         {/* Executive Summary - Always visible */}
-        {(() => {
-          // Use centralized competitorData directly
-          const displayExecutiveSummary = competitorData?.executiveSummary;
-          
-          if (!displayExecutiveSummary && !localExecutiveSummary && !executiveSummary) {
-            return null;
-          }
-          
-          return (
-            <div className="mb-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-blue-600" />
-                  Executive Summary
-                </h3>
-              </div>
-              {isCompetitorLandscapeEditing ? (
-                <Textarea
-                  value={localExecutiveSummary}
-                  onChange={(e) => setLocalExecutiveSummary(e.target.value)}
-                  className="w-full"
-                  rows={4}
-                  placeholder="Enter executive summary..."
-                />
-              ) : (
-                <p className="text-gray-700 leading-relaxed">{localExecutiveSummary || displayExecutiveSummary || executiveSummary}</p>
-              )}
-            </div>
-          );
-        })()}
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <FileText className="h-5 w-5 text-blue-600" />
+              Executive Summary
+            </h3>
+          </div>
+          {isCompetitorLandscapeEditing ? (
+            <Textarea
+              value={localExecutiveSummary}
+              onChange={(e) => setLocalExecutiveSummary(e.target.value)}
+              className="w-full"
+              rows={4}
+              placeholder="Enter executive summary..."
+            />
+          ) : (
+            <p className="text-gray-700 leading-relaxed">{displayExecutiveSummary}</p>
+          )}
+        </div>
 
         {/* Key Metrics Section - Always visible */}
-        {(() => {
-          // Use competitorData directly for metrics
-          const apiMetrics = null; // No metrics in current data structure
-          
-          // Use competitorData values
-          const fallbackMetrics = [
-            { label: "Top Player Market Share", value: localTopPlayerShare || competitorData?.topPlayerShare || topPlayerShare || '', trend: "up" },
-            { label: "Emerging Players Added", value: localEmergingPlayers || competitorData?.emergingPlayers || emergingPlayers || '', trend: "up" }
-          ];
-          
-          const displayMetrics = apiMetrics && apiMetrics.length > 0 ? apiMetrics : fallbackMetrics;
-          
-          if (!displayMetrics || displayMetrics.length === 0) return null;
-          
-          return (
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Key Metrics</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {displayMetrics.map((metric, index) => (
-                  <div key={index} className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        {isCompetitorLandscapeEditing ? (
-                          <div className="space-y-2">
-                            <Input
-                              value={index === 0 ? localTopPlayerShare : localEmergingPlayers}
-                              onChange={(e) => index === 0 ? setLocalTopPlayerShare(e.target.value) : setLocalEmergingPlayers(e.target.value)}
-                              className="text-lg font-bold text-blue-600 bg-white"
-                              placeholder={metric.label}
-                            />
-                            <div className="text-sm text-gray-700">{metric.label}</div>
-                          </div>
-                        ) : (
-                           <>
-                            <div className="text-lg font-bold text-blue-600">
-                              {index === 0 ? (localTopPlayerShare || competitorData?.topPlayerShare || topPlayerShare || metric.value) : (localEmergingPlayers || competitorData?.emergingPlayers || emergingPlayers || metric.value)}
-                            </div>
-                            <div className="text-sm text-gray-700">{metric.label}</div>
-                          </>
-                        )}
-                      </div>
-                      {metric.trend === 'up' ? (
-                        <div className="text-green-500">
-                          <ChevronUp className="h-5 w-5" />
-                        </div>
-                      ) : metric.trend === 'down' ? (
-                        <div className="text-red-500">
-                          <ChevronDown className="h-5 w-5" />
-                        </div>
-                      ) : null}
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Key Metrics</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Top Player Market Share */}
+            <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  {isCompetitorLandscapeEditing ? (
+                    <div className="space-y-2">
+                      <Input
+                        value={localTopPlayerShare}
+                        onChange={(e) => setLocalTopPlayerShare(e.target.value)}
+                        className="text-lg font-bold text-blue-600 bg-white"
+                        placeholder="Top Player Market Share"
+                      />
+                      <div className="text-sm text-gray-700">Top Player Market Share</div>
                     </div>
-                  </div>
-                ))}
+                  ) : (
+                    <>
+                      <div className="text-lg font-bold text-blue-600">{displayTopPlayerShare}</div>
+                      <div className="text-sm text-gray-700">Top Player Market Share</div>
+                    </>
+                  )}
+                </div>
+                <div className="text-green-500">
+                  <ChevronUp className="h-5 w-5" />
+                </div>
               </div>
             </div>
-          );
-        })()}
+            
+            {/* Emerging Players */}
+            <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  {isCompetitorLandscapeEditing ? (
+                    <div className="space-y-2">
+                      <Input
+                        value={localEmergingPlayers}
+                        onChange={(e) => setLocalEmergingPlayers(e.target.value)}
+                        className="text-lg font-bold text-blue-600 bg-white"
+                        placeholder="Emerging Players Added"
+                      />
+                      <div className="text-sm text-gray-700">Emerging Players Added</div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="text-lg font-bold text-blue-600">{displayEmergingPlayers}</div>
+                      <div className="text-sm text-gray-700">Emerging Players Added</div>
+                    </>
+                  )}
+                </div>
+                <div className="text-green-500">
+                  <ChevronUp className="h-5 w-5" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* Read More Button - Show when collapsed */}
         {!competitorLandscapeExpanded && !isSplitView && (
