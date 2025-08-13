@@ -251,21 +251,115 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
     }
   };
 
-  // Initialize component - using centralized data from props
-  useEffect(() => {
-    console.log('🚀 Competitor Landscape Component mounted - using centralized data');
-    setIsLoading(false);
-    setError(null);
-  }, []);
-  
-  // Handle refresh when isRefreshing prop changes
-  useEffect(() => {
-    if (isRefreshing) {
-      console.log('🔄 Competitor Landscape - Refresh triggered by parent, using centralized data');
+  // Fetch Competitor Landscape data from API
+  const fetchCompetitorLandscapeData = async (refresh = true) => {
+    console.log('🏆 CompetitorLandscapeSection: Starting fetchCompetitorLandscapeData with refresh:', refresh);
+    try {
+      setIsLoading(true);
       setError(null);
+
+      const currentTime = Date.now();
+      const randomId = Math.random().toString(36).substring(7);
+      
+      // Get company profile data for dynamic reports
+      const profile = companyProfile || JSON.parse(localStorage.getItem('companyProfile') || '{}');
+      
+      const payload = {
+        user_id: "brewra",
+        component_name: "competitor landscape", // Exact match for competitor landscape
+        refresh: refresh,
+        force_refresh: refresh,
+        cache_bypass: refresh,
+        bypass_all_cache: refresh,
+        request_timestamp: currentTime,
+        request_id: randomId,
+        additionalPrompt: profile.companyUrl ? `Company: ${profile.companyUrl}, Industry: ${profile.industry}, Size: ${profile.companySize}, GTM: ${profile.primaryGTMModel}, Goals: ${profile.strategicGoals}` : "",
+        data: {
+          company: profile.companyUrl || "OrbiSelf",
+          product: "Convoic.AI", 
+          target_market: profile.targetMarkets?.[0] || "Indian college students (Tier 2 & 3)",
+          region: profile.targetMarkets?.[0] || "India",
+          timestamp: currentTime,
+          force_new_data: refresh
+        }
+      };
+
+      console.log('📤 CompetitorLandscapeSection: Sending API request with payload:', payload);
+      console.log('⏰ COMPETITOR LANDSCAPE REQUEST TIMESTAMP:', payload.request_timestamp);
+
+      const response = await fetch('https://backend-11kr.onrender.com/market-research', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      });
+
+      console.log('📨 CompetitorLandscapeSection: API response status:', response.status);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('📊 CompetitorLandscapeSection: API result:', result);
+      
+      if (result.status === 'success' && result.data) {
+        const apiData = result.data;
+        console.log('✅ CompetitorLandscapeSection: Processing API data:', apiData);
+        
+        // Update local state with API data
+        setLocalExecutiveSummary(apiData.executiveSummary || '');
+        setLocalTopPlayerShare(apiData.topPlayerShare || '');
+        setLocalEmergingPlayers(apiData.emergingPlayers || '');
+        
+        // Update parent state with API data
+        onExecutiveSummaryChange(apiData.executiveSummary || '');
+        onTopPlayerShareChange(apiData.topPlayerShare || '');
+        onEmergingPlayersChange(apiData.emergingPlayers || '');
+        if (apiData.fundingNews) {
+          onFundingNewsChange(apiData.fundingNews);
+        }
+        
+        console.log('✅ CompetitorLandscapeSection: Data updated from API');
+      } else {
+        console.log('⚠️ CompetitorLandscapeSection: No data in API response, using fallback');
+      }
+    } catch (error) {
+      console.error('❌ CompetitorLandscapeSection: Error fetching data:', error);
+      setError(error instanceof Error ? error.message : 'Failed to load competitor data');
+    } finally {
       setIsLoading(false);
     }
+  };
+
+  // Initialize component and fetch data on mount
+  useEffect(() => {
+    console.log('🚀 Competitor Landscape Component mounted - fetching fresh data');
+    fetchCompetitorLandscapeData(true);
+  }, []);
+  
+  // Handle refresh when isRefreshing prop changes or company profile changes
+  useEffect(() => {
+    if (isRefreshing) {
+      console.log('🔄 Competitor Landscape - Refresh triggered by parent, fetching fresh data');
+      fetchCompetitorLandscapeData(true);
+    }
   }, [isRefreshing, companyProfile]);
+
+  // Listen for company profile updates from settings
+  useEffect(() => {
+    const handleCompanyProfileUpdate = () => {
+      console.log('🔄 Competitor Landscape - Company profile updated, fetching fresh data');
+      fetchCompetitorLandscapeData(true);
+    };
+
+    window.addEventListener('companyProfileUpdated', handleCompanyProfileUpdate);
+    
+    return () => {
+      window.removeEventListener('companyProfileUpdated', handleCompanyProfileUpdate);
+    };
+  }, []);
 
 
   if (isLoading) {
@@ -309,8 +403,12 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   }
 
   // Debug logging
-  console.log('🔍 CompetitorLandscapeSection Debug Info:');
+  console.log('🔍🏆 CompetitorLandscapeSection Debug Info:');
   console.log('- competitorData:', competitorData);
+  console.log('- propCompetitorData:', propCompetitorData);
+  console.log('- executiveSummary prop:', executiveSummary);
+  console.log('- topPlayerShare prop:', topPlayerShare);
+  console.log('- isRefreshing:', isRefreshing);
   console.log('- isLoading:', isLoading);
   console.log('- error:', error);
   console.log('- competitorLandscapeExpanded:', competitorLandscapeExpanded);

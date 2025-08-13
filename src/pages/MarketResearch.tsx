@@ -635,12 +635,17 @@ const MarketResearch = React.memo(() => {
         localStorage.setItem('companyProfileForRefresh', JSON.stringify(companyProfileData));
       }
       
-      const [marketSizeResponse, industryTrendsResponse, marketEntryResponse, competitorResponse] = await Promise.allSettled([
+      console.log('🔄🔄🔄 REFRESH TRIGGER - About to call all fetch functions...');
+      
+      const [marketSizeResponse, industryTrendsResponse, marketEntryResponse, competitorResponse, regulatoryResponse] = await Promise.allSettled([
         fetchMarketSizeData(true, false), // This calls the correct market-research API
         fetchIndustryTrendsData(true, false), // Industry Trends data
         fetchMarketEntryData(true, false), // Market Entry data
         fetchCompetitorData(true, false), // Competitor Landscape data
+        fetchRegulatoryData(true, false), // Regulatory Compliance data
       ]);
+      
+      console.log('🔄🔄🔄 REFRESH TRIGGER - All fetch functions completed');
       
       // Also trigger industry trends refresh to get latest data
       // The IndustryTrendsSection component will handle its own refresh and data updates
@@ -651,6 +656,7 @@ const MarketResearch = React.memo(() => {
         industryTrends: industryTrendsResponse.status,
         marketEntry: marketEntryResponse.status,
         competitor: competitorResponse.status,
+        regulatory: regulatoryResponse.status,
       });
       
       // Check if we have any fresh data in localStorage after the API calls
@@ -984,9 +990,137 @@ const MarketResearch = React.memo(() => {
     }
   };
 
+  // Fetch Regulatory Compliance data using backend API with correct component_name
+  const fetchRegulatoryData = async (refresh = true, showLoading = true) => {
+    console.log('🚀🚀🚀 REGULATORY DATA FETCH CALLED - Starting fetchRegulatoryData with refresh:', refresh, 'showLoading:', showLoading);
+    console.log('🚀🚀🚀 REGULATORY - Current regulatoryData state:', regulatoryData);
+    try {
+      console.log('📍 Fetching regulatory compliance data with correct component_name');
+      if (showLoading) {
+        setIsMarketSizeLoading(true); // Reuse same loading state for now
+      }
+      setMarketSizeError(null);
+
+      // Get company profile data for dynamic payload
+      const currentTime = Date.now();
+      const randomId = Math.random().toString(36).substring(7);
+      
+      // Get company profile data for dynamic reports
+      const profile = JSON.parse(localStorage.getItem('companyProfile') || '{}');
+      console.log('📋 Using company profile data for regulatory request:', profile);
+
+      // Payload specifically for Regulatory Compliance using API structure matching working components
+      const payload = {
+        user_id: "brewra",
+        component_name: "regulatory & compliance highlights",
+        refresh: refresh,
+        force_refresh: refresh,
+        cache_bypass: refresh,
+        bypass_all_cache: refresh,
+        request_timestamp: currentTime,
+        request_id: randomId,
+        additionalPrompt: profile.companyUrl ? `Company: ${profile.companyUrl}, Industry: ${profile.industry}, Size: ${profile.companySize}, GTM: ${profile.primaryGTMModel}, Goals: ${profile.strategicGoals}` : "",
+        data: {
+          company: profile.companyUrl || "OrbiSelf",
+          product: "Convoic.AI", 
+          target_market: profile.targetMarkets?.[0] || "Indian college students (Tier 2 & 3)",
+          region: profile.targetMarkets?.[0] || "India",
+          timestamp: currentTime,
+          force_new_data: refresh
+        }
+      };
+
+      console.log('📤 Sending Regulatory API request with payload:', payload);
+
+      const response = await fetch('https://backend-11kr.onrender.com/market-research', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      });
+
+      console.log('📨 Regulatory API response status:', response.status);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('📊🚀 Regulatory API result:', result);
+      console.log('📊🚀 Regulatory API result.status:', result.status);
+      console.log('📊🚀 Regulatory API result.data exists:', !!result.data);
+
+      if (result.status === 'success' && result.data) {
+        const apiData = result.data;
+        console.log('🎯🚀 Processing API data for Regulatory Compliance:', apiData);
+        console.log('🎯🚀 API Data Keys:', Object.keys(apiData));
+        console.log('🎯🚀 API Data executiveSummary:', apiData.executiveSummary);
+        console.log('🎯🚀 API Data euAiActDeadline:', apiData.euAiActDeadline);
+        console.log('🎯🚀 API Data gdprCompliance:', apiData.gdprCompliance);
+
+        // Check timestamp comparison
+        const currentTimestamp = regulatoryData.timestamp || null;
+        const newTimestamp = apiData.timestamp;
+        
+        console.log('🔍 REGULATORY TIMESTAMP ANALYSIS (UTC):');
+        console.log('  - Current request time (UTC):', new Date().toISOString());
+        console.log('  - Frontend data time (UTC):', currentTimestamp ? new Date(currentTimestamp).toISOString() : 'NO_TIMESTAMP');
+        console.log('  - Swagger data time (UTC):', newTimestamp ? new Date(newTimestamp).toISOString() : 'NO_TIMESTAMP');
+        
+        const shouldUpdate = refresh || !currentTimestamp || isTimestampNewer(newTimestamp, currentTimestamp);
+        console.log('🔍🚀 REGULATORY UPDATE DECISION:');
+        console.log('  - refresh param:', refresh);
+        console.log('  - shouldUpdate:', shouldUpdate);
+        console.log('  - !currentTimestamp:', !currentTimestamp);
+        console.log('  - isTimestampNewer result:', newTimestamp ? isTimestampNewer(newTimestamp, currentTimestamp) : 'no newTimestamp');
+        
+        if (shouldUpdate) {
+          console.log('✅ Found data in API response and data is newer - updating regulatory data');
+          
+          // Update regulatory data state with API response
+          const updatedRegulatoryData = {
+            executiveSummary: apiData.executiveSummary || regulatoryData.executiveSummary,
+            euAiActDeadline: apiData.euAiActDeadline || regulatoryData.euAiActDeadline,
+            gdprCompliance: apiData.gdprCompliance || regulatoryData.gdprCompliance,
+            potentialFines: apiData.potentialFines || regulatoryData.potentialFines,
+            dataLocalization: apiData.dataLocalization || regulatoryData.dataLocalization,
+            timestamp: newTimestamp,
+            keyUpdates: apiData.keyUpdates || [],
+            uiComponents: apiData.uiComponents || []
+          };
+          
+
+          
+          setRegulatoryData(updatedRegulatoryData);
+          
+          console.log('✅🚀🚀🚀 REGULATORY DATA STATE UPDATED:', updatedRegulatoryData);
+          console.log('✅🚀🚀🚀 REGULATORY - Old data:', regulatoryData);
+          console.log('✅🚀🚀🚀 REGULATORY - New data:', updatedRegulatoryData);
+        } else {
+          console.log('ℹ️🚀 Current regulatory data is already up to date - no update needed');
+        }
+      } else {
+        console.log('⚠️🚀 No regulatory data in API response or API call failed');
+        console.log('⚠️🚀 result:', result);
+      }
+    } catch (error) {
+      console.error('❌🚀 Error fetching Regulatory data:', error);
+      console.error('❌🚀 Error details:', error.message);
+      
+      // Set error state - no fallback data generation
+      setMarketSizeError('Failed to load regulatory data');
+    } finally {
+      if (showLoading) {
+        setIsMarketSizeLoading(false);
+      }
+    }
+  };
+
   // Fetch Competitor Landscape data using backend API with correct component_name
   const fetchCompetitorData = async (refresh = true, showLoading = true) => {
-    console.log('🚀 Starting fetchCompetitorData with refresh:', refresh, 'showLoading:', showLoading);
+    console.log('🏆🏆🏆 COMPETITOR DATA FETCH CALLED - Starting fetchCompetitorData with refresh:', refresh, 'showLoading:', showLoading);
+    console.log('🏆🏆🏆 COMPETITOR - Current competitorData state:', competitorData);
     try {
       console.log('📍 Fetching competitor landscape data with correct component_name');
       if (showLoading) {
@@ -1042,12 +1176,19 @@ const MarketResearch = React.memo(() => {
       }
 
       const result = await response.json();
-      console.log('📊 Competitor API result:', result);
-      console.log('🔥 RAW Competitor Swagger Data:', JSON.stringify(result, null, 2));
+      console.log('📊🏆 Competitor API result:', result);
+      console.log('📊🏆 Competitor API result.status:', result.status);
+      console.log('📊🏆 Competitor API result.data exists:', !!result.data);
+      console.log('🔥🏆 RAW Competitor Swagger Data:', JSON.stringify(result, null, 2));
 
       if (result.status === 'success' && result.data) {
         const apiData = result.data;
-        console.log('🎯 Processing API data for Competitor Landscape:', apiData);
+        console.log('🎯🏆 Processing API data for Competitor Landscape:', apiData);
+        console.log('🎯🏆 API Data Keys:', Object.keys(apiData));
+        console.log('🎯🏆 API Data executiveSummary:', apiData.executiveSummary);
+        console.log('🎯🏆 API Data topPlayerShare:', apiData.topPlayerShare);
+        console.log('🎯🏆 API Data emergingPlayers:', apiData.emergingPlayers);
+        console.log('🎯🏆 API Data fundingNews:', apiData.fundingNews);
 
         // Check timestamp comparison
         const currentTimestamp = competitorData.timestamp || null;
@@ -1060,7 +1201,14 @@ const MarketResearch = React.memo(() => {
         console.log('  - Raw current timestamp:', currentTimestamp);
         console.log('  - Raw new timestamp:', newTimestamp);
         
-        if (!currentTimestamp || isTimestampNewer(newTimestamp, currentTimestamp)) {
+        const shouldUpdate = refresh || !currentTimestamp || isTimestampNewer(newTimestamp, currentTimestamp);
+        console.log('🔍🏆 COMPETITOR UPDATE DECISION:');
+        console.log('  - refresh param:', refresh);
+        console.log('  - shouldUpdate:', shouldUpdate);
+        console.log('  - !currentTimestamp:', !currentTimestamp);
+        console.log('  - isTimestampNewer result:', newTimestamp ? isTimestampNewer(newTimestamp, currentTimestamp) : 'no newTimestamp');
+        
+        if (shouldUpdate) {
           console.log('✅ New Competitor data is newer, updating UI');
           
           // Update competitor data with API response
@@ -1073,14 +1221,24 @@ const MarketResearch = React.memo(() => {
             timestamp: toUTCTimestamp(newTimestamp)
           };
           
+
+          
           setCompetitorData(updatedData);
-          console.log('✅ Competitor data updated successfully with mapped fields:', updatedData);
+          console.log('✅🏆🏆🏆 COMPETITOR DATA STATE UPDATED:', updatedData);
+          console.log('✅🏆🏆🏆 COMPETITOR - Old data:', competitorData);
+          console.log('✅🏆🏆🏆 COMPETITOR - New data:', updatedData);
         } else {
-          console.log('ℹ️ Current Competitor data is up to date');
+          console.log('ℹ️🏆 Current Competitor data is up to date - no update needed');
         }
+      } else {
+        console.log('⚠️🏆 No competitor data in API response or API call failed');
+        console.log('⚠️🏆 result:', result);
       }
     } catch (error) {
-      console.error('❌ Error fetching Competitor data:', error);
+      console.error('❌🏆 Error fetching Competitor data:', error);
+      console.error('❌🏆 Error details:', error.message);
+      
+      // Set error state - no fallback data generation
       setMarketSizeError('Failed to load competitor data');
     } finally {
       if (showLoading) {
@@ -1297,6 +1455,12 @@ const MarketResearch = React.memo(() => {
       // Fetch Competitor Landscape data
       console.log('📊 Fetching Competitor data...');
       await fetchCompetitorData(false, true);
+
+      if (!isMounted) return;
+
+      // Fetch Regulatory Compliance data
+      console.log('📊 Fetching Regulatory data...');
+      await fetchRegulatoryData(false, true);
     };
     
     setupInitialData();
