@@ -330,7 +330,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
 
       console.log('📡 Competitor Landscape - Making API call to /market-research');
       
-      const response = await fetch('https://backend-11kr.onrender.com/market-research', {
+      const response = await fetch('http://backend-11kr.onrender.com/market-research', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
