@@ -121,27 +121,57 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   const [error, setError] = useState<string | null>(null);
   const [regulatoryExpanded, setRegulatoryExpanded] = useState(true);
 
-  // Local state for editing - dynamic for all key data points
-  const [localExecutiveSummary, setLocalExecutiveSummary] = useState('');
-  const [localEuAiActDeadline, setLocalEuAiActDeadline] = useState(euAiActDeadline || '');
-  const [localGdprCompliance, setLocalGdprCompliance] = useState(gdprCompliance || '');
-  const [localPotentialFines, setLocalPotentialFines] = useState(potentialFines || '');
-  const [localDataLocalization, setLocalDataLocalization] = useState(dataLocalization || '');
+  // Local state for editing - dynamic for all key data points - initialize with prop values
+  const [localExecutiveSummary, setLocalExecutiveSummary] = useState(executiveSummary || regulatoryData?.executiveSummary || '');
+  const [localEuAiActDeadline, setLocalEuAiActDeadline] = useState(euAiActDeadline || regulatoryData?.euAiActDeadline || '');
+  const [localGdprCompliance, setLocalGdprCompliance] = useState(gdprCompliance || regulatoryData?.gdprCompliance || '');
+  const [localPotentialFines, setLocalPotentialFines] = useState(potentialFines || regulatoryData?.potentialFines || '');
+  const [localDataLocalization, setLocalDataLocalization] = useState(dataLocalization || regulatoryData?.dataLocalization || '');
   
   // Dynamic local state for all key data points
   const [localKeyDataValues, setLocalKeyDataValues] = useState<Record<string, string>>({});
 
-  // Sync local state with centralized regulatoryData only (not props)
+  // Sync local state with centralized regulatoryData and props
+  useEffect(() => {
+    if (!isEditing) {
+      console.log('🔄 Syncing Regulatory Compliance local state with props and data:');
+      console.log('  - executiveSummary prop:', executiveSummary);
+      console.log('  - euAiActDeadline prop:', euAiActDeadline);
+      console.log('  - regulatoryData:', regulatoryData);
+      
+      // Use props data first, then fall back to regulatoryData
+      setLocalExecutiveSummary(executiveSummary || regulatoryData?.executiveSummary || '');
+      setLocalEuAiActDeadline(euAiActDeadline || regulatoryData?.euAiActDeadline || '');
+      setLocalGdprCompliance(gdprCompliance || regulatoryData?.gdprCompliance || '');
+      setLocalPotentialFines(potentialFines || regulatoryData?.potentialFines || '');
+      setLocalDataLocalization(dataLocalization || regulatoryData?.dataLocalization || '');
+      
+      console.log('✅ Updated local state:');
+      console.log('  - localExecutiveSummary set to:', executiveSummary || regulatoryData?.executiveSummary || '');
+      console.log('  - localEuAiActDeadline set to:', euAiActDeadline || regulatoryData?.euAiActDeadline || '');
+    }
+  }, [isEditing, regulatoryData, executiveSummary, euAiActDeadline, gdprCompliance, potentialFines, dataLocalization]);
+
+  // Also sync when regulatoryData changes
   useEffect(() => {
     if (!isEditing && regulatoryData) {
-      const currentExecutiveSummary = regulatoryData?.executiveSummary;
-      setLocalExecutiveSummary(currentExecutiveSummary || '');
-      setLocalEuAiActDeadline(regulatoryData?.euAiActDeadline || '');
-      setLocalGdprCompliance(regulatoryData?.gdprCompliance || '');
-      setLocalPotentialFines(regulatoryData?.potentialFines || '');
-      setLocalDataLocalization(regulatoryData?.dataLocalization || '');
+      console.log('🔄 Regulatory Compliance - regulatoryData updated:', regulatoryData);
+      
+      // Update local state with regulatoryData if props are empty
+      if (!executiveSummary && regulatoryData.executiveSummary) {
+        setLocalExecutiveSummary(regulatoryData.executiveSummary);
+        console.log('📝 Updated executiveSummary from regulatoryData:', regulatoryData.executiveSummary);
+      }
+      if (!euAiActDeadline && regulatoryData.euAiActDeadline) {
+        setLocalEuAiActDeadline(regulatoryData.euAiActDeadline);
+        console.log('📝 Updated euAiActDeadline from regulatoryData:', regulatoryData.euAiActDeadline);
+      }
+      if (!gdprCompliance && regulatoryData.gdprCompliance) {
+        setLocalGdprCompliance(regulatoryData.gdprCompliance);
+        console.log('📝 Updated gdprCompliance from regulatoryData:', regulatoryData.gdprCompliance);
+      }
     }
-  }, [isEditing, regulatoryData]);
+  }, [regulatoryData, isEditing, executiveSummary, euAiActDeadline, gdprCompliance, potentialFines, dataLocalization]);
 
   // Initialize dynamic key data values after keyDataPoints is available
   useEffect(() => {
@@ -263,8 +293,8 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     }
   };
 
-  // Fetch Regulatory Compliance data from API
-  const fetchRegulatoryComplianceData = async (refresh = true) => {
+  // Fetch Regulatory Compliance data from API (like working components do)
+  const fetchRegulatoryComplianceData = async (refresh = false) => {
     console.log('⚖️ RegulatoryComplianceSection: Starting fetchRegulatoryComplianceData with refresh:', refresh);
     try {
       setIsLoading(true);
@@ -275,6 +305,9 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
       
       // Get company profile data for dynamic reports
       const profile = companyProfile || JSON.parse(localStorage.getItem('companyProfile') || '{}');
+      console.log('🔍 Regulatory Compliance - Company profile being used:', profile);
+      console.log('🔍 Regulatory Compliance - companyProfile prop:', companyProfile);
+      console.log('🔍 Regulatory Compliance - localStorage profile:', JSON.parse(localStorage.getItem('companyProfile') || '{}'));
       
       const payload = {
         user_id: "brewra",
@@ -296,8 +329,9 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
         }
       };
 
+      console.log('🔍 Regulatory Compliance - additionalPrompt being sent:', payload.additionalPrompt);
+
       console.log('📤 RegulatoryComplianceSection: Sending API request with payload:', payload);
-      console.log('⏰ REGULATORY COMPLIANCE REQUEST TIMESTAMP:', payload.request_timestamp);
 
       const response = await fetch('https://backend-11kr.onrender.com/market-research', {
         method: 'POST',
@@ -320,19 +354,26 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
         const apiData = result.data;
         console.log('✅ RegulatoryComplianceSection: Processing API data:', apiData);
         
+        // Extract data from API response like working components do
+        const executiveSummary = apiData.executiveSummary || '';
+        const euAiActDeadline = apiData.euAiActDeadline || '';
+        const gdprCompliance = apiData.gdprCompliance || '';
+        const potentialFines = apiData.potentialFines || '';
+        const dataLocalization = apiData.dataLocalization || '';
+        
         // Update local state with API data
-        setLocalExecutiveSummary(apiData.executiveSummary || '');
-        setLocalEuAiActDeadline(apiData.euAiActDeadline || '');
-        setLocalGdprCompliance(apiData.gdprCompliance || '');
-        setLocalPotentialFines(apiData.potentialFines || '');
-        setLocalDataLocalization(apiData.dataLocalization || '');
+        setLocalExecutiveSummary(executiveSummary);
+        setLocalEuAiActDeadline(euAiActDeadline);
+        setLocalGdprCompliance(gdprCompliance);
+        setLocalPotentialFines(potentialFines);
+        setLocalDataLocalization(dataLocalization);
         
         // Update parent state with API data
-        onExecutiveSummaryChange(apiData.executiveSummary || '');
-        onEuAiActDeadlineChange(apiData.euAiActDeadline || '');
-        onGdprComplianceChange(apiData.gdprCompliance || '');
-        onPotentialFinesChange(apiData.potentialFines || '');
-        onDataLocalizationChange(apiData.dataLocalization || '');
+        onExecutiveSummaryChange(executiveSummary);
+        onEuAiActDeadlineChange(euAiActDeadline);
+        onGdprComplianceChange(gdprCompliance);
+        onPotentialFinesChange(potentialFines);
+        onDataLocalizationChange(dataLocalization);
         
         // Update dynamic key data values if available
         if (apiData.keyUpdates) {
@@ -356,25 +397,59 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     }
   };
 
-  // Initialize component and fetch data on mount
+  // Clear previous data and fetch fresh data on component mount
   useEffect(() => {
-    console.log('🚀 Regulatory Compliance Component mounted - fetching fresh data');
-    fetchRegulatoryComplianceData(true);
+    // Clear any existing data immediately to prevent showing stale data
+    setIsLoading(true);
+    setError(null);
+    
+    // Add delay to prevent conflicts with other components
+    const timer = setTimeout(() => {
+      console.log('🚀 Regulatory Compliance Component mounted - fetching initial data');
+      fetchRegulatoryComplianceData(false); // refresh = false for initial load
+    }, 600); // Slightly longer delay to prevent conflicts
+
+    return () => clearTimeout(timer);
   }, []);
   
-  // Handle refresh when isRefreshing prop changes or company profile changes
+  // Handle refresh when isRefreshing prop changes
   useEffect(() => {
     if (isRefreshing) {
       console.log('🔄 Regulatory Compliance - Refresh triggered by parent, fetching fresh data');
-      fetchRegulatoryComplianceData(true);
+      setError(null);
+      setIsLoading(true);
+      fetchRegulatoryComplianceData(true); // refresh = true for forced refresh
     }
-  }, [isRefreshing, companyProfile]);
+  }, [isRefreshing]);
 
   // Listen for company profile updates from settings
   useEffect(() => {
-    const handleCompanyProfileUpdate = () => {
-      console.log('🔄 Regulatory Compliance - Company profile updated, fetching fresh data');
-      fetchRegulatoryComplianceData(true);
+    const handleCompanyProfileUpdate = async () => {
+      console.log('🔄 Regulatory Compliance - Company profile updated, fetching latest profile and then fresh data');
+      setError(null);
+      setIsLoading(true);
+      
+      // Wait a bit for the backend to process the profile update
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Fetch the latest company profile from backend
+      try {
+        const profileResponse = await fetch('https://backend-11kr.onrender.com/profile/company', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        if (profileResponse.ok) {
+          const latestProfile = await profileResponse.json();
+          console.log('📋 Regulatory Compliance - Retrieved latest company profile:', latestProfile);
+          // Store in localStorage so the API call can use it
+          localStorage.setItem('companyProfile', JSON.stringify(latestProfile));
+          localStorage.setItem('companyProfileForRefresh', JSON.stringify(latestProfile));
+        }
+      } catch (error) {
+        console.warn('⚠️ Regulatory Compliance - Could not fetch latest profile:', error);
+      }
+      
+      fetchRegulatoryComplianceData(true); // refresh = true for company profile changes
     };
 
     window.addEventListener('companyProfileUpdated', handleCompanyProfileUpdate);
@@ -383,6 +458,17 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
       window.removeEventListener('companyProfileUpdated', handleCompanyProfileUpdate);
     };
   }, []);
+
+  // Also listen for companyProfile prop changes
+  useEffect(() => {
+    if (companyProfile) {
+      console.log('🔄 Regulatory Compliance - companyProfile prop changed:', companyProfile);
+      console.log('🔄 Regulatory Compliance - Fetching fresh data with new profile');
+      setError(null);
+      setIsLoading(true);
+      fetchRegulatoryComplianceData(true); // refresh = true for company profile prop changes
+    }
+  }, [companyProfile]);
 
   console.log('🎨 RegulatoryComplianceSection RENDER DEBUG:');
   console.log('  - isLoading:', isLoading);
@@ -1022,7 +1108,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                       });
                       
                       // Update the regulatory data with new key updates
-                      setRegulatoryData(prev => prev ? { ...prev, keyUpdates: updatedKeyUpdates } : prev);
+                      // Update regulatory data would be handled by parent component
                     }
                     
                     // Then call the API save function
