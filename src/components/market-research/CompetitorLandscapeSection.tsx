@@ -281,146 +281,30 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
     }
   };
 
-  // Fetch Competitor Landscape data from API (like working components do)
-  const fetchCompetitorLandscapeData = async (refresh = false) => {
-    console.log('🏆 CompetitorLandscapeSection: Starting fetchCompetitorLandscapeData with refresh:', refresh);
-    try {
-      setIsLoading(true);
-      setError(null);
+  // Removed fetchCompetitorLandscapeData function - now relying on parent's fetchCompetitorData
 
-      const currentTime = Date.now();
-      const randomId = Math.random().toString(36).substring(7);
-      
-      // Get company profile data for dynamic reports
-      const profile = companyProfile || JSON.parse(localStorage.getItem('companyProfile') || '{}');
-      
-      const payload = {
-        user_id: "brewra",
-        component_name: "competitor landscape", // Exact match for competitor landscape
-        refresh: refresh,
-        force_refresh: refresh,
-        cache_bypass: refresh,
-        bypass_all_cache: refresh,
-        request_timestamp: currentTime,
-        request_id: randomId,
-        additionalPrompt: profile.companyUrl ? `Company: ${profile.companyUrl}, Industry: ${profile.industry}, Size: ${profile.companySize}, GTM: ${profile.primaryGTMModel}, Goals: ${profile.strategicGoals}` : "",
-        data: {
-          company: profile.companyUrl || "OrbiSelf",
-          product: "Convoic.AI", 
-          target_market: profile.targetMarkets?.[0] || "Indian college students (Tier 2 & 3)",
-          region: profile.targetMarkets?.[0] || "India",
-          timestamp: currentTime,
-          force_new_data: refresh
-        }
-      };
-
-      console.log('📤 CompetitorLandscapeSection: Sending API request with payload:', payload);
-
-      const response = await fetch('https://backend-11kr.onrender.com/market-research', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload)
-      });
-
-      console.log('📨 CompetitorLandscapeSection: API response status:', response.status);
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-      console.log('📊 CompetitorLandscapeSection: API result:', result);
-      
-      if (result.status === 'success' && result.data) {
-        const apiData = result.data;
-        console.log('✅ CompetitorLandscapeSection: Processing API data:', apiData);
-        
-        // Extract data from API response like working components do
-        const executiveSummary = apiData.executiveSummary || '';
-        const topPlayerShare = apiData.topPlayerShare || '';
-        const emergingPlayers = apiData.emergingPlayers || '';
-        const fundingNews = apiData.fundingNews || [];
-        
-        // Update local state with API data
-        setLocalExecutiveSummary(executiveSummary);
-        setLocalTopPlayerShare(topPlayerShare);
-        setLocalEmergingPlayers(emergingPlayers);
-        
-        // Update parent state with API data
-        onExecutiveSummaryChange(executiveSummary);
-        onTopPlayerShareChange(topPlayerShare);
-        onEmergingPlayersChange(emergingPlayers);
-        if (fundingNews.length > 0) {
-          onFundingNewsChange(fundingNews);
-        }
-        
-        console.log('✅ CompetitorLandscapeSection: Data updated from API');
-      } else {
-        console.log('⚠️ CompetitorLandscapeSection: No data in API response, using fallback');
-      }
-    } catch (error) {
-      console.error('❌ CompetitorLandscapeSection: Error fetching data:', error);
-      setError(error instanceof Error ? error.message : 'Failed to load competitor data');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Clear previous data and fetch fresh data on component mount
+  // Simplified approach - rely on parent's refresh mechanism
   useEffect(() => {
-    // Clear any existing data immediately to prevent showing stale data
-    setIsLoading(true);
-    setError(null);
-    
-    // Add delay to prevent conflicts with other components
-    const timer = setTimeout(() => {
-      console.log('🚀 Competitor Landscape Component mounted - fetching initial data');
-      fetchCompetitorLandscapeData(false); // refresh = false for initial load
-    }, 500);
-
-    return () => clearTimeout(timer);
+    console.log('🚀 Competitor Landscape Component mounted');
+    console.log('🚀 Competitor Landscape - Relying on parent refresh mechanism');
   }, []);
-  
-  // Handle refresh when isRefreshing prop changes
+
+  // Handle refresh from parent
   useEffect(() => {
     if (isRefreshing) {
-      console.log('🔄 Competitor Landscape - Refresh triggered by parent, fetching fresh data');
-      setError(null);
+      console.log('🔄 Competitor Landscape - Parent refresh triggered');
       setIsLoading(true);
-      fetchCompetitorLandscapeData(true); // refresh = true for forced refresh
+      setError(null);
+    } else {
+      setIsLoading(false);
     }
   }, [isRefreshing]);
 
-  // Listen for company profile updates from settings
+  // Listen for company profile updates - just notify parent
   useEffect(() => {
-    const handleCompanyProfileUpdate = async () => {
-      console.log('🔄 Competitor Landscape - Company profile updated, fetching latest profile and then fresh data');
-      setError(null);
-      setIsLoading(true);
-      
-      // Wait a bit for the backend to process the profile update
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Fetch the latest company profile from backend
-      try {
-        const profileResponse = await fetch('https://backend-11kr.onrender.com/profile/company', {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' }
-        });
-        if (profileResponse.ok) {
-          const latestProfile = await profileResponse.json();
-          console.log('📋 Competitor Landscape - Retrieved latest company profile:', latestProfile);
-          // Store in localStorage so the API call can use it
-          localStorage.setItem('companyProfile', JSON.stringify(latestProfile));
-          localStorage.setItem('companyProfileForRefresh', JSON.stringify(latestProfile));
-        }
-      } catch (error) {
-        console.warn('⚠️ Competitor Landscape - Could not fetch latest profile:', error);
-      }
-      
-      fetchCompetitorLandscapeData(true); // refresh = true for company profile changes
+    const handleCompanyProfileUpdate = () => {
+      console.log('🔄 Competitor Landscape - Company profile updated, parent will handle refresh');
+      // Don't make API calls here - let parent handle it
     };
 
     window.addEventListener('companyProfileUpdated', handleCompanyProfileUpdate);
@@ -429,17 +313,6 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
       window.removeEventListener('companyProfileUpdated', handleCompanyProfileUpdate);
     };
   }, []);
-
-  // Also listen for companyProfile prop changes
-  useEffect(() => {
-    if (companyProfile) {
-      console.log('🔄 Competitor Landscape - companyProfile prop changed:', companyProfile);
-      console.log('🔄 Competitor Landscape - Fetching fresh data with new profile');
-      setError(null);
-      setIsLoading(true);
-      fetchCompetitorLandscapeData(true); // refresh = true for company profile prop changes
-    }
-  }, [companyProfile]);
 
 
   if (isLoading) {
