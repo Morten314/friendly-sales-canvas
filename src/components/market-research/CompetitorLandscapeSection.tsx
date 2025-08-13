@@ -132,9 +132,9 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   error: propError
 }) => {
   // State for API data
-  // Use centralized data from parent instead of local state
   const [isLoading, setIsLoading] = useState(false);
-  const error = propError; // Use prop error instead of local state
+  const [localError, setLocalError] = useState<string | null>(null);
+  const error = propError || localError; // Use prop error or local error
   const competitorData = propCompetitorData;
   
   // Local editing state for inline editing - initialize with prop values
@@ -296,30 +296,101 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
     }
   };
 
-  // Removed fetchCompetitorLandscapeData function - now relying on parent's fetchCompetitorData
+  // Fetch Competitor Landscape data from API - similar to other components
+  const fetchCompetitorLandscapeData = async (refresh = true) => {
+    try {
+      setIsLoading(true);
+      setLocalError(null);
 
-  // Simplified approach - rely on parent's refresh mechanism
+      const currentTime = Date.now();
+      const randomId = Math.random().toString(36).substring(7);
+      
+      // Get company profile data for dynamic reports
+      const profile = companyProfile || JSON.parse(localStorage.getItem('companyProfile') || '{}');
+      
+      const payload = {
+        user_id: "brewra",
+        component_name: "competitor landscape report",
+        refresh: refresh,
+        force_refresh: refresh,
+        cache_bypass: refresh,
+        bypass_all_cache: refresh,
+        request_timestamp: currentTime,
+        request_id: randomId,
+        additionalPrompt: profile.companyUrl ? `Company: ${profile.companyUrl}, Industry: ${profile.industry}, Size: ${profile.companySize}, GTM: ${profile.primaryGTMModel}, Goals: ${profile.strategicGoals}` : "",
+        data: {
+          company: profile.companyUrl || "OrbiSelf",
+          product: "Convoic.AI", 
+          target_market: profile.targetMarkets?.[0] || "Indian college students (Tier 2 & 3)",
+          region: profile.targetMarkets?.[0] || "India",
+          timestamp: currentTime,
+          force_new_data: refresh
+        }
+      };
+
+      console.log('📡 Competitor Landscape - Making API call to /market-research');
+      
+      const response = await fetch('https://backend-11kr.onrender.com/market-research', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Competitor Landscape - API response:', result);
+      
+      if (result.status === 'success' && result.data) {
+        const reportData = result.data;
+        
+        // Extract competitor landscape specific data
+        const competitorLandscapeData = {
+          executiveSummary: reportData.executiveSummary || '',
+          topPlayerShare: reportData.topPlayerShare || '48%',
+          emergingPlayers: reportData.emergingPlayers || '2',
+          fundingNews: reportData.fundingNews || [],
+          timestamp: reportData.timestamp
+        };
+        
+        console.log('📊 Competitor Landscape - Processed data:', competitorLandscapeData);
+        
+        // Update local state
+        setLocalExecutiveSummary(competitorLandscapeData.executiveSummary);
+        setLocalTopPlayerShare(competitorLandscapeData.topPlayerShare);
+        setLocalEmergingPlayers(competitorLandscapeData.emergingPlayers);
+        
+        // Update parent state through callbacks
+        onExecutiveSummaryChange(competitorLandscapeData.executiveSummary);
+        onTopPlayerShareChange(competitorLandscapeData.topPlayerShare);
+        onEmergingPlayersChange(competitorLandscapeData.emergingPlayers);
+        if (competitorLandscapeData.fundingNews && Array.isArray(competitorLandscapeData.fundingNews)) {
+          onFundingNewsChange(competitorLandscapeData.fundingNews);
+        }
+      }
+    } catch (err) {
+      console.error('❌ Competitor Landscape - API error:', err);
+      setLocalError(err instanceof Error ? err.message : 'Failed to fetch competitor landscape data');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Fetch data on component mount
   useEffect(() => {
     console.log('🚀 Competitor Landscape Component mounted');
-    console.log('🚀 Competitor Landscape - Relying on parent refresh mechanism');
+    fetchCompetitorLandscapeData(false);
   }, []);
 
-  // Handle refresh from parent
+  // Handle refresh when isRefreshing prop changes
   useEffect(() => {
     if (isRefreshing) {
-      console.log('🔄 Competitor Landscape - Parent refresh triggered');
-      setIsLoading(true);
-      
-      // Add timeout to prevent infinite loading
-      const timeout = setTimeout(() => {
-        console.log('⚠️ Competitor Landscape - Loading timeout, forcing completion');
-        setIsLoading(false);
-      }, 30000); // 30 second timeout
-      
-      return () => clearTimeout(timeout);
-    } else {
-      console.log('🔄 Competitor Landscape - Parent refresh completed');
-      setIsLoading(false);
+      console.log('🔄 Competitor Landscape - Refresh triggered, making API call');
+      fetchCompetitorLandscapeData(true);
     }
   }, [isRefreshing]);
 
