@@ -131,11 +131,12 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   competitorData: propCompetitorData,
   error: propError
 }) => {
-  // State for API data
-  const [isLoading, setIsLoading] = useState(false);
-  const [localError, setLocalError] = useState<string | null>(null);
-  const error = propError || localError; // Use prop error or local error
+  // State for API data - parent handles loading and errors
+  const error = propError; // Use prop error from parent
   const competitorData = propCompetitorData;
+  
+  // Check if we're loading (no competitorData with timestamp means we're still loading)
+  const isLoading = !competitorData?.timestamp && !error;
   
   // Local editing state for inline editing - initialize with prop values
   const [localExecutiveSummary, setLocalExecutiveSummary] = useState(executiveSummary || competitorData?.executiveSummary || '');
@@ -153,10 +154,10 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
       console.log('  - competitorData.executiveSummary:', competitorData?.executiveSummary);
       console.log('  - competitorData.timestamp:', competitorData?.timestamp);
       
-      // Use props data first, then fall back to competitorData
-      setLocalExecutiveSummary(executiveSummary || competitorData?.executiveSummary || '');
-      setLocalTopPlayerShare(topPlayerShare || competitorData?.topPlayerShare || '');
-      setLocalEmergingPlayers(emergingPlayers || competitorData?.emergingPlayers || '');
+      // Prioritize competitorData from API over fallback props
+      setLocalExecutiveSummary(competitorData?.executiveSummary || executiveSummary || '');
+      setLocalTopPlayerShare(competitorData?.topPlayerShare || topPlayerShare || '');
+      setLocalEmergingPlayers(competitorData?.emergingPlayers || emergingPlayers || '');
       
       console.log('✅ Updated local state:');
       console.log('  - localExecutiveSummary set to:', executiveSummary || competitorData?.executiveSummary || '');
@@ -296,101 +297,27 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
     }
   };
 
-  // Fetch Competitor Landscape data from API - similar to other components
-  const fetchCompetitorLandscapeData = async (refresh = true) => {
-    try {
-      setIsLoading(true);
-      setLocalError(null);
+  // Removed fetchCompetitorLandscapeData function - parent handles all API calls
 
-      const currentTime = Date.now();
-      const randomId = Math.random().toString(36).substring(7);
-      
-      // Get company profile data for dynamic reports
-      const profile = companyProfile || JSON.parse(localStorage.getItem('companyProfile') || '{}');
-      
-      const payload = {
-        user_id: "brewra",
-        component_name: "competitor landscape report",
-        refresh: refresh,
-        force_refresh: refresh,
-        cache_bypass: refresh,
-        bypass_all_cache: refresh,
-        request_timestamp: currentTime,
-        request_id: randomId,
-        additionalPrompt: profile.companyUrl ? `Company: ${profile.companyUrl}, Industry: ${profile.industry}, Size: ${profile.companySize}, GTM: ${profile.primaryGTMModel}, Goals: ${profile.strategicGoals}` : "",
-        data: {
-          company: profile.companyUrl || "OrbiSelf",
-          product: "Convoic.AI", 
-          target_market: profile.targetMarkets?.[0] || "Indian college students (Tier 2 & 3)",
-          region: profile.targetMarkets?.[0] || "India",
-          timestamp: currentTime,
-          force_new_data: refresh
-        }
-      };
-
-      console.log('📡 Competitor Landscape - Making API call to /market-research');
-      
-      const response = await fetch('https://backend-11kr.onrender.com/market-research', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload)
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-      console.log('✅ Competitor Landscape - API response:', result);
-      
-      if (result.status === 'success' && result.data) {
-        const reportData = result.data;
-        
-        // Extract competitor landscape specific data
-        const competitorLandscapeData = {
-          executiveSummary: reportData.executiveSummary || '',
-          topPlayerShare: reportData.topPlayerShare || '48%',
-          emergingPlayers: reportData.emergingPlayers || '2',
-          fundingNews: reportData.fundingNews || [],
-          timestamp: reportData.timestamp
-        };
-        
-        console.log('📊 Competitor Landscape - Processed data:', competitorLandscapeData);
-        
-        // Update local state
-        setLocalExecutiveSummary(competitorLandscapeData.executiveSummary);
-        setLocalTopPlayerShare(competitorLandscapeData.topPlayerShare);
-        setLocalEmergingPlayers(competitorLandscapeData.emergingPlayers);
-        
-        // Update parent state through callbacks
-        onExecutiveSummaryChange(competitorLandscapeData.executiveSummary);
-        onTopPlayerShareChange(competitorLandscapeData.topPlayerShare);
-        onEmergingPlayersChange(competitorLandscapeData.emergingPlayers);
-        if (competitorLandscapeData.fundingNews && Array.isArray(competitorLandscapeData.fundingNews)) {
-          onFundingNewsChange(competitorLandscapeData.fundingNews);
-        }
-      }
-    } catch (err) {
-      console.error('❌ Competitor Landscape - API error:', err);
-      setLocalError(err instanceof Error ? err.message : 'Failed to fetch competitor landscape data');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Fetch data on component mount
+  // Fetch data on component mount - let parent handle API calls
   useEffect(() => {
     console.log('🚀 Competitor Landscape Component mounted');
-    fetchCompetitorLandscapeData(false);
+    console.log('🚀 Initial competitorData:', competitorData);
+    // Don't make API calls here - parent handles it
   }, []);
+  
+  // Log when competitorData changes
+  useEffect(() => {
+    console.log('🔄 CompetitorLandscapeSection - competitorData changed:', competitorData);
+    console.log('🔄 competitorData.timestamp:', competitorData?.timestamp);
+    console.log('🔄 competitorData.executiveSummary:', competitorData?.executiveSummary);
+  }, [competitorData]);
 
-  // Handle refresh when isRefreshing prop changes
+  // Handle refresh when isRefreshing prop changes - let parent handle it
   useEffect(() => {
     if (isRefreshing) {
-      console.log('🔄 Competitor Landscape - Refresh triggered, making API call');
-      fetchCompetitorLandscapeData(true);
+      console.log('🔄 Competitor Landscape - Refresh triggered, parent will handle API call');
+      // Don't make API calls here - parent handles it
     }
   }, [isRefreshing]);
 
@@ -409,6 +336,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   }, []);
 
 
+  // Show loading state when no API data is available yet
   if (isLoading) {
     return (
       <div className={`${isSplitView ? 'flex gap-6' : ''}`}>
@@ -435,8 +363,8 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
               <p className="text-gray-600 text-sm mb-4">{error}</p>
               <Button 
                 onClick={() => {
-                  // Reset loading state - error will be cleared by parent
-                  setIsLoading(false);
+                  // Error will be cleared by parent
+                  console.log('Retry clicked - parent will handle refresh');
                 }}
                 variant="outline"
               >
@@ -453,6 +381,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   console.log('🔍🏆 CompetitorLandscapeSection Debug Info:');
   console.log('- competitorData:', competitorData);
   console.log('- propCompetitorData:', propCompetitorData);
+  console.log('- competitorData.timestamp:', competitorData?.timestamp);
   console.log('- executiveSummary prop:', executiveSummary);
   console.log('- topPlayerShare prop:', topPlayerShare);
   console.log('- isRefreshing:', isRefreshing);
@@ -466,10 +395,10 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
     console.log('⚠️ No competitorData found - will use fallback props');
   }
 
-  // Ensure we have some data to display
-  const displayExecutiveSummary = localExecutiveSummary || executiveSummary || competitorData?.executiveSummary || 'No data available';
-  const displayTopPlayerShare = localTopPlayerShare || topPlayerShare || competitorData?.topPlayerShare || 'No data available';
-  const displayEmergingPlayers = localEmergingPlayers || emergingPlayers || competitorData?.emergingPlayers || 'No data available';
+  // Ensure we have some data to display - prioritize competitorData from API over fallback props
+  const displayExecutiveSummary = localExecutiveSummary || competitorData?.executiveSummary || executiveSummary || 'No data available';
+  const displayTopPlayerShare = localTopPlayerShare || competitorData?.topPlayerShare || topPlayerShare || 'No data available';
+  const displayEmergingPlayers = localEmergingPlayers || competitorData?.emergingPlayers || emergingPlayers || 'No data available';
 
   return (
     <div className={`${isSplitView ? 'flex gap-6' : ''}`}>

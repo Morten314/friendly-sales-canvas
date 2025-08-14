@@ -350,7 +350,8 @@ const MarketResearch = React.memo(() => {
       "Microsoft Teams launches AI Copilot - New AI features for meeting summaries and task automation",
       "Slack introduces Workflow Builder 2.0 - Enhanced automation capabilities for enterprise customers"
     ],
-    timestamp: null as string | null
+    timestamp: null as string | null,
+    uiComponents: []
   });
 
   // Market Size Scout Chat states (separate from Industry Trends)
@@ -1125,6 +1126,7 @@ const MarketResearch = React.memo(() => {
   const fetchCompetitorData = async (refresh = true, showLoading = true) => {
     console.log('🏆🏆🏆 COMPETITOR DATA FETCH CALLED - Starting fetchCompetitorData with refresh:', refresh, 'showLoading:', showLoading);
     console.log('🏆🏆🏆 COMPETITOR - Current competitorData state:', competitorData);
+    console.log('🏆🏆🏆 COMPETITOR - Current competitorData.timestamp:', competitorData?.timestamp);
     try {
       console.log('📍 Fetching competitor landscape data with correct component_name');
       if (showLoading) {
@@ -1146,21 +1148,23 @@ const MarketResearch = React.memo(() => {
 
       // Payload specifically for Competitor Landscape using API structure
       const payload = {
-        user_id: "string",
+        user_id: "brewra",
         component_name: "competitor landscape",
+        refresh: refresh,
+        force_refresh: refresh,
+        cache_bypass: refresh,
+        bypass_all_cache: refresh,
+        request_timestamp: Date.now(),
+        request_id: Math.random().toString(36).substr(2, 6),
+        additionalPrompt: companyData ? `Company: ${companyData.website || companyData.companyUrl}, Industry: ${companyData.industry}, Size: ${companyData.companySize}, GTM: ${companyData.gtmModel || companyData.primaryGTMModel}, Goals: ${companyData.strategicGoals}` : "",
         data: {
-          additionalPrompt: companyData ? {
-            industry: companyData.industry,
-            companySize: companyData.companySize,
-            targetMarkets: companyData.targetMarkets,
-            strategicGoals: companyData.strategicGoals,
-            website: companyData.website,
-            gtmModel: companyData.gtmModel,
-            revenueStage: companyData.revenueStage,
-            keyBuyerPersona: companyData.keyBuyerPersona
-          } : {}
-        },
-        refresh: refresh
+          company: companyData?.website || companyData?.companyUrl || "OrbiSelf",
+          product: "Convoic.AI", 
+          target_market: companyData?.targetMarkets?.[0] || "Indian college students (Tier 2 & 3)",
+          region: companyData?.targetMarkets?.[0] || "India",
+          timestamp: Date.now(),
+          force_new_data: refresh
+        }
       };
 
       console.log('📤 Sending Competitor API request with payload:', payload);
@@ -1183,6 +1187,7 @@ const MarketResearch = React.memo(() => {
       console.log('📊🏆 Competitor API result:', result);
       console.log('📊🏆 Competitor API result.status:', result.status);
       console.log('📊🏆 Competitor API result.data exists:', !!result.data);
+      console.log('📊🏆 Competitor API result.data:', result.data);
       console.log('🔥🏆 RAW Competitor Swagger Data:', JSON.stringify(result, null, 2));
 
       if (result.status === 'success' && result.data) {
@@ -1261,7 +1266,8 @@ const MarketResearch = React.memo(() => {
             topPlayerShare: topPlayerShare || competitorData.topPlayerShare,
             emergingPlayers: emergingPlayers || competitorData.emergingPlayers,
             fundingNews: fundingNews || competitorData.fundingNews,
-            timestamp: toUTCTimestamp(newTimestamp)
+            timestamp: toUTCTimestamp(newTimestamp),
+            uiComponents: apiData.uiComponents || []
           };
           
 
@@ -1271,6 +1277,7 @@ const MarketResearch = React.memo(() => {
           console.log('✅🏆🏆🏆 COMPETITOR - Old data:', competitorData);
           console.log('✅🏆🏆🏆 COMPETITOR - New data:', updatedData);
           console.log('✅🏆🏆🏆 COMPETITOR - State update triggered with refresh:', refresh);
+          console.log('✅🏆🏆🏆 COMPETITOR - New timestamp:', updatedData.timestamp);
         } else {
           console.log('ℹ️🏆 Current Competitor data is up to date - no update needed');
         }
