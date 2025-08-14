@@ -22,6 +22,12 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
         props.onMarketSizeRefresh();
       }
       
+      // Trigger refresh for Competitor Landscape if refresh handler exists
+      if (props.onCompetitorRefresh) {
+        console.log('🔄 Triggering Competitor Landscape refresh');
+        props.onCompetitorRefresh();
+      }
+      
       // Trigger refresh for Market Entry if refresh handler exists
       if (props.onMarketEntryRefresh) {
         console.log('🔄 Triggering Market Entry refresh');

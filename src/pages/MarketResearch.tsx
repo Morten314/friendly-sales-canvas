@@ -596,6 +596,27 @@ const MarketResearch = React.memo(() => {
     }
   };
 
+  // Initial data loading effect
+  useEffect(() => {
+    console.log('🚀 MarketResearch component mounted - loading initial data');
+    
+    // Load initial data for all components
+    const loadInitialData = async () => {
+      try {
+        console.log('🔄 Loading initial data for all components...');
+        
+        // Load competitor data initially
+        await fetchCompetitorData(false, false); // Don't show loading, don't force refresh
+        
+        console.log('✅ Initial data loading completed');
+      } catch (error) {
+        console.error('❌ Error loading initial data:', error);
+      }
+    };
+    
+    loadInitialData();
+  }, []); // Only run on mount
+
   // Trigger market research using the existing backend API structure
   const triggerScoutAndRefresh = async () => {
     try {
@@ -765,10 +786,65 @@ const MarketResearch = React.memo(() => {
         body: JSON.stringify(payload)
       });
 
+      console.log('📨 Competitor API response status:', response.status);
+      console.log('📨 Competitor API response headers:', Object.fromEntries(response.headers.entries()));
+      console.log('📨 Competitor API response ok:', response.ok);
+
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error('❌🏆 API Error Response:', errorText);
+        console.error('❌🏆 API Error Status:', response.status);
+        console.error('❌🏆 API Error Headers:', Object.fromEntries(response.headers.entries()));
+        
+        // If it's a component name error, try alternative names
+        if (errorText.includes('Unsupported component_name')) {
+          console.log('🔄 Trying alternative component names...');
+          
+          // Try alternative component names
+          const alternativeNames = [
+            "competitor landscape",
+            "competitor analysis", 
+            "competitive landscape",
+            "competitor insights"
+          ];
+          
+          for (const altName of alternativeNames) {
+            console.log(`🔄 Trying component name: "${altName}"`);
+            const altPayload = { ...payload, component_name: altName };
+            
+            try {
+              const altResponse = await fetch('https://backend-11kr.onrender.com/market-research', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(altPayload)
+              });
+              
+              if (altResponse.ok) {
+                console.log(`✅ Success with component name: "${altName}"`);
+                const altResult = await altResponse.json();
+                // Process the successful response
+                if (altResult.status === 'success' && altResult.data) {
+                  // Use the same processing logic as below
+                  const apiData = altResult.data;
+                  // ... rest of the processing logic
+                  console.log('✅ Alternative component name worked, processing data...');
+                  // Continue with the existing processing logic
+                  break;
+                }
+              } else {
+                const altErrorText = await altResponse.text();
+                console.log(`❌ Alternative name "${altName}" failed:`, altErrorText);
+              }
+            } catch (altError) {
+              console.log(`❌ Alternative name "${altName}" failed:`, altError);
+            }
+          }
+        }
+        
+        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
       }
 
+      console.log('✅🏆 API request successful, parsing response...');
       const apiResponse = await response.json();
       console.log('📥 Market Size API response:', apiResponse);
       console.log('🔍 API Response structure:', JSON.stringify(apiResponse, null, 2));
@@ -1111,7 +1187,9 @@ const MarketResearch = React.memo(() => {
       }
     } catch (error) {
       console.error('❌🚀 Error fetching Regulatory data:', error);
-      console.error('❌🚀 Error details:', error.message);
+      console.error('❌🏆 API Error Status:', error.status);
+      console.error('❌🏆 API Error Headers:', Object.fromEntries(error.headers.entries()));
+      console.error('❌🏆 API Error Message:', error.message);
       
       // Set error state - no fallback data generation
       setMarketSizeError('Failed to load regulatory data');
@@ -1150,24 +1228,26 @@ const MarketResearch = React.memo(() => {
       const payload = {
         user_id: "brewra",
         component_name: "competitor landscape",
-        refresh: refresh,
-        force_refresh: refresh,
-        cache_bypass: refresh,
-        bypass_all_cache: refresh,
-        request_timestamp: Date.now(),
-        request_id: Math.random().toString(36).substr(2, 6),
-        additionalPrompt: companyData ? `Company: ${companyData.website || companyData.companyUrl}, Industry: ${companyData.industry}, Size: ${companyData.companySize}, GTM: ${companyData.gtmModel || companyData.primaryGTMModel}, Goals: ${companyData.strategicGoals}` : "",
         data: {
-          company: companyData?.website || companyData?.companyUrl || "OrbiSelf",
-          product: "Convoic.AI", 
-          target_market: companyData?.targetMarkets?.[0] || "Indian college students (Tier 2 & 3)",
-          region: companyData?.targetMarkets?.[0] || "India",
-          timestamp: Date.now(),
-          force_new_data: refresh
-        }
+          additionalPrompt: companyData ? {
+            industry: companyData.industry,
+            companySize: companyData.companySize,
+            targetMarkets: companyData.targetMarkets,
+            strategicGoals: companyData.strategicGoals,
+            website: companyData.website,
+            gtmModel: companyData.gtmModel,
+            revenueStage: companyData.revenueStage,
+            keyBuyerPersona: companyData.keyBuyerPersona
+          } : {}
+        },
+        refresh: refresh
       };
 
       console.log('📤 Sending Competitor API request with payload:', payload);
+      console.log('📦 Competitor Complete Payload:', JSON.stringify(payload, null, 2));
+      console.log('📦 Competitor Payload component_name:', payload.component_name);
+      console.log('📦 Competitor Payload keys:', Object.keys(payload));
+      console.log('📦 Competitor Data keys:', Object.keys(payload.data));
 
       const response = await fetch('https://backend-11kr.onrender.com/market-research', {
         method: 'POST',
@@ -1178,11 +1258,18 @@ const MarketResearch = React.memo(() => {
       });
 
       console.log('📨 Competitor API response status:', response.status);
+      console.log('📨 Competitor API response headers:', Object.fromEntries(response.headers.entries()));
+      console.log('📨 Competitor API response ok:', response.ok);
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error('❌🏆 API Error Response:', errorText);
+        console.error('❌🏆 API Error Status:', response.status);
+        console.error('❌🏆 API Error Headers:', Object.fromEntries(response.headers.entries()));
+        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
       }
 
+      console.log('✅🏆 API request successful, parsing response...');
       const result = await response.json();
       console.log('📊🏆 Competitor API result:', result);
       console.log('📊🏆 Competitor API result.status:', result.status);
@@ -1196,7 +1283,7 @@ const MarketResearch = React.memo(() => {
         console.log('🎯🏆 API Data Keys:', Object.keys(apiData));
         console.log('🎯🏆 API Data uiComponents:', apiData.uiComponents);
         
-        // Extract data from uiComponents array (like other working components)
+        // Extract data from uiComponents array based on the backend schema
         let executiveSummary = '';
         let topPlayerShare = '';
         let emergingPlayers = '';
@@ -1205,24 +1292,25 @@ const MarketResearch = React.memo(() => {
         if (apiData.uiComponents && Array.isArray(apiData.uiComponents)) {
           console.log('🔍🏆 Found uiComponents array:', apiData.uiComponents);
           
-          // Extract data from uiComponents
-          const executiveSummaryComponent = apiData.uiComponents.find(comp => 
-            comp.name === 'executiveSummary' || comp.name === 'Executive Summary'
-          );
-          const topPlayerShareComponent = apiData.uiComponents.find(comp => 
-            comp.name === 'topPlayerShare' || comp.name === 'Top Player Share'
-          );
-          const emergingPlayersComponent = apiData.uiComponents.find(comp => 
-            comp.name === 'emergingPlayers' || comp.name === 'Emerging Players'
-          );
-          const fundingNewsComponent = apiData.uiComponents.find(comp => 
-            comp.name === 'fundingNews' || comp.name === 'Funding News'
-          );
+          // Extract data from uiComponents based on the backend schema
+          const reportComponent = apiData.uiComponents.find(comp => comp.type === 'report');
+          const sectionComponent = apiData.uiComponents.find(comp => comp.type === 'section');
+          const newsComponent = apiData.uiComponents.find(comp => comp.type === 'news');
           
-          executiveSummary = executiveSummaryComponent?.content || executiveSummaryComponent?.value || '';
-          topPlayerShare = topPlayerShareComponent?.content || topPlayerShareComponent?.value || '';
-          emergingPlayers = emergingPlayersComponent?.content || emergingPlayersComponent?.value || '';
-          fundingNews = fundingNewsComponent?.content || fundingNewsComponent?.value || [];
+          // Extract executive summary from report component
+          executiveSummary = reportComponent?.executiveSummary || '';
+          
+          // Extract metrics from section component
+          if (sectionComponent?.metrics) {
+            const topPlayerMetric = sectionComponent.metrics.find(m => m.label === 'Top Player Market Share');
+            const emergingMetric = sectionComponent.metrics.find(m => m.label === 'Emerging Players Added');
+            
+            topPlayerShare = topPlayerMetric?.value || '';
+            emergingPlayers = emergingMetric?.value || '';
+          }
+          
+          // Extract news from news component
+          fundingNews = newsComponent?.headlines || [];
           
           console.log('🔍🏆 Extracted from uiComponents:');
           console.log('  - executiveSummary:', executiveSummary);
@@ -2840,6 +2928,8 @@ const MarketResearch = React.memo(() => {
                        competitorEmergingPlayers={competitorData.emergingPlayers}
                        competitorFundingNews={competitorData.fundingNews}
                        competitorError={competitorError}
+                       // Add refresh handler for competitor data
+                       onCompetitorRefresh={() => fetchCompetitorData(true)}
                        // Regulatory Compliance props - pass structured data
                        isRegulatoryEditing={isRegulatoryEditing}
                        regulatoryExpanded={regulatoryExpanded}

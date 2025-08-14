@@ -135,8 +135,8 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   const error = propError; // Use prop error from parent
   const competitorData = propCompetitorData;
   
-  // Check if we're loading (no competitorData with timestamp means we're still loading)
-  const isLoading = !competitorData?.timestamp && !error;
+  // Check if we're loading - show loading when there's no data and no error
+  const isLoading = !competitorData && !error;
   
   // Local editing state for inline editing - initialize with prop values
   const [localExecutiveSummary, setLocalExecutiveSummary] = useState(executiveSummary || competitorData?.executiveSummary || '');
@@ -154,48 +154,19 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
       console.log('  - competitorData.executiveSummary:', competitorData?.executiveSummary);
       console.log('  - competitorData.timestamp:', competitorData?.timestamp);
       
-      // Prioritize competitorData from API over fallback props
+      // Always update local state with competitorData (prioritize API data)
       setLocalExecutiveSummary(competitorData?.executiveSummary || executiveSummary || '');
       setLocalTopPlayerShare(competitorData?.topPlayerShare || topPlayerShare || '');
       setLocalEmergingPlayers(competitorData?.emergingPlayers || emergingPlayers || '');
       
       console.log('✅ Updated local state:');
-      console.log('  - localExecutiveSummary set to:', executiveSummary || competitorData?.executiveSummary || '');
-      console.log('  - localTopPlayerShare set to:', topPlayerShare || competitorData?.topPlayerShare || '');
+      console.log('  - localExecutiveSummary set to:', competitorData?.executiveSummary || executiveSummary || '');
+      console.log('  - localTopPlayerShare set to:', competitorData?.topPlayerShare || topPlayerShare || '');
+      console.log('  - localEmergingPlayers set to:', competitorData?.emergingPlayers || emergingPlayers || '');
+      console.log('  - competitorData has uiComponents:', !!competitorData?.uiComponents);
+      console.log('  - competitorData uiComponents length:', competitorData?.uiComponents?.length);
     }
   }, [executiveSummary, topPlayerShare, emergingPlayers, competitorData, isCompetitorLandscapeEditing]);
-
-  // Also sync when competitorData changes
-  useEffect(() => {
-    if (!isCompetitorLandscapeEditing && competitorData) {
-      console.log('🔄 Competitor Landscape - competitorData updated:', competitorData);
-      console.log('🔍 Competitor Landscape - Data analysis:');
-      console.log('  - competitorData.executiveSummary:', competitorData.executiveSummary);
-      console.log('  - competitorData.topPlayerShare:', competitorData.topPlayerShare);
-      console.log('  - competitorData.emergingPlayers:', competitorData.emergingPlayers);
-      console.log('  - competitorData.timestamp:', competitorData.timestamp);
-      console.log('  - executiveSummary prop:', executiveSummary);
-      console.log('  - topPlayerShare prop:', topPlayerShare);
-      console.log('  - emergingPlayers prop:', emergingPlayers);
-      console.log('  - Current localExecutiveSummary:', localExecutiveSummary);
-      console.log('  - Current localTopPlayerShare:', localTopPlayerShare);
-      console.log('  - Current localEmergingPlayers:', localEmergingPlayers);
-      
-      // Always update local state with competitorData (prioritize API data)
-      if (competitorData.executiveSummary && competitorData.executiveSummary !== localExecutiveSummary) {
-        setLocalExecutiveSummary(competitorData.executiveSummary);
-        console.log('📝 Updated executiveSummary from competitorData:', competitorData.executiveSummary);
-      }
-      if (competitorData.topPlayerShare && competitorData.topPlayerShare !== localTopPlayerShare) {
-        setLocalTopPlayerShare(competitorData.topPlayerShare);
-        console.log('📝 Updated topPlayerShare from competitorData:', competitorData.topPlayerShare);
-      }
-      if (competitorData.emergingPlayers && competitorData.emergingPlayers !== localEmergingPlayers) {
-        setLocalEmergingPlayers(competitorData.emergingPlayers);
-        console.log('📝 Updated emergingPlayers from competitorData:', competitorData.emergingPlayers);
-      }
-    }
-  }, [competitorData, isCompetitorLandscapeEditing, executiveSummary, topPlayerShare, emergingPlayers, localExecutiveSummary, localTopPlayerShare, localEmergingPlayers]);
 
   // Handle save changes
   const handleCompetitorLandscapeSaveChanges = async () => {
@@ -311,6 +282,10 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
     console.log('🔄 CompetitorLandscapeSection - competitorData changed:', competitorData);
     console.log('🔄 competitorData.timestamp:', competitorData?.timestamp);
     console.log('🔄 competitorData.executiveSummary:', competitorData?.executiveSummary);
+    console.log('🔄 competitorData.topPlayerShare:', competitorData?.topPlayerShare);
+    console.log('🔄 competitorData.emergingPlayers:', competitorData?.emergingPlayers);
+    console.log('🔄 competitorData.uiComponents:', competitorData?.uiComponents);
+    console.log('🔄 competitorData.uiComponents length:', competitorData?.uiComponents?.length);
   }, [competitorData]);
 
   // Handle refresh when isRefreshing prop changes - let parent handle it
@@ -384,11 +359,15 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   console.log('- competitorData.timestamp:', competitorData?.timestamp);
   console.log('- executiveSummary prop:', executiveSummary);
   console.log('- topPlayerShare prop:', topPlayerShare);
+  console.log('- emergingPlayers prop:', emergingPlayers);
   console.log('- isRefreshing:', isRefreshing);
   console.log('- isLoading:', isLoading);
   console.log('- error:', error);
   console.log('- competitorLandscapeExpanded:', competitorLandscapeExpanded);
   console.log('- isSplitView:', isSplitView);
+  console.log('- localExecutiveSummary:', localExecutiveSummary);
+  console.log('- localTopPlayerShare:', localTopPlayerShare);
+  console.log('- localEmergingPlayers:', localEmergingPlayers);
 
   // Always use competitorData when available
   if (!competitorData) {
@@ -399,6 +378,10 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   const displayExecutiveSummary = localExecutiveSummary || competitorData?.executiveSummary || executiveSummary || 'No data available';
   const displayTopPlayerShare = localTopPlayerShare || competitorData?.topPlayerShare || topPlayerShare || 'No data available';
   const displayEmergingPlayers = localEmergingPlayers || competitorData?.emergingPlayers || emergingPlayers || 'No data available';
+
+  console.log('- displayExecutiveSummary:', displayExecutiveSummary);
+  console.log('- displayTopPlayerShare:', displayTopPlayerShare);
+  console.log('- displayEmergingPlayers:', displayEmergingPlayers);
 
   return (
     <div className={`${isSplitView ? 'flex gap-6' : ''}`}>
@@ -546,6 +529,28 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
           <div className="space-y-6">
 
             {/* Executive Summary section is now moved above for collapsed view */}
+
+            {/* Competitor Report Data */}
+            {(() => {
+              const reportComponent = competitorData?.uiComponents?.find(comp => comp.type === 'report');
+              const dataPoints = reportComponent?.dataPoints;
+              
+              if (!dataPoints || dataPoints.length === 0) return null;
+              
+              return (
+                <div className="mb-8">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Competitor Analysis Report</h3>
+                  <div className="grid grid-cols-1 gap-4">
+                    {dataPoints.map((dataPoint, index) => (
+                      <div key={index} className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <h4 className="font-medium text-blue-800 mb-2">{dataPoint.label}</h4>
+                        <p className="text-blue-700">{dataPoint.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Top Players */}
             {(() => {
@@ -733,6 +738,30 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                       <div key={index} className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                         <h4 className="font-medium text-yellow-800 mb-2">{insight.label}</h4>
                         <p className="text-yellow-700">{insight.description}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Market Trends */}
+            {(() => {
+              const trendsComponent = competitorData?.uiComponents?.find(comp => comp.type === 'marketTrends');
+              const charts = trendsComponent?.charts;
+              
+              if (!charts || charts.length === 0) return null;
+              
+              return (
+                <div className="mb-8">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Market Trends</h3>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {charts.map((chart, index) => (
+                      <div key={index} className="bg-white border border-gray-200 rounded-lg p-4">
+                        <h4 className="font-medium text-gray-900 mb-3">{chart.name}</h4>
+                        <div className="text-sm text-gray-600">
+                          <p>X-Axis: {Array.isArray(chart.xAxis) ? chart.xAxis.join(', ') : chart.xAxis}</p>
+                        </div>
                       </div>
                     ))}
                   </div>
