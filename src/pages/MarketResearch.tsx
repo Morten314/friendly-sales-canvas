@@ -29,6 +29,7 @@ import EditHistoryPanel from "@/components/market-research/EditHistoryPanel";
 import { DeploymentData } from "@/components/layout/Header";
 import { useNavigate, useLocation } from "react-router-dom";
 import { toUTCTimestamp, isTimestampNewer, logTimestampComparison } from '@/lib/timestampUtils';
+import { apiFetchJson } from '@/lib/api';
 import ScoutChatPanel from "@/components/market-research/ScoutChatPanel";
 
 
@@ -354,6 +355,13 @@ const MarketResearch = React.memo(() => {
     uiComponents: []
   });
 
+  // Monitor competitorData changes for debugging
+  useEffect(() => {
+    console.log('🔄🏆 PARENT - competitorData changed:', competitorData);
+    console.log('🔄🏆 PARENT - competitorData.timestamp:', competitorData?.timestamp);
+    console.log('🔄🏆 PARENT - competitorData.executiveSummary:', competitorData?.executiveSummary);
+  }, [competitorData]);
+
   // Market Size Scout Chat states (separate from Industry Trends)
   const [showMarketSizeScoutChat, setShowMarketSizeScoutChat] = useState(false);
   const [marketSizeHasEdits, setMarketSizeHasEdits] = useState(false);
@@ -529,14 +537,14 @@ const MarketResearch = React.memo(() => {
         await Promise.all(
           cacheNames.map(cacheName => 
             caches.open(cacheName).then(cache => 
-              cache.delete('https://backend-11kr.onrender.com/market_intelligence')
+              cache.delete('/api/market_intelligence')
             )
           )
         );
       }
       
       // Try to get existing market intelligence data first
-      const response = await fetch(`https://backend-11kr.onrender.com/market_intelligence?t=${Date.now()}&cache_bust=${Math.random()}`, {
+      const apiResponse = await apiFetchJson(`market_intelligence?t=${Date.now()}&cache_bust=${Math.random()}`, {
         method: 'GET',
         headers: {
           'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -545,16 +553,9 @@ const MarketResearch = React.memo(() => {
         },
         cache: 'no-store'
       });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const apiResponse = await response.json();
       console.log('📊 Market intelligence data:', apiResponse);
       console.log('🔍 DEBUGGING: Raw API response structure:', JSON.stringify(apiResponse, null, 2));
       console.log('🔍 DEBUGGING: Response timestamp or ID:', apiResponse.timestamp || apiResponse.id || apiResponse.created_at || 'NO_TIMESTAMP');
-      console.log('🔍 DEBUGGING: Response headers:', [...response.headers.entries()]);
       
       // Extract the report data from the API response
       const reportData = apiResponse.report || apiResponse;
@@ -1205,6 +1206,7 @@ const MarketResearch = React.memo(() => {
     console.log('🏆🏆🏆 COMPETITOR DATA FETCH CALLED - Starting fetchCompetitorData with refresh:', refresh, 'showLoading:', showLoading);
     console.log('🏆🏆🏆 COMPETITOR - Current competitorData state:', competitorData);
     console.log('🏆🏆🏆 COMPETITOR - Current competitorData.timestamp:', competitorData?.timestamp);
+    
     try {
       console.log('📍 Fetching competitor landscape data with correct component_name');
       if (showLoading) {
@@ -1248,29 +1250,36 @@ const MarketResearch = React.memo(() => {
       console.log('📦 Competitor Payload component_name:', payload.component_name);
       console.log('📦 Competitor Payload keys:', Object.keys(payload));
       console.log('📦 Competitor Data keys:', Object.keys(payload.data));
+      console.log('📦 Competitor Company Profile Data:', payload.data.additionalPrompt);
+      console.log('📦 Competitor Refresh Flag:', payload.refresh);
 
-      const response = await fetch('https://backend-11kr.onrender.com/market-research', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload)
-      });
-
-      console.log('📨 Competitor API response status:', response.status);
-      console.log('📨 Competitor API response headers:', Object.fromEntries(response.headers.entries()));
-      console.log('📨 Competitor API response ok:', response.ok);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌🏆 API Error Response:', errorText);
-        console.error('❌🏆 API Error Status:', response.status);
-        console.error('❌🏆 API Error Headers:', Object.fromEntries(response.headers.entries()));
-        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+      // Try the API call with retry mechanism
+      let result;
+      let retryCount = 0;
+      const maxRetries = 2;
+      
+      while (retryCount <= maxRetries) {
+        try {
+          console.log(`🔄🏆 Attempting API call (attempt ${retryCount + 1}/${maxRetries + 1})`);
+          result = await apiFetchJson('market-research', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+          });
+          console.log('✅🏆 API call successful');
+          break; // Success, exit retry loop
+        } catch (apiError) {
+          retryCount++;
+          console.error(`❌🏆 API call failed (attempt ${retryCount}/${maxRetries + 1}):`, apiError);
+          
+          if (retryCount > maxRetries) {
+            throw apiError; // Re-throw if we've exhausted retries
+          }
+          
+          // Wait before retrying
+          console.log(`⏳🏆 Waiting 2 seconds before retry...`);
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
       }
-
-      console.log('✅🏆 API request successful, parsing response...');
-      const result = await response.json();
       console.log('📊🏆 Competitor API result:', result);
       console.log('📊🏆 Competitor API result.status:', result.status);
       console.log('📊🏆 Competitor API result.data exists:', !!result.data);
@@ -1347,25 +1356,47 @@ const MarketResearch = React.memo(() => {
         if (shouldUpdate) {
           console.log('✅ New Competitor data is newer, updating UI');
           
-          // Update competitor data with API response
+          // Update competitor data with API response - prioritize fresh API data
           const updatedData = {
             ...competitorData,
-            executiveSummary: executiveSummary || competitorData.executiveSummary,
-            topPlayerShare: topPlayerShare || competitorData.topPlayerShare,
-            emergingPlayers: emergingPlayers || competitorData.emergingPlayers,
-            fundingNews: fundingNews || competitorData.fundingNews,
+            executiveSummary: executiveSummary, // Use fresh API data, not fallback
+            topPlayerShare: topPlayerShare, // Use fresh API data, not fallback
+            emergingPlayers: emergingPlayers, // Use fresh API data, not fallback
+            fundingNews: fundingNews, // Use fresh API data, not fallback
             timestamp: toUTCTimestamp(newTimestamp),
             uiComponents: apiData.uiComponents || []
           };
           
-
+          console.log('🔄🏆 UPDATING COMPETITOR DATA WITH FRESH API DATA:');
+          console.log('  - New executiveSummary:', executiveSummary);
+          console.log('  - New topPlayerShare:', topPlayerShare);
+          console.log('  - New emergingPlayers:', emergingPlayers);
+          console.log('  - New fundingNews:', fundingNews);
+          console.log('  - New timestamp:', toUTCTimestamp(newTimestamp));
           
-          setCompetitorData(updatedData);
+          // Force immediate state update with callback to ensure we have latest state
+          setCompetitorData(prevData => {
+            const newData = {
+              ...prevData,
+              executiveSummary: executiveSummary,
+              topPlayerShare: topPlayerShare,
+              emergingPlayers: emergingPlayers,
+              fundingNews: fundingNews,
+              timestamp: toUTCTimestamp(newTimestamp),
+              uiComponents: apiData.uiComponents || []
+            };
+            console.log('🔄🏆 COMPETITOR - State update callback executed');
+            console.log('🔄🏆 COMPETITOR - Previous data:', prevData);
+            console.log('🔄🏆 COMPETITOR - New data:', newData);
+            return newData;
+          });
+          
           console.log('✅🏆🏆🏆 COMPETITOR DATA STATE UPDATED:', updatedData);
           console.log('✅🏆🏆🏆 COMPETITOR - Old data:', competitorData);
           console.log('✅🏆🏆🏆 COMPETITOR - New data:', updatedData);
           console.log('✅🏆🏆🏆 COMPETITOR - State update triggered with refresh:', refresh);
           console.log('✅🏆🏆🏆 COMPETITOR - New timestamp:', updatedData.timestamp);
+          console.log('🔄🏆 COMPETITOR - Component will re-render with new data');
         } else {
           console.log('ℹ️🏆 Current Competitor data is up to date - no update needed');
         }
@@ -1377,8 +1408,18 @@ const MarketResearch = React.memo(() => {
       console.error('❌🏆 Error fetching Competitor data:', error);
       console.error('❌🏆 Error details:', error.message);
       
-      // Set error state - no fallback data generation
-      setCompetitorError('Failed to load competitor data');
+      // Set error state but don't break the entire refresh process
+      setCompetitorError('Failed to load competitor data - API server error');
+      
+      // Log additional debugging info
+      console.error('❌🏆 Competitor API failed - this might be a backend server issue');
+      console.error('❌🏆 Check if the backend server at https://backend-11kr.onrender.com is running');
+      
+      // Keep existing data if available
+      if (competitorData && Object.keys(competitorData).length > 0) {
+        console.log('🔄🏆 Keeping existing competitor data due to API failure');
+        console.log('🔄🏆 Existing data timestamp:', competitorData.timestamp);
+      }
     } finally {
       if (showLoading) {
         setIsCompetitorLoading(false);

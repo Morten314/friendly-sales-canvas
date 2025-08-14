@@ -192,6 +192,7 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
       <div className={`${props.showCompetitorScoutChat ? 'flex gap-6' : ''}`}>
         <div className={`${props.showCompetitorScoutChat ? 'w-1/2' : ''}`}>
           <CompetitorLandscapeSection
+        key={`competitor-${props.competitorData?.timestamp || Date.now()}-${props.isRefreshing ? 'refreshing' : 'stable'}`}
         isEditing={props.isCompetitorEditing || false}
         isSplitView={props.isSplitView}
         isExpanded={props.competitorExpanded || false}

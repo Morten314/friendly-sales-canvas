@@ -12,6 +12,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import MiniPieChart from '@/components/ui/MiniPieChart';
 import MiniLineChart from '@/components/ui/MiniLineChart';
 import { toUTCTimestamp, isTimestampNewer, getCurrentUTCTimestamp, logTimestampComparison } from '@/lib/timestampUtils';
+import { apiFetchJson } from '@/lib/api';
 
 interface EditRecord {
   id: string;
@@ -153,20 +154,25 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
       console.log('  - competitorData:', competitorData);
       console.log('  - competitorData.executiveSummary:', competitorData?.executiveSummary);
       console.log('  - competitorData.timestamp:', competitorData?.timestamp);
+      console.log('  - isRefreshing:', isRefreshing);
       
       // Always update local state with competitorData (prioritize API data)
-      setLocalExecutiveSummary(competitorData?.executiveSummary || executiveSummary || '');
-      setLocalTopPlayerShare(competitorData?.topPlayerShare || topPlayerShare || '');
-      setLocalEmergingPlayers(competitorData?.emergingPlayers || emergingPlayers || '');
+      const newExecutiveSummary = competitorData?.executiveSummary || executiveSummary || '';
+      const newTopPlayerShare = competitorData?.topPlayerShare || topPlayerShare || '';
+      const newEmergingPlayers = competitorData?.emergingPlayers || emergingPlayers || '';
+      
+      setLocalExecutiveSummary(newExecutiveSummary);
+      setLocalTopPlayerShare(newTopPlayerShare);
+      setLocalEmergingPlayers(newEmergingPlayers);
       
       console.log('✅ Updated local state:');
-      console.log('  - localExecutiveSummary set to:', competitorData?.executiveSummary || executiveSummary || '');
-      console.log('  - localTopPlayerShare set to:', competitorData?.topPlayerShare || topPlayerShare || '');
-      console.log('  - localEmergingPlayers set to:', competitorData?.emergingPlayers || emergingPlayers || '');
+      console.log('  - localExecutiveSummary set to:', newExecutiveSummary);
+      console.log('  - localTopPlayerShare set to:', newTopPlayerShare);
+      console.log('  - localEmergingPlayers set to:', newEmergingPlayers);
       console.log('  - competitorData has uiComponents:', !!competitorData?.uiComponents);
       console.log('  - competitorData uiComponents length:', competitorData?.uiComponents?.length);
     }
-  }, [executiveSummary, topPlayerShare, emergingPlayers, competitorData, isCompetitorLandscapeEditing]);
+  }, [executiveSummary, topPlayerShare, emergingPlayers, competitorData, isCompetitorLandscapeEditing, isRefreshing]);
 
   // Handle save changes
   const handleCompetitorLandscapeSaveChanges = async () => {
@@ -211,35 +217,15 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
       localStorage.setItem('competitor-landscape_modified_json', JSON.stringify(editData.modified_json));
 
       // Call POST API to save edits
-      const response = await fetch('https://backend-11kr.onrender.com/edit', {
+      await apiFetchJson('edit', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(editData)
       });
 
-      console.log('📥 POST /edit status:', response.status);
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
       // Fetch updated data using GET API
-      const getResponse = await fetch('https://backend-11kr.onrender.com/market_intelligence', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
+      const getData = await apiFetchJson('market_intelligence', {
+        method: 'GET'
       });
-
-       console.log('📥 GET /market_intelligence status:', getResponse.status);
-
-      if (!getResponse.ok) {
-        throw new Error(`HTTP error! status: ${getResponse.status}`);
-      }
-
-      const getData = await getResponse.json();
       console.log('✅ Competitor Landscape - GET /market_intelligence successful:', getData);
       
       // Update component with fresh data from API response
@@ -286,15 +272,33 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
     console.log('🔄 competitorData.emergingPlayers:', competitorData?.emergingPlayers);
     console.log('🔄 competitorData.uiComponents:', competitorData?.uiComponents);
     console.log('🔄 competitorData.uiComponents length:', competitorData?.uiComponents?.length);
-  }, [competitorData]);
+    
+    // If we have new competitorData and we're not editing, update local state immediately
+    if (competitorData && !isCompetitorLandscapeEditing) {
+      console.log('🔄 Updating local state with new competitorData');
+      setLocalExecutiveSummary(competitorData.executiveSummary || '');
+      setLocalTopPlayerShare(competitorData.topPlayerShare || '');
+      setLocalEmergingPlayers(competitorData.emergingPlayers || '');
+    }
+  }, [competitorData, isCompetitorLandscapeEditing]);
 
   // Handle refresh when isRefreshing prop changes - let parent handle it
   useEffect(() => {
     if (isRefreshing) {
       console.log('🔄 Competitor Landscape - Refresh triggered, parent will handle API call');
+      console.log('🔄 isRefreshing changed to true - waiting for new competitorData');
       // Don't make API calls here - parent handles it
+    } else {
+      console.log('🔄 isRefreshing changed to false - refresh completed');
+      // When refresh completes, ensure we have the latest data
+      if (competitorData) {
+        console.log('🔄 Refresh completed - updating local state with latest competitorData');
+        setLocalExecutiveSummary(competitorData.executiveSummary || '');
+        setLocalTopPlayerShare(competitorData.topPlayerShare || '');
+        setLocalEmergingPlayers(competitorData.emergingPlayers || '');
+      }
     }
-  }, [isRefreshing]);
+  }, [isRefreshing, competitorData]);
 
   // Listen for company profile updates - just notify parent
   useEffect(() => {
@@ -382,9 +386,38 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   console.log('- displayExecutiveSummary:', displayExecutiveSummary);
   console.log('- displayTopPlayerShare:', displayTopPlayerShare);
   console.log('- displayEmergingPlayers:', displayEmergingPlayers);
+  console.log('- isRefreshing:', isRefreshing);
+  console.log('- competitorData.timestamp:', competitorData?.timestamp);
 
   return (
     <div className={`${isSplitView ? 'flex gap-6' : ''}`}>
+      {/* Debug info - remove this after testing */}
+      {isRefreshing && (
+        <div className="mb-4 p-2 bg-yellow-100 border border-yellow-300 rounded text-sm">
+          🔄 Refreshing... Latest data: {competitorData?.timestamp || 'No timestamp'}
+        </div>
+      )}
+      {!isRefreshing && competitorData?.timestamp && (
+        <div className="mb-4 p-2 bg-green-100 border border-green-300 rounded text-sm">
+          ✅ Data updated: {competitorData.timestamp} | Executive Summary: {competitorData.executiveSummary?.substring(0, 50)}...
+        </div>
+      )}
+      {/* Debug company profile data */}
+      {isRefreshing && (
+        <div className="mb-4 p-2 bg-blue-100 border border-blue-300 rounded text-sm">
+          🔍 Company Profile: {companyProfile ? 'Available' : 'Not available'} | 
+          Industry: {companyProfile?.industry || 'Unknown'} | 
+          Company Size: {companyProfile?.companySize || 'Unknown'}
+        </div>
+      )}
+      
+      {/* API Error indicator */}
+      {error && (
+        <div className="mb-4 p-2 bg-red-100 border border-red-300 rounded text-sm">
+          ❌ API Error: {error} | 
+          {error.includes('500') ? 'Backend server issue - check server status' : 'Check network connection'}
+        </div>
+      )}
       <div className={`bg-white rounded-lg border border-gray-200 p-6 ${isSplitView ? 'flex-1' : ''}`}>
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
@@ -426,6 +459,8 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                 <p>Chat with Scout about competitor landscape</p>
               </TooltipContent>
             </Tooltip>
+            
+
           </div>
         </div>
 
