@@ -980,15 +980,7 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
                   className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                   onClick={() => setIsMarketExpanded(!isMarketExpanded)}
                 >
-                  {isMarketExpanded ? (
-                    <>
-                      Show Less <ChevronUp className="ml-1 h-4 w-4" />
-                    </>
-                  ) : (
-                    <>
-                      Read More <ChevronDown className="ml-1 h-4 w-4" />
-                    </>
-                  )}
+                  Read More <ChevronDown className="ml-1 h-4 w-4" />
                 </Button>
           </div>
 
@@ -1122,7 +1114,17 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
                     >
                       {reportGenerating ? 'Generating...' : 'Export PDF'}
                     </Button>
-              </div>
+                  </div>
+                  
+                  <div className="flex justify-center pt-4">
+                    <Button 
+                      variant="ghost" 
+                      className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                      onClick={() => setIsMarketExpanded(false)}
+                    >
+                      Show Less <ChevronUp className="ml-1 h-4 w-4" />
+                    </Button>
+                  </div>
             </div>
           )}
             </div>
@@ -1187,15 +1189,7 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
                   className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                   onClick={() => setIsBuyerMapExpanded(!isBuyerMapExpanded)}
                 >
-                  {isBuyerMapExpanded ? (
-                    <>
-                      Show Less <ChevronUp className="ml-1 h-4 w-4" />
-                    </>
-                  ) : (
-                    <>
-                      Read More <ChevronDown className="ml-1 h-4 w-4" />
-                    </>
-                  )}
+                  Read More <ChevronDown className="ml-1 h-4 w-4" />
             </Button>
           </div>
 
@@ -1240,7 +1234,17 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
                     >
                       {reportGenerating ? 'Generating...' : 'Export PDF'}
                     </Button>
-                </div>
+                  </div>
+                  
+                  <div className="flex justify-center pt-4">
+                    <Button 
+                      variant="ghost" 
+                      className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                      onClick={() => setIsBuyerMapExpanded(false)}
+                    >
+                      Show Less <ChevronUp className="ml-1 h-4 w-4" />
+                    </Button>
+                  </div>
             </div>
           )}
             </div>
@@ -1304,15 +1308,7 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
                   className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                   onClick={() => setIsCompetitiveExpanded(!isCompetitiveExpanded)}
                 >
-                  {isCompetitiveExpanded ? (
-                    <>
-                      Show Less <ChevronUp className="ml-1 h-4 w-4" />
-                    </>
-                  ) : (
-                    <>
-                      Read More <ChevronDown className="ml-1 h-4 w-4" />
-                    </>
-                  )}
+                  Read More <ChevronDown className="ml-1 h-4 w-4" />
             </Button>
           </div>
 
@@ -1437,6 +1433,16 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
                       {reportGenerating ? 'Generating...' : 'Export PDF'}
                     </Button>
                   </div>
+                  
+                  <div className="flex justify-center pt-4">
+                    <Button 
+                      variant="ghost" 
+                      className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                      onClick={() => setIsCompetitiveExpanded(false)}
+                    >
+                      Show Less <ChevronUp className="ml-1 h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
@@ -1507,15 +1513,7 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
                   className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                   onClick={() => setIsRegulatoryExpanded(!isRegulatoryExpanded)}
                 >
-                  {isRegulatoryExpanded ? (
-                    <>
-                      Show Less <ChevronUp className="ml-1 h-4 w-4" />
-                    </>
-                  ) : (
-                    <>
-                      Read More <ChevronDown className="ml-1 h-4 w-4" />
-                    </>
-                  )}
+                  Read More <ChevronDown className="ml-1 h-4 w-4" />
                 </Button>
               </div>
 
@@ -1560,6 +1558,16 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
                       disabled={reportGenerating}
                     >
                       {reportGenerating ? 'Generating...' : 'Export PDF'}
+                    </Button>
+                  </div>
+                  
+                  <div className="flex justify-center pt-4">
+                    <Button 
+                      variant="ghost" 
+                      className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                      onClick={() => setIsRegulatoryExpanded(false)}
+                    >
+                      Show Less <ChevronUp className="ml-1 h-4 w-4" />
                     </Button>
                   </div>
                 </div>

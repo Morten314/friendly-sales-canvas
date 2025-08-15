@@ -85,7 +85,6 @@ export interface MarketIntelligenceTabProps {
   // Market Entry loading states and handlers
   isMarketEntryLoading?: boolean;
   marketEntryError?: string | null;
-  onMarketEntryRefresh?: () => void;
   onCompetitorRefresh?: () => void;
   onToggleEdit: () => void;
   onMarketSizeScoutIconClick: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance' | 'market-entry', hasEdits?: boolean, lastEditedField?: string) => void | Promise<void>;
