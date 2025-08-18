@@ -4,10 +4,11 @@ console.log('📁 MarketResearch.tsx file is loading!');
 import { Layout } from "@/components/layout/Layout";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { Button } from "@/components/ui/button";
-import { Search, MessageSquare, Users, Settings, RefreshCw, AlertCircle, History, Calendar } from "lucide-react";
+import { Search, MessageSquare, Users, Settings, RefreshCw, AlertCircle, History, Calendar, Info } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 import { Badge } from "@/components/ui/badge";
 import { RecentMarketResearch } from "@/components/market-research/RecentMarketResearch";
@@ -2794,6 +2795,48 @@ const MarketResearch = React.memo(() => {
         {/* Fixed header section */}
         <div className="sticky top-0 bg-white z-20 pb-2">
           <div className="animate-fade-in">
+            {/* Scout Header */}
+            <div className="mb-6">
+              <div className="flex items-center gap-2 mb-2">
+                <h1 className="text-3xl font-bold text-gray-900">Scout</h1>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button className="text-gray-500 hover:text-gray-700 transition-colors">
+                      <Info className="h-5 w-5" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80 p-4 z-50">
+                    <div className="space-y-3">
+                      <h3 className="font-semibold text-gray-900">What can this agent do for you?</h3>
+                      <ul className="space-y-2 text-sm text-gray-700">
+                        <li className="flex items-start gap-2">
+                          <div className="h-1.5 w-1.5 rounded-full bg-primary mt-2 flex-shrink-0"></div>
+                          Market size estimation & TAM analysis
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <div className="h-1.5 w-1.5 rounded-full bg-primary mt-2 flex-shrink-0"></div>
+                          Competitor research & positioning
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <div className="h-1.5 w-1.5 rounded-full bg-primary mt-2 flex-shrink-0"></div>
+                          Industry trends & growth forecasts
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <div className="h-1.5 w-1.5 rounded-full bg-primary mt-2 flex-shrink-0"></div>
+                          Regulatory & compliance landscape
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <div className="h-1.5 w-1.5 rounded-full bg-primary mt-2 flex-shrink-0"></div>
+                          Market entry barriers analysis
+                        </li>
+                      </ul>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <p className="text-lg text-gray-600 italic">Find the best markets before your competitors do</p>
+            </div>
+            
             {/* Scout Loading Animation - Show at top when refreshing with existing data */}
             {(isRefreshing || isInitialLoading) && (
               <div className="mb-4">
