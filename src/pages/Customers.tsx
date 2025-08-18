@@ -134,16 +134,16 @@ const Customers = () => {
         {/* Main Tabs - Full Width */}
         <div className="h-full w-full">
           <Tabs defaultValue="icp-intelligence" className="h-full w-full">
-            <TabsList className="mb-6 w-full justify-start">
-              <TabsTrigger value="icp-intelligence" className="flex items-center gap-2">
+            <TabsList className="mb-6 w-full">
+              <TabsTrigger value="icp-intelligence" className="flex items-center gap-2 flex-1">
                 <Users className="h-4 w-4" />
                 ICP Intelligence
               </TabsTrigger>
-              <TabsTrigger value="icp-battlemap" className="flex items-center gap-2">
+              <TabsTrigger value="icp-battlemap" className="flex items-center gap-2 flex-1">
                 <Target className="h-4 w-4" />
                 ICP Battlemap
               </TabsTrigger>
-              <TabsTrigger value="chat-profiler" className="flex items-center gap-2">
+              <TabsTrigger value="chat-profiler" className="flex items-center gap-2 flex-1">
                 <MessageSquare className="h-4 w-4" />
                 Chat with Profiler
               </TabsTrigger>
