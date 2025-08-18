@@ -89,10 +89,10 @@ interface ICPSummaryOpportunityProps {
 }
 
 export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProps) => {
-  const [isMarketExpanded, setIsMarketExpanded] = useState(true);
-  const [isBuyerMapExpanded, setIsBuyerMapExpanded] = useState(true);
-  const [isCompetitiveExpanded, setIsCompetitiveExpanded] = useState(true);
-  const [isRegulatoryExpanded, setIsRegulatoryExpanded] = useState(true);
+  const [isMarketExpanded, setIsMarketExpanded] = useState(false);
+  const [isBuyerMapExpanded, setIsBuyerMapExpanded] = useState(false);
+  const [isCompetitiveExpanded, setIsCompetitiveExpanded] = useState(false);
+  const [isRegulatoryExpanded, setIsRegulatoryExpanded] = useState(false);
   const [signalRegionFilter, setSignalRegionFilter] = useState("all");
   const [signalTypeFilter, setSignalTypeFilter] = useState("all");
   const [reportGenerating, setReportGenerating] = useState(false);
@@ -974,15 +974,17 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
                 </div>
               </div>
 
-              <div className="flex justify-center">
-                <Button 
-                  variant="ghost" 
-                  className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                  onClick={() => setIsMarketExpanded(!isMarketExpanded)}
-                >
-                  Read More <ChevronDown className="ml-1 h-4 w-4" />
-                </Button>
-          </div>
+              {!isMarketExpanded && (
+                <div className="flex justify-center">
+                  <Button 
+                    variant="ghost" 
+                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                    onClick={() => setIsMarketExpanded(true)}
+                  >
+                    Read More <ChevronDown className="ml-1 h-4 w-4" />
+                  </Button>
+                </div>
+              )}
 
           {isMarketExpanded && (
                 <div className="mt-6 space-y-8 border-t pt-6">
@@ -1183,15 +1185,17 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
                 </div>
               </div>
 
-              <div className="flex justify-center">
-            <Button
-              variant="ghost"
-                  className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                  onClick={() => setIsBuyerMapExpanded(!isBuyerMapExpanded)}
-                >
-                  Read More <ChevronDown className="ml-1 h-4 w-4" />
-            </Button>
-          </div>
+              {!isBuyerMapExpanded && (
+                <div className="flex justify-center">
+                  <Button 
+                    variant="ghost" 
+                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                    onClick={() => setIsBuyerMapExpanded(true)}
+                  >
+                    Read More <ChevronDown className="ml-1 h-4 w-4" />
+                  </Button>
+                </div>
+              )}
 
           {isBuyerMapExpanded && (
                 <div className="mt-6 space-y-6 border-t pt-6">
@@ -1302,15 +1306,17 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
                 </div>
               </div>
 
-              <div className="flex justify-center">
-            <Button
-              variant="ghost"
-                  className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                  onClick={() => setIsCompetitiveExpanded(!isCompetitiveExpanded)}
-                >
-                  Read More <ChevronDown className="ml-1 h-4 w-4" />
-            </Button>
-          </div>
+              {!isCompetitiveExpanded && (
+                <div className="flex justify-center">
+                  <Button 
+                    variant="ghost" 
+                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                    onClick={() => setIsCompetitiveExpanded(true)}
+                  >
+                    Read More <ChevronDown className="ml-1 h-4 w-4" />
+                  </Button>
+                </div>
+              )}
 
           {isCompetitiveExpanded && (
                 <div className="mt-6 space-y-6 border-t pt-6">
@@ -1507,15 +1513,17 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
                 </div>
               </div>
 
-              <div className="flex justify-center">
-                <Button 
-                  variant="ghost" 
-                  className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                  onClick={() => setIsRegulatoryExpanded(!isRegulatoryExpanded)}
-                >
-                  Read More <ChevronDown className="ml-1 h-4 w-4" />
-                </Button>
-              </div>
+              {!isRegulatoryExpanded && (
+                <div className="flex justify-center">
+                  <Button 
+                    variant="ghost" 
+                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                    onClick={() => setIsRegulatoryExpanded(true)}
+                  >
+                    Read More <ChevronDown className="ml-1 h-4 w-4" />
+                  </Button>
+                </div>
+              )}
 
               {isRegulatoryExpanded && (
                 <div className="mt-6 space-y-8 border-t pt-6">
