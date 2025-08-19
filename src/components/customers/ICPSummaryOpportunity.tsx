@@ -172,6 +172,7 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
         };
 
         console.log("API Request Payload:", payload);
+        console.log("API Request Payload (stringified):", JSON.stringify(payload, null, 2));
 
         // Call the icp research API endpoint
         let response;
