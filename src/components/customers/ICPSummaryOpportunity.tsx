@@ -164,23 +164,22 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
           throw new Error("No ICP selected for report generation");
         }
 
-        // Prepare the API request payload - API expects data wrapper
-        // CACHE BUSTER: 2025-08-19-11:20:00
+        // Prepare the API request payload - API expects fields directly in body (not wrapped in data)
+        // FINAL FIX: 2025-08-19-11:21:00
         const payload = {
-          data: {
-            user_id: "user_123",
-            component_name: componentName,
-            refresh: true,
-            predata: selectedICP // Pass the selected ICP JSON
-          }
+          user_id: "user_123",
+          component_name: componentName,
+          refresh: true,
+          predata: selectedICP // Pass the selected ICP JSON
         };
 
         console.log("🔄 API Call Timestamp:", new Date().toISOString());
-        console.log("🔧 DEBUGGING: API Request Payload Structure (v2):");
-        console.log("- Has data wrapper:", 'data' in payload);
-        console.log("- Data keys:", Object.keys(payload.data));
-        console.log("- user_id:", payload.data.user_id);
-        console.log("- component_name:", payload.data.component_name);
+        console.log("🔧 FINAL DEBUGGING: API Request Payload Structure (v3):");
+        console.log("- Sending fields directly in body (no data wrapper)");
+        console.log("- user_id:", payload.user_id);
+        console.log("- component_name:", payload.component_name);
+        console.log("- refresh:", payload.refresh);
+        console.log("- predata keys:", Object.keys(payload.predata));
         console.log("API Request Payload:", payload);
         console.log("API Request Payload (stringified):", JSON.stringify(payload, null, 2));
 
