@@ -165,11 +165,16 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
         }
 
         // Prepare the API request payload
-        const payload = {
+        const payloadData = {
           user_id: "user_123",
           component_name: componentName,
           refresh: true,
           predata: selectedICP // Pass the selected ICP JSON
+        };
+
+        // Wrap payload in "data" field as expected by API
+        const payload = {
+          data: payloadData
         };
 
         console.log("API Request Payload:", payload);
