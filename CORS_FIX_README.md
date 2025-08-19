@@ -66,3 +66,4 @@ const result = await apiFetchJson('market-research', {
 - `src/components/market-research/CompetitorLandscapeSection.tsx` - Updated API calls
 
 
+

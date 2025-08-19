@@ -7,6 +7,7 @@ import { ChevronDown, ChevronUp, TrendingUp, Clock, Target, DollarSign, User, Za
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import MiniLineChart from "@/components/MiniLineChart";
 import MiniPieChart from "@/components/MiniPieChart";
+import { apiFetchJson } from "@/lib/api";
 
 interface SuggestedICP {
   id: string;
@@ -98,10 +99,18 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
   const [reportGenerating, setReportGenerating] = useState(false);
   const [dataSource, setDataSource] = useState<'api' | 'fallback' | 'unknown'>('api');
   const [componentError, setComponentError] = useState<string | null>(null);
+  
+  // New state for API-generated report data
+  const [apiReportData, setApiReportData] = useState<any>(null);
+  const [isLoadingReport, setIsLoadingReport] = useState(false);
+  const [reportError, setReportError] = useState<string | null>(null);
 
   console.log("=== ICPSummaryOpportunity RENDER ===");
   console.log("selectedICP:", selectedICP);
   console.log("🔍 DATA SOURCE:", dataSource);
+  console.log("🔍 API REPORT DATA:", apiReportData);
+  console.log("🔍 IS LOADING REPORT:", isLoadingReport);
+  console.log("🔍 REPORT ERROR:", reportError);
 
   // Early return if no ICP is selected
   if (!selectedICP) {
@@ -140,72 +149,190 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
   }
 
   try {
-  // Generate report via backend API
-  const generateReport = async (reportType: 'save' | 'pdf' = 'save') => {
-    try {
-      setReportGenerating(true);
-      console.log(`=== GENERATING ${reportType.toUpperCase()} REPORT ===`);
-      
-      const currentData = selectedICP; // Use selectedICP directly
-      if (!currentData) {
-        throw new Error("No data available for report generation");
-      }
+    // New function to generate report via API
+    const generateReportViaAPI = async (componentName: string) => {
+      try {
+        setIsLoadingReport(true);
+        setReportError(null);
+        
+        console.log("=== GENERATING REPORT VIA API ===");
+        console.log("Component name:", componentName);
+        console.log("Selected ICP:", selectedICP);
+        
+        if (!selectedICP) {
+          throw new Error("No ICP selected for report generation");
+        }
 
-      const reportPayload = {
-        selectedICP: currentData,
-        icpData: currentData, // Pass the entire ICP object
-        activeCard: 0, // No internal card switching, always 0
-        reportType,
-        timestamp: new Date().toISOString(),
-        sections: {
-          marketAnalysis: currentData.marketAnalysis,
-          competitiveData: currentData.competitiveData,
-          buyingTriggers: currentData.buyingTriggersArray,
-          filters: {
-            signalRegionFilter,
-            signalTypeFilter
+        // Prepare the API request payload
+        const payload = {
+          data: {
+            user_id: "user_123",
+            component_name: componentName,
+            refresh: true,
+            predata: selectedICP // Pass the selected ICP JSON
           }
+        };
+
+        console.log("API Request Payload:", payload);
+
+        // Call the icp research API endpoint
+        let response;
+        try {
+          // Try the actual endpoint first
+          response = await apiFetchJson('icp-research', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+          });
+                 } catch (error) {
+           console.log("API call failed:", error);
+           console.log("Error details:", error instanceof Error ? error.message : error);
+           console.log("API endpoint not available yet, using mock response...");
+          // Mock response until backend endpoint is implemented
+          response = {
+            currentData: {
+              title: selectedICP.title,
+              blurb: selectedICP.blurb,
+              _metadata: {
+                dataSource: "mock"
+              },
+              marketSize: selectedICP.marketSize,
+              growth: selectedICP.growth,
+              urgency: selectedICP.urgency,
+              timeToClose: selectedICP.timeToClose,
+              marketAnalysis: {
+                totalMarketSize: selectedICP.marketAnalysis?.totalMarketSize || "€51.7B",
+                marketGrowth: selectedICP.growth || "+30%",
+                servicableMarket: selectedICP.marketAnalysis?.servicableMarket || "€17.5B",
+                targetableMarket: selectedICP.marketAnalysis?.targetableMarket || "€4.1B",
+                segments: selectedICP.marketAnalysis?.segments || [
+                  {
+                    name: "Advanced Hospitals/Clinics",
+                    share: "45%",
+                    size: "€22.0B",
+                    growth: "+40%"
+                  },
+                  {
+                    name: "Traditional Hospitals/Clinics",
+                    share: "35%",
+                    size: "€17.0B",
+                    growth: "+22%"
+                  }
+                ],
+                growthTrajectory: {
+                  units: "index(2023=100)",
+                  points: [
+                    { year: 2023, index: 100 },
+                    { year: 2024, index: 103 },
+                    { year: 2025, index: 107 },
+                    { year: 2026, index: 112 }
+                  ]
+                },
+                marketShareDistribution: [
+                  { name: "Advanced Hospitals/Clinics", share: "45%" },
+                  { name: "Traditional Hospitals/Clinics", share: "35%" },
+                  { name: "Other", share: "20%" }
+                ],
+                keyChallenges: selectedICP.marketAnalysis?.keyChallenges || [
+                  "Healthcare Providers sector complexity requiring specialized high cloud adoption",
+                  "Hospitals/Clinics integration challenges for 201-500 employees organizations"
+                ],
+                strategicRecommendations: selectedICP.marketAnalysis?.strategicRecommendations || [
+                  "Target Healthcare Providers companies specifically needing high cloud adoption",
+                  "Focus hospitals/clinics messaging on high cloud adoption and HIPAA/GDPR compliance benefits"
+                ],
+                signalsToMonitor: selectedICP.marketAnalysis?.signalsToMonitor || [
+                  "Healthcare Providers sector funding and hospitals/clinics investment announcements",
+                  "Germany regulatory changes affecting healthcare providers high cloud adoption"
+                ]
+              },
+              timestamp: new Date().toISOString()
+            }
+          };
         }
-      };
 
-      console.log("Report payload:", reportPayload);
+        console.log("API Response:", response);
 
-      const response = await fetch('https://backend-11kr.onrender.com/generate-report', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(reportPayload)
-      });
-
-      if (!response.ok) {
-        throw new Error(`Report generation failed: ${response.status}`);
-      }
-
-      const result = await response.json();
-      console.log("Report generation result:", result);
-
-      if (reportType === 'pdf') {
-        // Handle PDF download
-        if (result.downloadUrl) {
-          window.open(result.downloadUrl, '_blank');
+        if (response && response.currentData) {
+          setApiReportData(response.currentData);
+          console.log("✅ Report data updated from API/Mock");
         } else {
-          alert('Report generated successfully! Check your email for the PDF.');
+          throw new Error("Invalid response format from API");
         }
-      } else {
-        alert('Report saved successfully!');
+
+      } catch (error) {
+        console.error("=== ERROR GENERATING REPORT VIA API ===", error);
+        setReportError(error instanceof Error ? error.message : "Failed to generate report");
+      } finally {
+        setIsLoadingReport(false);
       }
+    };
 
-    } catch (err) {
-      console.error("=== ERROR GENERATING REPORT ===", err);
-      alert(`Failed to generate ${reportType} report. Please try again.`);
-    } finally {
-      setReportGenerating(false);
-    }
-  };
+    // Generate report via backend API (legacy function - keeping for compatibility)
+    const generateReport = async (reportType: 'save' | 'pdf' = 'save') => {
+      try {
+        setReportGenerating(true);
+        console.log(`=== GENERATING ${reportType.toUpperCase()} REPORT ===`);
+        
+        const currentData = selectedICP; // Use selectedICP directly
+        if (!currentData) {
+          throw new Error("No data available for report generation");
+        }
 
-  // Fetch ICP data from backend
-  const fetchICPData = async () => {
+        const reportPayload = {
+          selectedICP: currentData,
+          icpData: currentData, // Pass the entire ICP object
+          activeCard: 0, // No internal card switching, always 0
+          reportType,
+          timestamp: new Date().toISOString(),
+          sections: {
+            marketAnalysis: currentData.marketAnalysis,
+            competitiveData: currentData.competitiveData,
+            buyingTriggers: currentData.buyingTriggersArray,
+            filters: {
+              signalRegionFilter,
+              signalTypeFilter
+            }
+          }
+        };
+
+        console.log("Report payload:", reportPayload);
+
+        const response = await fetch('https://backend-11kr.onrender.com/generate-report', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(reportPayload)
+        });
+
+        if (!response.ok) {
+          throw new Error(`Report generation failed: ${response.status}`);
+        }
+
+        const result = await response.json();
+        console.log("Report generation result:", result);
+
+        if (reportType === 'pdf') {
+          // Handle PDF download
+          if (result.downloadUrl) {
+            window.open(result.downloadUrl, '_blank');
+          } else {
+            alert('Report generated successfully! Check your email for the PDF.');
+          }
+        } else {
+          alert('Report saved successfully!');
+        }
+
+      } catch (err) {
+        console.error("=== ERROR GENERATING REPORT ===", err);
+        alert(`Failed to generate ${reportType} report. Please try again.`);
+      } finally {
+        setReportGenerating(false);
+      }
+    };
+
+    // Fetch ICP data from backend
+    const fetchICPData = async () => {
     try {
       console.log("=== FETCHING ICP DATA ===");
       setDataSource('api'); // Set data source to API
@@ -830,6 +957,14 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
     }
   }, [selectedICP]);
 
+  // Generate report via API when ICP is selected
+  useEffect(() => {
+    if (selectedICP) {
+      console.log("=== ICP SELECTED - GENERATING REPORT VIA API ===");
+      generateReportViaAPI("icp summary & market opportunity");
+    }
+  }, [selectedICP]);
+
   // Mock data for charts
   const mockGrowthData = [
     { name: "2022", value: 8.5 },
@@ -857,8 +992,8 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
     }));
   }, [selectedICP]);
 
-  // Get current data based on active card
-  const currentData = selectedICP;
+  // Get current data based on active card - prioritize API data over frontend data
+  const currentData = apiReportData || selectedICP;
 
   // Filter buying signals
   const filteredBuyingSignals = useMemo(() => {
@@ -885,24 +1020,64 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
       <div className="flex justify-between items-center p-3 rounded-lg border-2 border-dashed">
         <div className="flex items-center gap-3">
           <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+            apiReportData ? 'bg-blue-100 text-blue-800 border border-blue-300' :
             dataSource === 'api' ? 'bg-green-100 text-green-800 border border-green-300' :
             dataSource === 'fallback' ? 'bg-orange-100 text-orange-800 border border-orange-300' :
             'bg-gray-100 text-gray-800 border border-gray-300'
           }`}>
-            {dataSource === 'api' ? '🟢 API Data' : 
-             dataSource === 'fallback' ? '🟡 Fallback Data' : 
-             '⚪ Loading...'}
+                         {apiReportData ? (apiReportData._metadata?.dataSource === 'mock' ? '🟡 Mock Data' : '🔵 API Report Data') :
+              dataSource === 'api' ? '🟢 API Data' : 
+              dataSource === 'fallback' ? '🟡 Fallback Data' : 
+              '⚪ Loading...'}
       </div>
-          <div className="text-sm text-gray-600">
-            {dataSource === 'api' ? 'Components showing live data from /icp endpoint' :
-             dataSource === 'fallback' ? 'Components showing fallback data (API unavailable)' :
-             'Determining data source...'}
-      </div>
+                     <div className="text-sm text-gray-600">
+                           {apiReportData ? (apiReportData._metadata?.dataSource === 'mock' ? 'Components showing mock data (Backend endpoint not available)' : 'Components showing API-generated report data from /icp-research endpoint') :
+               dataSource === 'api' ? 'Components showing live data from /icp endpoint' :
+               dataSource === 'fallback' ? 'Components showing fallback data (API unavailable)' :
+               'Determining data source...'}
+       </div>
         </div>
         <div className="text-xs text-gray-500">
           Active Card: 1 | Total ICPs: 1
+          {isLoadingReport && ' | Generating Report...'}
         </div>
       </div>
+
+      {/* API Report Error Display */}
+      {reportError && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-red-800 text-sm">API Report Error: {reportError}</p>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => generateReportViaAPI("icp summary & market opportunity")}
+            className="mt-2"
+          >
+            Retry API Report
+          </Button>
+        </div>
+      )}
+
+      {/* API Report Generation Button */}
+      {selectedICP && !apiReportData && !isLoadingReport && (
+        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-blue-800 text-sm mb-2">Generate API-powered report for this ICP</p>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => generateReportViaAPI("icp summary & market opportunity")}
+          >
+            Generate Report
+          </Button>
+        </div>
+      )}
+
+      {/* Loading Indicator */}
+      {isLoadingReport && (
+        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-blue-800 text-sm">🔄 Generating API report...</p>
+        </div>
+      )}
 
       {/* Error Banner (if any) */}
       {/* Removed error banner as it's not directly tied to a single ICP */}
@@ -916,8 +1091,21 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
                 <CardTitle className="text-xl font-semibold">ICP Summary & Market Opportunity</CardTitle>
                 <CardDescription className="mt-1">
                   Overview of target customer profile and market dynamics
+                  {apiReportData && (
+                    <span className="ml-2 text-blue-600">(API Generated)</span>
+                  )}
                 </CardDescription>
             </div>
+            {apiReportData && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => generateReportViaAPI("icp summary & market opportunity")}
+                disabled={isLoadingReport}
+              >
+                {isLoadingReport ? 'Regenerating...' : 'Regenerate Report'}
+              </Button>
+            )}
               {/* Removed Card 1/Card 2 selection buttons */}
           </div>
         </CardHeader>
@@ -928,11 +1116,13 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
                 <h3 className="font-semibold text-lg mb-2 flex items-center gap-2">
                   {currentData.title}
                   <span className={`text-xs px-2 py-1 rounded-full ${
-                    currentData._metadata?.dataSource === 'api' 
+                    apiReportData 
+                      ? 'bg-blue-100 text-blue-700' 
+                      : currentData._metadata?.dataSource === 'api' 
                       ? 'bg-green-100 text-green-700' 
                       : 'bg-orange-100 text-orange-700'
                   }`}>
-                    {currentData._metadata?.dataSource === 'api' ? 'API' : 'Mock'}
+                                         {apiReportData ? (apiReportData._metadata?.dataSource === 'mock' ? 'Mock' : 'API Report') : currentData._metadata?.dataSource === 'api' ? 'API' : 'Mock'}
                   </span>
                 </h3>
                 <p className="text-gray-600 text-sm leading-relaxed">

@@ -9,7 +9,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-
 import { Badge } from "@/components/ui/badge";
 import { RecentMarketResearch } from "@/components/market-research/RecentMarketResearch";
 import { ScoutCapabilities } from "@/components/market-research/ScoutCapabilities";

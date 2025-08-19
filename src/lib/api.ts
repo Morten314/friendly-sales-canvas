@@ -10,6 +10,12 @@ export const API_BASE_URL = isDevelopment
 export const buildApiUrl = (endpoint: string): string => {
   // Remove leading slash if present to avoid double slashes
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
+  
+  // Special handling for research endpoints - use direct backend URL
+  if (endpoint === 'icp-research' || endpoint === 'research') {
+    return `https://backend-11kr.onrender.com/${cleanEndpoint}`;
+  }
+  
   return `${API_BASE_URL}/${cleanEndpoint}`;
 };
 
@@ -26,6 +32,7 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
   };
 
   console.log(`🌐 API Request: ${defaultOptions.method || 'GET'} ${url}`);
+  console.log(`🔗 Full URL: ${url}`);
   
   const response = await fetch(url, defaultOptions);
   
