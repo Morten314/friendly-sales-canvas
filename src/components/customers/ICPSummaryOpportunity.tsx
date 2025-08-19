@@ -164,24 +164,25 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
           throw new Error("No ICP selected for report generation");
         }
 
-        // FORCE CACHE REFRESH: 2025-08-19-11:23:45 - NO DATA WRAPPER NEEDED
-        // Prepare the API request payload - API expects fields directly in body (not wrapped in data)
+        // CORRECT FIX: API EXPECTS DATA WRAPPER - 2025-08-19-11:24:30
+        // Prepare the API request payload - API expects data wrapper after all
         const payload = {
-          user_id: "user_123",
-          component_name: componentName,
-          refresh: true,
-          predata: selectedICP // Pass the selected ICP JSON
+          data: {
+            user_id: "user_123",
+            component_name: componentName,
+            refresh: true,
+            predata: selectedICP // Pass the selected ICP JSON
+          }
         };
 
         console.log("🔄 API Call Timestamp:", new Date().toISOString());
-        console.log("🚨 CACHE REFRESH SUCCESSFUL - RUNNING NEW CODE VERSION 11:23:45");
-        console.log("🔧 FINAL DEBUGGING: API Request Payload Structure (v4-FINAL):");
-        console.log("- Sending fields directly in body (no data wrapper)");
-        console.log("- user_id:", payload.user_id);
-        console.log("- component_name:", payload.component_name);
-        console.log("- refresh:", payload.refresh);
-        console.log("- predata keys:", Object.keys(payload.predata));
-        console.log("- IMPORTANT: No 'data' wrapper in payload structure");
+        console.log("✅ CORRECT STRUCTURE: API needs data wrapper after all");
+        console.log("🔧 FINAL CORRECT DEBUGGING: API Request Payload Structure (v5-CORRECT):");
+        console.log("- Wrapping payload in 'data' field as API expects");
+        console.log("- data.user_id:", payload.data.user_id);
+        console.log("- data.component_name:", payload.data.component_name);
+        console.log("- data.refresh:", payload.data.refresh);
+        console.log("- data.predata keys:", Object.keys(payload.data.predata));
         console.log("API Request Payload:", payload);
         console.log("API Request Payload (stringified):", JSON.stringify(payload, null, 2));
 
