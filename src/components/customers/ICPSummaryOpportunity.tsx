@@ -156,6 +156,7 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
         setReportError(null);
         
         console.log("=== GENERATING REPORT VIA API ===");
+        console.log("🔄 API Call Timestamp:", new Date().toISOString());
         console.log("Component name:", componentName);
         console.log("Selected ICP:", selectedICP);
         
