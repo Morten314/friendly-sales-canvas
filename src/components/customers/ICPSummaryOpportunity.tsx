@@ -164,27 +164,24 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
           throw new Error("No ICP selected for report generation");
         }
 
-        console.log("=== FORCE REBUILD TRIGGER - 2025-08-19-11:25:10 ===");
+        console.log("=== API FIX ATTEMPT - 2025-08-19-11:26:30 ===");
         
-        // FINAL CORRECT FIX: API EXPECTS DATA WRAPPER - REBUILDING
-        // Prepare the API request payload - API expects data wrapper 
+        // ACTUAL FINAL FIX: API wants fields directly in body (no data wrapper)
         const payload = {
-          data: {
-            user_id: "user_123",
-            component_name: componentName,
-            refresh: true,
-            predata: selectedICP // Pass the selected ICP JSON
-          }
+          user_id: "user_123",
+          component_name: componentName,
+          refresh: true,
+          predata: selectedICP
         };
 
         console.log("🔄 API Call Timestamp:", new Date().toISOString());
-        console.log("🟢 REBUILD SUCCESS: API payload now has data wrapper");
-        console.log("🔧 FINAL STRUCTURE (v6-REBUILD):");
-        console.log("- Payload has data wrapper:", 'data' in payload);
-        console.log("- data.user_id:", payload.data.user_id);
-        console.log("- data.component_name:", payload.data.component_name);
-        console.log("- data.refresh:", payload.data.refresh);
-        console.log("- data.predata type:", typeof payload.data.predata);
+        console.log("🎯 CORRECT APPROACH: Fields directly in body (no data wrapper)");
+        console.log("🔧 FINAL PAYLOAD STRUCTURE (v7-NO-WRAPPER):");
+        console.log("- user_id:", payload.user_id);
+        console.log("- component_name:", payload.component_name); 
+        console.log("- refresh:", payload.refresh);
+        console.log("- predata type:", typeof payload.predata);
+        console.log("- No data wrapper:", !('data' in payload));
         console.log("API Request Payload:", payload);
         console.log("API Request Payload (stringified):", JSON.stringify(payload, null, 2));
 
