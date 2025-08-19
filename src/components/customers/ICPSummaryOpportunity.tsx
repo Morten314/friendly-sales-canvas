@@ -164,15 +164,22 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
           throw new Error("No ICP selected for report generation");
         }
 
-        // Prepare the API request payload - send fields directly in body
+        // Prepare the API request payload - API expects data wrapper
         const payload = {
-          user_id: "user_123",
-          component_name: componentName,
-          refresh: true,
-          predata: selectedICP // Pass the selected ICP JSON
+          data: {
+            user_id: "user_123",
+            component_name: componentName,
+            refresh: true,
+            predata: selectedICP // Pass the selected ICP JSON
+          }
         };
 
         console.log("🔄 API Call Timestamp:", new Date().toISOString());
+        console.log("🔧 DEBUGGING: API Request Payload Structure:");
+        console.log("- Has data wrapper:", 'data' in payload);
+        console.log("- Data keys:", Object.keys(payload.data));
+        console.log("- user_id:", payload.data.user_id);
+        console.log("- component_name:", payload.data.component_name);
         console.log("API Request Payload:", payload);
         console.log("API Request Payload (stringified):", JSON.stringify(payload, null, 2));
 
