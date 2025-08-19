@@ -164,19 +164,15 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
           throw new Error("No ICP selected for report generation");
         }
 
-        // Prepare the API request payload
-        const payloadData = {
+        // Prepare the API request payload - send fields directly in body
+        const payload = {
           user_id: "user_123",
           component_name: componentName,
           refresh: true,
           predata: selectedICP // Pass the selected ICP JSON
         };
 
-        // Wrap payload in "data" field as expected by API
-        const payload = {
-          data: payloadData
-        };
-
+        console.log("🔄 API Call Timestamp:", new Date().toISOString());
         console.log("API Request Payload:", payload);
         console.log("API Request Payload (stringified):", JSON.stringify(payload, null, 2));
 
