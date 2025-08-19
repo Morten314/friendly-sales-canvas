@@ -165,6 +165,7 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
         }
 
         // Prepare the API request payload - API expects data wrapper
+        // CACHE BUSTER: 2025-08-19-11:20:00
         const payload = {
           data: {
             user_id: "user_123",
@@ -175,7 +176,7 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
         };
 
         console.log("🔄 API Call Timestamp:", new Date().toISOString());
-        console.log("🔧 DEBUGGING: API Request Payload Structure:");
+        console.log("🔧 DEBUGGING: API Request Payload Structure (v2):");
         console.log("- Has data wrapper:", 'data' in payload);
         console.log("- Data keys:", Object.keys(payload.data));
         console.log("- user_id:", payload.data.user_id);
