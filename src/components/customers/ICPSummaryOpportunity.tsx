@@ -164,8 +164,10 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
           throw new Error("No ICP selected for report generation");
         }
 
-        // CORRECT FIX: API EXPECTS DATA WRAPPER - 2025-08-19-11:24:30
-        // Prepare the API request payload - API expects data wrapper after all
+        console.log("=== FORCE REBUILD TRIGGER - 2025-08-19-11:25:10 ===");
+        
+        // FINAL CORRECT FIX: API EXPECTS DATA WRAPPER - REBUILDING
+        // Prepare the API request payload - API expects data wrapper 
         const payload = {
           data: {
             user_id: "user_123",
@@ -176,13 +178,13 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
         };
 
         console.log("🔄 API Call Timestamp:", new Date().toISOString());
-        console.log("✅ CORRECT STRUCTURE: API needs data wrapper after all");
-        console.log("🔧 FINAL CORRECT DEBUGGING: API Request Payload Structure (v5-CORRECT):");
-        console.log("- Wrapping payload in 'data' field as API expects");
+        console.log("🟢 REBUILD SUCCESS: API payload now has data wrapper");
+        console.log("🔧 FINAL STRUCTURE (v6-REBUILD):");
+        console.log("- Payload has data wrapper:", 'data' in payload);
         console.log("- data.user_id:", payload.data.user_id);
         console.log("- data.component_name:", payload.data.component_name);
         console.log("- data.refresh:", payload.data.refresh);
-        console.log("- data.predata keys:", Object.keys(payload.data.predata));
+        console.log("- data.predata type:", typeof payload.data.predata);
         console.log("API Request Payload:", payload);
         console.log("API Request Payload (stringified):", JSON.stringify(payload, null, 2));
 
