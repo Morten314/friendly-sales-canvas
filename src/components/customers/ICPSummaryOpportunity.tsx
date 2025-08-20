@@ -46,6 +46,17 @@ interface SuggestedICP {
       growth: string;
       share: string;
     }>;
+    growthTrajectory?: {
+      units: string;
+      points: Array<{
+        year: number;
+        index: number;
+      }>;
+    };
+    marketShareDistribution?: Array<{
+      name: string;
+      share: string;
+    }>;
     keyChallenges: string[];
     strategicRecommendations: string[];
     signalsToMonitor: string[];
@@ -402,12 +413,100 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
         console.log("   - RESULT: Clean API call with correct structure");
 
         if (response && response.currentData) {
-          setApiReportData(response.currentData);
-          console.log("✅ Report data updated from API/Mock");
+          // Transform the API response to match frontend expectations
+          const transformedData = {
+            ...response.currentData,
+            // Ensure all required fields are present with fallbacks
+            marketSize: response.currentData.marketSize || 'N/A',
+            growth: response.currentData.growth || 'N/A',
+            urgency: response.currentData.urgency || 'N/A',
+            timeToClose: response.currentData.timeToClose || 'N/A',
+            marketAnalysis: {
+              ...response.currentData.marketAnalysis,
+              // Ensure marketAnalysis fields are present
+              totalMarketSize: response.currentData.marketAnalysis?.totalMarketSize || 'N/A',
+              marketGrowth: response.currentData.marketAnalysis?.marketGrowth || response.currentData.growth || 'N/A',
+              servicableMarket: response.currentData.marketAnalysis?.servicableMarket || 'N/A',
+              targetableMarket: response.currentData.marketAnalysis?.targetableMarket || 'N/A',
+              segments: response.currentData.marketAnalysis?.segments || [],
+              growthTrajectory: response.currentData.marketAnalysis?.growthTrajectory || {
+                units: "index(2023=100)",
+                points: [
+                  { year: 2023, index: 100 },
+                  { year: 2024, index: 103 },
+                  { year: 2025, index: 107 },
+                  { year: 2026, index: 112 }
+                ]
+              },
+              marketShareDistribution: response.currentData.marketAnalysis?.marketShareDistribution || [],
+              keyChallenges: response.currentData.marketAnalysis?.keyChallenges || [],
+              strategicRecommendations: response.currentData.marketAnalysis?.strategicRecommendations || [],
+              signalsToMonitor: response.currentData.marketAnalysis?.signalsToMonitor || []
+            },
+            competitiveData: {
+              ...response.currentData.competitiveData,
+              mainCompetitors: response.currentData.competitiveData?.mainCompetitors || [],
+              competitiveMap: response.currentData.competitiveData?.competitiveMap || [],
+              competitiveNews: response.currentData.competitiveData?.competitiveNews || [],
+              buyingSignalsData: response.currentData.competitiveData?.buyingSignalsData || []
+            },
+            buyingTriggersArray: response.currentData.buyingTriggersArray || [],
+            _metadata: {
+              ...response.currentData._metadata,
+              dataSource: 'api'
+            }
+          };
+          
+          setApiReportData(transformedData);
+          console.log("✅ Report data updated from API/Mock with transformation");
+          console.log("🔍 Transformed data structure:", transformedData);
         } else if (response && response.data) {
           // Handle case where response might have data instead of currentData
-          setApiReportData(response.data);
-          console.log("✅ Report data updated from API (data field)");
+          const transformedData = {
+            ...response.data,
+            // Apply same transformation logic
+            marketSize: response.data.marketSize || 'N/A',
+            growth: response.data.growth || 'N/A',
+            urgency: response.data.urgency || 'N/A',
+            timeToClose: response.data.timeToClose || 'N/A',
+            marketAnalysis: {
+              ...response.data.marketAnalysis,
+              totalMarketSize: response.data.marketAnalysis?.totalMarketSize || 'N/A',
+              marketGrowth: response.data.marketAnalysis?.marketGrowth || response.data.growth || 'N/A',
+              servicableMarket: response.data.marketAnalysis?.servicableMarket || 'N/A',
+              targetableMarket: response.data.marketAnalysis?.targetableMarket || 'N/A',
+              segments: response.data.marketAnalysis?.segments || [],
+              growthTrajectory: response.data.marketAnalysis?.growthTrajectory || {
+                units: "index(2023=100)",
+                points: [
+                  { year: 2023, index: 100 },
+                  { year: 2024, index: 103 },
+                  { year: 2025, index: 107 },
+                  { year: 2026, index: 112 }
+                ]
+              },
+              marketShareDistribution: response.data.marketAnalysis?.marketShareDistribution || [],
+              keyChallenges: response.data.marketAnalysis?.keyChallenges || [],
+              strategicRecommendations: response.data.marketAnalysis?.strategicRecommendations || [],
+              signalsToMonitor: response.data.marketAnalysis?.signalsToMonitor || []
+            },
+            competitiveData: {
+              ...response.data.competitiveData,
+              mainCompetitors: response.data.competitiveData?.mainCompetitors || [],
+              competitiveMap: response.data.competitiveData?.competitiveMap || [],
+              competitiveNews: response.data.competitiveData?.competitiveNews || [],
+              buyingSignalsData: response.data.competitiveData?.buyingSignalsData || []
+            },
+            buyingTriggersArray: response.data.buyingTriggersArray || [],
+            _metadata: {
+              ...response.data._metadata,
+              dataSource: 'api'
+            }
+          };
+          
+          setApiReportData(transformedData);
+          console.log("✅ Report data updated from API (data field) with transformation");
+          console.log("🔍 Transformed data structure:", transformedData);
         } else {
           console.error("❌ Invalid response format:", response);
           throw new Error("Invalid response format from API");
@@ -1149,6 +1248,25 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
   // Get current data based on active card - prioritize API data over frontend data
   const currentData = apiReportData || selectedICP;
 
+  // Debug logging to see what data is being used
+  console.log("🔍 FINAL DATA DEBUG:");
+  console.log("  - apiReportData exists:", !!apiReportData);
+  console.log("  - selectedICP exists:", !!selectedICP);
+  console.log("  - currentData source:", apiReportData ? 'API Report' : 'Selected ICP');
+  console.log("  - currentData structure:", {
+    title: currentData?.title,
+    marketSize: currentData?.marketSize,
+    growth: currentData?.growth,
+    urgency: currentData?.urgency,
+    timeToClose: currentData?.timeToClose,
+    hasMarketAnalysis: !!currentData?.marketAnalysis,
+    marketAnalysisKeys: currentData?.marketAnalysis ? Object.keys(currentData.marketAnalysis) : [],
+    totalMarketSize: currentData?.marketAnalysis?.totalMarketSize,
+    marketGrowth: currentData?.marketAnalysis?.marketGrowth,
+    servicableMarket: currentData?.marketAnalysis?.servicableMarket,
+    targetableMarket: currentData?.marketAnalysis?.targetableMarket
+  });
+
   // Filter buying signals
   const filteredBuyingSignals = useMemo(() => {
     if (!currentData?.competitiveData?.buyingSignalsData) return [];
@@ -1212,505 +1330,488 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
         </div>
       )}
 
-      {/* API Report Generation Button */}
-      {selectedICP && !apiReportData && !isLoadingReport && (
-        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <p className="text-blue-800 text-sm mb-2">Generate API-powered report for this ICP</p>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => generateReportViaAPI("icp summary & market opportunity")}
-          >
-            Generate Report
-          </Button>
-        </div>
-      )}
-
-      {/* Loading Indicator */}
+      {/* Loading Indicator - Shows in component space when ICP is selected */}
       {isLoadingReport && (
-        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <p className="text-blue-800 text-sm">🔄 Generating API report...</p>
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-blue-800 text-lg font-medium">Generating ICP Report...</p>
+            <p className="text-gray-600 text-sm mt-2">Analyzing market data and competitive landscape</p>
+          </div>
         </div>
       )}
 
-      {/* Error Banner (if any) */}
-      {/* Removed error banner as it's not directly tied to a single ICP */}
-
-      {/* ICP Summary & Market Opportunity */}
-      <div className="space-y-4">
-        <Card className="border border-gray-200">
-          <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <div>
-                <CardTitle className="text-xl font-semibold">ICP Summary & Market Opportunity</CardTitle>
-                <CardDescription className="mt-1">
-                  Overview of target customer profile and market dynamics
-                  {apiReportData && (
-                    <span className="ml-2 text-blue-600">(API Generated)</span>
-                  )}
-                </CardDescription>
-            </div>
-            {apiReportData && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => generateReportViaAPI("icp summary & market opportunity")}
-                disabled={isLoadingReport}
-              >
-                {isLoadingReport ? 'Regenerating...' : 'Regenerate Report'}
-              </Button>
-            )}
-              {/* Removed Card 1/Card 2 selection buttons */}
-          </div>
-        </CardHeader>
-          
-        <CardContent>
-            <div className="space-y-4">
-              <div>
-                <h3 className="font-semibold text-lg mb-2 flex items-center gap-2">
-                  {currentData.title}
-                  <span className={`text-xs px-2 py-1 rounded-full ${
-                    apiReportData 
-                      ? 'bg-blue-100 text-blue-700' 
-                      : currentData._metadata?.dataSource === 'api' 
-                      ? 'bg-green-100 text-green-700' 
-                      : 'bg-orange-100 text-orange-700'
-                  }`}>
-                                         {apiReportData ? (apiReportData._metadata?.dataSource === 'mock' ? 'Mock' : 'API Report') : currentData._metadata?.dataSource === 'api' ? 'API' : 'Mock'}
-                  </span>
-                </h3>
-                <p className="text-gray-600 text-sm leading-relaxed">
-                  {currentData.blurb}
-                </p>
-            </div>
-
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg">
-                  <Target className="h-5 w-5 text-blue-600" />
-                  <div>
-                    <p className="text-xs text-gray-600">Market Size</p>
-                    <p className="font-semibold text-blue-900">{currentData.marketSize}</p>
-            </div>
-            </div>
-                
-                <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg">
-                  <TrendingUp className="h-5 w-5 text-green-600" />
-                  <div>
-                    <p className="text-xs text-gray-600">Growth Rate</p>
-                    <p className="font-semibold text-green-900">{currentData.growth}</p>
-            </div>
+      {/* Show content only when not loading and we have data */}
+      {!isLoadingReport && (
+        <>
+          {/* ICP Summary & Market Opportunity */}
+          <div className="space-y-4">
+            <Card className="border border-gray-200">
+              <CardHeader className="pb-4">
+              <div className="flex items-center justify-between">
+                <div>
+                    <CardTitle className="text-xl font-semibold">ICP Summary & Market Opportunity</CardTitle>
+                    <CardDescription className="mt-1">
+                      Overview of target customer profile and market dynamics
+                      {apiReportData && (
+                        <span className="ml-2 text-blue-600">(API Generated)</span>
+                      )}
+                    </CardDescription>
                 </div>
-                
-                <div className="flex items-center gap-2 p-3 bg-orange-50 rounded-lg">
-                  <Clock className="h-5 w-5 text-orange-600" />
-                  <div>
-                    <p className="text-xs text-gray-600">Urgency</p>
-                    <p className="font-semibold text-orange-900">{currentData.urgency}</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-2 p-3 bg-purple-50 rounded-lg">
-                  <DollarSign className="h-5 w-5 text-purple-600" />
-                  <div>
-                    <p className="text-xs text-gray-600">Time to Close</p>
-                    <p className="font-semibold text-purple-900">{currentData.timeToClose}</p>
-                  </div>
-                </div>
+                {/* Removed Regenerate Report button - loading happens automatically when ICP is selected */}
               </div>
-
-              {!isMarketExpanded && (
-                <div className="flex justify-center">
-                  <Button 
-                    variant="ghost" 
-                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                    onClick={() => setIsMarketExpanded(true)}
-                  >
-                    Read More <ChevronDown className="ml-1 h-4 w-4" />
-                  </Button>
+            </CardHeader>
+              
+            <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="font-semibold text-lg mb-2 flex items-center gap-2">
+                      {currentData.title}
+                      <span className={`text-xs px-2 py-1 rounded-full ${
+                        apiReportData 
+                          ? 'bg-blue-100 text-blue-700' 
+                          : currentData._metadata?.dataSource === 'api' 
+                          ? 'bg-green-100 text-green-700' 
+                          : 'bg-orange-100 text-orange-700'
+                      }`}>
+                                         {apiReportData ? (apiReportData._metadata?.dataSource === 'mock' ? 'Mock' : 'API Report') : currentData._metadata?.dataSource === 'api' ? 'API' : 'Mock'}
+                      </span>
+                    </h3>
+                    <p className="text-gray-600 text-sm leading-relaxed">
+                      {currentData.blurb}
+                    </p>
                 </div>
-              )}
 
-          {isMarketExpanded && (
-                <div className="mt-6 space-y-8 border-t pt-6">
-                  {/* Market Size & Growth */}
-              <div>
-                    <h4 className="font-semibold text-lg mb-4">Market Size & Growth</h4>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="p-4 bg-blue-50 rounded-lg">
-                            <p className="text-sm font-medium text-blue-900">Total Market Size</p>
-                            <p className="text-2xl font-bold text-blue-600">{currentData.marketAnalysis?.totalMarketSize || 'N/A'}</p>
-                          </div>
-                          <div className="p-4 bg-green-50 rounded-lg">
-                            <p className="text-sm font-medium text-green-900">Market Growth</p>
-                            <p className="text-2xl font-bold text-green-600">{currentData.marketAnalysis?.marketGrowth || 'N/A'}</p>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="p-4 bg-purple-50 rounded-lg">
-                            <p className="text-sm font-medium text-purple-900">Serviceable Market</p>
-                            <p className="text-xl font-bold text-purple-600">{currentData.marketAnalysis?.servicableMarket || 'N/A'}</p>
-                          </div>
-                          <div className="p-4 bg-orange-50 rounded-lg">
-                            <p className="text-sm font-medium text-orange-900">Targetable Market</p>
-                            <p className="text-xl font-bold text-orange-600">{currentData.marketAnalysis?.targetableMarket || 'N/A'}</p>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="p-4 bg-gray-50 rounded-lg">
-                        <h5 className="font-medium mb-3">Market Growth Trajectory</h5>
-                        <div className="h-32">
-                <MiniLineChart 
-                  data={mockGrowthData} 
-                            title="Market Growth Trajectory"
-                            color="#3b82f6"
-                />
-                        </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg">
+                      <Target className="h-5 w-5 text-blue-600" />
+                      <div>
+                        <p className="text-xs text-gray-600">Market Size</p>
+                        <p className="font-semibold text-blue-900">{currentData.marketSize}</p>
+              </div>
+              </div>
+                    
+                    <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg">
+                      <TrendingUp className="h-5 w-5 text-green-600" />
+                      <div>
+                        <p className="text-xs text-gray-600">Growth Rate</p>
+                        <p className="font-semibold text-green-900">{currentData.growth}</p>
+              </div>
+                  </div>
+                    
+                    <div className="flex items-center gap-2 p-3 bg-orange-50 rounded-lg">
+                      <Clock className="h-5 w-5 text-orange-600" />
+                      <div>
+                        <p className="text-xs text-gray-600">Urgency</p>
+                        <p className="font-semibold text-orange-900">{currentData.urgency}</p>
                       </div>
                     </div>
-              </div>
+                    
+                    <div className="flex items-center gap-2 p-3 bg-purple-50 rounded-lg">
+                      <DollarSign className="h-5 w-5 text-purple-600" />
+                      <div>
+                        <p className="text-xs text-gray-600">Time to Close</p>
+                        <p className="font-semibold text-purple-900">{currentData.timeToClose}</p>
+                      </div>
+                    </div>
+                  </div>
 
-                  {/* Segment Breakdown */}
-              <div>
-                    <h4 className="font-semibold text-lg mb-4">Segment Breakdown</h4>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      <div className="space-y-4">
-                        {(currentData.marketAnalysis?.segments || []).map((segment: any, index: number) => (
-                          <div key={index} className="p-4 border rounded-lg">
-                            <div className="flex justify-between items-start mb-2">
-                              <h5 className="font-medium">{segment.name}</h5>
-                              <Badge variant="outline">{segment.share}</Badge>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4 text-sm">
-                              <div>
-                                <p className="text-gray-600">Market Size</p>
-                                <p className="font-semibold">{segment.size}</p>
+                  {!isMarketExpanded && (
+                    <div className="flex justify-center">
+                      <Button 
+                        variant="ghost" 
+                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                        onClick={() => setIsMarketExpanded(true)}
+                      >
+                        Read More <ChevronDown className="ml-1 h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
+
+              {isMarketExpanded && (
+                    <div className="mt-6 space-y-8 border-t pt-6">
+                      {/* Market Size & Growth */}
+                  <div>
+                        <h4 className="font-semibold text-lg mb-4">Market Size & Growth</h4>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                          <div className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="p-4 bg-blue-50 rounded-lg">
+                                <p className="text-sm font-medium text-blue-900">Total Market Size</p>
+                                <p className="text-2xl font-bold text-blue-600">{currentData.marketAnalysis?.totalMarketSize || 'N/A'}</p>
                               </div>
-                              <div>
-                                <p className="text-gray-600">Growth Rate</p>
-                                <p className="font-semibold text-green-600">{segment.growth}</p>
+                              <div className="p-4 bg-green-50 rounded-lg">
+                                <p className="text-sm font-medium text-green-900">Market Growth</p>
+                                <p className="text-2xl font-bold text-green-600">{currentData.marketAnalysis?.marketGrowth || 'N/A'}</p>
                               </div>
                             </div>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="p-4 bg-purple-50 rounded-lg">
+                                <p className="text-sm font-medium text-purple-900">Serviceable Market</p>
+                                <p className="text-xl font-bold text-purple-600">{currentData.marketAnalysis?.servicableMarket || 'N/A'}</p>
+                              </div>
+                              <div className="p-4 bg-orange-50 rounded-lg">
+                                <p className="text-sm font-medium text-orange-900">Targetable Market</p>
+                                <p className="text-xl font-bold text-orange-600">{currentData.marketAnalysis?.targetableMarket || 'N/A'}</p>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="p-4 bg-gray-50 rounded-lg">
+                            <h5 className="font-medium mb-3">Market Growth Trajectory</h5>
+                            <div className="h-32">
+                  <MiniLineChart 
+                    data={currentData.marketAnalysis?.growthTrajectory?.points?.map((point: any) => ({
+                      name: point.year.toString(),
+                      value: point.index
+                    })) || mockGrowthData} 
+                              title="Market Growth Trajectory"
+                              color="#3b82f6"
+                  />
+                            </div>
+                          </div>
+                        </div>
+                  </div>
+
+                      {/* Segment Breakdown */}
+                  <div>
+                        <h4 className="font-semibold text-lg mb-4">Segment Breakdown</h4>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                          <div className="space-y-4">
+                            {(currentData.marketAnalysis?.segments || []).map((segment: any, index: number) => (
+                              <div key={index} className="p-4 border rounded-lg">
+                                <div className="flex justify-between items-start mb-2">
+                                  <h5 className="font-medium">{segment.name}</h5>
+                                  <Badge variant="outline">{segment.share}</Badge>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4 text-sm">
+                                  <div>
+                                    <p className="text-gray-600">Market Size</p>
+                                    <p className="font-semibold">{segment.size}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-gray-600">Growth Rate</p>
+                                    <p className="font-semibold text-green-600">{segment.growth}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="p-4 bg-gray-50 rounded-lg">
+                            <h5 className="font-medium mb-3">Market Share Distribution</h5>
+                            <div className="h-48">
+                  <MiniPieChart 
+                              data={dynamicSegmentData}
+                              title="Market Share Distribution"
+                            />
+                      </div>
+                          </div>
+                    </div>
+                  </div>
+
+                      {/* Key Challenges */}
+                  <div>
+                        <h4 className="font-semibold text-lg mb-4">Key Challenges</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {(currentData.marketAnalysis?.keyChallenges || []).map((challenge: string, index: number) => (
+                            <div key={index} className="p-4 bg-red-50 rounded-lg border-l-4 border-red-400">
+                              <p className="text-sm text-red-800">{challenge}</p>
+                            </div>
+                          ))}
+                        </div>
+                  </div>
+
+                      {/* Strategic Recommendations */}
+                  <div>
+                        <h4 className="font-semibold text-lg mb-4">Strategic Recommendations</h4>
+                        <div className="space-y-3">
+                          {(currentData.marketAnalysis?.strategicRecommendations || []).map((recommendation: string, index: number) => (
+                            <div key={index} className="p-4 bg-blue-50 rounded-lg border-l-4 border-blue-400">
+                              <p className="text-sm text-blue-800">{recommendation}</p>
+                            </div>
+                          ))}
+                        </div>
+                  </div>
+
+                      {/* Signals to Monitor */}
+                  <div>
+                        <h4 className="font-semibold text-lg mb-4">Signals to Monitor</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {(currentData.marketAnalysis?.signalsToMonitor || []).map((signal: string, index: number) => (
+                            <div key={index} className="p-4 bg-yellow-50 rounded-lg border-l-4 border-yellow-400">
+                              <p className="text-sm text-yellow-800">{signal}</p>
+                            </div>
+                          ))}
+                        </div>
+                    </div>
+
+                    <div className="flex justify-center gap-3 pt-4 border-t">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => generateReport('save')}
+                        disabled={reportGenerating}
+                      >
+                        {reportGenerating ? 'Generating...' : 'Save Report'}
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => generateReport('pdf')}
+                        disabled={reportGenerating}
+                      >
+                        {reportGenerating ? 'Generating...' : 'Export PDF'}
+                      </Button>
+                    </div>
+                    
+                    <div className="flex justify-center pt-4">
+                      <Button 
+                        variant="ghost" 
+                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                        onClick={() => setIsMarketExpanded(false)}
+                      >
+                        Show Less <ChevronUp className="ml-1 h-4 w-4" />
+                      </Button>
+                    </div>
+              </div>
+            )}
+              </div>
+          </CardContent>
+        </Card>
+        </div>
+
+        {/* Buyer Map & Roles, Pain Points, Triggers */}
+        <div className="space-y-4">
+          <Card className="border border-gray-200">
+            <CardHeader className="pb-4">
+            <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-xl font-semibold">Buyer Map & Roles, Pain Points, Triggers</CardTitle>
+                  <CardDescription className="mt-1">
+                    Key stakeholders, challenges, and purchase catalysts
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <p className="text-gray-600 text-sm leading-relaxed">
+                    Primary decision makers include CTOs focused on infrastructure modernization and Heads of Digital 
+                    driving customer experience improvements. Key pain points center around legacy system constraints 
+                    and regulatory compliance complexity, with funding rounds and competitive pressures serving as 
+                    primary buying triggers.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg">
+                    <User className="h-5 w-5 text-blue-600" />
+                    <div>
+                      <p className="text-xs text-gray-600"># of core buyer personas</p>
+                      <p className="font-semibold text-blue-900">{currentData.corePersonas}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 p-3 bg-red-50 rounded-lg">
+                    <Flame className="h-5 w-5 text-red-600" />
+                    <div>
+                      <p className="text-xs text-gray-600">Top pain point</p>
+                      <p className="font-semibold text-red-900">{currentData.topPainPoint}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 p-3 bg-yellow-50 rounded-lg">
+                    <Zap className="h-5 w-5 text-yellow-600" />
+                    <div>
+                      <p className="text-xs text-gray-600"># of buying triggers identified</p>
+                      <p className="font-semibold text-yellow-900">{currentData.buyingTriggers}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {!isBuyerMapExpanded && (
+                  <div className="flex justify-center">
+                    <Button 
+                      variant="ghost" 
+                      className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                      onClick={() => setIsBuyerMapExpanded(true)}
+                    >
+                      Read More <ChevronDown className="ml-1 h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+
+            {isBuyerMapExpanded && (
+                  <div className="mt-6 space-y-6 border-t pt-6">
+                    <div>
+                      <h4 className="font-semibold mb-4">Buying Triggers</h4>
+                      <div className="overflow-x-auto">
+                        <table className="w-full border-collapse border border-gray-300">
+                          <thead>
+                            <tr className="bg-gray-50">
+                              <th className="border border-gray-300 px-4 py-2 text-left text-sm font-medium">Trigger</th>
+                              <th className="border border-gray-300 px-4 py-2 text-left text-sm font-medium">Description</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(currentData.buyingTriggersArray || []).map((trigger: any, index: number) => (
+                              <tr key={index}>
+                                <td className="border border-gray-300 px-4 py-2 text-sm font-medium">{trigger.trigger}</td>
+                                <td className="border border-gray-300 px-4 py-2 text-sm">{trigger.description}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                    </div>
+                    </div>
+
+                    <div className="flex justify-center gap-3 pt-4 border-t">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => generateReport('save')}
+                        disabled={reportGenerating}
+                      >
+                        {reportGenerating ? 'Generating...' : 'Save Report'}
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => generateReport('pdf')}
+                        disabled={reportGenerating}
+                      >
+                        {reportGenerating ? 'Generating...' : 'Export PDF'}
+                      </Button>
+                    </div>
+                    
+                    <div className="flex justify-center pt-4">
+                      <Button 
+                        variant="ghost" 
+                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                        onClick={() => setIsBuyerMapExpanded(false)}
+                      >
+                        Show Less <ChevronUp className="ml-1 h-4 w-4" />
+                      </Button>
+                    </div>
+              </div>
+            )}
+              </div>
+          </CardContent>
+        </Card>
+        </div>
+
+        {/* Competitive Overlap & Buying Signals */}
+        <div className="space-y-4">
+          <Card className="border border-gray-200">
+            <CardHeader className="pb-4">
+            <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-xl font-semibold">Competitive Overlap & Buying Signals</CardTitle>
+                  <CardDescription className="mt-1">
+                    Competitive landscape analysis and market signals
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <p className="text-gray-600 text-sm leading-relaxed">
+                    Key competitors include {(currentData.competitiveData?.mainCompetitors || []).slice(0, 2).join(" and ")} dominating 
+                    the established market, while cloud-native solutions gain traction. Recent market signals show increased 
+                    funding activity and regulatory-driven technology investments creating new opportunities.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="flex items-center gap-2 p-3 bg-red-50 rounded-lg">
+                    <Swords className="h-5 w-5 text-red-600" />
+                    <div>
+                      <p className="text-xs text-gray-600">Number of main competitors</p>
+                      <p className="font-semibold text-red-900">{currentData.competitors}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg">
+                    <TrendingUp className="h-5 w-5 text-green-600" />
+                    <div>
+                      <p className="text-xs text-gray-600">Notable recent win/loss % change</p>
+                      <p className="font-semibold text-green-900">{currentData.winLossChange}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 p-3 bg-orange-50 rounded-lg">
+                    <Flame className="h-5 w-5 text-orange-600" />
+                    <div>
+                      <p className="text-xs text-gray-600">Count of active buying signals</p>
+                      <p className="font-semibold text-orange-900">{currentData.buyingSignals}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {!isCompetitiveExpanded && (
+                  <div className="flex justify-center">
+                    <Button 
+                      variant="ghost" 
+                      className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                      onClick={() => setIsCompetitiveExpanded(true)}
+                    >
+                      Read More <ChevronDown className="ml-1 h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+
+            {isCompetitiveExpanded && (
+                  <div className="mt-6 space-y-6 border-t pt-6">
+                    <div>
+                      <h4 className="font-semibold mb-4">Competitive Map</h4>
+                      <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                            <TableRow className="bg-gray-50">
+                              <TableHead className="font-medium">Competitor</TableHead>
+                              <TableHead className="font-medium">Segment</TableHead>
+                              <TableHead className="font-medium">Share</TableHead>
+                              <TableHead className="font-medium">Wins/Losses</TableHead>
+                              <TableHead className="font-medium">Differentiators</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                            {(currentData.competitiveData?.competitiveMap || []).map((competitor: any, index: number) => (
+                              <TableRow key={index}>
+                                <TableCell className="font-medium">{competitor.competitor}</TableCell>
+                                <TableCell>{competitor.segment}</TableCell>
+                                <TableCell>{competitor.share}</TableCell>
+                                <TableCell>{competitor.winsLosses}</TableCell>
+                                <TableCell>{competitor.differentiators}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="font-semibold mb-4">Competitive News & Events</h4>
+                      <div className="space-y-2">
+                        {(currentData.competitiveData?.competitiveNews || []).map((newsItem, index: number) => (
+                          <div key={index} className="p-3 bg-gray-50 rounded-lg">
+                            <p className="text-sm text-gray-700">"{newsItem.headline}"</p>
+                            <p className="text-xs text-gray-500 mt-1">{newsItem.competitor} • {newsItem.date}</p>
                           </div>
                         ))}
-                      </div>
-                      <div className="p-4 bg-gray-50 rounded-lg">
-                        <h5 className="font-medium mb-3">Market Share Distribution</h5>
-                        <div className="h-48">
-                <MiniPieChart 
-                            data={dynamicSegmentData}
-                            title="Market Share Distribution"
-                          />
-                    </div>
-                      </div>
                 </div>
-              </div>
-
-                  {/* Key Challenges */}
-              <div>
-                    <h4 className="font-semibold text-lg mb-4">Key Challenges</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {(currentData.marketAnalysis?.keyChallenges || []).map((challenge: string, index: number) => (
-                        <div key={index} className="p-4 bg-red-50 rounded-lg border-l-4 border-red-400">
-                          <p className="text-sm text-red-800">{challenge}</p>
-                        </div>
-                      ))}
-                    </div>
-              </div>
-
-                  {/* Strategic Recommendations */}
-              <div>
-                    <h4 className="font-semibold text-lg mb-4">Strategic Recommendations</h4>
-                    <div className="space-y-3">
-                      {(currentData.marketAnalysis?.strategicRecommendations || []).map((recommendation: string, index: number) => (
-                        <div key={index} className="p-4 bg-blue-50 rounded-lg border-l-4 border-blue-400">
-                          <p className="text-sm text-blue-800">{recommendation}</p>
-                        </div>
-                      ))}
-                    </div>
-              </div>
-
-                  {/* Signals to Monitor */}
-              <div>
-                    <h4 className="font-semibold text-lg mb-4">Signals to Monitor</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {(currentData.marketAnalysis?.signalsToMonitor || []).map((signal: string, index: number) => (
-                        <div key={index} className="p-4 bg-yellow-50 rounded-lg border-l-4 border-yellow-400">
-                          <p className="text-sm text-yellow-800">{signal}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="flex justify-center gap-3 pt-4 border-t">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => generateReport('save')}
-                      disabled={reportGenerating}
-                    >
-                      {reportGenerating ? 'Generating...' : 'Save Report'}
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => generateReport('pdf')}
-                      disabled={reportGenerating}
-                    >
-                      {reportGenerating ? 'Generating...' : 'Export PDF'}
-                    </Button>
-                  </div>
-                  
-                  <div className="flex justify-center pt-4">
-                    <Button 
-                      variant="ghost" 
-                      className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                      onClick={() => setIsMarketExpanded(false)}
-                    >
-                      Show Less <ChevronUp className="ml-1 h-4 w-4" />
-                    </Button>
-                  </div>
             </div>
-          )}
-            </div>
-        </CardContent>
-      </Card>
-      </div>
 
-      {/* Buyer Map & Roles, Pain Points, Triggers */}
-      <div className="space-y-4">
-        <Card className="border border-gray-200">
-          <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-xl font-semibold">Buyer Map & Roles, Pain Points, Triggers</CardTitle>
-                <CardDescription className="mt-1">
-                  Key stakeholders, challenges, and purchase catalysts
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          
-          <CardContent>
-            <div className="space-y-4">
-              <div>
-                <p className="text-gray-600 text-sm leading-relaxed">
-                  Primary decision makers include CTOs focused on infrastructure modernization and Heads of Digital 
-                  driving customer experience improvements. Key pain points center around legacy system constraints 
-                  and regulatory compliance complexity, with funding rounds and competitive pressures serving as 
-                  primary buying triggers.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg">
-                  <User className="h-5 w-5 text-blue-600" />
-                  <div>
-                    <p className="text-xs text-gray-600"># of core buyer personas</p>
-                    <p className="font-semibold text-blue-900">{currentData.corePersonas}</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-2 p-3 bg-red-50 rounded-lg">
-                  <Flame className="h-5 w-5 text-red-600" />
-                  <div>
-                    <p className="text-xs text-gray-600">Top pain point</p>
-                    <p className="font-semibold text-red-900">{currentData.topPainPoint}</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-2 p-3 bg-yellow-50 rounded-lg">
-                  <Zap className="h-5 w-5 text-yellow-600" />
-                  <div>
-                    <p className="text-xs text-gray-600"># of buying triggers identified</p>
-                    <p className="font-semibold text-yellow-900">{currentData.buyingTriggers}</p>
-                  </div>
-                </div>
-              </div>
-
-              {!isBuyerMapExpanded && (
-                <div className="flex justify-center">
-                  <Button 
-                    variant="ghost" 
-                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                    onClick={() => setIsBuyerMapExpanded(true)}
-                  >
-                    Read More <ChevronDown className="ml-1 h-4 w-4" />
-                  </Button>
-                </div>
-              )}
-
-          {isBuyerMapExpanded && (
-                <div className="mt-6 space-y-6 border-t pt-6">
-                  <div>
-                    <h4 className="font-semibold mb-4">Buying Triggers</h4>
-                    <div className="overflow-x-auto">
-                      <table className="w-full border-collapse border border-gray-300">
-                        <thead>
-                          <tr className="bg-gray-50">
-                            <th className="border border-gray-300 px-4 py-2 text-left text-sm font-medium">Trigger</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left text-sm font-medium">Description</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {(currentData.buyingTriggersArray || []).map((trigger: any, index: number) => (
-                            <tr key={index}>
-                              <td className="border border-gray-300 px-4 py-2 text-sm font-medium">{trigger.trigger}</td>
-                              <td className="border border-gray-300 px-4 py-2 text-sm">{trigger.description}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                  </div>
-                  </div>
-
-                  <div className="flex justify-center gap-3 pt-4 border-t">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => generateReport('save')}
-                      disabled={reportGenerating}
-                    >
-                      {reportGenerating ? 'Generating...' : 'Save Report'}
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => generateReport('pdf')}
-                      disabled={reportGenerating}
-                    >
-                      {reportGenerating ? 'Generating...' : 'Export PDF'}
-                    </Button>
-                  </div>
-                  
-                  <div className="flex justify-center pt-4">
-                    <Button 
-                      variant="ghost" 
-                      className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                      onClick={() => setIsBuyerMapExpanded(false)}
-                    >
-                      Show Less <ChevronUp className="ml-1 h-4 w-4" />
-                    </Button>
-                  </div>
-            </div>
-          )}
-            </div>
-        </CardContent>
-      </Card>
-      </div>
-
-      {/* Competitive Overlap & Buying Signals */}
-      <div className="space-y-4">
-        <Card className="border border-gray-200">
-          <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-xl font-semibold">Competitive Overlap & Buying Signals</CardTitle>
-                <CardDescription className="mt-1">
-                  Competitive landscape analysis and market signals
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          
-          <CardContent>
-            <div className="space-y-4">
-              <div>
-                <p className="text-gray-600 text-sm leading-relaxed">
-                  Key competitors include {(currentData.competitiveData?.mainCompetitors || []).slice(0, 2).join(" and ")} dominating 
-                  the established market, while cloud-native solutions gain traction. Recent market signals show increased 
-                  funding activity and regulatory-driven technology investments creating new opportunities.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="flex items-center gap-2 p-3 bg-red-50 rounded-lg">
-                  <Swords className="h-5 w-5 text-red-600" />
-                  <div>
-                    <p className="text-xs text-gray-600">Number of main competitors</p>
-                    <p className="font-semibold text-red-900">{currentData.competitors}</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg">
-                  <TrendingUp className="h-5 w-5 text-green-600" />
-                  <div>
-                    <p className="text-xs text-gray-600">Notable recent win/loss % change</p>
-                    <p className="font-semibold text-green-900">{currentData.winLossChange}</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-2 p-3 bg-orange-50 rounded-lg">
-                  <Flame className="h-5 w-5 text-orange-600" />
-                  <div>
-                    <p className="text-xs text-gray-600">Count of active buying signals</p>
-                    <p className="font-semibold text-orange-900">{currentData.buyingSignals}</p>
-                  </div>
-                </div>
-              </div>
-
-              {!isCompetitiveExpanded && (
-                <div className="flex justify-center">
-                  <Button 
-                    variant="ghost" 
-                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                    onClick={() => setIsCompetitiveExpanded(true)}
-                  >
-                    Read More <ChevronDown className="ml-1 h-4 w-4" />
-                  </Button>
-                </div>
-              )}
-
-          {isCompetitiveExpanded && (
-                <div className="mt-6 space-y-6 border-t pt-6">
-                  <div>
-                    <h4 className="font-semibold mb-4">Competitive Map</h4>
-                    <div className="border rounded-lg overflow-hidden">
-              <Table>
-                <TableHeader>
-                          <TableRow className="bg-gray-50">
-                            <TableHead className="font-medium">Competitor</TableHead>
-                            <TableHead className="font-medium">Segment</TableHead>
-                            <TableHead className="font-medium">Share</TableHead>
-                            <TableHead className="font-medium">Wins/Losses</TableHead>
-                            <TableHead className="font-medium">Differentiators</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                          {(currentData.competitiveData?.competitiveMap || []).map((competitor: any, index: number) => (
-                            <TableRow key={index}>
-                              <TableCell className="font-medium">{competitor.competitor}</TableCell>
-                              <TableCell>{competitor.segment}</TableCell>
-                              <TableCell>{competitor.share}</TableCell>
-                              <TableCell>{competitor.winsLosses}</TableCell>
-                              <TableCell>{competitor.differentiators}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h4 className="font-semibold mb-4">Competitive News & Events</h4>
-                    <div className="space-y-2">
-                      {(currentData.competitiveData?.competitiveNews || []).map((newsItem, index: number) => (
-                        <div key={index} className="p-3 bg-gray-50 rounded-lg">
-                          <p className="text-sm text-gray-700">"{newsItem.headline}"</p>
-                          <p className="text-xs text-gray-500 mt-1">{newsItem.competitor} • {newsItem.date}</p>
-                        </div>
-                      ))}
-              </div>
-          </div>
-
-            <div>
-                    <h4 className="font-semibold mb-4">Buying Signals</h4>
-                    
-                    <div className="flex gap-4 mb-4">
-            <div className="flex items-center gap-2">
-                        <Filter className="h-4 w-4 text-gray-500" />
-              <Select value={signalRegionFilter} onValueChange={setSignalRegionFilter}>
+                      <h4 className="font-semibold mb-4">Buying Signals</h4>
+                      
+                      <div className="flex gap-4 mb-4">
+              <div className="flex items-center gap-2">
+                          <Filter className="h-4 w-4 text-gray-500" />
+                <Select value={signalRegionFilter} onValueChange={setSignalRegionFilter}>
                           <SelectTrigger className="w-40">
                             <SelectValue placeholder="Region" />
                 </SelectTrigger>
@@ -1798,136 +1899,138 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
             </div>
           </CardContent>
         </Card>
-      </div>
+        </div>
 
-      {/* Regulatory, Compliance & Recommended ICP */}
-      <div className="space-y-4">
-        <Card className="border border-gray-200">
-          <CardHeader className="pb-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-xl font-semibold">Regulatory, Compliance & Recommended ICP</CardTitle>
-                <CardDescription className="mt-1">
-                  Regulatory frameworks, compliance requirements, and ICP refinement recommendations
-                </CardDescription>
+        {/* Regulatory, Compliance & Recommended ICP */}
+        <div className="space-y-4">
+          <Card className="border border-gray-200">
+            <CardHeader className="pb-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-xl font-semibold">Regulatory, Compliance & Recommended ICP</CardTitle>
+                  <CardDescription className="mt-1">
+                    Regulatory frameworks, compliance requirements, and ICP refinement recommendations
+                  </CardDescription>
+              </div>
             </div>
-          </div>
-        </CardHeader>
-          
-        <CardContent>
-            <div className="space-y-4">
-              <div>
-                <p className="text-gray-600 text-sm leading-relaxed">
-                  Companies in this segment face increasing compliance requirements, especially around cloud-hosted data and regulatory frameworks. 
-                  This section recommends refining your ICP to reflect these regulatory triggers and market dynamics.
-                </p>
-              </div>
+          </CardHeader>
+            
+          <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <p className="text-gray-600 text-sm leading-relaxed">
+                    Companies in this segment face increasing compliance requirements, especially around cloud-hosted data and regulatory frameworks. 
+                    This section recommends refining your ICP to reflect these regulatory triggers and market dynamics.
+                  </p>
+                </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg">
-                  <Shield className="h-5 w-5 text-blue-600" />
-                  <div>
-                    <p className="text-xs text-gray-600">Key Compliance Frameworks</p>
-                    <p className="font-semibold text-blue-900">GDPR, Industry Standards</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-2 p-3 bg-orange-50 rounded-lg">
-                  <Calendar className="h-5 w-5 text-orange-600" />
-                  <div>
-                    <p className="text-xs text-gray-600">Upcoming Mandates</p>
-                    <p className="font-semibold text-orange-900">Q4 2025 Updates</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-2 p-3 bg-purple-50 rounded-lg">
-                  <Brain className="h-5 w-5 text-purple-600" />
-                  <div>
-                    <p className="text-xs text-gray-600">ICP Fit Score</p>
-                    <p className="font-semibold text-purple-900">92% match</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                  <div>
-                    <p className="text-xs text-gray-600">Recommendation Confidence</p>
-                    <p className="font-semibold text-green-900">High</p>
-                  </div>
-                </div>
-              </div>
-
-              {!isRegulatoryExpanded && (
-                <div className="flex justify-center">
-                  <Button 
-                    variant="ghost" 
-                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                    onClick={() => setIsRegulatoryExpanded(true)}
-                  >
-                    Read More <ChevronDown className="ml-1 h-4 w-4" />
-                  </Button>
-                </div>
-              )}
-
-              {isRegulatoryExpanded && (
-                <div className="mt-6 space-y-8 border-t pt-6">
-                  {/* ICP Refinement Recommendations */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg">
+                    <Shield className="h-5 w-5 text-blue-600" />
                     <div>
-                    <h4 className="font-semibold text-lg mb-4">ICP Refinement Recommendations</h4>
-                    <div className="space-y-4">
-                      <div className="p-4 bg-blue-50 rounded-lg border-l-4 border-blue-400">
-                        <h5 className="font-medium text-blue-800 mb-2">Target High-Compliance Organizations</h5>
-                        <p className="text-sm text-blue-700">Focus on companies that have already invested in compliance infrastructure and understand regulatory complexity</p>
+                      <p className="text-xs text-gray-600">Key Compliance Frameworks</p>
+                      <p className="font-semibold text-blue-900">GDPR, Industry Standards</p>
                     </div>
-                      <div className="p-4 bg-blue-50 rounded-lg border-l-4 border-blue-400">
-                        <h5 className="font-medium text-blue-800 mb-2">Prioritize Multi-Jurisdiction Players</h5>
-                        <p className="text-sm text-blue-700">Companies operating across multiple regions face the highest compliance burden and need comprehensive solutions</p>
-                  </div>
-                      <div className="p-4 bg-blue-50 rounded-lg border-l-4 border-blue-400">
-                        <h5 className="font-medium text-blue-800 mb-2">Focus on Cloud-First Organizations</h5>
-                        <p className="text-sm text-blue-700">Target companies already committed to cloud infrastructure who need compliance-ready solutions</p>
-                      </div>
-                      <div className="p-4 bg-blue-50 rounded-lg border-l-4 border-blue-400">
-                        <h5 className="font-medium text-blue-800 mb-2">Emphasize Audit-Ready Capabilities</h5>
-                        <p className="text-sm text-blue-700">Position solutions that provide built-in audit trails and compliance reporting features</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-center gap-3 pt-4 border-t">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => generateReport('save')}
-                      disabled={reportGenerating}
-                    >
-                      {reportGenerating ? 'Generating...' : 'Save Report'}
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => generateReport('pdf')}
-                      disabled={reportGenerating}
-                    >
-                      {reportGenerating ? 'Generating...' : 'Export PDF'}
-                    </Button>
                   </div>
                   
-                  <div className="flex justify-center pt-4">
+                  <div className="flex items-center gap-2 p-3 bg-orange-50 rounded-lg">
+                    <Calendar className="h-5 w-5 text-orange-600" />
+                    <div>
+                      <p className="text-xs text-gray-600">Upcoming Mandates</p>
+                      <p className="font-semibold text-orange-900">Q4 2025 Updates</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 p-3 bg-purple-50 rounded-lg">
+                    <Brain className="h-5 w-5 text-purple-600" />
+                    <div>
+                      <p className="text-xs text-gray-600">ICP Fit Score</p>
+                      <p className="font-semibold text-purple-900">92% match</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    <div>
+                      <p className="text-xs text-gray-600">Recommendation Confidence</p>
+                      <p className="font-semibold text-green-900">High</p>
+                    </div>
+                  </div>
+                </div>
+
+                {!isRegulatoryExpanded && (
+                  <div className="flex justify-center">
                     <Button 
                       variant="ghost" 
                       className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                      onClick={() => setIsRegulatoryExpanded(false)}
+                      onClick={() => setIsRegulatoryExpanded(true)}
                     >
-                      Show Less <ChevronUp className="ml-1 h-4 w-4" />
+                      Read More <ChevronDown className="ml-1 h-4 w-4" />
                     </Button>
                   </div>
-                </div>
-              )}
-            </div>
-        </CardContent>
-      </Card>
-      </div>
+                )}
+
+                {isRegulatoryExpanded && (
+                  <div className="mt-6 space-y-8 border-t pt-6">
+                    {/* ICP Refinement Recommendations */}
+                      <div>
+                      <h4 className="font-semibold text-lg mb-4">ICP Refinement Recommendations</h4>
+                      <div className="space-y-4">
+                        <div className="p-4 bg-blue-50 rounded-lg border-l-4 border-blue-400">
+                          <h5 className="font-medium text-blue-800 mb-2">Target High-Compliance Organizations</h5>
+                          <p className="text-sm text-blue-700">Focus on companies that have already invested in compliance infrastructure and understand regulatory complexity</p>
+                      </div>
+                        <div className="p-4 bg-blue-50 rounded-lg border-l-4 border-blue-400">
+                          <h5 className="font-medium text-blue-800 mb-2">Prioritize Multi-Jurisdiction Players</h5>
+                          <p className="text-sm text-blue-700">Companies operating across multiple regions face the highest compliance burden and need comprehensive solutions</p>
+                    </div>
+                        <div className="p-4 bg-blue-50 rounded-lg border-l-4 border-blue-400">
+                          <h5 className="font-medium text-blue-800 mb-2">Focus on Cloud-First Organizations</h5>
+                          <p className="text-sm text-blue-700">Target companies already committed to cloud infrastructure who need compliance-ready solutions</p>
+                        </div>
+                        <div className="p-4 bg-blue-50 rounded-lg border-l-4 border-blue-400">
+                          <h5 className="font-medium text-blue-800 mb-2">Emphasize Audit-Ready Capabilities</h5>
+                          <p className="text-sm text-blue-700">Position solutions that provide built-in audit trails and compliance reporting features</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-center gap-3 pt-4 border-t">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => generateReport('save')}
+                        disabled={reportGenerating}
+                      >
+                        {reportGenerating ? 'Generating...' : 'Save Report'}
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => generateReport('pdf')}
+                        disabled={reportGenerating}
+                      >
+                        {reportGenerating ? 'Generating...' : 'Export PDF'}
+                      </Button>
+                    </div>
+                    
+                    <div className="flex justify-center pt-4">
+                      <Button 
+                        variant="ghost" 
+                        className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                        onClick={() => setIsRegulatoryExpanded(false)}
+                      >
+                        Show Less <ChevronUp className="ml-1 h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+          </CardContent>
+        </Card>
+        </div>
+      </>
+      )}
     </div>
   );
   
