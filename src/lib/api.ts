@@ -12,7 +12,7 @@ export const buildApiUrl = (endpoint: string): string => {
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
   
   // Special handling for research endpoints - use direct backend URL
-  if (endpoint === 'icp-research' || endpoint === 'research') {
+  if (cleanEndpoint.startsWith('icp-research') || cleanEndpoint.startsWith('research')) {
     return `https://backend-11kr.onrender.com/${cleanEndpoint}`;
   }
   
@@ -23,12 +23,23 @@ export const buildApiUrl = (endpoint: string): string => {
 export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
   const url = buildApiUrl(endpoint);
   
+  // Handle body stringification for JSON requests
+  let processedBody = options.body;
+  if (options.body && typeof options.body === 'object' && !(options.body instanceof FormData)) {
+    console.log('🔧 API Fetch: Converting object body to JSON string');
+    processedBody = JSON.stringify(options.body);
+    console.log('🔧 API Fetch: Body type after processing:', typeof processedBody);
+  } else {
+    console.log('🔧 API Fetch: Body type:', typeof options.body);
+  }
+  
   const defaultOptions: RequestInit = {
     headers: {
       'Content-Type': 'application/json',
       ...options.headers,
     },
     ...options,
+    body: processedBody,
   };
 
   console.log(`🌐 API Request: ${defaultOptions.method || 'GET'} ${url}`);
