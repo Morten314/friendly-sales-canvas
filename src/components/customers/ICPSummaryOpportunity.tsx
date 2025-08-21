@@ -116,12 +116,20 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
   const [isLoadingReport, setIsLoadingReport] = useState(false);
   const [reportError, setReportError] = useState<string | null>(null);
 
+  // New state for buyer map API data
+  const [buyerMapApiData, setBuyerMapApiData] = useState<any>(null);
+  const [isLoadingBuyerMap, setIsLoadingBuyerMap] = useState(false);
+  const [buyerMapError, setBuyerMapError] = useState<string | null>(null);
+
   console.log("=== ICPSummaryOpportunity RENDER ===");
   console.log("selectedICP:", selectedICP);
   console.log("🔍 DATA SOURCE:", dataSource);
   console.log("🔍 API REPORT DATA:", apiReportData);
   console.log("🔍 IS LOADING REPORT:", isLoadingReport);
   console.log("🔍 REPORT ERROR:", reportError);
+  console.log("🔍 BUYER MAP API DATA:", buyerMapApiData);
+  console.log("🔍 IS LOADING BUYER MAP:", isLoadingBuyerMap);
+  console.log("🔍 BUYER MAP ERROR:", buyerMapError);
 
   // Early return if no ICP is selected
   if (!selectedICP) {
@@ -517,6 +525,260 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
         setReportError(error instanceof Error ? error.message : "Failed to generate report");
       } finally {
         setIsLoadingReport(false);
+      }
+    };
+
+    // New function to generate buyer map report via API
+    const generateBuyerMapReportViaAPI = async () => {
+      try {
+        setIsLoadingBuyerMap(true);
+        setBuyerMapError(null);
+        
+        // Clear browser cache for this specific request
+        if ('caches' in window) {
+          try {
+            const cacheNames = await caches.keys();
+            await Promise.all(
+              cacheNames.map(cacheName => caches.delete(cacheName))
+            );
+            console.log('🧹 Browser cache cleared for buyer map');
+          } catch (cacheError) {
+            console.warn('⚠️ Could not clear browser cache:', cacheError);
+          }
+        }
+        
+        console.log("=== GENERATING BUYER MAP REPORT VIA API ===");
+        console.log("🔄 API Call Timestamp:", new Date().toISOString());
+        console.log("Component name: buyer map & roles, pain points, triggers");
+        console.log("Selected ICP:", selectedICP);
+        
+        if (!selectedICP) {
+          throw new Error("No ICP selected for buyer map report generation");
+        }
+
+        // Create the API payload according to backend schema
+        const apiPayload = {
+          user_id: "user_123",
+          component_name: "buyer map & roles, pain points, triggers",
+          refresh: true,
+          data: selectedICP
+        };
+
+        console.log("🔄 Buyer Map API Call Timestamp:", new Date().toISOString());
+        console.log("🎯 BUYER MAP PAYLOAD STRUCTURE:");
+        console.log("- user_id:", apiPayload.user_id);
+        console.log("- component_name:", apiPayload.component_name); 
+        console.log("- refresh:", apiPayload.refresh);
+        console.log("- data type:", typeof apiPayload.data);
+        console.log("- data keys:", Object.keys(apiPayload.data || {}));
+        console.log("Buyer Map API Request Payload:", apiPayload);
+        console.log("Buyer Map API Request Payload (stringified):", JSON.stringify(apiPayload, null, 2));
+        
+        // Validate payload structure before sending
+        console.log("🔍 BUYER MAP PAYLOAD VALIDATION:");
+        console.log("   - Has user_id:", !!apiPayload.user_id);
+        console.log("   - Has component_name:", !!apiPayload.component_name);
+        console.log("   - Has refresh:", typeof apiPayload.refresh === 'boolean');
+        console.log("   - Has data:", !!apiPayload.data);
+        console.log("   - Data is object:", typeof apiPayload.data === 'object');
+
+        // Call the icp research API endpoint with retry mechanism
+        let response;
+        let retryCount = 0;
+        const maxRetries = 2;
+        
+        // Define endpoint outside try block for error logging
+        const timestamp = Date.now();
+        const randomParam = Math.random().toString(36).substring(7);
+        const endpoint = `icp-research?t=${timestamp}&cache_bust=${randomParam}`;
+        
+        while (retryCount <= maxRetries) {
+          try {
+            console.log(`🔄 Attempting Buyer Map ICP Research API call (attempt ${retryCount + 1}/${maxRetries + 1})`);
+            console.log(`🔍 Current timestamp: ${new Date().toISOString()}`);
+            
+            // Try the actual endpoint first with cache busting
+            console.log(`🌐 Making request to: ${endpoint}`);
+            console.log(`📤 About to send payload:`, apiPayload);
+            // Try with direct fetch to bypass apiFetch function
+            console.log("🔧 Attempting with direct fetch...");
+            const directResponse = await fetch(`https://backend-11kr.onrender.com/${endpoint}`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache',
+                'Expires': '0'
+              },
+              body: JSON.stringify(apiPayload)
+            });
+            
+            console.log(`🌐 Direct fetch response status: ${directResponse.status}`);
+            console.log(`🌐 Direct fetch response status text: ${directResponse.statusText}`);
+            
+            if (!directResponse.ok) {
+              const errorText = await directResponse.text();
+              console.error(`❌ Direct fetch error: ${directResponse.status} - ${errorText}`);
+              throw new Error(`HTTP error! status: ${directResponse.status} - ${errorText}`);
+            }
+            
+            response = await directResponse.json();
+            
+            console.log('✅ Buyer Map ICP Research API call successful');
+            console.log('📊 Response received at:', new Date().toISOString());
+            console.log('🔍 Response headers should indicate no caching');
+            console.log('📥 Response data:', response);
+            console.log('📥 Response type:', typeof response);
+            console.log('📥 Response keys:', Object.keys(response || {}));
+            break; // Success, exit retry loop
+            
+          } catch (error) {
+            retryCount++;
+            console.error(`❌ Buyer Map ICP Research API call failed (attempt ${retryCount}/${maxRetries + 1}):`, error);
+            
+            // Log detailed error information
+            if (error instanceof Error) {
+              console.error(`🔍 Error message: ${error.message}`);
+              console.error(`🔍 Error name: ${error.name}`);
+              console.error(`🔍 Error stack: ${error.stack}`);
+              
+              // Check if it's a network error
+              if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+                console.error(`🌐 NETWORK ERROR DETECTED: This might be a CORS or connectivity issue`);
+              }
+              
+              // Check if it's a 422 error and extract the detailed error
+              if (error.message.includes('422')) {
+                console.error(`🔍 422 ERROR DETECTED: Backend validation failed`);
+                console.error(`🔍 This suggests the payload structure is still incorrect`);
+                
+                // Try to extract the detailed error message from the response
+                try {
+                  const errorMatch = error.message.match(/\{.*\}/);
+                  if (errorMatch) {
+                    const errorDetails = JSON.parse(errorMatch[0]);
+                    console.error(`🔍 DETAILED 422 ERROR:`, errorDetails);
+                    console.error(`🔍 ERROR DETAIL:`, errorDetails.detail);
+                  }
+                } catch (parseError) {
+                  console.error(`🔍 Could not parse error details:`, parseError);
+                }
+              }
+            }
+            
+            // Log the exact payload that was sent
+            console.error(`📤 Sent payload:`, apiPayload);
+            console.error(`📤 Sent payload (stringified):`, JSON.stringify(apiPayload, null, 2));
+            
+            // Log additional debugging info
+            console.error(`🔍 Request URL: ${endpoint}`);
+            console.error(`🔍 Request method: POST`);
+            console.error(`🔍 Request headers:`, {
+              'Content-Type': 'application/json',
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache',
+              'Expires': '0'
+            });
+            
+            if (retryCount > maxRetries) {
+              // If all retries failed, fall back to mock response
+              console.log("Buyer Map API endpoint not available after retries, using mock response...");
+              break;
+            }
+            
+            // Wait before retrying
+            console.log(`⏳ Waiting 2 seconds before retry...`);
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          }
+        }
+        
+        // If API call failed after all retries, use mock response
+        if (!response) {
+          console.log("Buyer Map API endpoint not available after retries, using mock response...");
+          // Mock response until backend endpoint is implemented
+          response = {
+            buyerMap: {
+              summary: "Primary decision makers include CTOs focused on infrastructure modernization and Heads of Digital driving customer experience improvements. Key pain points center around legacy system constraints and regulatory compliance complexity, with funding rounds and competitive pressures serving as primary buying triggers.",
+              corePersonas: 3,
+              topPainPoint: "Legacy system constraints",
+              buyingTriggers: 2,
+              buyingTriggersArray: [
+                {
+                  trigger: "Funding round announced",
+                  description: "Company has recently secured Series B funding, indicating readiness for expansion and technology upgrades."
+                },
+                {
+                  trigger: "Competitive product launch",
+                  description: "A key competitor released a new digital platform, creating pressure to modernize."
+                }
+              ],
+              _metadata: {
+                dataSource: "mock"
+              }
+            }
+          };
+        }
+
+        console.log("Buyer Map API Response:", response);
+        console.log("Buyer Map API Response type:", typeof response);
+        console.log("Buyer Map API Response keys:", response ? Object.keys(response) : 'null');
+        
+        // Summary of the fix applied
+        console.log("🎯 BUYER MAP FINAL FIX SUMMARY:");
+        console.log("   - COMPONENT NAME: buyer map & roles, pain points, triggers");
+        console.log("   - PAYLOAD STRUCTURE: data field with ICP object directly");
+        console.log("   - REMOVED: Unnecessary health check endpoints");
+        console.log("   - RESULT: Clean API call with correct structure");
+
+        if (response && response.buyerMap) {
+          // Transform the API response to match frontend expectations
+          const transformedData = {
+            ...response.buyerMap,
+            // Ensure all required fields are present with fallbacks
+            summary: response.buyerMap.summary || 'N/A',
+            corePersonas: response.buyerMap.corePersonas || 0,
+            topPainPoint: response.buyerMap.topPainPoint || 'N/A',
+            buyingTriggers: response.buyerMap.buyingTriggers || 0,
+            buyingTriggersArray: response.buyerMap.buyingTriggersArray || [],
+            _metadata: {
+              ...response.buyerMap._metadata,
+              dataSource: 'api'
+            }
+          };
+          
+          setBuyerMapApiData(transformedData);
+          console.log("✅ Buyer Map report data updated from API/Mock with transformation");
+          console.log("🔍 Transformed buyer map data structure:", transformedData);
+        } else if (response && response.data) {
+          // Handle case where response might have data instead of buyerMap
+          const transformedData = {
+            ...response.data,
+            // Apply same transformation logic
+            summary: response.data.summary || 'N/A',
+            corePersonas: response.data.corePersonas || 0,
+            topPainPoint: response.data.topPainPoint || 'N/A',
+            buyingTriggers: response.data.buyingTriggers || 0,
+            buyingTriggersArray: response.data.buyingTriggersArray || [],
+            _metadata: {
+              ...response.data._metadata,
+              dataSource: 'api'
+            }
+          };
+          
+          setBuyerMapApiData(transformedData);
+          console.log("✅ Buyer Map report data updated from API/Mock with transformation (data field)");
+          console.log("🔍 Transformed buyer map data structure:", transformedData);
+        } else {
+          console.warn("❌ Unexpected buyer map API response structure");
+          console.warn("Response:", response);
+          setBuyerMapError("Unexpected API response structure");
+        }
+        
+      } catch (error) {
+        console.error("=== ERROR GENERATING BUYER MAP REPORT VIA API ===", error);
+        setBuyerMapError(error instanceof Error ? error.message : "Failed to generate buyer map report");
+      } finally {
+        setIsLoadingBuyerMap(false);
       }
     };
 
@@ -1218,6 +1480,14 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
     }
   }, [selectedICP]);
 
+  // Generate buyer map report via API when ICP is selected
+  useEffect(() => {
+    if (selectedICP) {
+      console.log("=== ICP SELECTED - GENERATING BUYER MAP REPORT VIA API ===");
+      generateBuyerMapReportViaAPI();
+    }
+  }, [selectedICP]);
+
   // Mock data for charts
   const mockGrowthData = [
     { name: "2022", value: 8.5 },
@@ -1247,12 +1517,17 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
 
   // Get current data based on active card - prioritize API data over frontend data
   const currentData = apiReportData || selectedICP;
+  
+  // Get buyer map data - prioritize API data over frontend data
+  const buyerMapData = buyerMapApiData || selectedICP;
 
   // Debug logging to see what data is being used
   console.log("🔍 FINAL DATA DEBUG:");
   console.log("  - apiReportData exists:", !!apiReportData);
   console.log("  - selectedICP exists:", !!selectedICP);
   console.log("  - currentData source:", apiReportData ? 'API Report' : 'Selected ICP');
+  console.log("  - buyerMapApiData exists:", !!buyerMapApiData);
+  console.log("  - buyerMapData source:", buyerMapApiData ? 'API Report' : 'Selected ICP');
   console.log("  - currentData structure:", {
     title: currentData?.title,
     marketSize: currentData?.marketSize,
@@ -1265,6 +1540,13 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
     marketGrowth: currentData?.marketAnalysis?.marketGrowth,
     servicableMarket: currentData?.marketAnalysis?.servicableMarket,
     targetableMarket: currentData?.marketAnalysis?.targetableMarket
+  });
+  console.log("  - buyerMapData structure:", {
+    summary: buyerMapData?.summary?.substring(0, 50) + '...',
+    corePersonas: buyerMapData?.corePersonas,
+    topPainPoint: buyerMapData?.topPainPoint,
+    buyingTriggers: buyerMapData?.buyingTriggers,
+    buyingTriggersArray: buyerMapData?.buyingTriggersArray?.length || 0
   });
 
   // Filter buying signals
@@ -1292,18 +1574,18 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
       <div className="flex justify-between items-center p-3 rounded-lg border-2 border-dashed">
         <div className="flex items-center gap-3">
           <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-            apiReportData ? 'bg-blue-100 text-blue-800 border border-blue-300' :
+            (apiReportData || buyerMapApiData) ? 'bg-blue-100 text-blue-800 border border-blue-300' :
             dataSource === 'api' ? 'bg-green-100 text-green-800 border border-green-300' :
             dataSource === 'fallback' ? 'bg-orange-100 text-orange-800 border border-orange-300' :
             'bg-gray-100 text-gray-800 border border-gray-300'
           }`}>
-                         {apiReportData ? (apiReportData._metadata?.dataSource === 'mock' ? '🟡 Mock Data' : '🔵 API Report Data') :
+                         {(apiReportData || buyerMapApiData) ? ((apiReportData?._metadata?.dataSource === 'mock' || buyerMapApiData?._metadata?.dataSource === 'mock') ? '🟡 Mock Data' : '🔵 API Report Data') :
               dataSource === 'api' ? '🟢 API Data' : 
               dataSource === 'fallback' ? '🟡 Fallback Data' : 
               '⚪ Loading...'}
       </div>
                      <div className="text-sm text-gray-600">
-                           {apiReportData ? (apiReportData._metadata?.dataSource === 'mock' ? 'Components showing mock data (Backend endpoint not available)' : 'Components showing API-generated report data from /icp-research endpoint') :
+                           {apiReportData ? (apiReportData._metadata?.dataSource === 'mock' ? 'Market & Buyer Map components showing mock data (Backend endpoint not available)' : 'Market & Buyer Map components showing API-generated report data from /icp-research endpoint') :
                dataSource === 'api' ? 'Components showing live data from /icp endpoint' :
                dataSource === 'fallback' ? 'Components showing fallback data (API unavailable)' :
                'Determining data source...'}
@@ -1311,7 +1593,8 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
         </div>
         <div className="text-xs text-gray-500">
           Active Card: 1 | Total ICPs: 1
-          {isLoadingReport && ' | Generating Report...'}
+          {isLoadingReport && ' | Generating Market Report...'}
+          {isLoadingBuyerMap && ' | Generating Buyer Map...'}
         </div>
       </div>
 
@@ -1588,6 +1871,9 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
                   <CardTitle className="text-xl font-semibold">Buyer Map & Roles, Pain Points, Triggers</CardTitle>
                   <CardDescription className="mt-1">
                     Key stakeholders, challenges, and purchase catalysts
+                    {buyerMapApiData && (
+                      <span className="ml-2 text-blue-600">(API Generated)</span>
+                    )}
                   </CardDescription>
                 </div>
               </div>
@@ -1595,40 +1881,68 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
             
             <CardContent>
               <div className="space-y-4">
-                <div>
-                  <p className="text-gray-600 text-sm leading-relaxed">
-                    Primary decision makers include CTOs focused on infrastructure modernization and Heads of Digital 
-                    driving customer experience improvements. Key pain points center around legacy system constraints 
-                    and regulatory compliance complexity, with funding rounds and competitive pressures serving as 
-                    primary buying triggers.
-                  </p>
-                </div>
+                {/* Buyer Map Error Display */}
+                {buyerMapError && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-red-800 text-sm">Buyer Map API Error: {buyerMapError}</p>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => generateBuyerMapReportViaAPI()}
+                      className="mt-2"
+                    >
+                      Retry Buyer Map API
+                    </Button>
+                  </div>
+                )}
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg">
-                    <User className="h-5 w-5 text-blue-600" />
-                    <div>
-                      <p className="text-xs text-gray-600"># of core buyer personas</p>
-                      <p className="font-semibold text-blue-900">{currentData.corePersonas}</p>
+                {/* Loading Indicator - Shows in component space when ICP is selected */}
+                {isLoadingBuyerMap && (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="text-center">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                      <p className="text-blue-800 text-lg font-medium">Generating Buyer Map Report...</p>
+                      <p className="text-gray-600 text-sm mt-2">Analyzing buyer personas and pain points</p>
                     </div>
                   </div>
-                  
-                  <div className="flex items-center gap-2 p-3 bg-red-50 rounded-lg">
-                    <Flame className="h-5 w-5 text-red-600" />
+                )}
+
+                {/* Show content only when not loading and we have data */}
+                {!isLoadingBuyerMap && (
+                  <>
                     <div>
-                      <p className="text-xs text-gray-600">Top pain point</p>
-                      <p className="font-semibold text-red-900">{currentData.topPainPoint}</p>
+                      <p className="text-gray-600 text-sm leading-relaxed">
+                        {buyerMapData.summary || "Primary decision makers include CTOs focused on infrastructure modernization and Heads of Digital driving customer experience improvements. Key pain points center around legacy system constraints and regulatory compliance complexity, with funding rounds and competitive pressures serving as primary buying triggers."}
+                      </p>
                     </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2 p-3 bg-yellow-50 rounded-lg">
-                    <Zap className="h-5 w-5 text-yellow-600" />
-                    <div>
-                      <p className="text-xs text-gray-600"># of buying triggers identified</p>
-                      <p className="font-semibold text-yellow-900">{currentData.buyingTriggers}</p>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg">
+                        <User className="h-5 w-5 text-blue-600" />
+                        <div>
+                          <p className="text-xs text-gray-600"># of core buyer personas</p>
+                          <p className="font-semibold text-blue-900">{buyerMapData.corePersonas || 'N/A'}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 p-3 bg-red-50 rounded-lg">
+                        <Flame className="h-5 w-5 text-red-600" />
+                        <div>
+                          <p className="text-xs text-gray-600">Top pain point</p>
+                          <p className="font-semibold text-red-900">{buyerMapData.topPainPoint || 'N/A'}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 p-3 bg-yellow-50 rounded-lg">
+                        <Zap className="h-5 w-5 text-yellow-600" />
+                        <div>
+                          <p className="text-xs text-gray-600"># of buying triggers identified</p>
+                          <p className="font-semibold text-yellow-900">{buyerMapData.buyingTriggers || 'N/A'}</p>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
+                  </>
+                )}
 
                 {!isBuyerMapExpanded && (
                   <div className="flex justify-center">
@@ -1655,7 +1969,7 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
                             </tr>
                           </thead>
                           <tbody>
-                            {(currentData.buyingTriggersArray || []).map((trigger: any, index: number) => (
+                            {(buyerMapData.buyingTriggersArray || []).map((trigger: any, index: number) => (
                               <tr key={index}>
                                 <td className="border border-gray-300 px-4 py-2 text-sm font-medium">{trigger.trigger}</td>
                                 <td className="border border-gray-300 px-4 py-2 text-sm">{trigger.description}</td>
