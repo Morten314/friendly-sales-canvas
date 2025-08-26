@@ -23,6 +23,7 @@
 
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
+import { Toaster } from "@/components/ui/toaster";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -38,6 +39,7 @@ export function Layout({ children }: LayoutProps) {
           {children}
         </main>
       </div>
+      <Toaster />
     </div>
   );
 }
