@@ -613,21 +613,20 @@ const MarketResearch = React.memo(() => {
         await Promise.all(
           cacheNames.map(cacheName => 
             caches.open(cacheName).then(cache => 
-              cache.delete('/api/market_intelligence')
+              cache.delete('/api/market-research')
             )
           )
         );
       }
       
       // Try to get existing market intelligence data first
-      const apiResponse = await apiFetchJson(`market_intelligence?t=${Date.now()}&cache_bust=${Math.random()}`, {
-        method: 'GET',
-        headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
-        },
-        cache: 'no-store'
+      const apiResponse = await apiFetchJson(`market-research`, {
+        method: 'POST',
+        body: JSON.stringify({
+          component_name: "market_intelligence",
+          user_id: "user_123",
+          refresh: true
+        })
       });
       console.log('📊 Market intelligence data:', apiResponse);
       console.log('🔍 DEBUGGING: Raw API response structure:', JSON.stringify(apiResponse, null, 2));

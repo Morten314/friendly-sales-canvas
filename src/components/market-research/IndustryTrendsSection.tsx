@@ -361,14 +361,14 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
         },
       });
 
-      console.log('📥 GET /market_intelligence status:', getResponse.status);
+      console.log('📥 POST /market-research status:', getResponse.status);
 
       if (!getResponse.ok) {
         throw new Error(`Failed to fetch updated data: ${getResponse.status}`);
       }
 
       const getData = await getResponse.json();
-      console.log('✅ Industry Trends - GET /market_intelligence successful:', getData);
+      console.log('✅ Industry Trends - POST /market-research successful:', getData);
       
       // Check if API returned updated data, otherwise use local edited values
       if (getData && getData.industry_trends_data) {
@@ -425,7 +425,11 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
 
   const fetchUpdatedData = async () => {
     try {
-      const response = await fetch('https://backend-11kr.onrender.com/market_intelligence');
+      const response = await fetch('https://backend-11kr.onrender.com/market-research', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ component_name: "industry_trends", user_id: "user_123" })
+      });
       if (response.ok) {
         const data = await response.json();
         console.log('Updated data fetched:', data);
