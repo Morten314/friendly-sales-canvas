@@ -24,7 +24,7 @@ import { ScoutDeploymentDetails } from "@/components/market-research/ScoutDeploy
 import { ScoutSettingsForm } from "@/components/market-research/ScoutSettingsForm";
 import { ScoutLoadingAnimation } from "@/components/market-research/ScoutLoadingAnimation";
 import { DataHistoryDialog } from "@/components/market-research/DataHistoryDialog";
-import MarketIntelligenceTab from "@/components/market-research/MarketIntelligenceTab";
+import SafeMarketIntelligenceTab from "@/components/market-research/SafeMarketIntelligenceTab";
 import EditHistoryPanel from "@/components/market-research/EditHistoryPanel";
 import { DeploymentData } from "@/components/layout/Header";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -3157,7 +3157,7 @@ const MarketResearch = React.memo(() => {
                     )}
                     
                     {/* Market Intelligence Tab with embedded scout chats */}
-                    <MarketIntelligenceTab
+                    <SafeMarketIntelligenceTab
                       isRefreshing={isRefreshing}
                       companyProfile={companyProfile}
                       competitorData={competitorData}
