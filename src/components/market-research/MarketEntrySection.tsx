@@ -287,14 +287,14 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
         }
       });
 
-      console.log('📥 POST /market-research status:', getResponse.status);
+      console.log('📥 GET /market_intelligence status:', getResponse.status);
 
       if (!getResponse.ok) {
         throw new Error(`HTTP error! status: ${getResponse.status}`);
       }
 
       const getData = await getResponse.json();
-      console.log('✅ Market Entry - POST /market-research successful:', getData);
+      console.log('✅ Market Entry - GET /market_intelligence successful:', getData);
       
       // Update component with fresh data from API response
       if (getData && getData.market_entry_data) {
