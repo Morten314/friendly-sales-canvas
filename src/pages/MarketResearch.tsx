@@ -49,9 +49,13 @@ import { ScoutSettingsForm } from "@/components/market-research/ScoutSettingsFor
 import { ScoutLoadingAnimation } from "@/components/market-research/ScoutLoadingAnimation";
 
 import { DataHistoryDialog } from "@/components/market-research/DataHistoryDialog";
+<<<<<<< HEAD
 
 import MarketIntelligenceTab from "@/components/market-research/MarketIntelligenceTab";
 
+=======
+import SafeMarketIntelligenceTab from "@/components/market-research/SafeMarketIntelligenceTab";
+>>>>>>> b1e51e138322d04a6dc70d3d2e88717102e57bc7
 import EditHistoryPanel from "@/components/market-research/EditHistoryPanel";
 
 import { DeploymentData } from "@/components/layout/Header";
@@ -1227,9 +1231,13 @@ const MarketResearch = React.memo(() => {
           cacheNames.map(cacheName => 
 
             caches.open(cacheName).then(cache => 
+<<<<<<< HEAD
 
               cache.delete('/api/market_intelligence')
 
+=======
+              cache.delete('/api/market-research')
+>>>>>>> b1e51e138322d04a6dc70d3d2e88717102e57bc7
             )
 
           )
@@ -1241,6 +1249,7 @@ const MarketResearch = React.memo(() => {
       
 
       // Try to get existing market intelligence data first
+<<<<<<< HEAD
 
       const apiResponse = await apiFetchJson(`market_intelligence?t=${Date.now()}&cache_bust=${Math.random()}`, {
 
@@ -1258,6 +1267,15 @@ const MarketResearch = React.memo(() => {
 
         cache: 'no-store'
 
+=======
+      const apiResponse = await apiFetchJson(`market-research`, {
+        method: 'POST',
+        body: JSON.stringify({
+          component_name: "market_intelligence",
+          user_id: "user_123",
+          refresh: true
+        })
+>>>>>>> b1e51e138322d04a6dc70d3d2e88717102e57bc7
       });
 
       console.log('📊 Market intelligence data:', apiResponse);
@@ -6315,9 +6333,13 @@ const MarketResearch = React.memo(() => {
                     
 
                     {/* Market Intelligence Tab with embedded scout chats */}
+<<<<<<< HEAD
 
                     <MarketIntelligenceTab
 
+=======
+                    <SafeMarketIntelligenceTab
+>>>>>>> b1e51e138322d04a6dc70d3d2e88717102e57bc7
                       isRefreshing={isRefreshing}
 
                       companyProfile={companyProfile}

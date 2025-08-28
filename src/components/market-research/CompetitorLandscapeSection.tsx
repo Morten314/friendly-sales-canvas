@@ -222,9 +222,14 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         body: JSON.stringify(editData)
       });
 
-      // Fetch updated data using GET API
-      const getData = await apiFetchJson('market_intelligence', {
-        method: 'GET'
+      // Fetch updated data using POST API to market-research
+      const getData = await apiFetchJson('market-research', {
+        method: 'POST',
+        body: JSON.stringify({
+          component_name: "competitor_landscape",
+          user_id: "user_123",
+          refresh: true
+        })
       });
       console.log('✅ Competitor Landscape - GET /market_intelligence successful:', getData);
       

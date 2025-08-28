@@ -192,22 +192,27 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
         throw new Error(`Failed to save: ${response.status}`);
       }
 
-      // Fetch updated data using GET API
-      const getResponse = await fetch('https://backend-11kr.onrender.com/market_intelligence', {
-        method: 'GET',
+      // Fetch updated data using POST API to market-research
+      const getResponse = await fetch('https://backend-11kr.onrender.com/market-research', {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          component_name: "market_size",
+          user_id: "user_123",
+          refresh: true
+        })
       });
 
-      console.log('📥 GET /market_intelligence status:', getResponse.status);
+      console.log('📥 POST /market-research status:', getResponse.status);
 
       if (!getResponse.ok) {
         throw new Error(`Failed to fetch updated data: ${getResponse.status}`);
       }
 
       const getData = await getResponse.json();
-      console.log('✅ Market Size - GET /market_intelligence successful:', getData);
+      console.log('✅ Market Size - POST /market-research successful:', getData);
       
       // Update component with fresh data from API response
       if (getData && getData.market_size_data) {
@@ -259,7 +264,11 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
 
   const fetchUpdatedData = async () => {
     try {
-      const response = await fetch('https://backend-11kr.onrender.com/market_intelligence');
+      const response = await fetch('https://backend-11kr.onrender.com/market-research', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ component_name: "market_size", user_id: "user_123" })
+      });
       if (response.ok) {
         const data = await response.json();
         console.log('Updated data fetched:', data);

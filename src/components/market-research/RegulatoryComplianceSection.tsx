@@ -392,14 +392,14 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
         }
       });
 
-      console.log('📥 GET /market_intelligence status:', getResponse.status);
+      console.log('📥 POST /market-research status:', getResponse.status);
 
       if (!getResponse.ok) {
         throw new Error(`HTTP error! status: ${getResponse.status}`);
       }
 
       const getData = await getResponse.json();
-      console.log('✅ Regulatory Compliance - GET /market_intelligence successful:', getData);
+      console.log('✅ Regulatory Compliance - POST /market-research successful:', getData);
       
       // Update component with fresh data from API response
       if (getData && getData.regulatory_compliance_data) {
