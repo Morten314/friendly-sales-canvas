@@ -284,6 +284,45 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     }
   }, [regulatoryData?.keyUpdates, isEditing]);
 
+  // Update local state when regulatoryData prop changes
+  useEffect(() => {
+    if (regulatoryData && !isEditing) {
+      console.log('🔄 RegulatoryComplianceSection: regulatoryData prop changed, updating local state:', regulatoryData);
+      
+      if (regulatoryData.executiveSummary && regulatoryData.executiveSummary !== localExecutiveSummary) {
+        setLocalExecutiveSummary(regulatoryData.executiveSummary);
+        console.log('📝 Updated localExecutiveSummary from regulatoryData prop:', regulatoryData.executiveSummary);
+      }
+      if (regulatoryData.euAiActDeadline && regulatoryData.euAiActDeadline !== localEuAiActDeadline) {
+        setLocalEuAiActDeadline(regulatoryData.euAiActDeadline);
+        console.log('📝 Updated localEuAiActDeadline from regulatoryData prop:', regulatoryData.euAiActDeadline);
+      }
+      if (regulatoryData.gdprCompliance && regulatoryData.gdprCompliance !== localGdprCompliance) {
+        setLocalGdprCompliance(regulatoryData.gdprCompliance);
+        console.log('📝 Updated localGdprCompliance from regulatoryData prop:', regulatoryData.gdprCompliance);
+      }
+      if (regulatoryData.potentialFines && regulatoryData.potentialFines !== localPotentialFines) {
+        setLocalPotentialFines(regulatoryData.potentialFines);
+        console.log('📝 Updated localPotentialFines from regulatoryData prop:', regulatoryData.potentialFines);
+      }
+      if (regulatoryData.dataLocalization && regulatoryData.dataLocalization !== localDataLocalization) {
+        setLocalDataLocalization(regulatoryData.dataLocalization);
+        console.log('📝 Updated localDataLocalization from regulatoryData prop:', regulatoryData.dataLocalization);
+      }
+      
+      // Update key data values if available
+      if (regulatoryData.keyUpdates) {
+        const initialValues: Record<string, string> = {};
+        regulatoryData.keyUpdates.forEach((update: any) => {
+          const id = update.title.toLowerCase().replace(/\s+/g, '-');
+          initialValues[id] = update.description || '';
+        });
+        setLocalKeyDataValues(initialValues);
+        console.log('📝 Updated localKeyDataValues from regulatoryData prop:', initialValues);
+      }
+    }
+  }, [regulatoryData, isEditing, localExecutiveSummary, localEuAiActDeadline, localGdprCompliance, localPotentialFines, localDataLocalization]);
+
   // Handle save changes
   const handleRegulatoryComplianceSaveChanges = async () => {
     try {
@@ -612,13 +651,13 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     }
   };
 
-  // Create fallback key data points using regulatoryData properties
+  // Create fallback key data points using local state values first, then regulatoryData properties
   const fallbackKeyDataPoints = [
     {
       id: 'eu-ai-act-deadline',
       icon: Scale,
       title: 'EU AI Act Deadline',
-      value: regulatoryData?.euAiActDeadline || euAiActDeadline || 'February 2, 2025',
+      value: localEuAiActDeadline || regulatoryData?.euAiActDeadline || euAiActDeadline || 'February 2, 2025',
       badge: 'New',
       badgeColor: 'bg-blue-100 text-blue-800',
       tooltip: 'Upcoming deadline for EU AI Act compliance'
@@ -627,7 +666,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
       id: 'gdpr-compliance',
       icon: Building,
       title: 'GDPR Compliance',
-      value: regulatoryData?.gdprCompliance || gdprCompliance || '68%',
+      value: localGdprCompliance || regulatoryData?.gdprCompliance || gdprCompliance || '68%',
       badge: 'Update',
       badgeColor: 'bg-yellow-100 text-yellow-800',
       tooltip: 'Current GDPR compliance percentage'
@@ -636,7 +675,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
       id: 'potential-fines',
       icon: Factory,
       title: 'Potential Fines',
-      value: regulatoryData?.potentialFines || potentialFines || 'Up to 6% of annual revenue',
+      value: localPotentialFines || regulatoryData?.potentialFines || potentialFines || 'Up to 6% of annual revenue',
       badge: 'Risk',
       badgeColor: 'bg-red-100 text-red-800',
       tooltip: 'Maximum regulatory fines'
@@ -645,7 +684,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
       id: 'data-localization',
       icon: BarChart3,
       title: 'Data Localization',
-      value: regulatoryData?.dataLocalization || dataLocalization || 'Mandatory for customer data',
+      value: localDataLocalization || regulatoryData?.dataLocalization || dataLocalization || 'Mandatory for customer data',
       badge: 'Support',
       badgeColor: 'bg-green-100 text-green-800',
       tooltip: 'Data storage requirements'
@@ -765,7 +804,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     }
   ];
 
-  const currentExecutiveSummary = regulatoryData?.executiveSummary || executiveSummary;
+  const currentExecutiveSummary = localExecutiveSummary || regulatoryData?.executiveSummary || executiveSummary;
 
   return (
     <Card className="border border-gray-200 shadow-sm">

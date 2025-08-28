@@ -149,7 +149,12 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
           // Update component data with API response
           if (apiData.executiveSummary) onExecutiveSummaryChange(apiData.executiveSummary);
           if (apiData.entryBarriers) onEntryBarriersChange(apiData.entryBarriers);
-          if (apiData.recommendedChannel) onRecommendedChannelChange(apiData.recommendedChannel);
+          if (apiData.recommendedChannel) {
+            const channelValue = typeof apiData.recommendedChannel === 'object' 
+              ? (apiData.recommendedChannel.channel || JSON.stringify(apiData.recommendedChannel))
+              : apiData.recommendedChannel;
+            onRecommendedChannelChange(channelValue);
+          }
           if (apiData.timeToMarket) onTimeToMarketChange(apiData.timeToMarket);
           if (apiData.topBarrier) onTopBarrierChange(apiData.topBarrier);
           if (apiData.competitiveDifferentiation) onCompetitiveDifferentiationChange(apiData.competitiveDifferentiation);
@@ -298,7 +303,10 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
         // Update local state with API response data
         onExecutiveSummaryChange(apiData.executiveSummary || '');
         onEntryBarriersChange(apiData.entryBarriers || []);
-        onRecommendedChannelChange(apiData.recommendedChannel || '');
+        const channelValue = typeof apiData.recommendedChannel === 'object' 
+          ? (apiData.recommendedChannel?.channel || JSON.stringify(apiData.recommendedChannel))
+          : apiData.recommendedChannel || '';
+        onRecommendedChannelChange(channelValue);
         onTimeToMarketChange(apiData.timeToMarket || '');
         onTopBarrierChange(apiData.topBarrier || '');
         onCompetitiveDifferentiationChange(apiData.competitiveDifferentiation || []);
@@ -402,7 +410,11 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-purple-50 p-3 rounded-lg border border-purple-200">
               <div className="text-xs font-medium text-purple-700 mb-1">Top Entry Channel</div>
-              <div className="text-sm font-semibold text-purple-900">{recommendedChannel}</div>
+              <div className="text-sm font-semibold text-purple-900">
+                {typeof recommendedChannel === 'object' && recommendedChannel !== null 
+                  ? (recommendedChannel.channel || JSON.stringify(recommendedChannel))
+                  : recommendedChannel || 'N/A'}
+              </div>
             </div>
             <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
               <div className="text-xs font-medium text-blue-700 mb-1">Time to Market</div>
@@ -456,7 +468,11 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-purple-50 p-3 rounded-lg border border-purple-200">
               <div className="text-xs font-medium text-purple-700 mb-1">Top Entry Channel</div>
-              <div className="text-sm font-semibold text-purple-900">{recommendedChannel}</div>
+              <div className="text-sm font-semibold text-purple-900">
+                {typeof recommendedChannel === 'object' && recommendedChannel !== null 
+                  ? (recommendedChannel.channel || JSON.stringify(recommendedChannel))
+                  : recommendedChannel || 'N/A'}
+              </div>
             </div>
             <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
               <div className="text-xs font-medium text-blue-700 mb-1">Time to Market</div>
