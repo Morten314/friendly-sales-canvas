@@ -1,3 +1,4 @@
+
 import React, { Component, ReactNode } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,6 +7,7 @@ import { AlertTriangle, RefreshCw } from 'lucide-react';
 interface Props {
   children: ReactNode;
   fallbackMessage?: string;
+  componentName?: string;
 }
 
 interface State {
@@ -25,6 +27,12 @@ export class ErrorBoundary extends Component<Props, State> {
     console.error('Error:', error);
     console.error('Stack:', error.stack);
     
+    // Check for React error #31 specifically
+    if (error.message && error.message.includes('invariant=31')) {
+      console.error('🚨 REACT ERROR #31 DETECTED - Object passed as React child');
+      console.error('This usually means an object with keys like {channel, channelMix} is being rendered directly');
+    }
+    
     return { hasError: true, error, errorInfo: null };
   }
 
@@ -33,6 +41,15 @@ export class ErrorBoundary extends Component<Props, State> {
     console.error('Error:', error.message);
     console.error('Error Info:', errorInfo);
     console.error('Component Stack:', errorInfo.componentStack);
+    console.error('Component Name:', this.props.componentName || 'Unknown');
+    
+    // Additional debugging for React error #31
+    if (error.message && error.message.includes('invariant=31')) {
+      console.error('🔍 DEBUGGING REACT ERROR #31:');
+      console.error('- Check for objects being rendered directly in JSX');
+      console.error('- Look for {channel, channelMix} objects in render methods');
+      console.error('- Ensure all rendered values are strings, numbers, or valid React elements');
+    }
     
     this.setState({
       error,
@@ -47,14 +64,14 @@ export class ErrorBoundary extends Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
-      const { fallbackMessage = "Something went wrong with this component" } = this.props;
+      const { fallbackMessage = "Something went wrong with this component", componentName } = this.props;
       
       return (
         <Card className="border-red-200 bg-red-50/40 m-4">
           <CardHeader>
             <CardTitle className="text-red-800 flex items-center gap-2">
               <AlertTriangle className="h-5 w-5" />
-              Component Error
+              Component Error {componentName && `- ${componentName}`}
             </CardTitle>
             <CardDescription className="text-red-700">
               {fallbackMessage}
@@ -66,6 +83,14 @@ export class ErrorBoundary extends Component<Props, State> {
               <p className="text-sm text-red-600 font-mono bg-red-50 p-2 rounded">
                 {this.state.error?.message || 'Unknown error'}
               </p>
+              {this.state.error?.message?.includes('invariant=31') && (
+                <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded">
+                  <p className="text-sm text-yellow-800 font-medium">React Error #31 Detected:</p>
+                  <p className="text-xs text-yellow-700">
+                    An object is being rendered as a React child. Check for objects like &#123;channel, channelMix&#125; being passed to JSX.
+                  </p>
+                </div>
+              )}
               {process.env.NODE_ENV === 'development' && (
                 <details className="mt-2">
                   <summary className="text-sm text-gray-600 cursor-pointer">Stack Trace</summary>
