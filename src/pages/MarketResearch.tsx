@@ -59,6 +59,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { toUTCTimestamp, isTimestampNewer, logTimestampComparison } from '@/lib/timestampUtils';
 
 import { apiFetchJson } from '@/lib/api';
+import { marketResearchApiCall, logApiCallResult, shouldUseCachedData, rateLimitedApiCall } from '@/utils/apiUtils';
 
 import ScoutChatPanel from "@/components/market-research/ScoutChatPanel";
 
@@ -1464,7 +1465,7 @@ const MarketResearch = React.memo(() => {
 
       
 
-      console.log('🔄🔄🔄 REFRESH TRIGGER - About to call all fetch functions simultaneously...');
+      console.log('🔄🔄🔄 REFRESH TRIGGER - Using sequential refresh to avoid rate limiting...');
 
       
 
@@ -2253,205 +2254,104 @@ const MarketResearch = React.memo(() => {
   // Fetch Industry Trends data using backend API with correct component_name
 
   const fetchIndustryTrendsData = async (refresh = true, showLoading = true) => {
-
     console.log('🚀 Starting fetchIndustryTrendsData with refresh:', refresh, 'showLoading:', showLoading);
+    
+    // Only show individual loading if not in global refresh mode
+    if (showLoading && !isRefreshing) {
+      setIsMarketSizeLoading(true);
+    }
+    setMarketSizeError(null);
 
     try {
-
-      console.log('📍 Fetching industry trends data with correct component_name');
-
-      // Only show individual loading if not in global refresh mode
-
-      if (showLoading && !isRefreshing) {
-
-        setIsMarketSizeLoading(true); // Reuse same loading state for now
-
-      }
-
-      setMarketSizeError(null);
-
-
-
       // Get company profile data for dynamic payload
-
       let companyData = null;
-
       try {
-
         const profileData = localStorage.getItem('companyProfileForRefresh');
-
         if (profileData) {
-
           companyData = JSON.parse(profileData);
-
           console.log('📋 Using company profile data for industry trends request:', companyData);
-
         }
-
       } catch (error) {
-
         console.warn('⚠️ Could not get company profile data:', error);
-
       }
-
-
 
       // Payload specifically for Industry Trends using API structure
-
       const payload = {
-
         user_id: "string",
-
-        component_name: "industry trends",
-
+        component_name: "industry trends report",
         data: {
-
           additionalPrompt: companyData ? {
-
             industry: companyData.industry,
-
             companySize: companyData.companySize,
-
             targetMarkets: companyData.targetMarkets,
-
             strategicGoals: companyData.strategicGoals,
-
             website: companyData.website,
-
             gtmModel: companyData.gtmModel,
-
             revenueStage: companyData.revenueStage,
-
             keyBuyerPersona: companyData.keyBuyerPersona
-
           } : {}
-
         },
-
         refresh: refresh
-
       };
-
-
 
       console.log('📤 Sending Industry Trends API request with payload:', payload);
 
-
-
-      const response = await fetch('https://backend-11kr.onrender.com/market-research', {
-
-        method: 'POST',
-
-        headers: {
-
-          'Content-Type': 'application/json',
-
-        },
-
-        body: JSON.stringify(payload)
-
+      // Use enhanced API call with retry logic
+      const result = await marketResearchApiCall('Industry Trends', payload, {
+        maxRetries: 3,
+        retryDelay: 2000,
+        timeout: 30000,
+        componentName: 'Industry Trends'
       });
 
+      // Log the result for debugging
+      logApiCallResult('Industry Trends', result, refresh);
 
-
-      console.log('📨 Industry Trends API response status:', response.status);
-
-
-
-      if (!response.ok) {
-
-        throw new Error(`HTTP error! status: ${response.status}`);
-
-      }
-
-
-
-      const result = await response.json();
-
-      console.log('📊 Industry Trends API result:', result);
-
-      console.log('🔥 RAW Industry Trends Swagger Data:', JSON.stringify(result, null, 2));
-
-
-
-      if (result.status === 'success' && result.data) {
-
-        const apiData = result.data;
-
+      if (result.success && result.data?.status === 'success' && result.data?.data) {
+        const apiData = result.data.data;
         console.log('🎯 Processing API data for Industry Trends:', apiData);
 
-
-
         // Check timestamp comparison with timestampUtils
-
         const currentTimestamp = industryTrendsData.timestamp || null;
-
         const newTimestamp = apiData.timestamp;
-
         
-
         logTimestampComparison(currentTimestamp, newTimestamp, 'IndustryTrends');
-
         
-
         if (!currentTimestamp || isTimestampNewer(newTimestamp, currentTimestamp)) {
-
           console.log('✅ New Industry Trends data is newer, updating UI');
-
           
-
           // Update industry trends data with API response
-
           const updatedData = {
-
             ...industryTrendsData,
-
             executiveSummary: apiData.executiveSummary || industryTrendsData.executiveSummary,
-
             aiAdoption: apiData.aiAdoption || industryTrendsData.aiAdoption,
-
             cloudMigration: apiData.cloudMigration || industryTrendsData.cloudMigration,
-
             regulatory: apiData.regulatory || industryTrendsData.regulatory,
-
             risks: apiData.risks || industryTrendsData.risks,
-
             timestamp: toUTCTimestamp(newTimestamp)
-
           };
-
           
-
           setIndustryTrendsData(updatedData);
-
           console.log('✅ Industry Trends data updated successfully');
-
         } else {
-
           console.log('ℹ️ Current Industry Trends data is up to date');
-
         }
-
+      } else {
+        console.warn('⚠️ Industry Trends - API call succeeded but data structure is unexpected');
+        if (refresh) {
+          console.log('🔄 Industry Trends - Will keep existing data due to unexpected response');
+        }
       }
-
+      
     } catch (error) {
-
-      console.error('❌ Error fetching Industry Trends data:', error);
-
-      setMarketSizeError('Failed to load industry trends data');
-
+      console.error('❌ Industry Trends - Unexpected error:', error);
+      setMarketSizeError('Failed to load industry trends data - using cached data');
     } finally {
-
       // Only hide individual loading if not in global refresh mode
-
       if (showLoading && !isRefreshing) {
-
         setIsMarketSizeLoading(false);
-
       }
-
     }
-
   };
 
 
@@ -5901,6 +5801,57 @@ const MarketResearch = React.memo(() => {
     );
 
   }
+
+
+
+  // Simple delay function for rate limiting
+  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+  // Sequential refresh function to avoid rate limiting
+  const sequentialRefresh = async () => {
+    console.log('🔄🔄🔄 SEQUENTIAL REFRESH - Starting sequential API calls to avoid rate limiting...');
+    
+    const results: PromiseSettledResult<any>[] = [];
+    const components = [
+      { name: 'Market Size', fetchFn: fetchMarketSizeData },
+      { name: 'Industry Trends', fetchFn: fetchIndustryTrendsData },
+      { name: 'Market Entry', fetchFn: fetchMarketEntryData },
+      { name: 'Competitor Landscape', fetchFn: fetchCompetitorData },
+      { name: 'Regulatory Compliance', fetchFn: fetchRegulatoryData }
+    ];
+    
+    // Process components sequentially with delays
+    for (let i = 0; i < components.length; i++) {
+      const component = components[i];
+      console.log(`🔄 Processing ${component.name} (${i + 1}/${components.length})...`);
+      
+      try {
+        // Add delay between API calls (except for the first one)
+        if (i > 0) {
+          const delayMs = 5000; // 5 seconds between calls
+          console.log(`⏳ Waiting ${delayMs}ms before ${component.name} API call...`);
+          await delay(delayMs);
+        }
+        
+        const result = await component.fetchFn(true, false);
+        results.push({ status: 'fulfilled', value: result });
+        console.log(`✅ ${component.name} completed successfully`);
+        
+      } catch (error) {
+        console.error(`❌ ${component.name} fetch failed:`, error);
+        results.push({ 
+          status: 'rejected', 
+          reason: { 
+            status: 'error', 
+            component: component.name.toLowerCase().replace(' ', '-'), 
+            error: error instanceof Error ? error.message : 'Unknown error' 
+          } 
+        });
+      }
+    }
+    
+    return results;
+  };
 
 
 

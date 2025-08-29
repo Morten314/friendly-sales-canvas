@@ -12,7 +12,7 @@ export const buildApiUrl = (endpoint: string): string => {
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
   
   // Special handling for research endpoints - use direct backend URL
-  if (cleanEndpoint.startsWith('icp-research') || cleanEndpoint.startsWith('research')) {
+  if (cleanEndpoint.startsWith('icp-research') || cleanEndpoint.startsWith('research') || cleanEndpoint.startsWith('market-research')) {
     return `https://backend-11kr.onrender.com/${cleanEndpoint}`;
   }
   
