@@ -59,7 +59,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { toUTCTimestamp, isTimestampNewer, logTimestampComparison } from '@/lib/timestampUtils';
 
 import { apiFetchJson } from '@/lib/api';
-import { marketResearchApiCall, logApiCallResult, shouldUseCachedData, rateLimitedApiCall } from '@/utils/apiUtils';
+import { marketResearchApiCall, logApiCallResult, shouldUseCachedData } from '@/utils/apiUtils';
 
 import ScoutChatPanel from "@/components/market-research/ScoutChatPanel";
 
@@ -1380,383 +1380,150 @@ const MarketResearch = React.memo(() => {
   // Trigger market research using the existing backend API structure
 
   const triggerScoutAndRefresh = async () => {
-
     try {
-
       setIsRefreshing(true);
-
       setError(null);
-
       
-
-      console.log('🔄 Refresh button clicked - fetching fresh data with company profile context...');
-
+      // Store company profile data for refresh (will be set later)
       
-
-      // Get company profile data to send to backend
-
+      console.log('🔄🔄🔄 REFRESH TRIGGER - About to call all fetch functions with rate limiting...');
+      
+      // Get company profile data for context
       let companyProfileData = null;
-
       try {
-
         const profileResponse = await fetch('https://backend-11kr.onrender.com/profile/company', {
-
           method: 'GET',
-
           headers: { 'Content-Type': 'application/json' }
-
         });
-
         if (profileResponse.ok) {
-
           companyProfileData = await profileResponse.json();
-
           console.log('📋 Retrieved company profile for context:', companyProfileData);
-
         }
-
       } catch (error) {
-
         console.warn('⚠️ Could not retrieve company profile, proceeding without context:', error);
-
       }
-
       
-
-      // Get current UI data timestamp for comparison
-
-      const currentUIData = getInitialMarketIntelligenceData();
-
-      let currentUITimestamp = 0;
-
-      if (currentUIData?.timestamp) {
-
-        // Handle both ISO string and timestamp number formats
-
-        currentUITimestamp = typeof currentUIData.timestamp === 'string' ? 
-
-          new Date(currentUIData.timestamp).getTime() : 
-
-          parseInt(currentUIData.timestamp);
-
-      }
-
-      console.log('📊 Current UI data timestamp:', currentUIData?.timestamp);
-
-      console.log('📊 Current UI data time:', currentUITimestamp ? new Date(currentUITimestamp).toISOString() : 'No timestamp');
-
-      
-
-      // Always fetch fresh data from Swagger API when refresh is clicked  
-
-      console.log('🔄 Fetching fresh data from Swagger API...');
-
-      
-
-      // Force refresh all market intelligence data with company profile context
-
-      // Store company profile data in localStorage so components can access it
-
+      // Store company profile data for refresh
       if (companyProfileData) {
-
         localStorage.setItem('companyProfileForRefresh', JSON.stringify(companyProfileData));
-
       }
-
       
+      // Add a small delay before starting to avoid immediate rate limiting
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
-      console.log('🔄🔄🔄 REFRESH TRIGGER - Using sequential refresh to avoid rate limiting...');
-
+      // Sequential refresh to avoid rate limiting
+      console.log('🔄🔄🔄 Starting sequential refresh of all 5 components...');
       
-
-      // Create a promise for each component's data fetch
-
-      const marketSizePromise = fetchMarketSizeData(true, false).catch(error => {
-
-        console.error('❌ Market Size fetch failed:', error);
-
-        return { status: 'error', component: 'market-size', error: error.message };
-
-      });
-
+      const results: PromiseSettledResult<any>[] = [];
+      const components = [
+        { name: 'Market Size', fetchFn: fetchMarketSizeData },
+        { name: 'Industry Trends', fetchFn: fetchIndustryTrendsData },
+        { name: 'Market Entry', fetchFn: fetchMarketEntryData },
+        { name: 'Competitor Landscape', fetchFn: fetchCompetitorData },
+        { name: 'Regulatory Compliance', fetchFn: fetchRegulatoryData }
+      ];
       
-
-      const industryTrendsPromise = fetchIndustryTrendsData(true, false).catch(error => {
-
-        console.error('❌ Industry Trends fetch failed:', error);
-
-        return { status: 'error', component: 'industry-trends', error: error.message };
-
-      });
-
-      
-
-      const marketEntryPromise = fetchMarketEntryData(true, false).catch(error => {
-
-        console.error('❌ Market Entry fetch failed:', error);
-
-        return { status: 'error', component: 'market-entry', error: error.message };
-
-      });
-
-      
-
-      const competitorPromise = fetchCompetitorData(true, false).catch(error => {
-
-        console.error('❌ Competitor Landscape fetch failed:', error);
-
-        return { status: 'error', component: 'competitor-landscape', error: error.message };
-
-      });
-
-      
-
-      const regulatoryPromise = fetchRegulatoryData(true, false).catch(error => {
-
-        console.error('❌ Regulatory Compliance fetch failed:', error);
-
-        return { status: 'error', component: 'regulatory-compliance', error: error.message };
-
-      });
-
-      
-
-      // Wait for all promises to complete (either success or error) with timeout
-
-      const timeoutPromise = new Promise((_, reject) => {
-
-        setTimeout(() => reject(new Error('Refresh timeout - some components may not have completed')), 60000); // 60 second timeout
-
-      });
-
-      
-
-      const results = await Promise.race([
-
-        Promise.allSettled([
-
-          marketSizePromise,
-
-          industryTrendsPromise,
-
-          marketEntryPromise,
-
-          competitorPromise,
-
-          regulatoryPromise
-
-        ]),
-
-        timeoutPromise
-
-      ]).catch(async (timeoutError) => {
-
-        console.error('❌ Refresh timeout:', timeoutError);
-
-        return await Promise.allSettled([
-
-          marketSizePromise,
-
-          industryTrendsPromise,
-
-          marketEntryPromise,
-
-          competitorPromise,
-
-          regulatoryPromise
-
-        ]); // Still wait for all promises even if timeout occurs
-
-      }) as PromiseSettledResult<any>[];
-
-      
+      // Process each component sequentially with delays
+      for (let i = 0; i < components.length; i++) {
+        const component = components[i];
+        console.log(`🔄 Processing ${component.name} (${i + 1}/${components.length})...`);
+        
+        try {
+          // Add delay between API calls (except for the first one)
+          if (i > 0) {
+            const delayMs = 10000; // 10 seconds between calls to stay well under rate limit
+            console.log(`⏳ Waiting ${delayMs}ms before ${component.name} API call...`);
+            await new Promise(resolve => setTimeout(resolve, delayMs));
+          }
+          
+          const result = await component.fetchFn(true, false);
+          results.push({ status: 'fulfilled', value: result });
+          console.log(`✅ ${component.name} completed successfully`);
+          
+        } catch (error) {
+          console.error(`❌ ${component.name} fetch failed:`, error);
+          results.push({ 
+            status: 'rejected', 
+            reason: { 
+              status: 'error', 
+              component: component.name.toLowerCase().replace(' ', '-'), 
+              error: error instanceof Error ? error.message : 'Unknown error' 
+            } 
+          });
+        }
+      }
 
       console.log('🔄🔄🔄 REFRESH TRIGGER - All fetch functions completed');
-
       
-
       // Analyze results
-
       const successfulComponents = [];
-
       const failedComponents = [];
-
       
-
       results.forEach((result, index) => {
-
         const componentNames = ['Market Size', 'Industry Trends', 'Market Entry', 'Competitor Landscape', 'Regulatory Compliance'];
-
         const componentName = componentNames[index];
-
         
-
         if (result.status === 'fulfilled') {
-
           if (result.value && result.value.status === 'error') {
-
             failedComponents.push({ name: componentName, error: result.value.error });
-
           } else {
-
             successfulComponents.push(componentName);
-
           }
-
         } else {
-
           failedComponents.push({ name: componentName, error: result.reason?.message || 'Unknown error' });
-
         }
-
       });
-
       
-
       console.log('📊 REFRESH RESULTS:');
-
       console.log('✅ Successful components:', successfulComponents);
-
       console.log('❌ Failed components:', failedComponents);
-
       
-
       // Check if we have any fresh data in localStorage after the API calls
-
       const updatedData = getInitialMarketIntelligenceData();
-
       if (updatedData && updatedData.timestamp) {
-
         let updatedTimestamp = 0;
-
-        if (updatedData.timestamp) {
-
-          updatedTimestamp = typeof updatedData.timestamp === 'string' ? 
-
-            new Date(updatedData.timestamp).getTime() : 
-
-            parseInt(updatedData.timestamp);
-
+        try {
+          updatedTimestamp = new Date(updatedData.timestamp).getTime();
+        } catch (e) {
+          console.warn('Could not parse updated timestamp:', e);
         }
-
         
-
+        const originalTimestamp = localStorage.getItem('originalRefreshTimestamp');
+        const originalTime = originalTimestamp ? parseInt(originalTimestamp) : 0;
+        
         console.log('🔄 POST-REFRESH TIMESTAMP COMPARISON:');
-
-        console.log('  - Original UI timestamp:', currentUITimestamp, new Date(currentUITimestamp).toISOString());
-
+        console.log('  - Original UI timestamp:', originalTime, new Date(originalTime).toISOString());
         console.log('  - Updated data timestamp:', updatedTimestamp, new Date(updatedTimestamp).toISOString());
-
         
-
-        // If we have newer data, force update the UI states
-
-        if (updatedTimestamp > currentUITimestamp) {
-
+        if (updatedTimestamp > originalTime) {
           console.log('✅ Fresh data found after refresh - updating UI states');
-
-          setMarketData(updatedData);
-
+          
+          // Update all the state variables with fresh data
           setMarketIntelligenceData(updatedData);
-
-          cachedMarketData = updatedData;
-
-          cacheTimestamp = updatedTimestamp;
-
+          // Individual component data will be updated by their respective fetch functions
+          
+          // Clear the original timestamp
+          localStorage.removeItem('originalRefreshTimestamp');
         }
-
       }
-
       
-
-      // Show success/error summary
-
-      if (successfulComponents.length === 5) {
-
-        console.log('🎉 All 5 components refreshed successfully!');
-
-        // Show success notification
-
-        setError(null); // Clear any previous errors
-
-        toast({
-
-          title: "✅ Refresh Complete",
-
-          description: "All 5 market research components updated successfully with fresh data.",
-
-          variant: "default",
-
-        });
-
-      } else if (successfulComponents.length > 0) {
-
-        console.log(`⚠️ ${successfulComponents.length}/5 components refreshed successfully`);
-
-        console.log('Failed components:', failedComponents);
-
-        
-
-        // Show a user-friendly message about partial success
-
-        const failedComponentNames = failedComponents.map(fc => fc.name).join(', ');
-
-        setError(`Refresh completed with ${successfulComponents.length}/5 components updated. Some components may show cached data.`);
-
-        toast({
-
-          title: "⚠️ Partial Refresh Complete",
-
-          description: `${successfulComponents.length}/5 components updated. Failed: ${failedComponentNames}`,
-
-          variant: "destructive",
-
-        });
-
+      // Show success/failure summary
+      if (successfulComponents.length > 0) {
+        console.log(`✅ ${successfulComponents.length}/${results.length} components refreshed successfully`);
+        if (failedComponents.length > 0) {
+          console.log('Failed components:', failedComponents);
+        }
       } else {
-
-        console.log('❌ All components failed to refresh');
-
-        setError('Failed to refresh market research data. Please try again or check your connection.');
-
-        toast({
-
-          title: "❌ Refresh Failed",
-
-          description: "All components failed to refresh. Please check your connection and try again.",
-
-          variant: "destructive",
-
-        });
-
+        console.error('❌ All components failed to refresh');
+        setError('All components failed to refresh. Please try again.');
       }
-
       
-
-      // Reset historical data flags
-
-      setIsShowingHistoricalData(false);
-
-      setHistoricalDataTimestamp(null);
-
-      
-
-    } catch (err) {
-
-      console.error('Error in market research refresh:', err);
-
-      setError(err instanceof Error ? err.message : 'Failed to refresh market research data');
-
-      
-
-      // Keep showing existing data even if the operation failed
-
+    } catch (error) {
+      console.error('❌ Error during refresh:', error);
+      setError('Failed to refresh data. Please try again.');
     } finally {
-
       setIsRefreshing(false);
-
     }
-
   };
 
 
@@ -2296,10 +2063,8 @@ const MarketResearch = React.memo(() => {
 
       console.log('📤 Sending Industry Trends API request with payload:', payload);
 
-      // Use enhanced API call with retry logic
+      // Use simple API call - NO RETRIES
       const result = await marketResearchApiCall('Industry Trends', payload, {
-        maxRetries: 3,
-        retryDelay: 2000,
         timeout: 30000,
         componentName: 'Industry Trends'
       });
@@ -5828,7 +5593,7 @@ const MarketResearch = React.memo(() => {
       try {
         // Add delay between API calls (except for the first one)
         if (i > 0) {
-          const delayMs = 5000; // 5 seconds between calls
+          const delayMs = 10000; // 10 seconds between calls to stay well under rate limit
           console.log(`⏳ Waiting ${delayMs}ms before ${component.name} API call...`);
           await delay(delayMs);
         }
