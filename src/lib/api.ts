@@ -11,11 +11,7 @@ export const buildApiUrl = (endpoint: string): string => {
   // Remove leading slash if present to avoid double slashes
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
   
-  // Special handling for research endpoints - use direct backend URL
-  if (cleanEndpoint.startsWith('icp-research') || cleanEndpoint.startsWith('research') || cleanEndpoint.startsWith('market-research')) {
-    return `https://backend-11kr.onrender.com/${cleanEndpoint}`;
-  }
-  
+  // Use proxy for all endpoints in development to avoid CORS issues
   return `${API_BASE_URL}/${cleanEndpoint}`;
 };
 

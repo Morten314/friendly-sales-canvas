@@ -12,7 +12,7 @@ export const DebugRenderer: React.FC<DebugRendererProps> = ({ children, componen
   // Check if children contains problematic objects
   const checkChildren = (child: any): boolean => {
     if (child && typeof child === 'object' && !React.isValidElement(child) && !Array.isArray(child)) {
-      if (child.channel || child.channelMix) {
+      if (child.channel || child.channelMix || child.trigger || child.description) {
         console.error(`🚨 FOUND PROBLEMATIC OBJECT in ${componentName}:`, child);
         return true;
       }

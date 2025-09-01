@@ -14,7 +14,7 @@ const SafeMarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = (props) 
   // Check for problematic objects before rendering
   const checkForObjects = (obj: any, path = '') => {
     if (obj && typeof obj === 'object' && !React.isValidElement(obj) && !Array.isArray(obj)) {
-      if (obj.channel || obj.channelMix) {
+      if (obj.channel || obj.channelMix || obj.trigger || obj.description) {
         console.error('🚨 FOUND PROBLEMATIC OBJECT:', path, obj);
       }
     }

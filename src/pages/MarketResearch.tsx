@@ -1391,7 +1391,7 @@ const MarketResearch = React.memo(() => {
       // Get company profile data for context
       let companyProfileData = null;
       try {
-        const profileResponse = await fetch('https://backend-11kr.onrender.com/profile/company', {
+        const profileResponse = await fetch('/api/profile/company', {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' }
         });
@@ -1612,7 +1612,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-      console.log('📤 Sending API request to:', 'https://backend-11kr.onrender.com/market-research');
+              console.log('📤 Sending API request to:', '/api/market-research');
 
       console.log('📦 Market Size Complete Payload:', JSON.stringify(payload, null, 2));
 
@@ -1634,7 +1634,7 @@ const MarketResearch = React.memo(() => {
 
       
 
-      const response = await fetch('https://backend-11kr.onrender.com/market-research', {
+      const response = await fetch('/api/market-research', {
 
         method: 'POST',
 
@@ -1704,7 +1704,7 @@ const MarketResearch = React.memo(() => {
 
             try {
 
-              const altResponse = await fetch('https://backend-11kr.onrender.com/market-research', {
+              const altResponse = await fetch('/api/market-research', {
 
                 method: 'POST',
 
@@ -2207,7 +2207,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-      const response = await fetch('https://backend-11kr.onrender.com/market-research', {
+      const response = await fetch('/api/market-research', {
 
         method: 'POST',
 
@@ -2943,7 +2943,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-      const response = await fetch('https://backend-11kr.onrender.com/market-research', {
+      const response = await fetch('/api/market-research', {
 
         method: 'POST',
 
@@ -6046,33 +6046,15 @@ const MarketResearch = React.memo(() => {
 
                        apacGrowthRate={marketData?.apacGrowthRate || marketIntelligenceData.apacGrowthRate}
 
-                       strategicRecommendations={(() => {
-
-                         console.log('🔍 MarketResearch - passing strategicRecommendations:', marketData?.strategicRecommendations || marketIntelligenceData.strategicRecommendations);
-
-                         return marketData?.strategicRecommendations || marketIntelligenceData.strategicRecommendations;
-
-                       })()}
+                       strategicRecommendations={marketData?.strategicRecommendations || marketIntelligenceData.strategicRecommendations}
 
                        marketEntry={marketData?.marketEntry || marketIntelligenceData.marketEntry}
 
                        marketDrivers={marketData?.marketDrivers || marketIntelligenceData.marketDrivers}
 
-                        marketSizeBySegment={(() => {
+                        marketSizeBySegment={marketData?.marketSizeBySegment || marketIntelligenceData.marketSizeBySegment}
 
-                         console.log('🔍 MarketResearch - passing marketSizeBySegment:', marketData?.marketSizeBySegment || marketIntelligenceData.marketSizeBySegment);
-
-                         return marketData?.marketSizeBySegment || marketIntelligenceData.marketSizeBySegment;
-
-                       })()}
-
-                        growthProjections={(() => {
-
-                         console.log('🔍 MarketResearch - passing growthProjections:', marketData?.growthProjections || marketIntelligenceData.growthProjections);
-
-                         return marketData?.growthProjections || marketIntelligenceData.growthProjections;
-
-                       })()}
+                        growthProjections={marketData?.growthProjections || marketIntelligenceData.growthProjections}
 
                        // Market Size specific props
 

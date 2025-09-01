@@ -104,6 +104,12 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
 
   const { toast } = useToast();
 
+  // Debug logging for strategicRecommendations outside of JSX
+  console.log('🎯 RENDER CHECK - strategicRecommendations in MarketSizeSection:', strategicRecommendations);
+  console.log('🎯 RENDER CHECK - Type:', typeof strategicRecommendations);
+  console.log('🎯 RENDER CHECK - Is Array:', Array.isArray(strategicRecommendations));
+  console.log('🎯 RENDER CHECK - Length:', strategicRecommendations?.length);
+
   // Handle section delete
   const handleSectionDelete = () => {
     // Implementation for section deletion
@@ -633,13 +639,6 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                   </h3>
                    <div className="bg-green-50 p-4 rounded-lg border border-green-200">
                      <ul className="space-y-2 text-gray-700">
-                       {(() => {
-                         console.log('🎯 RENDER CHECK - strategicRecommendations in MarketSizeSection:', strategicRecommendations);
-                         console.log('🎯 RENDER CHECK - Type:', typeof strategicRecommendations);
-                         console.log('🎯 RENDER CHECK - Is Array:', Array.isArray(strategicRecommendations));
-                         console.log('🎯 RENDER CHECK - Length:', strategicRecommendations?.length);
-                         return null;
-                       })()}
                          {Array.isArray(strategicRecommendations) ? (
                            strategicRecommendations.map((rec, index) => (
                              <li key={index} className="flex items-start gap-2">
@@ -678,11 +677,6 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                      <div className="bg-white border border-gray-200 rounded-lg p-4">
                        <h4 className="font-medium text-gray-900 mb-3">Market Size by Segment</h4>
-                       {(() => {
-                         console.log('🔍 MarketSizeSection - marketSizeBySegment:', marketSizeBySegment);
-                         console.log('🔍 MarketSizeSection - marketSizeBySegment exists:', !!marketSizeBySegment);
-                         return null;
-                       })()}
                        <MiniPieChart 
                          data={marketSizeBySegment ? Object.entries(marketSizeBySegment).map(([name, value], index) => ({
                            name,
@@ -698,11 +692,6 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                     </div>
                      <div className="bg-white border border-gray-200 rounded-lg p-4">
                        <h4 className="font-medium text-gray-900 mb-3">Growth Projections</h4>
-                       {(() => {
-                         console.log('🔍 MarketSizeSection - growthProjections:', growthProjections);
-                         console.log('🔍 MarketSizeSection - growthProjections exists:', !!growthProjections);
-                         return null;
-                       })()}
                         <MiniLineChart 
                           data={(() => {
                             if (!growthProjections) {
@@ -716,7 +705,6 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                             
                             // If growthProjections is a string, use fallback data
                             if (typeof growthProjections === 'string') {
-                              console.log('🔧 growthProjections is string, using fallback data');
                               return [
                                 { name: "2023", value: 100 },
                                 { name: "2024", value: 120 },
@@ -728,7 +716,6 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                             // If it's an object, transform it safely
                             return Object.entries(growthProjections).map(([year, value]) => {
                               const numericValue = parseFloat(value.toString());
-                              console.log(`🔧 Converting ${year}: ${value} -> ${numericValue}`);
                               return {
                                 name: year,
                                 value: isNaN(numericValue) ? 100 : numericValue * 100

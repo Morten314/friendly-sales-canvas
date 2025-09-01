@@ -105,7 +105,7 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
   const [isBuyerMapExpanded, setIsBuyerMapExpanded] = useState(false);
   const [isCompetitiveExpanded, setIsCompetitiveExpanded] = useState(false);
   const [isRegulatoryExpanded, setIsRegulatoryExpanded] = useState(false);
-  const [signalRegionFilter, setSignalRegionFilter] = useState("all");
+
   const [signalTypeFilter, setSignalTypeFilter] = useState("all");
   const [reportGenerating, setReportGenerating] = useState(false);
   const [dataSource, setDataSource] = useState<'api' | 'fallback' | 'unknown'>('api');
@@ -267,9 +267,9 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
             // Try the actual endpoint first with cache busting
             console.log(`🌐 Making request to: ${endpoint}`);
             console.log(`📤 About to send payload:`, apiPayload);
-            // Try with direct fetch to bypass apiFetch function
-            console.log("🔧 Attempting with direct fetch...");
-            const directResponse = await fetch(`https://backend-11kr.onrender.com/${endpoint}`, {
+            // Use the API utility function to go through the proxy
+            console.log("🔧 Attempting with API utility...");
+            const directResponse = await fetch(`/api/${endpoint}`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -521,7 +521,14 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
               competitiveNews: response.data.competitiveData?.competitiveNews || [],
               buyingSignalsData: response.data.competitiveData?.buyingSignalsData || []
             },
-            buyingTriggersArray: response.data.buyingTriggersArray || [],
+            buyingTriggersArray: Array.isArray(response.data.buyingTriggersArray) 
+              ? response.data.buyingTriggersArray.filter((trigger: any) => 
+                  trigger && 
+                  typeof trigger === 'object' && 
+                  typeof trigger.trigger === 'string' && 
+                  typeof trigger.description === 'string'
+                )
+              : [],
             _metadata: {
               ...response.data._metadata,
               dataSource: 'api'
@@ -616,9 +623,9 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
             // Try the actual endpoint first with cache busting
             console.log(`🌐 Making request to: ${endpoint}`);
             console.log(`📤 About to send payload:`, apiPayload);
-            // Try with direct fetch to bypass apiFetch function
-            console.log("🔧 Attempting with direct fetch...");
-            const directResponse = await fetch(`https://backend-11kr.onrender.com/${endpoint}`, {
+            // Use the API utility function to go through the proxy
+            console.log("🔧 Attempting with API utility...");
+            const directResponse = await fetch(`/api/${endpoint}`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -738,6 +745,26 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
         console.log("Buyer Map API Response:", response);
         console.log("Buyer Map API Response type:", typeof response);
         console.log("Buyer Map API Response keys:", response ? Object.keys(response) : 'null');
+        console.log("Buyer Map API Response.data:", response?.data);
+        console.log("Buyer Map API Response.data keys:", response?.data ? Object.keys(response.data) : 'null');
+        
+        // ADD COMPREHENSIVE DEBUGGING
+        console.log("🔍🔍🔍 COMPREHENSIVE API RESPONSE DEBUGGING:");
+        console.log("🔍 Full response object:", JSON.stringify(response, null, 2));
+        console.log("🔍 Response.status:", response?.status);
+        console.log("🔍 Response.message:", response?.message);
+        console.log("🔍 Response.data exists:", !!response?.data);
+        console.log("🔍 Response.data type:", typeof response?.data);
+        console.log("🔍 Response.data keys:", response?.data ? Object.keys(response.data) : 'null');
+        
+        // Check if response.data contains the expected fields
+        if (response?.data) {
+          console.log("🔍 response.data.corePersonas:", response.data.corePersonas);
+          console.log("🔍 response.data.topPainPoint:", response.data.topPainPoint);
+          console.log("🔍 response.data.buyingTriggers:", response.data.buyingTriggers);
+          console.log("🔍 response.data.buyingTriggersArray:", response.data.buyingTriggersArray);
+          console.log("🔍 response.data.blurb:", response.data.blurb);
+        }
         
         // Summary of the fix applied
         console.log("🎯 BUYER MAP FINAL FIX SUMMARY:");
@@ -746,18 +773,25 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
         console.log("   - REMOVED: Unnecessary health check endpoints");
         console.log("   - RESULT: Clean API call with correct structure");
 
-        if (response && response.buyerMap) {
+        // Handle both nested response.buyerMap and direct response formats
+        // The API returns {status: 'success', data: {...}}, so we need to extract from response.data
+        const buyerMapResponse = response?.data || response?.buyerMap || response;
+        
+        console.log("🔍 Extracted buyerMapResponse:", buyerMapResponse);
+        console.log("🔍 buyerMapResponse keys:", buyerMapResponse ? Object.keys(buyerMapResponse) : 'null');
+        
+        if (buyerMapResponse && typeof buyerMapResponse === 'object') {
           // Transform the API response to match frontend expectations
+          // Based on the actual API response, the fields are directly available
           const transformedData = {
-            ...response.buyerMap,
-            // Ensure all required fields are present with fallbacks
-            summary: response.buyerMap.summary || 'N/A',
-            corePersonas: response.buyerMap.corePersonas || 0,
-            topPainPoint: response.buyerMap.topPainPoint || 'N/A',
-            buyingTriggers: response.buyerMap.buyingTriggers || 0,
-            buyingTriggersArray: response.buyerMap.buyingTriggersArray || [],
+            summary: buyerMapResponse.blurb || buyerMapResponse.summary || 'N/A',
+            corePersonas: buyerMapResponse.corePersonas || 0,
+            topPainPoint: buyerMapResponse.topPainPoint || 'N/A',
+            buyingTriggers: buyerMapResponse.buyingTriggers || 0,
+            buyingTriggersArray: Array.isArray(buyerMapResponse.buyingTriggersArray) 
+              ? buyerMapResponse.buyingTriggersArray 
+              : [],
             _metadata: {
-              ...response.buyerMap._metadata,
               dataSource: 'api'
             }
           };
@@ -765,18 +799,34 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
           setBuyerMapApiData(transformedData);
           console.log("✅ Buyer Map report data updated from API/Mock with transformation");
           console.log("🔍 Transformed buyer map data structure:", transformedData);
+          console.log("🔍 buyingTriggersArray:", transformedData.buyingTriggersArray);
+          
+          // ADD STATE UPDATE DEBUGGING
+          console.log("🔍🔍🔍 STATE UPDATE DEBUGGING:");
+          console.log("🔍 About to call setBuyerMapApiData with:", transformedData);
+          console.log("🔍 transformedData.corePersonas:", transformedData.corePersonas);
+          console.log("🔍 transformedData.topPainPoint:", transformedData.topPainPoint);
+          console.log("🔍 transformedData.buyingTriggers:", transformedData.buyingTriggers);
+          console.log("🔍 transformedData.buyingTriggersArray length:", transformedData.buyingTriggersArray?.length);
+          console.log("🔍 transformedData.summary:", transformedData.summary);
+          
+          // Force a re-render check
+          setTimeout(() => {
+            console.log("🔍🔍🔍 STATE UPDATE VERIFICATION (after 100ms):");
+            console.log("🔍 buyerMapApiData should now contain:", transformedData);
+          }, 100);
         } else if (response && response.data) {
           // Handle case where response might have data instead of buyerMap
+          // Based on the actual API response, the fields are directly available
           const transformedData = {
-            ...response.data,
-            // Apply same transformation logic
-            summary: response.data.summary || 'N/A',
+            summary: response.data.blurb || response.data.summary || 'N/A',
             corePersonas: response.data.corePersonas || 0,
             topPainPoint: response.data.topPainPoint || 'N/A',
             buyingTriggers: response.data.buyingTriggers || 0,
-            buyingTriggersArray: response.data.buyingTriggersArray || [],
+            buyingTriggersArray: Array.isArray(response.data.buyingTriggersArray) 
+              ? response.data.buyingTriggersArray 
+              : [],
             _metadata: {
-              ...response.data._metadata,
               dataSource: 'api'
             }
           };
@@ -784,6 +834,21 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
           setBuyerMapApiData(transformedData);
           console.log("✅ Buyer Map report data updated from API/Mock with transformation (data field)");
           console.log("🔍 Transformed buyer map data structure:", transformedData);
+          
+          // ADD STATE UPDATE DEBUGGING FOR SECOND PATH
+          console.log("🔍🔍🔍 STATE UPDATE DEBUGGING (SECOND PATH):");
+          console.log("🔍 About to call setBuyerMapApiData with:", transformedData);
+          console.log("🔍 transformedData.corePersonas:", transformedData.corePersonas);
+          console.log("🔍 transformedData.topPainPoint:", transformedData.topPainPoint);
+          console.log("🔍 transformedData.buyingTriggers:", transformedData.buyingTriggers);
+          console.log("🔍 transformedData.buyingTriggersArray length:", transformedData.buyingTriggersArray?.length);
+          console.log("🔍 transformedData.summary:", transformedData.summary);
+          
+          // Force a re-render check
+          setTimeout(() => {
+            console.log("🔍🔍🔍 STATE UPDATE VERIFICATION (SECOND PATH, after 100ms):");
+            console.log("🔍 buyerMapApiData should now contain:", transformedData);
+          }, 100);
         } else {
           console.warn("❌ Unexpected buyer map API response structure");
           console.warn("Response:", response);
@@ -870,9 +935,9 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
              // Try the actual endpoint first with cache busting
              console.log(`🌐 Making request to: ${endpoint}`);
              console.log(`📤 About to send payload:`, apiPayload);
-             // Try with direct fetch to bypass apiFetch function
-             console.log("🔧 Attempting with direct fetch...");
-             const directResponse = await fetch(`https://backend-11kr.onrender.com/${endpoint}`, {
+             // Use the API utility function to go through the proxy
+             console.log("🔧 Attempting with API utility...");
+             const directResponse = await fetch(`/api/${endpoint}`, {
                method: 'POST',
                headers: {
                  'Content-Type': 'application/json',
@@ -889,6 +954,23 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
              if (!directResponse.ok) {
                const errorText = await directResponse.text();
                console.error(`❌ Direct fetch error: ${directResponse.status} - ${errorText}`);
+               
+               // Enhanced error logging for 500 errors
+               if (directResponse.status === 500) {
+                 console.error(`🚨 500 INTERNAL SERVER ERROR DETECTED`);
+                 console.error(`🚨 This indicates a backend server issue, not a frontend problem`);
+                 console.error(`🚨 Backend service might be down or experiencing issues`);
+                 console.error(`🚨 Error response body:`, errorText);
+                 
+                 // Try to parse error response if it's JSON
+                 try {
+                   const errorJson = JSON.parse(errorText);
+                   console.error(`🚨 Parsed error response:`, errorJson);
+                 } catch (parseError) {
+                   console.error(`🚨 Error response is not JSON:`, errorText);
+                 }
+               }
+               
                throw new Error(`HTTP error! status: ${directResponse.status} - ${errorText}`);
              }
              
@@ -965,6 +1047,7 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
          // If API call failed after all retries, use mock response
          if (!response) {
            console.log("Competitive Overlap API endpoint not available after retries, using mock response...");
+           console.log("🔍🔍🔍 USING MOCK RESPONSE FOR COMPETITIVE OVERLAP");
            // Mock response until backend endpoint is implemented
            response = {
              competitiveOverlap: {
@@ -1034,9 +1117,44 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
            };
          }
 
-         console.log("Competitive Overlap API Response:", response);
-         console.log("Competitive Overlap API Response type:", typeof response);
-         console.log("Competitive Overlap API Response keys:", response ? Object.keys(response) : 'null');
+         // ADD MOCK RESPONSE DEBUGGING
+         if (response?.competitiveOverlap) {
+           console.log("🔍🔍🔍 MOCK RESPONSE DEBUGGING:");
+           console.log("🔍 response.competitiveOverlap.competitiveData:", response.competitiveOverlap.competitiveData);
+           console.log("🔍 response.competitiveOverlap.competitiveData?.competitiveMap:", response.competitiveOverlap.competitiveData?.competitiveMap);
+           console.log("🔍 response.competitiveOverlap.competitiveData?.competitiveMap length:", response.competitiveOverlap.competitiveData?.competitiveMap?.length);
+           console.log("🔍 response.competitiveOverlap.competitiveData?.competitiveMap isArray:", Array.isArray(response.competitiveOverlap.competitiveData?.competitiveMap));
+         }
+
+         // ADD COMPREHENSIVE API RESPONSE DEBUGGING
+         console.log("🔍🔍🔍 COMPREHENSIVE COMPETITIVE OVERLAP API RESPONSE DEBUGGING:");
+         console.log("🔍 Full response object:", JSON.stringify(response, null, 2));
+         console.log("🔍 Response.status:", response?.status);
+         console.log("🔍 Response.message:", response?.message);
+         console.log("🔍 Response.data exists:", !!response?.data);
+         console.log("🔍 Response.data type:", typeof response?.data);
+         console.log("🔍 Response.data keys:", response?.data ? Object.keys(response?.data) : 'null');
+         if (response?.data) {
+           console.log("🔍 response.data.numberOfMainCompetitors:", response.data.numberOfMainCompetitors);
+           console.log("🔍 response.data.recentWinLossChange:", response.data.recentWinLossChange);
+           console.log("🔍 response.data.activeBuyingSignals:", response.data.activeBuyingSignals);
+           console.log("🔍 response.data.competitiveMap:", response.data.competitiveMap);
+           console.log("🔍 response.data.competitiveMap type:", typeof response.data.competitiveMap);
+           console.log("🔍 response.data.competitiveMap isArray:", Array.isArray(response.data.competitiveMap));
+           console.log("🔍 response.data.competitiveMap length:", response.data.competitiveMap?.length);
+           console.log("🔍 response.data.competitiveNewsAndEvents:", response.data.competitiveNewsAndEvents);
+           console.log("🔍 response.data.buyingSignals:", response.data.buyingSignals);
+           console.log("🔍 response.data.blurb:", response.data.blurb);
+           
+           // ADD SPECIFIC COMPETITIVE MAP DEBUGGING
+           if (response.data.competitiveMap) {
+             console.log("🔍🔍🔍 COMPETITIVE MAP DETAILED DEBUG:");
+             console.log("🔍 competitiveMap raw value:", response.data.competitiveMap);
+             console.log("🔍 competitiveMap JSON stringified:", JSON.stringify(response.data.competitiveMap, null, 2));
+             console.log("🔍 competitiveMap first item:", response.data.competitiveMap[0]);
+             console.log("🔍 competitiveMap keys (if object):", typeof response.data.competitiveMap === 'object' ? Object.keys(response.data.competitiveMap) : 'not an object');
+           }
+         }
          
          // Summary of the fix applied
          console.log("🎯 COMPETITIVE OVERLAP FINAL FIX SUMMARY:");
@@ -1049,52 +1167,104 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
            // Transform the API response to match frontend expectations
            const transformedData = {
              ...response.competitiveOverlap,
-             // Ensure all required fields are present with fallbacks
-             summary: response.competitiveOverlap.summary || 'N/A',
-             competitors: response.competitiveOverlap.competitors || 0,
-             winLossChange: response.competitiveOverlap.winLossChange || 'N/A',
-             buyingSignals: response.competitiveOverlap.buyingSignals || 0,
-             competitiveData: {
-               ...response.competitiveOverlap.competitiveData,
-               mainCompetitors: response.competitiveOverlap.competitiveData?.mainCompetitors || [],
-               competitiveMap: response.competitiveOverlap.competitiveData?.competitiveMap || [],
-               competitiveNews: response.competitiveOverlap.competitiveData?.competitiveNews || []
-             },
-             buyingSignalsData: response.competitiveOverlap.buyingSignalsData || [],
+             // Map backend schema fields to frontend expectations
+             summary: response.competitiveOverlap.blurb || response.competitiveOverlap.summary || 'N/A',
+             competitors: response.competitiveOverlap.numberOfMainCompetitors || response.competitiveOverlap.competitors || 0,
+             winLossChange: response.competitiveOverlap.recentWinLossChange || response.competitiveOverlap.winLossChange || 'N/A',
+             activeBuyingSignals: response.competitiveOverlap.activeBuyingSignals || response.competitiveOverlap.buyingSignals?.length || 0,
+             // Handle competitiveMap from both top level and nested under competitiveData
+             competitiveMap: response.competitiveOverlap.competitiveMap || 
+                           response.competitiveOverlap.competitiveData?.competitiveMap || [],
+             competitiveNewsAndEvents: response.competitiveOverlap.competitiveNewsAndEvents || 
+                                     response.competitiveOverlap.competitiveData?.competitiveNews || [],
+             mainCompetitors: response.competitiveOverlap.mainCompetitors || 
+                            response.competitiveOverlap.competitiveData?.mainCompetitors || [],
+             buyingSignalsData: response.competitiveOverlap.buyingSignals || 
+                              response.competitiveOverlap.buyingSignalsData || [],
              _metadata: {
                ...response.competitiveOverlap._metadata,
                dataSource: 'api'
              }
            };
            
+           // ADD TRANSFORMATION DEBUGGING
+           console.log("🔍🔍🔍 TRANSFORMATION DEBUGGING (competitiveOverlap path):");
+           console.log("🔍 response.competitiveOverlap.competitiveMap:", response.competitiveOverlap.competitiveMap);
+           console.log("🔍 response.competitiveOverlap.competitiveData?.competitiveMap:", response.competitiveOverlap.competitiveData?.competitiveMap);
+           console.log("🔍 Final competitiveMap (transformed):", transformedData.competitiveMap);
+           console.log("🔍 Final competitiveMap length:", transformedData.competitiveMap?.length);
+           
            setCompetitiveOverlapApiData(transformedData);
            console.log("✅ Competitive Overlap report data updated from API/Mock with transformation");
            console.log("🔍 Transformed competitive overlap data structure:", transformedData);
+           // ADD STATE UPDATE DEBUGGING
+           console.log("🔍🔍🔍 COMPETITIVE OVERLAP STATE UPDATE DEBUGGING:");
+           console.log("🔍 About to call setCompetitiveOverlapApiData with:", transformedData);
+           console.log("🔍 transformedData.summary:", transformedData.summary);
+           console.log("🔍 transformedData.competitors:", transformedData.competitors);
+           console.log("🔍 transformedData.winLossChange:", transformedData.winLossChange);
+           console.log("🔍 transformedData.activeBuyingSignals:", transformedData.activeBuyingSignals);
+           console.log("🔍 transformedData.competitiveMap:", transformedData.competitiveMap);
+           console.log("🔍 transformedData.competitiveMap type:", typeof transformedData.competitiveMap);
+           console.log("🔍 transformedData.competitiveMap isArray:", Array.isArray(transformedData.competitiveMap));
+           console.log("🔍 transformedData.competitiveMap length:", transformedData.competitiveMap?.length);
+           console.log("🔍 transformedData.competitiveNewsAndEvents length:", transformedData.competitiveNewsAndEvents?.length);
+           console.log("🔍 transformedData.buyingSignalsData length:", transformedData.buyingSignalsData?.length);
+           setTimeout(() => {
+             console.log("🔍🔍🔍 COMPETITIVE OVERLAP STATE UPDATE VERIFICATION (after 100ms):");
+             console.log("🔍 competitiveOverlapApiData should now contain:", transformedData);
+           }, 100);
          } else if (response && response.data) {
            // Handle case where response might have data instead of competitiveOverlap
            const transformedData = {
              ...response.data,
-             // Apply same transformation logic
-             summary: response.data.summary || 'N/A',
-             competitors: response.data.competitors || 0,
-             winLossChange: response.data.winLossChange || 'N/A',
-             buyingSignals: response.data.buyingSignals || 0,
-             competitiveData: {
-               ...response.data.competitiveData,
-               mainCompetitors: response.data.competitiveData?.mainCompetitors || [],
-               competitiveMap: response.data.competitiveData?.competitiveMap || [],
-               competitiveNews: response.data.competitiveData?.competitiveNews || []
-             },
-             buyingSignalsData: response.data.buyingSignalsData || [],
+             // Map backend schema fields to frontend expectations
+             summary: response.data.blurb || response.data.summary || 'N/A',
+             competitors: response.data.numberOfMainCompetitors || response.data.competitors || 0,
+             winLossChange: response.data.recentWinLossChange || response.data.winLossChange || 'N/A',
+             activeBuyingSignals: response.data.activeBuyingSignals || response.data.buyingSignals?.length || 0,
+             // Handle competitiveMap from both top level and nested under competitiveData
+             competitiveMap: response.data.competitiveMap || 
+                           response.data.competitiveData?.competitiveMap || [],
+             competitiveNewsAndEvents: response.data.competitiveNewsAndEvents || 
+                                     response.data.competitiveData?.competitiveNews || [],
+             mainCompetitors: response.data.mainCompetitors || 
+                            response.data.competitiveData?.mainCompetitors || [],
+             buyingSignalsData: response.data.buyingSignals || 
+                              response.data.buyingSignalsData || [],
              _metadata: {
                ...response.data._metadata,
                dataSource: 'api'
              }
            };
            
+           // ADD TRANSFORMATION DEBUGGING FOR DATA PATH
+           console.log("🔍🔍🔍 TRANSFORMATION DEBUGGING (response.data path):");
+           console.log("🔍 response.data.competitiveMap:", response.data.competitiveMap);
+           console.log("🔍 response.data.competitiveData?.competitiveMap:", response.data.competitiveData?.competitiveMap);
+           console.log("🔍 Final competitiveMap (transformed):", transformedData.competitiveMap);
+           console.log("🔍 Final competitiveMap length:", transformedData.competitiveMap?.length);
+           
            setCompetitiveOverlapApiData(transformedData);
            console.log("✅ Competitive Overlap report data updated from API/Mock with transformation (data field)");
            console.log("🔍 Transformed competitive overlap data structure:", transformedData);
+           // ADD STATE UPDATE DEBUGGING FOR SECOND PATH
+           console.log("🔍🔍🔍 COMPETITIVE OVERLAP STATE UPDATE DEBUGGING (SECOND PATH):");
+           console.log("🔍 About to call setCompetitiveOverlapApiData with:", transformedData);
+           console.log("🔍 transformedData.summary:", transformedData.summary);
+           console.log("🔍 transformedData.competitors:", transformedData.competitors);
+           console.log("🔍 transformedData.winLossChange:", transformedData.winLossChange);
+           console.log("🔍 transformedData.activeBuyingSignals:", transformedData.activeBuyingSignals);
+           console.log("🔍 transformedData.competitiveMap:", transformedData.competitiveMap);
+           console.log("🔍 transformedData.competitiveMap type:", typeof transformedData.competitiveMap);
+           console.log("🔍 transformedData.competitiveMap isArray:", Array.isArray(transformedData.competitiveMap));
+           console.log("🔍 transformedData.competitiveMap length:", transformedData.competitiveMap?.length);
+           console.log("🔍 transformedData.competitiveNewsAndEvents length:", transformedData.competitiveNewsAndEvents?.length);
+           console.log("🔍 transformedData.buyingSignalsData length:", transformedData.buyingSignalsData?.length);
+           setTimeout(() => {
+             console.log("🔍🔍🔍 COMPETITIVE OVERLAP STATE UPDATE VERIFICATION (SECOND PATH, after 100ms):");
+             console.log("🔍 competitiveOverlapApiData should now contain:", transformedData);
+           }, 100);
          } else {
            console.warn("❌ Unexpected competitive overlap API response structure");
            console.warn("Response:", response);
@@ -1106,6 +1276,34 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
          setCompetitiveOverlapError(error instanceof Error ? error.message : "Failed to generate competitive overlap report");
        } finally {
          setIsLoadingCompetitiveOverlap(false);
+       }
+     };
+
+     // Simple health check function to test backend connectivity
+     const testBackendHealth = async () => {
+       try {
+         console.log('🏥 Testing backend health...');
+         const response = await fetch('/api/health', {
+           method: 'GET',
+           headers: {
+             'Content-Type': 'application/json',
+           }
+         });
+         
+         console.log('🏥 Health check response status:', response.status);
+         console.log('🏥 Health check response ok:', response.ok);
+         
+         if (response.ok) {
+           const healthData = await response.json();
+           console.log('🏥 Backend health check successful:', healthData);
+           return true;
+         } else {
+           console.error('🏥 Backend health check failed:', response.status, response.statusText);
+           return false;
+         }
+       } catch (error) {
+         console.error('🏥 Backend health check error:', error);
+         return false;
        }
      };
 
@@ -1181,9 +1379,9 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
              // Try the actual endpoint first with cache busting
              console.log(`🌐 Making request to: ${endpoint}`);
              console.log(`📤 About to send payload:`, apiPayload);
-             // Try with direct fetch to bypass apiFetch function
-             console.log("🔧 Attempting with direct fetch...");
-             const directResponse = await fetch(`https://backend-11kr.onrender.com/${endpoint}`, {
+             // Use the API utility function to go through the proxy
+             console.log("🔧 Attempting with API utility...");
+             const directResponse = await fetch(`/api/${endpoint}`, {
                method: 'POST',
                headers: {
                  'Content-Type': 'application/json',
@@ -1207,7 +1405,6 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
              
              console.log('✅ Regulatory Compliance ICP Research API call successful');
              console.log('📊 Response received at:', new Date().toISOString());
-             console.log('🔍 Response headers should indicate no caching');
              console.log('📥 Response data:', response);
              console.log('📥 Response type:', typeof response);
              console.log('📥 Response keys:', Object.keys(response || {}));
@@ -1410,9 +1607,8 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
            sections: {
              marketAnalysis: currentData.marketAnalysis,
              competitiveData: currentData.competitiveData,
-             buyingTriggers: currentData.buyingTriggersArray,
+             buyingTriggers: currentData.buyingTriggersArray || [],
              filters: {
-               signalRegionFilter,
                signalTypeFilter
              }
            }
@@ -1420,7 +1616,7 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
 
          console.log("Report payload:", reportPayload);
 
-         const response = await fetch('https://backend-11kr.onrender.com/generate-report', {
+         const response = await fetch('/api/generate-report', {
            method: 'POST',
            headers: {
              'Content-Type': 'application/json',
@@ -1462,7 +1658,7 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
       
       // Add timestamp to force fresh data and avoid caching
       const timestamp = new Date().getTime();
-      const apiUrl = `https://backend-11kr.onrender.com/icp?t=${timestamp}&fresh=true`;
+      const apiUrl = `/api/icp?t=${timestamp}&fresh=true`;
 
       const response = await fetch(apiUrl, {
         method: 'GET',
@@ -2057,7 +2253,6 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
       });
       
       // Reset filters to "all" when switching cards
-      setSignalRegionFilter("all");
       setSignalTypeFilter("all");
       setComponentError(null); // Clear any component errors
     } catch (error) {
@@ -2080,37 +2275,18 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
     }
   }, [selectedICP]);
 
-  // Generate report via API when ICP is selected
+  // Generate all reports via API when ICP is selected - consolidated into single useEffect
   useEffect(() => {
     if (selectedICP) {
-      console.log("=== ICP SELECTED - GENERATING REPORT VIA API ===");
+      console.log("=== ICP SELECTED - GENERATING ALL REPORTS VIA API ===");
       generateReportViaAPI("icp summary & market opportunity");
-    }
-  }, [selectedICP]);
-
-  // Generate buyer map report via API when ICP is selected
-  useEffect(() => {
-    if (selectedICP) {
-      console.log("=== ICP SELECTED - GENERATING BUYER MAP REPORT VIA API ===");
       generateBuyerMapReportViaAPI();
-    }
-  }, [selectedICP]);
-
-  // Generate competitive overlap report via API when ICP is selected
-  useEffect(() => {
-    if (selectedICP) {
-      console.log("=== ICP SELECTED - GENERATING COMPETITIVE OVERLAP REPORT VIA API ===");
       generateCompetitiveOverlapReportViaAPI();
-    }
-  }, [selectedICP]);
-
-  // Generate regulatory compliance report via API when ICP is selected
-  useEffect(() => {
-    if (selectedICP) {
-      console.log("=== ICP SELECTED - GENERATING REGULATORY COMPLIANCE REPORT VIA API ===");
       generateRegulatoryComplianceReportViaAPI();
     }
   }, [selectedICP]);
+
+
 
   // Mock data for charts
   const mockGrowthData = [
@@ -2145,8 +2321,65 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
   // Get buyer map data - prioritize API data over frontend data
   const buyerMapData = buyerMapApiData || selectedICP;
   
+  // ADD COMPREHENSIVE BUYER MAP DATA DEBUGGING
+  console.log("🔍🔍🔍 BUYER MAP DATA COMPUTATION DEBUGGING:");
+  console.log("🔍 buyerMapApiData:", buyerMapApiData);
+  console.log("🔍 selectedICP:", selectedICP);
+  console.log("🔍 buyerMapData (computed):", buyerMapData);
+  console.log("🔍 buyerMapData source:", buyerMapApiData ? 'API Buyer Map' : 'Selected ICP');
+  console.log("🔍 buyerMapData.corePersonas:", buyerMapData?.corePersonas);
+  console.log("🔍 buyerMapData.topPainPoint:", buyerMapData?.topPainPoint);
+  console.log("🔍 buyerMapData.buyingTriggers:", buyerMapData?.buyingTriggers);
+  console.log("🔍 buyerMapData.buyingTriggersArray:", buyerMapData?.buyingTriggersArray);
+  console.log("🔍 buyerMapData.summary:", buyerMapData?.summary);
+  
   // Get competitive overlap data - prioritize API data over frontend data
   const competitiveOverlapData = competitiveOverlapApiData || selectedICP;
+  
+  // Ensure competitiveOverlapData has the minimum required structure for the component
+  const safeCompetitiveOverlapData = useMemo(() => {
+    console.log("🔍🔍🔍 safeCompetitiveOverlapData useMemo DEBUG:");
+    console.log("🔍 competitiveOverlapData:", competitiveOverlapData);
+    console.log("🔍 competitiveOverlapData type:", typeof competitiveOverlapData);
+    console.log("🔍 competitiveOverlapData.competitiveMap:", competitiveOverlapData?.competitiveMap);
+    console.log("🔍 competitiveOverlapData.competitiveMap type:", typeof competitiveOverlapData?.competitiveMap);
+    console.log("🔍 competitiveOverlapData.competitiveMap isArray:", Array.isArray(competitiveOverlapData?.competitiveMap));
+    console.log("🔍 competitiveOverlapData.competitiveMap length:", competitiveOverlapData?.competitiveMap?.length);
+    
+    if (!competitiveOverlapData) {
+      return {
+        summary: "No competitive overlap data available",
+        competitors: 0,
+        winLossChange: "N/A",
+        activeBuyingSignals: 0,
+        buyingSignals: [],
+        competitiveMap: [],
+        competitiveNewsAndEvents: [],
+        mainCompetitors: []
+      };
+    }
+    
+    // Ensure all required fields exist with proper types
+    const result = {
+      summary: competitiveOverlapData.summary || competitiveOverlapData.blurb || "No summary available",
+      competitors: competitiveOverlapData.competitors || competitiveOverlapData.numberOfMainCompetitors || 0,
+      winLossChange: competitiveOverlapData.winLossChange || competitiveOverlapData.recentWinLossChange || "N/A",
+      activeBuyingSignals: competitiveOverlapData.activeBuyingSignals || competitiveOverlapData.buyingSignals?.length || 0,
+      buyingSignals: Array.isArray(competitiveOverlapData.buyingSignals) ? competitiveOverlapData.buyingSignals : 
+                    Array.isArray(competitiveOverlapData.buyingSignalsData) ? competitiveOverlapData.buyingSignalsData : [],
+      competitiveMap: Array.isArray(competitiveOverlapData.competitiveMap) ? competitiveOverlapData.competitiveMap : [],
+      competitiveNewsAndEvents: Array.isArray(competitiveOverlapData.competitiveNewsAndEvents) ? competitiveOverlapData.competitiveNewsAndEvents : [],
+      mainCompetitors: Array.isArray(competitiveOverlapData.mainCompetitors) ? competitiveOverlapData.mainCompetitors : []
+    };
+    
+    console.log("🔍🔍🔍 safeCompetitiveOverlapData RESULT:");
+    console.log("🔍 result.competitiveMap:", result.competitiveMap);
+    console.log("🔍 result.competitiveMap type:", typeof result.competitiveMap);
+    console.log("🔍 result.competitiveMap isArray:", Array.isArray(result.competitiveMap));
+    console.log("🔍 result.competitiveMap length:", result.competitiveMap?.length);
+    
+    return result;
+  }, [competitiveOverlapData]);
   
   // Get regulatory compliance data - prioritize API data over frontend data
   const regulatoryComplianceData = regulatoryComplianceApiData || selectedICP;
@@ -2157,6 +2390,10 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
   console.log("  - selectedICP exists:", !!selectedICP);
   console.log("  - currentData source:", apiReportData ? 'API Report' : 'Selected ICP');
   console.log("  - buyerMapApiData exists:", !!buyerMapApiData);
+  console.log("  - buyerMapData source:", buyerMapApiData ? 'API Buyer Map' : 'Selected ICP');
+  console.log("  - buyerMapData.buyingTriggersArray:", buyerMapData?.buyingTriggersArray);
+  console.log("  - buyerMapData.corePersonas:", buyerMapData?.corePersonas);
+  console.log("  - buyerMapData.topPainPoint:", buyerMapData?.topPainPoint);
   console.log("  - buyerMapData source:", buyerMapApiData ? 'API Report' : 'Selected ICP');
   console.log("  - competitiveOverlapApiData exists:", !!competitiveOverlapApiData);
   console.log("  - competitiveOverlapData source:", competitiveOverlapApiData ? 'API Report' : 'Selected ICP');
@@ -2183,12 +2420,14 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
     buyingTriggersArray: buyerMapData?.buyingTriggersArray?.length || 0
   });
   console.log("  - competitiveOverlapData structure:", {
-    summary: competitiveOverlapData?.summary?.substring(0, 50) + '...',
-    competitors: competitiveOverlapData?.competitors,
-    winLossChange: competitiveOverlapData?.winLossChange,
-    buyingSignals: competitiveOverlapData?.buyingSignals,
-    competitiveData: !!competitiveOverlapData?.competitiveData,
-    buyingSignalsData: competitiveOverlapData?.buyingSignalsData?.length || 0
+    summary: safeCompetitiveOverlapData?.summary?.substring(0, 50) + '...',
+    competitors: safeCompetitiveOverlapData?.competitors,
+    winLossChange: safeCompetitiveOverlapData?.winLossChange,
+    activeBuyingSignals: safeCompetitiveOverlapData?.activeBuyingSignals,
+    buyingSignalsCount: safeCompetitiveOverlapData?.buyingSignals?.length || 0,
+    competitiveMap: safeCompetitiveOverlapData?.competitiveMap?.length || 0,
+    competitiveNewsAndEvents: safeCompetitiveOverlapData?.competitiveNewsAndEvents?.length || 0,
+    buyingSignals: safeCompetitiveOverlapData?.buyingSignals?.length || 0
   });
   console.log("  - regulatoryComplianceData structure:", {
     summary: regulatoryComplianceData?.summary?.substring(0, 50) + '...',
@@ -2199,16 +2438,24 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
     icpRefinementRecommendations: regulatoryComplianceData?.icpRefinementRecommendations?.length || 0
   });
 
-  // Filter buying signals
+  // Debug logging for buyingTriggersArray outside of JSX
+  console.log('🔍 Rendering buyingTriggersArray:', buyerMapData?.buyingTriggersArray);
+  console.log('🔍 buyingTriggersArray type:', typeof buyerMapData?.buyingTriggersArray);
+  console.log('🔍 buyingTriggersArray isArray:', Array.isArray(buyerMapData?.buyingTriggersArray));
+
+
+
+  // Filter buying signals with proper array validation
   const filteredBuyingSignals = useMemo(() => {
-    if (!competitiveOverlapData?.buyingSignalsData) return [];
+    // Use safe data that guarantees buyingSignals is an array
+    const buyingSignals = safeCompetitiveOverlapData?.buyingSignals || [];
     
-    return competitiveOverlapData.buyingSignalsData.filter((signal: any) => {
-      const regionMatch = signalRegionFilter === "all" || signal.region === signalRegionFilter;
-      const typeMatch = signalTypeFilter === "all" || signal.type === signalTypeFilter;
-    return regionMatch && typeMatch;
-  });
-  }, [competitiveOverlapData?.buyingSignalsData, signalRegionFilter, signalTypeFilter]);
+    return buyingSignals.filter((signal: any) => {
+      // Backend schema only has signalType, description, source, recency - no region field
+      const typeMatch = signalTypeFilter === "all" || signal.signalType === signalTypeFilter;
+      return typeMatch;
+    });
+  }, [safeCompetitiveOverlapData?.buyingSignals, signalTypeFilter]);
 
   if (!currentData) {
     return (
@@ -2621,10 +2868,16 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
                             </tr>
                           </thead>
                           <tbody>
-                            {(buyerMapData.buyingTriggersArray || []).map((trigger: any, index: number) => (
+                            {(buyerMapData.buyingTriggersArray || [])
+                              .filter((trigger: any) => trigger && typeof trigger === 'object')
+                              .map((trigger: any, index: number) => (
                               <tr key={index}>
-                                <td className="border border-gray-300 px-4 py-2 text-sm font-medium">{trigger.trigger}</td>
-                                <td className="border border-gray-300 px-4 py-2 text-sm">{trigger.description}</td>
+                                <td className="border border-gray-300 px-4 py-2 text-sm font-medium">
+                                  {typeof trigger.trigger === 'string' ? trigger.trigger : JSON.stringify(trigger.trigger)}
+                                </td>
+                                <td className="border border-gray-300 px-4 py-2 text-sm">
+                                  {typeof trigger.description === 'string' ? trigger.description : JSON.stringify(trigger.description)}
+                                </td>
                               </tr>
                             ))}
                           </tbody>
@@ -2689,7 +2942,31 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
                 {/* Competitive Overlap Error Display */}
                 {competitiveOverlapError && (
                   <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                    <p className="text-red-800 text-sm">Competitive Overlap API Error: {competitiveOverlapError}</p>
+                    <p className="text-red-800 text-sm font-medium">Competitive Overlap API Error: {competitiveOverlapError}</p>
+                    
+                    {/* Enhanced error information for 500 errors */}
+                    {competitiveOverlapError.includes('500') && (
+                      <div className="mt-2 p-2 bg-red-100 rounded border border-red-300">
+                        <p className="text-red-700 text-xs font-medium">🚨 Backend Server Issue Detected</p>
+                        <p className="text-red-600 text-xs mt-1">
+                          The backend service is experiencing internal errors. This is not a frontend issue.
+                        </p>
+                        <p className="text-red-600 text-xs mt-1">
+                          Please check backend service status or contact your system administrator.
+                        </p>
+                        
+                        {/* Backend Health Check Button */}
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={testBackendHealth}
+                          className="mt-2 text-xs"
+                        >
+                          🏥 Test Backend Health
+                        </Button>
+                      </div>
+                    )}
+                    
                     <Button 
                       variant="outline" 
                       size="sm" 
@@ -2717,8 +2994,18 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
                   <>
                     <div>
                       <p className="text-gray-600 text-sm leading-relaxed">
-                        {competitiveOverlapData.summary || `Key competitors include ${(competitiveOverlapData.competitiveData?.mainCompetitors || []).slice(0, 2).join(" and ")} dominating the established market, while cloud-native solutions gain traction. Recent market signals show increased funding activity and regulatory-driven technology investments creating new opportunities.`}
+                        {safeCompetitiveOverlapData.summary || `Key competitors include ${safeCompetitiveOverlapData.mainCompetitors.slice(0, 2).join(" and ")} dominating the established market, while cloud-native solutions gain traction. Recent market signals show increased funding activity and regulatory-driven technology investments creating new opportunities.`}
                       </p>
+                      
+                      {/* Data Source Indicator */}
+                      {competitiveOverlapError && competitiveOverlapError.includes('500') && (
+                        <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+                          <p className="text-yellow-700 text-xs font-medium">⚠️ Using Mock Data</p>
+                          <p className="text-yellow-600 text-xs mt-1">
+                            Backend service unavailable. Displaying sample data for demonstration.
+                          </p>
+                        </div>
+                      )}
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -2726,7 +3013,7 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
                         <Swords className="h-5 w-5 text-red-600" />
                         <div>
                           <p className="text-xs text-gray-600">Number of main competitors</p>
-                          <p className="font-semibold text-red-900">{competitiveOverlapData.competitors || 'N/A'}</p>
+                          <p className="font-semibold text-red-900">{safeCompetitiveOverlapData.competitors || 'N/A'}</p>
                         </div>
                       </div>
                       
@@ -2734,7 +3021,7 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
                         <TrendingUp className="h-5 w-5 text-green-600" />
                         <div>
                           <p className="text-xs text-gray-600">Notable recent win/loss % change</p>
-                          <p className="font-semibold text-green-900">{competitiveOverlapData.winLossChange || 'N/A'}</p>
+                          <p className="font-semibold text-green-900">{safeCompetitiveOverlapData.winLossChange || 'N/A'}</p>
                         </div>
                       </div>
                       
@@ -2742,7 +3029,7 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
                         <Flame className="h-5 w-5 text-orange-600" />
                         <div>
                           <p className="text-xs text-gray-600">Count of active buying signals</p>
-                          <p className="font-semibold text-orange-900">{competitiveOverlapData.buyingSignals || 'N/A'}</p>
+                          <p className="font-semibold text-orange-900">{safeCompetitiveOverlapData.activeBuyingSignals || 'N/A'}</p>
                         </div>
                       </div>
                     </div>
@@ -2766,35 +3053,53 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
                     <div>
                       <h4 className="font-semibold mb-4">Competitive Map</h4>
                       <div className="border rounded-lg overflow-hidden">
-                <Table>
-                  <TableHeader>
-                            <TableRow className="bg-gray-50">
-                              <TableHead className="font-medium">Competitor</TableHead>
-                              <TableHead className="font-medium">Segment</TableHead>
-                              <TableHead className="font-medium">Share</TableHead>
-                              <TableHead className="font-medium">Wins/Losses</TableHead>
-                              <TableHead className="font-medium">Differentiators</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                            {(competitiveOverlapData.competitiveData?.competitiveMap || []).map((competitor: any, index: number) => (
-                              <TableRow key={index}>
-                                <TableCell className="font-medium">{competitor.competitor}</TableCell>
-                                <TableCell>{competitor.segment}</TableCell>
-                                <TableCell>{competitor.share}</TableCell>
-                                <TableCell>{competitor.winsLosses}</TableCell>
-                                <TableCell>{competitor.differentiators}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                        {/* DEBUG: Show competitiveMap data status */}
+                        <div className="p-4 bg-gray-50 border-b text-sm text-gray-600">
+                          <strong>Debug Info:</strong> competitiveMap data: {safeCompetitiveOverlapData.competitiveMap ? 
+                            `Array with ${safeCompetitiveOverlapData.competitiveMap.length} items` : 
+                            'undefined/null'
+                          }
+                        </div>
+                        
+                        {safeCompetitiveOverlapData.competitiveMap && safeCompetitiveOverlapData.competitiveMap.length > 0 ? (
+                          <Table>
+                            <TableHeader>
+                              <TableRow className="bg-gray-50">
+                                <TableHead className="font-medium">Competitor</TableHead>
+                                <TableHead className="font-medium">Segment</TableHead>
+                                <TableHead className="font-medium">Share</TableHead>
+                                <TableHead className="font-medium">Wins/Losses</TableHead>
+                                <TableHead className="font-medium">Differentiators</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {safeCompetitiveOverlapData.competitiveMap.map((competitor: any, index: number) => (
+                                <TableRow key={index}>
+                                  <TableCell className="font-medium">{competitor.competitor}</TableCell>
+                                  <TableCell>{competitor.segment}</TableCell>
+                                  <TableCell>{competitor.share}</TableCell>
+                                  <TableCell>{competitor.winsLosses}</TableCell>
+                                  <TableCell>{competitor.differentiators}</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        ) : (
+                          <div className="p-8 text-center text-gray-500">
+                            <p>No competitive map data available</p>
+                            <p className="text-sm mt-2">
+                              Data source: {competitiveOverlapApiData ? 'API' : 'Selected ICP'} | 
+                              competitiveMap: {JSON.stringify(safeCompetitiveOverlapData.competitiveMap)}
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </div>
 
                     <div>
                       <h4 className="font-semibold mb-4">Competitive News & Events</h4>
                       <div className="space-y-2">
-                        {(competitiveOverlapData.competitiveData?.competitiveNews || []).map((newsItem, index: number) => (
+                        {safeCompetitiveOverlapData.competitiveNewsAndEvents.map((newsItem, index: number) => (
                           <div key={index} className="p-3 bg-gray-50 rounded-lg">
                             <p className="text-sm text-gray-700">"{newsItem.headline}"</p>
                             <p className="text-xs text-gray-500 mt-1">{newsItem.competitor} • {newsItem.date}</p>
@@ -2807,23 +3112,6 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
                       <h4 className="font-semibold mb-4">Buying Signals</h4>
                       
                       <div className="flex gap-4 mb-4">
-              <div className="flex items-center gap-2">
-                          <Filter className="h-4 w-4 text-gray-500" />
-                <Select value={signalRegionFilter} onValueChange={setSignalRegionFilter}>
-                          <SelectTrigger className="w-40">
-                            <SelectValue placeholder="Region" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Regions</SelectItem>
-                            <SelectItem value="North America">North America</SelectItem>
-                            <SelectItem value="Europe">Europe</SelectItem>
-                            <SelectItem value="US">US</SelectItem>
-                            <SelectItem value="Canada">Canada</SelectItem>
-                            <SelectItem value="UK">UK</SelectItem>
-                </SelectContent>
-              </Select>
-                      </div>
-                      
                       <div>
               <Select value={signalTypeFilter} onValueChange={setSignalTypeFilter}>
                           <SelectTrigger className="w-40">
@@ -2831,10 +3119,9 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Types</SelectItem>
-                            <SelectItem value="Funding">Funding</SelectItem>
-                            <SelectItem value="Tech adoption">Tech Adoption</SelectItem>
-                            <SelectItem value="Regulatory">Regulatory</SelectItem>
-                            <SelectItem value="Partnership">Partnership</SelectItem>
+                            <SelectItem value="Funding Round">Funding Round</SelectItem>
+                            <SelectItem value="Regulatory Compliance">Regulatory Compliance</SelectItem>
+                            <SelectItem value="High digital marketing spend">High digital marketing spend</SelectItem>
                 </SelectContent>
               </Select>
                       </div>

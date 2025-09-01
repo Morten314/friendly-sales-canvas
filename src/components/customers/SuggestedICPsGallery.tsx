@@ -103,14 +103,14 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
       const timestamp = new Date().getTime();
       
       // For refresh mode, fetch company profile and include it in the request
-      let apiUrl = `https://backend-11kr.onrender.com/icp?t=${timestamp}&fresh=true`;
+      let apiUrl = `/api/icp?t=${timestamp}&fresh=true`;
       
       if (refreshTrigger > 0) {
         console.log("🔄 REFRESH MODE - Fetching company profile for ICP generation");
         
         try {
           // Fetch the latest company profile from backend
-          const profileResponse = await fetch('https://backend-11kr.onrender.com/profile/company', {
+          const profileResponse = await fetch('/api/profile/company', {
             method: 'GET',
             headers: {
               'Content-Type': 'application/json',
@@ -215,7 +215,7 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
           
           // Only try basic request if it's not a rate limit (rate limits affect all requests)
           if (!isRateLimit) {
-            const basicUrl = `https://backend-11kr.onrender.com/icp?t=${Date.now()}&refresh=true`;
+            const basicUrl = `/api/icp?t=${Date.now()}&refresh=true`;
             console.log("Basic fallback URL:", basicUrl);
             
             try {

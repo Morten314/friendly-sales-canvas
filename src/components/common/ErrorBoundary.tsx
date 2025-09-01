@@ -87,7 +87,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded">
                   <p className="text-sm text-yellow-800 font-medium">React Error #31 Detected:</p>
                   <p className="text-xs text-yellow-700">
-                    An object is being rendered as a React child. Check for objects like &#123;channel, channelMix&#125; being passed to JSX.
+                    An object is being rendered as a React child. Check for objects like &#123;channel, channelMix, trigger, description&#125; being passed to JSX.
                   </p>
                 </div>
               )}

@@ -37,7 +37,7 @@ export const simpleApiCall = async <T = any>(
     });
 
     // Create fetch promise
-    const fetchPromise = fetch(`https://backend-11kr.onrender.com/${endpoint}`, {
+    const fetchPromise = fetch(`/api/${endpoint}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
