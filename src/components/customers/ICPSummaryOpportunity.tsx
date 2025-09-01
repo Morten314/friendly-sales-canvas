@@ -7,7 +7,8 @@ import { ChevronDown, ChevronUp, TrendingUp, Clock, Target, DollarSign, User, Za
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import MiniLineChart from "@/components/MiniLineChart";
 import MiniPieChart from "@/components/MiniPieChart";
-import { apiFetchJson } from "@/lib/api";
+import { callICPresearch } from "@/lib/enhancedApi";
+import { RateLimitStatus } from "@/components/common/RateLimitStatus";
 
 interface SuggestedICP {
   id: string;
@@ -605,114 +606,56 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
         console.log("   - Has data:", !!apiPayload.data);
         console.log("   - Data is object:", typeof apiPayload.data === 'object');
 
-        // Call the icp research API endpoint with retry mechanism
-        let response;
-        let retryCount = 0;
-        const maxRetries = 2;
+        // Use enhanced API with rate limiting
+        console.log("🚀 Using enhanced API with rate limiting for Buyer Map");
         
-        // Define endpoint outside try block for error logging
-        const timestamp = Date.now();
-        const randomParam = Math.random().toString(36).substring(7);
-        const endpoint = `icp-research?t=${timestamp}&cache_bust=${randomParam}`;
-        
-        while (retryCount <= maxRetries) {
-          try {
-            console.log(`🔄 Attempting Buyer Map ICP Research API call (attempt ${retryCount + 1}/${maxRetries + 1})`);
-            console.log(`🔍 Current timestamp: ${new Date().toISOString()}`);
-            
-            // Try the actual endpoint first with cache busting
-            console.log(`🌐 Making request to: ${endpoint}`);
-            console.log(`📤 About to send payload:`, apiPayload);
-            // Use the API utility function to go through the proxy
-            console.log("🔧 Attempting with API utility...");
-            const directResponse = await fetch(`/api/${endpoint}`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Cache-Control': 'no-cache, no-store, must-revalidate',
-                'Pragma': 'no-cache',
-                'Expires': '0'
-              },
-              body: JSON.stringify(apiPayload)
-            });
-            
-            console.log(`🌐 Direct fetch response status: ${directResponse.status}`);
-            console.log(`🌐 Direct fetch response status text: ${directResponse.statusText}`);
-            
-            if (!directResponse.ok) {
-              const errorText = await directResponse.text();
-              console.error(`❌ Direct fetch error: ${directResponse.status} - ${errorText}`);
-              throw new Error(`HTTP error! status: ${directResponse.status} - ${errorText}`);
-            }
-            
-            response = await directResponse.json();
-            
-            console.log('✅ Buyer Map ICP Research API call successful');
-            console.log('📊 Response received at:', new Date().toISOString());
-            console.log('🔍 Response headers should indicate no caching');
-            console.log('📥 Response data:', response);
-            console.log('📥 Response type:', typeof response);
-            console.log('📥 Response keys:', Object.keys(response || {}));
-            break; // Success, exit retry loop
-            
-          } catch (error) {
-            retryCount++;
-            console.error(`❌ Buyer Map ICP Research API call failed (attempt ${retryCount}/${maxRetries + 1}):`, error);
-            
-            // Log detailed error information
-            if (error instanceof Error) {
-              console.error(`🔍 Error message: ${error.message}`);
-              console.error(`🔍 Error name: ${error.name}`);
-              console.error(`🔍 Error stack: ${error.stack}`);
-              
-              // Check if it's a network error
-              if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-                console.error(`🌐 NETWORK ERROR DETECTED: This might be a CORS or connectivity issue`);
-              }
-              
-              // Check if it's a 422 error and extract the detailed error
-              if (error.message.includes('422')) {
-                console.error(`🔍 422 ERROR DETECTED: Backend validation failed`);
-                console.error(`🔍 This suggests the payload structure is still incorrect`);
-                
-                // Try to extract the detailed error message from the response
-                try {
-                  const errorMatch = error.message.match(/\{.*\}/);
-                  if (errorMatch) {
-                    const errorDetails = JSON.parse(errorMatch[0]);
-                    console.error(`🔍 DETAILED 422 ERROR:`, errorDetails);
-                    console.error(`🔍 ERROR DETAIL:`, errorDetails.detail);
-                  }
-                } catch (parseError) {
-                  console.error(`🔍 Could not parse error details:`, parseError);
-                }
-              }
-            }
-            
-            // Log the exact payload that was sent
-            console.error(`📤 Sent payload:`, apiPayload);
-            console.error(`📤 Sent payload (stringified):`, JSON.stringify(apiPayload, null, 2));
-            
-            // Log additional debugging info
-            console.error(`🔍 Request URL: ${endpoint}`);
-            console.error(`🔍 Request method: POST`);
-            console.error(`🔍 Request headers:`, {
-              'Content-Type': 'application/json',
-              'Cache-Control': 'no-cache, no-store, must-revalidate',
-              'Pragma': 'no-cache',
-              'Expires': '0'
-            });
-            
-            if (retryCount > maxRetries) {
-              // If all retries failed, fall back to mock response
-              console.log("Buyer Map API endpoint not available after retries, using mock response...");
-              break;
-            }
-            
-            // Wait before retrying
-            console.log(`⏳ Waiting 2 seconds before retry...`);
-            await new Promise(resolve => setTimeout(resolve, 2000));
+        const apiResponse = await callICPresearch(
+          "buyer map & roles, pain points, triggers",
+          selectedICP,
+          {
+            useCache: true,
+            componentName: "Buyer Map"
           }
+        );
+        
+        console.log("📊 Enhanced API Response:", apiResponse);
+        
+        if (!apiResponse.success) {
+          console.error("❌ Enhanced API call failed:", apiResponse.error);
+          
+          // Check if it's a rate limit error
+          if (apiResponse.error?.includes('rate limit') || apiResponse.statusCode === 429) {
+            console.log("🚫 Rate limit detected, using mock data as fallback");
+            setBuyerMapError("Rate limit reached. Using cached/mock data.");
+          } else {
+            setBuyerMapError(`API Error: ${apiResponse.error}`);
+          }
+          
+          // Use mock response as fallback
+          response = {
+            data: {
+              summary: "Primary decision makers include CTOs focused on infrastructure modernization and Heads of Digital driving customer experience improvements. Key pain points center around legacy system constraints and regulatory compliance complexity, with funding rounds and competitive pressures serving as primary buying triggers.",
+              corePersonas: 3,
+              topPainPoint: "Legacy system constraints",
+              buyingTriggers: 2,
+              buyingTriggersArray: [
+                {
+                  trigger: "Funding round announced",
+                  description: "Company has recently secured Series B funding, indicating readiness for expansion and technology upgrades."
+                },
+                {
+                  trigger: "Competitive product launch",
+                  description: "A key competitor released a new digital platform, creating pressure to modernize."
+                }
+              ],
+              _metadata: {
+                dataSource: "mock"
+              }
+            }
+          };
+        } else {
+          response = apiResponse.data;
+          console.log("✅ Enhanced API call successful");
         }
         
         // If API call failed after all retries, use mock response
@@ -869,19 +812,6 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
          setIsLoadingCompetitiveOverlap(true);
          setCompetitiveOverlapError(null);
          
-         // Clear browser cache for this specific request
-         if ('caches' in window) {
-           try {
-             const cacheNames = await caches.keys();
-             await Promise.all(
-               cacheNames.map(cacheName => caches.delete(cacheName))
-             );
-             console.log('🧹 Browser cache cleared for competitive overlap');
-           } catch (cacheError) {
-             console.warn('⚠️ Could not clear browser cache:', cacheError);
-           }
-         }
-         
          console.log("=== GENERATING COMPETITIVE OVERLAP REPORT VIA API ===");
          console.log("🔄 API Call Timestamp:", new Date().toISOString());
          console.log("Component name: competitive overlap & buying signals");
@@ -891,223 +821,73 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
            throw new Error("No ICP selected for competitive overlap report generation");
          }
 
-         // Create the API payload according to backend schema
-         const apiPayload = {
-           user_id: "user_123",
-           component_name: "competitive overlap & buying signals",
-           refresh: true,
-           data: selectedICP
-         };
-
-         console.log("🔄 Competitive Overlap API Call Timestamp:", new Date().toISOString());
-         console.log("🎯 COMPETITIVE OVERLAP PAYLOAD STRUCTURE:");
-         console.log("- user_id:", apiPayload.user_id);
-         console.log("- component_name:", apiPayload.component_name); 
-         console.log("- refresh:", apiPayload.refresh);
-         console.log("- data type:", typeof apiPayload.data);
-         console.log("- data keys:", Object.keys(apiPayload.data || {}));
-         console.log("Competitive Overlap API Request Payload:", apiPayload);
-         console.log("Competitive Overlap API Request Payload (stringified):", JSON.stringify(apiPayload, null, 2));
+         // Use enhanced API with rate limiting
+         console.log("🚀 Using enhanced API with rate limiting for Competitive Overlap");
          
-         // Validate payload structure before sending
-         console.log("🔍 COMPETITIVE OVERLAP PAYLOAD VALIDATION:");
-         console.log("   - Has user_id:", !!apiPayload.user_id);
-         console.log("   - Has component_name:", !!apiPayload.component_name);
-         console.log("   - Has refresh:", typeof apiPayload.refresh === 'boolean');
-         console.log("   - Has data:", !!apiPayload.data);
-         console.log("   - Data is object:", typeof apiPayload.data === 'object');
-
-         // Call the icp research API endpoint with retry mechanism
-         let response;
-         let retryCount = 0;
-         const maxRetries = 2;
-         
-         // Define endpoint outside try block for error logging
-         const timestamp = Date.now();
-         const randomParam = Math.random().toString(36).substring(7);
-         const endpoint = `icp-research?t=${timestamp}&cache_bust=${randomParam}`;
-         
-         while (retryCount <= maxRetries) {
-           try {
-             console.log(`🔄 Attempting Competitive Overlap ICP Research API call (attempt ${retryCount + 1}/${maxRetries + 1})`);
-             console.log(`🔍 Current timestamp: ${new Date().toISOString()}`);
-             
-             // Try the actual endpoint first with cache busting
-             console.log(`🌐 Making request to: ${endpoint}`);
-             console.log(`📤 About to send payload:`, apiPayload);
-             // Use the API utility function to go through the proxy
-             console.log("🔧 Attempting with API utility...");
-             const directResponse = await fetch(`/api/${endpoint}`, {
-               method: 'POST',
-               headers: {
-                 'Content-Type': 'application/json',
-                 'Cache-Control': 'no-cache, no-store, must-revalidate',
-                 'Pragma': 'no-cache',
-                 'Expires': '0'
-               },
-               body: JSON.stringify(apiPayload)
-             });
-             
-             console.log(`🌐 Direct fetch response status: ${directResponse.status}`);
-             console.log(`🌐 Direct fetch response status text: ${directResponse.statusText}`);
-             
-             if (!directResponse.ok) {
-               const errorText = await directResponse.text();
-               console.error(`❌ Direct fetch error: ${directResponse.status} - ${errorText}`);
-               
-               // Enhanced error logging for 500 errors
-               if (directResponse.status === 500) {
-                 console.error(`🚨 500 INTERNAL SERVER ERROR DETECTED`);
-                 console.error(`🚨 This indicates a backend server issue, not a frontend problem`);
-                 console.error(`🚨 Backend service might be down or experiencing issues`);
-                 console.error(`🚨 Error response body:`, errorText);
-                 
-                 // Try to parse error response if it's JSON
-                 try {
-                   const errorJson = JSON.parse(errorText);
-                   console.error(`🚨 Parsed error response:`, errorJson);
-                 } catch (parseError) {
-                   console.error(`🚨 Error response is not JSON:`, errorText);
-                 }
-               }
-               
-               throw new Error(`HTTP error! status: ${directResponse.status} - ${errorText}`);
-             }
-             
-             response = await directResponse.json();
-             
-             console.log('✅ Competitive Overlap ICP Research API call successful');
-             console.log('📊 Response received at:', new Date().toISOString());
-             console.log('🔍 Response headers should indicate no caching');
-             console.log('📥 Response data:', response);
-             console.log('📥 Response type:', typeof response);
-             console.log('📥 Response keys:', Object.keys(response || {}));
-             break; // Success, exit retry loop
-             
-           } catch (error) {
-             retryCount++;
-             console.error(`❌ Competitive Overlap ICP Research API call failed (attempt ${retryCount}/${maxRetries + 1}):`, error);
-             
-             // Log detailed error information
-             if (error instanceof Error) {
-               console.error(`🔍 Error message: ${error.message}`);
-               console.error(`🔍 Error name: ${error.name}`);
-               console.error(`🔍 Error stack: ${error.stack}`);
-               
-               // Check if it's a network error
-               if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-                 console.error(`🌐 NETWORK ERROR DETECTED: This might be a CORS or connectivity issue`);
-               }
-               
-               // Check if it's a 422 error and extract the detailed error
-               if (error.message.includes('422')) {
-                 console.error(`🔍 422 ERROR DETECTED: Backend validation failed`);
-                 console.error(`🔍 This suggests the payload structure is still incorrect`);
-                 
-                 // Try to extract the detailed error message from the response
-                 try {
-                   const errorMatch = error.message.match(/\{.*\}/);
-                   if (errorMatch) {
-                     const errorDetails = JSON.parse(errorMatch[0]);
-                     console.error(`🔍 DETAILED 422 ERROR:`, errorDetails);
-                     console.error(`🔍 ERROR DETAIL:`, errorDetails.detail);
-                   }
-                 } catch (parseError) {
-                   console.error(`🔍 Could not parse error details:`, parseError);
-                 }
-               }
-             }
-             
-             // Log the exact payload that was sent
-             console.error(`📤 Sent payload:`, apiPayload);
-             console.error(`📤 Sent payload (stringified):`, JSON.stringify(apiPayload, null, 2));
-             
-             // Log additional debugging info
-             console.error(`🔍 Request URL: ${endpoint}`);
-             console.error(`🔍 Request method: POST`);
-             console.error(`🔍 Request headers:`, {
-               'Content-Type': 'application/json',
-               'Cache-Control': 'no-cache, no-store, must-revalidate',
-               'Pragma': 'no-cache',
-               'Expires': '0'
-             });
-             
-             if (retryCount > maxRetries) {
-               // If all retries failed, fall back to mock response
-               console.log("Competitive Overlap API endpoint not available after retries, using mock response...");
-               break;
-             }
-             
-             // Wait before retrying
-             console.log(`⏳ Waiting 2 seconds before retry...`);
-             await new Promise(resolve => setTimeout(resolve, 2000));
+         const apiResponse = await callICPresearch(
+           "competitive overlap & buying signals",
+           selectedICP,
+           {
+             useCache: true,
+             componentName: "Competitive Overlap"
            }
-         }
+         );
          
-         // If API call failed after all retries, use mock response
-         if (!response) {
-           console.log("Competitive Overlap API endpoint not available after retries, using mock response...");
-           console.log("🔍🔍🔍 USING MOCK RESPONSE FOR COMPETITIVE OVERLAP");
-           // Mock response until backend endpoint is implemented
+         console.log("📊 Enhanced API Response:", apiResponse);
+         
+         let response;
+         if (!apiResponse.success) {
+           console.error("❌ Enhanced API call failed:", apiResponse.error);
+           
+           // Check if it's a rate limit error
+           if (apiResponse.error?.includes('rate limit') || apiResponse.statusCode === 429) {
+             console.log("🚫 Rate limit detected, using mock data as fallback");
+             setCompetitiveOverlapError("Rate limit reached. Using cached/mock data.");
+           } else {
+             setCompetitiveOverlapError(`API Error: ${apiResponse.error}`);
+           }
+           
+           // Use mock response as fallback
            response = {
-             competitiveOverlap: {
-               summary: "Key competitors include Competitor A and Competitor B dominating the established market, while cloud-native solutions gain traction. Recent market signals show increased funding activity and regulatory-driven technology investments creating new opportunities.",
-               competitors: 5,
-               winLossChange: "+7%",
-               buyingSignals: 12,
-               competitiveData: {
-                 mainCompetitors: [
-                   "Competitor A",
-                   "Competitor B",
-                   "Competitor C"
-                 ],
-                 competitiveMap: [
-                   {
-                     competitor: "Competitor A",
-                     segment: "Enterprise Cloud Solutions",
-                     share: "35%",
-                     winsLosses: "15W / 5L",
-                     differentiators: "Strong compliance capabilities, global infrastructure"
-                   },
-                   {
-                     competitor: "Competitor B",
-                     segment: "Digital Experience Platforms",
-                     share: "25%",
-                     winsLosses: "10W / 8L",
-                     differentiators: "Superior UI/UX and ecosystem integrations"
-                   }
-                 ],
-                 competitiveNews: [
-                   {
-                     headline: "Competitor A secures $100M in Series D funding",
-                     competitor: "Competitor A",
-                     date: "2025-07-20"
-                   },
-                   {
-                     headline: "Competitor B launches AI-driven personalization engine",
-                     competitor: "Competitor B",
-                     date: "2025-08-02"
-                   }
-                 ]
-               },
+             data: {
+               summary: "Key competitors include E-commerce Leader A and E-commerce Leader B dominating the established market, while cloud-native solutions gain traction. Recent market signals show increased funding activity and regulatory-driven technology investments creating new opportunities.",
+               competitors: 7,
+               winLossChange: "+11%",
+               activeBuyingSignals: 3,
+               competitiveMap: [
+                 {
+                   competitor: "E-commerce Incumbent A",
+                   segment: "Direct-to-Consumer Brands",
+                   share: "24%",
+                   winsLosses: "Strong in DACH, high digital marketing spend focus",
+                   differentiators: "Legacy e-commerce presence, high digital marketing spend approach"
+                 }
+               ],
+               competitiveNewsAndEvents: [
+                 {
+                   headline: "E-commerce Leader announces direct-to-consumer brands expansion",
+                   source: "E-commerce Leader A",
+                   date: "2024-12-15"
+                 }
+               ],
                buyingSignalsData: [
                  {
-                   signalType: "Funding",
-                   description: "Series C investment to expand product capabilities in Europe",
-                   source: "TechCrunch",
+                   signalType: "High digital marketing spend",
+                   description: "Increased high digital marketing spend spending in e-commerce",
+                   source: "Industry Reports",
                    recency: "2 weeks ago"
                  },
                  {
-                   signalType: "Regulatory",
-                   description: "New data protection requirements driving compliance software adoption",
-                   source: "Gartner",
+                   signalType: "Funding Round",
+                   description: "Major e-commerce player raises Series C funding to accelerate digital transformation",
+                   source: "Press Release",
                    recency: "1 month ago"
                  },
                  {
-                   signalType: "Tech Adoption",
-                   description: "Customer migrating workloads to AWS",
-                   source: "LinkedIn Insights",
-                   recency: "3 days ago"
+                   signalType: "Regulatory Compliance",
+                   description: "New DACH regulations pushing higher investment in marketing and compliance systems",
+                   source: "Government Bulletin",
+                   recency: "3 weeks ago"
                  }
                ],
                _metadata: {
@@ -1115,46 +895,14 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
                }
              }
            };
+         } else {
+           response = apiResponse.data;
+           console.log("✅ Enhanced API call successful");
          }
 
-         // ADD MOCK RESPONSE DEBUGGING
-         if (response?.competitiveOverlap) {
-           console.log("🔍🔍🔍 MOCK RESPONSE DEBUGGING:");
-           console.log("🔍 response.competitiveOverlap.competitiveData:", response.competitiveOverlap.competitiveData);
-           console.log("🔍 response.competitiveOverlap.competitiveData?.competitiveMap:", response.competitiveOverlap.competitiveData?.competitiveMap);
-           console.log("🔍 response.competitiveOverlap.competitiveData?.competitiveMap length:", response.competitiveOverlap.competitiveData?.competitiveMap?.length);
-           console.log("🔍 response.competitiveOverlap.competitiveData?.competitiveMap isArray:", Array.isArray(response.competitiveOverlap.competitiveData?.competitiveMap));
-         }
-
-         // ADD COMPREHENSIVE API RESPONSE DEBUGGING
-         console.log("🔍🔍🔍 COMPREHENSIVE COMPETITIVE OVERLAP API RESPONSE DEBUGGING:");
-         console.log("🔍 Full response object:", JSON.stringify(response, null, 2));
-         console.log("🔍 Response.status:", response?.status);
-         console.log("🔍 Response.message:", response?.message);
-         console.log("🔍 Response.data exists:", !!response?.data);
-         console.log("🔍 Response.data type:", typeof response?.data);
-         console.log("🔍 Response.data keys:", response?.data ? Object.keys(response?.data) : 'null');
-         if (response?.data) {
-           console.log("🔍 response.data.numberOfMainCompetitors:", response.data.numberOfMainCompetitors);
-           console.log("🔍 response.data.recentWinLossChange:", response.data.recentWinLossChange);
-           console.log("🔍 response.data.activeBuyingSignals:", response.data.activeBuyingSignals);
-           console.log("🔍 response.data.competitiveMap:", response.data.competitiveMap);
-           console.log("🔍 response.data.competitiveMap type:", typeof response.data.competitiveMap);
-           console.log("🔍 response.data.competitiveMap isArray:", Array.isArray(response.data.competitiveMap));
-           console.log("🔍 response.data.competitiveMap length:", response.data.competitiveMap?.length);
-           console.log("🔍 response.data.competitiveNewsAndEvents:", response.data.competitiveNewsAndEvents);
-           console.log("🔍 response.data.buyingSignals:", response.data.buyingSignals);
-           console.log("🔍 response.data.blurb:", response.data.blurb);
-           
-           // ADD SPECIFIC COMPETITIVE MAP DEBUGGING
-           if (response.data.competitiveMap) {
-             console.log("🔍🔍🔍 COMPETITIVE MAP DETAILED DEBUG:");
-             console.log("🔍 competitiveMap raw value:", response.data.competitiveMap);
-             console.log("🔍 competitiveMap JSON stringified:", JSON.stringify(response.data.competitiveMap, null, 2));
-             console.log("🔍 competitiveMap first item:", response.data.competitiveMap[0]);
-             console.log("🔍 competitiveMap keys (if object):", typeof response.data.competitiveMap === 'object' ? Object.keys(response.data.competitiveMap) : 'not an object');
-           }
-         }
+         console.log("Competitive Overlap API Response:", response);
+         console.log("Competitive Overlap API Response type:", typeof response);
+         console.log("Competitive Overlap API Response keys:", response ? Object.keys(response) : 'null');
          
          // Summary of the fix applied
          console.log("🎯 COMPETITIVE OVERLAP FINAL FIX SUMMARY:");
@@ -1171,7 +919,9 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
              summary: response.competitiveOverlap.blurb || response.competitiveOverlap.summary || 'N/A',
              competitors: response.competitiveOverlap.numberOfMainCompetitors || response.competitiveOverlap.competitors || 0,
              winLossChange: response.competitiveOverlap.recentWinLossChange || response.competitiveOverlap.winLossChange || 'N/A',
-             activeBuyingSignals: response.competitiveOverlap.activeBuyingSignals || response.competitiveOverlap.buyingSignals?.length || 0,
+             activeBuyingSignals: response.competitiveOverlap.activeBuyingSignals || 
+                                 response.competitiveOverlap.buyingSignals?.length || 
+                                 response.competitiveOverlap.buyingSignalsData?.length || 0,
              // Handle competitiveMap from both top level and nested under competitiveData
              competitiveMap: response.competitiveOverlap.competitiveMap || 
                            response.competitiveOverlap.competitiveData?.competitiveMap || [],
@@ -1222,7 +972,9 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
              summary: response.data.blurb || response.data.summary || 'N/A',
              competitors: response.data.numberOfMainCompetitors || response.data.competitors || 0,
              winLossChange: response.data.recentWinLossChange || response.data.winLossChange || 'N/A',
-             activeBuyingSignals: response.data.activeBuyingSignals || response.data.buyingSignals?.length || 0,
+             activeBuyingSignals: response.data.activeBuyingSignals || 
+                                 response.data.buyingSignals?.length || 
+                                 response.data.buyingSignalsData?.length || 0,
              // Handle competitiveMap from both top level and nested under competitiveData
              competitiveMap: response.data.competitiveMap || 
                            response.data.competitiveData?.competitiveMap || [],
@@ -2372,6 +2124,17 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
       mainCompetitors: Array.isArray(competitiveOverlapData.mainCompetitors) ? competitiveOverlapData.mainCompetitors : []
     };
     
+    // ADD BUYING SIGNALS DEBUGGING
+    console.log("🔍🔍🔍 BUYING SIGNALS DEBUGGING:");
+    console.log("🔍 competitiveOverlapData.buyingSignals:", competitiveOverlapData.buyingSignals);
+    console.log("🔍 competitiveOverlapData.buyingSignalsData:", competitiveOverlapData.buyingSignalsData);
+    console.log("🔍 result.buyingSignals:", result.buyingSignals);
+    console.log("🔍 result.buyingSignals length:", result.buyingSignals?.length);
+    console.log("🔍 result.activeBuyingSignals:", result.activeBuyingSignals);
+    console.log("🔍 competitiveOverlapData.activeBuyingSignals:", competitiveOverlapData.activeBuyingSignals);
+    console.log("🔍 competitiveOverlapData.buyingSignals?.length:", competitiveOverlapData.buyingSignals?.length);
+    console.log("🔍 competitiveOverlapData.buyingSignalsData?.length:", competitiveOverlapData.buyingSignalsData?.length);
+    
     console.log("🔍🔍🔍 safeCompetitiveOverlapData RESULT:");
     console.log("🔍 result.competitiveMap:", result.competitiveMap);
     console.log("🔍 result.competitiveMap type:", typeof result.competitiveMap);
@@ -2496,6 +2259,9 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
           {isLoadingRegulatoryCompliance && ' | Generating Regulatory Compliance...'}
         </div>
       </div>
+
+      {/* Rate Limit Status */}
+      <RateLimitStatus className="mb-4" />
 
       {/* API Report Error Display */}
       {reportError && (
@@ -3062,28 +2828,28 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
                         </div>
                         
                         {safeCompetitiveOverlapData.competitiveMap && safeCompetitiveOverlapData.competitiveMap.length > 0 ? (
-                          <Table>
-                            <TableHeader>
-                              <TableRow className="bg-gray-50">
-                                <TableHead className="font-medium">Competitor</TableHead>
-                                <TableHead className="font-medium">Segment</TableHead>
-                                <TableHead className="font-medium">Share</TableHead>
-                                <TableHead className="font-medium">Wins/Losses</TableHead>
-                                <TableHead className="font-medium">Differentiators</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
+                <Table>
+                  <TableHeader>
+                            <TableRow className="bg-gray-50">
+                              <TableHead className="font-medium">Competitor</TableHead>
+                              <TableHead className="font-medium">Segment</TableHead>
+                              <TableHead className="font-medium">Share</TableHead>
+                              <TableHead className="font-medium">Wins/Losses</TableHead>
+                              <TableHead className="font-medium">Differentiators</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                               {safeCompetitiveOverlapData.competitiveMap.map((competitor: any, index: number) => (
-                                <TableRow key={index}>
-                                  <TableCell className="font-medium">{competitor.competitor}</TableCell>
-                                  <TableCell>{competitor.segment}</TableCell>
-                                  <TableCell>{competitor.share}</TableCell>
-                                  <TableCell>{competitor.winsLosses}</TableCell>
-                                  <TableCell>{competitor.differentiators}</TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
+                              <TableRow key={index}>
+                                <TableCell className="font-medium">{competitor.competitor}</TableCell>
+                                <TableCell>{competitor.segment}</TableCell>
+                                <TableCell>{competitor.share}</TableCell>
+                                <TableCell>{competitor.winsLosses}</TableCell>
+                                <TableCell>{competitor.differentiators}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
                         ) : (
                           <div className="p-8 text-center text-gray-500">
                             <p>No competitive map data available</p>
