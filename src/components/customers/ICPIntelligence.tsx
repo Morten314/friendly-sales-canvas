@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Edit, TrendingUp, Clock, Target, DollarSign } from "lucide-react";
 import MiniLineChart from "@/components/MiniLineChart";
 import MiniPieChart from "@/components/MiniPieChart";
-import ICPSummaryOpportunity from "./ICPSummaryOpportunity"; // Re-enabled with null handling
+import { ICPSummaryOpportunity } from "./ICPSummaryOpportunity"; // Re-enabled with null handling
 import { SuggestedICPsGallery } from "./SuggestedICPsGallery";
 import { ICPBuilder } from "./ICPBuilder";
 import { ICPInsights } from "./ICPInsights";
