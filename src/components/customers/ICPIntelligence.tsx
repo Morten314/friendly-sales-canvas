@@ -219,29 +219,7 @@ export const ICPIntelligence = () => {
           </div>
         )}
 
-        {/* The 4 Main ICP Components */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* ICP Builder */}
-          <div>
-            <ICPBuilder />
-          </div>
-          
-          {/* ICP Insights */}
-          <div>
-            <ICPInsights />
-          </div>
-        </div>
-
-        {/* ICP Profiles List - Full Width */}
-        <div>
-          <div className="mb-4">
-            <h3 className="text-xl font-bold">Your ICP Profiles</h3>
-            <p className="text-sm text-gray-600">
-              Manage and analyze your existing customer profiles
-            </p>
-          </div>
-          <ICPProfilesList />
-        </div>
+        
       </div>
 
       {/* Profiler Chat Panel */}
