@@ -8,6 +8,9 @@ import MiniLineChart from "@/components/MiniLineChart";
 import MiniPieChart from "@/components/MiniPieChart";
 import ICPSummaryOpportunity from "./ICPSummaryOpportunity"; // Re-enabled with null handling
 import { SuggestedICPsGallery } from "./SuggestedICPsGallery";
+import { ICPBuilder } from "./ICPBuilder";
+import { ICPInsights } from "./ICPInsights";
+import { ICPProfilesList } from "./ICPProfilesList";
 
 interface SuggestedICP {
   id: string;
@@ -208,25 +211,37 @@ export const ICPIntelligence = () => {
       />
 
       {/* ICP Details Section */}
-      <div id="icp-details-section">
-        {/* ICP Summary & Market Opportunity Section - Re-enabled */}
-        {selectedICP ? (
+      <div id="icp-details-section" className="space-y-6">
+        {/* ICP Summary & Market Opportunity Section - Shows when ICP selected */}
+        {selectedICP && (
           <div className="mt-4">
             <ICPSummaryOpportunity selectedICP={selectedICP} />
           </div>
-        ) : (
-          <div className="flex items-center justify-center py-8">
-            <div className="text-center text-gray-500">
-              <p className="text-lg font-medium">Select an ICP card above</p>
-              <p className="text-sm">to view detailed market analysis and insights</p>
-            </div>
-          </div>
         )}
 
-        {/* Agent-Level Contextual Mini Report */}
-        
+        {/* The 4 Main ICP Components */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* ICP Builder */}
+          <div>
+            <ICPBuilder />
+          </div>
+          
+          {/* ICP Insights */}
+          <div>
+            <ICPInsights />
+          </div>
+        </div>
 
-        {/* ICP Profiles and Profile Analytics section removed */}
+        {/* ICP Profiles List - Full Width */}
+        <div>
+          <div className="mb-4">
+            <h3 className="text-xl font-bold">Your ICP Profiles</h3>
+            <p className="text-sm text-gray-600">
+              Manage and analyze your existing customer profiles
+            </p>
+          </div>
+          <ICPProfilesList />
+        </div>
       </div>
 
       {/* Profiler Chat Panel */}
