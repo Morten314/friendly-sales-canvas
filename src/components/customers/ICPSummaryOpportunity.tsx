@@ -184,8 +184,7 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
     );
   }
 
-  try {
-    // New function to generate report via API
+  // New function to generate report via API
     const generateReportViaAPI = async (componentName: string) => {
       try {
         setIsLoadingReport(true);
@@ -2228,7 +2227,7 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
     );
   }
 
-    return (
+  return (
     <div className="space-y-6">
       {/* Data Source Indicator */}
       <div className="flex justify-between items-center p-3 rounded-lg border-2 border-dashed">
@@ -2243,13 +2242,13 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
               dataSource === 'api' ? '🟢 API Data' : 
               dataSource === 'fallback' ? '🟡 Fallback Data' : 
               '⚪ Loading...'}
-      </div>
+                      </div>
                      <div className="text-sm text-gray-600">
                            {(apiReportData || buyerMapApiData || competitiveOverlapApiData || regulatoryComplianceApiData) ? ((apiReportData?._metadata?.dataSource === 'mock' || buyerMapApiData?._metadata?.dataSource === 'mock' || competitiveOverlapApiData?._metadata?.dataSource === 'mock' || regulatoryComplianceApiData?._metadata?.dataSource === 'mock') ? 'Market, Buyer Map, Competitive Overlap & Regulatory Compliance components showing mock data (Backend endpoint not available)' : 'Market, Buyer Map, Competitive Overlap & Regulatory Compliance components showing API-generated report data from /icp-research endpoint') :
                dataSource === 'api' ? 'Components showing live data from /icp endpoint' :
                dataSource === 'fallback' ? 'Components showing fallback data (API unavailable)' :
                'Determining data source...'}
-       </div>
+                      </div>
         </div>
         <div className="text-xs text-gray-500">
           Active Card: 1 | Total ICPs: 1
@@ -2965,11 +2964,11 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
                       <span className="ml-2 text-blue-600">(API Generated)</span>
                     )}
                   </CardDescription>
+                </div>
               </div>
-            </div>
-          </CardHeader>
+            </CardHeader>
             
-          <CardContent>
+            <CardContent>
               <div className="space-y-4">
                 {/* Regulatory Compliance Error Display */}
                 {regulatoryComplianceError && (
@@ -3023,19 +3022,19 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
                         </div>
                       </div>
                       
-                      <div className="flex items-center gap-2 p-3 bg-purple-50 rounded-lg">
-                        <Brain className="h-5 w-5 text-purple-600" />
+                      <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg">
+                        <Brain className="h-5 w-5 text-green-600" />
                         <div>
                           <p className="text-xs text-gray-600">ICP Fit Score</p>
-                          <p className="font-semibold text-purple-900">{regulatoryComplianceData.icpFitScore || '92% match'}</p>
+                          <p className="font-semibold text-green-900">{regulatoryComplianceData.icpFitScore || '92% match'}</p>
                         </div>
                       </div>
                       
-                      <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg">
-                        <CheckCircle className="h-5 w-5 text-green-600" />
+                      <div className="flex items-center gap-2 p-3 bg-purple-50 rounded-lg">
+                        <CheckCircle className="h-5 w-5 text-purple-600" />
                         <div>
                           <p className="text-xs text-gray-600">Recommendation Confidence</p>
-                          <p className="font-semibold text-green-900">{regulatoryComplianceData.recommendationConfidence || 'High'}</p>
+                          <p className="font-semibold text-purple-900">{regulatoryComplianceData.recommendationConfidence || 'High'}</p>
                         </div>
                       </div>
                     </div>
@@ -3057,7 +3056,7 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
                 {isRegulatoryExpanded && (
                   <div className="mt-6 space-y-8 border-t pt-6">
                     {/* ICP Refinement Recommendations */}
-                      <div>
+                    <div>
                       <h4 className="font-semibold text-lg mb-4">ICP Refinement Recommendations</h4>
                       <div className="space-y-4">
                         {(regulatoryComplianceData.icpRefinementRecommendations || [
@@ -3117,33 +3116,11 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
                   </div>
                 )}
               </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
         </div>
       </>
       )}
     </div>
   );
-  
-  } catch (error) {
-    console.error("=== COMPONENT RENDER ERROR ===", error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown render error";
-    
-    return (
-      <div className="p-6 bg-red-50 border border-red-200 rounded-lg">
-        <h3 className="text-red-800 font-semibold mb-2">Render Error</h3>
-        <p className="text-red-600 text-sm mb-4">{errorMessage}</p>
-        <div className="text-xs text-red-500">
-          ICP ID: {selectedICP?.id || 'undefined'} | 
-          Industry: {selectedICP?.industry || 'undefined'}
-        </div>
-        <button 
-          onClick={() => window.location.reload()}
-          className="mt-3 px-4 py-2 bg-red-100 text-red-800 rounded text-sm"
-        >
-          Reload Page
-        </button>
-      </div>
-    );
-  }
 };
