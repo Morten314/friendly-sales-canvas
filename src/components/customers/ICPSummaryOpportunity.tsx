@@ -169,10 +169,13 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
     console.log("🔄 ICPSummaryOpportunity component re-rendered");
     console.log("🔄 Current apiReportData:", apiReportData);
     console.log("🔄 Current selectedICP:", selectedICP);
+    console.log("🔄 Current buyerMapApiData:", buyerMapApiData);
+    console.log("🔄 Current buyerMapData (computed):", buyerMapApiData || selectedICP);
   });
   
   // Effect to monitor buyerMapApiData changes
   useEffect(() => {
+    console.log("🔄 buyerMapApiData useEffect triggered");
     if (buyerMapApiData) {
       console.log("🔄 buyerMapApiData changed:", buyerMapApiData);
       console.log("🔄 buyerMapApiData keys:", Object.keys(buyerMapApiData));
@@ -181,6 +184,7 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
       console.log("🔄 buyerMapApiData.topPainPoint:", buyerMapApiData.topPainPoint);
       console.log("🔄 buyerMapApiData.buyingTriggers:", buyerMapApiData.buyingTriggers);
       console.log("🔄 buyerMapApiData.buyingTriggersArray:", buyerMapApiData.buyingTriggersArray);
+      console.log("🔄 buyerMapApiData._metadata.dataSource:", buyerMapApiData._metadata?.dataSource);
     } else {
       console.log("🔄 buyerMapApiData is null/undefined");
     }
@@ -761,6 +765,10 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
 
         // Use enhanced API with rate limiting
         console.log("🚀 Using enhanced API with rate limiting for Buyer Map");
+        console.log("🔍 About to call callICPresearch with:");
+        console.log("  - componentName: buyer map & roles, pain points, triggers");
+        console.log("  - selectedICP:", selectedICP);
+        console.log("  - options:", { useCache: true, componentName: "Buyer Map" });
         
         const apiResponse = await callICPresearch(
           "buyer map & roles, pain points, triggers",
@@ -785,6 +793,10 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
         let response;
         if (!apiResponse.success) {
           console.error("❌ Enhanced API call failed:", apiResponse.error);
+          console.log("🔍🔍🔍 ENHANCED API FAILURE ANALYSIS:");
+          console.log("🔍 apiResponse.statusCode:", apiResponse.statusCode);
+          console.log("🔍 apiResponse.error:", apiResponse.error);
+          console.log("🔍 apiResponse.rateLimitInfo:", apiResponse.rateLimitInfo);
           
           // Check if it's a rate limit error
           if (apiResponse.error?.includes('rate limit') || apiResponse.statusCode === 429) {
@@ -793,6 +805,9 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
           } else if (apiResponse.statusCode === 408) {
             console.log("⏰ Request timeout detected, using mock data as fallback");
             setBuyerMapError("Request timed out. Using cached/mock data.");
+          } else if (apiResponse.statusCode === 500) {
+            console.log("🏥 Backend server error detected, using mock data as fallback");
+            setBuyerMapError("Backend server error. Using cached/mock data.");
           } else {
             setBuyerMapError(`API Error: ${apiResponse.error}`);
           }
@@ -897,9 +912,9 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
         console.log("   - REMOVED: Unnecessary health check endpoints");
         console.log("   - RESULT: Clean API call with correct structure");
 
-        // Handle the API response structure: {status: 'success', data: {...}}
-        // For buyer map, the API returns data directly in response.data (not nested under currentData)
-        const buyerMapResponse = response?.data || response?.buyerMap || response;
+        // Handle the API response structure: {status: 'success', data: {currentData: {...}}}
+        // For buyer map, the API returns data nested under response.data.currentData (same as first component)
+        const buyerMapResponse = response?.data?.currentData || response?.data || response?.buyerMap || response;
         
         console.log("🔍🔍🔍 BUYER MAP DATA EXTRACTION DEBUGGING:");
         console.log("🔍 response?.data:", response?.data);
@@ -910,24 +925,40 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
         
         if (buyerMapResponse && typeof buyerMapResponse === 'object') {
           // Transform the API response to match frontend expectations
-          // Based on the actual API response, the fields are directly available
+          // Based on the actual API response, map the correct field names
           const transformedData = {
             summary: buyerMapResponse.blurb || buyerMapResponse.summary || 'N/A',
-            corePersonas: buyerMapResponse.corePersonas || 0,
+            corePersonas: buyerMapResponse.coreBuyerPersonas || buyerMapResponse.corePersonas || 0,
             topPainPoint: buyerMapResponse.topPainPoint || 'N/A',
-            buyingTriggers: buyerMapResponse.buyingTriggers || 0,
-            buyingTriggersArray: Array.isArray(buyerMapResponse.buyingTriggersArray) 
-              ? buyerMapResponse.buyingTriggersArray 
-              : [],
+            buyingTriggers: buyerMapResponse.buyingTriggersIdentified || buyerMapResponse.buyingTriggers || 0,
+            buyingTriggersArray: Array.isArray(buyerMapResponse.buyingTriggers) 
+              ? buyerMapResponse.buyingTriggers 
+              : Array.isArray(buyerMapResponse.buyingTriggersArray) 
+                ? buyerMapResponse.buyingTriggersArray 
+                : [],
             _metadata: {
               dataSource: 'api'
             }
           };
           
+          console.log("🔍🔍🔍 BEFORE STATE UPDATE:");
+          console.log("🔍 Current buyerMapApiData:", buyerMapApiData);
+          console.log("🔍 About to set buyerMapApiData to:", transformedData);
+          
           setBuyerMapApiData(transformedData);
+          
           console.log("✅ Buyer Map report data updated from API/Mock with transformation");
           console.log("🔍 Transformed buyer map data structure:", transformedData);
           console.log("🔍 buyingTriggersArray:", transformedData.buyingTriggersArray);
+          
+          // ADD FIELD MAPPING DEBUGGING
+          console.log("🔍🔍🔍 FIELD MAPPING DEBUGGING:");
+          console.log("🔍 Original coreBuyerPersonas:", buyerMapResponse.coreBuyerPersonas);
+          console.log("🔍 Mapped to corePersonas:", transformedData.corePersonas);
+          console.log("🔍 Original buyingTriggersIdentified:", buyerMapResponse.buyingTriggersIdentified);
+          console.log("🔍 Mapped to buyingTriggers:", transformedData.buyingTriggers);
+          console.log("🔍 Original buyingTriggers array:", buyerMapResponse.buyingTriggers);
+          console.log("🔍 Mapped to buyingTriggersArray:", transformedData.buyingTriggersArray);
           
           // ADD BUYER MAP STATE UPDATE DEBUGGING
           console.log("🔍🔍🔍 BUYER MAP STATE UPDATE DEBUGGING:");
@@ -951,18 +982,21 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
           setTimeout(() => {
             console.log("🔍🔍🔍 STATE UPDATE VERIFICATION (after 100ms):");
             console.log("🔍 buyerMapApiData should now contain:", transformedData);
+            console.log("🔍 Current buyerMapApiData state:", buyerMapApiData);
           }, 100);
         } else if (response && response.data) {
           // Handle case where response might have data instead of buyerMap
-          // Based on the actual API response, the fields are directly available
+          // Based on the actual API response, map the correct field names
           const transformedData = {
             summary: response.data.blurb || response.data.summary || 'N/A',
-            corePersonas: response.data.corePersonas || 0,
+            corePersonas: response.data.coreBuyerPersonas || response.data.corePersonas || 0,
             topPainPoint: response.data.topPainPoint || 'N/A',
-            buyingTriggers: response.data.buyingTriggers || 0,
-            buyingTriggersArray: Array.isArray(response.data.buyingTriggersArray) 
-              ? response.data.buyingTriggersArray 
-              : [],
+            buyingTriggers: response.data.buyingTriggersIdentified || response.data.buyingTriggers || 0,
+            buyingTriggersArray: Array.isArray(response.data.buyingTriggers) 
+              ? response.data.buyingTriggers 
+              : Array.isArray(response.data.buyingTriggersArray) 
+                ? response.data.buyingTriggersArray 
+                : [],
             _metadata: {
               dataSource: 'api'
             }

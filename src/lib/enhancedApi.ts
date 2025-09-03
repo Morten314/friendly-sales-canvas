@@ -30,6 +30,7 @@ class EnhancedApiClient {
   private defaultRetries: number;
 
   constructor() {
+    // Try local dev server first, fallback to production if it fails
     this.baseUrl = import.meta.env.DEV ? '/api' : 'https://backend-11kr.onrender.com';
     this.defaultTimeout = 120000; // 2 minutes - increased to prevent premature timeouts
     this.defaultRetries = 2;
@@ -102,6 +103,56 @@ class EnhancedApiClient {
 
       if (!response.ok) {
         const errorText = await response.text();
+        
+        // If local dev server fails with 500 error, try production backend
+        if (import.meta.env.DEV && response.status === 500 && this.baseUrl === '/api') {
+          console.log(`🏥 Local dev server failed with 500 error, trying production backend...`);
+          
+          // Switch to production backend
+          const originalBaseUrl = this.baseUrl;
+          this.baseUrl = 'https://backend-11kr.onrender.com';
+          
+          try {
+            const productionUrl = this.buildUrl(endpoint);
+            console.log(`🔄 Retrying with production backend: ${productionUrl}`);
+            
+            const productionResponse = await fetch(productionUrl, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache',
+                'Expires': '0'
+              },
+              body: JSON.stringify(payload),
+              signal: controller.signal
+            });
+            
+            if (!productionResponse.ok) {
+              const productionErrorText = await productionResponse.text();
+              throw new Error(`Production backend also failed: HTTP ${productionResponse.status}: ${productionErrorText}`);
+            }
+            
+            const productionData = await productionResponse.json();
+            console.log(`✅ Production backend request successful`);
+            
+            // Restore original base URL
+            this.baseUrl = originalBaseUrl;
+            
+            return {
+              success: true,
+              data: productionData,
+              statusCode: productionResponse.status,
+              rateLimitInfo: rateLimitManager.getQueueStatus()
+            };
+            
+          } catch (productionError) {
+            // Restore original base URL
+            this.baseUrl = originalBaseUrl;
+            throw productionError;
+          }
+        }
+        
         throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
 
