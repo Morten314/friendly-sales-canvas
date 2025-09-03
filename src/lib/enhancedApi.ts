@@ -31,7 +31,7 @@ class EnhancedApiClient {
 
   constructor() {
     this.baseUrl = import.meta.env.DEV ? '/api' : 'https://backend-11kr.onrender.com';
-    this.defaultTimeout = 30000;
+    this.defaultTimeout = 120000; // 2 minutes - increased to prevent premature timeouts
     this.defaultRetries = 2;
   }
 
@@ -81,7 +81,10 @@ class EnhancedApiClient {
       console.log(`🚀 ${componentName} - Making API request to: ${url}`);
       
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), timeout);
+      const timeoutId = setTimeout(() => {
+        console.log(`⏰ ${componentName} - Request timeout after ${timeout}ms, aborting...`);
+        controller.abort();
+      }, timeout);
 
       const response = await fetch(url, {
         method: 'POST',
@@ -113,6 +116,16 @@ class EnhancedApiClient {
 
     } catch (error) {
       console.error(`❌ ${componentName} - API request failed:`, error);
+      
+      // Handle abort signal errors specifically
+      if (error instanceof Error && error.name === 'AbortError') {
+        return {
+          success: false,
+          error: 'Request timed out - please try again',
+          statusCode: 408,
+          rateLimitInfo: rateLimitManager.getQueueStatus()
+        };
+      }
       
       return {
         success: false,
@@ -150,31 +163,52 @@ class EnhancedApiClient {
       }
     }
 
-    // Execute with rate limiting
-    try {
-      const result = await executeWithRateLimit(
-        () => this.makeRequest<T>(endpoint, payload, options),
-        componentName
-      );
+    // Execute with rate limiting and retry logic
+    let lastError: any;
+    for (let attempt = 1; attempt <= this.defaultRetries; attempt++) {
+      try {
+        console.log(`🔄 ${componentName} - Attempt ${attempt}/${this.defaultRetries}`);
+        
+        const result = await executeWithRateLimit(
+          () => this.makeRequest<T>(endpoint, payload, options),
+          componentName
+        );
 
-      // Cache successful responses if enabled
-      if (useCache && result.success && result.data) {
-        const key = cacheKey || this.getCacheKey(endpoint, payload);
-        this.setCache(key, result.data);
+        // Cache successful responses if enabled
+        if (useCache && result.success && result.data) {
+          const key = cacheKey || this.getCacheKey(endpoint, payload);
+          this.setCache(key, result.data);
+        }
+
+        return result;
+
+      } catch (error) {
+        lastError = error;
+        console.warn(`⚠️ ${componentName} - Attempt ${attempt} failed:`, error);
+        
+        // Don't retry on certain error types
+        if (error instanceof Error && 
+            (error.name === 'AbortError' || error.message.includes('timeout'))) {
+          break;
+        }
+        
+        // Wait before retrying (exponential backoff)
+        if (attempt < this.defaultRetries) {
+          const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+          console.log(`⏳ ${componentName} - Waiting ${delay}ms before retry...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
       }
-
-      return result;
-
-    } catch (error) {
-      console.error(`❌ ${componentName} - Rate limited request failed:`, error);
-      
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Rate limit exceeded',
-        statusCode: 429,
-        rateLimitInfo: rateLimitManager.getQueueStatus()
-      };
     }
+
+    console.error(`❌ ${componentName} - All ${this.defaultRetries} attempts failed. Last error:`, lastError);
+    
+    return {
+      success: false,
+      error: lastError instanceof Error ? lastError.message : 'All retry attempts failed',
+      statusCode: 500,
+      rateLimitInfo: rateLimitManager.getQueueStatus()
+    };
   }
 
   // Specialized method for ICP research calls

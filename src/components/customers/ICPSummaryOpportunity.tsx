@@ -148,6 +148,44 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
   console.log("🔍 IS LOADING REGULATORY COMPLIANCE:", isLoadingRegulatoryCompliance);
   console.log("🔍 REGULATORY COMPLIANCE ERROR:", regulatoryComplianceError);
 
+  // Effect to monitor apiReportData changes
+  useEffect(() => {
+    if (apiReportData) {
+      console.log("🔄 apiReportData changed:", apiReportData);
+      console.log("🔄 apiReportData keys:", Object.keys(apiReportData));
+      console.log("🔄 apiReportData.title:", apiReportData.title);
+      console.log("🔄 apiReportData.blurb:", apiReportData.blurb);
+      console.log("🔄 apiReportData.marketSize:", apiReportData.marketSize);
+      console.log("🔄 apiReportData.growth:", apiReportData.growth);
+      console.log("🔄 apiReportData.urgency:", apiReportData.urgency);
+      console.log("🔄 apiReportData.timeToClose:", apiReportData.timeToClose);
+    } else {
+      console.log("🔄 apiReportData is null/undefined");
+    }
+  }, [apiReportData]);
+  
+  // Effect to monitor component re-renders
+  useEffect(() => {
+    console.log("🔄 ICPSummaryOpportunity component re-rendered");
+    console.log("🔄 Current apiReportData:", apiReportData);
+    console.log("🔄 Current selectedICP:", selectedICP);
+  });
+  
+  // Effect to monitor buyerMapApiData changes
+  useEffect(() => {
+    if (buyerMapApiData) {
+      console.log("🔄 buyerMapApiData changed:", buyerMapApiData);
+      console.log("🔄 buyerMapApiData keys:", Object.keys(buyerMapApiData));
+      console.log("🔄 buyerMapApiData.summary:", buyerMapApiData.summary);
+      console.log("🔄 buyerMapApiData.corePersonas:", buyerMapApiData.corePersonas);
+      console.log("🔄 buyerMapApiData.topPainPoint:", buyerMapApiData.topPainPoint);
+      console.log("🔄 buyerMapApiData.buyingTriggers:", buyerMapApiData.buyingTriggers);
+      console.log("🔄 buyerMapApiData.buyingTriggersArray:", buyerMapApiData.buyingTriggersArray);
+    } else {
+      console.log("🔄 buyerMapApiData is null/undefined");
+    }
+  }, [buyerMapApiData]);
+
   // Early return if no ICP is selected
   if (!selectedICP) {
     console.log("No selectedICP, showing placeholder");
@@ -257,8 +295,6 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
         const randomParam = Math.random().toString(36).substring(7);
         const endpoint = `icp-research?t=${timestamp}&cache_bust=${randomParam}`;
         
-
-        
         while (retryCount <= maxRetries) {
           try {
             console.log(`🔄 Attempting ICP Research API call (attempt ${retryCount + 1}/${maxRetries + 1})`);
@@ -267,18 +303,40 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
             // Try the actual endpoint first with cache busting
             console.log(`🌐 Making request to: ${endpoint}`);
             console.log(`📤 About to send payload:`, apiPayload);
-            // Use the API utility function to go through the proxy
-            console.log("🔧 Attempting with API utility...");
-            const directResponse = await fetch(`/api/${endpoint}`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Cache-Control': 'no-cache, no-store, must-revalidate',
-                'Pragma': 'no-cache',
-                'Expires': '0'
-              },
-              body: JSON.stringify(apiPayload)
-            });
+            
+            // Try direct backend call first (bypass proxy)
+            console.log("🔧 Attempting direct backend call...");
+            let directResponse;
+            
+            try {
+              directResponse = await fetch(`https://backend-11kr.onrender.com/icp-research`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Cache-Control': 'no-cache, no-store, must-revalidate',
+                  'Pragma': 'no-cache',
+                  'Expires': '0'
+                },
+                body: JSON.stringify(apiPayload)
+              });
+              console.log("✅ Direct backend call successful");
+            } catch (directError) {
+              console.log("⚠️ Direct backend call failed, trying proxy...");
+              console.log("Direct error:", directError);
+              
+              // Fallback to proxy
+              directResponse = await fetch(`/api/${endpoint}`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Cache-Control': 'no-cache, no-store, must-revalidate',
+                  'Pragma': 'no-cache',
+                  'Expires': '0'
+                },
+                body: JSON.stringify(apiPayload)
+              });
+              console.log("✅ Proxy call successful");
+            }
             
             console.log(`🌐 Direct fetch response status: ${directResponse.status}`);
             console.log(`🌐 Direct fetch response status text: ${directResponse.statusText}`);
@@ -297,6 +355,15 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
             console.log('📥 Response data:', response);
             console.log('📥 Response type:', typeof response);
             console.log('📥 Response keys:', Object.keys(response || {}));
+            
+            // ADD SPECIFIC RESPONSE VALIDATION
+            console.log('🔍🔍🔍 RESPONSE VALIDATION:');
+            console.log('🔍 response.status:', response?.status);
+            console.log('🔍 response.data exists:', !!response?.data);
+            console.log('🔍 response.data.currentData exists:', !!response?.data?.currentData);
+            console.log('🔍 response.data.currentData.title:', response?.data?.currentData?.title);
+            console.log('🔍 response.data.currentData.blurb:', response?.data?.currentData?.blurb);
+            
             break; // Success, exit retry loop
             
           } catch (error) {
@@ -429,6 +496,40 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
         console.log("API Response type:", typeof response);
         console.log("API Response keys:", response ? Object.keys(response) : 'null');
         
+        // ADD SPECIFIC API RESPONSE STRUCTURE DEBUGGING
+        console.log("🔍🔍🔍 API RESPONSE STRUCTURE ANALYSIS:");
+        console.log("🔍 response.status:", response?.status);
+        console.log("🔍 response.data exists:", !!response?.data);
+        console.log("🔍 response.data type:", typeof response?.data);
+        console.log("🔍 response.data keys:", response?.data ? Object.keys(response?.data) : 'null');
+        console.log("🔍 response.data.currentData exists:", !!response?.data?.currentData);
+        console.log("🔍 response.data.currentData type:", typeof response?.data?.currentData);
+        console.log("🔍 response.data.currentData keys:", response?.data?.currentData ? Object.keys(response?.data?.currentData) : 'null');
+        
+        // ADD COMPREHENSIVE DEBUGGING
+        console.log("🔍🔍🔍 COMPREHENSIVE API RESPONSE DEBUGGING:");
+        console.log("🔍 Full response object:", JSON.stringify(response, null, 2));
+        console.log("🔍 Response.status:", response?.status);
+        console.log("🔍 Response.message:", response?.message);
+        console.log("🔍 Response.data exists:", !!response?.data);
+        console.log("🔍 Response.data type:", typeof response?.data);
+        console.log("🔍 Response.data keys:", response?.data ? Object.keys(response?.data) : 'null');
+        
+        // Check if response.data contains the expected fields
+        if (response?.data) {
+          console.log("🔍 response.data.currentData exists:", !!response.data.currentData);
+          console.log("🔍 response.data.currentData keys:", response.data.currentData ? Object.keys(response.data.currentData) : 'null');
+          
+          if (response.data.currentData) {
+            console.log("🔍 response.data.currentData.title:", response.data.currentData.title);
+            console.log("🔍 response.data.currentData.blurb:", response.data.currentData.blurb);
+            console.log("🔍 response.data.currentData.marketSize:", response.data.currentData.marketSize);
+            console.log("🔍 response.data.currentData.growth:", response.data.currentData.growth);
+            console.log("🔍 response.data.currentData.urgency:", response.data.currentData.urgency);
+            console.log("🔍 response.data.currentData.timeToClose:", response.data.currentData.timeToClose);
+          }
+        }
+        
         // Summary of the fix applied
         console.log("🎯 FINAL FIX SUMMARY:");
         console.log("   - COMPONENT NAME: icp summary & market opportunity");
@@ -436,24 +537,38 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
         console.log("   - REMOVED: Unnecessary health check endpoints");
         console.log("   - RESULT: Clean API call with correct structure");
 
-        if (response && response.currentData) {
+        // Handle the API response structure: {status: 'success', data: {currentData: {...}}}
+        // The API returns {status: 'success', data: {currentData: {...}}}, so we need to extract from response.data.currentData
+        const reportData = response?.data?.currentData || response?.data || response?.currentData || response;
+        
+        console.log("🔍🔍🔍 DATA EXTRACTION DEBUGGING:");
+        console.log("🔍 response?.data?.currentData:", response?.data?.currentData);
+        console.log("🔍 response?.data:", response?.data);
+        console.log("🔍 response?.currentData:", response?.currentData);
+        console.log("🔍 response:", response);
+        console.log("🔍 FINAL EXTRACTED reportData:", reportData);
+        console.log("🔍 reportData keys:", reportData ? Object.keys(reportData) : 'null');
+        
+        if (reportData && typeof reportData === 'object') {
           // Transform the API response to match frontend expectations
           const transformedData = {
-            ...response.currentData,
+            ...reportData,
             // Ensure all required fields are present with fallbacks
-            marketSize: response.currentData.marketSize || 'N/A',
-            growth: response.currentData.growth || 'N/A',
-            urgency: response.currentData.urgency || 'N/A',
-            timeToClose: response.currentData.timeToClose || 'N/A',
+            title: reportData.title || selectedICP.title || 'N/A',
+            blurb: reportData.blurb || reportData.summary || 'N/A',
+            marketSize: reportData.marketSize || 'N/A',
+            growth: reportData.growth || 'N/A',
+            urgency: reportData.urgency || 'N/A',
+            timeToClose: reportData.timeToClose || 'N/A',
             marketAnalysis: {
-              ...response.currentData.marketAnalysis,
+              ...reportData.marketAnalysis,
               // Ensure marketAnalysis fields are present
-              totalMarketSize: response.currentData.marketAnalysis?.totalMarketSize || 'N/A',
-              marketGrowth: response.currentData.marketAnalysis?.marketGrowth || response.currentData.growth || 'N/A',
-              servicableMarket: response.currentData.marketAnalysis?.servicableMarket || 'N/A',
-              targetableMarket: response.currentData.marketAnalysis?.targetableMarket || 'N/A',
-              segments: response.currentData.marketAnalysis?.segments || [],
-              growthTrajectory: response.currentData.marketAnalysis?.growthTrajectory || {
+              totalMarketSize: reportData.marketAnalysis?.totalMarketSize || reportData.marketSize || 'N/A',
+              marketGrowth: reportData.marketAnalysis?.marketGrowth || reportData.growth || 'N/A',
+              servicableMarket: reportData.marketAnalysis?.servicableMarket || 'N/A',
+              targetableMarket: reportData.marketAnalysis?.targetableMarket || 'N/A',
+              segments: reportData.marketAnalysis?.segments || [],
+              growthTrajectory: reportData.marketAnalysis?.growthTrajectory || {
                 units: "index(2023=100)",
                 points: [
                   { year: 2023, index: 100 },
@@ -462,21 +577,28 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
                   { year: 2026, index: 112 }
                 ]
               },
-              marketShareDistribution: response.currentData.marketAnalysis?.marketShareDistribution || [],
-              keyChallenges: response.currentData.marketAnalysis?.keyChallenges || [],
-              strategicRecommendations: response.currentData.marketAnalysis?.strategicRecommendations || [],
-              signalsToMonitor: response.currentData.marketAnalysis?.signalsToMonitor || []
+              marketShareDistribution: reportData.marketAnalysis?.marketShareDistribution || [],
+              keyChallenges: reportData.marketAnalysis?.keyChallenges || [],
+              strategicRecommendations: reportData.marketAnalysis?.strategicRecommendations || [],
+              signalsToMonitor: reportData.marketAnalysis?.signalsToMonitor || []
             },
             competitiveData: {
-              ...response.currentData.competitiveData,
-              mainCompetitors: response.currentData.competitiveData?.mainCompetitors || [],
-              competitiveMap: response.currentData.competitiveData?.competitiveMap || [],
-              competitiveNews: response.currentData.competitiveData?.competitiveNews || [],
-              buyingSignalsData: response.currentData.competitiveData?.buyingSignalsData || []
+              ...reportData.competitiveData,
+              mainCompetitors: reportData.competitiveData?.mainCompetitors || [],
+              competitiveMap: reportData.competitiveData?.competitiveMap || [],
+              competitiveNews: reportData.competitiveData?.competitiveNews || [],
+              buyingSignalsData: reportData.competitiveData?.buyingSignalsData || []
             },
-            buyingTriggersArray: response.currentData.buyingTriggersArray || [],
+            buyingTriggersArray: Array.isArray(reportData.buyingTriggersArray) 
+              ? reportData.buyingTriggersArray.filter((trigger: any) => 
+                  trigger && 
+                  typeof trigger === 'object' && 
+                  typeof trigger.trigger === 'string' && 
+                  typeof trigger.description === 'string'
+                )
+              : [],
             _metadata: {
-              ...response.currentData._metadata,
+              ...reportData._metadata,
               dataSource: 'api'
             }
           };
@@ -484,6 +606,22 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
           setApiReportData(transformedData);
           console.log("✅ Report data updated from API/Mock with transformation");
           console.log("🔍 Transformed data structure:", transformedData);
+          
+          // ADD STATE UPDATE DEBUGGING
+          console.log("🔍🔍🔍 STATE UPDATE DEBUGGING:");
+          console.log("🔍 About to call setApiReportData with:", transformedData);
+          console.log("🔍 transformedData.title:", transformedData.title);
+          console.log("🔍 transformedData.blurb:", transformedData.blurb);
+          console.log("🔍 transformedData.marketSize:", transformedData.marketSize);
+          console.log("🔍 transformedData.growth:", transformedData.growth);
+          console.log("🔍 transformedData.urgency:", transformedData.urgency);
+          console.log("🔍 transformedData.timeToClose:", transformedData.timeToClose);
+          
+          // Force a re-render check
+          setTimeout(() => {
+            console.log("🔍🔍🔍 STATE UPDATE VERIFICATION (after 100ms):");
+            console.log("🔍 apiReportData should now contain:", transformedData);
+          }, 100);
         } else if (response && response.data) {
           // Handle case where response might have data instead of currentData
           const transformedData = {
@@ -538,6 +676,22 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
           setApiReportData(transformedData);
           console.log("✅ Report data updated from API (data field) with transformation");
           console.log("🔍 Transformed data structure:", transformedData);
+          
+          // ADD STATE UPDATE DEBUGGING FOR SECOND PATH
+          console.log("🔍🔍🔍 STATE UPDATE DEBUGGING (SECOND PATH):");
+          console.log("🔍 About to call setApiReportData with:", transformedData);
+          console.log("🔍 transformedData.title:", transformedData.title);
+          console.log("🔍 transformedData.blurb:", transformedData.blurb);
+          console.log("🔍 transformedData.marketSize:", transformedData.marketSize);
+          console.log("🔍 transformedData.growth:", transformedData.growth);
+          console.log("🔍 transformedData.urgency:", transformedData.urgency);
+          console.log("🔍 transformedData.timeToClose:", transformedData.timeToClose);
+          
+          // Force a re-render check
+          setTimeout(() => {
+            console.log("🔍🔍🔍 STATE UPDATE VERIFICATION (SECOND PATH, after 100ms):");
+            console.log("🔍 apiReportData should now contain:", transformedData);
+          }, 100);
         } else {
           console.error("❌ Invalid response format:", response);
           throw new Error("Invalid response format from API");
@@ -619,6 +773,16 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
         
         console.log("📊 Enhanced API Response:", apiResponse);
         
+        // ADD ENHANCED API RESPONSE DEBUGGING
+        console.log("🔍🔍🔍 ENHANCED API RESPONSE STRUCTURE:");
+        console.log("🔍 apiResponse.success:", apiResponse.success);
+        console.log("🔍 apiResponse.error:", apiResponse.error);
+        console.log("🔍 apiResponse.statusCode:", apiResponse.statusCode);
+        console.log("🔍 apiResponse.data exists:", !!apiResponse.data);
+        console.log("🔍 apiResponse.data type:", typeof apiResponse.data);
+        console.log("🔍 apiResponse.data keys:", apiResponse.data ? Object.keys(apiResponse.data) : 'null');
+        
+        let response;
         if (!apiResponse.success) {
           console.error("❌ Enhanced API call failed:", apiResponse.error);
           
@@ -626,6 +790,9 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
           if (apiResponse.error?.includes('rate limit') || apiResponse.statusCode === 429) {
             console.log("🚫 Rate limit detected, using mock data as fallback");
             setBuyerMapError("Rate limit reached. Using cached/mock data.");
+          } else if (apiResponse.statusCode === 408) {
+            console.log("⏰ Request timeout detected, using mock data as fallback");
+            setBuyerMapError("Request timed out. Using cached/mock data.");
           } else {
             setBuyerMapError(`API Error: ${apiResponse.error}`);
           }
@@ -655,6 +822,11 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
         } else {
           response = apiResponse.data;
           console.log("✅ Enhanced API call successful");
+          console.log("🔍🔍🔍 RESPONSE ASSIGNMENT DEBUGGING:");
+          console.log("🔍 apiResponse.data:", apiResponse.data);
+          console.log("🔍 response assigned:", response);
+          console.log("🔍 response type:", typeof response);
+          console.log("🔍 response keys:", response ? Object.keys(response) : 'null');
         }
         
         // If API call failed after all retries, use mock response
@@ -699,13 +871,23 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
         console.log("🔍 Response.data type:", typeof response?.data);
         console.log("🔍 Response.data keys:", response?.data ? Object.keys(response.data) : 'null');
         
-        // Check if response.data contains the expected fields
+        // ADD SPECIFIC BUYER MAP API RESPONSE STRUCTURE DEBUGGING
+        console.log("🔍🔍🔍 BUYER MAP API RESPONSE STRUCTURE ANALYSIS:");
+        console.log("🔍 response.status:", response?.status);
+        console.log("🔍 response.data exists:", !!response?.data);
+        console.log("🔍 response.data type:", typeof response?.data);
+        console.log("🔍 response.data keys:", response?.data ? Object.keys(response?.data) : 'null');
+        
+        // Check if response.data contains the expected fields for buyer map
         if (response?.data) {
           console.log("🔍 response.data.corePersonas:", response.data.corePersonas);
           console.log("🔍 response.data.topPainPoint:", response.data.topPainPoint);
           console.log("🔍 response.data.buyingTriggers:", response.data.buyingTriggers);
           console.log("🔍 response.data.buyingTriggersArray:", response.data.buyingTriggersArray);
           console.log("🔍 response.data.blurb:", response.data.blurb);
+          console.log("🔍 response.data.title:", response.data.title);
+          console.log("🔍 response.data.industry:", response.data.industry);
+          console.log("🔍 response.data.segment:", response.data.segment);
         }
         
         // Summary of the fix applied
@@ -715,11 +897,15 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
         console.log("   - REMOVED: Unnecessary health check endpoints");
         console.log("   - RESULT: Clean API call with correct structure");
 
-        // Handle both nested response.buyerMap and direct response formats
-        // The API returns {status: 'success', data: {...}}, so we need to extract from response.data
+        // Handle the API response structure: {status: 'success', data: {...}}
+        // For buyer map, the API returns data directly in response.data (not nested under currentData)
         const buyerMapResponse = response?.data || response?.buyerMap || response;
         
-        console.log("🔍 Extracted buyerMapResponse:", buyerMapResponse);
+        console.log("🔍🔍🔍 BUYER MAP DATA EXTRACTION DEBUGGING:");
+        console.log("🔍 response?.data:", response?.data);
+        console.log("🔍 response?.buyerMap:", response?.buyerMap);
+        console.log("🔍 response:", response);
+        console.log("🔍 FINAL EXTRACTED buyerMapResponse:", buyerMapResponse);
         console.log("🔍 buyerMapResponse keys:", buyerMapResponse ? Object.keys(buyerMapResponse) : 'null');
         
         if (buyerMapResponse && typeof buyerMapResponse === 'object') {
@@ -742,6 +928,15 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
           console.log("✅ Buyer Map report data updated from API/Mock with transformation");
           console.log("🔍 Transformed buyer map data structure:", transformedData);
           console.log("🔍 buyingTriggersArray:", transformedData.buyingTriggersArray);
+          
+          // ADD BUYER MAP STATE UPDATE DEBUGGING
+          console.log("🔍🔍🔍 BUYER MAP STATE UPDATE DEBUGGING:");
+          console.log("🔍 About to call setBuyerMapApiData with:", transformedData);
+          console.log("🔍 transformedData.summary:", transformedData.summary);
+          console.log("🔍 transformedData.corePersonas:", transformedData.corePersonas);
+          console.log("🔍 transformedData.topPainPoint:", transformedData.topPainPoint);
+          console.log("🔍 transformedData.buyingTriggers:", transformedData.buyingTriggers);
+          console.log("🔍 transformedData.buyingTriggersArray length:", transformedData.buyingTriggersArray?.length);
           
           // ADD STATE UPDATE DEBUGGING
           console.log("🔍🔍🔍 STATE UPDATE DEBUGGING:");
@@ -842,6 +1037,9 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
            if (apiResponse.error?.includes('rate limit') || apiResponse.statusCode === 429) {
              console.log("🚫 Rate limit detected, using mock data as fallback");
              setCompetitiveOverlapError("Rate limit reached. Using cached/mock data.");
+           } else if (apiResponse.statusCode === 408) {
+             console.log("⏰ Request timeout detected, using mock data as fallback");
+             setCompetitiveOverlapError("Request timed out. Using cached/mock data.");
            } else {
              setCompetitiveOverlapError(`API Error: ${apiResponse.error}`);
            }
@@ -2068,6 +2266,19 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
 
   // Get current data based on active card - prioritize API data over frontend data
   const currentData = apiReportData || selectedICP;
+  
+  // ADD COMPREHENSIVE CURRENT DATA DEBUGGING
+  console.log("🔍🔍🔍 CURRENT DATA COMPUTATION DEBUGGING:");
+  console.log("🔍 apiReportData:", apiReportData);
+  console.log("🔍 selectedICP:", selectedICP);
+  console.log("🔍 currentData (computed):", currentData);
+  console.log("🔍 currentData source:", apiReportData ? 'API Report' : 'Selected ICP');
+  console.log("🔍 currentData.title:", currentData?.title);
+  console.log("🔍 currentData.blurb:", currentData?.blurb);
+  console.log("🔍 currentData.marketSize:", currentData?.marketSize);
+  console.log("🔍 currentData.growth:", currentData?.growth);
+  console.log("🔍 currentData.urgency:", currentData?.urgency);
+  console.log("🔍 currentData.timeToClose:", currentData?.timeToClose);
   
   // Get buyer map data - prioritize API data over frontend data
   const buyerMapData = buyerMapApiData || selectedICP;
