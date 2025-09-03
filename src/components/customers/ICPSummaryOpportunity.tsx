@@ -1255,6 +1255,9 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
            }, 100);
          } else if (response && response.data) {
            // Handle case where response might have data instead of competitiveOverlap
+           // This is a fallback for different API response structures
+           console.log("🔍🔍🔍 FALLBACK DATA PATH - response.data structure detected");
+           
            const transformedData = {
              ...response.data,
              // Map backend schema fields to frontend expectations
@@ -1279,33 +1282,16 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
              }
            };
            
-           // ADD TRANSFORMATION DEBUGGING FOR DATA PATH
-           console.log("🔍🔍🔍 TRANSFORMATION DEBUGGING (response.data path):");
+           // ADD TRANSFORMATION DEBUGGING FOR FALLBACK PATH
+           console.log("🔍🔍🔍 TRANSFORMATION DEBUGGING (FALLBACK response.data path):");
            console.log("🔍 response.data.competitiveMap:", response.data.competitiveMap);
            console.log("🔍 response.data.competitiveData?.competitiveMap:", response.data.competitiveData?.competitiveMap);
            console.log("🔍 Final competitiveMap (transformed):", transformedData.competitiveMap);
            console.log("🔍 Final competitiveMap length:", transformedData.competitiveMap?.length);
            
-           setCompetitiveOverlapApiData(transformedData);
-           console.log("✅ Competitive Overlap report data updated from API/Mock with transformation (data field)");
-           console.log("🔍 Transformed competitive overlap data structure:", transformedData);
-           // ADD STATE UPDATE DEBUGGING FOR SECOND PATH
-           console.log("🔍🔍🔍 COMPETITIVE OVERLAP STATE UPDATE DEBUGGING (SECOND PATH):");
-           console.log("🔍 About to call setCompetitiveOverlapApiData with:", transformedData);
-           console.log("🔍 transformedData.summary:", transformedData.summary);
-           console.log("🔍 transformedData.competitors:", transformedData.competitors);
-           console.log("🔍 transformedData.winLossChange:", transformedData.winLossChange);
-           console.log("🔍 transformedData.activeBuyingSignals:", transformedData.activeBuyingSignals);
-           console.log("🔍 transformedData.competitiveMap:", transformedData.competitiveMap);
-           console.log("🔍 transformedData.competitiveMap type:", typeof transformedData.competitiveMap);
-           console.log("🔍 transformedData.competitiveMap isArray:", Array.isArray(transformedData.competitiveMap));
-           console.log("🔍 transformedData.competitiveMap length:", transformedData.competitiveMap?.length);
-           console.log("🔍 transformedData.competitiveNewsAndEvents length:", transformedData.competitiveNewsAndEvents?.length);
-           console.log("🔍 transformedData.buyingSignalsData length:", transformedData.buyingSignalsData?.length);
-           setTimeout(() => {
-             console.log("🔍🔍🔍 COMPETITIVE OVERLAP STATE UPDATE VERIFICATION (SECOND PATH, after 100ms):");
-             console.log("🔍 competitiveOverlapApiData should now contain:", transformedData);
-           }, 100);
+           // IMPORTANT: Don't call setCompetitiveOverlapApiData here to avoid overriding the main path
+           console.log("⚠️ FALLBACK PATH: Not calling setCompetitiveOverlapApiData to avoid data override");
+           console.log("🔍 Fallback transformedData:", transformedData);
          } else {
            console.warn("❌ Unexpected competitive overlap API response structure");
            console.warn("Response:", response);
@@ -2997,8 +2983,12 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
                   <CardTitle className="text-xl font-semibold">Competitive Overlap & Buying Signals</CardTitle>
                   <CardDescription className="mt-1">
                     Competitive landscape analysis and market signals
-                    {competitiveOverlapApiData && (
-                      <span className="ml-2 text-blue-600">(API Generated)</span>
+                    {competitiveOverlapApiData ? (
+                      <span className="ml-2 text-blue-600">
+                        ({competitiveOverlapApiData._metadata?.dataSource === 'mock' ? 'Mock Data' : 'API Generated'})
+                      </span>
+                    ) : (
+                      <span className="ml-2 text-gray-500">(No Data)</span>
                     )}
                   </CardDescription>
                 </div>
@@ -3066,11 +3056,38 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
                       </p>
                       
                       {/* Data Source Indicator */}
-                      {competitiveOverlapError && competitiveOverlapError.includes('500') && (
-                        <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
-                          <p className="text-yellow-700 text-xs font-medium">⚠️ Using Mock Data</p>
-                          <p className="text-yellow-600 text-xs mt-1">
-                            Backend service unavailable. Displaying sample data for demonstration.
+                      {competitiveOverlapApiData && (
+                        <div className={`mt-2 p-2 rounded-lg border ${
+                          competitiveOverlapApiData._metadata?.dataSource === 'mock' 
+                            ? 'bg-yellow-50 border-yellow-200' 
+                            : 'bg-green-50 border-green-200'
+                        }`}>
+                          <p className={`text-xs font-medium ${
+                            competitiveOverlapApiData._metadata?.dataSource === 'mock' 
+                              ? 'text-yellow-700' 
+                              : 'text-green-700'
+                          }`}>
+                            {competitiveOverlapApiData._metadata?.dataSource === 'mock' ? '⚠️ Mock Data' : '✅ API Data'}
+                          </p>
+                          <p className={`text-xs mt-1 ${
+                            competitiveOverlapApiData._metadata?.dataSource === 'mock' 
+                              ? 'text-yellow-600' 
+                              : 'text-green-600'
+                          }`}>
+                            {competitiveOverlapApiData._metadata?.dataSource === 'mock' 
+                              ? 'Backend service unavailable. Displaying sample data for demonstration.'
+                              : 'Live data from competitive overlap API endpoint.'
+                            }
+                          </p>
+                        </div>
+                      )}
+                      
+                      {/* Error-specific indicator */}
+                      {competitiveOverlapError && competitiveOverlapError.includes('500') && !competitiveOverlapApiData && (
+                        <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-lg">
+                          <p className="text-red-700 text-xs font-medium">🚨 API Error</p>
+                          <p className="text-red-600 text-xs mt-1">
+                            Failed to fetch competitive overlap data. Please retry.
                           </p>
                         </div>
                       )}
