@@ -189,6 +189,24 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
       console.log("🔄 buyerMapApiData is null/undefined");
     }
   }, [buyerMapApiData]);
+  
+  // Effect to monitor competitiveOverlapApiData changes
+  useEffect(() => {
+    console.log("🔄 competitiveOverlapApiData useEffect triggered");
+    if (competitiveOverlapApiData) {
+      console.log("🔄 competitiveOverlapApiData changed:", competitiveOverlapApiData);
+      console.log("🔄 competitiveOverlapApiData keys:", Object.keys(competitiveOverlapApiData));
+      console.log("🔍 competitiveOverlapApiData.summary:", competitiveOverlapApiData.summary);
+      console.log("🔍 competitiveOverlapApiData.competitors:", competitiveOverlapApiData.competitors);
+      console.log("🔍 competitiveOverlapApiData.winLossChange:", competitiveOverlapApiData.winLossChange);
+      console.log("🔍 competitiveOverlapApiData.activeBuyingSignals:", competitiveOverlapApiData.activeBuyingSignals);
+      console.log("🔍 competitiveOverlapApiData.competitiveMap:", competitiveOverlapApiData.competitiveMap);
+      console.log("🔍 competitiveOverlapApiData.buyingSignalsData:", competitiveOverlapApiData.buyingSignalsData);
+      console.log("🔍 competitiveOverlapApiData._metadata.dataSource:", competitiveOverlapApiData._metadata?.dataSource);
+    } else {
+      console.log("🔄 competitiveOverlapApiData is null/undefined");
+    }
+  }, [competitiveOverlapApiData]);
 
   // Early return if no ICP is selected
   if (!selectedICP) {
@@ -1066,6 +1084,7 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
          let response;
          if (!apiResponse.success) {
            console.error("❌ Enhanced API call failed:", apiResponse.error);
+           console.error("❌ Status Code:", apiResponse.statusCode);
            
            // Check if it's a rate limit error
            if (apiResponse.error?.includes('rate limit') || apiResponse.statusCode === 429) {
@@ -1074,55 +1093,61 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
            } else if (apiResponse.statusCode === 408) {
              console.log("⏰ Request timeout detected, using mock data as fallback");
              setCompetitiveOverlapError("Request timed out. Using cached/mock data.");
+           } else if (apiResponse.statusCode === 500) {
+             console.log("🏥 Backend server error (500), using mock data as fallback");
+             setCompetitiveOverlapError("Backend server error. Using cached/mock data.");
            } else {
              setCompetitiveOverlapError(`API Error: ${apiResponse.error}`);
            }
            
-           // Use mock response as fallback
+           // Use mock response as fallback - Updated to match manufacturing ICP
            response = {
              data: {
-               summary: "Key competitors include E-commerce Leader A and E-commerce Leader B dominating the established market, while cloud-native solutions gain traction. Recent market signals show increased funding activity and regulatory-driven technology investments creating new opportunities.",
-               competitors: 7,
-               winLossChange: "+11%",
-               activeBuyingSignals: 3,
-               competitiveMap: [
-                 {
-                   competitor: "E-commerce Incumbent A",
-                   segment: "Direct-to-Consumer Brands",
-                   share: "24%",
-                   winsLosses: "Strong in DACH, high digital marketing spend focus",
-                   differentiators: "Legacy e-commerce presence, high digital marketing spend approach"
+               currentData: {
+                 title: "Competitive Overlap & Buying Signals",
+                 blurb: "Key competitors include Manufacturing Leader A and Manufacturing Leader B dominating the Industrial Automation market, while Industry 4.0 technologies gain traction. Recent market signals show increased investment activity and regulatory-driven technology investments creating new opportunities.",
+                 numberOfMainCompetitors: 6,
+                 recentWinLossChange: "+15%",
+                 activeBuyingSignals: 8,
+                 competitiveMap: [
+                   {
+                     competitor: "Manufacturing Incumbent A",
+                     segment: "Industrial Automation",
+                     share: "24%",
+                     winsLosses: "Strong in Midwest, high adoption of Industry 4.0 technologies focus",
+                     differentiators: "Legacy manufacturing presence, high adoption of Industry 4.0 technologies approach"
+                   }
+                 ],
+                 competitiveNewsAndEvents: [
+                   {
+                     headline: "Manufacturing Leader announces industrial automation expansion",
+                     source: "Manufacturing Leader A",
+                     date: "2024-12-15"
+                   }
+                 ],
+                 buyingSignals: [
+                   {
+                     signalType: "Industry 4.0 Investment",
+                     description: "Increased Industry 4.0 spending in manufacturing",
+                     source: "Industry Reports",
+                     recency: "2 weeks ago"
+                   },
+                   {
+                     signalType: "Regulatory Compliance",
+                     description: "Midwest regulatory changes requiring Industry 4.0 improvements",
+                     source: "Government Bulletin",
+                     recency: "3 weeks ago"
+                   },
+                   {
+                     signalType: "Technological Advancement",
+                     description: "Increased focus on process optimization in manufacturing sector",
+                     source: "Market Analysis",
+                     recency: "1 month ago"
+                   }
+                 ],
+                 _metadata: {
+                   dataSource: "mock"
                  }
-               ],
-               competitiveNewsAndEvents: [
-                 {
-                   headline: "E-commerce Leader announces direct-to-consumer brands expansion",
-                   source: "E-commerce Leader A",
-                   date: "2024-12-15"
-                 }
-               ],
-               buyingSignalsData: [
-                 {
-                   signalType: "High digital marketing spend",
-                   description: "Increased high digital marketing spend spending in e-commerce",
-                   source: "Industry Reports",
-                   recency: "2 weeks ago"
-                 },
-                 {
-                   signalType: "Funding Round",
-                   description: "Major e-commerce player raises Series C funding to accelerate digital transformation",
-                   source: "Press Release",
-                   recency: "1 month ago"
-                 },
-                 {
-                   signalType: "Regulatory Compliance",
-                   description: "New DACH regulations pushing higher investment in marketing and compliance systems",
-                   source: "Government Bulletin",
-                   recency: "3 weeks ago"
-                 }
-               ],
-               _metadata: {
-                 dataSource: "mock"
                }
              }
            };
@@ -1135,6 +1160,27 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
          console.log("Competitive Overlap API Response type:", typeof response);
          console.log("Competitive Overlap API Response keys:", response ? Object.keys(response) : 'null');
          
+         // ADD COMPREHENSIVE COMPETITIVE OVERLAP API RESPONSE DEBUGGING
+         console.log("🔍🔍🔍 COMPETITIVE OVERLAP API RESPONSE STRUCTURE ANALYSIS:");
+         console.log("🔍 response.status:", response?.status);
+         console.log("🔍 response.data exists:", !!response?.data);
+         console.log("🔍 response.data type:", typeof response?.data);
+         console.log("🔍 response.data keys:", response?.data ? Object.keys(response?.data) : 'null');
+         console.log("🔍 response.data.currentData exists:", !!response?.data?.currentData);
+         console.log("🔍 response.data.currentData type:", typeof response?.data?.currentData);
+         console.log("🔍 response.data.currentData keys:", response?.data?.currentData ? Object.keys(response?.data?.currentData) : 'null');
+         
+         // Check if response.data.currentData contains the expected fields for competitive overlap
+         if (response?.data?.currentData) {
+           console.log("🔍 response.data.currentData.numberOfMainCompetitors:", response.data.currentData.numberOfMainCompetitors);
+           console.log("🔍 response.data.currentData.recentWinLossChange:", response.data.currentData.recentWinLossChange);
+           console.log("🔍 response.data.currentData.activeBuyingSignals:", response.data.currentData.activeBuyingSignals);
+           console.log("🔍 response.data.currentData.competitiveMap:", response.data.currentData.competitiveMap);
+           console.log("🔍 response.data.currentData.buyingSignals:", response.data.currentData.buyingSignals);
+           console.log("🔍 response.data.currentData.blurb:", response.data.currentData.blurb);
+           console.log("🔍 response.data.currentData.title:", response.data.currentData.title);
+         }
+         
          // Summary of the fix applied
          console.log("🎯 COMPETITIVE OVERLAP FINAL FIX SUMMARY:");
          console.log("   - COMPONENT NAME: competitive overlap & buying signals");
@@ -1142,36 +1188,48 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
          console.log("   - REMOVED: Unnecessary health check endpoints");
          console.log("   - RESULT: Clean API call with correct structure");
 
-         if (response && response.competitiveOverlap) {
+         // Handle the API response structure: {status: 'success', data: {currentData: {...}}}
+         // For competitive overlap, the API returns data nested under response.data.currentData
+         const competitiveOverlapData = response?.data?.currentData || response?.competitiveOverlap || response?.data || response;
+         
+         console.log("🔍🔍🔍 COMPETITIVE OVERLAP DATA EXTRACTION DEBUGGING:");
+         console.log("🔍 response?.data?.currentData:", response?.data?.currentData);
+         console.log("🔍 response?.competitiveOverlap:", response?.competitiveOverlap);
+         console.log("🔍 response?.data:", response?.data);
+         console.log("🔍 response:", response);
+         console.log("🔍 FINAL EXTRACTED competitiveOverlapData:", competitiveOverlapData);
+         console.log("🔍 competitiveOverlapData keys:", competitiveOverlapData ? Object.keys(competitiveOverlapData) : 'null');
+         
+         if (competitiveOverlapData && typeof competitiveOverlapData === 'object') {
            // Transform the API response to match frontend expectations
            const transformedData = {
-             ...response.competitiveOverlap,
+             ...competitiveOverlapData,
              // Map backend schema fields to frontend expectations
-             summary: response.competitiveOverlap.blurb || response.competitiveOverlap.summary || 'N/A',
-             competitors: response.competitiveOverlap.numberOfMainCompetitors || response.competitiveOverlap.competitors || 0,
-             winLossChange: response.competitiveOverlap.recentWinLossChange || response.competitiveOverlap.winLossChange || 'N/A',
-             activeBuyingSignals: response.competitiveOverlap.activeBuyingSignals || 
-                                 response.competitiveOverlap.buyingSignals?.length || 
-                                 response.competitiveOverlap.buyingSignalsData?.length || 0,
+             summary: competitiveOverlapData.blurb || competitiveOverlapData.summary || 'N/A',
+             competitors: competitiveOverlapData.numberOfMainCompetitors || competitiveOverlapData.competitors || 0,
+             winLossChange: competitiveOverlapData.recentWinLossChange || competitiveOverlapData.winLossChange || 'N/A',
+             activeBuyingSignals: competitiveOverlapData.activeBuyingSignals || 
+                                 competitiveOverlapData.buyingSignals?.length || 
+                                 competitiveOverlapData.buyingSignalsData?.length || 0,
              // Handle competitiveMap from both top level and nested under competitiveData
-             competitiveMap: response.competitiveOverlap.competitiveMap || 
-                           response.competitiveOverlap.competitiveData?.competitiveMap || [],
-             competitiveNewsAndEvents: response.competitiveOverlap.competitiveNewsAndEvents || 
-                                     response.competitiveOverlap.competitiveData?.competitiveNews || [],
-             mainCompetitors: response.competitiveOverlap.mainCompetitors || 
-                            response.competitiveOverlap.competitiveData?.mainCompetitors || [],
-             buyingSignalsData: response.competitiveOverlap.buyingSignals || 
-                              response.competitiveOverlap.buyingSignalsData || [],
+             competitiveMap: competitiveOverlapData.competitiveMap || 
+                           competitiveOverlapData.competitiveData?.competitiveMap || [],
+             competitiveNewsAndEvents: competitiveOverlapData.competitiveNewsAndEvents || 
+                                     competitiveOverlapData.competitiveData?.competitiveNews || [],
+             mainCompetitors: competitiveOverlapData.mainCompetitors || 
+                            competitiveOverlapData.competitiveData?.mainCompetitors || [],
+             buyingSignalsData: competitiveOverlapData.buyingSignals || 
+                              competitiveOverlapData.buyingSignalsData || [],
              _metadata: {
-               ...response.competitiveOverlap._metadata,
-               dataSource: 'api'
+               ...competitiveOverlapData._metadata,
+               dataSource: competitiveOverlapData._metadata?.dataSource || 'api'
              }
            };
            
            // ADD TRANSFORMATION DEBUGGING
            console.log("🔍🔍🔍 TRANSFORMATION DEBUGGING (competitiveOverlap path):");
-           console.log("🔍 response.competitiveOverlap.competitiveMap:", response.competitiveOverlap.competitiveMap);
-           console.log("🔍 response.competitiveOverlap.competitiveData?.competitiveMap:", response.competitiveOverlap.competitiveData?.competitiveMap);
+           console.log("🔍 competitiveOverlapData.competitiveMap:", competitiveOverlapData.competitiveMap);
+           console.log("🔍 competitiveOverlapData.competitiveData?.competitiveMap:", competitiveOverlapData.competitiveData?.competitiveMap);
            console.log("🔍 Final competitiveMap (transformed):", transformedData.competitiveMap);
            console.log("🔍 Final competitiveMap length:", transformedData.competitiveMap?.length);
            
