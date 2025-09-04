@@ -1566,23 +1566,27 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
            console.log("🔍 Transformed regulatory compliance data structure:", transformedData);
          } else if (response && response.data) {
            // Handle case where response might have data instead of regulatoryCompliance
+           // Check if data is nested under currentData (new API response format)
+           const sourceData = response.data.currentData || response.data;
+           
            const transformedData = {
-             ...response.data,
+             ...sourceData,
              // Apply same transformation logic
-             summary: response.data.summary || 'N/A',
-             keyComplianceFrameworks: response.data.keyComplianceFrameworks || [],
-             upcomingMandates: response.data.upcomingMandates || 'N/A',
-             icpFitScore: response.data.icpFitScore || 'N/A',
-             recommendationConfidence: response.data.recommendationConfidence || 'N/A',
-             icpRefinementRecommendations: response.data.icpRefinementRecommendations || [],
+             summary: sourceData.summary || sourceData.blurb || 'N/A',
+             keyComplianceFrameworks: sourceData.keyComplianceFrameworks || [],
+             upcomingMandates: sourceData.upcomingMandates || 'N/A',
+             icpFitScore: sourceData.icpFitScore || 'N/A',
+             recommendationConfidence: sourceData.recommendationConfidence || 'N/A',
+             icpRefinementRecommendations: sourceData.icpRefinementRecommendations || [],
              _metadata: {
-               ...response.data._metadata,
+               ...sourceData._metadata,
                dataSource: 'api'
              }
            };
            
            setRegulatoryComplianceApiData(transformedData);
            console.log("✅ Regulatory Compliance report data updated from API/Mock with transformation (data field)");
+           console.log("🔍 Source data structure:", sourceData);
            console.log("🔍 Transformed regulatory compliance data structure:", transformedData);
          } else {
            console.warn("❌ Unexpected regulatory compliance API response structure");
@@ -2460,6 +2464,15 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
   
   // Get regulatory compliance data - prioritize API data over frontend data
   const regulatoryComplianceData = regulatoryComplianceApiData || selectedICP;
+  
+  // DEBUG: Check which data source is being used for regulatory compliance
+  console.log("🔍🔍🔍 REGULATORY COMPLIANCE DATA SOURCE DEBUG:");
+  console.log("🔍 regulatoryComplianceApiData exists:", !!regulatoryComplianceApiData);
+  console.log("🔍 regulatoryComplianceApiData:", regulatoryComplianceApiData);
+  console.log("🔍 selectedICP exists:", !!selectedICP);
+  console.log("🔍 Using data source:", regulatoryComplianceApiData ? 'API Response' : 'Original ICP');
+  console.log("🔍 regulatoryComplianceError:", regulatoryComplianceError);
+  console.log("🔍 isLoadingRegulatoryCompliance:", isLoadingRegulatoryCompliance);
 
   // Debug logging to see what data is being used
   console.log("🔍 FINAL DATA DEBUG:");
@@ -3337,6 +3350,14 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
                     >
                       Retry Regulatory Compliance API
                     </Button>
+                    
+                    {/* Debug Info */}
+                    <div className="mt-2 p-2 bg-gray-100 rounded text-xs">
+                      <div><strong>Data Source:</strong> {regulatoryComplianceApiData ? 'API Response' : 'Original ICP'}</div>
+                      <div><strong>API Data:</strong> {regulatoryComplianceApiData ? 'Available' : 'Not Available'}</div>
+                      <div><strong>Error:</strong> {regulatoryComplianceError || 'None'}</div>
+                      <div><strong>Loading:</strong> {isLoadingRegulatoryCompliance ? 'Yes' : 'No'}</div>
+                    </div>
                   </div>
                 )}
 
