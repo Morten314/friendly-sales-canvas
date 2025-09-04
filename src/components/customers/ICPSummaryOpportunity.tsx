@@ -99,9 +99,10 @@ interface SuggestedICP {
 
 interface ICPSummaryOpportunityProps {
   selectedICP: SuggestedICP | null;
+  refreshTrigger?: number;
 }
 
-export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProps) => {
+export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummaryOpportunityProps) => {
   const [isMarketExpanded, setIsMarketExpanded] = useState(false);
   const [isBuyerMapExpanded, setIsBuyerMapExpanded] = useState(false);
   const [isCompetitiveExpanded, setIsCompetitiveExpanded] = useState(false);
@@ -134,6 +135,7 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
 
   console.log("=== ICPSummaryOpportunity RENDER ===");
   console.log("selectedICP:", selectedICP);
+  console.log("🔍 REFRESH TRIGGER:", refreshTrigger);
   console.log("🔍 DATA SOURCE:", dataSource);
   console.log("🔍 API REPORT DATA:", apiReportData);
   console.log("🔍 IS LOADING REPORT:", isLoadingReport);
@@ -2316,6 +2318,18 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
       generateRegulatoryComplianceReportViaAPI();
     }
   }, [selectedICP]);
+
+  // Generate all reports via API when company profile is updated (refreshTrigger changes)
+  useEffect(() => {
+    if (selectedICP && refreshTrigger && refreshTrigger > 0) {
+      console.log("=== COMPANY PROFILE UPDATED - REGENERATING ALL REPORTS VIA API ===");
+      console.log("RefreshTrigger value:", refreshTrigger);
+      generateReportViaAPI("icp summary & market opportunity");
+      generateBuyerMapReportViaAPI();
+      generateCompetitiveOverlapReportViaAPI();
+      generateRegulatoryComplianceReportViaAPI();
+    }
+  }, [refreshTrigger, selectedICP]);
 
 
 

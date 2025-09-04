@@ -215,7 +215,10 @@ export const ICPIntelligence = () => {
         {/* ICP Summary & Market Opportunity Section - Shows when ICP selected */}
         {selectedICP && (
           <div className="mt-4">
-            <ICPSummaryOpportunity selectedICP={selectedICP} />
+            <ICPSummaryOpportunity 
+              selectedICP={selectedICP} 
+              refreshTrigger={refreshTrigger}
+            />
           </div>
         )}
 
