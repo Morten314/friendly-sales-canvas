@@ -2345,6 +2345,15 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
   // Get current data based on active card - prioritize API data over frontend data
   const currentData = apiReportData || selectedICP;
   
+  // DEBUG: Check which data source is being used for main metrics
+  console.log("🔍🔍🔍 MAIN DATA SOURCE DEBUG:");
+  console.log("🔍 apiReportData exists:", !!apiReportData);
+  console.log("🔍 apiReportData:", apiReportData);
+  console.log("🔍 selectedICP exists:", !!selectedICP);
+  console.log("🔍 Using data source for main metrics:", apiReportData ? 'API Report' : 'Original ICP');
+  console.log("🔍 reportError:", reportError);
+  console.log("🔍 isLoadingReport:", isLoadingReport);
+  
   // ADD COMPREHENSIVE CURRENT DATA DEBUGGING
   console.log("🔍🔍🔍 CURRENT DATA COMPUTATION DEBUGGING:");
   console.log("🔍 apiReportData:", apiReportData);
@@ -2376,6 +2385,15 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
   // Get competitive overlap data - prioritize API data over frontend data
   const competitiveOverlapData = competitiveOverlapApiData || selectedICP;
   
+  // DEBUG: Check which data source is being used
+  console.log("🔍🔍🔍 COMPETITIVE OVERLAP DATA SOURCE DEBUG:");
+  console.log("🔍 competitiveOverlapApiData exists:", !!competitiveOverlapApiData);
+  console.log("🔍 competitiveOverlapApiData:", competitiveOverlapApiData);
+  console.log("🔍 selectedICP exists:", !!selectedICP);
+  console.log("🔍 Using data source:", competitiveOverlapApiData ? 'API Response' : 'Original ICP');
+  console.log("🔍 competitiveOverlapError:", competitiveOverlapError);
+  console.log("🔍 isLoadingCompetitiveOverlap:", isLoadingCompetitiveOverlap);
+  
   // Ensure competitiveOverlapData has the minimum required structure for the component
   const safeCompetitiveOverlapData = useMemo(() => {
     console.log("🔍🔍🔍 safeCompetitiveOverlapData useMemo DEBUG:");
@@ -2404,7 +2422,9 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
       summary: competitiveOverlapData.summary || competitiveOverlapData.blurb || "No summary available",
       competitors: competitiveOverlapData.competitors || competitiveOverlapData.numberOfMainCompetitors || 0,
       winLossChange: competitiveOverlapData.winLossChange || competitiveOverlapData.recentWinLossChange || "N/A",
-      activeBuyingSignals: competitiveOverlapData.activeBuyingSignals || competitiveOverlapData.buyingSignals?.length || 0,
+      activeBuyingSignals: competitiveOverlapData.activeBuyingSignals || 
+                          competitiveOverlapData.buyingSignals?.length || 
+                          competitiveOverlapData.buyingSignalsData?.length || 0,
       buyingSignals: Array.isArray(competitiveOverlapData.buyingSignals) ? competitiveOverlapData.buyingSignals : 
                     Array.isArray(competitiveOverlapData.buyingSignalsData) ? competitiveOverlapData.buyingSignalsData : [],
       competitiveMap: Array.isArray(competitiveOverlapData.competitiveMap) ? competitiveOverlapData.competitiveMap : [],
@@ -2422,6 +2442,12 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
     console.log("🔍 competitiveOverlapData.activeBuyingSignals:", competitiveOverlapData.activeBuyingSignals);
     console.log("🔍 competitiveOverlapData.buyingSignals?.length:", competitiveOverlapData.buyingSignals?.length);
     console.log("🔍 competitiveOverlapData.buyingSignalsData?.length:", competitiveOverlapData.buyingSignalsData?.length);
+    
+    // Debug individual signal structure
+    if (result.buyingSignals && result.buyingSignals.length > 0) {
+      console.log("🔍 First buying signal structure:", result.buyingSignals[0]);
+      console.log("🔍 Signal fields:", Object.keys(result.buyingSignals[0]));
+    }
     
     console.log("🔍🔍🔍 safeCompetitiveOverlapData RESULT:");
     console.log("🔍 result.competitiveMap:", result.competitiveMap);
@@ -2502,8 +2528,9 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
     const buyingSignals = safeCompetitiveOverlapData?.buyingSignals || [];
     
     return buyingSignals.filter((signal: any) => {
-      // Backend schema only has signalType, description, source, recency - no region field
-      const typeMatch = signalTypeFilter === "all" || signal.signalType === signalTypeFilter;
+      // Handle both API response formats: signalType (frontend) and type (API)
+      const signalType = signal.signalType || signal.type;
+      const typeMatch = signalTypeFilter === "all" || signalType === signalTypeFilter;
       return typeMatch;
     });
   }, [safeCompetitiveOverlapData?.buyingSignals, signalTypeFilter]);
@@ -3033,6 +3060,14 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
                     >
                       Retry Competitive Overlap API
                     </Button>
+                    
+                    {/* Debug Info */}
+                    <div className="mt-2 p-2 bg-gray-100 rounded text-xs">
+                      <div><strong>Data Source:</strong> {competitiveOverlapApiData ? 'API Response' : 'Original ICP'}</div>
+                      <div><strong>API Data:</strong> {competitiveOverlapApiData ? 'Available' : 'Not Available'}</div>
+                      <div><strong>Error:</strong> {competitiveOverlapError || 'None'}</div>
+                      <div><strong>Loading:</strong> {isLoadingCompetitiveOverlap ? 'Yes' : 'No'}</div>
+                    </div>
                   </div>
                 )}
 
@@ -3225,7 +3260,7 @@ export const ICPSummaryOpportunity = ({ selectedICP }: ICPSummaryOpportunityProp
                         <TableBody>
                           {filteredBuyingSignals.map((signal: any, index: number) => (
                             <TableRow key={index}>
-                              <TableCell className="font-medium">{signal.signalType}</TableCell>
+                              <TableCell className="font-medium">{signal.signalType || signal.type}</TableCell>
                               <TableCell>{signal.description}</TableCell>
                               <TableCell>{signal.source}</TableCell>
                               <TableCell>{signal.recency}</TableCell>
