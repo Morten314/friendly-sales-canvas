@@ -369,16 +369,22 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
       localStorage.setItem('regulatory-compliance_original_json', JSON.stringify(originalData));
       localStorage.setItem('regulatory-compliance_modified_json', JSON.stringify(modifiedData));
 
-      // Call POST API to save edits
-      const response = await fetch('https://backend-11kr.onrender.com/edit', {
-        method: 'POST',
+      // Call GET API to save edits using /ask endpoint with query parameters
+      const queryParams = new URLSearchParams({
+        original_json: JSON.stringify(originalData),
+        modified_json: JSON.stringify(modifiedData),
+        edit_type: "modification",
+        section: "regulatory_compliance"
+      });
+      
+      const response = await fetch(`/api/ask?${queryParams}`, {
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(editData)
       });
 
-      console.log('📥 POST /edit status:', response.status);
+      console.log('📥 GET /ask status:', response.status);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -392,14 +398,14 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
         }
       });
 
-      console.log('📥 POST /market-research status:', getResponse.status);
+      console.log('📥 GET /market_intelligence status:', getResponse.status);
 
       if (!getResponse.ok) {
         throw new Error(`HTTP error! status: ${getResponse.status}`);
       }
 
       const getData = await getResponse.json();
-      console.log('✅ Regulatory Compliance - POST /market-research successful:', getData);
+      console.log('✅ Regulatory Compliance - GET /market_intelligence successful:', getData);
       
       // Update component with fresh data from API response
       if (getData && getData.regulatory_compliance_data) {
@@ -422,7 +428,10 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
         console.log('✅ Regulatory Compliance - State updated with API response data');
       }
       
-      // Call the original save function
+      // Also refresh the component data
+      await fetchRegulatoryComplianceData();
+      
+      // Call the original save function to trigger chat panel
       onSaveChanges();
     } catch (error) {
       console.error('❌ Regulatory Compliance - Error saving changes:', error);

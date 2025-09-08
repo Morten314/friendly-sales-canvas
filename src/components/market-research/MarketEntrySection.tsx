@@ -264,16 +264,22 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
       localStorage.setItem('market-entry_original_json', JSON.stringify(originalData));
       localStorage.setItem('market-entry_modified_json', JSON.stringify(modifiedData));
 
-      // Call POST API to save edits
-      const response = await fetch('https://backend-11kr.onrender.com/edit', {
-        method: 'POST',
+      // Call GET API to save edits using /ask endpoint with query parameters
+      const queryParams = new URLSearchParams({
+        original_json: JSON.stringify(originalData),
+        modified_json: JSON.stringify(modifiedData),
+        edit_type: "modification",
+        section: "market_entry"
+      });
+      
+      const response = await fetch(`/api/ask?${queryParams}`, {
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(editData)
       });
 
-      console.log('📥 POST /edit status:', response.status);
+      console.log('📥 GET /ask status:', response.status);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

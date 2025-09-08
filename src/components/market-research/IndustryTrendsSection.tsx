@@ -338,16 +338,22 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
       localStorage.setItem('industry-trends_original_json', JSON.stringify(originalData));
       localStorage.setItem('industry-trends_modified_json', JSON.stringify(modifiedData));
 
-      // Call POST API to save edits
-      const response = await fetch('https://backend-11kr.onrender.com/edit', {
-        method: 'POST',
+      // Call GET API to save edits using /ask endpoint with query parameters
+      const queryParams = new URLSearchParams({
+        original_json: JSON.stringify(originalData),
+        modified_json: JSON.stringify(modifiedData),
+        edit_type: "modification",
+        section: "industry_trends"
+      });
+      
+      const response = await fetch(`/api/ask?${queryParams}`, {
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(editData),
       });
 
-      console.log('📥 POST /edit status:', response.status);
+      console.log('📥 GET /ask status:', response.status);
 
       if (!response.ok) {
         throw new Error(`Failed to save: ${response.status}`);
@@ -361,14 +367,14 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
         },
       });
 
-      console.log('📥 POST /market-research status:', getResponse.status);
+      console.log('📥 GET /market_intelligence status:', getResponse.status);
 
       if (!getResponse.ok) {
         throw new Error(`Failed to fetch updated data: ${getResponse.status}`);
       }
 
       const getData = await getResponse.json();
-      console.log('✅ Industry Trends - POST /market-research successful:', getData);
+      console.log('✅ Industry Trends - GET /market_intelligence successful:', getData);
       
       // Check if API returned updated data, otherwise use local edited values
       if (getData && getData.industry_trends_data) {
@@ -407,19 +413,16 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
         });
       }
       
-      // Call the parent save function
-      onIndustryTrendsSaveChanges();
-
-      // Fetch updated data from GET API
+      // Also refresh the component data
       await fetchUpdatedData();
       
+      // Call the original save function to trigger chat panel
+      onIndustryTrendsSaveChanges();
+      
     } catch (error) {
-      console.error('Error saving industry trends data:', error);
-      toast({
-        title: "Error saving changes",
-        description: "Failed to save industry trends data. Please try again.",
-        variant: "destructive",
-      });
+      console.error('❌ Industry Trends - Error saving changes:', error);
+      // Still call the original save function even if API fails
+      onIndustryTrendsSaveChanges();
     }
   };
 

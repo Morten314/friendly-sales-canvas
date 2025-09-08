@@ -104,12 +104,6 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
 
   const { toast } = useToast();
 
-  // Debug logging for strategicRecommendations outside of JSX
-  console.log('🎯 RENDER CHECK - strategicRecommendations in MarketSizeSection:', strategicRecommendations);
-  console.log('🎯 RENDER CHECK - Type:', typeof strategicRecommendations);
-  console.log('🎯 RENDER CHECK - Is Array:', Array.isArray(strategicRecommendations));
-  console.log('🎯 RENDER CHECK - Length:', strategicRecommendations?.length);
-
   // Handle section delete
   const handleSectionDelete = () => {
     // Implementation for section deletion
@@ -183,42 +177,43 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
       localStorage.setItem('market-size_original_json', JSON.stringify(originalData));
       localStorage.setItem('market-size_modified_json', JSON.stringify(modifiedData));
 
-      // Call POST API to save edits
-      const response = await fetch('https://backend-11kr.onrender.com/edit', {
-        method: 'POST',
+      // Call GET API to save edits using /ask endpoint with query parameters
+      const queryParams = new URLSearchParams({
+        original_json: JSON.stringify(originalData),
+        modified_json: JSON.stringify(modifiedData),
+        edit_type: "modification",
+        section: "market_size"
+      });
+      
+      const response = await fetch(`/api/ask?${queryParams}`, {
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(editData),
       });
 
-      console.log('📥 POST /edit status:', response.status);
+      console.log('📥 GET /ask status:', response.status);
 
       if (!response.ok) {
         throw new Error(`Failed to save: ${response.status}`);
       }
 
-      // Fetch updated data using POST API to market-research
-      const getResponse = await fetch('https://backend-11kr.onrender.com/market-research', {
-        method: 'POST',
+      // Fetch updated data using GET API
+      const getResponse = await fetch('https://backend-11kr.onrender.com/market_intelligence', {
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          component_name: "market_size",
-          user_id: "user_123",
-          refresh: true
-        })
+        }
       });
 
-      console.log('📥 POST /market-research status:', getResponse.status);
+      console.log('📥 GET /market_intelligence status:', getResponse.status);
 
       if (!getResponse.ok) {
         throw new Error(`Failed to fetch updated data: ${getResponse.status}`);
       }
 
       const getData = await getResponse.json();
-      console.log('✅ Market Size - POST /market-research successful:', getData);
+      console.log('✅ Market Size - GET /market_intelligence successful:', getData);
       
       // Update component with fresh data from API response
       if (getData && getData.market_size_data) {
@@ -254,17 +249,16 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
         onMarketDriversChange(localMarketDrivers);
       }
       
-      onSaveChanges();
+      // Also refresh the component data
       await fetchUpdatedData();
       
+      // Call the original save function to trigger chat panel
+      onSaveChanges();
+      
     } catch (error) {
-      console.error('❌ Error saving changes:', error);
-      setLocalError('Failed to save changes. Please try again.');
-      toast({
-        title: "Error saving changes",
-        description: "Failed to save market size data. Please try again.",
-        variant: "destructive",
-      });
+      console.error('❌ Market Size - Error saving changes:', error);
+      // Still call the original save function even if API fails
+      onSaveChanges();
     }
   };
 
@@ -639,6 +633,13 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                   </h3>
                    <div className="bg-green-50 p-4 rounded-lg border border-green-200">
                      <ul className="space-y-2 text-gray-700">
+                       {(() => {
+                         console.log('🎯 RENDER CHECK - strategicRecommendations in MarketSizeSection:', strategicRecommendations);
+                         console.log('🎯 RENDER CHECK - Type:', typeof strategicRecommendations);
+                         console.log('🎯 RENDER CHECK - Is Array:', Array.isArray(strategicRecommendations));
+                         console.log('🎯 RENDER CHECK - Length:', strategicRecommendations?.length);
+                         return null;
+                       })()}
                          {Array.isArray(strategicRecommendations) ? (
                            strategicRecommendations.map((rec, index) => (
                              <li key={index} className="flex items-start gap-2">
@@ -677,6 +678,11 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                      <div className="bg-white border border-gray-200 rounded-lg p-4">
                        <h4 className="font-medium text-gray-900 mb-3">Market Size by Segment</h4>
+                       {(() => {
+                         console.log('🔍 MarketSizeSection - marketSizeBySegment:', marketSizeBySegment);
+                         console.log('🔍 MarketSizeSection - marketSizeBySegment exists:', !!marketSizeBySegment);
+                         return null;
+                       })()}
                        <MiniPieChart 
                          data={marketSizeBySegment ? Object.entries(marketSizeBySegment).map(([name, value], index) => ({
                            name,
@@ -692,6 +698,11 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                     </div>
                      <div className="bg-white border border-gray-200 rounded-lg p-4">
                        <h4 className="font-medium text-gray-900 mb-3">Growth Projections</h4>
+                       {(() => {
+                         console.log('🔍 MarketSizeSection - growthProjections:', growthProjections);
+                         console.log('🔍 MarketSizeSection - growthProjections exists:', !!growthProjections);
+                         return null;
+                       })()}
                         <MiniLineChart 
                           data={(() => {
                             if (!growthProjections) {
@@ -705,6 +716,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                             
                             // If growthProjections is a string, use fallback data
                             if (typeof growthProjections === 'string') {
+                              console.log('🔧 growthProjections is string, using fallback data');
                               return [
                                 { name: "2023", value: 100 },
                                 { name: "2024", value: 120 },
@@ -716,6 +728,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                             // If it's an object, transform it safely
                             return Object.entries(growthProjections).map(([year, value]) => {
                               const numericValue = parseFloat(value.toString());
+                              console.log(`🔧 Converting ${year}: ${value} -> ${numericValue}`);
                               return {
                                 name: year,
                                 value: isNaN(numericValue) ? 100 : numericValue * 100

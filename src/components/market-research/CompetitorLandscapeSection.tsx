@@ -216,21 +216,42 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
       localStorage.setItem('competitor-landscape_original_json', JSON.stringify(editData.original_json));
       localStorage.setItem('competitor-landscape_modified_json', JSON.stringify(editData.modified_json));
 
-      // Call POST API to save edits
-      await apiFetchJson('edit', {
-        method: 'POST',
-        body: JSON.stringify(editData)
+      // Call GET API to save edits using /ask endpoint with query parameters
+      const queryParams = new URLSearchParams({
+        original_json: JSON.stringify(originalData),
+        modified_json: JSON.stringify(modifiedData),
+        edit_type: "modification",
+        section: "competitor_landscape"
+      });
+      
+      const response = await fetch(`/api/ask?${queryParams}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
 
-      // Fetch updated data using POST API to market-research
-      const getData = await apiFetchJson('market-research', {
-        method: 'POST',
-        body: JSON.stringify({
-          component_name: "competitor_landscape",
-          user_id: "user_123",
-          refresh: true
-        })
+      console.log('📥 GET /ask status:', response.status);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // Fetch updated data using GET API
+      const getResponse = await fetch('https://backend-11kr.onrender.com/market_intelligence', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
       });
+
+      console.log('📥 GET /market_intelligence status:', getResponse.status);
+
+      if (!getResponse.ok) {
+        throw new Error(`HTTP error! status: ${getResponse.status}`);
+      }
+
+      const getData = await getResponse.json();
       console.log('✅ Competitor Landscape - GET /market_intelligence successful:', getData);
       
       // Update component with fresh data from API response
@@ -250,7 +271,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         console.log('✅ Competitor Landscape - State updated with API response data');
       }
       
-      // Call the original save function
+      // Call the original save function to trigger chat panel
       onCompetitorLandscapeSaveChanges();
     } catch (error) {
       console.error('❌ Competitor Landscape - Error saving changes:', error);
