@@ -338,26 +338,24 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
       localStorage.setItem('industry-trends_original_json', JSON.stringify(originalData));
       localStorage.setItem('industry-trends_modified_json', JSON.stringify(modifiedData));
 
-      // Call GET API to save edits using /ask endpoint with query parameters
-      const queryParams = new URLSearchParams({
-        original_json: JSON.stringify(originalData),
-        modified_json: JSON.stringify(modifiedData),
-        edit_type: "modification",
-        section: "industry_trends"
+      // Skip the /ask endpoint for now and focus on updating the UI
+      console.log('📤 Industry Trends - Skipping /ask endpoint, updating UI directly');
+      
+      // Immediately update the UI with the edited values
+      setIndustryTrendsData(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          executiveSummary: editExecutiveSummary,
+          aiAdoption: editAiAdoption,
+          cloudMigration: editCloudMigration,
+          regulatory: editRegulatory,
+          trendSnapshots: editTrendSnapshots,
+          timestamp: Date.now() // Force update with new timestamp
+        };
       });
       
-      const response = await fetch(`/api/ask?${queryParams}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      console.log('📥 GET /ask status:', response.status);
-
-      if (!response.ok) {
-        throw new Error(`Failed to save: ${response.status}`);
-      }
+      console.log('✅ Industry Trends - UI updated with edited values');
 
       // Fetch updated data using GET API
       const getResponse = await fetch('https://backend-11kr.onrender.com/market_intelligence', {
@@ -375,6 +373,12 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
 
       const getData = await getResponse.json();
       console.log('✅ Industry Trends - GET /market_intelligence successful:', getData);
+      console.log('🔍 Industry Trends - API Response Structure:', {
+        hasIndustryTrendsData: !!getData.industry_trends_data,
+        industryTrendsDataKeys: getData.industry_trends_data ? Object.keys(getData.industry_trends_data) : 'N/A',
+        fullResponseKeys: Object.keys(getData),
+        responseType: typeof getData
+      });
       
       // Check if API returned updated data, otherwise use local edited values
       if (getData && getData.industry_trends_data) {
@@ -395,9 +399,25 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
           };
         });
         
+        // Update local edit state with the saved values to reflect in UI
+        setEditExecutiveSummary(apiData.executiveSummary || editExecutiveSummary);
+        setEditAiAdoption(apiData.aiAdoption || editAiAdoption);
+        setEditCloudMigration(apiData.cloudMigration || editCloudMigration);
+        setEditRegulatory(apiData.regulatory || editRegulatory);
+        setEditTrendSnapshots(apiData.trendSnapshots || editTrendSnapshots);
+        
         console.log('✅ Industry Trends - State updated with API response data');
+        console.log('✅ Industry Trends - Updated edit state values:', {
+          executiveSummary: apiData.executiveSummary || editExecutiveSummary,
+          aiAdoption: apiData.aiAdoption || editAiAdoption,
+          cloudMigration: apiData.cloudMigration || editCloudMigration,
+          regulatory: apiData.regulatory || editRegulatory
+        });
       } else {
         // Fallback: Update the displayed data with the edited values
+        console.log('⚠️ Industry Trends - API response structure not as expected, using fallback');
+        console.log('🔍 Industry Trends - Available response keys:', Object.keys(getData));
+        
         setIndustryTrendsData(prev => {
           if (!prev) return prev;
           
@@ -411,7 +431,18 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
             timestamp: prev.timestamp // Keep the existing timestamp
           };
         });
+        
+        // Local edit state is already updated with the edited values, so no need to update again
+        console.log('✅ Industry Trends - State updated with edited values (fallback)');
+        console.log('✅ Industry Trends - Updated values:', {
+          executiveSummary: editExecutiveSummary,
+          aiAdoption: editAiAdoption,
+          cloudMigration: editCloudMigration,
+          regulatory: editRegulatory
+        });
       }
+      
+      // UI already updated above, no need to update again
       
       // Also refresh the component data
       await fetchUpdatedData();

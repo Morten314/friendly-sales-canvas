@@ -177,100 +177,72 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     }
   }, [localDataLocalization]);
 
-  // Sync local state with centralized regulatoryData and props
+  // Sync local state with centralized regulatoryData and props (only on initial load)
   useEffect(() => {
     if (!isEditing) {
-      console.log('🔄 Syncing Regulatory Compliance local state with props and data:');
+      console.log('🔄 Syncing Regulatory Compliance local state with props and data (initial load only):');
       console.log('  - executiveSummary prop:', executiveSummary);
       console.log('  - euAiActDeadline prop:', euAiActDeadline);
       console.log('  - regulatoryData:', regulatoryData);
       console.log('  - Current localExecutiveSummary:', localExecutiveSummary);
       console.log('  - Current localEuAiActDeadline:', localEuAiActDeadline);
       
-      // Only update if we have new data and current local state is empty
+      // Only update if we have new data and current local state is empty (initial load only)
       if (executiveSummary && !localExecutiveSummary) {
         setLocalExecutiveSummary(executiveSummary);
-        console.log('📝 Updated localExecutiveSummary from prop:', executiveSummary);
+        console.log('📝 Updated localExecutiveSummary from prop (initial load):', executiveSummary);
       }
       if (regulatoryData?.executiveSummary && !localExecutiveSummary) {
         setLocalExecutiveSummary(regulatoryData.executiveSummary);
-        console.log('📝 Updated localExecutiveSummary from regulatoryData:', regulatoryData.executiveSummary);
+        console.log('📝 Updated localExecutiveSummary from regulatoryData (initial load):', regulatoryData.executiveSummary);
       }
       
       if (euAiActDeadline && !localEuAiActDeadline) {
         setLocalEuAiActDeadline(euAiActDeadline);
-        console.log('📝 Updated localEuAiActDeadline from prop:', euAiActDeadline);
+        console.log('📝 Updated localEuAiActDeadline from prop (initial load):', euAiActDeadline);
       }
       if (regulatoryData?.euAiActDeadline && !localEuAiActDeadline) {
         setLocalEuAiActDeadline(regulatoryData.euAiActDeadline);
-        console.log('📝 Updated localEuAiActDeadline from regulatoryData:', regulatoryData.euAiActDeadline);
+        console.log('📝 Updated localEuAiActDeadline from regulatoryData (initial load):', regulatoryData.euAiActDeadline);
       }
       
       if (gdprCompliance && !localGdprCompliance) {
         setLocalGdprCompliance(gdprCompliance);
-        console.log('📝 Updated localGdprCompliance from prop:', gdprCompliance);
+        console.log('📝 Updated localGdprCompliance from prop (initial load):', gdprCompliance);
       }
       if (regulatoryData?.gdprCompliance && !localGdprCompliance) {
         setLocalGdprCompliance(regulatoryData.gdprCompliance);
-        console.log('📝 Updated localGdprCompliance from regulatoryData:', regulatoryData.gdprCompliance);
+        console.log('📝 Updated localGdprCompliance from regulatoryData (initial load):', regulatoryData.gdprCompliance);
       }
       
       if (potentialFines && !localPotentialFines) {
         setLocalPotentialFines(potentialFines);
-        console.log('📝 Updated localPotentialFines from prop:', potentialFines);
+        console.log('📝 Updated localPotentialFines from prop (initial load):', potentialFines);
       }
       if (regulatoryData?.potentialFines && !localPotentialFines) {
         setLocalPotentialFines(regulatoryData.potentialFines);
-        console.log('📝 Updated localPotentialFines from regulatoryData:', regulatoryData.potentialFines);
+        console.log('📝 Updated localPotentialFines from regulatoryData (initial load):', regulatoryData.potentialFines);
       }
       
       if (dataLocalization && !localDataLocalization) {
         setLocalDataLocalization(dataLocalization);
-        console.log('📝 Updated localDataLocalization from prop:', dataLocalization);
+        console.log('📝 Updated localDataLocalization from prop (initial load):', dataLocalization);
       }
       if (regulatoryData?.dataLocalization && !localDataLocalization) {
         setLocalDataLocalization(regulatoryData.dataLocalization);
-        console.log('📝 Updated localDataLocalization from regulatoryData:', regulatoryData.dataLocalization);
+        console.log('📝 Updated localDataLocalization from regulatoryData (initial load):', regulatoryData.dataLocalization);
       }
     }
-  }, [isEditing, regulatoryData, executiveSummary, euAiActDeadline, gdprCompliance, potentialFines, dataLocalization, localExecutiveSummary, localEuAiActDeadline, localGdprCompliance, localPotentialFines, localDataLocalization]);
+  }, [isEditing]); // Removed dependencies that cause constant re-syncing
 
-  // Also sync when regulatoryData changes
-  useEffect(() => {
-    if (!isEditing && regulatoryData) {
-      console.log('🔄 Regulatory Compliance - regulatoryData updated:', regulatoryData);
-      console.log('🔍 Regulatory Compliance - Data analysis:');
-      console.log('  - regulatoryData.executiveSummary:', regulatoryData.executiveSummary);
-      console.log('  - regulatoryData.euAiActDeadline:', regulatoryData.euAiActDeadline);
-      console.log('  - regulatoryData.gdprCompliance:', regulatoryData.gdprCompliance);
-      console.log('  - regulatoryData.timestamp:', regulatoryData.timestamp);
-      console.log('  - Current localExecutiveSummary:', localExecutiveSummary);
-      console.log('  - Current localEuAiActDeadline:', localEuAiActDeadline);
-      console.log('  - Current localGdprCompliance:', localGdprCompliance);
-      
-      // Only update if we have new data and current local state is empty
-      if (regulatoryData.executiveSummary && !localExecutiveSummary) {
-        setLocalExecutiveSummary(regulatoryData.executiveSummary);
-        console.log('📝 Updated executiveSummary from regulatoryData:', regulatoryData.executiveSummary);
-      }
-      if (regulatoryData.euAiActDeadline && !localEuAiActDeadline) {
-        setLocalEuAiActDeadline(regulatoryData.euAiActDeadline);
-        console.log('📝 Updated euAiActDeadline from regulatoryData:', regulatoryData.euAiActDeadline);
-      }
-      if (regulatoryData.gdprCompliance && !localGdprCompliance) {
-        setLocalGdprCompliance(regulatoryData.gdprCompliance);
-        console.log('📝 Updated gdprCompliance from regulatoryData:', regulatoryData.gdprCompliance);
-      }
-      if (regulatoryData.potentialFines && !localPotentialFines) {
-        setLocalPotentialFines(regulatoryData.potentialFines);
-        console.log('📝 Updated potentialFines from regulatoryData:', regulatoryData.potentialFines);
-      }
-      if (regulatoryData.dataLocalization && !localDataLocalization) {
-        setLocalDataLocalization(regulatoryData.dataLocalization);
-        console.log('📝 Updated dataLocalization from regulatoryData:', regulatoryData.dataLocalization);
-      }
-    }
-  }, [regulatoryData, isEditing, localExecutiveSummary, localEuAiActDeadline, localGdprCompliance, localPotentialFines, localDataLocalization]);
+  // Disabled: Also sync when regulatoryData changes (causes local state to be overwritten)
+  // useEffect(() => {
+  //   if (!isEditing && regulatoryData) {
+  //     console.log('🔄 Regulatory Compliance - regulatoryData updated:', regulatoryData);
+  //     // This useEffect was causing local state to be overwritten with original values
+  //     // Disabled to preserve user edits
+  //   }
+  // }, [regulatoryData, isEditing, localExecutiveSummary, localEuAiActDeadline, localGdprCompliance, localPotentialFines, localDataLocalization]);
 
   // Initialize dynamic key data values after keyDataPoints is available
   useEffect(() => {
@@ -284,44 +256,14 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     }
   }, [regulatoryData?.keyUpdates, isEditing]);
 
-  // Update local state when regulatoryData prop changes
-  useEffect(() => {
-    if (regulatoryData && !isEditing) {
-      console.log('🔄 RegulatoryComplianceSection: regulatoryData prop changed, updating local state:', regulatoryData);
-      
-      if (regulatoryData.executiveSummary && regulatoryData.executiveSummary !== localExecutiveSummary) {
-        setLocalExecutiveSummary(regulatoryData.executiveSummary);
-        console.log('📝 Updated localExecutiveSummary from regulatoryData prop:', regulatoryData.executiveSummary);
-      }
-      if (regulatoryData.euAiActDeadline && regulatoryData.euAiActDeadline !== localEuAiActDeadline) {
-        setLocalEuAiActDeadline(regulatoryData.euAiActDeadline);
-        console.log('📝 Updated localEuAiActDeadline from regulatoryData prop:', regulatoryData.euAiActDeadline);
-      }
-      if (regulatoryData.gdprCompliance && regulatoryData.gdprCompliance !== localGdprCompliance) {
-        setLocalGdprCompliance(regulatoryData.gdprCompliance);
-        console.log('📝 Updated localGdprCompliance from regulatoryData prop:', regulatoryData.gdprCompliance);
-      }
-      if (regulatoryData.potentialFines && regulatoryData.potentialFines !== localPotentialFines) {
-        setLocalPotentialFines(regulatoryData.potentialFines);
-        console.log('📝 Updated localPotentialFines from regulatoryData prop:', regulatoryData.potentialFines);
-      }
-      if (regulatoryData.dataLocalization && regulatoryData.dataLocalization !== localDataLocalization) {
-        setLocalDataLocalization(regulatoryData.dataLocalization);
-        console.log('📝 Updated localDataLocalization from regulatoryData prop:', regulatoryData.dataLocalization);
-      }
-      
-      // Update key data values if available
-      if (regulatoryData.keyUpdates) {
-        const initialValues: Record<string, string> = {};
-        regulatoryData.keyUpdates.forEach((update: any) => {
-          const id = update.title.toLowerCase().replace(/\s+/g, '-');
-          initialValues[id] = update.description || '';
-        });
-        setLocalKeyDataValues(initialValues);
-        console.log('📝 Updated localKeyDataValues from regulatoryData prop:', initialValues);
-      }
-    }
-  }, [regulatoryData, isEditing, localExecutiveSummary, localEuAiActDeadline, localGdprCompliance, localPotentialFines, localDataLocalization]);
+  // Disabled: Update local state when regulatoryData prop changes (causes local state to be overwritten)
+  // useEffect(() => {
+  //   if (regulatoryData && !isEditing) {
+  //     console.log('🔄 RegulatoryComplianceSection: regulatoryData prop changed, updating local state:', regulatoryData);
+  //     // This useEffect was causing local state to be overwritten with original values
+  //     // Disabled to preserve user edits
+  //   }
+  // }, [regulatoryData, isEditing, localExecutiveSummary, localEuAiActDeadline, localGdprCompliance, localPotentialFines, localDataLocalization]);
 
   // Handle save changes
   const handleRegulatoryComplianceSaveChanges = async () => {
@@ -369,67 +311,19 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
       localStorage.setItem('regulatory-compliance_original_json', JSON.stringify(originalData));
       localStorage.setItem('regulatory-compliance_modified_json', JSON.stringify(modifiedData));
 
-      // Call GET API to save edits using /ask endpoint with query parameters
-      const queryParams = new URLSearchParams({
-        original_json: JSON.stringify(originalData),
-        modified_json: JSON.stringify(modifiedData),
-        edit_type: "modification",
-        section: "regulatory_compliance"
-      });
+      // Skip the /ask endpoint for now and focus on updating the UI
+      console.log('📤 Regulatory Compliance - Skipping /ask endpoint, updating UI directly');
       
-      const response = await fetch(`/api/ask?${queryParams}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      // The local state variables are already updated with the edited values
+      // The UI will automatically reflect these changes since it uses local state
+      console.log('✅ Regulatory Compliance - UI will reflect local state changes');
+      console.log('✅ Regulatory Compliance - Current local values:', {
+        localExecutiveSummary,
+        localEuAiActDeadline,
+        localGdprCompliance,
+        localPotentialFines,
+        localDataLocalization
       });
-
-      console.log('📥 GET /ask status:', response.status);
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      // Fetch updated data using GET API
-      const getResponse = await fetch('https://backend-11kr.onrender.com/market_intelligence', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-
-      console.log('📥 GET /market_intelligence status:', getResponse.status);
-
-      if (!getResponse.ok) {
-        throw new Error(`HTTP error! status: ${getResponse.status}`);
-      }
-
-      const getData = await getResponse.json();
-      console.log('✅ Regulatory Compliance - GET /market_intelligence successful:', getData);
-      
-      // Update component with fresh data from API response
-      if (getData && getData.regulatory_compliance_data) {
-        const apiData = getData.regulatory_compliance_data;
-        
-        // Update local state with API response data
-        setLocalExecutiveSummary(apiData.executiveSummary || '');
-        setLocalEuAiActDeadline(apiData.euAiActDeadline || '');
-        setLocalGdprCompliance(apiData.gdprCompliance || '');
-        setLocalPotentialFines(apiData.potentialFines || '');
-        setLocalDataLocalization(apiData.dataLocalization || '');
-        
-        // Update parent state with API response data
-        onExecutiveSummaryChange(apiData.executiveSummary || '');
-        onEuAiActDeadlineChange(apiData.euAiActDeadline || '');
-        onGdprComplianceChange(apiData.gdprCompliance || '');
-        onPotentialFinesChange(apiData.potentialFines || '');
-        onDataLocalizationChange(apiData.dataLocalization || '');
-        
-        console.log('✅ Regulatory Compliance - State updated with API response data');
-      }
-      
-      // Also refresh the component data
-      await fetchRegulatoryComplianceData();
       
       // Call the original save function to trigger chat panel
       onSaveChanges();
