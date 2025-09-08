@@ -121,27 +121,61 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   const [error, setError] = useState<string | null>(null);
   const [regulatoryExpanded, setRegulatoryExpanded] = useState(true);
 
-  // Local state for editing - dynamic for all key data points - initialize with prop values or saved state
+  // Local state for editing - prioritize API data over localStorage for fresh updates
   const [localExecutiveSummary, setLocalExecutiveSummary] = useState(() => {
-    const saved = localStorage.getItem('regulatory_executiveSummary');
-    return saved || executiveSummary || regulatoryData?.executiveSummary || '';
+    return regulatoryData?.executiveSummary || executiveSummary || localStorage.getItem('regulatory_executiveSummary') || '';
   });
   const [localEuAiActDeadline, setLocalEuAiActDeadline] = useState(() => {
-    const saved = localStorage.getItem('regulatory_euAiActDeadline');
-    return saved || euAiActDeadline || regulatoryData?.euAiActDeadline || '';
+    return regulatoryData?.euAiActDeadline || euAiActDeadline || localStorage.getItem('regulatory_euAiActDeadline') || '';
   });
   const [localGdprCompliance, setLocalGdprCompliance] = useState(() => {
-    const saved = localStorage.getItem('regulatory_gdprCompliance');
-    return saved || gdprCompliance || regulatoryData?.gdprCompliance || '';
+    return regulatoryData?.gdprCompliance || gdprCompliance || localStorage.getItem('regulatory_gdprCompliance') || '';
   });
   const [localPotentialFines, setLocalPotentialFines] = useState(() => {
-    const saved = localStorage.getItem('regulatory_potentialFines');
-    return saved || potentialFines || regulatoryData?.potentialFines || '';
+    return regulatoryData?.potentialFines || potentialFines || localStorage.getItem('regulatory_potentialFines') || '';
   });
   const [localDataLocalization, setLocalDataLocalization] = useState(() => {
-    const saved = localStorage.getItem('regulatory_dataLocalization');
-    return saved || dataLocalization || regulatoryData?.dataLocalization || '';
+    return regulatoryData?.dataLocalization || dataLocalization || localStorage.getItem('regulatory_dataLocalization') || '';
   });
+
+  // Debug: Log when regulatoryData prop changes
+  useEffect(() => {
+    console.log('🔍 Regulatory Compliance - regulatoryData prop changed:', {
+      hasRegulatoryData: !!regulatoryData,
+      executiveSummary: regulatoryData?.executiveSummary,
+      euAiActDeadline: regulatoryData?.euAiActDeadline,
+      gdprCompliance: regulatoryData?.gdprCompliance,
+      potentialFines: regulatoryData?.potentialFines,
+      dataLocalization: regulatoryData?.dataLocalization,
+      timestamp: regulatoryData?.timestamp
+    });
+  }, [regulatoryData]);
+
+  // Update local state when regulatoryData prop changes (for API data updates)
+  useEffect(() => {
+    if (regulatoryData && !isEditing) {
+      console.log('🔄 Regulatory Compliance - Updating local state with new regulatoryData:', regulatoryData);
+      
+      // Update local state with new API data
+      if (regulatoryData.executiveSummary) {
+        setLocalExecutiveSummary(regulatoryData.executiveSummary);
+      }
+      if (regulatoryData.euAiActDeadline) {
+        setLocalEuAiActDeadline(regulatoryData.euAiActDeadline);
+      }
+      if (regulatoryData.gdprCompliance) {
+        setLocalGdprCompliance(regulatoryData.gdprCompliance);
+      }
+      if (regulatoryData.potentialFines) {
+        setLocalPotentialFines(regulatoryData.potentialFines);
+      }
+      if (regulatoryData.dataLocalization) {
+        setLocalDataLocalization(regulatoryData.dataLocalization);
+      }
+      
+      console.log('✅ Regulatory Compliance - Local state updated with new data');
+    }
+  }, [regulatoryData, isEditing]);
   
   // Dynamic local state for all key data points
   const [localKeyDataValues, setLocalKeyDataValues] = useState<Record<string, string>>({});

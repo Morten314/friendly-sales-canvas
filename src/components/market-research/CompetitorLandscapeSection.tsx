@@ -420,7 +420,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
       setLocalEmergingPlayers(competitorData.emergingPlayers || '');
     }
   }, [competitorData, isCompetitorLandscapeEditing]);
-  
+
   // Handle refresh when isRefreshing prop changes
   useEffect(() => {
     if (isRefreshing) {

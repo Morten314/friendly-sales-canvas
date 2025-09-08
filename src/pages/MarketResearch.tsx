@@ -8,6 +8,8 @@ import { Layout } from "@/components/layout/Layout";
 
 import { usePageTitle } from "@/hooks/usePageTitle";
 
+import { executeWithRateLimit } from "@/lib/rateLimitManager";
+
 import { Button } from "@/components/ui/button";
 
 import { Search, MessageSquare, Users, Settings, RefreshCw, AlertCircle, History, Calendar, Info } from "lucide-react";
@@ -295,13 +297,13 @@ interface IndustryTrendsRecommendations {
 
 
 
-// Cache for market data - DISABLED to ensure fresh data on every load
+// Cache for market data - ENABLED with 5-minute cache to reduce API calls
 
 let cachedMarketData: MarketIntelligenceData | null = null;
 
 let cacheTimestamp: number | null = null;
 
-const CACHE_DURATION = 0; // Disabled - always fetch fresh data
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache to reduce API calls
 
 
 
@@ -1408,37 +1410,62 @@ const MarketResearch = React.memo(() => {
         localStorage.setItem('companyProfileForRefresh', JSON.stringify(companyProfileData));
       }
       
-      // Add a small delay before starting to avoid immediate rate limiting
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Show cached data immediately if available (for better UX)
+      if (cachedMarketData) {
+        console.log('📋 Showing cached data while loading fresh data...');
+        setMarketData(cachedMarketData);
+        toast({
+          title: "Showing cached data",
+          description: "Loading fresh data in background...",
+          duration: 3000,
+        });
+      }
+      
+      // Add a minimal delay before starting to avoid immediate rate limiting
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       // Sequential refresh to avoid rate limiting
       console.log('🔄🔄🔄 Starting sequential refresh of all 5 components...');
       
       const results: PromiseSettledResult<any>[] = [];
+      // Prioritize most important components first for better user experience
       const components = [
-        { name: 'Market Size', fetchFn: fetchMarketSizeData },
-        { name: 'Industry Trends', fetchFn: fetchIndustryTrendsData },
-        { name: 'Market Entry', fetchFn: fetchMarketEntryData },
-        { name: 'Competitor Landscape', fetchFn: fetchCompetitorData },
-        { name: 'Regulatory Compliance', fetchFn: fetchRegulatoryData }
+        { name: 'Market Size', fetchFn: fetchMarketSizeData, priority: 1 },
+        { name: 'Industry Trends', fetchFn: fetchIndustryTrendsData, priority: 2 },
+        { name: 'Market Entry', fetchFn: fetchMarketEntryData, priority: 3 },
+        { name: 'Competitor Landscape', fetchFn: fetchCompetitorData, priority: 4 },
+        { name: 'Regulatory Compliance', fetchFn: fetchRegulatoryData, priority: 5 }
       ];
       
-      // Process each component sequentially with delays
+      // Process each component with rate limiting (optimized for 3-4 components to load)
       for (let i = 0; i < components.length; i++) {
         const component = components[i];
         console.log(`🔄 Processing ${component.name} (${i + 1}/${components.length})...`);
         
+        // Show progress to user
+        toast({
+          title: `Loading ${component.name}...`,
+          description: `Component ${i + 1} of ${components.length}`,
+          duration: 2000,
+        });
+        
         try {
-          // Add delay between API calls (except for the first one)
-          if (i > 0) {
-            const delayMs = 10000; // 10 seconds between calls to stay well under rate limit
-            console.log(`⏳ Waiting ${delayMs}ms before ${component.name} API call...`);
-            await new Promise(resolve => setTimeout(resolve, delayMs));
-          }
-          
-          const result = await component.fetchFn(true, false);
+          // Use rate limiter for optimal API call management
+          const result = await executeWithRateLimit(
+            () => component.fetchFn(true, false),
+            component.name
+          );
           results.push({ status: 'fulfilled', value: result });
           console.log(`✅ ${component.name} completed successfully`);
+          
+          // Show success for important components
+          if (i < 3) { // First 3 components are most important
+            toast({
+              title: `${component.name} loaded!`,
+              description: `${i + 1}/${components.length} components ready`,
+              duration: 1500,
+            });
+          }
           
         } catch (error) {
           console.error(`❌ ${component.name} fetch failed:`, error);
@@ -1450,33 +1477,75 @@ const MarketResearch = React.memo(() => {
               error: error instanceof Error ? error.message : 'Unknown error' 
             } 
           });
+          
+          // Show error for important components
+          if (i < 3) {
+            toast({
+              title: `${component.name} failed to load`,
+              description: "Will retry automatically",
+              variant: "destructive",
+              duration: 2000,
+            });
+          }
         }
       }
 
       console.log('🔄🔄🔄 REFRESH TRIGGER - All fetch functions completed');
       
-      // Analyze results
+      // Analyze results and retry failed components
       const successfulComponents = [];
       const failedComponents = [];
       
       results.forEach((result, index) => {
-        const componentNames = ['Market Size', 'Industry Trends', 'Market Entry', 'Competitor Landscape', 'Regulatory Compliance'];
-        const componentName = componentNames[index];
-        
         if (result.status === 'fulfilled') {
-          if (result.value && result.value.status === 'error') {
-            failedComponents.push({ name: componentName, error: result.value.error });
-          } else {
-            successfulComponents.push(componentName);
-          }
+          successfulComponents.push(components[index].name);
         } else {
-          failedComponents.push({ name: componentName, error: result.reason?.message || 'Unknown error' });
+          failedComponents.push(components[index]);
         }
       });
       
+      // Retry failed components automatically (only for first 3 most important)
+      if (failedComponents.length > 0) {
+        console.log(`🔄 Retrying ${failedComponents.length} failed components...`);
+        
+        for (const failedComponent of failedComponents.slice(0, 3)) { // Only retry first 3
+          try {
+            console.log(`🔄 Retrying ${failedComponent.name}...`);
+            await executeWithRateLimit(
+              () => failedComponent.fetchFn(true, false),
+              `${failedComponent.name} (retry)`
+            );
+            console.log(`✅ ${failedComponent.name} retry successful`);
+            successfulComponents.push(failedComponent.name);
+          } catch (retryError) {
+            console.error(`❌ ${failedComponent.name} retry failed:`, retryError);
+          }
+        }
+      }
+      
+      // Final success summary
+      const totalSuccessful = successfulComponents.length;
+      
       console.log('📊 REFRESH RESULTS:');
       console.log('✅ Successful components:', successfulComponents);
-      console.log('❌ Failed components:', failedComponents);
+      console.log('❌ Failed components:', failedComponents.length);
+      console.log(`🎯 Total loaded: ${totalSuccessful}/5 components`);
+      
+      // Show final success notification
+      if (totalSuccessful >= 3) {
+        toast({
+          title: `Success! ${totalSuccessful} components loaded`,
+          description: totalSuccessful >= 4 ? "Excellent! All key components are ready." : "Good! Most components are ready.",
+          duration: 3000,
+        });
+      } else {
+        toast({
+          title: `Only ${totalSuccessful} components loaded`,
+          description: "Some components failed. Try refreshing again.",
+          variant: "destructive",
+          duration: 4000,
+        });
+      }
       
       // Check if we have any fresh data in localStorage after the API calls
       const updatedData = getInitialMarketIntelligenceData();
