@@ -46,6 +46,7 @@ import { EditRecord } from './types';
 import { toUTCTimestamp, isTimestampNewer, getCurrentUTCTimestamp, logTimestampComparison } from '@/lib/timestampUtils';
 import MiniPieChart from '../MiniPieChart';
 import MiniLineChart from '../MiniLineChart';
+import { executeWithRateLimit } from '@/lib/rateLimitManager';
 
 interface RegulatoryComplianceSectionProps {
   isEditing: boolean;
@@ -408,13 +409,16 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
 
       console.log('📤 RegulatoryComplianceSection: Sending API request with payload:', payload);
 
-      const response = await fetch('https://backend-11kr.onrender.com/market-research', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload)
-      });
+      const response = await executeWithRateLimit(
+        () => fetch('https://backend-11kr.onrender.com/market-research', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload)
+        }),
+        'Regulatory Compliance'
+      );
 
       console.log('📨 RegulatoryComplianceSection: API response status:', response.status);
 
@@ -476,17 +480,24 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
 
   // Clear previous data and fetch fresh data on component mount
   useEffect(() => {
-    // Clear any existing data immediately to prevent showing stale data
-    setIsLoading(true);
-    setError(null);
+    // Only fetch if we don't have data from props
+    const hasPropData = executiveSummary || euAiActDeadline || gdprCompliance || potentialFines || dataLocalization;
     
-    // Add delay to prevent conflicts with other components
-    const timer = setTimeout(() => {
-      console.log('🚀 Regulatory Compliance Component mounted - fetching initial data');
-      fetchRegulatoryComplianceData(false); // refresh = false for initial load
-    }, 600); // Slightly longer delay to prevent conflicts
+    if (!hasPropData) {
+      // Clear any existing data immediately to prevent showing stale data
+      setIsLoading(true);
+      setError(null);
+      
+      // Add delay to prevent conflicts with other components
+      const timer = setTimeout(() => {
+        console.log('🚀 Regulatory Compliance Component mounted - fetching initial data');
+        fetchRegulatoryComplianceData(false); // refresh = false for initial load
+      }, 600); // Slightly longer delay to prevent conflicts
 
-    return () => clearTimeout(timer);
+      return () => clearTimeout(timer);
+    } else {
+      console.log('🚀 Regulatory Compliance Component mounted - using prop data, not fetching');
+    }
   }, []);
   
   // Handle refresh when isRefreshing prop changes
@@ -550,16 +561,43 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     };
   }, []);
 
-  // Also listen for companyProfile prop changes
+  // Also listen for companyProfile prop changes but don't auto-fetch to prevent loops
   useEffect(() => {
     if (companyProfile) {
       console.log('🔄 Regulatory Compliance - companyProfile prop changed:', companyProfile);
-      console.log('🔄 Regulatory Compliance - Fetching fresh data with new profile');
-      setError(null);
-      setIsLoading(true);
-      fetchRegulatoryComplianceData(true); // refresh = true for company profile prop changes
+      console.log('🔄 Regulatory Compliance - Profile updated, but not auto-fetching to prevent loops');
+      // Don't auto-fetch here to prevent infinite loops
+      // The parent refresh mechanism will handle data fetching
     }
   }, [companyProfile]);
+
+  // Sync local state with props to prevent data reversion
+  useEffect(() => {
+    console.log('🔄 Regulatory Compliance - Props changed, syncing with local state');
+    console.log('🔄 Props:', { executiveSummary, euAiActDeadline, gdprCompliance, potentialFines, dataLocalization });
+    
+    // Always sync with props when they change (even if empty, to clear stale data)
+    if (executiveSummary !== localExecutiveSummary) {
+      console.log('🔄 Regulatory Compliance - Syncing executiveSummary from props:', executiveSummary);
+      setLocalExecutiveSummary(executiveSummary);
+    }
+    if (euAiActDeadline !== localEuAiActDeadline) {
+      console.log('🔄 Regulatory Compliance - Syncing euAiActDeadline from props:', euAiActDeadline);
+      setLocalEuAiActDeadline(euAiActDeadline);
+    }
+    if (gdprCompliance !== localGdprCompliance) {
+      console.log('🔄 Regulatory Compliance - Syncing gdprCompliance from props:', gdprCompliance);
+      setLocalGdprCompliance(gdprCompliance);
+    }
+    if (potentialFines !== localPotentialFines) {
+      console.log('🔄 Regulatory Compliance - Syncing potentialFines from props:', potentialFines);
+      setLocalPotentialFines(potentialFines);
+    }
+    if (dataLocalization !== localDataLocalization) {
+      console.log('🔄 Regulatory Compliance - Syncing dataLocalization from props:', dataLocalization);
+      setLocalDataLocalization(dataLocalization);
+    }
+  }, [executiveSummary, euAiActDeadline, gdprCompliance, potentialFines, dataLocalization]);
 
   console.log('🎨 RegulatoryComplianceSection RENDER DEBUG:');
   console.log('  - isLoading:', isLoading);

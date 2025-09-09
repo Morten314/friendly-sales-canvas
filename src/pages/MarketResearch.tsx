@@ -12,7 +12,7 @@ import { executeWithRateLimit } from "@/lib/rateLimitManager";
 
 import { Button } from "@/components/ui/button";
 
-import { Search, MessageSquare, Users, Settings, RefreshCw, AlertCircle, History, Calendar, Info } from "lucide-react";
+import { Search, MessageSquare, Users, Settings, RefreshCw, AlertCircle, History, Calendar, Info, Loader2 } from "lucide-react";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -49,6 +49,7 @@ import { ScoutDeploymentDetails } from "@/components/market-research/ScoutDeploy
 import { ScoutSettingsForm } from "@/components/market-research/ScoutSettingsForm";
 
 import { ScoutLoadingAnimation } from "@/components/market-research/ScoutLoadingAnimation";
+import { ComponentStatusLoadingScreen } from "@/components/market-research/ComponentStatusLoadingScreen";
 
 import { DataHistoryDialog } from "@/components/market-research/DataHistoryDialog";
 import SafeMarketIntelligenceTab from "@/components/market-research/SafeMarketIntelligenceTab";
@@ -1414,6 +1415,7 @@ const MarketResearch = React.memo(() => {
 
   // Smart refresh function that tracks component status and only retries failed ones
   const smartRefresh = async (isFirstRefresh = false) => {
+    console.log('🔄 smartRefresh called with isFirstRefresh:', isFirstRefresh);
     try {
       if (isFirstRefresh) {
         // Reset all component statuses on first refresh
@@ -1432,6 +1434,7 @@ const MarketResearch = React.memo(() => {
         console.log(`🔄 Current component status before retry:`, componentStatus);
       }
 
+      console.log('🔄 Setting isRefreshing to true');
       setIsRefreshing(true);
       setError(null);
       
@@ -1513,10 +1516,10 @@ const MarketResearch = React.memo(() => {
         console.log(`🔄 Processing ${component.name} (${i + 1}/${componentsToFetch.length})...`);
         
         try {
-          // Add delay between API calls (except for the first one)
+          // Rate limit manager will handle timing, but add a small delay for safety
           if (i > 0) {
-            const delayMs = 5000; // 5 seconds between calls
-            console.log(`⏳ Waiting ${delayMs}ms before ${component.name} API call...`);
+            const delayMs = 1000; // 1 second delay (rate limit manager handles the rest)
+            console.log(`⏳ Small delay before ${component.name} API call...`);
             await new Promise(resolve => setTimeout(resolve, delayMs));
           }
           
@@ -1524,8 +1527,11 @@ const MarketResearch = React.memo(() => {
           currentStatus[component.name] = 'pending';
           setComponentStatus(prev => ({ ...prev, [component.name]: 'pending' }));
           
-          console.log(`🚀 Calling API for ${component.name}...`);
-          const result = await component.fetchFn(true, false);
+          console.log(`🚀 Calling API for ${component.name} with rate limiting...`);
+          const result = await executeWithRateLimit(
+            () => component.fetchFn(true, false),
+            component.name
+          );
           results.push({ status: 'fulfilled', value: result });
           
           // Update component status to success
@@ -1563,12 +1569,18 @@ const MarketResearch = React.memo(() => {
       
       if (allSuccessful) {
         console.log('🎉 All components completed successfully!');
-        setIsRefreshing(false);
-        toast({
-          title: "Refresh Complete",
-          description: "All components updated successfully",
-          duration: 3000,
-        });
+        console.log('🎉 Waiting 2 seconds for components to process data before showing Scout page...');
+        
+        // Wait for components to process the new data before hiding loading screen
+        setTimeout(() => {
+          console.log('🎉 All components processed, showing Scout page');
+          setIsRefreshing(false);
+          toast({
+            title: "Refresh Complete",
+            description: "All 5 components updated successfully",
+            duration: 3000,
+          });
+        }, 2000);
       } else if (hasFailures && refreshAttempt < 3) {
         console.log(`⚠️ Some components failed. Will retry failed components (attempt ${refreshAttempt + 1}/3)`);
         console.log(`⚠️ Failed components:`, Object.entries(currentStatus).filter(([name, status]) => status === 'failed').map(([name]) => name));
@@ -3535,6 +3547,7 @@ const MarketResearch = React.memo(() => {
 
 
   const handleRefresh = () => {
+    console.log('🔄 Refresh button clicked!', { isShowingHistoricalData, isRefreshing });
 
     if (isShowingHistoricalData) {
 
@@ -3546,6 +3559,7 @@ const MarketResearch = React.memo(() => {
 
       // If showing current data, refresh it
 
+      console.log('🔄 Triggering Scout and refresh...');
       triggerScoutAndRefresh();
 
     }
@@ -5961,112 +5975,13 @@ const MarketResearch = React.memo(() => {
 
             
 
-            {/* Centralized Loading Overlay for Refresh */}
-
+            {/* Component Status Loading Screen */}
             {isRefreshing && (
-
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-
-                <div className="bg-white rounded-lg p-8 max-w-md mx-4 text-center">
-
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-
-                  <h3 className="text-lg font-semibold mb-2">Refreshing Market Research</h3>
-
-                  <p className="text-gray-600 mb-4">
-
-                    Fetching fresh data for all 5 components...
-
-                  </p>
-
-                  <div className="space-y-2 text-sm text-gray-500">
-
-                    <div className="flex items-center justify-between">
-
-                      <span>Market Size & Opportunity</span>
-
-                      <span className={`${
-                        componentStatus['Market Size'] === 'success' ? 'text-green-600' :
-                        componentStatus['Market Size'] === 'failed' ? 'text-red-600' :
-                        componentStatus['Market Size'] === 'pending' ? 'text-blue-600' : 'text-gray-400'
-                      }`}>
-                        {componentStatus['Market Size'] === 'success' ? '✅ Complete' :
-                         componentStatus['Market Size'] === 'failed' ? '❌ Failed' :
-                         componentStatus['Market Size'] === 'pending' ? '⏳ Loading...' : '⏸️ Pending'}
-                      </span>
-
-                    </div>
-
-                    <div className="flex items-center justify-between">
-
-                      <span>Industry Trends</span>
-
-                      <span className={`${
-                        componentStatus['Industry Trends'] === 'success' ? 'text-green-600' :
-                        componentStatus['Industry Trends'] === 'failed' ? 'text-red-600' :
-                        componentStatus['Industry Trends'] === 'pending' ? 'text-blue-600' : 'text-gray-400'
-                      }`}>
-                        {componentStatus['Industry Trends'] === 'success' ? '✅ Complete' :
-                         componentStatus['Industry Trends'] === 'failed' ? '❌ Failed' :
-                         componentStatus['Industry Trends'] === 'pending' ? '⏳ Loading...' : '⏸️ Pending'}
-                      </span>
-
-                    </div>
-
-                    <div className="flex items-center justify-between">
-
-                      <span>Market Entry & Growth</span>
-
-                      <span className={`${
-                        componentStatus['Market Entry'] === 'success' ? 'text-green-600' :
-                        componentStatus['Market Entry'] === 'failed' ? 'text-red-600' :
-                        componentStatus['Market Entry'] === 'pending' ? 'text-blue-600' : 'text-gray-400'
-                      }`}>
-                        {componentStatus['Market Entry'] === 'success' ? '✅ Complete' :
-                         componentStatus['Market Entry'] === 'failed' ? '❌ Failed' :
-                         componentStatus['Market Entry'] === 'pending' ? '⏳ Loading...' : '⏸️ Pending'}
-                      </span>
-
-                    </div>
-
-                    <div className="flex items-center justify-between">
-
-                      <span>Competitor Landscape</span>
-
-                      <span className={`${
-                        componentStatus['Competitor Landscape'] === 'success' ? 'text-green-600' :
-                        componentStatus['Competitor Landscape'] === 'failed' ? 'text-red-600' :
-                        componentStatus['Competitor Landscape'] === 'pending' ? 'text-blue-600' : 'text-gray-400'
-                      }`}>
-                        {componentStatus['Competitor Landscape'] === 'success' ? '✅ Complete' :
-                         componentStatus['Competitor Landscape'] === 'failed' ? '❌ Failed' :
-                         componentStatus['Competitor Landscape'] === 'pending' ? '⏳ Loading...' : '⏸️ Pending'}
-                      </span>
-
-                    </div>
-
-                    <div className="flex items-center justify-between">
-
-                      <span>Regulatory Compliance</span>
-
-                      <span className={`${
-                        componentStatus['Regulatory Compliance'] === 'success' ? 'text-green-600' :
-                        componentStatus['Regulatory Compliance'] === 'failed' ? 'text-red-600' :
-                        componentStatus['Regulatory Compliance'] === 'pending' ? 'text-blue-600' : 'text-gray-400'
-                      }`}>
-                        {componentStatus['Regulatory Compliance'] === 'success' ? '✅ Complete' :
-                         componentStatus['Regulatory Compliance'] === 'failed' ? '❌ Failed' :
-                         componentStatus['Regulatory Compliance'] === 'pending' ? '⏳ Loading...' : '⏸️ Pending'}
-                      </span>
-
-                    </div>
-
-                  </div>
-
-                </div>
-
-              </div>
-
+              <ComponentStatusLoadingScreen 
+                componentStatus={componentStatus}
+                refreshAttempt={refreshAttempt}
+                maxRetries={3}
+              />
             )}
 
             
@@ -6113,13 +6028,17 @@ const MarketResearch = React.memo(() => {
 
         <ScrollArea className="flex-1">
 
-          {/* Show content with subtle overlay when refreshing */}
+          {/* Show content only when all components are successful or when not refreshing */}
 
-          <div className={`transition-opacity duration-300 ${(isRefreshing || isInitialLoading) && marketData ? 'opacity-70' : 'opacity-100'} relative`}>
+          <div className={`transition-opacity duration-300 ${
+            (isRefreshing || isInitialLoading) && marketData ? 'opacity-70' : 'opacity-100'
+          } relative`}>
 
-            <Tabs value={activeTab} onValueChange={handleTabChange} className="mt-0">
+            {/* Show main content when not refreshing */}
+            {!isRefreshing ? (
+              <Tabs value={activeTab} onValueChange={handleTabChange} className="mt-0">
 
-              <TabsContent value="intelligence" className="mt-0">
+                <TabsContent value="intelligence" className="mt-0">
 
                 {marketData ? (
 
@@ -6674,6 +6593,15 @@ const MarketResearch = React.memo(() => {
               </TabsContent>
 
             </Tabs>
+            ) : (
+              /* Show loading message when refreshing and not all components are successful */
+              <div className="flex items-center justify-center h-64">
+                <div className="text-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
+                  <p className="text-gray-600">Waiting for all components to load...</p>
+                </div>
+              </div>
+            )}
 
           </div>
 

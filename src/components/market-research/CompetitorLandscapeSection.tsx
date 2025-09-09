@@ -13,6 +13,7 @@ import MiniPieChart from '@/components/ui/MiniPieChart';
 import MiniLineChart from '@/components/ui/MiniLineChart';
 import { toUTCTimestamp, isTimestampNewer, getCurrentUTCTimestamp, logTimestampComparison } from '@/lib/timestampUtils';
 import { apiFetchJson } from '@/lib/api';
+import { executeWithRateLimit } from '@/lib/rateLimitManager';
 
 interface EditRecord {
   id: string;
@@ -140,10 +141,10 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   const [localError, setLocalError] = useState<string | null>(null);
   const [localLoading, setLocalLoading] = useState<boolean>(false);
   
-  // Check if we're loading - show loading when there's no data and no error, or when local loading is true
-  // Don't show loading if we have individual prop data (executiveSummary, topPlayerShare, etc.)
+  // Check if we're loading - show loading when local loading is true OR when parent is refreshing
+  // Don't show loading if we have data from props or parent
   const hasPropData = executiveSummary || topPlayerShare || emergingPlayers || fundingNews?.length > 0;
-  const isLoading = localLoading || (!competitorData && !hasPropData && !error && !localError);
+  const isLoading = localLoading || (isRefreshing && !hasPropData);
   
   // Debug loading state
   console.log('🔍 Competitor Landscape Loading State Debug:', {
@@ -305,7 +306,9 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
 
   // Fetch Competitor Landscape data from API (like working components do)
   const fetchCompetitorLandscapeData = async (refresh = false) => {
-    console.log('🏢 CompetitorLandscapeSection: Starting fetchCompetitorLandscapeData with refresh:', refresh);
+    console.log('🏢🏢🏢 CompetitorLandscapeSection: Starting fetchCompetitorLandscapeData with refresh:', refresh);
+    console.log('🏢🏢🏢 CompetitorLandscapeSection: Function called at:', new Date().toISOString());
+    console.log('🏢🏢🏢 CompetitorLandscapeSection: Current props:', { executiveSummary, topPlayerShare, emergingPlayers });
     try {
         setLocalLoading(true);
         setLocalError(null);
@@ -313,51 +316,86 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
       const currentTime = Date.now();
       const randomId = Math.random().toString(36).substring(7);
       
-      // Get company profile data for dynamic reports
-      const profile = companyProfile || JSON.parse(localStorage.getItem('companyProfile') || '{}');
-      console.log('🔍 Competitor Landscape - Company profile being used:', profile);
+      // Get company profile data for dynamic reports (same source as parent)
+      let profile = null;
+      try {
+        const profileData = localStorage.getItem('companyProfileForRefresh');
+        if (profileData) {
+          profile = JSON.parse(profileData);
+          console.log('🔍 Competitor Landscape - Using companyProfileForRefresh:', profile);
+        } else {
+          // Fallback to companyProfile prop or regular localStorage
+          profile = companyProfile || JSON.parse(localStorage.getItem('companyProfile') || '{}');
+          console.log('🔍 Competitor Landscape - Using fallback profile:', profile);
+        }
+      } catch (error) {
+        console.warn('⚠️ Competitor Landscape - Could not get company profile data:', error);
+        profile = companyProfile || JSON.parse(localStorage.getItem('companyProfile') || '{}');
+      }
       
       const payload = {
         user_id: "brewra",
-        component_name: "competitor landscape", // Correct component name
-        refresh: refresh,
-        force_refresh: refresh,
-        cache_bypass: refresh,
-        bypass_all_cache: refresh,
-        request_timestamp: currentTime,
-        request_id: randomId,
-        additionalPrompt: profile.companyUrl ? `Company: ${profile.companyUrl}, Industry: ${profile.industry}, Size: ${profile.companySize}, GTM: ${profile.primaryGTMModel}, Goals: ${profile.strategicGoals}` : "",
+        component_name: "competitor landscape", // Match parent component exactly
         data: {
-          company: profile.companyUrl || "OrbiSelf",
-          product: "Convoic.AI", 
-          target_market: profile.targetMarkets?.[0] || "Indian college students (Tier 2 & 3)",
-          region: profile.targetMarkets?.[0] || "India",
-          timestamp: currentTime,
-          force_new_data: refresh
-        }
+          additionalPrompt: profile.companyUrl ? {
+            industry: profile.industry,
+            companySize: profile.companySize,
+            targetMarkets: profile.targetMarkets,
+            strategicGoals: profile.strategicGoals,
+            website: profile.website,
+            gtmModel: profile.primaryGTMModel,
+            revenueStage: profile.revenueStage,
+            keyBuyerPersona: profile.keyBuyerPersona
+          } : {}
+        },
+        refresh: refresh
       };
 
       console.log('📤 CompetitorLandscapeSection: Sending API request with payload:', payload);
-      console.log('⏰ COMPETITOR LANDSCAPE REQUEST TIMESTAMP:', payload.request_timestamp);
 
-      const response = await fetch('https://backend-11kr.onrender.com/market-research', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload)
-      });
+      // Try the API call with retry mechanism (like parent component)
+      let result;
+      let retryCount = 0;
+      const maxRetries = 2;
 
-      console.log('📨 CompetitorLandscapeSection: API response status:', response.status);
+      while (retryCount <= maxRetries) {
+        try {
+          console.log(`🔄 Competitor Landscape - Attempting API call (attempt ${retryCount + 1}/${maxRetries + 1})`);
+          
+          result = await apiFetchJson('market-research', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+          });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ CompetitorLandscapeSection: API error response:', errorText);
-        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+          console.log('✅ Competitor Landscape - API call successful');
+          break; // Success, exit retry loop
+
+        } catch (apiError) {
+          retryCount++;
+          console.error(`❌ Competitor Landscape - API call failed (attempt ${retryCount}/${maxRetries + 1}):`, apiError);
+          
+          if (retryCount > maxRetries) {
+            throw apiError; // Re-throw if we've exhausted retries
+          }
+          
+          // Wait before retrying
+          console.log(`⏳ Competitor Landscape - Waiting 2 seconds before retry...`);
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
       }
 
-      const result = await response.json();
-      console.log('📊 CompetitorLandscapeSection: API result:', result);
+      console.log('📨 CompetitorLandscapeSection: API result:', result);
+      console.log('📨 CompetitorLandscapeSection: API result.success:', result.success);
+      console.log('📨 CompetitorLandscapeSection: API result.status:', result.status);
+      console.log('📨 CompetitorLandscapeSection: API result.data exists:', !!result.data);
+      console.log('📨 CompetitorLandscapeSection: RAW API result:', JSON.stringify(result, null, 2));
+
+      if (!result.success) {
+        console.error('❌ CompetitorLandscapeSection: API error response:', result.error);
+        throw new Error(`API error: ${result.error}`);
+      }
+
+      console.log('📊 CompetitorLandscapeSection: API data:', result.data);
 
       if (result.status === 'success' && result.data) {
         const apiData = result.data;
@@ -431,21 +469,21 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
     }
   };
 
-  // Fetch data on component mount (disabled for now due to 500 errors)
+  // Fetch data on component mount - DISABLED to prevent conflicts with parent
   useEffect(() => {
     console.log('🚀 Competitor Landscape Component mounted');
     console.log('🚀 Initial competitorData:', competitorData);
     
-    // Re-enabled API call to fetch fresh data
-    console.log('🔄 Competitor Landscape - Re-enabled API call to fetch fresh data');
+    // DISABLED: Let parent component handle all API calls to prevent conflicts
+    console.log('🔄 Competitor Landscape - Relying on parent component for data fetching');
     
-    // Add delay to prevent conflicts with other components
-    const timer = setTimeout(() => {
-      console.log('🚀 Competitor Landscape Component mounted - fetching initial data');
-      fetchCompetitorLandscapeData(false); // Re-enabled API call
-    }, 700); // Slightly longer delay to prevent conflicts
-
-    return () => clearTimeout(timer);
+    // Only fetch if we have no data at all and no props
+    const hasAnyData = competitorData || executiveSummary || topPlayerShare || emergingPlayers || fundingNews?.length > 0;
+    if (!hasAnyData) {
+      console.log('🔄 Competitor Landscape - No data available, will wait for parent refresh');
+    } else {
+      console.log('🔄 Competitor Landscape - Using existing data from props');
+    }
   }, []);
   
   // Log when competitorData changes
@@ -470,50 +508,35 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   // Handle refresh when isRefreshing prop changes
   useEffect(() => {
     if (isRefreshing) {
-      console.log('🔄 Competitor Landscape - Refresh triggered by parent');
+      console.log('🔄 Competitor Landscape - Parent is refreshing, clearing local state');
       setLocalError(null);
-      setLocalLoading(true);
+      setLocalLoading(false); // Don't show loading since parent handles it
       
       // Clear local state immediately to prevent showing stale data
       setLocalExecutiveSummary('');
       setLocalTopPlayerShare('');
       setLocalEmergingPlayers('');
       
-      fetchCompetitorLandscapeData(true); // Re-enabled API call
+      // Don't fetch data here - parent handles all API calls
+      console.log('🔄 Competitor Landscape - Parent will handle API calls, just clearing local state');
     }
   }, [isRefreshing]);
 
 
-  // Listen for company profile updates
+  // Listen for company profile updates (but don't fetch data - parent handles it)
   useEffect(() => {
     const handleCompanyProfileUpdate = async () => {
-      console.log('🔄 Competitor Landscape - Company profile updated, fetching fresh data');
+      console.log('🔄 Competitor Landscape - Company profile updated, clearing local state');
       setLocalError(null);
-      setLocalLoading(true);
+      setLocalLoading(false);
       
       // Clear local state immediately to prevent showing stale data
       setLocalExecutiveSummary('');
       setLocalTopPlayerShare('');
       setLocalEmergingPlayers('');
       
-      // Fetch the latest company profile from backend immediately
-      try {
-        const profileResponse = await fetch('https://backend-11kr.onrender.com/profile/company', {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' }
-        });
-        if (profileResponse.ok) {
-          const latestProfile = await profileResponse.json();
-          console.log('📋 Competitor Landscape - Retrieved latest company profile:', latestProfile);
-          // Store in localStorage so the API call can use it
-          localStorage.setItem('companyProfile', JSON.stringify(latestProfile));
-          localStorage.setItem('companyProfileForRefresh', JSON.stringify(latestProfile));
-        }
-      } catch (error) {
-        console.warn('⚠️ Competitor Landscape - Could not fetch latest profile:', error);
-      }
-      
-      fetchCompetitorLandscapeData(true); // Re-enabled API call
+      // Don't fetch data here - parent handles all API calls
+      console.log('🔄 Competitor Landscape - Parent will handle API calls after profile update');
     };
 
     window.addEventListener('companyProfileUpdated', handleCompanyProfileUpdate);
@@ -523,16 +546,47 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
     };
   }, []);
 
-  // Also listen for companyProfile prop changes
+  // Also listen for companyProfile prop changes but don't auto-fetch to prevent loops
   useEffect(() => {
     if (companyProfile) {
       console.log('🔄 Competitor Landscape - companyProfile prop changed:', companyProfile);
-      console.log('🔄 Competitor Landscape - Fetching fresh data with new profile');
-      setLocalError(null);
-      setLocalLoading(true);
-      fetchCompetitorLandscapeData(true); // Re-enabled API call
+      console.log('🔄 Competitor Landscape - Profile updated, but not auto-fetching to prevent loops');
+      // Don't auto-fetch here to prevent infinite loops
+      // The parent refresh mechanism will handle data fetching
     }
   }, [companyProfile]);
+
+  // Sync local state with props to prevent data reversion
+  useEffect(() => {
+    console.log('🔄 Competitor Landscape - Props changed, syncing with local state');
+    console.log('🔄 Props:', { executiveSummary, topPlayerShare, emergingPlayers });
+    console.log('🔄 Local state:', { localExecutiveSummary, localTopPlayerShare, localEmergingPlayers });
+    
+    // Always sync with props when they change (even if empty, to clear stale data)
+    if (executiveSummary !== localExecutiveSummary) {
+      console.log('🔄 Competitor Landscape - Syncing executiveSummary from props:', executiveSummary);
+      setLocalExecutiveSummary(executiveSummary);
+    }
+    if (topPlayerShare !== localTopPlayerShare) {
+      console.log('🔄 Competitor Landscape - Syncing topPlayerShare from props:', topPlayerShare);
+      setLocalTopPlayerShare(topPlayerShare);
+    }
+    if (emergingPlayers !== localEmergingPlayers) {
+      console.log('🔄 Competitor Landscape - Syncing emergingPlayers from props:', emergingPlayers);
+      setLocalEmergingPlayers(emergingPlayers);
+    }
+  }, [executiveSummary, topPlayerShare, emergingPlayers, localExecutiveSummary, localTopPlayerShare, localEmergingPlayers]);
+
+  // Force sync when parent data changes (for refresh scenarios)
+  useEffect(() => {
+    console.log('🔄 Competitor Landscape - Parent data changed, forcing sync');
+    console.log('🔄 Parent data:', { executiveSummary, topPlayerShare, emergingPlayers });
+    
+    // Force update local state with parent data
+    setLocalExecutiveSummary(executiveSummary);
+    setLocalTopPlayerShare(topPlayerShare);
+    setLocalEmergingPlayers(emergingPlayers);
+  }, [executiveSummary, topPlayerShare, emergingPlayers]);
 
   // Show loading state when no API data is available yet
   if (isLoading) {

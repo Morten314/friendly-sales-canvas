@@ -10,6 +10,7 @@ import MiniPieChart from '@/components/ui/MiniPieChart';
 import MiniLineChart from '@/components/ui/MiniLineChart';
 import { EditRecord } from './types';
 import { EditDropdownMenu } from './EditDropdownMenu';
+import { executeWithRateLimit } from '@/lib/rateLimitManager';
 
 interface MarketSizeSectionProps {
   isEditing: boolean;
@@ -264,11 +265,14 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
 
   const fetchUpdatedData = async () => {
     try {
-      const response = await fetch('https://backend-11kr.onrender.com/market-research', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ component_name: "market_size", user_id: "user_123" })
-      });
+      const response = await executeWithRateLimit(
+        () => fetch('https://backend-11kr.onrender.com/market-research', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ component_name: "market_size", user_id: "user_123" })
+        }),
+        'Market Size Update'
+      );
       if (response.ok) {
         const data = await response.json();
         console.log('Updated data fetched:', data);

@@ -11,6 +11,7 @@ import MiniPieChart from '@/components/ui/MiniPieChart';
 import MiniLineChart from '@/components/ui/MiniLineChart';
 import { toUTCTimestamp, isTimestampNewer, getCurrentUTCTimestamp, logTimestampComparison } from '@/lib/timestampUtils';
 import { EditDropdownMenu } from './EditDropdownMenu';
+import { executeWithRateLimit } from '@/lib/rateLimitManager';
 
 interface EditRecord {
   id: string;
@@ -155,13 +156,16 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
 
       const requestTimestamp = Date.now();
       
-      const response = await fetch('https://backend-11kr.onrender.com/market-research', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload)
-      });
+      const response = await executeWithRateLimit(
+        () => fetch('https://backend-11kr.onrender.com/market-research', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload)
+        }),
+        'Industry Trends'
+      );
 
       
       
@@ -459,11 +463,14 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
 
   const fetchUpdatedData = async () => {
     try {
-      const response = await fetch('https://backend-11kr.onrender.com/market-research', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ component_name: "industry_trends", user_id: "user_123" })
-      });
+      const response = await executeWithRateLimit(
+        () => fetch('https://backend-11kr.onrender.com/market-research', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ component_name: "industry_trends", user_id: "user_123" })
+        }),
+        'Industry Trends Update'
+      );
       if (response.ok) {
         const data = await response.json();
         console.log('Updated data fetched:', data);

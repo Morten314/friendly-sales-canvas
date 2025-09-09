@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { EditRecord } from './types';
 import { toUTCTimestamp, isTimestampNewer } from '@/lib/timestampUtils';
+import { executeWithRateLimit } from '@/lib/rateLimitManager';
 
 interface MarketEntrySectionProps {
   isEditing: boolean;
@@ -120,13 +121,16 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
       console.log('📤 MarketEntrySection: Sending API request with payload:', payload);
       console.log('⏰ MARKET ENTRY REQUEST TIMESTAMP:', payload.request_timestamp);
 
-      const response = await fetch('https://backend-11kr.onrender.com/market-research', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload)
-      });
+      const response = await executeWithRateLimit(
+        () => fetch('https://backend-11kr.onrender.com/market-research', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload)
+        }),
+        'Market Entry'
+      );
 
       console.log('📨 MarketEntrySection: API response status:', response.status);
 
