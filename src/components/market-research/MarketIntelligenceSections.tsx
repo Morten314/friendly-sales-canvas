@@ -179,6 +179,14 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
             onGenerateShareableLink={props.onGenerateShareableLink}
             isRefreshing={props.isRefreshing}
             companyProfile={props.companyProfile}
+            // Pass Industry Trends data props
+            executiveSummary={props.industryTrendsExecutiveSummary}
+            aiAdoption={props.industryTrendsAiAdoption}
+            cloudMigration={props.industryTrendsCloudMigration}
+            regulatory={props.industryTrendsRegulatory}
+            trendSnapshots={props.industryTrendSnapshots}
+            recommendations={props.industryTrendsRecommendations}
+            risks={props.industryTrendsRisks}
           />
         </div>
         {props.showIndustryTrendsScoutChat && industryTrendsScoutChatPanel && (

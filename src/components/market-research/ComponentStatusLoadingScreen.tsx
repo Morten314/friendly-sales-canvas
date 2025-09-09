@@ -13,12 +13,16 @@ interface ComponentStatusLoadingScreenProps {
   componentStatus: Record<string, 'pending' | 'success' | 'failed'>;
   refreshAttempt: number;
   maxRetries: number;
+  isValidating?: boolean;
+  validationAttempt?: number;
 }
 
 export const ComponentStatusLoadingScreen: React.FC<ComponentStatusLoadingScreenProps> = ({
   componentStatus,
   refreshAttempt,
-  maxRetries
+  maxRetries,
+  isValidating = false,
+  validationAttempt = 0
 }) => {
   const components: ComponentStatus[] = [
     { name: 'Market Size', status: componentStatus['Market Size'], icon: BarChart3 },
@@ -57,7 +61,14 @@ export const ComponentStatusLoadingScreen: React.FC<ComponentStatusLoadingScreen
   };
 
   const getOverallStatus = () => {
-    if (allSuccessful) {
+    if (allSuccessful && isValidating) {
+      return {
+        title: "Validating Fresh Data... 🔍",
+        subtitle: `Ensuring all components have fresh data (${validationAttempt}/10)`,
+        bgColor: "from-purple-50 to-indigo-50",
+        borderColor: "border-purple-200"
+      };
+    } else if (allSuccessful) {
       return {
         title: "All Components Loaded Successfully! 🎉",
         subtitle: "Scout is ready with fresh market intelligence data",

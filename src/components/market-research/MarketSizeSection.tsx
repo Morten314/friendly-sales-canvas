@@ -142,6 +142,21 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
     }
   }, [isEditing, executiveSummary, tamValue, samValue, apacGrowthRate, marketEntry, strategicRecommendations, marketDrivers]);
 
+  // Sync local state with props when they change (for refresh scenarios)
+  useEffect(() => {
+    console.log('🔄 Market Size - Props changed, syncing with local state');
+    console.log('🔄 Props:', { executiveSummary, tamValue, samValue, apacGrowthRate, marketEntry, strategicRecommendations, marketDrivers });
+    
+    // Always sync with props when they change (even if empty, to clear stale data)
+    setLocalExecutiveSummary(executiveSummary || '');
+    setLocalTamValue(tamValue || '');
+    setLocalSamValue(samValue || '');
+    setLocalApacGrowthRate(apacGrowthRate || '');
+    setLocalMarketEntry(marketEntry || '');
+    setLocalStrategicRecommendations(strategicRecommendations || []);
+    setLocalMarketDrivers(marketDrivers || []);
+  }, [executiveSummary, tamValue, samValue, apacGrowthRate, marketEntry, strategicRecommendations, marketDrivers]);
+
   const handleSave = async () => {
     try {
       // Prepare original and modified data

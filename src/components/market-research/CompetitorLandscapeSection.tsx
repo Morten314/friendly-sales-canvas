@@ -577,6 +577,19 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
     }
   }, [executiveSummary, topPlayerShare, emergingPlayers, localExecutiveSummary, localTopPlayerShare, localEmergingPlayers]);
 
+  // Debug: Log all props received
+  useEffect(() => {
+    console.log('🔍 Competitor Landscape - All props received:', {
+      executiveSummary,
+      topPlayerShare,
+      emergingPlayers,
+      fundingNews: fundingNews?.length || 0,
+      isRefreshing,
+      companyProfile: !!companyProfile,
+      competitorData: !!competitorData
+    });
+  }, [executiveSummary, topPlayerShare, emergingPlayers, fundingNews, isRefreshing, companyProfile, competitorData]);
+
   // Force sync when parent data changes (for refresh scenarios)
   useEffect(() => {
     console.log('🔄 Competitor Landscape - Parent data changed, forcing sync');
@@ -650,6 +663,16 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   if (!competitorData) {
     console.log('⚠️ No competitorData found - will use fallback props');
   }
+
+  // Debug: Show what we're about to render
+  console.log('🔍 Competitor Landscape - About to render:', {
+    hasLocalData: !!localExecutiveSummary,
+    hasPropData: !!executiveSummary,
+    hasCompetitorData: !!competitorData,
+    executiveSummary,
+    localExecutiveSummary,
+    competitorDataExecutiveSummary: competitorData?.executiveSummary
+  });
 
   // Ensure we have some data to display - prioritize competitorData from API over fallback props
   const displayExecutiveSummary = localExecutiveSummary || competitorData?.executiveSummary || executiveSummary || 'No data available';

@@ -436,7 +436,7 @@ const MarketResearch = React.memo(() => {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
-  
+
   // Smart refresh state tracking
   const [componentStatus, setComponentStatus] = useState<Record<string, 'pending' | 'success' | 'failed'>>({
     'Market Size': 'pending',
@@ -446,8 +446,107 @@ const MarketResearch = React.memo(() => {
     'Regulatory Compliance': 'pending'
   });
   const [refreshAttempt, setRefreshAttempt] = useState(0);
+  const [validationAttempts, setValidationAttempts] = useState(0);
 
-  
+  // Function to validate that all components have fresh data
+  const validateAllComponentsHaveFreshData = () => {
+    setValidationAttempts(prev => prev + 1);
+    const currentAttempt = validationAttempts + 1;
+    const maxValidationAttempts = 5; // Maximum 15 seconds of validation (5 attempts * 3 seconds)
+    
+    console.log(`🔍 VALIDATION FUNCTION CALLED - Attempt ${currentAttempt}/${maxValidationAttempts}`);
+    console.log('🔍 Validating all components have fresh data...');
+    console.log('🔍 Current isRefreshing state:', isRefreshing);
+    
+    // Check each component's data freshness AND loading states
+    const componentDataChecks = {
+      'Market Size': marketData?.executiveSummary && marketData?.tamValue && marketData?.apacGrowthRate && !isMarketSizeLoading,
+      'Industry Trends': industryTrendsData?.executiveSummary && industryTrendsData?.aiAdoption && !isIndustryTrendsLoading,
+      'Market Entry': marketEntryData?.executiveSummary && marketEntryData?.entryBarriers && !isMarketEntryLoading,
+      'Competitor Landscape': competitorData?.executiveSummary && competitorData?.topPlayerShare && competitorData?.emergingPlayers && !isCompetitorLoading,
+      'Regulatory Compliance': regulatoryData?.executiveSummary && regulatoryData?.euAiActDeadline && !isRegulatoryLoading
+    };
+    
+    // Debug: Check each component's data structure in detail
+    console.log('🔍 DETAILED DATA STRUCTURE CHECK:');
+    console.log('  - Market Size - executiveSummary:', marketData?.executiveSummary);
+    console.log('  - Market Size - tamValue:', marketData?.tamValue);
+    console.log('  - Market Size - apacGrowthRate:', marketData?.apacGrowthRate);
+    console.log('  - Market Size - isMarketSizeLoading:', isMarketSizeLoading);
+    console.log('  - Industry Trends - executiveSummary:', industryTrendsData?.executiveSummary);
+    console.log('  - Industry Trends - aiAdoption:', industryTrendsData?.aiAdoption);
+    console.log('  - Industry Trends - isIndustryTrendsLoading:', isIndustryTrendsLoading);
+    console.log('  - Market Entry - executiveSummary:', marketEntryData?.executiveSummary);
+    console.log('  - Market Entry - entryBarriers:', marketEntryData?.entryBarriers);
+    console.log('  - Market Entry - isMarketEntryLoading:', isMarketEntryLoading);
+    console.log('  - Competitor Landscape - executiveSummary:', competitorData?.executiveSummary);
+    console.log('  - Competitor Landscape - topPlayerShare:', competitorData?.topPlayerShare);
+    console.log('  - Competitor Landscape - emergingPlayers:', competitorData?.emergingPlayers);
+    console.log('  - Competitor Landscape - isCompetitorLoading:', isCompetitorLoading);
+    console.log('  - Regulatory Compliance - executiveSummary:', regulatoryData?.executiveSummary);
+    console.log('  - Regulatory Compliance - euAiActDeadline:', regulatoryData?.euAiActDeadline);
+    console.log('  - Regulatory Compliance - isRegulatoryLoading:', isRegulatoryLoading);
+    
+    console.log('🔍 Component data validation results:', componentDataChecks);
+    console.log('🔍 Component loading states:', {
+      'Market Size': isMarketSizeLoading,
+      'Industry Trends': isIndustryTrendsLoading,
+      'Market Entry': isMarketEntryLoading,
+      'Competitor Landscape': isCompetitorLoading,
+      'Regulatory Compliance': isRegulatoryLoading
+    });
+    
+    // Debug: Log actual data to see what we have
+    console.log('🔍 DEBUG - Actual component data:');
+    console.log('  - marketData:', marketData);
+    console.log('  - industryTrendsData:', industryTrendsData);
+    console.log('  - marketEntryData:', marketEntryData);
+    console.log('  - competitorData:', competitorData);
+    console.log('  - regulatoryData:', regulatoryData);
+    
+    const allComponentsHaveData = Object.values(componentDataChecks).every(hasData => hasData);
+    const missingDataComponents = Object.entries(componentDataChecks)
+      .filter(([name, hasData]) => !hasData)
+      .map(([name]) => name);
+    
+    if (allComponentsHaveData) {
+      console.log('✅ All components have fresh data! Showing Scout page...');
+      setIsRefreshing(false);
+      toast({
+        title: "Refresh Complete",
+        description: "All 5 components updated successfully with fresh data",
+        duration: 3000,
+      });
+    } else {
+      console.log('⚠️ Some components still missing fresh data:', missingDataComponents);
+      
+      if (currentAttempt >= maxValidationAttempts) {
+        console.log('⏰ Maximum validation attempts reached, showing Scout page anyway');
+        console.log('⏰ Final validation results:', componentDataChecks);
+        console.log('⏰ Component status:', componentStatus);
+        
+        // Check if at least the API calls completed successfully
+        const successfulComponents = Object.entries(componentStatus).filter(([name, status]) => status === 'success');
+        console.log('⏰ Successful components:', successfulComponents.map(([name]) => name));
+        
+        setIsRefreshing(false);
+        toast({
+          title: "Refresh Complete",
+          description: `${successfulComponents.length}/5 components updated successfully`,
+          duration: 3000,
+        });
+      } else {
+        console.log('⏳ Waiting 3 more seconds for components to process data...');
+        console.log('⏳ Missing components:', missingDataComponents);
+        console.log('⏳ Current component status:', componentStatus);
+        
+        // Wait a bit more and try again
+        setTimeout(() => {
+          validateAllComponentsHaveFreshData();
+        }, 3000);
+      }
+    }
+  };
 
   // Company profile state for centralized data context
 
@@ -636,6 +735,16 @@ const MarketResearch = React.memo(() => {
   const [isCompetitorLoading, setIsCompetitorLoading] = useState(false);
 
   const [competitorError, setCompetitorError] = useState<string | null>(null);
+
+  // Add missing loading states for other components
+  const [isIndustryTrendsLoading, setIsIndustryTrendsLoading] = useState(false);
+  const [isMarketEntryLoading, setIsMarketEntryLoading] = useState(false);
+  const [isRegulatoryLoading, setIsRegulatoryLoading] = useState(false);
+  
+  // Add missing error states for other components
+  const [industryTrendsError, setIndustryTrendsError] = useState<string | null>(null);
+  const [marketEntryError, setMarketEntryError] = useState<string | null>(null);
+  const [regulatoryError, setRegulatoryError] = useState<string | null>(null);
 
   const [deletedSections, setDeletedSections] = useState<Set<string>>(new Set());
 
@@ -1416,6 +1525,18 @@ const MarketResearch = React.memo(() => {
   // Smart refresh function that tracks component status and only retries failed ones
   const smartRefresh = async (isFirstRefresh = false) => {
     console.log('🔄 smartRefresh called with isFirstRefresh:', isFirstRefresh);
+    
+    // Add a safety timeout to prevent infinite loading
+    const refreshTimeout = setTimeout(() => {
+      console.log('⏰ REFRESH TIMEOUT - Force stopping refresh after 60 seconds');
+      setIsRefreshing(false);
+      toast({
+        title: "Refresh Timeout",
+        description: "Refresh took too long. Please try again.",
+        duration: 5000,
+      });
+    }, 60000); // 60 second timeout
+    
     try {
       if (isFirstRefresh) {
         // Reset all component statuses on first refresh
@@ -1427,9 +1548,11 @@ const MarketResearch = React.memo(() => {
           'Regulatory Compliance': 'pending'
         });
         setRefreshAttempt(1);
+        setValidationAttempts(0); // Reset validation attempts for new refresh
         console.log('🔄 Starting first refresh - all components will be fetched');
       } else {
         setRefreshAttempt(prev => prev + 1);
+        setValidationAttempts(0); // Reset validation attempts for retry
         console.log(`🔄 Starting retry refresh (attempt ${refreshAttempt + 1}) - only failed components will be fetched`);
         console.log(`🔄 Current component status before retry:`, componentStatus);
       }
@@ -1451,17 +1574,17 @@ const MarketResearch = React.memo(() => {
       }
       
       if (!companyProfileData) {
-        try {
-          const profileResponse = await fetch('/api/profile/company', {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' }
-          });
-          if (profileResponse.ok) {
-            companyProfileData = await profileResponse.json();
+      try {
+        const profileResponse = await fetch('/api/profile/company', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        if (profileResponse.ok) {
+          companyProfileData = await profileResponse.json();
             console.log('📋 Retrieved fresh company profile for context:', companyProfileData);
-          }
-        } catch (error) {
-          console.warn('⚠️ Could not retrieve company profile, proceeding without context:', error);
+        }
+      } catch (error) {
+        console.warn('⚠️ Could not retrieve company profile, proceeding without context:', error);
         }
       }
       
@@ -1569,18 +1692,14 @@ const MarketResearch = React.memo(() => {
       
       if (allSuccessful) {
         console.log('🎉 All components completed successfully!');
-        console.log('🎉 Waiting 2 seconds for components to process data before showing Scout page...');
+        console.log('🎉 About to call validateAllComponentsHaveFreshData...');
+        console.log('🎉 Current component status:', currentStatus);
         
-        // Wait for components to process the new data before hiding loading screen
-        setTimeout(() => {
-          console.log('🎉 All components processed, showing Scout page');
-          setIsRefreshing(false);
-          toast({
-            title: "Refresh Complete",
-            description: "All 5 components updated successfully",
-            duration: 3000,
-          });
-        }, 2000);
+        // Clear the refresh timeout since we're completing successfully
+        clearTimeout(refreshTimeout);
+        
+        // Validate that all components have fresh data before hiding loading screen
+        validateAllComponentsHaveFreshData();
       } else if (hasFailures && refreshAttempt < 3) {
         console.log(`⚠️ Some components failed. Will retry failed components (attempt ${refreshAttempt + 1}/3)`);
         console.log(`⚠️ Failed components:`, Object.entries(currentStatus).filter(([name, status]) => status === 'failed').map(([name]) => name));
@@ -1596,6 +1715,7 @@ const MarketResearch = React.memo(() => {
         }, 2000);
       } else {
         console.log('❌ Maximum retry attempts reached or all components failed');
+        clearTimeout(refreshTimeout);
         setIsRefreshing(false);
         toast({
           title: "Refresh Incomplete",
@@ -1606,6 +1726,7 @@ const MarketResearch = React.memo(() => {
       
     } catch (error) {
       console.error('❌ Smart refresh failed:', error);
+      clearTimeout(refreshTimeout);
       setIsRefreshing(false);
       setError('Refresh failed. Please try again.');
     }
@@ -2116,9 +2237,9 @@ const MarketResearch = React.memo(() => {
     
     // Only show individual loading if not in global refresh mode
     if (showLoading && !isRefreshing) {
-      setIsMarketSizeLoading(true);
+      setIsIndustryTrendsLoading(true);
     }
-    setMarketSizeError(null);
+    setIndustryTrendsError(null);
 
     try {
       // Get company profile data for dynamic payload
@@ -2166,10 +2287,15 @@ const MarketResearch = React.memo(() => {
       if (result.success && result.data?.status === 'success' && result.data?.data) {
         const apiData = result.data.data;
         console.log('🎯 Processing API data for Industry Trends:', apiData);
+        console.log('🎯 Industry Trends API response structure:', JSON.stringify(apiData, null, 2));
 
         // Check timestamp comparison with timestampUtils
         const currentTimestamp = industryTrendsData.timestamp || null;
         const newTimestamp = apiData.timestamp;
+        
+        console.log('🎯 Current industryTrendsData:', industryTrendsData);
+        console.log('🎯 New timestamp:', newTimestamp);
+        console.log('🎯 Current timestamp:', currentTimestamp);
         
         logTimestampComparison(currentTimestamp, newTimestamp, 'IndustryTrends');
         
@@ -2179,11 +2305,11 @@ const MarketResearch = React.memo(() => {
           // Update industry trends data with API response
           const updatedData = {
             ...industryTrendsData,
-            executiveSummary: apiData.executiveSummary || industryTrendsData.executiveSummary,
-            aiAdoption: apiData.aiAdoption || industryTrendsData.aiAdoption,
-            cloudMigration: apiData.cloudMigration || industryTrendsData.cloudMigration,
-            regulatory: apiData.regulatory || industryTrendsData.regulatory,
-            risks: apiData.risks || industryTrendsData.risks,
+            executiveSummary: apiData.executiveSummary || industryTrendsData?.executiveSummary || '',
+            aiAdoption: apiData.aiAdoption || industryTrendsData?.aiAdoption || '',
+            cloudMigration: apiData.cloudMigration || industryTrendsData?.cloudMigration || '',
+            regulatory: apiData.regulatory || industryTrendsData?.regulatory || '',
+            risks: apiData.risks || industryTrendsData?.risks || [],
             timestamp: toUTCTimestamp(newTimestamp)
           };
           
@@ -2201,11 +2327,11 @@ const MarketResearch = React.memo(() => {
       
     } catch (error) {
       console.error('❌ Industry Trends - Unexpected error:', error);
-      setMarketSizeError('Failed to load industry trends data - using cached data');
+      setIndustryTrendsError('Failed to load industry trends data - using cached data');
     } finally {
       // Only hide individual loading if not in global refresh mode
       if (showLoading && !isRefreshing) {
-        setIsMarketSizeLoading(false);
+        setIsIndustryTrendsLoading(false);
       }
     }
   };
@@ -2228,11 +2354,11 @@ const MarketResearch = React.memo(() => {
 
       if (showLoading && !isRefreshing) {
 
-        setIsMarketSizeLoading(true); // Reuse same loading state for now
+        setIsRegulatoryLoading(true);
 
       }
 
-      setMarketSizeError(null);
+      setRegulatoryError(null);
 
 
 
@@ -2958,11 +3084,11 @@ const MarketResearch = React.memo(() => {
 
       if (showLoading && !isRefreshing) {
 
-        setIsMarketSizeLoading(true); // Reuse same loading state for now
+        setIsMarketEntryLoading(true);
 
       }
 
-      setMarketSizeError(null);
+      setMarketEntryError(null);
 
 
 
@@ -5981,6 +6107,8 @@ const MarketResearch = React.memo(() => {
                 componentStatus={componentStatus}
                 refreshAttempt={refreshAttempt}
                 maxRetries={3}
+                isValidating={validationAttempts > 0}
+                validationAttempt={validationAttempts}
               />
             )}
 
@@ -6036,9 +6164,9 @@ const MarketResearch = React.memo(() => {
 
             {/* Show main content when not refreshing */}
             {!isRefreshing ? (
-              <Tabs value={activeTab} onValueChange={handleTabChange} className="mt-0">
+            <Tabs value={activeTab} onValueChange={handleTabChange} className="mt-0">
 
-                <TabsContent value="intelligence" className="mt-0">
+              <TabsContent value="intelligence" className="mt-0">
 
                 {marketData ? (
 
@@ -6098,13 +6226,21 @@ const MarketResearch = React.memo(() => {
 
                        marketSizeDeletedSections={marketSizeDeletedSections}
 
-                       isMarketSizeLoading={isMarketSizeLoading}
+                       isMarketSizeLoading={isRefreshing ? false : isMarketSizeLoading}
 
                        marketSizeError={marketSizeError}
 
                        onMarketSizeRefresh={() => fetchMarketSizeData(true)}
 
                       // Industry Trends props
+                      // Debug: Log what we're passing to Industry Trends
+                      {...(console.log('🔍 DEBUG - Passing Industry Trends props:', {
+                        executiveSummary: industryTrendsData?.executiveSummary,
+                        aiAdoption: industryTrendsData?.aiAdoption,
+                        cloudMigration: industryTrendsData?.cloudMigration,
+                        regulatory: industryTrendsData?.regulatory,
+                        fullData: industryTrendsData
+                      }) || {})}
 
                       isIndustryTrendsEditing={isIndustryTrendsEditing}
 
@@ -6116,23 +6252,31 @@ const MarketResearch = React.memo(() => {
 
                       industryTrendsEditHistory={industryTrendsEditHistory}
 
-                      industryTrendsExecutiveSummary={industryTrendsData.executiveSummary}
+                      industryTrendsExecutiveSummary={industryTrendsData?.executiveSummary}
 
-                      industryTrendsAiAdoption={industryTrendsData.aiAdoption}
+                      industryTrendsAiAdoption={industryTrendsData?.aiAdoption}
 
-                      industryTrendsCloudMigration={industryTrendsData.cloudMigration}
+                      industryTrendsCloudMigration={industryTrendsData?.cloudMigration}
 
-                      industryTrendsRegulatory={industryTrendsData.regulatory}
+                      industryTrendsRegulatory={industryTrendsData?.regulatory}
 
-                      industryTrendSnapshots={industryTrendsData.trendSnapshots}
+                      industryTrendSnapshots={industryTrendsData?.trendSnapshots}
 
-                      industryTrendsRecommendations={industryTrendsData.recommendations}
+                      industryTrendsRecommendations={industryTrendsData?.recommendations}
 
-                      industryTrendsRisks={industryTrendsData.risks}
+                      industryTrendsRisks={industryTrendsData?.risks}
 
                       industryTrendsLastEditedField={industryTrendsLastEditedField}
 
                        // Competitor Landscape props - pass structured data
+                       // Debug: Log what we're passing to Competitor Landscape
+                       {...(console.log('🔍 DEBUG - Passing Competitor Landscape props:', {
+                         executiveSummary: competitorData?.executiveSummary,
+                         topPlayerShare: competitorData?.topPlayerShare,
+                         emergingPlayers: competitorData?.emergingPlayers,
+                         fundingNews: competitorData?.fundingNews,
+                         fullData: competitorData
+                       }) || {})}
 
                        isCompetitorEditing={isCompetitorEditing}
 
@@ -6144,13 +6288,13 @@ const MarketResearch = React.memo(() => {
 
                        competitorEditHistory={competitorEditHistory}
 
-                        competitorExecutiveSummary={competitorData.executiveSummary}
+                        competitorExecutiveSummary={competitorData?.executiveSummary}
 
-                       competitorTopPlayerShare={competitorData.topPlayerShare}
+                        competitorTopPlayerShare={competitorData?.topPlayerShare}
 
-                       competitorEmergingPlayers={competitorData.emergingPlayers}
+                        competitorEmergingPlayers={competitorData?.emergingPlayers}
 
-                       competitorFundingNews={competitorData.fundingNews}
+                        competitorFundingNews={competitorData?.fundingNews}
 
                        competitorError={competitorError}
 

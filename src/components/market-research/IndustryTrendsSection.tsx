@@ -78,6 +78,14 @@ interface IndustryTrendsSectionProps {
   // Add refresh props
   isRefreshing?: boolean;
   companyProfile?: any;
+  // Add data props
+  executiveSummary?: string;
+  aiAdoption?: string;
+  cloudMigration?: string;
+  regulatory?: string;
+  trendSnapshots?: TrendSnapshot[];
+  recommendations?: IndustryTrendsRecommendations;
+  risks?: string[];
 }
 
 const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
@@ -98,11 +106,19 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
   onSaveToWorkspace,
   onGenerateShareableLink,
   isRefreshing = false,
-  companyProfile
+  companyProfile,
+  // Data props
+  executiveSummary: propExecutiveSummary,
+  aiAdoption: propAiAdoption,
+  cloudMigration: propCloudMigration,
+  regulatory: propRegulatory,
+  trendSnapshots: propTrendSnapshots,
+  recommendations: propRecommendations,
+  risks: propRisks
 }) => {
   // State for API data
   const [industryTrendsData, setIndustryTrendsData] = useState<IndustryTrendsData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   const { toast } = useToast();
@@ -281,31 +297,58 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
     }
   };
 
-  // Clear previous data and fetch fresh data on component mount
+  // Component mounted - no need to fetch data, parent provides it via props
   useEffect(() => {
-    // Clear any existing data immediately to prevent showing stale data
-    setIndustryTrendsData(null);
-    setIsLoading(true);
-    setError(null);
-    
-    // Reduced delay to improve user experience - 500ms is sufficient to avoid conflicts
-    const timer = setTimeout(() => {
-      fetchIndustryTrendsData(false);
-    }, 500);
-
-    return () => clearTimeout(timer);
+    console.log('🔄 Industry Trends - Component mounted, waiting for props data');
+    // Don't fetch data - parent provides it via props
   }, []);
   
   // Handle refresh when isRefreshing prop changes
   useEffect(() => {
     if (isRefreshing) {
       console.log('🔄 Industry Trends - Refresh triggered by parent');
-      // Immediately start fetching without showing error state
+      // Clear old data immediately to prevent showing stale data
+      setIndustryTrendsData(null);
       setError(null);
-      setIsLoading(true);
-      fetchIndustryTrendsData(true);
+      // Don't set loading to true - parent handles loading state
+      // Don't call fetchIndustryTrendsData - parent provides data via props
     }
   }, [isRefreshing]);
+
+  // Debug: Log all props received
+  useEffect(() => {
+    console.log('🔍 Industry Trends - All props received:', {
+      propExecutiveSummary,
+      propAiAdoption,
+      propCloudMigration,
+      propRegulatory,
+      propTrendSnapshots,
+      propRecommendations,
+      propRisks,
+      isRefreshing,
+      companyProfile: !!companyProfile
+    });
+  }, [propExecutiveSummary, propAiAdoption, propCloudMigration, propRegulatory, propTrendSnapshots, propRecommendations, propRisks, isRefreshing, companyProfile]);
+
+  // Sync with props when they change (for refresh scenarios)
+  useEffect(() => {
+    if (propExecutiveSummary || propAiAdoption || propCloudMigration || propRegulatory) {
+      console.log('🔄 Industry Trends - Props changed, syncing with local state');
+      console.log('🔄 Props:', { propExecutiveSummary, propAiAdoption, propCloudMigration, propRegulatory });
+      
+      // Update local state with prop data
+      setIndustryTrendsData(prevData => ({
+        ...prevData,
+        executiveSummary: propExecutiveSummary || prevData?.executiveSummary || '',
+        aiAdoption: propAiAdoption || prevData?.aiAdoption || '',
+        cloudMigration: propCloudMigration || prevData?.cloudMigration || '',
+        regulatory: propRegulatory || prevData?.regulatory || '',
+        trendSnapshots: propTrendSnapshots || prevData?.trendSnapshots || [],
+        recommendations: propRecommendations || prevData?.recommendations || { primaryFocus: '', marketEntry: '' },
+        risks: propRisks || prevData?.risks || []
+      }));
+    }
+  }, [propExecutiveSummary, propAiAdoption, propCloudMigration, propRegulatory, propTrendSnapshots, propRecommendations, propRisks]);
 
   // Handle save changes
   const handleSaveChanges = async () => {
@@ -482,8 +525,8 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
     }
   };
 
-  // Show loading state
-  if (isLoading) {
+  // Show loading state only if we don't have props data and we're not refreshing
+  if (isLoading && !isRefreshing && !propExecutiveSummary) {
     return (
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-6">
@@ -522,8 +565,16 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
     );
   }
 
-  // Show no data state
-  if (!industryTrendsData) {
+  // Debug: Show what we're about to render
+  console.log('🔍 Industry Trends - About to render:', {
+    hasLocalData: !!industryTrendsData,
+    hasPropData: !!propExecutiveSummary,
+    propExecutiveSummary,
+    localExecutiveSummary: industryTrendsData?.executiveSummary
+  });
+
+  // Show no data state only if we don't have props data and we're not refreshing
+  if (!industryTrendsData && !propExecutiveSummary && !isRefreshing) {
     return (
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-6">
@@ -768,22 +819,22 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
         <div className="space-y-6">
           {/* Default View */}
           <div>
-            <p className="text-gray-700 mb-6">{industryTrendsData.executiveSummary}</p>
+            <p className="text-gray-700 mb-6">{propExecutiveSummary || industryTrendsData.executiveSummary}</p>
 
             {/* Key Metrics Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
-                <div className="text-2xl font-bold text-blue-600">{industryTrendsData.aiAdoption}</div>
+                <div className="text-2xl font-bold text-blue-600">{propAiAdoption || industryTrendsData.aiAdoption}</div>
                 <div className="text-sm font-medium text-gray-900">AI Adoption Rate</div>
                 <div className="text-xs text-gray-600">Enterprise pilots</div>
               </div>
               <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded-r-lg">
-                <div className="text-2xl font-bold text-green-600">{industryTrendsData.cloudMigration}</div>
+                <div className="text-2xl font-bold text-green-600">{propCloudMigration || industryTrendsData.cloudMigration}</div>
                 <div className="text-sm font-medium text-gray-900">Cloud Migration Increase</div>
                 <div className="text-xs text-gray-600">Year over year</div>
               </div>
               <div className="bg-purple-50 border-l-4 border-purple-500 p-4 rounded-r-lg">
-                <div className="text-2xl font-bold text-purple-600">{industryTrendsData.regulatory}</div>
+                <div className="text-2xl font-bold text-purple-600">{propRegulatory || industryTrendsData.regulatory}</div>
                 <div className="text-sm font-medium text-gray-900">Regulatory Changes</div>
                 <div className="text-xs text-gray-600">Impacting sector</div>
               </div>
@@ -819,7 +870,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                 <div className="mb-8">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Executive Summary</h3>
                   <p className="text-gray-700 bg-gray-50 p-4 rounded-lg">
-                    {industryTrendsData?.executiveSummary || 'No executive summary available'}
+                    {propExecutiveSummary || industryTrendsData?.executiveSummary || 'No executive summary available'}
                   </p>
                 </div>
 
@@ -827,7 +878,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                 <div className="mb-8">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Key Trend Snapshots</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {industryTrendsData.trendSnapshots?.map((trend, index) => (
+                    {(propTrendSnapshots || industryTrendsData.trendSnapshots)?.map((trend, index) => (
                       <div key={index} className="bg-white border border-gray-200 rounded-lg p-4">
                         <h4 className="font-medium text-gray-900 mb-2">{trend.title}</h4>
                         <p className="text-sm text-gray-600 mb-3">{trend.metric}</p>
@@ -868,11 +919,11 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="bg-green-50 p-4 rounded-lg border border-green-200">
                       <h4 className="font-medium text-green-900 mb-2">Primary Focus</h4>
-                      <p className="text-green-700 text-sm">{industryTrendsData.strategicRecommendations?.primaryFocus || 'No recommendations available'}</p>
+                      <p className="text-green-700 text-sm">{propRecommendations?.primaryFocus || industryTrendsData.strategicRecommendations?.primaryFocus || 'No recommendations available'}</p>
                     </div>
                     <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
                       <h4 className="font-medium text-blue-900 mb-2">Market Entry</h4>
-                      <p className="text-blue-700 text-sm">{industryTrendsData.strategicRecommendations?.marketEntry || 'No recommendations available'}</p>
+                      <p className="text-blue-700 text-sm">{propRecommendations?.marketEntry || industryTrendsData.strategicRecommendations?.marketEntry || 'No recommendations available'}</p>
                     </div>
                   </div>
                 </div>
@@ -882,7 +933,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Risks & Watchouts</h3>
                   <div className="bg-red-50 p-4 rounded-lg border border-red-200">
                      <ul className="space-y-2">
-                      {industryTrendsData.risks?.map((risk, index) => (
+                      {(propRisks || industryTrendsData.risks)?.map((risk, index) => (
                         <li key={index} className="flex items-start gap-2 text-red-700 text-sm">
                           <div className="w-2 h-2 rounded-full bg-red-500 mt-2 flex-shrink-0"></div>
                           {risk}

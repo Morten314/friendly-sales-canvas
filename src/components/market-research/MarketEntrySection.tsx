@@ -193,7 +193,8 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
   useEffect(() => {
     if (isRefreshing) {
       console.log('🔄 Market Entry - Refresh triggered by parent');
-      // Immediately start fetching without showing error state
+      // Clear old data immediately to prevent showing stale data
+      setMarketEntryData(null);
       setError(null);
       setIsLoading(true);
       fetchMarketEntryData(true);
