@@ -305,6 +305,13 @@ let cacheTimestamp: number | null = null;
 
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache to reduce API calls
 
+// Function to clear cache when company profile updates
+const clearMarketDataCache = () => {
+  cachedMarketData = null;
+  cacheTimestamp = null;
+  console.log('🧹 Market data cache cleared due to company profile update');
+};
+
 
 
 // Helper function to check if cached data is still valid
@@ -1377,6 +1384,22 @@ const MarketResearch = React.memo(() => {
 
   }, []); // Only run on mount
 
+  // Listen for company profile updates to clear cache
+  useEffect(() => {
+    const handleCompanyProfileUpdate = (event: CustomEvent) => {
+      console.log('🔄 MarketResearch - Company profile updated, clearing cache');
+      if (event.detail?.clearCaches) {
+        clearMarketDataCache();
+      }
+    };
+
+    window.addEventListener('companyProfileUpdated', handleCompanyProfileUpdate as EventListener);
+    
+    return () => {
+      window.removeEventListener('companyProfileUpdated', handleCompanyProfileUpdate as EventListener);
+    };
+  }, []);
+
 
 
   // Trigger market research using the existing backend API structure
@@ -1390,19 +1413,34 @@ const MarketResearch = React.memo(() => {
       
       console.log('🔄🔄🔄 REFRESH TRIGGER - About to call all fetch functions with rate limiting...');
       
-      // Get company profile data for context
+      // Get company profile data for context - use cached version if available, otherwise fetch
       let companyProfileData = null;
-      try {
-        const profileResponse = await fetch('/api/profile/company', {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' }
-        });
-        if (profileResponse.ok) {
-          companyProfileData = await profileResponse.json();
-          console.log('📋 Retrieved company profile for context:', companyProfileData);
+      
+      // First try to get from localStorage (faster)
+      const cachedProfile = localStorage.getItem('companyProfile');
+      if (cachedProfile) {
+        try {
+          companyProfileData = JSON.parse(cachedProfile);
+          console.log('📋 Using cached company profile for context:', companyProfileData);
+        } catch (error) {
+          console.warn('⚠️ Could not parse cached profile, fetching fresh:', error);
         }
-      } catch (error) {
-        console.warn('⚠️ Could not retrieve company profile, proceeding without context:', error);
+      }
+      
+      // If no cached profile, fetch from API
+      if (!companyProfileData) {
+        try {
+          const profileResponse = await fetch('/api/profile/company', {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          if (profileResponse.ok) {
+            companyProfileData = await profileResponse.json();
+            console.log('📋 Retrieved fresh company profile for context:', companyProfileData);
+          }
+        } catch (error) {
+          console.warn('⚠️ Could not retrieve company profile, proceeding without context:', error);
+        }
       }
       
       // Store company profile data for refresh
@@ -1422,7 +1460,7 @@ const MarketResearch = React.memo(() => {
       }
       
       // Add a minimal delay before starting to avoid immediate rate limiting
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       // Sequential refresh to avoid rate limiting
       console.log('🔄🔄🔄 Starting sequential refresh of all 5 components...');
@@ -5662,7 +5700,7 @@ const MarketResearch = React.memo(() => {
       try {
         // Add delay between API calls (except for the first one)
         if (i > 0) {
-          const delayMs = 10000; // 10 seconds between calls to stay well under rate limit
+          const delayMs = 5000; // 5 seconds between calls to stay well under rate limit
           console.log(`⏳ Waiting ${delayMs}ms before ${component.name} API call...`);
           await delay(delayMs);
         }

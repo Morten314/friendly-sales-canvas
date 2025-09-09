@@ -154,6 +154,17 @@ export function CompanyProfile({ onProfileUpdate, isEditMode = false, profileDat
       console.log("Company profile saved successfully:", data);
       alert("Company profile saved successfully!");
       
+      // Store the updated profile data immediately in localStorage
+      console.log("=== STORING UPDATED PROFILE DATA ===");
+      localStorage.setItem('companyProfile', JSON.stringify(profileData));
+      localStorage.setItem('companyProfileForRefresh', JSON.stringify(profileData));
+      
+      // Clear market data cache
+      if (typeof window !== 'undefined' && (window as any).cachedMarketData) {
+        (window as any).cachedMarketData = null;
+        (window as any).cacheTimestamp = null;
+      }
+      
       // Dispatch a global event to notify other components
       console.log("=== DISPATCHING COMPANY PROFILE UPDATE EVENT ===");
       console.log("Profile data being dispatched:", profileData);
@@ -162,7 +173,8 @@ export function CompanyProfile({ onProfileUpdate, isEditMode = false, profileDat
           profileData,
           timestamp: new Date().toISOString(),
           action: 'PROFILE_SAVED',
-          triggerICPRefresh: true
+          triggerICPRefresh: true,
+          clearCaches: true
         }
       });
       window.dispatchEvent(event);

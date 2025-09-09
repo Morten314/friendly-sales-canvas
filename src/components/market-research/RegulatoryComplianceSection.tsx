@@ -504,10 +504,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
       setError(null);
       setIsLoading(true);
       
-      // Wait a bit for the backend to process the profile update
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Fetch the latest company profile from backend
+      // Fetch the latest company profile from backend immediately
       try {
         const profileResponse = await fetch('https://backend-11kr.onrender.com/profile/company', {
           method: 'GET',

@@ -1390,114 +1390,62 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
          console.log("   - Has data:", !!apiPayload.data);
          console.log("   - Data is object:", typeof apiPayload.data === 'object');
 
-         // Call the icp research API endpoint with retry mechanism
-         let response;
-         let retryCount = 0;
-         const maxRetries = 2;
-         
-         // Define endpoint outside try block for error logging
-         const timestamp = Date.now();
-         const randomParam = Math.random().toString(36).substring(7);
-         const endpoint = `icp-research?t=${timestamp}&cache_bust=${randomParam}`;
-         
-         while (retryCount <= maxRetries) {
-           try {
-             console.log(`🔄 Attempting Regulatory Compliance ICP Research API call (attempt ${retryCount + 1}/${maxRetries + 1})`);
-             console.log(`🔍 Current timestamp: ${new Date().toISOString()}`);
-             
-             // Try the actual endpoint first with cache busting
-             console.log(`🌐 Making request to: ${endpoint}`);
-             console.log(`📤 About to send payload:`, apiPayload);
-             // Use the API utility function to go through the proxy
-             console.log("🔧 Attempting with API utility...");
-             const directResponse = await fetch(`/api/${endpoint}`, {
-               method: 'POST',
-               headers: {
-                 'Content-Type': 'application/json',
-                 'Cache-Control': 'no-cache, no-store, must-revalidate',
-                 'Pragma': 'no-cache',
-                 'Expires': '0'
-               },
-               body: JSON.stringify(apiPayload)
-             });
-             
-             console.log(`🌐 Direct fetch response status: ${directResponse.status}`);
-             console.log(`🌐 Direct fetch response status text: ${directResponse.statusText}`);
-             
-             if (!directResponse.ok) {
-               const errorText = await directResponse.text();
-               console.error(`❌ Direct fetch error: ${directResponse.status} - ${errorText}`);
-               throw new Error(`HTTP error! status: ${directResponse.status} - ${errorText}`);
-             }
-             
-             response = await directResponse.json();
-             
-             console.log('✅ Regulatory Compliance ICP Research API call successful');
-             console.log('📊 Response received at:', new Date().toISOString());
-             console.log('📥 Response data:', response);
-             console.log('📥 Response type:', typeof response);
-             console.log('📥 Response keys:', Object.keys(response || {}));
-             break; // Success, exit retry loop
-             
-           } catch (error) {
-             retryCount++;
-             console.error(`❌ Regulatory Compliance ICP Research API call failed (attempt ${retryCount}/${maxRetries + 1}):`, error);
-             
-             // Log detailed error information
-             if (error instanceof Error) {
-               console.error(`🔍 Error message: ${error.message}`);
-               console.error(`🔍 Error name: ${error.name}`);
-               console.error(`🔍 Error stack: ${error.stack}`);
-               
-               // Check if it's a network error
-               if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-                 console.error(`🌐 NETWORK ERROR DETECTED: This might be a CORS or connectivity issue`);
-               }
-               
-               // Check if it's a 422 error and extract the detailed error
-               if (error.message.includes('422')) {
-                 console.error(`🔍 422 ERROR DETECTED: Backend validation failed`);
-                 console.error(`🔍 This suggests the payload structure is still incorrect`);
-                 
-                 // Try to extract the detailed error message from the response
-                 try {
-                   const errorMatch = error.message.match(/\{.*\}/);
-                   if (errorMatch) {
-                     const errorDetails = JSON.parse(errorMatch[0]);
-                     console.error(`🔍 DETAILED 422 ERROR:`, errorDetails);
-                     console.error(`🔍 ERROR DETAIL:`, errorDetails.detail);
-                   }
-                 } catch (parseError) {
-                   console.error(`🔍 Could not parse error details:`, parseError);
-                 }
-               }
-             }
-             
-             // Log the exact payload that was sent
-             console.error(`📤 Sent payload:`, apiPayload);
-             console.error(`📤 Sent payload (stringified):`, JSON.stringify(apiPayload, null, 2));
-             
-             // Log additional debugging info
-             console.error(`🔍 Request URL: ${endpoint}`);
-             console.error(`🔍 Request method: POST`);
-             console.error(`🔍 Request headers:`, {
-               'Content-Type': 'application/json',
-               'Cache-Control': 'no-cache, no-store, must-revalidate',
-               'Pragma': 'no-cache',
-               'Expires': '0'
-             });
-             
-             if (retryCount > maxRetries) {
-               // If all retries failed, fall back to mock response
-               console.log("Regulatory Compliance API endpoint not available after retries, using mock response...");
-               break;
-             }
-             
-             // Wait before retrying
-             console.log(`⏳ Waiting 2 seconds before retry...`);
-             await new Promise(resolve => setTimeout(resolve, 2000));
-           }
-         }
+        // Use enhanced API with rate limiting (like working components)
+        console.log("🚀 Using enhanced API with rate limiting for Regulatory Compliance");
+        console.log("🔍 About to call callICPresearch with:");
+        console.log("  - componentName: regulatory, compliance & recommended icp");
+        console.log("  - selectedICP:", selectedICP);
+        console.log("  - options:", { useCache: true, componentName: "Regulatory Compliance" });
+        
+        const apiResponse = await callICPresearch(
+          "regulatory, compliance & recommended icp",
+          selectedICP,
+          {
+            useCache: true,
+            componentName: "Regulatory Compliance"
+          }
+        );
+        
+        console.log("📊 Enhanced API Response:", apiResponse);
+        
+        // ADD ENHANCED API RESPONSE DEBUGGING
+        console.log("🔍🔍🔍 ENHANCED API RESPONSE STRUCTURE:");
+        console.log("🔍 apiResponse.success:", apiResponse.success);
+        console.log("🔍 apiResponse.error:", apiResponse.error);
+        console.log("🔍 apiResponse.statusCode:", apiResponse.statusCode);
+        console.log("🔍 apiResponse.data exists:", !!apiResponse.data);
+        console.log("🔍 apiResponse.data type:", typeof apiResponse.data);
+        console.log("🔍 apiResponse.data keys:", apiResponse.data ? Object.keys(apiResponse.data) : 'null');
+        
+        let response;
+        if (!apiResponse.success) {
+          console.error("❌ Enhanced API call failed:", apiResponse.error);
+          console.log("🔍🔍🔍 ENHANCED API FAILURE ANALYSIS:");
+          console.log("🔍 apiResponse.statusCode:", apiResponse.statusCode);
+          console.log("🔍 apiResponse.error:", apiResponse.error);
+          console.log("🔍 apiResponse.rateLimitInfo:", apiResponse.rateLimitInfo);
+          
+          // Check if it's a rate limit error
+          if (apiResponse.error?.includes('rate limit') || apiResponse.statusCode === 429) {
+            console.log("🚫 Rate limit detected, using mock data as fallback");
+            setRegulatoryComplianceError("Rate limit reached. Using cached/mock data.");
+          } else if (apiResponse.statusCode === 408) {
+            console.log("⏰ Request timeout detected, using mock data as fallback");
+            setRegulatoryComplianceError("Request timed out. Using cached/mock data.");
+          } else if (apiResponse.statusCode === 500) {
+            console.log("🏥 Backend server error detected, using mock data as fallback");
+            setRegulatoryComplianceError("Backend server error. Using cached/mock data.");
+          } else {
+            console.log("❌ Other API error detected, using mock data as fallback");
+            setRegulatoryComplianceError(`API error: ${apiResponse.error}. Using cached/mock data.`);
+          }
+          
+          // Set response to null to trigger fallback
+          response = null;
+        } else {
+          console.log("✅ Enhanced API call successful");
+          response = apiResponse.data;
+        }
          
          // If API call failed after all retries, use mock response
          if (!response) {
