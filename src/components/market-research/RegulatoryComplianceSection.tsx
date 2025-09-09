@@ -450,6 +450,8 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
         onPotentialFinesChange(potentialFines);
         onDataLocalizationChange(dataLocalization);
         
+        console.log('✅ RegulatoryComplianceSection: Parent state updated with API data');
+        
         // Update dynamic key data values if available
         if (apiData.keyUpdates) {
           const initialValues: Record<string, string> = {};
@@ -493,6 +495,15 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
       console.log('🔄 Regulatory Compliance - Refresh triggered by parent, fetching fresh data');
       setError(null);
       setIsLoading(true);
+      
+      // Clear local state immediately to prevent showing stale data
+      setLocalExecutiveSummary('');
+      setLocalEuAiActDeadline('');
+      setLocalGdprCompliance('');
+      setLocalPotentialFines('');
+      setLocalDataLocalization('');
+      setLocalKeyDataValues({});
+      
       fetchRegulatoryComplianceData(true); // refresh = true for forced refresh
     }
   }, [isRefreshing]);
@@ -503,6 +514,14 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
       console.log('🔄 Regulatory Compliance - Company profile updated, fetching latest profile and then fresh data');
       setError(null);
       setIsLoading(true);
+      
+      // Clear local state immediately to prevent showing stale data
+      setLocalExecutiveSummary('');
+      setLocalEuAiActDeadline('');
+      setLocalGdprCompliance('');
+      setLocalPotentialFines('');
+      setLocalDataLocalization('');
+      setLocalKeyDataValues({});
       
       // Fetch the latest company profile from backend immediately
       try {

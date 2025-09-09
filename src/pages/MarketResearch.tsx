@@ -435,6 +435,16 @@ const MarketResearch = React.memo(() => {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
+  
+  // Smart refresh state tracking
+  const [componentStatus, setComponentStatus] = useState<Record<string, 'pending' | 'success' | 'failed'>>({
+    'Market Size': 'pending',
+    'Industry Trends': 'pending', 
+    'Market Entry': 'pending',
+    'Competitor Landscape': 'pending',
+    'Regulatory Compliance': 'pending'
+  });
+  const [refreshAttempt, setRefreshAttempt] = useState(0);
 
   
 
@@ -1402,21 +1412,31 @@ const MarketResearch = React.memo(() => {
 
 
 
-  // Trigger market research using the existing backend API structure
-
-  const triggerScoutAndRefresh = async () => {
+  // Smart refresh function that tracks component status and only retries failed ones
+  const smartRefresh = async (isFirstRefresh = false) => {
     try {
+      if (isFirstRefresh) {
+        // Reset all component statuses on first refresh
+        setComponentStatus({
+          'Market Size': 'pending',
+          'Industry Trends': 'pending', 
+          'Market Entry': 'pending',
+          'Competitor Landscape': 'pending',
+          'Regulatory Compliance': 'pending'
+        });
+        setRefreshAttempt(1);
+        console.log('🔄 Starting first refresh - all components will be fetched');
+      } else {
+        setRefreshAttempt(prev => prev + 1);
+        console.log(`🔄 Starting retry refresh (attempt ${refreshAttempt + 1}) - only failed components will be fetched`);
+        console.log(`🔄 Current component status before retry:`, componentStatus);
+      }
+
       setIsRefreshing(true);
       setError(null);
       
-      // Store company profile data for refresh (will be set later)
-      
-      console.log('🔄🔄🔄 REFRESH TRIGGER - About to call all fetch functions with rate limiting...');
-      
-      // Get company profile data for context - use cached version if available, otherwise fetch
+      // Get company profile data for context
       let companyProfileData = null;
-      
-      // First try to get from localStorage (faster)
       const cachedProfile = localStorage.getItem('companyProfile');
       if (cachedProfile) {
         try {
@@ -1427,7 +1447,6 @@ const MarketResearch = React.memo(() => {
         }
       }
       
-      // If no cached profile, fetch from API
       if (!companyProfileData) {
         try {
           const profileResponse = await fetch('/api/profile/company', {
@@ -1443,13 +1462,12 @@ const MarketResearch = React.memo(() => {
         }
       }
       
-      // Store company profile data for refresh
       if (companyProfileData) {
         localStorage.setItem('companyProfileForRefresh', JSON.stringify(companyProfileData));
       }
       
       // Show cached data immediately if available (for better UX)
-      if (cachedMarketData) {
+      if (cachedMarketData && isFirstRefresh) {
         console.log('📋 Showing cached data while loading fresh data...');
         setMarketData(cachedMarketData);
         toast({
@@ -1462,12 +1480,8 @@ const MarketResearch = React.memo(() => {
       // Add a minimal delay before starting to avoid immediate rate limiting
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      // Sequential refresh to avoid rate limiting
-      console.log('🔄🔄🔄 Starting sequential refresh of all 5 components...');
-      
-      const results: PromiseSettledResult<any>[] = [];
-      // Prioritize most important components first for better user experience
-      const components = [
+      // Define all components
+      const allComponents = [
         { name: 'Market Size', fetchFn: fetchMarketSizeData, priority: 1 },
         { name: 'Industry Trends', fetchFn: fetchIndustryTrendsData, priority: 2 },
         { name: 'Market Entry', fetchFn: fetchMarketEntryData, priority: 3 },
@@ -1475,35 +1489,49 @@ const MarketResearch = React.memo(() => {
         { name: 'Regulatory Compliance', fetchFn: fetchRegulatoryData, priority: 5 }
       ];
       
-      // Process each component with rate limiting (optimized for 3-4 components to load)
-      for (let i = 0; i < components.length; i++) {
-        const component = components[i];
-        console.log(`🔄 Processing ${component.name} (${i + 1}/${components.length})...`);
-        
-        // Show progress to user
-        toast({
-          title: `Loading ${component.name}...`,
-          description: `Component ${i + 1} of ${components.length}`,
-          duration: 2000,
-        });
+      // Filter components to fetch based on status
+      const componentsToFetch = isFirstRefresh 
+        ? allComponents 
+        : allComponents.filter(comp => componentStatus[comp.name] === 'failed');
+      
+      console.log(`🔄 Processing ${componentsToFetch.length} components (${isFirstRefresh ? 'all' : 'failed only'})...`);
+      console.log(`🔄 Current component status:`, componentStatus);
+      console.log(`🔄 Components to fetch:`, componentsToFetch.map(c => c.name));
+      
+      if (componentsToFetch.length === 0) {
+        console.log('✅ All components already successful, no need to fetch');
+        setIsRefreshing(false);
+        return;
+      }
+      
+      const results: PromiseSettledResult<any>[] = [];
+      const currentStatus = { ...componentStatus }; // Local copy to track status
+      
+      // Process each component with rate limiting
+      for (let i = 0; i < componentsToFetch.length; i++) {
+        const component = componentsToFetch[i];
+        console.log(`🔄 Processing ${component.name} (${i + 1}/${componentsToFetch.length})...`);
         
         try {
-          // Use rate limiter for optimal API call management
-          const result = await executeWithRateLimit(
-            () => component.fetchFn(true, false),
-            component.name
-          );
-          results.push({ status: 'fulfilled', value: result });
-          console.log(`✅ ${component.name} completed successfully`);
-          
-          // Show success for important components
-          if (i < 3) { // First 3 components are most important
-            toast({
-              title: `${component.name} loaded!`,
-              description: `${i + 1}/${components.length} components ready`,
-              duration: 1500,
-            });
+          // Add delay between API calls (except for the first one)
+          if (i > 0) {
+            const delayMs = 5000; // 5 seconds between calls
+            console.log(`⏳ Waiting ${delayMs}ms before ${component.name} API call...`);
+            await new Promise(resolve => setTimeout(resolve, delayMs));
           }
+          
+          // Update component status to pending
+          currentStatus[component.name] = 'pending';
+          setComponentStatus(prev => ({ ...prev, [component.name]: 'pending' }));
+          
+          console.log(`🚀 Calling API for ${component.name}...`);
+          const result = await component.fetchFn(true, false);
+          results.push({ status: 'fulfilled', value: result });
+          
+          // Update component status to success
+          currentStatus[component.name] = 'success';
+          setComponentStatus(prev => ({ ...prev, [component.name]: 'success' }));
+          console.log(`✅ ${component.name} completed successfully`);
           
         } catch (error) {
           console.error(`❌ ${component.name} fetch failed:`, error);
@@ -1516,121 +1544,65 @@ const MarketResearch = React.memo(() => {
             } 
           });
           
-          // Show error for important components
-          if (i < 3) {
-            toast({
-              title: `${component.name} failed to load`,
-              description: "Will retry automatically",
-              variant: "destructive",
-              duration: 2000,
-            });
-          }
-        }
-      }
-
-      console.log('🔄🔄🔄 REFRESH TRIGGER - All fetch functions completed');
-      
-      // Analyze results and retry failed components
-      const successfulComponents = [];
-      const failedComponents = [];
-      
-      results.forEach((result, index) => {
-        if (result.status === 'fulfilled') {
-          successfulComponents.push(components[index].name);
-        } else {
-          failedComponents.push(components[index]);
-        }
-      });
-      
-      // Retry failed components automatically (only for first 3 most important)
-      if (failedComponents.length > 0) {
-        console.log(`🔄 Retrying ${failedComponents.length} failed components...`);
-        
-        for (const failedComponent of failedComponents.slice(0, 3)) { // Only retry first 3
-          try {
-            console.log(`🔄 Retrying ${failedComponent.name}...`);
-            await executeWithRateLimit(
-              () => failedComponent.fetchFn(true, false),
-              `${failedComponent.name} (retry)`
-            );
-            console.log(`✅ ${failedComponent.name} retry successful`);
-            successfulComponents.push(failedComponent.name);
-          } catch (retryError) {
-            console.error(`❌ ${failedComponent.name} retry failed:`, retryError);
-          }
+          // Update component status to failed
+          currentStatus[component.name] = 'failed';
+          setComponentStatus(prev => ({ ...prev, [component.name]: 'failed' }));
         }
       }
       
-      // Final success summary
-      const totalSuccessful = successfulComponents.length;
+      // Update the component status state with the current status
+      setComponentStatus(currentStatus);
       
-      console.log('📊 REFRESH RESULTS:');
-      console.log('✅ Successful components:', successfulComponents);
-      console.log('❌ Failed components:', failedComponents.length);
-      console.log(`🎯 Total loaded: ${totalSuccessful}/5 components`);
+      // Check if all components are now successful using local status
+      const allSuccessful = Object.values(currentStatus).every(status => status === 'success');
+      const hasFailures = Object.values(currentStatus).some(status => status === 'failed');
       
-      // Show final success notification
-      if (totalSuccessful >= 3) {
+      console.log('📊 Final component status after processing:', currentStatus);
+      console.log('📊 All successful:', allSuccessful);
+      console.log('📊 Has failures:', hasFailures);
+      
+      if (allSuccessful) {
+        console.log('🎉 All components completed successfully!');
+        setIsRefreshing(false);
         toast({
-          title: `Success! ${totalSuccessful} components loaded`,
-          description: totalSuccessful >= 4 ? "Excellent! All key components are ready." : "Good! Most components are ready.",
+          title: "Refresh Complete",
+          description: "All components updated successfully",
           duration: 3000,
         });
-      } else {
+      } else if (hasFailures && refreshAttempt < 3) {
+        console.log(`⚠️ Some components failed. Will retry failed components (attempt ${refreshAttempt + 1}/3)`);
+        console.log(`⚠️ Failed components:`, Object.entries(currentStatus).filter(([name, status]) => status === 'failed').map(([name]) => name));
         toast({
-          title: `Only ${totalSuccessful} components loaded`,
-          description: "Some components failed. Try refreshing again.",
-          variant: "destructive",
-          duration: 4000,
+          title: "Partial Update",
+          description: `Some components failed. Retrying failed components... (attempt ${refreshAttempt + 1}/3)`,
+          duration: 3000,
         });
-      }
-      
-      // Check if we have any fresh data in localStorage after the API calls
-      const updatedData = getInitialMarketIntelligenceData();
-      if (updatedData && updatedData.timestamp) {
-        let updatedTimestamp = 0;
-        try {
-          updatedTimestamp = new Date(updatedData.timestamp).getTime();
-        } catch (e) {
-          console.warn('Could not parse updated timestamp:', e);
-        }
         
-        const originalTimestamp = localStorage.getItem('originalRefreshTimestamp');
-        const originalTime = originalTimestamp ? parseInt(originalTimestamp) : 0;
-        
-        console.log('🔄 POST-REFRESH TIMESTAMP COMPARISON:');
-        console.log('  - Original UI timestamp:', originalTime, new Date(originalTime).toISOString());
-        console.log('  - Updated data timestamp:', updatedTimestamp, new Date(updatedTimestamp).toISOString());
-        
-        if (updatedTimestamp > originalTime) {
-          console.log('✅ Fresh data found after refresh - updating UI states');
-          
-          // Update all the state variables with fresh data
-          setMarketIntelligenceData(updatedData);
-          // Individual component data will be updated by their respective fetch functions
-          
-          // Clear the original timestamp
-          localStorage.removeItem('originalRefreshTimestamp');
-        }
-      }
-      
-      // Show success/failure summary
-      if (successfulComponents.length > 0) {
-        console.log(`✅ ${successfulComponents.length}/${results.length} components refreshed successfully`);
-        if (failedComponents.length > 0) {
-          console.log('Failed components:', failedComponents);
-        }
+        // Wait a bit before retrying failed components
+        setTimeout(() => {
+          smartRefresh(false);
+        }, 2000);
       } else {
-        console.error('❌ All components failed to refresh');
-        setError('All components failed to refresh. Please try again.');
+        console.log('❌ Maximum retry attempts reached or all components failed');
+        setIsRefreshing(false);
+        toast({
+          title: "Refresh Incomplete",
+          description: "Some components could not be updated. You can try refreshing again.",
+          duration: 5000,
+        });
       }
       
     } catch (error) {
-      console.error('❌ Error during refresh:', error);
-      setError('Failed to refresh data. Please try again.');
-    } finally {
+      console.error('❌ Smart refresh failed:', error);
       setIsRefreshing(false);
+      setError('Refresh failed. Please try again.');
     }
+  };
+
+  // Trigger market research using the smart refresh system
+  const triggerScoutAndRefresh = async () => {
+    console.log('🔄🔄🔄 REFRESH TRIGGER - Starting smart refresh system...');
+    await smartRefresh(true); // Start with first refresh
   };
 
 
@@ -6013,7 +5985,15 @@ const MarketResearch = React.memo(() => {
 
                       <span>Market Size & Opportunity</span>
 
-                      <span className="text-blue-600">Loading...</span>
+                      <span className={`${
+                        componentStatus['Market Size'] === 'success' ? 'text-green-600' :
+                        componentStatus['Market Size'] === 'failed' ? 'text-red-600' :
+                        componentStatus['Market Size'] === 'pending' ? 'text-blue-600' : 'text-gray-400'
+                      }`}>
+                        {componentStatus['Market Size'] === 'success' ? '✅ Complete' :
+                         componentStatus['Market Size'] === 'failed' ? '❌ Failed' :
+                         componentStatus['Market Size'] === 'pending' ? '⏳ Loading...' : '⏸️ Pending'}
+                      </span>
 
                     </div>
 
@@ -6021,7 +6001,15 @@ const MarketResearch = React.memo(() => {
 
                       <span>Industry Trends</span>
 
-                      <span className="text-blue-600">Loading...</span>
+                      <span className={`${
+                        componentStatus['Industry Trends'] === 'success' ? 'text-green-600' :
+                        componentStatus['Industry Trends'] === 'failed' ? 'text-red-600' :
+                        componentStatus['Industry Trends'] === 'pending' ? 'text-blue-600' : 'text-gray-400'
+                      }`}>
+                        {componentStatus['Industry Trends'] === 'success' ? '✅ Complete' :
+                         componentStatus['Industry Trends'] === 'failed' ? '❌ Failed' :
+                         componentStatus['Industry Trends'] === 'pending' ? '⏳ Loading...' : '⏸️ Pending'}
+                      </span>
 
                     </div>
 
@@ -6029,7 +6017,15 @@ const MarketResearch = React.memo(() => {
 
                       <span>Market Entry & Growth</span>
 
-                      <span className="text-blue-600">Loading...</span>
+                      <span className={`${
+                        componentStatus['Market Entry'] === 'success' ? 'text-green-600' :
+                        componentStatus['Market Entry'] === 'failed' ? 'text-red-600' :
+                        componentStatus['Market Entry'] === 'pending' ? 'text-blue-600' : 'text-gray-400'
+                      }`}>
+                        {componentStatus['Market Entry'] === 'success' ? '✅ Complete' :
+                         componentStatus['Market Entry'] === 'failed' ? '❌ Failed' :
+                         componentStatus['Market Entry'] === 'pending' ? '⏳ Loading...' : '⏸️ Pending'}
+                      </span>
 
                     </div>
 
@@ -6037,7 +6033,15 @@ const MarketResearch = React.memo(() => {
 
                       <span>Competitor Landscape</span>
 
-                      <span className="text-blue-600">Loading...</span>
+                      <span className={`${
+                        componentStatus['Competitor Landscape'] === 'success' ? 'text-green-600' :
+                        componentStatus['Competitor Landscape'] === 'failed' ? 'text-red-600' :
+                        componentStatus['Competitor Landscape'] === 'pending' ? 'text-blue-600' : 'text-gray-400'
+                      }`}>
+                        {componentStatus['Competitor Landscape'] === 'success' ? '✅ Complete' :
+                         componentStatus['Competitor Landscape'] === 'failed' ? '❌ Failed' :
+                         componentStatus['Competitor Landscape'] === 'pending' ? '⏳ Loading...' : '⏸️ Pending'}
+                      </span>
 
                     </div>
 
@@ -6045,7 +6049,15 @@ const MarketResearch = React.memo(() => {
 
                       <span>Regulatory Compliance</span>
 
-                      <span className="text-blue-600">Loading...</span>
+                      <span className={`${
+                        componentStatus['Regulatory Compliance'] === 'success' ? 'text-green-600' :
+                        componentStatus['Regulatory Compliance'] === 'failed' ? 'text-red-600' :
+                        componentStatus['Regulatory Compliance'] === 'pending' ? 'text-blue-600' : 'text-gray-400'
+                      }`}>
+                        {componentStatus['Regulatory Compliance'] === 'success' ? '✅ Complete' :
+                         componentStatus['Regulatory Compliance'] === 'failed' ? '❌ Failed' :
+                         componentStatus['Regulatory Compliance'] === 'pending' ? '⏳ Loading...' : '⏸️ Pending'}
+                      </span>
 
                     </div>
 

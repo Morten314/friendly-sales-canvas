@@ -359,22 +359,68 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
       const result = await response.json();
       console.log('📊 CompetitorLandscapeSection: API result:', result);
 
-      if (result && result.competitor_landscape_data) {
-        const apiData = result.competitor_landscape_data;
+      if (result.status === 'success' && result.data) {
+        const apiData = result.data;
+        console.log('🎯 CompetitorLandscapeSection: Processing API data:', apiData);
+        console.log('🎯 API Data Keys:', Object.keys(apiData));
+        console.log('🎯 API Data uiComponents:', apiData.uiComponents);
         
-        // Update local state with API response data
-        setLocalExecutiveSummary(apiData.executiveSummary || '');
-        setLocalTopPlayerShare(apiData.topPlayerShare || '');
-        setLocalEmergingPlayers(apiData.emergingPlayers || '');
+        // Extract data from uiComponents array (same as parent function)
+        let executiveSummary = '';
+        let topPlayerShare = '';
+        let emergingPlayers = '';
+        let fundingNews = [];
+        
+        if (apiData.uiComponents && Array.isArray(apiData.uiComponents)) {
+          console.log('🔍 Found uiComponents array:', apiData.uiComponents);
+          
+          // Extract data from uiComponents based on the backend schema
+          const reportComponent = apiData.uiComponents.find(comp => comp.type === 'report');
+          const sectionComponent = apiData.uiComponents.find(comp => comp.type === 'section');
+          const newsComponent = apiData.uiComponents.find(comp => comp.type === 'news');
+          
+          // Extract executive summary from report component
+          executiveSummary = reportComponent?.executiveSummary || '';
+          
+          // Extract metrics from section component
+          if (sectionComponent?.metrics) {
+            const topPlayerMetric = sectionComponent.metrics.find(m => m.label === 'Top Player Market Share');
+            const emergingMetric = sectionComponent.metrics.find(m => m.label === 'Emerging Players Added');
+            
+            topPlayerShare = topPlayerMetric?.value || '';
+            emergingPlayers = emergingMetric?.value || '';
+          }
+          
+          // Extract news from news component
+          fundingNews = newsComponent?.headlines || [];
+          
+          console.log('🔍 Extracted from uiComponents:');
+          console.log('  - executiveSummary:', executiveSummary);
+          console.log('  - topPlayerShare:', topPlayerShare);
+          console.log('  - emergingPlayers:', emergingPlayers);
+          console.log('  - fundingNews:', fundingNews);
+        }
+        
+        // Update local state with extracted data
+        setLocalExecutiveSummary(executiveSummary);
+        setLocalTopPlayerShare(topPlayerShare);
+        setLocalEmergingPlayers(emergingPlayers);
+        
+        // Update parent state with extracted data
+        onExecutiveSummaryChange(executiveSummary);
+        onTopPlayerShareChange(topPlayerShare);
+        onEmergingPlayersChange(emergingPlayers);
         
         console.log('✅ CompetitorLandscapeSection: Data updated successfully');
-        console.log('✅ API Data:', {
-          executiveSummary: apiData.executiveSummary,
-          topPlayerShare: apiData.topPlayerShare,
-          emergingPlayers: apiData.emergingPlayers
+        console.log('✅ Final extracted data:', {
+          executiveSummary,
+          topPlayerShare,
+          emergingPlayers,
+          fundingNews
         });
       } else {
-        console.warn('⚠️ CompetitorLandscapeSection: No competitor_landscape_data in response');
+        console.warn('⚠️ CompetitorLandscapeSection: No valid data in response');
+        console.warn('⚠️ Response structure:', result);
       }
 
         setLocalLoading(false);
@@ -427,6 +473,12 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
       console.log('🔄 Competitor Landscape - Refresh triggered by parent');
       setLocalError(null);
       setLocalLoading(true);
+      
+      // Clear local state immediately to prevent showing stale data
+      setLocalExecutiveSummary('');
+      setLocalTopPlayerShare('');
+      setLocalEmergingPlayers('');
+      
       fetchCompetitorLandscapeData(true); // Re-enabled API call
     }
   }, [isRefreshing]);
@@ -438,6 +490,11 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
       console.log('🔄 Competitor Landscape - Company profile updated, fetching fresh data');
       setLocalError(null);
       setLocalLoading(true);
+      
+      // Clear local state immediately to prevent showing stale data
+      setLocalExecutiveSummary('');
+      setLocalTopPlayerShare('');
+      setLocalEmergingPlayers('');
       
       // Fetch the latest company profile from backend immediately
       try {
