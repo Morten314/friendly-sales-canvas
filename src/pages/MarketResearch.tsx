@@ -512,6 +512,11 @@ const MarketResearch = React.memo(() => {
     if (allComponentsHaveData) {
       console.log('✅ All components have fresh data! Showing Scout page...');
       setIsRefreshing(false);
+      
+      // Clear the company profile update flag since refresh is complete
+      localStorage.removeItem('companyProfileUpdated');
+      console.log('🏁 Company profile update flag cleared - data persistence restored');
+      
       toast({
         title: "Refresh Complete",
         description: "All 5 components updated successfully with fresh data",
@@ -530,6 +535,11 @@ const MarketResearch = React.memo(() => {
         console.log('⏰ Successful components:', successfulComponents.map(([name]) => name));
         
         setIsRefreshing(false);
+        
+        // Clear the company profile update flag since refresh is complete
+        localStorage.removeItem('companyProfileUpdated');
+        console.log('🏁 Company profile update flag cleared - data persistence restored');
+        
         toast({
           title: "Refresh Complete",
           description: `${successfulComponents.length}/5 components updated successfully`,
@@ -648,9 +658,14 @@ const MarketResearch = React.memo(() => {
 
     try {
 
-      localStorage.setItem('marketIntelligenceData', JSON.stringify(data));
-
-      console.log('💾 Market Intelligence data saved to localStorage');
+      // Only save data if no new company profile update has occurred
+      const companyProfileUpdated = localStorage.getItem('companyProfileUpdated');
+      if (companyProfileUpdated !== '1') {
+        localStorage.setItem('marketIntelligenceData', JSON.stringify(data));
+        console.log('💾 Market Intelligence data saved to localStorage');
+      } else {
+        console.log('🏁 Company profile update flag is set - NOT saving cached data to prevent reversion');
+      }
 
     } catch (error) {
 
@@ -668,9 +683,14 @@ const MarketResearch = React.memo(() => {
 
     try {
 
-      localStorage.setItem('competitorData', JSON.stringify(data));
-
-      console.log('💾 Competitor data saved to localStorage');
+      // Only save data if no new company profile update has occurred
+      const companyProfileUpdated = localStorage.getItem('companyProfileUpdated');
+      if (companyProfileUpdated !== '1') {
+        localStorage.setItem('competitorData', JSON.stringify(data));
+        console.log('💾 Competitor data saved to localStorage');
+      } else {
+        console.log('🏁 Company profile update flag is set - NOT saving cached competitor data to prevent reversion');
+      }
 
     } catch (error) {
 
@@ -688,9 +708,14 @@ const MarketResearch = React.memo(() => {
 
     try {
 
-      localStorage.setItem('regulatoryData', JSON.stringify(data));
-
-      console.log('💾 Regulatory data saved to localStorage');
+      // Only save data if no new company profile update has occurred
+      const companyProfileUpdated = localStorage.getItem('companyProfileUpdated');
+      if (companyProfileUpdated !== '1') {
+        localStorage.setItem('regulatoryData', JSON.stringify(data));
+        console.log('💾 Regulatory data saved to localStorage');
+      } else {
+        console.log('🏁 Company profile update flag is set - NOT saving cached regulatory data to prevent reversion');
+      }
 
     } catch (error) {
 
@@ -708,9 +733,14 @@ const MarketResearch = React.memo(() => {
 
     try {
 
-      localStorage.setItem('marketEntryData', JSON.stringify(data));
-
-      console.log('💾 Market Entry data saved to localStorage');
+      // Only save data if no new company profile update has occurred
+      const companyProfileUpdated = localStorage.getItem('companyProfileUpdated');
+      if (companyProfileUpdated !== '1') {
+        localStorage.setItem('marketEntryData', JSON.stringify(data));
+        console.log('💾 Market Entry data saved to localStorage');
+      } else {
+        console.log('🏁 Company profile update flag is set - NOT saving cached market entry data to prevent reversion');
+      }
 
     } catch (error) {
 
@@ -1717,6 +1747,11 @@ const MarketResearch = React.memo(() => {
         console.log('❌ Maximum retry attempts reached or all components failed');
         clearTimeout(refreshTimeout);
         setIsRefreshing(false);
+        
+        // Clear the company profile update flag even on failure to prevent permanent blocking
+        localStorage.removeItem('companyProfileUpdated');
+        console.log('🏁 Company profile update flag cleared after failure - data persistence restored');
+        
         toast({
           title: "Refresh Incomplete",
           description: "Some components could not be updated. You can try refreshing again.",
@@ -1728,6 +1763,11 @@ const MarketResearch = React.memo(() => {
       console.error('❌ Smart refresh failed:', error);
       clearTimeout(refreshTimeout);
       setIsRefreshing(false);
+      
+      // Clear the company profile update flag even on error to prevent permanent blocking
+      localStorage.removeItem('companyProfileUpdated');
+      console.log('🏁 Company profile update flag cleared after error - data persistence restored');
+      
       setError('Refresh failed. Please try again.');
     }
   };
@@ -1846,7 +1886,7 @@ const MarketResearch = React.memo(() => {
 
       
 
-      const response = await fetch('/api/market-research', {
+      const response = await fetch('https://backend-11kr.onrender.com/market-research', {
 
         method: 'POST',
 
@@ -1862,11 +1902,11 @@ const MarketResearch = React.memo(() => {
 
 
 
-      console.log('📨 Competitor API response status:', response.status);
+      console.log('📨 Market Size API response status:', response.status);
 
-      console.log('📨 Competitor API response headers:', Object.fromEntries(response.headers.entries()));
+      console.log('📨 Market Size API response headers:', Object.fromEntries(response.headers.entries()));
 
-      console.log('📨 Competitor API response ok:', response.ok);
+      console.log('📨 Market Size API response ok:', response.ok);
 
 
 
@@ -1916,7 +1956,7 @@ const MarketResearch = React.memo(() => {
 
             try {
 
-              const altResponse = await fetch('/api/market-research', {
+              const altResponse = await fetch('https://backend-11kr.onrender.com/market-research', {
 
                 method: 'POST',
 
@@ -2424,7 +2464,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-      const response = await fetch('/api/market-research', {
+      const response = await fetch('https://backend-11kr.onrender.com/market-research', {
 
         method: 'POST',
 
@@ -3160,7 +3200,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-      const response = await fetch('/api/market-research', {
+      const response = await fetch('https://backend-11kr.onrender.com/market-research', {
 
         method: 'POST',
 
@@ -3349,10 +3389,11 @@ const MarketResearch = React.memo(() => {
       
 
       // Check if we have persistent data from previous session
-
+      // BUT only restore it if no new company profile update has occurred
+      const companyProfileUpdated = localStorage.getItem('companyProfileUpdated');
       const storedMarketData = localStorage.getItem('marketIntelligenceData');
 
-      if (storedMarketData) {
+      if (storedMarketData && companyProfileUpdated !== '1') {
 
         try {
 
@@ -3365,6 +3406,8 @@ const MarketResearch = React.memo(() => {
             console.log('🔧 Not clearing data - user will see last Swagger data until new data arrives');
 
             console.log('💾 Persistent data timestamp:', parsedData.timestamp);
+
+            console.log('🏁 Company profile update flag is not set - restoring cached data');
 
             
 
@@ -3419,6 +3462,13 @@ const MarketResearch = React.memo(() => {
           console.error('Error parsing stored market data:', error);
 
         }
+
+      } else if (companyProfileUpdated === '1') {
+
+        console.log('🏁 Company profile update flag is set - NOT restoring cached data, will fetch fresh data');
+
+        // Clear the flag after checking it
+        localStorage.removeItem('companyProfileUpdated');
 
       }
 
@@ -3545,6 +3595,10 @@ const MarketResearch = React.memo(() => {
       console.log('Company profile updated, reloading profile data and triggering Scout refresh...');
 
       loadCompanyProfile();
+
+      // Set flag to indicate new company profile data is available
+      localStorage.setItem('companyProfileUpdated', '1');
+      console.log('🏁 Company profile update flag set to 1 - new data will persist until next profile update');
 
       triggerScoutAndRefresh();
 
@@ -6230,17 +6284,28 @@ const MarketResearch = React.memo(() => {
 
                        marketSizeError={marketSizeError}
 
-                       onMarketSizeRefresh={() => fetchMarketSizeData(true)}
+                       onMarketSizeRefresh={async () => {
+                         setComponentStatus(prev => ({ ...prev, 'Market Size': 'pending' }));
+                         try {
+                           await fetchMarketSizeData(true);
+                           setComponentStatus(prev => ({ ...prev, 'Market Size': 'success' }));
+                         } catch (error) {
+                           setComponentStatus(prev => ({ ...prev, 'Market Size': 'failed' }));
+                         }
+                       }}
 
                       // Industry Trends props
                       // Debug: Log what we're passing to Industry Trends
-                      {...(console.log('🔍 DEBUG - Passing Industry Trends props:', {
-                        executiveSummary: industryTrendsData?.executiveSummary,
-                        aiAdoption: industryTrendsData?.aiAdoption,
-                        cloudMigration: industryTrendsData?.cloudMigration,
-                        regulatory: industryTrendsData?.regulatory,
-                        fullData: industryTrendsData
-                      }) || {})}
+                      {...(() => {
+                        console.log('🔍 DEBUG - Passing Industry Trends props:', {
+                          executiveSummary: industryTrendsData?.executiveSummary,
+                          aiAdoption: industryTrendsData?.aiAdoption,
+                          cloudMigration: industryTrendsData?.cloudMigration,
+                          regulatory: industryTrendsData?.regulatory,
+                          fullData: industryTrendsData
+                        });
+                        return {};
+                      })()}
 
                       isIndustryTrendsEditing={isIndustryTrendsEditing}
 
@@ -6270,13 +6335,16 @@ const MarketResearch = React.memo(() => {
 
                        // Competitor Landscape props - pass structured data
                        // Debug: Log what we're passing to Competitor Landscape
-                       {...(console.log('🔍 DEBUG - Passing Competitor Landscape props:', {
-                         executiveSummary: competitorData?.executiveSummary,
-                         topPlayerShare: competitorData?.topPlayerShare,
-                         emergingPlayers: competitorData?.emergingPlayers,
-                         fundingNews: competitorData?.fundingNews,
-                         fullData: competitorData
-                       }) || {})}
+                       {...(() => {
+                         console.log('🔍 DEBUG - Passing Competitor Landscape props:', {
+                           executiveSummary: competitorData?.executiveSummary,
+                           topPlayerShare: competitorData?.topPlayerShare,
+                           emergingPlayers: competitorData?.emergingPlayers,
+                           fundingNews: competitorData?.fundingNews,
+                           fullData: competitorData
+                         });
+                         return {};
+                       })()}
 
                        isCompetitorEditing={isCompetitorEditing}
 
@@ -6300,7 +6368,15 @@ const MarketResearch = React.memo(() => {
 
                        // Add refresh handler for competitor data
 
-                       onCompetitorRefresh={() => fetchCompetitorData(true)}
+                       onCompetitorRefresh={async () => {
+                         setComponentStatus(prev => ({ ...prev, 'Competitor Landscape': 'pending' }));
+                         try {
+                           await fetchCompetitorData(true);
+                           setComponentStatus(prev => ({ ...prev, 'Competitor Landscape': 'success' }));
+                         } catch (error) {
+                           setComponentStatus(prev => ({ ...prev, 'Competitor Landscape': 'failed' }));
+                         }
+                       }}
 
                        // Regulatory Compliance props - pass structured data
 
@@ -6506,7 +6582,15 @@ const MarketResearch = React.memo(() => {
 
                        onMarketEntrySaveChanges={handleMarketEntrySaveChanges}
 
-                       onMarketEntryRefresh={() => fetchMarketEntryData(true)}
+                       onMarketEntryRefresh={async () => {
+                         setComponentStatus(prev => ({ ...prev, 'Market Entry': 'pending' }));
+                         try {
+                           await fetchMarketEntryData(true);
+                           setComponentStatus(prev => ({ ...prev, 'Market Entry': 'success' }));
+                         } catch (error) {
+                           setComponentStatus(prev => ({ ...prev, 'Market Entry': 'failed' }));
+                         }
+                       }}
 
                        onMarketEntryCancelEdit={handleMarketEntryCancelEdit}
 

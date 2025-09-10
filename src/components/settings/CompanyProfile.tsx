@@ -159,6 +159,10 @@ export function CompanyProfile({ onProfileUpdate, isEditMode = false, profileDat
       localStorage.setItem('companyProfile', JSON.stringify(profileData));
       localStorage.setItem('companyProfileForRefresh', JSON.stringify(profileData));
       
+      // Set flag to indicate new company profile data is available
+      localStorage.setItem('companyProfileUpdated', '1');
+      console.log("🏁 Company profile update flag set to 1 - new data will persist until next profile update");
+      
       // Clear market data cache
       if (typeof window !== 'undefined' && (window as any).cachedMarketData) {
         (window as any).cachedMarketData = null;
