@@ -455,7 +455,12 @@ const MarketResearch = React.memo(() => {
       console.log('🔄 Refresh started - beginning validation system...');
       setValidationAttempts(0); // Reset validation attempts
       setConsecutiveValidations(0); // Reset consecutive validations
-      validateAllComponentsHaveFreshData();
+      
+      // Wait 10 seconds before starting validation to give API calls time to complete
+      setTimeout(() => {
+        console.log('🔄 Starting validation after 10 second delay...');
+        validateAllComponentsHaveFreshData();
+      }, 10000);
     }
   }, [isRefreshing]);
 
@@ -475,18 +480,16 @@ const MarketResearch = React.memo(() => {
     const fiveMinutesAgo = now - (5 * 60 * 1000);
     
     const componentDataChecks = {
-      'Market Size': marketData?.executiveSummary && marketData?.tamValue && marketData?.apacGrowthRate && 
+      'Market Size': marketData?.executiveSummary && marketData?.executiveSummary.trim().length > 0 && 
                     marketData?.timestamp && new Date(marketData.timestamp).getTime() > fiveMinutesAgo && !isMarketSizeLoading,
-      'Industry Trends': industryTrendsData?.executiveSummary && industryTrendsData?.aiAdoption && 
+      'Industry Trends': industryTrendsData?.executiveSummary && industryTrendsData?.executiveSummary.trim().length > 0 && 
                        industryTrendsData?.timestamp && new Date(industryTrendsData.timestamp).getTime() > fiveMinutesAgo && !isIndustryTrendsLoading,
       'Market Entry': marketEntryData?.executiveSummary && 
                      marketEntryData?.executiveSummary.trim().length > 0 && // Ensure executiveSummary is not empty
-                     marketEntryData?.entryBarriers && 
-                     marketEntryData?.entryBarriers.length > 0 && // Ensure entryBarriers is not empty array
                      marketEntryData?.timestamp && new Date(marketEntryData.timestamp).getTime() > fiveMinutesAgo && !isMarketEntryLoading,
-      'Competitor Landscape': competitorData?.executiveSummary && competitorData?.topPlayerShare && competitorData?.emergingPlayers && 
+      'Competitor Landscape': competitorData?.executiveSummary && competitorData?.executiveSummary.trim().length > 0 && 
                             competitorData?.timestamp && new Date(competitorData.timestamp).getTime() > fiveMinutesAgo && !isCompetitorLoading,
-      'Regulatory Compliance': regulatoryData?.executiveSummary && regulatoryData?.euAiActDeadline && 
+      'Regulatory Compliance': regulatoryData?.executiveSummary && regulatoryData?.executiveSummary.trim().length > 0 && 
                              regulatoryData?.timestamp && new Date(regulatoryData.timestamp).getTime() > fiveMinutesAgo && !isRegulatoryLoading
     };
     
@@ -573,19 +576,19 @@ const MarketResearch = React.memo(() => {
         // Wait 10 seconds to ensure the UI has time to fully render the fresh data
         setTimeout(() => {
           console.log('✅ UI update delay complete - showing Scout page...');
-          setIsRefreshing(false);
+      setIsRefreshing(false);
           
           // Clear the company profile update flag since refresh is complete
           localStorage.removeItem('companyProfileUpdated');
           console.log('🏁 Company profile update flag cleared - data persistence restored');
           
-          toast({
-            title: "Refresh Complete",
-            description: "All 5 components updated successfully with fresh data",
-            duration: 3000,
-          });
+      toast({
+        title: "Refresh Complete",
+        description: "All 5 components updated successfully with fresh data",
+        duration: 3000,
+      });
         }, 10000); // 10 second delay to ensure UI fully renders
-      } else {
+    } else {
         console.log(`⏳ Need ${3 - (consecutiveValidations + 1)} more consecutive validations...`);
         // Continue validation
         setTimeout(() => {
@@ -947,8 +950,8 @@ const MarketResearch = React.memo(() => {
       // Only save data if no new company profile update has occurred
       const companyProfileUpdated = localStorage.getItem('companyProfileUpdated');
       if (companyProfileUpdated !== '1') {
-        localStorage.setItem('marketIntelligenceData', JSON.stringify(data));
-        console.log('💾 Market Intelligence data saved to localStorage');
+      localStorage.setItem('marketIntelligenceData', JSON.stringify(data));
+      console.log('💾 Market Intelligence data saved to localStorage');
       } else {
         console.log('🏁 Company profile update flag is set - NOT saving cached data to prevent reversion');
       }
@@ -972,8 +975,8 @@ const MarketResearch = React.memo(() => {
       // Only save data if no new company profile update has occurred
       const companyProfileUpdated = localStorage.getItem('companyProfileUpdated');
       if (companyProfileUpdated !== '1') {
-        localStorage.setItem('competitorData', JSON.stringify(data));
-        console.log('💾 Competitor data saved to localStorage');
+      localStorage.setItem('competitorData', JSON.stringify(data));
+      console.log('💾 Competitor data saved to localStorage');
       } else {
         console.log('🏁 Company profile update flag is set - NOT saving cached competitor data to prevent reversion');
       }
@@ -997,8 +1000,8 @@ const MarketResearch = React.memo(() => {
       // Only save data if no new company profile update has occurred
       const companyProfileUpdated = localStorage.getItem('companyProfileUpdated');
       if (companyProfileUpdated !== '1') {
-        localStorage.setItem('regulatoryData', JSON.stringify(data));
-        console.log('💾 Regulatory data saved to localStorage');
+      localStorage.setItem('regulatoryData', JSON.stringify(data));
+      console.log('💾 Regulatory data saved to localStorage');
       } else {
         console.log('🏁 Company profile update flag is set - NOT saving cached regulatory data to prevent reversion');
       }
@@ -1022,8 +1025,8 @@ const MarketResearch = React.memo(() => {
       // Only save data if no new company profile update has occurred
       const companyProfileUpdated = localStorage.getItem('companyProfileUpdated');
       if (companyProfileUpdated !== '1') {
-        localStorage.setItem('marketEntryData', JSON.stringify(data));
-        console.log('💾 Market Entry data saved to localStorage');
+      localStorage.setItem('marketEntryData', JSON.stringify(data));
+      console.log('💾 Market Entry data saved to localStorage');
       } else {
         console.log('🏁 Company profile update flag is set - NOT saving cached market entry data to prevent reversion');
       }
@@ -1820,7 +1823,7 @@ const MarketResearch = React.memo(() => {
         description: `Refresh took too long. ${successCount}/5 components loaded successfully. You can try refreshing again.`,
         duration: 8000,
       });
-    }, 120000); // 120 second timeout (2 minutes)
+    }, 300000); // 300 second timeout (5 minutes) - give more time for all components to load
     
     try {
       if (isFirstRefresh) {
@@ -3770,7 +3773,7 @@ const MarketResearch = React.memo(() => {
         await fetchIndustryTrendsData(false, true); // Don't refresh, but show loading
       } else if (industryTrendsCompanyProfileUpdated === '1') {
         console.log('📊 Company profile updated - fetching fresh Industry Trends data...');
-        await fetchIndustryTrendsData(false, true);
+      await fetchIndustryTrendsData(false, true);
       } else {
         console.log('📊 Industry Trends data already loaded from localStorage via state initialization');
       }
@@ -6622,11 +6625,11 @@ const MarketResearch = React.memo(() => {
                       // Debug: Log what we're passing to Industry Trends
                       {...(() => {
                         console.log('🔍 DEBUG - Passing Industry Trends props:', {
-                          executiveSummary: industryTrendsData?.executiveSummary,
-                          aiAdoption: industryTrendsData?.aiAdoption,
-                          cloudMigration: industryTrendsData?.cloudMigration,
-                          regulatory: industryTrendsData?.regulatory,
-                          fullData: industryTrendsData
+                        executiveSummary: industryTrendsData?.executiveSummary,
+                        aiAdoption: industryTrendsData?.aiAdoption,
+                        cloudMigration: industryTrendsData?.cloudMigration,
+                        regulatory: industryTrendsData?.regulatory,
+                        fullData: industryTrendsData
                         });
                         return {};
                       })()}
@@ -6662,11 +6665,11 @@ const MarketResearch = React.memo(() => {
                        // Debug: Log what we're passing to Competitor Landscape
                        {...(() => {
                          console.log('🔍 DEBUG - Passing Competitor Landscape props:', {
-                           executiveSummary: competitorData?.executiveSummary,
-                           topPlayerShare: competitorData?.topPlayerShare,
-                           emergingPlayers: competitorData?.emergingPlayers,
-                           fundingNews: competitorData?.fundingNews,
-                           fullData: competitorData
+                         executiveSummary: competitorData?.executiveSummary,
+                         topPlayerShare: competitorData?.topPlayerShare,
+                         emergingPlayers: competitorData?.emergingPlayers,
+                         fundingNews: competitorData?.fundingNews,
+                         fullData: competitorData
                          });
                          return {};
                        })()}
