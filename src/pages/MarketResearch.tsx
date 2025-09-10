@@ -452,7 +452,7 @@ const MarketResearch = React.memo(() => {
   const validateAllComponentsHaveFreshData = () => {
     setValidationAttempts(prev => prev + 1);
     const currentAttempt = validationAttempts + 1;
-    const maxValidationAttempts = 5; // Maximum 15 seconds of validation (5 attempts * 3 seconds)
+    const maxValidationAttempts = 40; // Maximum 120 seconds of validation (40 attempts * 3 seconds)
     
     console.log(`🔍 VALIDATION FUNCTION CALLED - Attempt ${currentAttempt}/${maxValidationAttempts}`);
     console.log('🔍 Validating all components have fresh data...');
@@ -534,17 +534,23 @@ const MarketResearch = React.memo(() => {
         const successfulComponents = Object.entries(componentStatus).filter(([name, status]) => status === 'success');
         console.log('⏰ Successful components:', successfulComponents.map(([name]) => name));
         
-        setIsRefreshing(false);
-        
-        // Clear the company profile update flag since refresh is complete
-        localStorage.removeItem('companyProfileUpdated');
-        console.log('🏁 Company profile update flag cleared - data persistence restored');
-        
-        toast({
-          title: "Refresh Complete",
-          description: `${successfulComponents.length}/5 components updated successfully`,
-          duration: 3000,
-        });
+        // Only hide loading screen if we have at least 3 out of 5 components successful
+        if (successfulComponents.length >= 3) {
+          setIsRefreshing(false);
+          
+          // Clear the company profile update flag since refresh is complete
+          localStorage.removeItem('companyProfileUpdated');
+          console.log('🏁 Company profile update flag cleared - data persistence restored');
+          
+          toast({
+            title: "Refresh Complete",
+            description: `${successfulComponents.length}/5 components updated successfully`,
+            duration: 3000,
+          });
+        } else {
+          console.log('⏰ Not enough components successful, waiting for main timeout...');
+          // Don't hide loading screen yet, let the main timeout handle it
+        }
       } else {
         console.log('⏳ Waiting 3 more seconds for components to process data...');
         console.log('⏳ Missing components:', missingDataComponents);
@@ -745,6 +751,31 @@ const MarketResearch = React.memo(() => {
     } catch (error) {
 
       console.error('❌ Failed to save Market Entry data to localStorage:', error);
+
+    }
+
+  }, []);
+
+
+
+  // Helper function to save industry trends data to localStorage
+
+  const saveIndustryTrendsDataToLocalStorage = React.useCallback((data: any) => {
+
+    try {
+
+      // Only save data if no new company profile update has occurred
+      const companyProfileUpdated = localStorage.getItem('companyProfileUpdated');
+      if (companyProfileUpdated !== '1') {
+        localStorage.setItem('industryTrendsData', JSON.stringify(data));
+        console.log('💾 Industry Trends data saved to localStorage');
+      } else {
+        console.log('🏁 Company profile update flag is set - NOT saving cached industry trends data to prevent reversion');
+      }
+
+    } catch (error) {
+
+      console.error('❌ Failed to save Industry Trends data to localStorage:', error);
 
     }
 
@@ -1558,14 +1589,23 @@ const MarketResearch = React.memo(() => {
     
     // Add a safety timeout to prevent infinite loading
     const refreshTimeout = setTimeout(() => {
-      console.log('⏰ REFRESH TIMEOUT - Force stopping refresh after 60 seconds');
+      console.log('⏰ REFRESH TIMEOUT - Force stopping refresh after 120 seconds');
       setIsRefreshing(false);
+      
+      // Clear the company profile update flag since refresh is complete (even on timeout)
+      localStorage.removeItem('companyProfileUpdated');
+      console.log('🏁 Company profile update flag cleared after timeout - data persistence restored');
+      
+      // Check how many components were successful
+      const successfulComponents = Object.entries(componentStatus).filter(([name, status]) => status === 'success');
+      const successCount = successfulComponents.length;
+      
       toast({
         title: "Refresh Timeout",
-        description: "Refresh took too long. Please try again.",
-        duration: 5000,
+        description: `Refresh took too long. ${successCount}/5 components loaded successfully. You can try refreshing again.`,
+        duration: 8000,
       });
-    }, 60000); // 60 second timeout
+    }, 120000); // 120 second timeout (2 minutes)
     
     try {
       if (isFirstRefresh) {
@@ -2354,6 +2394,10 @@ const MarketResearch = React.memo(() => {
           };
           
           setIndustryTrendsData(updatedData);
+          
+          // Save to localStorage for persistence
+          saveIndustryTrendsDataToLocalStorage(updatedData);
+          
           console.log('✅ Industry Trends data updated successfully');
         } else {
           console.log('ℹ️ Current Industry Trends data is up to date');
@@ -3350,7 +3394,7 @@ const MarketResearch = React.memo(() => {
 
       console.error('❌ Error fetching Market Entry data:', error);
 
-      setMarketSizeError('Failed to load market entry data');
+      setMarketEntryError('Failed to load market entry data');
 
     } finally {
 
@@ -3358,7 +3402,7 @@ const MarketResearch = React.memo(() => {
 
       if (showLoading && !isRefreshing) {
 
-        setIsMarketSizeLoading(false);
+        setIsMarketEntryLoading(false);
 
       }
 
@@ -3512,11 +3556,29 @@ const MarketResearch = React.memo(() => {
 
 
 
-      // Fetch Industry Trends data
+      // Check if we have Industry Trends data, if not fetch it
+      const storedIndustryTrends = localStorage.getItem('industryTrendsData');
+      const industryTrendsCompanyProfileUpdated = localStorage.getItem('companyProfileUpdated');
 
-      console.log('📊 Fetching Industry Trends data...');
-
-      await fetchIndustryTrendsData(false, true);
+      if ((!storedIndustryTrends || !JSON.parse(storedIndustryTrends).timestamp) && industryTrendsCompanyProfileUpdated !== '1') {
+        console.log('📊 No Industry Trends data found, fetching from API...');
+        await fetchIndustryTrendsData(false, true); // Don't refresh, but show loading
+      } else if (storedIndustryTrends && industryTrendsCompanyProfileUpdated !== '1') {
+        console.log('📊 Industry Trends data already loaded from localStorage');
+        try {
+          const parsedData = JSON.parse(storedIndustryTrends);
+          if (parsedData.timestamp) {
+            setIndustryTrendsData(parsedData);
+            console.log('📊 Industry Trends data restored from localStorage');
+          }
+        } catch (error) {
+          console.warn('⚠️ Could not parse stored Industry Trends data:', error);
+          await fetchIndustryTrendsData(false, true);
+        }
+      } else {
+        console.log('📊 Company profile updated - fetching fresh Industry Trends data...');
+        await fetchIndustryTrendsData(false, true);
+      }
 
 
 
@@ -6430,9 +6492,9 @@ const MarketResearch = React.memo(() => {
 
                         // Market Entry loading states and handlers
 
-                        isMarketEntryLoading={isMarketSizeLoading}
+                        isMarketEntryLoading={isMarketEntryLoading}
 
-                        marketEntryError={marketSizeError}
+                        marketEntryError={marketEntryError}
 
                         onToggleEdit={handleMarketIntelligenceToggleEdit}
 
