@@ -479,7 +479,10 @@ const MarketResearch = React.memo(() => {
                     marketData?.timestamp && new Date(marketData.timestamp).getTime() > fiveMinutesAgo && !isMarketSizeLoading,
       'Industry Trends': industryTrendsData?.executiveSummary && industryTrendsData?.aiAdoption && 
                        industryTrendsData?.timestamp && new Date(industryTrendsData.timestamp).getTime() > fiveMinutesAgo && !isIndustryTrendsLoading,
-      'Market Entry': marketEntryData?.executiveSummary && marketEntryData?.entryBarriers && 
+      'Market Entry': marketEntryData?.executiveSummary && 
+                     marketEntryData?.executiveSummary.trim().length > 0 && // Ensure executiveSummary is not empty
+                     marketEntryData?.entryBarriers && 
+                     marketEntryData?.entryBarriers.length > 0 && // Ensure entryBarriers is not empty array
                      marketEntryData?.timestamp && new Date(marketEntryData.timestamp).getTime() > fiveMinutesAgo && !isMarketEntryLoading,
       'Competitor Landscape': competitorData?.executiveSummary && competitorData?.topPlayerShare && competitorData?.emergingPlayers && 
                             competitorData?.timestamp && new Date(competitorData.timestamp).getTime() > fiveMinutesAgo && !isCompetitorLoading,
@@ -500,8 +503,11 @@ const MarketResearch = React.memo(() => {
     console.log('  - Industry Trends - isIndustryTrendsLoading:', isIndustryTrendsLoading);
     console.log('  - Market Entry - executiveSummary:', marketEntryData?.executiveSummary);
     console.log('  - Market Entry - entryBarriers:', marketEntryData?.entryBarriers);
+    console.log('  - Market Entry - entryBarriers.length:', marketEntryData?.entryBarriers?.length);
     console.log('  - Market Entry - timestamp:', marketEntryData?.timestamp);
+    console.log('  - Market Entry - timestamp age (minutes):', marketEntryData?.timestamp ? Math.round((now - new Date(marketEntryData.timestamp).getTime()) / (1000 * 60)) : 'N/A');
     console.log('  - Market Entry - isMarketEntryLoading:', isMarketEntryLoading);
+    console.log('  - Market Entry - isFresh (within 5 min):', marketEntryData?.timestamp ? new Date(marketEntryData.timestamp).getTime() > fiveMinutesAgo : false);
     console.log('  - Competitor Landscape - executiveSummary:', competitorData?.executiveSummary);
     console.log('  - Competitor Landscape - topPlayerShare:', competitorData?.topPlayerShare);
     console.log('  - Competitor Landscape - emergingPlayers:', competitorData?.emergingPlayers);
@@ -515,6 +521,15 @@ const MarketResearch = React.memo(() => {
     console.log('🔍 Freshness check - Five minutes ago:', new Date(fiveMinutesAgo).toISOString());
     
     console.log('🔍 Component data validation results:', componentDataChecks);
+    console.log('🔍 Market Entry validation breakdown:');
+    console.log('  - Has executiveSummary:', !!marketEntryData?.executiveSummary);
+    console.log('  - executiveSummary not empty:', marketEntryData?.executiveSummary?.trim().length > 0);
+    console.log('  - Has entryBarriers:', !!marketEntryData?.entryBarriers);
+    console.log('  - entryBarriers not empty:', marketEntryData?.entryBarriers?.length > 0);
+    console.log('  - Has timestamp:', !!marketEntryData?.timestamp);
+    console.log('  - Is fresh (within 5 min):', marketEntryData?.timestamp ? new Date(marketEntryData.timestamp).getTime() > fiveMinutesAgo : false);
+    console.log('  - Not loading:', !isMarketEntryLoading);
+    console.log('  - Final validation result:', componentDataChecks['Market Entry']);
     console.log('🔍 Component loading states:', {
       'Market Size': isMarketSizeLoading,
       'Industry Trends': isIndustryTrendsLoading,
@@ -831,6 +846,8 @@ const MarketResearch = React.memo(() => {
       const companyProfileUpdated = localStorage.getItem('companyProfileUpdated');
       if (companyProfileUpdated === '1') {
         console.log('🏁 Company profile update flag is set - NOT restoring cached Market Entry data, will fetch fresh data');
+        // Clear any existing cached data to prevent old data from showing
+        localStorage.removeItem('marketEntryData');
         return {
           executiveSummary: '',
           entryBarriers: [],
@@ -1364,6 +1381,30 @@ const MarketResearch = React.memo(() => {
 
 
   const [marketEntryData, setMarketEntryData] = useState(getInitialMarketEntryData());
+  
+  // Force clear Market Entry cached data on component mount if company profile was updated
+  useEffect(() => {
+    const companyProfileUpdated = localStorage.getItem('companyProfileUpdated');
+    if (companyProfileUpdated === '1') {
+      console.log('🧹 Clearing Market Entry cached data on component mount due to company profile update');
+      localStorage.removeItem('marketEntryData');
+      // Reset state to empty to force fresh data fetch
+      setMarketEntryData({
+        executiveSummary: '',
+        entryBarriers: [],
+        recommendedChannel: '',
+        timeToMarket: '',
+        topBarrier: '',
+        competitiveDifferentiation: [],
+        strategicRecommendations: [],
+        riskAssessment: [],
+        swot: {},
+        timeline: {},
+        marketSizeBySegment: {},
+        growthProjections: ''
+      });
+    }
+  }, []);
 
 
 
@@ -3815,6 +3856,14 @@ const MarketResearch = React.memo(() => {
       // Set flag to indicate new company profile data is available
       localStorage.setItem('companyProfileUpdated', '1');
       console.log('🏁 Company profile update flag set to 1 - new data will persist until next profile update');
+      
+      // Clear all cached data to prevent old data from showing
+      localStorage.removeItem('marketEntryData');
+      localStorage.removeItem('industryTrendsData');
+      localStorage.removeItem('competitorData');
+      localStorage.removeItem('regulatoryData');
+      localStorage.removeItem('marketData');
+      console.log('🧹 Cleared all cached data due to company profile update');
 
       triggerScoutAndRefresh();
 
@@ -6568,15 +6617,6 @@ const MarketResearch = React.memo(() => {
 
                        marketSizeError={marketSizeError}
 
-                       onMarketSizeRefresh={async () => {
-                         setComponentStatus(prev => ({ ...prev, 'Market Size': 'pending' }));
-                         try {
-                           await fetchMarketSizeData(true);
-                           setComponentStatus(prev => ({ ...prev, 'Market Size': 'success' }));
-                         } catch (error) {
-                           setComponentStatus(prev => ({ ...prev, 'Market Size': 'failed' }));
-                         }
-                       }}
 
                       // Industry Trends props
                       // Debug: Log what we're passing to Industry Trends
@@ -6651,17 +6691,6 @@ const MarketResearch = React.memo(() => {
 
                        competitorError={competitorError}
 
-                       // Add refresh handler for competitor data
-
-                       onCompetitorRefresh={async () => {
-                         setComponentStatus(prev => ({ ...prev, 'Competitor Landscape': 'pending' }));
-                         try {
-                           await fetchCompetitorData(true);
-                           setComponentStatus(prev => ({ ...prev, 'Competitor Landscape': 'success' }));
-                         } catch (error) {
-                           setComponentStatus(prev => ({ ...prev, 'Competitor Landscape': 'failed' }));
-                         }
-                       }}
 
                        // Regulatory Compliance props - pass structured data
 
@@ -6868,15 +6897,6 @@ const MarketResearch = React.memo(() => {
 
                        onMarketEntrySaveChanges={handleMarketEntrySaveChanges}
 
-                       onMarketEntryRefresh={async () => {
-                         setComponentStatus(prev => ({ ...prev, 'Market Entry': 'pending' }));
-                         try {
-                           await fetchMarketEntryData(true);
-                           setComponentStatus(prev => ({ ...prev, 'Market Entry': 'success' }));
-                         } catch (error) {
-                           setComponentStatus(prev => ({ ...prev, 'Market Entry': 'failed' }));
-                         }
-                       }}
 
                        onMarketEntryCancelEdit={handleMarketEntryCancelEdit}
 

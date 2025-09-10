@@ -179,27 +179,27 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
     }
   };
 
-  // Fetch data on component mount
-  useEffect(() => {
-    console.log('🚀 MarketEntrySection: Component mounted - fetching fresh data');
-    const timer = setTimeout(() => {
-      fetchMarketEntryData(false);
-    }, 600); // Slight delay to avoid conflicts with other components
-    
-    return () => clearTimeout(timer);
-  }, []);
+  // Remove internal data fetching - let parent handle all data fetching
+  // useEffect(() => {
+  //   console.log('🚀 MarketEntrySection: Component mounted - fetching fresh data');
+  //   const timer = setTimeout(() => {
+  //     fetchMarketEntryData(false);
+  //   }, 600); // Slight delay to avoid conflicts with other components
+  //   
+  //   return () => clearTimeout(timer);
+  // }, []);
   
-  // Handle refresh when isRefreshing prop changes
-  useEffect(() => {
-    if (isRefreshing) {
-      console.log('🔄 Market Entry - Refresh triggered by parent');
-      // Clear old data immediately to prevent showing stale data
-      setMarketEntryData(null);
-      setError(null);
-      setIsLoading(true);
-      fetchMarketEntryData(true);
-    }
-  }, [isRefreshing]);
+  // Remove internal refresh logic - let parent handle all refresh logic
+  // useEffect(() => {
+  //   if (isRefreshing) {
+  //     console.log('🔄 Market Entry - Refresh triggered by parent');
+  //     // Clear old data immediately to prevent showing stale data
+  //     setMarketEntryData(null);
+  //     setError(null);
+  //     setIsLoading(true);
+  //     fetchMarketEntryData(true);
+  //   }
+  // }, [isRefreshing]);
 
   const handleMarketEntrySaveChanges = () => {
     console.log('🚀 Market Entry Section - Save function called!');
