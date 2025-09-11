@@ -16,6 +16,8 @@ interface ComponentStatusLoadingScreenProps {
   isValidating?: boolean;
   validationAttempt?: number;
   consecutiveValidations?: number;
+  loadingPhase?: 'api' | 'rendering' | 'complete';
+  componentRenderingStatus?: Record<string, 'pending' | 'rendering' | 'complete'>;
 }
 
 export const ComponentStatusLoadingScreen: React.FC<ComponentStatusLoadingScreenProps> = ({
@@ -24,7 +26,9 @@ export const ComponentStatusLoadingScreen: React.FC<ComponentStatusLoadingScreen
   maxRetries,
   isValidating = false,
   validationAttempt = 0,
-  consecutiveValidations = 0
+  consecutiveValidations = 0,
+  loadingPhase = 'api',
+  componentRenderingStatus = {}
 }) => {
   const components: ComponentStatus[] = [
     { name: 'Market Size', status: componentStatus['Market Size'], icon: BarChart3 },
@@ -37,6 +41,39 @@ export const ComponentStatusLoadingScreen: React.FC<ComponentStatusLoadingScreen
   const allSuccessful = Object.values(componentStatus).every(status => status === 'success');
   const hasFailures = Object.values(componentStatus).some(status => status === 'failed');
   const isRetrying = hasFailures && refreshAttempt < maxRetries;
+  
+  // Enhanced status logic for two-phase loading
+  const getComponentDisplayStatus = (componentName: string) => {
+    const apiStatus = componentStatus[componentName];
+    const renderingStatus = componentRenderingStatus[componentName];
+    
+    if (loadingPhase === 'api') {
+      return apiStatus;
+    } else if (loadingPhase === 'rendering') {
+      if (apiStatus === 'failed') return 'failed';
+      if (renderingStatus === 'complete') return 'success';
+      if (renderingStatus === 'rendering') return 'pending';
+      return 'pending';
+    } else {
+      return 'success';
+    }
+  };
+  
+  const getComponentProgress = (componentName: string) => {
+    const apiStatus = componentStatus[componentName];
+    const renderingStatus = componentRenderingStatus[componentName];
+    
+    if (loadingPhase === 'api') {
+      return apiStatus === 'success' ? 100 : apiStatus === 'pending' ? 50 : 0;
+    } else if (loadingPhase === 'rendering') {
+      if (apiStatus === 'failed') return 0;
+      if (renderingStatus === 'complete') return 100;
+      if (renderingStatus === 'rendering') return 75;
+      return 50; // API complete, rendering pending
+    } else {
+      return 100;
+    }
+  };
 
   const getStatusIcon = (status: 'pending' | 'success' | 'failed') => {
     switch (status) {
@@ -63,7 +100,22 @@ export const ComponentStatusLoadingScreen: React.FC<ComponentStatusLoadingScreen
   };
 
   const getOverallStatus = () => {
-    if (allSuccessful && isValidating) {
+    if (loadingPhase === 'rendering') {
+      const renderedCount = Object.values(componentRenderingStatus).filter(status => status === 'complete').length;
+      return {
+        title: "Rendering Components... 🎨",
+        subtitle: `Building UI with fresh data (${renderedCount}/5 components rendered)`,
+        bgColor: "from-purple-50 to-indigo-50",
+        borderColor: "border-purple-200"
+      };
+    } else if (loadingPhase === 'complete') {
+      return {
+        title: "Scout Ready! 🎉",
+        subtitle: "All components loaded and rendered with fresh data",
+        bgColor: "from-green-50 to-emerald-50",
+        borderColor: "border-green-200"
+      };
+    } else if (allSuccessful && isValidating) {
       return {
         title: "Validating Fresh Data... 🔍",
         subtitle: `Ensuring all components have fresh data (${validationAttempt}/10)`,
@@ -72,10 +124,10 @@ export const ComponentStatusLoadingScreen: React.FC<ComponentStatusLoadingScreen
       };
     } else if (allSuccessful) {
       return {
-        title: "All Components Loaded Successfully! 🎉",
-        subtitle: "Scout is ready with fresh market intelligence data",
-        bgColor: "from-green-50 to-emerald-50",
-        borderColor: "border-green-200"
+        title: "API Calls Complete! 🚀",
+        subtitle: "Transitioning to rendering phase...",
+        bgColor: "from-blue-50 to-cyan-50",
+        borderColor: "border-blue-200"
       };
     } else if (isRetrying) {
       return {
@@ -114,24 +166,41 @@ export const ComponentStatusLoadingScreen: React.FC<ComponentStatusLoadingScreen
         <div className="space-y-3 mb-6">
           {components.map((component) => {
             const Icon = component.icon;
+            const displayStatus = getComponentDisplayStatus(component.name);
+            const progress = getComponentProgress(component.name);
+            const renderingStatus = componentRenderingStatus[component.name];
+            
             return (
-              <Card key={component.name} className={`border-gray-200 ${component.status === 'success' ? 'bg-green-50' : component.status === 'failed' ? 'bg-red-50' : 'bg-blue-50'}`}>
+              <Card key={component.name} className={`border-gray-200 ${displayStatus === 'success' ? 'bg-green-50' : displayStatus === 'failed' ? 'bg-red-50' : 'bg-blue-50'}`}>
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <Icon className="h-5 w-5 text-gray-600" />
                       <span className="font-medium text-gray-900">{component.name}</span>
+                      {loadingPhase === 'rendering' && renderingStatus && (
+                        <span className="text-xs text-gray-500">
+                          {renderingStatus === 'complete' ? '✅ Rendered' : renderingStatus === 'rendering' ? '🎨 Rendering...' : '⏳ Pending'}
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-3">
-                      {getStatusIcon(component.status)}
-                      {getStatusBadge(component.status)}
+                      {getStatusIcon(displayStatus)}
+                      {getStatusBadge(displayStatus)}
                     </div>
                   </div>
-                  {/* Progress indicator for pending components */}
-                  {component.status === 'pending' && (
+                  {/* Enhanced progress indicator */}
+                  {displayStatus === 'pending' && (
                     <div className="mt-2">
                       <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div className="bg-blue-600 h-2 rounded-full animate-pulse" style={{width: '60%'}}></div>
+                        <div 
+                          className={`h-2 rounded-full transition-all duration-500 ${
+                            loadingPhase === 'rendering' ? 'bg-purple-600' : 'bg-blue-600'
+                          }`} 
+                          style={{width: `${progress}%`}}
+                        ></div>
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        {loadingPhase === 'api' ? 'API Call in progress...' : 'Rendering UI...'}
                       </div>
                     </div>
                   )}
@@ -161,17 +230,44 @@ export const ComponentStatusLoadingScreen: React.FC<ComponentStatusLoadingScreen
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-gray-700">Overall Progress</span>
             <span className="text-sm text-gray-600">
-              {Object.values(componentStatus).filter(status => status === 'success').length} / {components.length} Complete
+              {(() => {
+                if (loadingPhase === 'api') {
+                  const apiComplete = Object.values(componentStatus).filter(status => status === 'success').length;
+                  return `${apiComplete} / ${components.length} API Calls Complete`;
+                } else if (loadingPhase === 'rendering') {
+                  const rendered = Object.values(componentRenderingStatus).filter(status => status === 'complete').length;
+                  return `${rendered} / ${components.length} Components Rendered`;
+                } else {
+                  return `${components.length} / ${components.length} Complete`;
+                }
+              })()}
             </span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
             <div 
-              className="bg-gradient-to-r from-blue-500 to-cyan-500 h-2 rounded-full transition-all duration-500"
+              className={`h-2 rounded-full transition-all duration-500 ${
+                loadingPhase === 'rendering' ? 'bg-gradient-to-r from-purple-500 to-indigo-500' : 'bg-gradient-to-r from-blue-500 to-cyan-500'
+              }`}
               style={{ 
-                width: `${(Object.values(componentStatus).filter(status => status === 'success').length / components.length) * 100}%` 
+                width: `${(() => {
+                  if (loadingPhase === 'api') {
+                    return (Object.values(componentStatus).filter(status => status === 'success').length / components.length) * 50;
+                  } else if (loadingPhase === 'rendering') {
+                    const apiComplete = Object.values(componentStatus).filter(status => status === 'success').length;
+                    const rendered = Object.values(componentRenderingStatus).filter(status => status === 'complete').length;
+                    return 50 + ((rendered / components.length) * 50);
+                  } else {
+                    return 100;
+                  }
+                })()}%` 
               }}
             />
           </div>
+          {loadingPhase === 'rendering' && (
+            <div className="text-xs text-gray-500 mt-2">
+              Phase 1: API Calls ✅ | Phase 2: UI Rendering 🎨
+            </div>
+          )}
         </div>
 
         {/* Retry Information */}

@@ -24,11 +24,11 @@ class RateLimitManager {
 
   constructor(config: Partial<RateLimitConfig> = {}) {
     this.config = {
-      maxRequestsPerMinute: 10, // Increased to allow parallel loading of all 5 components
+      maxRequestsPerMinute: 20, // Increased to allow faster parallel loading
       maxRetries: 3, // Increased retries for better reliability
-      baseDelayMs: 2000, // Reduced to 2s for faster parallel processing
-      maxDelayMs: 10000, // Reduced for faster processing
-      jitterMs: 500, // Reduced jitter for more predictable timing
+      baseDelayMs: 500, // Reduced to 500ms for much faster processing
+      maxDelayMs: 5000, // Reduced for faster processing
+      jitterMs: 200, // Reduced jitter for more predictable timing
       ...config
     };
   }

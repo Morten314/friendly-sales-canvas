@@ -445,14 +445,99 @@ const MarketResearch = React.memo(() => {
     'Competitor Landscape': 'pending',
     'Regulatory Compliance': 'pending'
   });
+
+  // Enhanced loading phases tracking
+  const [loadingPhase, setLoadingPhase] = useState<'api' | 'rendering' | 'complete'>('api');
+  const [componentRenderingStatus, setComponentRenderingStatus] = useState<Record<string, 'pending' | 'rendering' | 'complete'>>({
+    'Market Size': 'pending',
+    'Industry Trends': 'pending', 
+    'Market Entry': 'pending',
+    'Competitor Landscape': 'pending',
+    'Regulatory Compliance': 'pending'
+  });
   const [refreshAttempt, setRefreshAttempt] = useState(0);
   const [validationAttempts, setValidationAttempts] = useState(0);
+
+  // Function to start the rendering phase monitoring
+  const startRenderingPhase = () => {
+    console.log('🎨 Starting rendering phase monitoring...');
+    
+    // Monitor rendering completion with a more sophisticated approach
+    const checkRenderingCompletion = (attempt: number = 1) => {
+      const maxAttempts = 200; // 10 minutes total (200 * 3 seconds) for safety
+      
+      console.log(`🎨 Rendering check attempt ${attempt}/${maxAttempts}`);
+      
+      // Check if components are visually rendered by looking for specific UI elements
+      const renderingChecks = {
+        'Market Size': marketData?.executiveSummary && marketData?.tamValue && marketData?.apacGrowthRate,
+        'Industry Trends': industryTrendsData?.executiveSummary && industryTrendsData?.aiAdoption,
+        'Market Entry': marketEntryData?.executiveSummary && marketEntryData?.entryBarriers,
+        'Competitor Landscape': competitorData?.executiveSummary && competitorData?.topPlayerShare,
+        'Regulatory Compliance': regulatoryData?.executiveSummary && regulatoryData?.euAiActDeadline
+      };
+      
+      const allRendered = Object.values(renderingChecks).every(rendered => rendered);
+      const renderedComponents = Object.entries(renderingChecks)
+        .filter(([name, rendered]) => rendered)
+        .map(([name]) => name);
+      
+      console.log(`🎨 Rendering status: ${renderedComponents.length}/5 components rendered`);
+      console.log(`🎨 Rendered components:`, renderedComponents);
+      
+      if (allRendered) {
+        console.log('🎨 All components fully rendered! Completing loading...');
+        setLoadingPhase('complete');
+        setComponentRenderingStatus({
+          'Market Size': 'complete',
+          'Industry Trends': 'complete', 
+          'Market Entry': 'complete',
+          'Competitor Landscape': 'complete',
+          'Regulatory Compliance': 'complete'
+        });
+        
+        // Wait a moment for smooth transition, then hide loading screen
+        setTimeout(() => {
+          setIsRefreshing(false);
+          toast({
+            title: "Scout Ready! 🎉",
+            description: "All components loaded and rendered with fresh data",
+            duration: 3000,
+          });
+        }, 1000);
+      } else if (attempt >= maxAttempts) {
+        console.log('⏰ Rendering timeout reached, showing Scout page anyway');
+        setLoadingPhase('complete');
+        setIsRefreshing(false);
+        toast({
+          title: "Scout Ready",
+          description: "Components loaded (some may still be rendering)",
+          duration: 3000,
+        });
+      } else {
+        // Update rendering status for partially rendered components
+        const updatedRenderingStatus = { ...componentRenderingStatus };
+        Object.entries(renderingChecks).forEach(([name, rendered]) => {
+          if (rendered && updatedRenderingStatus[name] === 'rendering') {
+            updatedRenderingStatus[name] = 'complete';
+          }
+        });
+        setComponentRenderingStatus(updatedRenderingStatus);
+        
+        // Continue monitoring
+        setTimeout(() => checkRenderingCompletion(attempt + 1), 3000);
+      }
+    };
+    
+    // Start monitoring
+    checkRenderingCompletion();
+  };
 
   // Function to validate that all components have fresh data
   const validateAllComponentsHaveFreshData = () => {
     setValidationAttempts(prev => prev + 1);
     const currentAttempt = validationAttempts + 1;
-    const maxValidationAttempts = 5; // Maximum 15 seconds of validation (5 attempts * 3 seconds)
+    const maxValidationAttempts = 100; // Maximum 5 minutes of validation (100 attempts * 3 seconds)
     
     console.log(`🔍 VALIDATION FUNCTION CALLED - Attempt ${currentAttempt}/${maxValidationAttempts}`);
     console.log('🔍 Validating all components have fresh data...');
@@ -510,31 +595,65 @@ const MarketResearch = React.memo(() => {
       .map(([name]) => name);
     
     if (allComponentsHaveData) {
-      console.log('✅ All components have fresh data! Showing Scout page...');
-      setIsRefreshing(false);
-      toast({
-        title: "Refresh Complete",
-        description: "All 5 components updated successfully with fresh data",
-        duration: 3000,
+      console.log('✅ All components have fresh data! Transitioning to rendering phase...');
+      
+      // Transition to rendering phase
+      setLoadingPhase('rendering');
+      setComponentRenderingStatus({
+        'Market Size': 'rendering',
+        'Industry Trends': 'rendering', 
+        'Market Entry': 'rendering',
+        'Competitor Landscape': 'rendering',
+        'Regulatory Compliance': 'rendering'
       });
+      
+      // Start monitoring rendering completion
+      startRenderingPhase();
     } else {
       console.log('⚠️ Some components still missing fresh data:', missingDataComponents);
+      console.log('⚠️ Detailed missing data analysis:');
+      Object.entries(componentDataChecks).forEach(([name, hasData]) => {
+        if (!hasData) {
+          console.log(`  - ${name}: Missing data -`, {
+            hasExecutiveSummary: name === 'Market Size' ? !!marketData?.executiveSummary : 
+                               name === 'Industry Trends' ? !!industryTrendsData?.executiveSummary :
+                               name === 'Market Entry' ? !!marketEntryData?.executiveSummary :
+                               name === 'Competitor Landscape' ? !!competitorData?.executiveSummary :
+                               !!regulatoryData?.executiveSummary,
+            isLoading: name === 'Market Size' ? isMarketSizeLoading :
+                      name === 'Industry Trends' ? isIndustryTrendsLoading :
+                      name === 'Market Entry' ? isMarketEntryLoading :
+                      name === 'Competitor Landscape' ? isCompetitorLoading :
+                      isRegulatoryLoading
+          });
+        }
+      });
       
       if (currentAttempt >= maxValidationAttempts) {
         console.log('⏰ Maximum validation attempts reached, showing Scout page anyway');
         console.log('⏰ Final validation results:', componentDataChecks);
         console.log('⏰ Component status:', componentStatus);
+        console.log('⏰ Current loading phase:', loadingPhase);
         
         // Check if at least the API calls completed successfully
         const successfulComponents = Object.entries(componentStatus).filter(([name, status]) => status === 'success');
         console.log('⏰ Successful components:', successfulComponents.map(([name]) => name));
         
-        setIsRefreshing(false);
-        toast({
-          title: "Refresh Complete",
-          description: `${successfulComponents.length}/5 components updated successfully`,
-          duration: 3000,
-        });
+        // Only hide loading screen if we're not in rendering phase
+        if (loadingPhase !== 'rendering') {
+          setIsRefreshing(false);
+          toast({
+            title: "Refresh Complete",
+            description: `${successfulComponents.length}/5 components updated successfully`,
+            duration: 3000,
+          });
+        } else {
+          console.log('⏰ Still in rendering phase, continuing to monitor...');
+          // Continue monitoring rendering even if validation times out
+          setTimeout(() => {
+            validateAllComponentsHaveFreshData();
+          }, 3000);
+        }
       } else {
         console.log('⏳ Waiting 3 more seconds for components to process data...');
         console.log('⏳ Missing components:', missingDataComponents);
@@ -1543,19 +1662,29 @@ const MarketResearch = React.memo(() => {
     
     // Add a safety timeout to prevent infinite loading
     const refreshTimeout = setTimeout(() => {
-      console.log('⏰ REFRESH TIMEOUT - Force stopping refresh after 30 seconds');
+      console.log('⏰ REFRESH TIMEOUT - Force stopping refresh after 10 minutes');
       setIsRefreshing(false);
       toast({
         title: "Refresh Timeout",
         description: "Refresh took too long. Please try again.",
         duration: 5000,
       });
-    }, 30000); // Reduced from 60 to 30 seconds for faster feedback
+    }, 600000); // Extended to 10 minutes (600 seconds) to allow full rendering
     
     try {
       if (isFirstRefresh) {
         // Reset all component statuses on first refresh
         setComponentStatus({
+          'Market Size': 'pending',
+          'Industry Trends': 'pending', 
+          'Market Entry': 'pending',
+          'Competitor Landscape': 'pending',
+          'Regulatory Compliance': 'pending'
+        });
+        
+        // Reset loading phases
+        setLoadingPhase('api');
+        setComponentRenderingStatus({
           'Market Size': 'pending',
           'Industry Trends': 'pending', 
           'Market Entry': 'pending',
@@ -1619,7 +1748,7 @@ const MarketResearch = React.memo(() => {
       }
       
       // Add a minimal delay before starting to avoid immediate rate limiting
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 50));
 
       // Define all components
       const allComponents = [
@@ -1657,7 +1786,7 @@ const MarketResearch = React.memo(() => {
         try {
           // Rate limit manager will handle timing, but add a small delay for safety
           if (i > 0) {
-            const delayMs = 500; // Reduced from 1000ms to 500ms for faster processing
+            const delayMs = 200; // Reduced to 200ms for faster processing
             console.log(`⏳ Small delay before ${component.name} API call...`);
             await new Promise(resolve => setTimeout(resolve, delayMs));
           }
@@ -1667,16 +1796,20 @@ const MarketResearch = React.memo(() => {
           setComponentStatus(prev => ({ ...prev, [component.name]: 'pending' }));
           
           console.log(`🚀 Calling API for ${component.name} with rate limiting...`);
+          const startTime = Date.now();
           const result = await executeWithRateLimit(
             () => component.fetchFn(true, false),
             component.name
           );
+          const endTime = Date.now();
+          const duration = endTime - startTime;
+          console.log(`⏱️ ${component.name} API call took ${duration}ms`);
           results.push({ status: 'fulfilled', value: result });
           
           // Update component status to success
           currentStatus[component.name] = 'success';
           setComponentStatus(prev => ({ ...prev, [component.name]: 'success' }));
-          console.log(`✅ ${component.name} completed successfully`);
+          console.log(`✅ ${component.name} completed successfully in ${duration}ms`);
           
         } catch (error) {
           console.error(`❌ ${component.name} fetch failed:`, error);
@@ -2204,7 +2337,8 @@ const MarketResearch = React.memo(() => {
 
           setIsInitialLoading(false);
 
-          setIsRefreshing(false);
+          // Don't stop global refresh here - let smart refresh handle it
+          // setIsRefreshing(false);
 
           
 
@@ -2218,7 +2352,8 @@ const MarketResearch = React.memo(() => {
 
         setIsInitialLoading(false);
 
-        setIsRefreshing(false);
+        // Don't stop global refresh here - let smart refresh handle it
+        // setIsRefreshing(false);
 
       }
 
@@ -2234,7 +2369,8 @@ const MarketResearch = React.memo(() => {
 
       setIsInitialLoading(false);
 
-      setIsRefreshing(false);
+      // Don't stop global refresh here - let smart refresh handle it
+      // setIsRefreshing(false);
 
     } finally {
 
@@ -6228,6 +6364,8 @@ const MarketResearch = React.memo(() => {
                 maxRetries={3}
                 isValidating={validationAttempts > 0}
                 validationAttempt={validationAttempts}
+                loadingPhase={loadingPhase}
+                componentRenderingStatus={componentRenderingStatus}
               />
             )}
 
