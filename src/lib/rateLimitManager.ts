@@ -24,11 +24,11 @@ class RateLimitManager {
 
   constructor(config: Partial<RateLimitConfig> = {}) {
     this.config = {
-      maxRequestsPerMinute: 4, // Conservative limit (backend allows 6, we use 4 for safety)
+      maxRequestsPerMinute: 5, // Increased from 4 to 5 (backend allows 6, we use 5 for better performance)
       maxRetries: 3, // Increased retries for better reliability
-      baseDelayMs: 10000, // 10 seconds base delay (more conservative)
-      maxDelayMs: 30000, // 30 seconds max delay (more conservative)
-      jitterMs: 2000, // 2 seconds jitter (more random delay)
+      baseDelayMs: 5000, // Reduced from 10s to 5s for faster processing
+      maxDelayMs: 15000, // Reduced from 30s to 15s for faster processing
+      jitterMs: 1000, // Reduced from 2s to 1s for faster processing
       ...config
     };
   }

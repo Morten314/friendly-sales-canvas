@@ -15,6 +15,7 @@ interface ComponentStatusLoadingScreenProps {
   maxRetries: number;
   isValidating?: boolean;
   validationAttempt?: number;
+  consecutiveValidations?: number;
 }
 
 export const ComponentStatusLoadingScreen: React.FC<ComponentStatusLoadingScreenProps> = ({
@@ -22,7 +23,8 @@ export const ComponentStatusLoadingScreen: React.FC<ComponentStatusLoadingScreen
   refreshAttempt,
   maxRetries,
   isValidating = false,
-  validationAttempt = 0
+  validationAttempt = 0,
+  consecutiveValidations = 0
 }) => {
   const components: ComponentStatus[] = [
     { name: 'Market Size', status: componentStatus['Market Size'], icon: BarChart3 },
@@ -113,7 +115,7 @@ export const ComponentStatusLoadingScreen: React.FC<ComponentStatusLoadingScreen
           {components.map((component) => {
             const Icon = component.icon;
             return (
-              <Card key={component.name} className="border-gray-200">
+              <Card key={component.name} className={`border-gray-200 ${component.status === 'success' ? 'bg-green-50' : component.status === 'failed' ? 'bg-red-50' : 'bg-blue-50'}`}>
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -125,11 +127,34 @@ export const ComponentStatusLoadingScreen: React.FC<ComponentStatusLoadingScreen
                       {getStatusBadge(component.status)}
                     </div>
                   </div>
+                  {/* Progress indicator for pending components */}
+                  {component.status === 'pending' && (
+                    <div className="mt-2">
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div className="bg-blue-600 h-2 rounded-full animate-pulse" style={{width: '60%'}}></div>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             );
           })}
         </div>
+
+        {/* Validation Progress */}
+        {isValidating && (
+          <div className="bg-blue-50 rounded-lg p-4 mb-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Loader2 className="h-4 w-4 text-blue-600 animate-spin" />
+              <span className="font-medium text-blue-900">Validation Progress</span>
+            </div>
+            <div className="text-sm text-blue-800">
+              <p>Validation Attempt: {validationAttempt}/200</p>
+              <p>Consecutive Validations: {consecutiveValidations}/3</p>
+              <p>All 5 components must pass validation before loading screen disappears</p>
+            </div>
+          </div>
+        )}
 
         {/* Progress Summary */}
         <div className="bg-gray-50 rounded-lg p-4">
