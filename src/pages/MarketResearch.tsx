@@ -702,6 +702,26 @@ const MarketResearch = React.memo(() => {
 
 
 
+  // Helper function to save industry trends data to localStorage
+
+  const saveIndustryTrendsDataToLocalStorage = React.useCallback((data: any) => {
+
+    try {
+
+      localStorage.setItem('industryTrendsData', JSON.stringify(data));
+
+      console.log('💾 Industry Trends data saved to localStorage');
+
+    } catch (error) {
+
+      console.error('❌ Failed to save Industry Trends data to localStorage:', error);
+
+    }
+
+  }, []);
+
+
+
   // Helper function to save market entry data to localStorage
 
   const saveMarketEntryDataToLocalStorage = React.useCallback((data: any) => {
@@ -776,47 +796,48 @@ const MarketResearch = React.memo(() => {
 
   const [industryTrendsEditHistory, setIndustryTrendsEditHistory] = useState<EditRecord[]>([]);
 
-  const [industryTrendsData, setIndustryTrendsData] = useState({
+  // Function to get initial Industry Trends data from localStorage or defaults
+  const getInitialIndustryTrendsData = () => {
+    try {
+      const stored = localStorage.getItem('industryTrendsData');
+      if (stored) {
+        const parsedData = JSON.parse(stored);
+        console.log('📦 Loading Industry Trends data from localStorage:', parsedData);
+        // Only return stored data if it has a timestamp (meaning it came from API)
+        if (parsedData.timestamp) {
+          console.log('✅ Found persisted Industry Trends data with timestamp:', parsedData.timestamp);
+          return parsedData;
+        } else {
+          console.log('⚠️ Found localStorage data but no timestamp - this is default data, clearing...');
+          localStorage.removeItem('industryTrendsData');
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error loading Industry Trends data from localStorage:', error);
+      localStorage.removeItem('industryTrendsData');
+    }
+    
+    // Return default data if no valid stored data
+    return {
+      executiveSummary: "The enterprise software industry is experiencing rapid transformation driven by AI adoption, cloud migration, and regulatory changes. Key trends indicate accelerated digital transformation with 78% of companies prioritizing AI integration.",
+      aiAdoption: "78%",
+      cloudMigration: "45%",
+      regulatory: "12",
+      trendSnapshots: [
+        { title: "AI Integration", metric: "78% adoption rate", type: 'adoption' as const },
+        { title: "Cloud Migration", metric: "45% increase YoY", type: 'growth' as const },
+        { title: "Regulatory Impact", metric: "12 new policies", type: 'performance' as const }
+      ],
+      recommendations: {
+        primaryFocus: "Focus on digital transformation and AI adoption",
+        marketEntry: "Strategic partnerships and gradual market penetration"
+      },
+      risks: ["Regulatory changes could impact timeline", "Competition intensifying rapidly", "Economic uncertainty affecting IT spending"],
+      timestamp: null as string | null
+    };
+  };
 
-    executiveSummary: "The enterprise software industry is experiencing rapid transformation driven by AI adoption, cloud migration, and regulatory changes. Key trends indicate accelerated digital transformation with 78% of companies prioritizing AI integration.",
-
-    aiAdoption: "78%",
-
-    cloudMigration: "45%",
-
-    regulatory: "12",
-
-    trendSnapshots: [
-
-      { title: "AI Integration", metric: "78% adoption rate", type: 'adoption' as const },
-
-      { title: "Cloud Migration", metric: "45% increase YoY", type: 'growth' as const },
-
-      { title: "Regulatory Impact", metric: "12 new policies", type: 'performance' as const }
-
-    ],
-
-    recommendations: {
-
-      primaryFocus: "Prioritize AI-driven solutions and cloud-native architecture to capture the growing market demand for intelligent automation.",
-
-      marketEntry: "Target mid-market enterprises in APAC and Europe where regulatory compliance and AI adoption create the strongest business case."
-
-    },
-
-    risks: [
-
-      "Regulatory uncertainty in AI governance could slow enterprise adoption",
-
-      "Cloud vendor lock-in risks may drive customers toward multi-cloud strategies",
-
-      "Skills shortage in AI/ML talent could limit implementation speed"
-
-    ],
-
-    timestamp: null as string | null
-
-  });
+  const [industryTrendsData, setIndustryTrendsData] = useState(getInitialIndustryTrendsData());
 
   const [industryTrendsLastEditedField, setIndustryTrendsLastEditedField] = useState("");
 
@@ -2309,6 +2330,7 @@ const MarketResearch = React.memo(() => {
           };
           
           setIndustryTrendsData(updatedData);
+          saveIndustryTrendsDataToLocalStorage(updatedData);
           console.log('✅ Industry Trends data updated successfully');
         } else {
           console.log('ℹ️ Current Industry Trends data is up to date');
@@ -4191,7 +4213,11 @@ const MarketResearch = React.memo(() => {
 
     );
 
-    setIndustryTrendsData(prev => ({ ...prev, executiveSummary: value }));
+    setIndustryTrendsData(prev => {
+      const updated = { ...prev, executiveSummary: value };
+      saveIndustryTrendsDataToLocalStorage(updated);
+      return updated;
+    });
 
     setIndustryTrendsLastEditedField('executiveSummary');
 
@@ -4227,7 +4253,11 @@ const MarketResearch = React.memo(() => {
 
     );
 
-    setIndustryTrendsData(prev => ({ ...prev, aiAdoption: value }));
+    setIndustryTrendsData(prev => {
+      const updated = { ...prev, aiAdoption: value };
+      saveIndustryTrendsDataToLocalStorage(updated);
+      return updated;
+    });
 
   };
 
@@ -4249,7 +4279,11 @@ const MarketResearch = React.memo(() => {
 
     );
 
-    setIndustryTrendsData(prev => ({ ...prev, cloudMigration: value }));
+    setIndustryTrendsData(prev => {
+      const updated = { ...prev, cloudMigration: value };
+      saveIndustryTrendsDataToLocalStorage(updated);
+      return updated;
+    });
 
   };
 
@@ -4271,7 +4305,11 @@ const MarketResearch = React.memo(() => {
 
     );
 
-    setIndustryTrendsData(prev => ({ ...prev, regulatory: value }));
+    setIndustryTrendsData(prev => {
+      const updated = { ...prev, regulatory: value };
+      saveIndustryTrendsDataToLocalStorage(updated);
+      return updated;
+    });
 
   };
 
@@ -4295,7 +4333,11 @@ const MarketResearch = React.memo(() => {
 
     );
 
-    setIndustryTrendsData(prev => ({ ...prev, trendSnapshots: snapshots }));
+    setIndustryTrendsData(prev => {
+      const updated = { ...prev, trendSnapshots: snapshots };
+      saveIndustryTrendsDataToLocalStorage(updated);
+      return updated;
+    });
 
     setIndustryTrendsLastEditedField('trendSnapshots');
 
@@ -6310,14 +6352,6 @@ const MarketResearch = React.memo(() => {
                        onMarketSizeRefresh={() => fetchMarketSizeData(true)}
 
                       // Industry Trends props
-                      // Debug: Log what we're passing to Industry Trends
-                      {...(console.log('🔍 DEBUG - Passing Industry Trends props:', {
-                        executiveSummary: industryTrendsData?.executiveSummary,
-                        aiAdoption: industryTrendsData?.aiAdoption,
-                        cloudMigration: industryTrendsData?.cloudMigration,
-                        regulatory: industryTrendsData?.regulatory,
-                        fullData: industryTrendsData
-                      }) || {})}
 
                       isIndustryTrendsEditing={isIndustryTrendsEditing}
 
@@ -6346,14 +6380,6 @@ const MarketResearch = React.memo(() => {
                       industryTrendsLastEditedField={industryTrendsLastEditedField}
 
                        // Competitor Landscape props - pass structured data
-                       // Debug: Log what we're passing to Competitor Landscape
-                       {...(console.log('🔍 DEBUG - Passing Competitor Landscape props:', {
-                         executiveSummary: competitorData?.executiveSummary,
-                         topPlayerShare: competitorData?.topPlayerShare,
-                         emergingPlayers: competitorData?.emergingPlayers,
-                         fundingNews: competitorData?.fundingNews,
-                         fullData: competitorData
-                       }) || {})}
 
                        isCompetitorEditing={isCompetitorEditing}
 

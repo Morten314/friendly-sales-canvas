@@ -130,6 +130,37 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
   const [editRegulatory, setEditRegulatory] = useState('');
   const [editTrendSnapshots, setEditTrendSnapshots] = useState<TrendSnapshot[]>([]);
 
+  // Save individual fields to localStorage whenever they change
+  useEffect(() => {
+    if (editExecutiveSummary) {
+      localStorage.setItem('industry-trends_executiveSummary', editExecutiveSummary);
+    }
+  }, [editExecutiveSummary]);
+
+  useEffect(() => {
+    if (editAiAdoption) {
+      localStorage.setItem('industry-trends_aiAdoption', editAiAdoption);
+    }
+  }, [editAiAdoption]);
+
+  useEffect(() => {
+    if (editCloudMigration) {
+      localStorage.setItem('industry-trends_cloudMigration', editCloudMigration);
+    }
+  }, [editCloudMigration]);
+
+  useEffect(() => {
+    if (editRegulatory) {
+      localStorage.setItem('industry-trends_regulatory', editRegulatory);
+    }
+  }, [editRegulatory]);
+
+  useEffect(() => {
+    if (editTrendSnapshots && editTrendSnapshots.length > 0) {
+      localStorage.setItem('industry-trends_trendSnapshots', JSON.stringify(editTrendSnapshots));
+    }
+  }, [editTrendSnapshots]);
+
   const handleModify = () => {
     onIndustryTrendsToggleEdit();
   };
