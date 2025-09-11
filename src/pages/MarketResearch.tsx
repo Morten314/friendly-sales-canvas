@@ -5864,11 +5864,10 @@ const MarketResearch = React.memo(() => {
   // Simple delay function for rate limiting
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-  // Sequential refresh function to avoid rate limiting
-  const sequentialRefresh = async () => {
-    console.log('🔄🔄🔄 SEQUENTIAL REFRESH - Starting sequential API calls to avoid rate limiting...');
+  // Parallel refresh function for faster loading
+  const parallelRefresh = async () => {
+    console.log('🚀🚀🚀 PARALLEL REFRESH - Starting parallel API calls for faster loading...');
     
-    const results: PromiseSettledResult<any>[] = [];
     const components = [
       { name: 'Market Size', fetchFn: fetchMarketSizeData },
       { name: 'Industry Trends', fetchFn: fetchIndustryTrendsData },
@@ -5877,35 +5876,40 @@ const MarketResearch = React.memo(() => {
       { name: 'Regulatory Compliance', fetchFn: fetchRegulatoryData }
     ];
     
-    // Process components sequentially with delays
-    for (let i = 0; i < components.length; i++) {
-      const component = components[i];
-      console.log(`🔄 Processing ${component.name} (${i + 1}/${components.length})...`);
-      
+    // Process all components in parallel with rate limiting
+    const promises = components.map(async (component, index) => {
       try {
-        // Add delay between API calls (except for the first one)
-        if (i > 0) {
-          const delayMs = 5000; // 5 seconds between calls to stay well under rate limit
-          console.log(`⏳ Waiting ${delayMs}ms before ${component.name} API call...`);
-          await delay(delayMs);
+        // Add small staggered delay to prevent overwhelming the API
+        const staggerDelay = index * 200; // 200ms between each component start
+        if (staggerDelay > 0) {
+          await new Promise(resolve => setTimeout(resolve, staggerDelay));
         }
         
-        const result = await component.fetchFn(true, false);
-        results.push({ status: 'fulfilled', value: result });
+        console.log(`🚀 Starting ${component.name} API call...`);
+        const result = await executeWithRateLimit(
+          () => component.fetchFn(true, false),
+          component.name
+        );
+        
         console.log(`✅ ${component.name} completed successfully`);
+        return { status: 'fulfilled', value: result };
         
       } catch (error) {
         console.error(`❌ ${component.name} fetch failed:`, error);
-        results.push({ 
+        return { 
           status: 'rejected', 
           reason: { 
             status: 'error', 
             component: component.name.toLowerCase().replace(' ', '-'), 
             error: error instanceof Error ? error.message : 'Unknown error' 
           } 
-        });
+        };
       }
-    }
+    });
+    
+    // Wait for all components to complete
+    const results = await Promise.allSettled(promises);
+    console.log('🎉 All parallel API calls completed');
     
     return results;
   };
