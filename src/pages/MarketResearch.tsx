@@ -2923,7 +2923,7 @@ const MarketResearch = React.memo(() => {
 
       const payload = {
 
-        user_id: "string",
+        user_id: "brewra",
 
         component_name: "competitor landscape", // Back to original format
 
@@ -3085,6 +3085,12 @@ const MarketResearch = React.memo(() => {
         
 
         console.log('🔍🏆 FULL API RESPONSE STRUCTURE:', JSON.stringify(apiData, null, 2));
+        console.log('🔍🏆 API RESPONSE SUMMARY:');
+        console.log('  - Has executiveSummary:', !!apiData.executiveSummary);
+        console.log('  - Has topPlayerShare:', !!apiData.topPlayerShare);
+        console.log('  - Has emergingPlayers:', !!apiData.emergingPlayers);
+        console.log('  - Has uiComponents:', !!apiData.uiComponents);
+        console.log('  - uiComponents count:', apiData.uiComponents?.length || 0);
 
         
 
@@ -3127,6 +3133,11 @@ const MarketResearch = React.memo(() => {
           const sectionComponent = apiData.uiComponents.find(comp => comp.type === 'section');
 
           const newsComponent = apiData.uiComponents.find(comp => comp.type === 'news');
+          
+          console.log('🔍🏆 uiComponents extraction debug:');
+          console.log('  - reportComponent:', reportComponent);
+          console.log('  - sectionComponent:', sectionComponent);
+          console.log('  - newsComponent:', newsComponent);
 
           
 

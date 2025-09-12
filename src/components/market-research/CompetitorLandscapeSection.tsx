@@ -671,19 +671,33 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
     hasCompetitorData: !!competitorData,
     executiveSummary,
     localExecutiveSummary,
-    competitorDataExecutiveSummary: competitorData?.executiveSummary
+    competitorDataExecutiveSummary: competitorData?.executiveSummary,
+    competitorDataTimestamp: competitorData?.timestamp,
+    isRefreshing
   });
 
-  // Ensure we have some data to display - prioritize competitorData from API over fallback props
-  const displayExecutiveSummary = localExecutiveSummary || competitorData?.executiveSummary || executiveSummary || 'No data available';
-  const displayTopPlayerShare = localTopPlayerShare || competitorData?.topPlayerShare || topPlayerShare || 'No data available';
-  const displayEmergingPlayers = localEmergingPlayers || competitorData?.emergingPlayers || emergingPlayers || 'No data available';
+  // Ensure we have some data to display - prioritize fresh API data (competitorData) over local state and fallback props
+  const displayExecutiveSummary = competitorData?.executiveSummary || localExecutiveSummary || executiveSummary || 'No data available';
+  const displayTopPlayerShare = competitorData?.topPlayerShare || localTopPlayerShare || topPlayerShare || 'No data available';
+  const displayEmergingPlayers = competitorData?.emergingPlayers || localEmergingPlayers || emergingPlayers || 'No data available';
 
   console.log('- displayExecutiveSummary:', displayExecutiveSummary);
   console.log('- displayTopPlayerShare:', displayTopPlayerShare);
   console.log('- displayEmergingPlayers:', displayEmergingPlayers);
   console.log('- isRefreshing:', isRefreshing);
   console.log('- competitorData.timestamp:', competitorData?.timestamp);
+  console.log('🔍 Data source priority check:');
+  console.log('  - Using competitorData.executiveSummary:', !!competitorData?.executiveSummary);
+  console.log('  - Using localExecutiveSummary:', !competitorData?.executiveSummary && !!localExecutiveSummary);
+  console.log('  - Using executiveSummary prop:', !competitorData?.executiveSummary && !localExecutiveSummary && !!executiveSummary);
+  
+  // Debug: Show actual content of competitorData
+  console.log('🔍 CompetitorData content analysis:');
+  console.log('  - competitorData.executiveSummary:', competitorData?.executiveSummary);
+  console.log('  - competitorData.topPlayerShare:', competitorData?.topPlayerShare);
+  console.log('  - competitorData.emergingPlayers:', competitorData?.emergingPlayers);
+  console.log('  - competitorData.uiComponents length:', competitorData?.uiComponents?.length);
+  console.log('  - competitorData keys:', competitorData ? Object.keys(competitorData) : 'null');
 
   return (
     <div className={`${isSplitView ? 'flex gap-6' : ''}`}>
