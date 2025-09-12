@@ -2734,17 +2734,22 @@ const MarketResearch = React.memo(() => {
 
         
 
-        const shouldUpdate = refresh || !currentTimestamp || !regulatoryData?.executiveSummary || (apiData && (apiData.executiveSummary || apiData.euAiActDeadline)) || (newTimestamp && isTimestampNewer(newTimestamp, currentTimestamp));
+        // Only update if we have fresh data or if this is a forced refresh
+        // Don't update if we don't have new data to replace existing data
+        const hasNewData = (apiData.executiveSummary !== null && apiData.executiveSummary !== undefined) || (apiData.euAiActDeadline !== null && apiData.euAiActDeadline !== undefined);
+        const shouldUpdate = refresh && (hasNewData || !currentTimestamp || !regulatoryData?.executiveSummary);
 
         console.log('🔍🚀 REGULATORY UPDATE DECISION:');
 
         console.log('  - refresh param:', refresh);
 
+        console.log('  - hasNewData:', hasNewData);
+
         console.log('  - shouldUpdate:', shouldUpdate);
 
         console.log('  - !currentTimestamp:', !currentTimestamp);
 
-        console.log('  - isTimestampNewer result:', newTimestamp ? isTimestampNewer(newTimestamp, currentTimestamp) : 'no newTimestamp');
+        console.log('  - !regulatoryData?.executiveSummary:', !regulatoryData?.executiveSummary);
 
         
 
@@ -3223,17 +3228,22 @@ const MarketResearch = React.memo(() => {
 
         
 
-        const shouldUpdate = refresh || !currentTimestamp || !competitorData?.executiveSummary || (apiData && (apiData.executiveSummary || apiData.topPlayerShare || apiData.emergingPlayers)) || (newTimestamp && isTimestampNewer(newTimestamp, currentTimestamp));
+        // Only update if we have fresh data or if this is a forced refresh
+        // Don't update if we don't have new data to replace existing data
+        const hasNewData = (executiveSummary !== null) || (topPlayerShare !== null) || (emergingPlayers !== null) || (fundingNews !== null);
+        const shouldUpdate = refresh && (hasNewData || !currentTimestamp || !competitorData?.executiveSummary);
 
         console.log('🔍🏆 COMPETITOR UPDATE DECISION:');
 
         console.log('  - refresh param:', refresh);
 
+        console.log('  - hasNewData:', hasNewData);
+
         console.log('  - shouldUpdate:', shouldUpdate);
 
         console.log('  - !currentTimestamp:', !currentTimestamp);
 
-        console.log('  - isTimestampNewer result:', newTimestamp ? isTimestampNewer(newTimestamp, currentTimestamp) : 'no newTimestamp');
+        console.log('  - !competitorData?.executiveSummary:', !competitorData?.executiveSummary);
 
         
 
@@ -3300,6 +3310,7 @@ const MarketResearch = React.memo(() => {
           
 
           // Force immediate state update with callback to ensure we have latest state
+          // Only update if we have fresh data - don't preserve stale data
 
           setCompetitorData(prevData => {
 
@@ -3307,6 +3318,8 @@ const MarketResearch = React.memo(() => {
 
               ...prevData,
 
+              // Only use new data if it's not null, otherwise keep existing data
+              // This prevents components from switching to fallback data
               executiveSummary: executiveSummary !== null ? executiveSummary : (prevData?.executiveSummary || ''),
 
               topPlayerShare: topPlayerShare !== null ? topPlayerShare : (prevData?.topPlayerShare || ''),
