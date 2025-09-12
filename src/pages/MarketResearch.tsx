@@ -457,6 +457,40 @@ const MarketResearch = React.memo(() => {
   });
   const [refreshAttempt, setRefreshAttempt] = useState(0);
   const [validationAttempts, setValidationAttempts] = useState(0);
+  const [consecutiveValidations, setConsecutiveValidations] = useState(0);
+  const [globalTimeoutId, setGlobalTimeoutId] = useState<NodeJS.Timeout | null>(null);
+
+  // Cleanup global timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (globalTimeoutId) {
+        clearTimeout(globalTimeoutId);
+      }
+    };
+  }, [globalTimeoutId]);
+
+  // Global timeout to prevent infinite loading (2 minutes max)
+  const setGlobalLoadingTimeout = () => {
+    // Clear any existing timeout
+    if (globalTimeoutId) {
+      clearTimeout(globalTimeoutId);
+    }
+    
+    const timeoutId = setTimeout(() => {
+      console.log('⏰ GLOBAL TIMEOUT: 2 minutes reached, forcing loading screen to disappear');
+      console.log('⏰ Current component status:', componentStatus);
+      console.log('⏰ Current loading phase:', loadingPhase);
+      
+      setIsRefreshing(false);
+      toast({
+        title: "Loading Complete",
+        description: "Maximum loading time reached. Some components may still be processing.",
+        duration: 5000,
+      });
+    }, 120000); // 2 minutes
+    
+    setGlobalTimeoutId(timeoutId);
+  };
 
   // Function to start the rendering phase monitoring
   const startRenderingPhase = () => {
@@ -537,7 +571,7 @@ const MarketResearch = React.memo(() => {
   const validateAllComponentsHaveFreshData = () => {
     setValidationAttempts(prev => prev + 1);
     const currentAttempt = validationAttempts + 1;
-    const maxValidationAttempts = 100; // Maximum 5 minutes of validation (100 attempts * 3 seconds)
+    const maxValidationAttempts = 20; // Maximum 1 minute of validation (20 attempts * 3 seconds)
     
     console.log(`🔍 VALIDATION FUNCTION CALLED - Attempt ${currentAttempt}/${maxValidationAttempts}`);
     console.log('🔍 Validating all components have fresh data...');
@@ -595,22 +629,62 @@ const MarketResearch = React.memo(() => {
       .map(([name]) => name);
     
     if (allComponentsHaveData) {
-      console.log('✅ All components have fresh data! Transitioning to rendering phase...');
+      console.log('✅ All components have fresh data! Incrementing consecutive validations...');
       
-      // Transition to rendering phase
-      setLoadingPhase('rendering');
-      setComponentRenderingStatus({
-        'Market Size': 'rendering',
-        'Industry Trends': 'rendering', 
-        'Market Entry': 'rendering',
-        'Competitor Landscape': 'rendering',
-        'Regulatory Compliance': 'rendering'
-      });
+      // Increment consecutive validations
+      const newConsecutiveValidations = consecutiveValidations + 1;
+      setConsecutiveValidations(newConsecutiveValidations);
       
-      // Start monitoring rendering completion
-      startRenderingPhase();
+      console.log(`✅ Consecutive validations: ${newConsecutiveValidations}/2`);
+      
+      // Check if we have 2 consecutive successful validations
+      if (newConsecutiveValidations >= 2) {
+        console.log('🎉 2 consecutive validations achieved! Setting components to success and transitioning to rendering phase...');
+        
+        // NOW set all components to success since validation passed
+        setComponentStatus({
+          'Market Size': 'success',
+          'Industry Trends': 'success', 
+          'Market Entry': 'success',
+          'Competitor Landscape': 'success',
+          'Regulatory Compliance': 'success'
+        });
+        
+        // Clear global timeout since we're proceeding successfully
+        if (globalTimeoutId) {
+          clearTimeout(globalTimeoutId);
+          setGlobalTimeoutId(null);
+        }
+        
+        // Transition to rendering phase
+        setLoadingPhase('rendering');
+        setComponentRenderingStatus({
+          'Market Size': 'rendering',
+          'Industry Trends': 'rendering', 
+          'Market Entry': 'rendering',
+          'Competitor Landscape': 'rendering',
+          'Regulatory Compliance': 'rendering'
+        });
+        
+        // Start monitoring rendering completion
+        startRenderingPhase();
+        return; // Exit validation function - no need to continue
+      } else {
+        console.log(`⏳ Need ${2 - newConsecutiveValidations} more consecutive validations. Continuing validation...`);
+        
+        // Continue validation to ensure consistency
+        setTimeout(() => {
+          validateAllComponentsHaveFreshData();
+        }, 3000);
+        return;
+      }
     } else {
       console.log('⚠️ Some components still missing fresh data:', missingDataComponents);
+      console.log('⚠️ Resetting consecutive validations to 0');
+      
+      // Reset consecutive validations since not all components have data
+      setConsecutiveValidations(0);
+      
       console.log('⚠️ Detailed missing data analysis:');
       Object.entries(componentDataChecks).forEach(([name, hasData]) => {
         if (!hasData) {
@@ -639,6 +713,12 @@ const MarketResearch = React.memo(() => {
         const successfulComponents = Object.entries(componentStatus).filter(([name, status]) => status === 'success');
         console.log('⏰ Successful components:', successfulComponents.map(([name]) => name));
         
+        // Clear global timeout
+        if (globalTimeoutId) {
+          clearTimeout(globalTimeoutId);
+          setGlobalTimeoutId(null);
+        }
+        
         // Only hide loading screen if we're not in rendering phase
         if (loadingPhase !== 'rendering') {
           setIsRefreshing(false);
@@ -648,11 +728,8 @@ const MarketResearch = React.memo(() => {
             duration: 3000,
           });
         } else {
-          console.log('⏰ Still in rendering phase, continuing to monitor...');
-          // Continue monitoring rendering even if validation times out
-          setTimeout(() => {
-            validateAllComponentsHaveFreshData();
-          }, 3000);
+          console.log('⏰ Still in rendering phase, rendering monitoring is already active');
+          // No need to continue validation - startRenderingPhase() is already monitoring
         }
       } else {
         console.log('⏳ Waiting 3 more seconds for components to process data...');
@@ -1693,10 +1770,12 @@ const MarketResearch = React.memo(() => {
         });
         setRefreshAttempt(1);
         setValidationAttempts(0); // Reset validation attempts for new refresh
+        setConsecutiveValidations(0); // Reset consecutive validations for new refresh
         console.log('🔄 Starting first refresh - all components will be fetched');
       } else {
         setRefreshAttempt(prev => prev + 1);
         setValidationAttempts(0); // Reset validation attempts for retry
+        setConsecutiveValidations(0); // Reset consecutive validations for retry
         console.log(`🔄 Starting retry refresh (attempt ${refreshAttempt + 1}) - all components will be fetched`);
         console.log(`🔄 Current component status before retry:`, componentStatus);
       }
@@ -1704,6 +1783,9 @@ const MarketResearch = React.memo(() => {
       console.log('🔄 Setting isRefreshing to true');
       setIsRefreshing(true);
       setError(null);
+      
+      // Set global timeout to prevent infinite loading
+      setGlobalLoadingTimeout();
       
       // Get company profile data for context
       let companyProfileData = null;
@@ -1806,10 +1888,10 @@ const MarketResearch = React.memo(() => {
           console.log(`⏱️ ${component.name} API call took ${duration}ms`);
           results.push({ status: 'fulfilled', value: result });
           
-          // Update component status to success
-          currentStatus[component.name] = 'success';
-          setComponentStatus(prev => ({ ...prev, [component.name]: 'success' }));
-          console.log(`✅ ${component.name} completed successfully in ${duration}ms`);
+          // Mark component as API complete (but not yet validated)
+          currentStatus[component.name] = 'pending'; // Keep as pending until validation
+          setComponentStatus(prev => ({ ...prev, [component.name]: 'pending' }));
+          console.log(`✅ ${component.name} API call completed successfully in ${duration}ms - awaiting validation`);
           
         } catch (error) {
           console.error(`❌ ${component.name} fetch failed:`, error);
@@ -1831,23 +1913,23 @@ const MarketResearch = React.memo(() => {
       // Update the component status state with the current status
       setComponentStatus(currentStatus);
       
-      // Check if all components are now successful using local status
-      const allSuccessful = Object.values(currentStatus).every(status => status === 'success');
+      // Check if all API calls are complete (no failures)
+      const allApiCallsComplete = Object.values(currentStatus).every(status => status !== 'failed');
       const hasFailures = Object.values(currentStatus).some(status => status === 'failed');
       
       console.log('📊 Final component status after processing:', currentStatus);
-      console.log('📊 All successful:', allSuccessful);
+      console.log('📊 All API calls complete:', allApiCallsComplete);
       console.log('📊 Has failures:', hasFailures);
       
-      if (allSuccessful) {
-        console.log('🎉 All components completed successfully!');
+      if (allApiCallsComplete) {
+        console.log('🎉 All API calls completed! Starting validation...');
         console.log('🎉 About to call validateAllComponentsHaveFreshData...');
         console.log('🎉 Current component status:', currentStatus);
         
         // Clear the refresh timeout since we're completing successfully
         clearTimeout(refreshTimeout);
         
-        // Validate that all components have fresh data before hiding loading screen
+        // Validate that all components have fresh data before showing success
         validateAllComponentsHaveFreshData();
       } else if (hasFailures && refreshAttempt < 3) {
         console.log(`⚠️ Some components failed. Will retry failed components (attempt ${refreshAttempt + 1}/3)`);
@@ -2535,39 +2617,37 @@ const MarketResearch = React.memo(() => {
 
       const payload = {
 
-        user_id: "brewra",
+        user_id: "string",
 
         component_name: "regulatory & compliance highlights",
 
-        refresh: refresh,
-
-        force_refresh: refresh,
-
-        cache_bypass: refresh,
-
-        bypass_all_cache: refresh,
-
-        request_timestamp: currentTime,
-
-        request_id: randomId,
-
-        additionalPrompt: profile.companyUrl ? `Company: ${profile.companyUrl}, Industry: ${profile.industry}, Size: ${profile.companySize}, GTM: ${profile.primaryGTMModel}, Goals: ${profile.strategicGoals}` : "",
-
         data: {
 
-          company: profile.companyUrl || "OrbiSelf",
+          additionalPrompt: profile.companyUrl ? {
 
-          product: "Convoic.AI", 
+            company: profile.companyUrl,
 
-          target_market: profile.targetMarkets?.[0] || "Indian college students (Tier 2 & 3)",
+            industry: profile.industry,
 
-          region: profile.targetMarkets?.[0] || "India",
+            companySize: profile.companySize,
 
-          timestamp: currentTime,
+            targetMarkets: profile.targetMarkets,
 
-          force_new_data: refresh
+            strategicGoals: profile.strategicGoals,
 
-        }
+            website: profile.website,
+
+            gtmModel: profile.primaryGTMModel,
+
+            revenueStage: profile.revenueStage,
+
+            keyBuyerPersona: profile.keyBuyerPersona
+
+          } : {}
+
+        },
+
+        refresh: refresh
 
       };
 
@@ -2667,6 +2747,19 @@ const MarketResearch = React.memo(() => {
 
           console.log('✅ Found data in API response and data is newer - updating regulatory data');
 
+          console.log('🔍🚀 REGULATORY API DATA EXTRACTED:');
+          console.log('  - apiData.executiveSummary:', apiData.executiveSummary);
+          console.log('  - apiData.euAiActDeadline:', apiData.euAiActDeadline);
+          console.log('  - apiData.gdprCompliance:', apiData.gdprCompliance);
+          console.log('  - apiData.potentialFines:', apiData.potentialFines);
+          console.log('  - apiData.dataLocalization:', apiData.dataLocalization);
+          console.log('  - apiData.keyUpdates:', apiData.keyUpdates);
+
+          console.log('🔍🚀 CURRENT REGULATORY DATA:');
+          console.log('  - regulatoryData.executiveSummary:', regulatoryData.executiveSummary);
+          console.log('  - regulatoryData.euAiActDeadline:', regulatoryData.euAiActDeadline);
+          console.log('  - regulatoryData.gdprCompliance:', regulatoryData.gdprCompliance);
+
           
 
           // Update regulatory data state with API response
@@ -2690,6 +2783,11 @@ const MarketResearch = React.memo(() => {
             uiComponents: apiData.uiComponents || []
 
           };
+
+          console.log('🔍🚀 UPDATED REGULATORY DATA:');
+          console.log('  - updatedRegulatoryData.executiveSummary:', updatedRegulatoryData.executiveSummary);
+          console.log('  - updatedRegulatoryData.euAiActDeadline:', updatedRegulatoryData.euAiActDeadline);
+          console.log('  - updatedRegulatoryData.gdprCompliance:', updatedRegulatoryData.gdprCompliance);
 
           
 
@@ -2733,7 +2831,7 @@ const MarketResearch = React.memo(() => {
 
       console.error('❌🏆 API Error Status:', error.status);
 
-      console.error('❌🏆 API Error Headers:', Object.fromEntries(error.headers.entries()));
+      console.error('❌🏆 API Error Headers:', error.headers ? Object.fromEntries(error.headers.entries()) : 'No headers');
 
       console.error('❌🏆 API Error Message:', error.message);
 
@@ -2741,7 +2839,7 @@ const MarketResearch = React.memo(() => {
 
       // Set error state - no fallback data generation
 
-      setMarketSizeError('Failed to load regulatory data');
+      setRegulatoryError('Failed to load regulatory data');
 
           } finally {
 
@@ -2881,15 +2979,26 @@ const MarketResearch = React.memo(() => {
 
           console.log(`🔄🏆 Attempting API call (attempt ${retryCount + 1}/${maxRetries + 1})`);
 
-          result = await apiFetchJson('market-research', {
+          result = await fetch('/api/market-research', {
 
             method: 'POST',
+
+            headers: {
+
+              'Content-Type': 'application/json',
+
+            },
 
             body: JSON.stringify(payload)
 
           });
 
+          result = await result.json();
+
           console.log('✅🏆 API call successful');
+          console.log('✅🏆 API response structure:', result);
+          console.log('✅🏆 API response status:', result?.status);
+          console.log('✅🏆 API response data exists:', !!result?.data);
 
           break; // Success, exit retry loop
 
@@ -2955,13 +3064,13 @@ const MarketResearch = React.memo(() => {
 
         // Extract data from API response - try multiple approaches for robustness
 
-        let executiveSummary = '';
+        let executiveSummary = null;
 
-        let topPlayerShare = '';
+        let topPlayerShare = null;
 
-        let emergingPlayers = '';
+        let emergingPlayers = null;
 
-        let fundingNews = [];
+        let fundingNews = null;
 
         
 
@@ -2971,13 +3080,13 @@ const MarketResearch = React.memo(() => {
 
         // First, try direct properties (like other components)
 
-        executiveSummary = apiData.executiveSummary || '';
+        executiveSummary = apiData.executiveSummary || null;
 
-        topPlayerShare = apiData.topPlayerShare || '';
+        topPlayerShare = apiData.topPlayerShare || null;
 
-        emergingPlayers = apiData.emergingPlayers || '';
+        emergingPlayers = apiData.emergingPlayers || null;
 
-        fundingNews = apiData.fundingNews || [];
+        fundingNews = apiData.fundingNews || null;
 
         
 
@@ -3015,7 +3124,7 @@ const MarketResearch = React.memo(() => {
 
           if (!executiveSummary) {
 
-            executiveSummary = reportComponent?.executiveSummary || '';
+            executiveSummary = reportComponent?.executiveSummary || null;
 
           }
 
@@ -3033,13 +3142,13 @@ const MarketResearch = React.memo(() => {
 
             if (!topPlayerShare) {
 
-              topPlayerShare = topPlayerMetric?.value || '';
+              topPlayerShare = topPlayerMetric?.value || null;
 
             }
 
             if (!emergingPlayers) {
 
-              emergingPlayers = emergingMetric?.value || '';
+              emergingPlayers = emergingMetric?.value || null;
 
             }
 
@@ -3051,7 +3160,7 @@ const MarketResearch = React.memo(() => {
 
           if (!fundingNews || fundingNews.length === 0) {
 
-            fundingNews = newsComponent?.headlines || [];
+            fundingNews = newsComponent?.headlines || null;
 
           }
 
@@ -3121,29 +3230,39 @@ const MarketResearch = React.memo(() => {
 
           console.log('🔍🏆 FINAL EXTRACTED DATA BEFORE UPDATE:');
 
-          console.log('  - executiveSummary:', executiveSummary);
+          console.log('  - executiveSummary:', executiveSummary, '(type:', typeof executiveSummary, ')');
 
-          console.log('  - topPlayerShare:', topPlayerShare);
+          console.log('  - topPlayerShare:', topPlayerShare, '(type:', typeof topPlayerShare, ')');
 
-          console.log('  - emergingPlayers:', emergingPlayers);
+          console.log('  - emergingPlayers:', emergingPlayers, '(type:', typeof emergingPlayers, ')');
 
-          console.log('  - fundingNews:', fundingNews);
+          console.log('  - fundingNews:', fundingNews, '(type:', typeof fundingNews, ')');
+
+          console.log('🔍🏆 DATA VALIDATION:');
+
+          console.log('  - executiveSummary is null:', executiveSummary === null);
+
+          console.log('  - topPlayerShare is null:', topPlayerShare === null);
+
+          console.log('  - emergingPlayers is null:', emergingPlayers === null);
+
+          console.log('  - fundingNews is null:', fundingNews === null);
 
           
 
-          // Update competitor data with API response - prioritize fresh API data
+          // Update competitor data with API response - prioritize fresh API data, fallback to existing
 
           const updatedData = {
 
             ...competitorData,
 
-            executiveSummary: executiveSummary, // Use fresh API data, not fallback
+            executiveSummary: executiveSummary !== null ? executiveSummary : (competitorData?.executiveSummary || ''), // Use fresh API data, fallback to existing
 
-            topPlayerShare: topPlayerShare, // Use fresh API data, not fallback
+            topPlayerShare: topPlayerShare !== null ? topPlayerShare : (competitorData?.topPlayerShare || ''), // Use fresh API data, fallback to existing
 
-            emergingPlayers: emergingPlayers, // Use fresh API data, not fallback
+            emergingPlayers: emergingPlayers !== null ? emergingPlayers : (competitorData?.emergingPlayers || ''), // Use fresh API data, fallback to existing
 
-            fundingNews: fundingNews, // Use fresh API data, not fallback
+            fundingNews: fundingNews !== null ? fundingNews : (competitorData?.fundingNews || []), // Use fresh API data, fallback to existing
 
             timestamp: toUTCTimestamp(newTimestamp),
 
@@ -3175,13 +3294,13 @@ const MarketResearch = React.memo(() => {
 
               ...prevData,
 
-              executiveSummary: executiveSummary,
+              executiveSummary: executiveSummary !== null ? executiveSummary : (prevData?.executiveSummary || ''),
 
-              topPlayerShare: topPlayerShare,
+              topPlayerShare: topPlayerShare !== null ? topPlayerShare : (prevData?.topPlayerShare || ''),
 
-              emergingPlayers: emergingPlayers,
+              emergingPlayers: emergingPlayers !== null ? emergingPlayers : (prevData?.emergingPlayers || ''),
 
-              fundingNews: fundingNews,
+              fundingNews: fundingNews !== null ? fundingNews : (prevData?.fundingNews || []),
 
               timestamp: toUTCTimestamp(newTimestamp),
 
@@ -6364,6 +6483,7 @@ const MarketResearch = React.memo(() => {
                 maxRetries={3}
                 isValidating={validationAttempts > 0}
                 validationAttempt={validationAttempts}
+                consecutiveValidations={consecutiveValidations}
                 loadingPhase={loadingPhase}
                 componentRenderingStatus={componentRenderingStatus}
               />

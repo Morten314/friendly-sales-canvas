@@ -42,7 +42,7 @@ export const ComponentStatusLoadingScreen: React.FC<ComponentStatusLoadingScreen
   const hasFailures = Object.values(componentStatus).some(status => status === 'failed');
   const isRetrying = hasFailures && refreshAttempt < maxRetries;
   
-  // Enhanced status logic for two-phase loading
+  // Enhanced status logic for three-phase loading (API -> Validation -> Rendering)
   const getComponentDisplayStatus = (componentName: string) => {
     const apiStatus = componentStatus[componentName];
     const renderingStatus = componentRenderingStatus[componentName];
@@ -54,6 +54,10 @@ export const ComponentStatusLoadingScreen: React.FC<ComponentStatusLoadingScreen
       if (renderingStatus === 'complete') return 'success';
       if (renderingStatus === 'rendering') return 'pending';
       return 'pending';
+    } else if (isValidating) {
+      // During validation, show loading status regardless of API status
+      if (apiStatus === 'failed') return 'failed';
+      return 'pending'; // Show loading during validation
     } else {
       return 'success';
     }
@@ -70,6 +74,10 @@ export const ComponentStatusLoadingScreen: React.FC<ComponentStatusLoadingScreen
       if (renderingStatus === 'complete') return 100;
       if (renderingStatus === 'rendering') return 75;
       return 50; // API complete, rendering pending
+    } else if (isValidating) {
+      // During validation, show 75% progress (API complete, validating)
+      if (apiStatus === 'failed') return 0;
+      return 75;
     } else {
       return 100;
     }
@@ -115,10 +123,10 @@ export const ComponentStatusLoadingScreen: React.FC<ComponentStatusLoadingScreen
         bgColor: "from-green-50 to-emerald-50",
         borderColor: "border-green-200"
       };
-    } else if (allSuccessful && isValidating) {
+    } else if (isValidating) {
       return {
         title: "Validating Fresh Data... 🔍",
-        subtitle: `Ensuring all components have fresh data (${validationAttempt}/10)`,
+        subtitle: `Ensuring all components have fresh data (${validationAttempt}/20)`,
         bgColor: "from-purple-50 to-indigo-50",
         borderColor: "border-purple-200"
       };
@@ -200,7 +208,8 @@ export const ComponentStatusLoadingScreen: React.FC<ComponentStatusLoadingScreen
                         ></div>
                       </div>
                       <div className="text-xs text-gray-500 mt-1">
-                        {loadingPhase === 'api' ? 'API Call in progress...' : 'Rendering UI...'}
+                        {loadingPhase === 'api' ? 'API Call in progress...' : 
+                         isValidating ? 'Validating data...' : 'Rendering UI...'}
                       </div>
                     </div>
                   )}
@@ -218,8 +227,8 @@ export const ComponentStatusLoadingScreen: React.FC<ComponentStatusLoadingScreen
               <span className="font-medium text-blue-900">Validation Progress</span>
             </div>
             <div className="text-sm text-blue-800">
-              <p>Validation Attempt: {validationAttempt}/200</p>
-              <p>Consecutive Validations: {consecutiveValidations}/3</p>
+              <p>Validation Attempt: {validationAttempt}/20</p>
+              <p>Consecutive Validations: {consecutiveValidations}/2</p>
               <p>All 5 components must pass validation before loading screen disappears</p>
             </div>
           </div>
