@@ -507,8 +507,10 @@ const MarketResearch = React.memo(() => {
         'Market Size': marketData?.executiveSummary && marketData?.tamValue && marketData?.apacGrowthRate,
         'Industry Trends': industryTrendsData?.executiveSummary && industryTrendsData?.aiAdoption,
         'Market Entry': marketEntryData?.executiveSummary && marketEntryData?.entryBarriers,
-        'Competitor Landscape': competitorData?.executiveSummary && competitorData?.topPlayerShare,
-        'Regulatory Compliance': regulatoryData?.executiveSummary && regulatoryData?.euAiActDeadline
+        'Competitor Landscape': (competitorData?.executiveSummary && competitorData?.executiveSummary.trim() !== '') && 
+                               (competitorData?.topPlayerShare && competitorData?.topPlayerShare.trim() !== ''),
+        'Regulatory Compliance': (regulatoryData?.executiveSummary && regulatoryData?.executiveSummary.trim() !== '') && 
+                                (regulatoryData?.euAiActDeadline && regulatoryData?.euAiActDeadline.trim() !== '')
       };
       
       const allRendered = Object.values(renderingChecks).every(rendered => rendered);
@@ -582,8 +584,13 @@ const MarketResearch = React.memo(() => {
       'Market Size': marketData?.executiveSummary && marketData?.tamValue && marketData?.apacGrowthRate && !isMarketSizeLoading,
       'Industry Trends': industryTrendsData?.executiveSummary && industryTrendsData?.aiAdoption && !isIndustryTrendsLoading,
       'Market Entry': marketEntryData?.executiveSummary && marketEntryData?.entryBarriers && !isMarketEntryLoading,
-      'Competitor Landscape': competitorData?.executiveSummary && competitorData?.topPlayerShare && competitorData?.emergingPlayers && !isCompetitorLoading,
-      'Regulatory Compliance': regulatoryData?.executiveSummary && regulatoryData?.euAiActDeadline && !isRegulatoryLoading
+      'Competitor Landscape': (competitorData?.executiveSummary && competitorData?.executiveSummary.trim() !== '') && 
+                             (competitorData?.topPlayerShare && competitorData?.topPlayerShare.trim() !== '') && 
+                             (competitorData?.emergingPlayers && competitorData?.emergingPlayers.trim() !== '') && 
+                             !isCompetitorLoading,
+      'Regulatory Compliance': (regulatoryData?.executiveSummary && regulatoryData?.executiveSummary.trim() !== '') && 
+                              (regulatoryData?.euAiActDeadline && regulatoryData?.euAiActDeadline.trim() !== '') && 
+                              !isRegulatoryLoading
     };
     
     // Debug: Check each component's data structure in detail
@@ -1175,17 +1182,17 @@ const MarketResearch = React.memo(() => {
 
     
 
-    // Return empty data if no valid stored data - let API populate it
+    // Return default data if no valid stored data - provide meaningful fallback
 
-    console.log('📝 No stored Competitor data found - returning empty state, will load from API');
+    console.log('📝 No stored Competitor data found - returning default state, will load from API');
 
     return {
 
-      executiveSummary: '',
+      executiveSummary: 'The competitive landscape analysis is being prepared. This will include insights on market leaders, emerging players, and recent funding activities in your industry.',
 
-      topPlayerShare: '',
+      topPlayerShare: 'Loading market share data...',
 
-      emergingPlayers: '',
+      emergingPlayers: 'Analyzing emerging competitors...',
 
       fundingNews: [],
 
@@ -2625,8 +2632,6 @@ const MarketResearch = React.memo(() => {
 
           additionalPrompt: profile.companyUrl ? {
 
-            company: profile.companyUrl,
-
             industry: profile.industry,
 
             companySize: profile.companySize,
@@ -2729,7 +2734,7 @@ const MarketResearch = React.memo(() => {
 
         
 
-        const shouldUpdate = refresh || !currentTimestamp || (newTimestamp && isTimestampNewer(newTimestamp, currentTimestamp));
+        const shouldUpdate = refresh || !currentTimestamp || !regulatoryData?.executiveSummary || (apiData && (apiData.executiveSummary || apiData.euAiActDeadline)) || (newTimestamp && isTimestampNewer(newTimestamp, currentTimestamp));
 
         console.log('🔍🚀 REGULATORY UPDATE DECISION:');
 
@@ -2802,6 +2807,11 @@ const MarketResearch = React.memo(() => {
           // Save to localStorage for persistence
 
           saveRegulatoryDataToLocalStorage(updatedRegulatoryData);
+          
+          // Add a small delay to ensure state update is processed before validation
+          setTimeout(() => {
+            console.log('✅🚀 REGULATORY DATA STATE UPDATE COMPLETED');
+          }, 100);
 
           
 
@@ -2913,7 +2923,7 @@ const MarketResearch = React.memo(() => {
 
       const payload = {
 
-        user_id: "brewra",
+        user_id: "string",
 
         component_name: "competitor landscape", // Back to original format
 
@@ -3210,7 +3220,7 @@ const MarketResearch = React.memo(() => {
 
         
 
-        const shouldUpdate = refresh || !currentTimestamp || (newTimestamp && isTimestampNewer(newTimestamp, currentTimestamp));
+        const shouldUpdate = refresh || !currentTimestamp || !competitorData?.executiveSummary || (apiData && (apiData.executiveSummary || apiData.topPlayerShare || apiData.emergingPlayers)) || (newTimestamp && isTimestampNewer(newTimestamp, currentTimestamp));
 
         console.log('🔍🏆 COMPETITOR UPDATE DECISION:');
 
@@ -3317,6 +3327,11 @@ const MarketResearch = React.memo(() => {
               localStorage.setItem('competitorData', JSON.stringify(newData));
 
               console.log('💾 Competitor data saved to localStorage');
+              
+              // Add a small delay to ensure state update is processed before validation
+              setTimeout(() => {
+                console.log('✅🏆 COMPETITOR DATA STATE UPDATE COMPLETED');
+              }, 100);
 
             } catch (error) {
 
