@@ -3198,7 +3198,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-        // Check timestamp comparison
+        // Check timestamp comparison with timestampUtils (same pattern as other components)
 
         const currentTimestamp = competitorData.timestamp || null;
 
@@ -3206,17 +3206,9 @@ const MarketResearch = React.memo(() => {
 
         
 
-        console.log('🔍 COMPETITOR TIMESTAMP ANALYSIS (UTC):');
+        // Use proper UTC timestamp utilities for consistent comparison (same as Market Entry and Industry Trends)
 
-        console.log('  - Current request time (UTC):', new Date().toISOString());
-
-        console.log('  - Frontend data time (UTC):', currentTimestamp ? new Date(currentTimestamp).toISOString() : 'NO_TIMESTAMP');
-
-        console.log('  - Swagger data time (UTC):', newTimestamp ? new Date(newTimestamp).toISOString() : 'NO_TIMESTAMP');
-
-        console.log('  - Raw current timestamp:', currentTimestamp);
-
-        console.log('  - Raw new timestamp:', newTimestamp);
+        logTimestampComparison(currentTimestamp, newTimestamp, 'Competitor Landscape');
 
         
 
@@ -3274,7 +3266,7 @@ const MarketResearch = React.memo(() => {
 
             fundingNews: fundingNews !== null ? fundingNews : (competitorData?.fundingNews || []), // Use fresh API data, fallback to existing
 
-            timestamp: toUTCTimestamp(newTimestamp),
+            timestamp: toUTCTimestamp(newTimestamp), // Store as UTC timestamp (same as other components)
 
             uiComponents: apiData.uiComponents || []
 
@@ -3292,7 +3284,7 @@ const MarketResearch = React.memo(() => {
 
           console.log('  - New fundingNews:', fundingNews);
 
-          console.log('  - New timestamp:', toUTCTimestamp(newTimestamp));
+          console.log('  - New timestamp (UTC):', toUTCTimestamp(newTimestamp));
 
           
 
@@ -3312,7 +3304,7 @@ const MarketResearch = React.memo(() => {
 
               fundingNews: fundingNews !== null ? fundingNews : (prevData?.fundingNews || []),
 
-              timestamp: toUTCTimestamp(newTimestamp),
+              timestamp: toUTCTimestamp(newTimestamp), // Store as UTC timestamp (same as other components)
 
               uiComponents: apiData.uiComponents || []
 
