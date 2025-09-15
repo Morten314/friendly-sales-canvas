@@ -24,11 +24,11 @@ class RateLimitManager {
 
   constructor(config: Partial<RateLimitConfig> = {}) {
     this.config = {
-      maxRequestsPerMinute: 120, // Even higher for faster parallel loading
+      maxRequestsPerMinute: 200, // Increased for even faster parallel loading
       maxRetries: 1, // Minimal retries for faster failure handling
-      baseDelayMs: 25, // Very minimal delay for faster processing
-      maxDelayMs: 500, // Much reduced for faster processing
-      jitterMs: 10, // Minimal jitter for more predictable timing
+      baseDelayMs: 10, // Reduced from 25ms to 10ms for faster processing
+      maxDelayMs: 200, // Reduced from 500ms to 200ms for faster processing
+      jitterMs: 5, // Reduced from 10ms to 5ms for more predictable timing
       ...config
     };
   }
@@ -79,8 +79,8 @@ class RateLimitManager {
           // Put the request back at the front of the queue
           this.requestQueue.unshift(request);
           
-          // Wait for the next available slot
-          const waitTime = 60000 - (Date.now() - this.requestHistory[0]?.timestamp || 0);
+          // Wait for the next available slot (but cap at 5 seconds max)
+          const waitTime = Math.min(60000 - (Date.now() - this.requestHistory[0]?.timestamp || 0), 5000);
           if (waitTime > 0) {
             console.log(`⏳ Rate limit reached. Waiting ${Math.ceil(waitTime / 1000)}s before next request...`);
             await new Promise(resolve => setTimeout(resolve, waitTime));
