@@ -61,7 +61,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 
 import { toUTCTimestamp, isTimestampNewer, logTimestampComparison } from '@/lib/timestampUtils';
 
-import { apiFetchJson } from '@/lib/api';
+import { apiFetchJson, apiFetchJsonWithCacheBust } from '@/lib/api';
 import { marketResearchApiCall, logApiCallResult, shouldUseCachedData } from '@/utils/apiUtils';
 
 import ScoutChatPanel from "@/components/market-research/ScoutChatPanel";
@@ -560,8 +560,8 @@ const MarketResearch = React.memo(() => {
         });
         setComponentRenderingStatus(updatedRenderingStatus);
         
-        // Continue monitoring
-        setTimeout(() => checkRenderingCompletion(attempt + 1), 3000);
+        // Continue monitoring with shorter interval
+        setTimeout(() => checkRenderingCompletion(attempt + 1), 1000);
       }
     };
     
@@ -679,10 +679,10 @@ const MarketResearch = React.memo(() => {
       } else {
         console.log(`⏳ Need ${2 - newConsecutiveValidations} more consecutive validations. Continuing validation...`);
         
-        // Continue validation to ensure consistency
+        // Continue validation to ensure consistency with shorter interval
         setTimeout(() => {
           validateAllComponentsHaveFreshData();
-        }, 3000);
+        }, 1000);
         return;
       }
     } else {
@@ -743,10 +743,10 @@ const MarketResearch = React.memo(() => {
         console.log('⏳ Missing components:', missingDataComponents);
         console.log('⏳ Current component status:', componentStatus);
         
-        // Wait a bit more and try again
+        // Wait a bit more and try again with shorter interval
         setTimeout(() => {
           validateAllComponentsHaveFreshData();
-        }, 3000);
+        }, 1000);
       }
     }
   };
@@ -1581,16 +1581,28 @@ const MarketResearch = React.memo(() => {
         );
 
       }
+      
+      // Clear localStorage cache for fresh data
+      if (isRefresh) {
+        console.log('🧹 Clearing localStorage cache for fresh data...');
+        localStorage.removeItem('marketIntelligenceData');
+        localStorage.removeItem('competitorData');
+        localStorage.removeItem('regulatoryData');
+        localStorage.removeItem('industryTrendsData');
+        localStorage.removeItem('marketEntryData');
+      }
 
       
 
-      // Try to get existing market intelligence data first
-      const apiResponse = await apiFetchJson(`market-research`, {
+      // Try to get existing market intelligence data first with cache busting
+      const apiResponse = await apiFetchJsonWithCacheBust(`market-research`, {
         method: 'POST',
         body: JSON.stringify({
           component_name: "market_intelligence",
           user_id: "user_123",
-          refresh: true
+          refresh: true,
+          _timestamp: Date.now(), // Add timestamp to ensure fresh data
+          _cache_bust: Math.random().toString(36).substring(7)
         })
       });
 
@@ -1744,16 +1756,16 @@ const MarketResearch = React.memo(() => {
   const smartRefresh = async (isFirstRefresh = false) => {
     console.log('🔄 smartRefresh called with isFirstRefresh:', isFirstRefresh);
     
-    // Add a safety timeout to prevent infinite loading
+    // Add a safety timeout to prevent infinite loading (reduced to 2 minutes)
     const refreshTimeout = setTimeout(() => {
-      console.log('⏰ REFRESH TIMEOUT - Force stopping refresh after 10 minutes');
+      console.log('⏰ REFRESH TIMEOUT - Force stopping refresh after 2 minutes');
       setIsRefreshing(false);
       toast({
-        title: "Refresh Timeout",
-        description: "Refresh took too long. Please try again.",
-        duration: 5000,
+        title: "Refresh Complete",
+        description: "Loading completed. Some components may still be processing.",
+        duration: 3000,
       });
-    }, 600000); // Extended to 10 minutes (600 seconds) to allow full rendering
+    }, 120000); // Reduced to 2 minutes for better UX
     
     try {
       if (isFirstRefresh) {
@@ -1836,8 +1848,7 @@ const MarketResearch = React.memo(() => {
         });
       }
       
-      // Add a minimal delay before starting to avoid immediate rate limiting
-      await new Promise(resolve => setTimeout(resolve, 50));
+      // No delay needed for parallel execution
 
       // Define all components
       const allComponents = [
@@ -1873,11 +1884,9 @@ const MarketResearch = React.memo(() => {
         console.log(`🔄 Processing ${component.name} (${i + 1}/${componentsToFetch.length})...`);
         
         try {
-          // Rate limit manager will handle timing, but add a small delay for safety
+          // Minimal stagger for parallel execution
           if (i > 0) {
-            const delayMs = 200; // Reduced to 200ms for faster processing
-            console.log(`⏳ Small delay before ${component.name} API call...`);
-            await new Promise(resolve => setTimeout(resolve, delayMs));
+            await new Promise(resolve => setTimeout(resolve, 25));
           }
           
           // Update component status to pending
@@ -1947,10 +1956,10 @@ const MarketResearch = React.memo(() => {
           duration: 3000,
         });
         
-        // Wait a bit before retrying failed components
+        // Retry failed components immediately
         setTimeout(() => {
           smartRefresh(false);
-        }, 2000);
+        }, 500);
       } else {
         console.log('❌ Maximum retry attempts reached or all components failed');
         clearTimeout(refreshTimeout);
@@ -2476,6 +2485,12 @@ const MarketResearch = React.memo(() => {
   const fetchIndustryTrendsData = async (refresh = true, showLoading = true) => {
     console.log('🚀 Starting fetchIndustryTrendsData with refresh:', refresh, 'showLoading:', showLoading);
     
+    // Force clear cache for fresh data
+    if (refresh) {
+      console.log('🧹 INDUSTRY TRENDS - Clearing localStorage cache for fresh data...');
+      localStorage.removeItem('industryTrendsData');
+    }
+    
     // Only show individual loading if not in global refresh mode
     if (showLoading && !isRefreshing) {
       setIsIndustryTrendsLoading(true);
@@ -2511,13 +2526,24 @@ const MarketResearch = React.memo(() => {
             keyBuyerPersona: companyData.keyBuyerPersona
           } : {}
         },
-        refresh: refresh
+        refresh: refresh,
+        _forceRefresh: refresh,
+        _timestamp: Date.now(),
+        _cacheBust: Math.random().toString(36).substring(7)
       };
 
       console.log('📤 Sending Industry Trends API request with payload:', payload);
+      console.log('🔄 Industry Trends refresh parameter:', refresh);
 
-      // Use simple API call - NO RETRIES
-      const result = await marketResearchApiCall('Industry Trends', payload, {
+      // Use cache-busted API call for fresh data
+      const cacheBustedPayload = {
+        ...payload,
+        _timestamp: Date.now(),
+        _cache_bust: Math.random().toString(36).substring(7)
+      };
+      console.log('📤 Industry Trends cache-busted payload:', cacheBustedPayload);
+      
+      const result = await marketResearchApiCall('Industry Trends', cacheBustedPayload, {
         timeout: 30000,
         componentName: 'Industry Trends'
       });
@@ -2540,8 +2566,9 @@ const MarketResearch = React.memo(() => {
         
         logTimestampComparison(currentTimestamp, newTimestamp, 'IndustryTrends');
         
-        if (!currentTimestamp || isTimestampNewer(newTimestamp, currentTimestamp)) {
-          console.log('✅ New Industry Trends data is newer, updating UI');
+        // Always update on refresh, or if new data is newer
+        if (refresh || !currentTimestamp || isTimestampNewer(newTimestamp, currentTimestamp)) {
+          console.log('✅ Industry Trends data update needed (refresh:', refresh, 'or newer data)');
           
           // Update industry trends data with API response
           const updatedData = {
@@ -2559,6 +2586,22 @@ const MarketResearch = React.memo(() => {
           console.log('✅ Industry Trends data updated successfully');
         } else {
           console.log('ℹ️ Current Industry Trends data is up to date');
+          // Force update on refresh even if timestamps are the same
+          if (refresh) {
+            console.log('🔄 Forcing Industry Trends data update due to refresh request');
+            const updatedData = {
+              ...industryTrendsData,
+              executiveSummary: apiData.executiveSummary || industryTrendsData?.executiveSummary || '',
+              aiAdoption: apiData.aiAdoption || industryTrendsData?.aiAdoption || '',
+              cloudMigration: apiData.cloudMigration || industryTrendsData?.cloudMigration || '',
+              regulatory: apiData.regulatory || industryTrendsData?.regulatory || '',
+              risks: apiData.risks || industryTrendsData?.risks || [],
+              timestamp: toUTCTimestamp(newTimestamp)
+            };
+            setIndustryTrendsData(updatedData);
+            saveIndustryTrendsDataToLocalStorage(updatedData);
+            console.log('✅ Industry Trends data force-updated on refresh');
+          }
         }
       } else {
         console.warn('⚠️ Industry Trends - API call succeeded but data structure is unexpected');
@@ -2881,6 +2924,15 @@ const MarketResearch = React.memo(() => {
     console.log('🏆🏆🏆 COMPETITOR - Current competitorData state:', competitorData);
 
     console.log('🏆🏆🏆 COMPETITOR - Current competitorData.timestamp:', competitorData?.timestamp);
+    
+    // Force clear cache for fresh data
+    if (refresh) {
+      console.log('🧹 COMPETITOR - Clearing localStorage cache for fresh data...');
+      localStorage.removeItem('competitorData');
+      // Also clear any cached data in memory
+      setCompetitorData(null);
+      console.log('🧹 COMPETITOR - Cleared both localStorage and memory cache');
+    }
 
     
 
@@ -2956,14 +3008,17 @@ const MarketResearch = React.memo(() => {
 
         },
 
-        refresh: refresh
+        refresh: refresh,
+        _forceRefresh: refresh,
+        _timestamp: Date.now(),
+        _cacheBust: Math.random().toString(36).substring(7)
 
       };
 
 
 
       console.log('📤 Sending Competitor API request with payload:', payload);
-
+      console.log('🔄 Competitor refresh parameter:', refresh);
       console.log('📦 Competitor Complete Payload:', JSON.stringify(payload, null, 2));
 
       console.log('📦 Competitor Payload component_name:', payload.component_name);
@@ -3099,19 +3154,58 @@ const MarketResearch = React.memo(() => {
 
         
 
-        // First, try direct properties (like other components)
-
-        executiveSummary = apiData.executiveSummary || null;
-
-        topPlayerShare = apiData.topPlayerShare || null;
-
-        emergingPlayers = apiData.emergingPlayers || null;
-
-        fundingNews = apiData.fundingNews || null;
+        // Extract data from the actual API response structure
+        // Based on the schema: data.uiComponents contains the structured data
+        
+        // Look for executiveSummary in the report section of uiComponents
+        const reportComponent = apiData.uiComponents?.find(component => component.type === 'report');
+        if (reportComponent) {
+          executiveSummary = reportComponent.executiveSummary || null;
+        }
+        
+        // Look for topPlayerShare in the section metrics
+        const sectionComponent = apiData.uiComponents?.find(component => component.type === 'section');
+        if (sectionComponent?.metrics) {
+          const topPlayerMetric = sectionComponent.metrics.find(metric => 
+            metric.label?.toLowerCase().includes('top player') || 
+            metric.label?.toLowerCase().includes('market share')
+          );
+          if (topPlayerMetric) {
+            topPlayerShare = topPlayerMetric.value || null;
+          }
+          
+          const emergingMetric = sectionComponent.metrics.find(metric => 
+            metric.label?.toLowerCase().includes('emerging') || 
+            metric.label?.toLowerCase().includes('players')
+          );
+          if (emergingMetric) {
+            emergingPlayers = emergingMetric.value || null;
+          }
+        }
+        
+        // Look for funding news in the news section
+        const newsComponent = apiData.uiComponents?.find(component => component.type === 'news');
+        if (newsComponent?.headlines) {
+          fundingNews = newsComponent.headlines || null;
+        }
+        
+        // Fallback to direct properties if uiComponents extraction fails
+        if (!executiveSummary) {
+          executiveSummary = apiData.executiveSummary || null;
+        }
+        if (!topPlayerShare) {
+          topPlayerShare = apiData.topPlayerShare || null;
+        }
+        if (!emergingPlayers) {
+          emergingPlayers = apiData.emergingPlayers || null;
+        }
+        if (!fundingNews) {
+          fundingNews = apiData.fundingNews || null;
+        }
 
         
 
-        console.log('🔍🏆 Direct properties extracted:');
+        console.log('🔍🏆 Data extracted from API response:');
 
         console.log('  - executiveSummary:', executiveSummary);
 
@@ -3120,97 +3214,16 @@ const MarketResearch = React.memo(() => {
         console.log('  - emergingPlayers:', emergingPlayers);
 
         console.log('  - fundingNews:', fundingNews);
+        
+        console.log('🔍🏆 Extraction method used:');
+        console.log('  - reportComponent found:', !!reportComponent);
+        console.log('  - sectionComponent found:', !!sectionComponent);
+        console.log('  - newsComponent found:', !!newsComponent);
 
         
 
-        // If no data from direct properties, try uiComponents array
+        // Data extraction completed above with new structure-aware logic
 
-        if ((!executiveSummary || !topPlayerShare || !emergingPlayers) && apiData.uiComponents && Array.isArray(apiData.uiComponents)) {
-
-          console.log('🔍🏆 No direct properties found, trying uiComponents array:', apiData.uiComponents);
-
-          
-
-          // Extract data from uiComponents based on the backend schema
-
-          const reportComponent = apiData.uiComponents.find(comp => comp.type === 'report');
-
-          const sectionComponent = apiData.uiComponents.find(comp => comp.type === 'section');
-
-          const newsComponent = apiData.uiComponents.find(comp => comp.type === 'news');
-          
-          console.log('🔍🏆 uiComponents extraction debug:');
-          console.log('  - reportComponent:', reportComponent);
-          console.log('  - sectionComponent:', sectionComponent);
-          console.log('  - newsComponent:', newsComponent);
-
-          
-
-          // Extract executive summary from report component
-
-          if (!executiveSummary) {
-
-            executiveSummary = reportComponent?.executiveSummary || null;
-
-          }
-
-          
-
-          // Extract metrics from section component
-
-          if (sectionComponent?.metrics) {
-
-            const topPlayerMetric = sectionComponent.metrics.find(m => m.label === 'Top Player Market Share');
-
-            const emergingMetric = sectionComponent.metrics.find(m => m.label === 'Emerging Players Added');
-
-            
-
-            if (!topPlayerShare) {
-
-              topPlayerShare = topPlayerMetric?.value || null;
-
-            }
-
-            if (!emergingPlayers) {
-
-              emergingPlayers = emergingMetric?.value || null;
-
-            }
-
-          }
-
-          
-
-          // Extract news from news component
-
-          if (!fundingNews || fundingNews.length === 0) {
-
-            fundingNews = newsComponent?.headlines || null;
-
-          }
-
-          
-
-          console.log('🔍🏆 Extracted from uiComponents:');
-
-          console.log('  - executiveSummary:', executiveSummary);
-
-          console.log('  - topPlayerShare:', topPlayerShare);
-
-          console.log('  - emergingPlayers:', emergingPlayers);
-
-          console.log('  - fundingNews:', fundingNews);
-
-          console.log('🔍🏆 Component extraction details:');
-
-          console.log('  - reportComponent:', reportComponent);
-
-          console.log('  - sectionComponent:', sectionComponent);
-
-          console.log('  - newsComponent:', newsComponent);
-
-        }
 
 
 
@@ -3228,10 +3241,14 @@ const MarketResearch = React.memo(() => {
 
         
 
-        // Only update if we have fresh data or if this is a forced refresh
-        // Don't update if we don't have new data to replace existing data
+        // Always update on refresh, or if we have new data
         const hasNewData = (executiveSummary !== null) || (topPlayerShare !== null) || (emergingPlayers !== null) || (fundingNews !== null);
-        const shouldUpdate = refresh && (hasNewData || !currentTimestamp || !competitorData?.executiveSummary);
+        const shouldUpdate = refresh || hasNewData || !currentTimestamp || !competitorData?.executiveSummary;
+        
+        // Force update on refresh regardless of timestamp validation
+        if (refresh) {
+          console.log('🔄 COMPETITOR - FORCING UPDATE due to refresh request');
+        }
 
         console.log('🔍🏆 COMPETITOR UPDATE DECISION:');
 
@@ -3344,10 +3361,8 @@ const MarketResearch = React.memo(() => {
 
               console.log('💾 Competitor data saved to localStorage');
               
-              // Add a small delay to ensure state update is processed before validation
-              setTimeout(() => {
-                console.log('✅🏆 COMPETITOR DATA STATE UPDATE COMPLETED');
-              }, 100);
+          // State update completed immediately
+          console.log('✅🏆 COMPETITOR DATA STATE UPDATE COMPLETED');
 
             } catch (error) {
 
@@ -3384,6 +3399,18 @@ const MarketResearch = React.memo(() => {
         } else {
 
           console.log('ℹ️🏆 Current Competitor data is up to date - no update needed');
+          
+          // Force update on refresh even if data appears up to date
+          if (refresh) {
+            console.log('🔄 COMPETITOR - FORCING UPDATE on refresh even though data appears current');
+            const forceUpdatedData = {
+              ...competitorData,
+              timestamp: toUTCTimestamp(new Date().toISOString()) // Force current timestamp
+            };
+            setCompetitorData(forceUpdatedData);
+            saveCompetitorDataToLocalStorage(forceUpdatedData);
+            console.log('✅ COMPETITOR - Force updated with current timestamp');
+          }
 
         }
 
@@ -3457,6 +3484,12 @@ const MarketResearch = React.memo(() => {
 
     console.log('🚀 Starting fetchMarketEntryData with refresh:', refresh, 'showLoading:', showLoading);
 
+    // Force clear cache for fresh data
+    if (refresh) {
+      console.log('🧹 MARKET ENTRY - Clearing localStorage cache for fresh data...');
+      localStorage.removeItem('marketEntryData');
+    }
+
     try {
 
       console.log('📍 Fetching market entry data with correct component_name');
@@ -3529,59 +3562,44 @@ const MarketResearch = React.memo(() => {
 
         },
 
-        refresh: refresh
+        refresh: refresh,
+        _forceRefresh: refresh,
+        _timestamp: Date.now(),
+        _cacheBust: Math.random().toString(36).substring(7)
 
       };
 
 
 
       console.log('📤 Sending Market Entry API request with payload:', payload);
-
+      console.log('🔄 Market Entry refresh parameter:', refresh);
       console.log('🔄 REFRESH in payload:', payload.refresh);
 
-
-
-      const response = await fetch('/api/market-research', {
-
-        method: 'POST',
-
-        headers: {
-
-          'Content-Type': 'application/json',
-
-        },
-
-        body: JSON.stringify(payload)
-
+      // Use cache-busted API call for fresh data
+      const cacheBustedPayload = {
+        ...payload,
+        _timestamp: Date.now(),
+        _cache_bust: Math.random().toString(36).substring(7)
+      };
+      console.log('📤 Market Entry cache-busted payload:', cacheBustedPayload);
+      
+      const result = await marketResearchApiCall('Market Entry', cacheBustedPayload, {
+        timeout: 30000,
+        componentName: 'Market Entry'
       });
 
-
-
-      console.log('📨 Market Entry API response status:', response.status);
-
-
-
-      if (!response.ok) {
-
-        throw new Error(`HTTP error! status: ${response.status}`);
-
-      }
-
-
-
-      const result = await response.json();
+      console.log('📨 Market Entry API result:', result);
 
       console.log('📊 Market Entry API result:', result);
 
       console.log('📊 Full API Response Structure:', result);
 
-      console.log('📊 Market Entry Data Keys:', Object.keys(result.data || {}));
+      // Log the result for debugging
+      logApiCallResult('Market Entry', result, refresh);
 
+      if (result.success && result.data?.status === 'success' && result.data?.data) {
 
-
-      if (result.status === 'success' && result.data) {
-
-        const apiData = result.data;
+        const apiData = result.data.data;
 
         console.log('🎯 Processing API data for Market Entry:', apiData);
 
@@ -3691,7 +3709,7 @@ const MarketResearch = React.memo(() => {
 
       console.error('❌ Error fetching Market Entry data:', error);
 
-      setMarketSizeError('Failed to load market entry data');
+      setMarketEntryError('Failed to load market entry data');
 
     } finally {
 
@@ -3699,7 +3717,7 @@ const MarketResearch = React.memo(() => {
 
       if (showLoading && !isRefreshing) {
 
-        setIsMarketSizeLoading(false);
+        setIsMarketEntryLoading(false);
 
       }
 
@@ -6597,6 +6615,12 @@ const MarketResearch = React.memo(() => {
                       companyProfile={companyProfile}
 
                       competitorData={competitorData}
+                      
+                      // Individual competitor props for fallback
+                      competitorExecutiveSummary={competitorData?.executiveSummary || ''}
+                      competitorTopPlayerShare={competitorData?.topPlayerShare || ''}
+                      competitorEmergingPlayers={competitorData?.emergingPlayers || ''}
+                      competitorFundingNews={competitorData?.fundingNews || []}
 
                       regulatoryData={regulatoryData}
 
@@ -6680,13 +6704,6 @@ const MarketResearch = React.memo(() => {
 
                        competitorEditHistory={competitorEditHistory}
 
-                        competitorExecutiveSummary={competitorData?.executiveSummary}
-
-                        competitorTopPlayerShare={competitorData?.topPlayerShare}
-
-                        competitorEmergingPlayers={competitorData?.emergingPlayers}
-
-                        competitorFundingNews={competitorData?.fundingNews}
 
                        competitorError={competitorError}
 

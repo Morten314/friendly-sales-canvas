@@ -60,9 +60,28 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
   return response;
 };
 
-// Helper function for JSON responses
+// Helper function for JSON responses with cache busting
 export const apiFetchJson = async (endpoint: string, options: RequestInit = {}) => {
   const response = await apiFetch(endpoint, options);
+  return response.json();
+};
+
+// Helper function for cache-busted API calls
+export const apiFetchJsonWithCacheBust = async (endpoint: string, options: RequestInit = {}) => {
+  // Add cache busting parameter
+  const cacheBuster = `_cb=${Date.now()}&_r=${Math.random().toString(36).substring(7)}`;
+  const separator = endpoint.includes('?') ? '&' : '?';
+  const cacheBustedEndpoint = `${endpoint}${separator}${cacheBuster}`;
+  
+  const response = await apiFetch(cacheBustedEndpoint, {
+    ...options,
+    headers: {
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+      ...options.headers,
+    }
+  });
   return response.json();
 };
 
