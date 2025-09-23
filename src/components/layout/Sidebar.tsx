@@ -487,6 +487,20 @@ export function Sidebar() {
             </Link>
           </li>
 
+          {/* Artefacts navigation item */}
+          <li key="artefacts">
+            <Link 
+              to="/artefacts" 
+              className={cn(
+                "flex items-center px-4 py-3 text-gray-700 hover:bg-sales-gray hover:text-sales-blue rounded-lg mx-2 transition-colors",
+                window.location.pathname === "/artefacts" && "bg-blue-50 text-sales-blue"
+              )}
+            >
+              <FileCheck className="h-5 w-5" />
+              {!collapsed && <span className="ml-3">Artefacts</span>}
+            </Link>
+          </li>
+
           {/* Settings navigation item */}
           <li key="settings">
             <Link 
