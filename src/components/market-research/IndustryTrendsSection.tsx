@@ -375,7 +375,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
         cloudMigration: propCloudMigration || prevData?.cloudMigration || '',
         regulatory: propRegulatory || prevData?.regulatory || '',
         trendSnapshots: propTrendSnapshots || prevData?.trendSnapshots || [],
-        recommendations: propRecommendations || prevData?.recommendations || { primaryFocus: '', marketEntry: '' },
+        // recommendations removed as not part of IndustryTrendsData type
         risks: propRisks || prevData?.risks || []
       }));
     }
@@ -429,7 +429,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
           cloudMigration: editCloudMigration,
           regulatory: editRegulatory,
           trendSnapshots: editTrendSnapshots,
-          timestamp: Date.now() // Force update with new timestamp
+          timestamp: prev.timestamp || new Date().toISOString() // Keep as string
         };
       });
       

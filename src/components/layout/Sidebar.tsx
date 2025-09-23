@@ -357,6 +357,7 @@ const navItems: NavItem[] = [
   { icon: Calendar, label: "Activator", href: "/calendar" },
   { icon: Presentation, label: "Presenter", href: "/reports" },
   { icon: BarChart, label: "Reports", href: "/insights" },
+  { icon: FileCheck, label: "Artefacts", href: "/artefacts" },
   { icon: Settings, label: "Settings", href: "/settings" },
 ];
 

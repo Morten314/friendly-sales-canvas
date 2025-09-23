@@ -1982,7 +1982,7 @@ const MarketResearch = React.memo(() => {
         let hasValidData = false;
         switch (component.name) {
           case 'Market Size':
-            hasValidData = marketData?.executiveSummary && marketData?.tamValue;
+            hasValidData = Boolean(marketData?.executiveSummary && marketData?.tamValue);
             break;
           case 'Industry Trends':
             hasValidData = industryTrendsData?.executiveSummary && industryTrendsData?.aiAdoption;

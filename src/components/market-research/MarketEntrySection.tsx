@@ -422,9 +422,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
             <div className="bg-purple-50 p-3 rounded-lg border border-purple-200">
               <div className="text-xs font-medium text-purple-700 mb-1">Top Entry Channel</div>
               <div className="text-sm font-semibold text-purple-900">
-                {typeof recommendedChannel === 'object' && recommendedChannel !== null 
-                  ? (recommendedChannel.channel || JSON.stringify(recommendedChannel))
-                  : recommendedChannel || 'N/A'}
+                {recommendedChannel ? String(recommendedChannel) : 'N/A'}
               </div>
             </div>
             <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
@@ -480,9 +478,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
             <div className="bg-purple-50 p-3 rounded-lg border border-purple-200">
               <div className="text-xs font-medium text-purple-700 mb-1">Top Entry Channel</div>
               <div className="text-sm font-semibold text-purple-900">
-                {typeof recommendedChannel === 'object' && recommendedChannel !== null 
-                  ? (recommendedChannel.channel || JSON.stringify(recommendedChannel))
-                  : recommendedChannel || 'N/A'}
+                {recommendedChannel ? String(recommendedChannel) : 'N/A'}
               </div>
             </div>
             <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">

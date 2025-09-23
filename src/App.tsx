@@ -13,6 +13,7 @@ import NotFound from "./pages/NotFound";
 import MarketResearch from "./pages/MarketResearch";
 import Insights from "./pages/Insights";
 import AgentHub from "./pages/AgentHub";
+import Artefacts from "./pages/Artefacts";
 import ScoutDeploymentPage from "./pages/ScoutDeployment";
 
 const queryClient = new QueryClient();
@@ -33,7 +34,7 @@ const App = () => (
           <Route path="/your-lead-stream" element={<Navigate to="/your-ai-team/scout/leadstream" replace />} />
           <Route path="/your-ai-team/scout/:tab" element={<MarketResearch />} />
           <Route path="/your-ai-team/scout" element={<Navigate to="/your-ai-team/scout/marketintelligence" replace />} />
-          <Route path="/insights" element={<Insights />} />
+          <Route path="/artefacts" element={<Artefacts />} />
           <Route path="/scout-deployment" element={<ScoutDeploymentPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
