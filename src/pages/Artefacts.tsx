@@ -190,21 +190,14 @@ const Artefacts = () => {
   
   const [artefacts, setArtefacts] = useState<ArtefactItem[]>(mockArtefacts);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState('accepted');
   const [expandedChat, setExpandedChat] = useState<string | null>(null);
-  const [filterAgent, setFilterAgent] = useState('all');
-  const [filterType, setFilterType] = useState('all');
 
   const filteredArtefacts = artefacts.filter(artefact => {
     const matchesSearch = artefact.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          artefact.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          artefact.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
     
-    const matchesTab = artefact.status === activeTab;
-    const matchesAgent = filterAgent === 'all' || artefact.agentName.toLowerCase() === filterAgent;
-    const matchesType = filterType === 'all' || artefact.type === filterType;
-    
-    return matchesSearch && matchesTab && matchesAgent && matchesType;
+    return matchesSearch;
   });
 
   const handleAccept = (id: string) => {
@@ -455,52 +448,17 @@ const Artefacts = () => {
           </div>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <div className="flex items-center justify-between mb-4">
-            <TabsList className="grid grid-cols-2 w-auto">
-              <TabsTrigger value="accepted">Accepted</TabsTrigger>
-              <TabsTrigger value="dismissed">Dismissed</TabsTrigger>
-            </TabsList>
-            
-            <div className="flex items-center gap-3">
-              <select 
-                value={filterAgent} 
-                onChange={(e) => setFilterAgent(e.target.value)}
-                className="px-3 py-1.5 border border-input bg-background rounded-md text-sm"
-              >
-                <option value="all">All Agents</option>
-                <option value="scout">Scout</option>
-                <option value="profiler">Profiler</option>
-                <option value="strategist">Strategist</option>
-              </select>
-              
-              <select 
-                value={filterType} 
-                onChange={(e) => setFilterType(e.target.value)}
-                className="px-3 py-1.5 border border-input bg-background rounded-md text-sm"
-              >
-                <option value="all">All Types</option>
-                <option value="report">Reports</option>
-                <option value="analysis">Analysis</option>
-                <option value="enrichment">Enrichment</option>
-                <option value="proposal">Proposals</option>
-                <option value="playbook">Playbooks</option>
-              </select>
+        <div className="space-y-6">
+          {filteredArtefacts.length === 0 ? (
+            <EmptyState />
+          ) : (
+            <div className="grid gap-6">
+              {filteredArtefacts.map((artefact) => (
+                <ArtefactCard key={artefact.id} artefact={artefact} />
+              ))}
             </div>
-          </div>
-
-          <TabsContent value={activeTab} className="mt-6">
-            {filteredArtefacts.length === 0 ? (
-              <EmptyState />
-            ) : (
-              <div className="grid gap-6">
-                {filteredArtefacts.map((artefact) => (
-                  <ArtefactCard key={artefact.id} artefact={artefact} />
-                ))}
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
+          )}
+        </div>
       </div>
     </Layout>
   );
