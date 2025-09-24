@@ -19,7 +19,16 @@ import {
   Target,
   BarChart,
   Clock,
-  ArrowUpRight
+  ArrowUpRight,
+  AlertCircle,
+  CheckCircle,
+  History,
+  ArrowRight,
+  ChevronRight,
+  Lightbulb,
+  Activity,
+  Link2,
+  Filter
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -32,8 +41,19 @@ interface ArtefactItem {
   description: string;
   timestamp: string;
   tags: string[];
-  status: 'pending' | 'accepted' | 'dismissed';
-  type: 'report' | 'analysis' | 'insight' | 'proposal';
+  status: 'pending' | 'accepted' | 'dismissed' | 'draft' | 'completed' | 'needs-review';
+  type: 'report' | 'analysis' | 'insight' | 'proposal' | 'enrichment' | 'playbook';
+  // New fields for enhanced structure
+  actionDelegated: string;
+  whyTriggered: string;
+  actionPerformed: string;
+  outputSummary: string;
+  outputDetails: string;
+  recommendations: string[];
+  consequence: string;
+  actionLog: string[];
+  versionHistory?: string[];
+  crossLinks?: { id: string; title: string; relationship: string }[];
 }
 
 // Mock data for demonstration
@@ -41,50 +61,127 @@ const mockArtefacts: ArtefactItem[] = [
   {
     id: '1',
     agentName: 'Scout',
-    agentIcon: '🟦',
+    agentIcon: '🛰',
     agentColor: 'bg-blue-500',
     title: 'Competitor Pricing Analysis',
     description: 'Scout generated a comprehensive competitor pricing analysis for SMB segment, identifying key pricing gaps and opportunities.',
     timestamp: '2h ago',
     tags: ['Competitor Analysis', 'Pricing', 'SMB'],
     status: 'pending',
-    type: 'analysis'
+    type: 'analysis',
+    actionDelegated: 'Scout, analyze Competitor X\'s SMB pricing tier',
+    whyTriggered: 'Because your ICP includes Mid-Market SaaS in Healthcare, this action was prioritized',
+    actionPerformed: 'Researched Competitor X\'s new SMB pricing model across 12 different SaaS platforms and analyzed pricing structures',
+    outputSummary: 'Comprehensive pricing analysis revealing 23% pricing gap in mid-market segment',
+    outputDetails: 'Detailed breakdown of competitor pricing tiers, feature comparisons, and market positioning analysis with actionable recommendations.',
+    recommendations: [
+      'Implement tiered pricing strategy with 15-20% premium over competitors',
+      'Add enterprise features to justify higher pricing',
+      'Consider freemium model for market penetration'
+    ],
+    consequence: 'Competitive pricing benchmark updated with new SMB tier recommendations',
+    actionLog: [
+      'User delegated pricing analysis task',
+      'Scout initiated competitor research',
+      'Data collection completed from 12 platforms',
+      'Analysis generated with recommendations',
+      'Awaiting user review and approval'
+    ]
   },
   {
     id: '2',
     agentName: 'Profiler',
-    agentIcon: '🟪',
+    agentIcon: '🎯',
     agentColor: 'bg-purple-500',
     title: 'ICP Enrichment Report',
     description: 'Profiler enriched your ICP data with 47 new qualified leads and behavioral insights from recent market research.',
     timestamp: '4h ago',
     tags: ['ICP Enrichment', 'Lead Generation', 'Market Research'],
-    status: 'accepted',
-    type: 'report'
+    status: 'completed',
+    type: 'enrichment',
+    actionDelegated: 'Profiler, enrich ICP with EU fintech startup leads',
+    whyTriggered: 'Expansion into European markets requires updated ICP profiles for fintech vertical',
+    actionPerformed: 'Enriched 52 raw leads with verified contact details and behavioral data analysis',
+    outputSummary: 'Successfully enriched 47 qualified leads with 94% contact accuracy',
+    outputDetails: 'Complete lead enrichment including company size, tech stack, funding stage, and decision-maker contact information.',
+    recommendations: [
+      'Prioritize Series A companies for immediate outreach',
+      'Focus on companies using Stripe or similar payment processors',
+      'Target CTOs and Head of Engineering roles for technical decisions'
+    ],
+    consequence: 'Added 47 new enriched leads to CRM with automated nurture sequences activated',
+    actionLog: [
+      'User requested EU fintech ICP enrichment',
+      'Profiler processed 52 raw lead records',
+      'Contact verification completed with 94% success rate',
+      'Behavioral analysis and scoring applied',
+      'Leads automatically added to CRM system'
+    ]
   },
   {
     id: '3',
     agentName: 'Strategist',
-    agentIcon: '🟧',
+    agentIcon: '🧠',
     agentColor: 'bg-orange-500',
     title: 'GTM Strategy Proposal',
     description: 'Strategist developed a comprehensive go-to-market strategy for Q1 2024, including channel recommendations and timeline.',
     timestamp: '1d ago',
     tags: ['GTM Strategy', 'Q1 Planning', 'Channel Strategy'],
-    status: 'pending',
-    type: 'proposal'
+    status: 'needs-review',
+    type: 'proposal',
+    actionDelegated: 'Strategist, develop Q1 2024 GTM strategy for EU expansion',
+    whyTriggered: 'Based on successful ICP enrichment and competitive analysis, EU market entry is now strategically viable',
+    actionPerformed: 'Generated comprehensive GTM strategy including channel analysis, resource requirements, and 90-day execution plan',
+    outputSummary: 'Complete GTM framework with 3-phase execution plan and $2.4M revenue projection',
+    outputDetails: 'Detailed go-to-market strategy covering partner channels, direct sales, marketing campaigns, and success metrics.',
+    recommendations: [
+      'Launch with partner channel in Germany and Netherlands',
+      'Allocate 2 SDRs specifically for EU market',
+      'Implement localized content strategy in German and Dutch',
+      'Set up European customer success operations by Q2'
+    ],
+    consequence: 'GTM roadmap created - pending budget approval for EU expansion initiative',
+    actionLog: [
+      'User requested Q1 GTM strategy development',
+      'Strategist analyzed market data and ICP insights',
+      'Channel partnership opportunities identified',
+      'Resource requirements and timeline calculated',
+      'Comprehensive strategy document generated'
+    ],
+    crossLinks: [
+      { id: '2', title: 'ICP Enrichment Report', relationship: 'Used as foundation for target market analysis' },
+      { id: '1', title: 'Competitor Pricing Analysis', relationship: 'Informed pricing strategy recommendations' }
+    ]
   },
   {
     id: '4',
     agentName: 'Scout',
-    agentIcon: '🟦',
+    agentIcon: '🛰',
     agentColor: 'bg-blue-500',
     title: 'Market Size Analysis',
     description: 'Scout analyzed the addressable market size for the fintech vertical, providing TAM, SAM, and SOM calculations.',
     timestamp: '2d ago',
     tags: ['Market Analysis', 'Fintech', 'TAM/SAM'],
     status: 'dismissed',
-    type: 'analysis'
+    type: 'analysis',
+    actionDelegated: 'Scout, calculate TAM/SAM/SOM for fintech vertical expansion',
+    whyTriggered: 'Required for investor presentations and strategic planning discussions',
+    actionPerformed: 'Analyzed addressable market size for fintech vertical with detailed TAM, SAM, and SOM breakdowns',
+    outputSummary: 'Market analysis showing $47B TAM, $2.3B SAM, and $180M SOM for target segments',
+    outputDetails: 'Comprehensive market sizing analysis with geographic breakdown, competitive landscape, and growth projections.',
+    recommendations: [
+      'Focus on $180M serviceable obtainable market initially',
+      'Prioritize payment processing and lending software segments',
+      'Consider geographic expansion to DACH region within 18 months'
+    ],
+    consequence: 'Market analysis dismissed due to conflicting data sources - new analysis requested',
+    actionLog: [
+      'User requested fintech market sizing analysis',
+      'Scout gathered data from multiple market research sources',
+      'TAM/SAM/SOM calculations completed',
+      'Analysis delivered with methodology breakdown',
+      'User dismissed due to data source concerns'
+    ]
   }
 ];
 
@@ -95,6 +192,8 @@ const Artefacts = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('all');
   const [expandedChat, setExpandedChat] = useState<string | null>(null);
+  const [filterAgent, setFilterAgent] = useState('all');
+  const [filterType, setFilterType] = useState('all');
 
   const filteredArtefacts = artefacts.filter(artefact => {
     const matchesSearch = artefact.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -102,8 +201,10 @@ const Artefacts = () => {
                          artefact.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
     
     const matchesTab = activeTab === 'all' || artefact.status === activeTab;
+    const matchesAgent = filterAgent === 'all' || artefact.agentName.toLowerCase() === filterAgent;
+    const matchesType = filterType === 'all' || artefact.type === filterType;
     
-    return matchesSearch && matchesTab;
+    return matchesSearch && matchesTab && matchesAgent && matchesType;
   });
 
   const handleAccept = (id: string) => {
@@ -128,6 +229,8 @@ const Artefacts = () => {
       case 'analysis': return TrendingUp;
       case 'insight': return Target;
       case 'proposal': return BarChart;
+      case 'enrichment': return Users;
+      case 'playbook': return Target;
       default: return FileText;
     }
   };
@@ -136,49 +239,182 @@ const Artefacts = () => {
     const TypeIcon = getTypeIcon(artefact.type);
     const isExpanded = expandedChat === artefact.id;
 
+    const getStatusColor = (status: string) => {
+      switch (status) {
+        case 'completed': return 'bg-green-100 text-green-800 border-green-200';
+        case 'accepted': return 'bg-blue-100 text-blue-800 border-blue-200';
+        case 'needs-review': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+        case 'pending': return 'bg-orange-100 text-orange-800 border-orange-200';
+        case 'dismissed': return 'bg-red-100 text-red-800 border-red-200';
+        case 'draft': return 'bg-gray-100 text-gray-800 border-gray-200';
+        default: return 'bg-gray-100 text-gray-800 border-gray-200';
+      }
+    };
+
+    const getStatusIcon = (status: string) => {
+      switch (status) {
+        case 'completed': return CheckCircle;
+        case 'accepted': return CheckCircle;
+        case 'needs-review': return AlertCircle;
+        case 'pending': return Clock;
+        case 'dismissed': return X;
+        case 'draft': return FileText;
+        default: return Clock;
+      }
+    };
+
+    const StatusIcon = getStatusIcon(artefact.status);
+
     return (
-      <Card className="hover:shadow-md transition-shadow duration-200">
-        <CardHeader className="pb-3">
-          <div className="flex items-start justify-between">
+      <Card className="hover:shadow-lg transition-all duration-200 border-l-4 border-l-primary/20">
+        {/* 1. Artefact Header (Meta Layer) */}
+        <CardHeader className="pb-4">
+          <div className="flex items-start justify-between mb-3">
             <div className="flex items-center gap-3">
-              <Avatar className="h-8 w-8">
-                <AvatarFallback className={cn('text-white text-xs font-medium', artefact.agentColor)}>
+              <Avatar className="h-10 w-10">
+                <AvatarFallback className={cn('text-white text-sm font-medium', artefact.agentColor)}>
                   {artefact.agentIcon}
                 </AvatarFallback>
               </Avatar>
               <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-sm">{artefact.agentName}</span>
-                  <TypeIcon className="h-3 w-3 text-muted-foreground" />
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="font-semibold text-base">{artefact.agentName}</span>
+                  <TypeIcon className="h-4 w-4 text-muted-foreground" />
                 </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Clock className="h-3 w-3" />
                   <span>Generated {artefact.timestamp}</span>
                 </div>
               </div>
             </div>
-            <Badge variant={artefact.status === 'accepted' ? 'default' : artefact.status === 'dismissed' ? 'destructive' : 'secondary'}>
-              {artefact.status}
-            </Badge>
+            <div className={cn('px-3 py-1.5 rounded-full text-xs font-medium border flex items-center gap-1.5', getStatusColor(artefact.status))}>
+              <StatusIcon className="h-3 w-3" />
+              {artefact.status.replace('-', ' ').toUpperCase()}
+            </div>
+          </div>
+          
+          {/* Action Delegated by User */}
+          <div className="space-y-2">
+            <div className="flex items-start gap-2">
+              <ArrowRight className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-blue-700">Action Delegated</p>
+                <p className="text-sm text-muted-foreground">"{artefact.actionDelegated}"</p>
+              </div>
+            </div>
+            
+            {/* Why it was triggered */}
+            <div className="flex items-start gap-2">
+              <Lightbulb className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-amber-700">Context & Rationale</p>
+                <p className="text-sm text-muted-foreground">{artefact.whyTriggered}</p>
+              </div>
+            </div>
           </div>
         </CardHeader>
         
-        <CardContent className="space-y-4">
-          <div>
-            <h3 className="font-semibold text-base mb-2">{artefact.title}</h3>
-            <p className="text-sm text-muted-foreground leading-relaxed">{artefact.description}</p>
+        <CardContent className="space-y-6">
+          {/* 2. Action Performed (Agent's Work Log) */}
+          <div className="border-l-2 border-l-blue-200 pl-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Activity className="h-4 w-4 text-blue-600" />
+              <h4 className="font-semibold text-sm text-blue-700">Action Performed</h4>
+            </div>
+            <p className="text-sm text-muted-foreground leading-relaxed">{artefact.actionPerformed}</p>
           </div>
 
-          <div className="flex flex-wrap gap-1">
-            {artefact.tags.map((tag, index) => (
-              <Badge key={index} variant="outline" className="text-xs">
-                {tag}
-              </Badge>
-            ))}
+          {/* 3. Output (The Artefact Itself) */}
+          <div className="bg-muted/30 rounded-lg p-4 space-y-4">
+            <div className="flex items-center gap-2 mb-3">
+              <FileText className="h-4 w-4 text-primary" />
+              <h3 className="font-semibold text-lg">{artefact.title}</h3>
+            </div>
+            
+            <div className="space-y-3">
+              <div>
+                <h5 className="text-sm font-medium mb-1">Summary</h5>
+                <p className="text-sm text-muted-foreground">{artefact.outputSummary}</p>
+              </div>
+              
+              <div>
+                <h5 className="text-sm font-medium mb-1">Details</h5>
+                <p className="text-sm text-muted-foreground">{artefact.outputDetails}</p>
+              </div>
+              
+              {artefact.recommendations.length > 0 && (
+                <div>
+                  <h5 className="text-sm font-medium mb-2">Recommendations</h5>
+                  <ul className="space-y-1">
+                    {artefact.recommendations.map((rec, index) => (
+                      <li key={index} className="flex items-start gap-2 text-sm text-muted-foreground">
+                        <ChevronRight className="h-3 w-3 mt-0.5 text-primary flex-shrink-0" />
+                        <span>{rec}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-wrap gap-1 pt-2">
+              {artefact.tags.map((tag, index) => (
+                <Badge key={index} variant="secondary" className="text-xs">
+                  {tag}
+                </Badge>
+              ))}
+            </div>
           </div>
 
-          {artefact.status === 'pending' && (
+          {/* 4. Consequence (System Context) */}
+          <div className="border-l-2 border-l-green-200 pl-4">
+            <div className="flex items-center gap-2 mb-2">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <h4 className="font-semibold text-sm text-green-700">System Impact</h4>
+            </div>
+            <p className="text-sm text-muted-foreground">{artefact.consequence}</p>
+          </div>
+
+          {/* 5. History & Traceability */}
+          <div className="space-y-3">
             <div className="flex items-center gap-2">
+              <History className="h-4 w-4 text-muted-foreground" />
+              <h4 className="font-semibold text-sm">Action Log</h4>
+            </div>
+            <div className="space-y-2">
+              {artefact.actionLog.map((log, index) => (
+                <div key={index} className="flex items-center gap-3 text-xs">
+                  <div className="w-2 h-2 bg-primary/60 rounded-full flex-shrink-0"></div>
+                  <span className="text-muted-foreground">{log}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Cross-links */}
+          {artefact.crossLinks && artefact.crossLinks.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Link2 className="h-4 w-4 text-muted-foreground" />
+                <h4 className="font-semibold text-sm">Related Artefacts</h4>
+              </div>
+              <div className="space-y-2">
+                {artefact.crossLinks.map((link, index) => (
+                  <div key={index} className="flex items-start gap-2 p-2 bg-muted/20 rounded text-xs">
+                    <ArrowRight className="h-3 w-3 mt-0.5 text-muted-foreground flex-shrink-0" />
+                    <div>
+                      <span className="font-medium">{link.title}</span>
+                      <p className="text-muted-foreground">{link.relationship}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          {(artefact.status === 'pending' || artefact.status === 'needs-review') && (
+            <div className="flex items-center gap-2 pt-4 border-t">
               <Button 
                 onClick={() => handleAccept(artefact.id)}
                 className="flex-1 bg-green-600 hover:bg-green-700"
@@ -209,6 +445,7 @@ const Artefacts = () => {
             </div>
           )}
 
+          {/* Expanded Chat Panel */}
           {isExpanded && (
             <div className="border-t pt-4 mt-4">
               <div className="bg-muted/30 rounded-lg p-4">
@@ -269,18 +506,48 @@ const Artefacts = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="all">All Artefacts</TabsTrigger>
-            <TabsTrigger value="accepted">Accepted</TabsTrigger>
-            <TabsTrigger value="dismissed">Dismissed</TabsTrigger>
-            <TabsTrigger value="pending">Pending Review</TabsTrigger>
-          </TabsList>
+          <div className="flex items-center justify-between mb-4">
+            <TabsList className="grid grid-cols-6 w-auto">
+              <TabsTrigger value="all">All Artefacts</TabsTrigger>
+              <TabsTrigger value="pending">Pending</TabsTrigger>
+              <TabsTrigger value="completed">Completed</TabsTrigger>
+              <TabsTrigger value="needs-review">Needs Review</TabsTrigger>
+              <TabsTrigger value="accepted">Accepted</TabsTrigger>
+              <TabsTrigger value="dismissed">Dismissed</TabsTrigger>
+            </TabsList>
+            
+            <div className="flex items-center gap-3">
+              <select 
+                value={filterAgent} 
+                onChange={(e) => setFilterAgent(e.target.value)}
+                className="px-3 py-1.5 border border-input bg-background rounded-md text-sm"
+              >
+                <option value="all">All Agents</option>
+                <option value="scout">Scout</option>
+                <option value="profiler">Profiler</option>
+                <option value="strategist">Strategist</option>
+              </select>
+              
+              <select 
+                value={filterType} 
+                onChange={(e) => setFilterType(e.target.value)}
+                className="px-3 py-1.5 border border-input bg-background rounded-md text-sm"
+              >
+                <option value="all">All Types</option>
+                <option value="report">Reports</option>
+                <option value="analysis">Analysis</option>
+                <option value="enrichment">Enrichment</option>
+                <option value="proposal">Proposals</option>
+                <option value="playbook">Playbooks</option>
+              </select>
+            </div>
+          </div>
 
           <TabsContent value={activeTab} className="mt-6">
             {filteredArtefacts.length === 0 ? (
               <EmptyState />
             ) : (
-              <div className="grid gap-4">
+              <div className="grid gap-6">
                 {filteredArtefacts.map((artefact) => (
                   <ArtefactCard key={artefact.id} artefact={artefact} />
                 ))}
