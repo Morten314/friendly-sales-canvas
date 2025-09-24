@@ -416,15 +416,6 @@ const Artefacts = () => {
           {(artefact.status === 'pending' || artefact.status === 'needs-review') && (
             <div className="flex items-center gap-2 pt-4 border-t">
               <Button 
-                onClick={() => handleDismiss(artefact.id)}
-                variant="outline"
-                className="flex-1 text-red-600 border-red-200 hover:bg-red-50"
-                size="sm"
-              >
-                <X className="h-4 w-4 mr-1" />
-                Dismiss
-              </Button>
-              <Button 
                 onClick={() => toggleChat(artefact.id)}
                 variant="ghost"
                 size="sm"
