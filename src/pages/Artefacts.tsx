@@ -415,43 +415,10 @@ const Artefacts = () => {
           {/* Action Buttons */}
           {(artefact.status === 'pending' || artefact.status === 'needs-review') && (
             <div className="flex items-center gap-2 pt-4 border-t">
-              <Button 
-                onClick={() => toggleChat(artefact.id)}
-                variant="ghost"
-                size="sm"
-                className="px-3"
-              >
-                <MessageCircle className="h-4 w-4 mr-1" />
-                Discuss
-                <ChevronDown className={cn("h-3 w-3 ml-1 transition-transform", isExpanded && "rotate-180")} />
-              </Button>
+              {/* No action buttons for now */}
             </div>
           )}
 
-          {/* Expanded Chat Panel */}
-          {isExpanded && (
-            <div className="border-t pt-4 mt-4">
-              <div className="bg-muted/30 rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <Avatar className="h-6 w-6">
-                    <AvatarFallback className={cn('text-white text-xs', artefact.agentColor)}>
-                      {artefact.agentIcon}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-sm font-medium">{artefact.agentName}</span>
-                </div>
-                <p className="text-sm text-muted-foreground mb-3">
-                  Hi! Let's refine this artefact together. What's missing or needs adjustment?
-                </p>
-                <div className="flex gap-2">
-                  <Input placeholder="Type your feedback..." className="flex-1" />
-                  <Button size="sm">
-                    <ArrowUpRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
         </CardContent>
       </Card>
     );
