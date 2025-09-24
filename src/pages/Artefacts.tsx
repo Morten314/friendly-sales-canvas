@@ -77,34 +77,6 @@ const mockArtefacts: ArtefactItem[] = [{
   consequence: 'Added 47 new enriched leads to CRM with automated nurture sequences activated',
   actionLog: ['User requested EU fintech ICP enrichment', 'Profiler processed 52 raw lead records', 'Contact verification completed with 94% success rate', 'Behavioral analysis and scoring applied', 'Leads automatically added to CRM system']
 }, {
-  id: '3',
-  agentName: 'Strategist',
-  agentIcon: '🧠',
-  agentColor: 'bg-orange-500',
-  title: 'GTM Strategy Proposal',
-  description: 'Strategist developed a comprehensive go-to-market strategy for Q1 2024, including channel recommendations and timeline.',
-  timestamp: '1d ago',
-  tags: ['GTM Strategy', 'Q1 Planning', 'Channel Strategy'],
-  status: 'needs-review',
-  type: 'proposal',
-  actionDelegated: 'Strategist, develop Q1 2024 GTM strategy for EU expansion',
-  whyTriggered: 'Based on successful ICP enrichment and competitive analysis, EU market entry is now strategically viable',
-  actionPerformed: 'Generated comprehensive GTM strategy including channel analysis, resource requirements, and 90-day execution plan',
-  outputSummary: 'Complete GTM framework with 3-phase execution plan and $2.4M revenue projection',
-  outputDetails: 'Detailed go-to-market strategy covering partner channels, direct sales, marketing campaigns, and success metrics.',
-  recommendations: ['Launch with partner channel in Germany and Netherlands', 'Allocate 2 SDRs specifically for EU market', 'Implement localized content strategy in German and Dutch', 'Set up European customer success operations by Q2'],
-  consequence: 'GTM roadmap created - pending budget approval for EU expansion initiative',
-  actionLog: ['User requested Q1 GTM strategy development', 'Strategist analyzed market data and ICP insights', 'Channel partnership opportunities identified', 'Resource requirements and timeline calculated', 'Comprehensive strategy document generated'],
-  crossLinks: [{
-    id: '2',
-    title: 'ICP Enrichment Report',
-    relationship: 'Used as foundation for target market analysis'
-  }, {
-    id: '1',
-    title: 'Competitor Pricing Analysis',
-    relationship: 'Informed pricing strategy recommendations'
-  }]
-}, {
   id: '4',
   agentName: 'Scout',
   agentIcon: '🛰',
