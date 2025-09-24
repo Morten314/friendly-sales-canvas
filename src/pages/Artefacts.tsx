@@ -190,7 +190,7 @@ const Artefacts = () => {
   
   const [artefacts, setArtefacts] = useState<ArtefactItem[]>(mockArtefacts);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState('pending');
+  const [activeTab, setActiveTab] = useState('completed');
   const [expandedChat, setExpandedChat] = useState<string | null>(null);
   const [filterAgent, setFilterAgent] = useState('all');
   const [filterType, setFilterType] = useState('all');
@@ -457,8 +457,7 @@ const Artefacts = () => {
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <div className="flex items-center justify-between mb-4">
-            <TabsList className="grid grid-cols-5 w-auto">
-              <TabsTrigger value="pending">Pending</TabsTrigger>
+            <TabsList className="grid grid-cols-4 w-auto">
               <TabsTrigger value="completed">Completed</TabsTrigger>
               <TabsTrigger value="needs-review">Needs Review</TabsTrigger>
               <TabsTrigger value="accepted">Accepted</TabsTrigger>
