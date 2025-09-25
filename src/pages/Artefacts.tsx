@@ -224,6 +224,15 @@ const Artefacts = () => {
                 <p className="text-sm text-muted-foreground">{artefact.whyTriggered}</p>
               </div>
             </div>
+
+            {/* System Impact */}
+            <div className="flex items-start gap-2">
+              <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-green-700">System Impact</p>
+                <p className="text-sm text-muted-foreground">{artefact.consequence}</p>
+              </div>
+            </div>
           </div>
         </CardHeader>
         
@@ -271,15 +280,6 @@ const Artefacts = () => {
                   {tag}
                 </Badge>)}
             </div>
-          </div>
-
-          {/* 4. Consequence (System Context) */}
-          <div className="border-l-2 border-l-green-200 pl-4">
-            <div className="flex items-center gap-2 mb-2">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <h4 className="font-semibold text-sm text-green-700">System Impact</h4>
-            </div>
-            <p className="text-sm text-muted-foreground">{artefact.consequence}</p>
           </div>
 
           {/* 5. History & Traceability */}
