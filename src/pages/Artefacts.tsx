@@ -742,39 +742,10 @@ const Artefacts = () => {
             </div>}
 
           {/* Action Bar */}
-          <div className="border-t pt-4 mt-6">
-            <div className="flex flex-wrap gap-2">
-              <Button variant="outline" size="sm" className="gap-2">
-                <Download className="h-4 w-4" />
-                Save as PDF
-              </Button>
-              <Button variant="outline" size="sm" className="gap-2">
-                <Share className="h-4 w-4" />
-                Share on Slack
-              </Button>
-              <Button variant="outline" size="sm" className="gap-2">
-                <Linkedin className="h-4 w-4" />
-                Share as LinkedIn Post
-              </Button>
-              <Button variant="outline" size="sm" className="gap-2">
-                <Mail className="h-4 w-4" />
-                Email to Colleague
-              </Button>
-              <Button variant="outline" size="sm" className="gap-2">
-                <FolderPlus className="h-4 w-4" />
-                Save to Insights
-              </Button>
-              <Button variant="outline" size="sm" className="gap-2">
-                <Bot className="h-4 w-4" />
-                Ask Agent
-              </Button>
-            </div>
-          </div>
+          
 
           {/* Action Buttons */}
-          {(artefact.status === 'pending' || artefact.status === 'needs-review') && <div className="flex items-center gap-2 pt-4 border-t">
-              {/* No action buttons for now */}
-            </div>}
+          {artefact.status === 'pending' || artefact.status === 'needs-review'}
 
         </CardContent>
       </Card>;
