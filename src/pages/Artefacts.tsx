@@ -121,7 +121,6 @@ const Artefacts = () => {
   const toggleChat = (id: string) => {
     setExpandedChat(expandedChat === id ? null : id);
   };
-
   const toggleDeliverable = (id: string) => {
     setExpandedDeliverable(expandedDeliverable === id ? null : id);
   };
@@ -251,10 +250,7 @@ const Artefacts = () => {
             </div>
             
             {/* File Preview Card */}
-            <div 
-              className="border-2 border-dashed border-muted-foreground/20 rounded-lg p-6 hover:border-primary/40 transition-colors cursor-pointer group"
-              onClick={() => toggleDeliverable(artefact.id)}
-            >
+            <div className="border-2 border-dashed border-muted-foreground/20 rounded-lg p-6 hover:border-primary/40 transition-colors cursor-pointer group" onClick={() => toggleDeliverable(artefact.id)}>
               <div className="flex items-center gap-4">
                 <div className="w-12 h-16 bg-gradient-to-br from-red-500 to-red-600 rounded-lg flex items-center justify-center shadow-sm">
                   <FileText className="h-6 w-6 text-white" />
@@ -282,8 +278,7 @@ const Artefacts = () => {
             </div>
 
             {/* Expanded Deliverable View */}
-            {isDeliverableExpanded && (
-              <div className="bg-background rounded-lg border shadow-sm">
+            {isDeliverableExpanded && <div className="bg-background rounded-lg border shadow-sm">
                 {/* Document Header */}
                 <div className="border-b bg-muted/20 px-6 py-4">
                   <div className="flex items-center justify-between mb-4">
@@ -326,10 +321,9 @@ const Artefacts = () => {
                 <div className="p-6 space-y-8">
                   {/* Executive Summary */}
                   <section>
-                    <h2 className="text-lg font-semibold mb-4 border-b pb-2">Executive Summary</h2>
+                    <h2 className="text-lg font-semibold mb-4 border-b pb-2">Snapshot</h2>
                     <div className="space-y-3 text-sm leading-relaxed">
-                      {artefact.id === '1' && (
-                        <>
+                      {artefact.id === '1' && <>
                           <p><strong>Problem/Trigger:</strong> Competitor X launched new SMB pricing tiers targeting mid-market SaaS companies in Healthcare vertical, directly competing with our core ICP segment.</p>
                           
                           <p><strong>Key Findings:</strong></p>
@@ -342,11 +336,9 @@ const Artefacts = () => {
                           <p><strong>Recommended Actions:</strong> Implement competitive pricing response within 2 weeks, enhance enterprise features to justify premium, and accelerate European market expansion.</p>
                           
                           <p><strong>Urgency:</strong> High - 12% of our pipeline directly affected, immediate response required to maintain competitive positioning.</p>
-                        </>
-                      )}
+                        </>}
                       
-                      {artefact.id === '2' && (
-                        <>
+                      {artefact.id === '2' && <>
                           <p><strong>Problem/Trigger:</strong> European market expansion requires qualified fintech startup leads with verified contact data and behavioral insights for targeted outreach campaigns.</p>
                           
                           <p><strong>Key Findings:</strong></p>
@@ -359,11 +351,9 @@ const Artefacts = () => {
                           <p><strong>Recommended Actions:</strong> Prioritize Series A companies for immediate outreach, focus on Stripe/payment processor users, and target technical decision makers.</p>
                           
                           <p><strong>Urgency:</strong> Medium - Leads added to automated nurture sequences, follow-up campaigns scheduled for optimal EU timezone engagement.</p>
-                        </>
-                      )}
+                        </>}
                       
-                      {artefact.id === '4' && (
-                        <>
+                      {artefact.id === '4' && <>
                           <p><strong>Problem/Trigger:</strong> Strategic expansion into fintech vertical requires comprehensive market sizing analysis for investor presentations and resource allocation decisions.</p>
                           
                           <p><strong>Key Findings:</strong></p>
@@ -376,8 +366,7 @@ const Artefacts = () => {
                           <p><strong>Recommended Actions:</strong> Focus on $180M SOM initially, prioritize payment processing and lending segments, consider DACH region expansion within 18 months.</p>
                           
                           <p><strong>Urgency:</strong> Low - Analysis dismissed due to conflicting data sources requiring new methodology and updated market research.</p>
-                        </>
-                      )}
+                        </>}
                     </div>
                   </section>
 
@@ -388,62 +377,50 @@ const Artefacts = () => {
                       <div>
                         <h3 className="font-medium mb-2">Analysis Covers:</h3>
                         <ul className="space-y-1 text-muted-foreground">
-                          {artefact.id === '1' && (
-                            <>
+                          {artefact.id === '1' && <>
                               <li>• SMB pricing tier structure and features</li>
                               <li>• Target market positioning and messaging</li>
                               <li>• Geographic rollout strategy</li>
                               <li>• Impact on our current pipeline</li>
                               <li>• Early market and customer reaction</li>
-                            </>
-                          )}
-                          {artefact.id === '2' && (
-                            <>
+                            </>}
+                          {artefact.id === '2' && <>
                               <li>• EU fintech startup lead enrichment</li>
                               <li>• Contact verification and data accuracy</li>
                               <li>• Company profiling and tech stack analysis</li>
                               <li>• Decision maker identification</li>
                               <li>• Behavioral scoring and segmentation</li>
-                            </>
-                          )}
-                          {artefact.id === '4' && (
-                            <>
+                            </>}
+                          {artefact.id === '4' && <>
                               <li>• Global fintech software market sizing</li>
                               <li>• TAM, SAM, and SOM calculations</li>
                               <li>• Geographic market breakdown</li>
                               <li>• Competitive landscape analysis</li>
                               <li>• Growth projections and trends</li>
-                            </>
-                          )}
+                            </>}
                         </ul>
                       </div>
                       <div>
                         <h3 className="font-medium mb-2">Intentionally Excludes:</h3>
                         <ul className="space-y-1 text-muted-foreground">
-                          {artefact.id === '1' && (
-                            <>
+                          {artefact.id === '1' && <>
                               <li>• Enterprise tier analysis (separate report)</li>
                               <li>• Technical integration capabilities</li>
                               <li>• Long-term strategic roadmap speculation</li>
                               <li>• Customer churn and retention metrics</li>
-                            </>
-                          )}
-                          {artefact.id === '2' && (
-                            <>
+                            </>}
+                          {artefact.id === '2' && <>
                               <li>• North American market analysis</li>
                               <li>• Enterprise-level fintech companies</li>
                               <li>• Traditional banking institutions</li>
                               <li>• Cryptocurrency/DeFi segment</li>
-                            </>
-                          )}
-                          {artefact.id === '4' && (
-                            <>
+                            </>}
+                          {artefact.id === '4' && <>
                               <li>• Cryptocurrency and DeFi markets</li>
                               <li>• Traditional banking software</li>
                               <li>• Regulatory compliance solutions</li>
                               <li>• Consumer fintech applications</li>
-                            </>
-                          )}
+                            </>}
                         </ul>
                       </div>
                     </div>
@@ -456,8 +433,7 @@ const Artefacts = () => {
                        <div>
                          <h3 className="font-medium mb-2">Data Sources Used:</h3>
                          <div className="grid md:grid-cols-2 gap-4">
-                           {artefact.id === '1' && (
-                             <>
+                           {artefact.id === '1' && <>
                                <ul className="space-y-1 text-muted-foreground">
                                  <li>• Competitor X pricing page (snapshot: {artefact.timestamp})</li>
                                  <li>• Press release analysis from PR Newswire</li>
@@ -472,10 +448,8 @@ const Artefacts = () => {
                                  <li>• Job postings on LinkedIn (target roles)</li>
                                  <li>• Customer support documentation review</li>
                                </ul>
-                             </>
-                           )}
-                           {artefact.id === '2' && (
-                             <>
+                             </>}
+                           {artefact.id === '2' && <>
                                <ul className="space-y-1 text-muted-foreground">
                                  <li>• EU startup databases (Crunchbase, AngelList)</li>
                                  <li>• LinkedIn Sales Navigator for contact data</li>
@@ -490,10 +464,8 @@ const Artefacts = () => {
                                  <li>• Industry reports and funding announcements</li>
                                  <li>• Payment processor integration listings</li>
                                </ul>
-                             </>
-                           )}
-                           {artefact.id === '4' && (
-                             <>
+                             </>}
+                           {artefact.id === '4' && <>
                                <ul className="space-y-1 text-muted-foreground">
                                  <li>• Grand View Research fintech market reports</li>
                                  <li>• McKinsey Global Payments Report 2023</li>
@@ -508,8 +480,7 @@ const Artefacts = () => {
                                  <li>• Competitive intelligence databases</li>
                                  <li>• Industry association market data</li>
                                </ul>
-                             </>
-                           )}
+                             </>}
                          </div>
                        </div>
                        
@@ -529,8 +500,7 @@ const Artefacts = () => {
                     <h2 className="text-lg font-semibold mb-4 border-b pb-2">Detailed Findings</h2>
                     
                     <div className="space-y-6">
-                      {artefact.id === '1' && (
-                        <>
+                      {artefact.id === '1' && <>
                           <div>
                             <h3 className="font-medium mb-3">Pricing Structure & Feature Matrix</h3>
                             <div className="overflow-x-auto">
@@ -575,11 +545,9 @@ const Artefacts = () => {
                               <p className="text-sm text-yellow-800"><strong>Competitive Deals:</strong> 8 active opportunities now include Competitor X in evaluation</p>
                             </div>
                           </div>
-                        </>
-                      )}
+                        </>}
                       
-                      {artefact.id === '2' && (
-                        <>
+                      {artefact.id === '2' && <>
                           <div>
                             <h3 className="font-medium mb-3">Lead Enrichment Results</h3>
                             <div className="overflow-x-auto">
@@ -633,11 +601,9 @@ const Artefacts = () => {
                               </div>
                             </div>
                           </div>
-                        </>
-                      )}
+                        </>}
                       
-                      {artefact.id === '4' && (
-                        <>
+                      {artefact.id === '4' && <>
                           <div>
                             <h3 className="font-medium mb-3">Market Size Breakdown</h3>
                             <div className="space-y-4">
@@ -696,8 +662,7 @@ const Artefacts = () => {
                               </table>
                             </div>
                           </div>
-                        </>
-                      )}
+                        </>}
                     </div>
                   </section>
                 </div>
@@ -735,17 +700,14 @@ const Artefacts = () => {
                     </Button>
                   </div>
                 </div>
-              </div>
-            )}
+              </div>}
           </div>
 
           {/* 3. Output Tags */}
           <div className="flex flex-wrap gap-1">
-            {artefact.tags.map((tag, index) => (
-              <Badge key={index} variant="secondary" className="text-xs">
+            {artefact.tags.map((tag, index) => <Badge key={index} variant="secondary" className="text-xs">
                 {tag}
-              </Badge>
-            ))}
+              </Badge>)}
           </div>
 
           {/* 5. History & Traceability */}
