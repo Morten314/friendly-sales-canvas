@@ -283,9 +283,9 @@ const Artefacts = () => {
                 <div className="border-b bg-muted/20 px-6 py-4">
                   <div className="flex items-center justify-between mb-4">
                     <h1 className="text-xl font-bold">
-                      {artefact.id === '1' && 'Competitor X — SMB Pricing Launch: Detailed Impact Analysis (v1)'}
-                      {artefact.id === '2' && 'EU Fintech ICP Enrichment: Lead Intelligence Report (v1)'}
-                      {artefact.id === '4' && 'Fintech Vertical Market Sizing: TAM/SAM/SOM Analysis (v1)'}
+                      {artefact.id === '1' && 'Competitor X — SMB Pricing Launch: Detailed Impact Analysis'}
+                      {artefact.id === '2' && 'EU Fintech ICP Enrichment: Lead Intelligence Report'}
+                      {artefact.id === '4' && 'Fintech Vertical Market Sizing: TAM/SAM/SOM Analysis'}
                     </h1>
                     <Button variant="ghost" size="sm" onClick={() => toggleDeliverable(artefact.id)}>
                       <X className="h-4 w-4" />
