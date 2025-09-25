@@ -247,7 +247,7 @@ const Artefacts = () => {
           <div className="space-y-4">
             <div className="flex items-center gap-2 mb-3">
               <FileText className="h-4 w-4 text-primary" />
-              <h4 className="font-semibold text-sm">Deliverable File Preview</h4>
+              <h4 className="font-semibold text-sm">Action Performed</h4>
             </div>
             
             {/* File Preview Card */}
