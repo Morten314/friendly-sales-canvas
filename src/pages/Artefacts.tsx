@@ -287,7 +287,11 @@ const Artefacts = () => {
                 {/* Document Header */}
                 <div className="border-b bg-muted/20 px-6 py-4">
                   <div className="flex items-center justify-between mb-4">
-                    <h1 className="text-xl font-bold">Competitor X — SMB Pricing Launch: Detailed Impact Analysis (v1)</h1>
+                    <h1 className="text-xl font-bold">
+                      {artefact.id === '1' && 'Competitor X — SMB Pricing Launch: Detailed Impact Analysis (v1)'}
+                      {artefact.id === '2' && 'EU Fintech ICP Enrichment: Lead Intelligence Report (v1)'}
+                      {artefact.id === '4' && 'Fintech Vertical Market Sizing: TAM/SAM/SOM Analysis (v1)'}
+                    </h1>
                     <Button variant="ghost" size="sm" onClick={() => toggleDeliverable(artefact.id)}>
                       <X className="h-4 w-4" />
                     </Button>
@@ -309,7 +313,11 @@ const Artefacts = () => {
                     </div>
                     <div>
                       <span className="font-medium text-muted-foreground">Mission Control Trigger:</span>
-                      <p className="font-medium">ICP Market Expansion</p>
+                      <p className="font-medium">
+                        {artefact.id === '1' && 'ICP Market Expansion'}
+                        {artefact.id === '2' && 'EU Market Entry Strategy'}
+                        {artefact.id === '4' && 'Strategic Planning Request'}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -320,18 +328,56 @@ const Artefacts = () => {
                   <section>
                     <h2 className="text-lg font-semibold mb-4 border-b pb-2">Executive Summary</h2>
                     <div className="space-y-3 text-sm leading-relaxed">
-                      <p><strong>Problem/Trigger:</strong> Competitor X launched new SMB pricing tiers targeting mid-market SaaS companies in Healthcare vertical, directly competing with our core ICP segment.</p>
+                      {artefact.id === '1' && (
+                        <>
+                          <p><strong>Problem/Trigger:</strong> Competitor X launched new SMB pricing tiers targeting mid-market SaaS companies in Healthcare vertical, directly competing with our core ICP segment.</p>
+                          
+                          <p><strong>Key Findings:</strong></p>
+                          <ul className="list-decimal list-inside ml-4 space-y-1">
+                            <li>23% pricing gap identified in our favor across comparable feature sets</li>
+                            <li>Competitor targets same healthcare SaaS segment with 47% feature overlap</li>
+                            <li>Limited geographic reach (US only) vs our global presence advantage</li>
+                          </ul>
+                          
+                          <p><strong>Recommended Actions:</strong> Implement competitive pricing response within 2 weeks, enhance enterprise features to justify premium, and accelerate European market expansion.</p>
+                          
+                          <p><strong>Urgency:</strong> High - 12% of our pipeline directly affected, immediate response required to maintain competitive positioning.</p>
+                        </>
+                      )}
                       
-                      <p><strong>Key Findings:</strong></p>
-                      <ul className="list-decimal list-inside ml-4 space-y-1">
-                        <li>23% pricing gap identified in our favor across comparable feature sets</li>
-                        <li>Competitor targets same healthcare SaaS segment with 47% feature overlap</li>
-                        <li>Limited geographic reach (US only) vs our global presence advantage</li>
-                      </ul>
+                      {artefact.id === '2' && (
+                        <>
+                          <p><strong>Problem/Trigger:</strong> European market expansion requires qualified fintech startup leads with verified contact data and behavioral insights for targeted outreach campaigns.</p>
+                          
+                          <p><strong>Key Findings:</strong></p>
+                          <ul className="list-decimal list-inside ml-4 space-y-1">
+                            <li>47 qualified leads enriched from 52 raw records (90% success rate)</li>
+                            <li>94% contact accuracy achieved through multi-source verification</li>
+                            <li>73% of leads are Series A-B stage with strong payment infrastructure needs</li>
+                          </ul>
+                          
+                          <p><strong>Recommended Actions:</strong> Prioritize Series A companies for immediate outreach, focus on Stripe/payment processor users, and target technical decision makers.</p>
+                          
+                          <p><strong>Urgency:</strong> Medium - Leads added to automated nurture sequences, follow-up campaigns scheduled for optimal EU timezone engagement.</p>
+                        </>
+                      )}
                       
-                      <p><strong>Recommended Actions:</strong> Implement competitive pricing response within 2 weeks, enhance enterprise features to justify premium, and accelerate European market expansion.</p>
-                      
-                      <p><strong>Urgency:</strong> High - 12% of our pipeline directly affected, immediate response required to maintain competitive positioning.</p>
+                      {artefact.id === '4' && (
+                        <>
+                          <p><strong>Problem/Trigger:</strong> Strategic expansion into fintech vertical requires comprehensive market sizing analysis for investor presentations and resource allocation decisions.</p>
+                          
+                          <p><strong>Key Findings:</strong></p>
+                          <ul className="list-decimal list-inside ml-4 space-y-1">
+                            <li>$47B Total Addressable Market (TAM) across global fintech software sector</li>
+                            <li>$2.3B Serviceable Addressable Market (SAM) for our solution categories</li>
+                            <li>$180M Serviceable Obtainable Market (SOM) based on competitive analysis</li>
+                          </ul>
+                          
+                          <p><strong>Recommended Actions:</strong> Focus on $180M SOM initially, prioritize payment processing and lending segments, consider DACH region expansion within 18 months.</p>
+                          
+                          <p><strong>Urgency:</strong> Low - Analysis dismissed due to conflicting data sources requiring new methodology and updated market research.</p>
+                        </>
+                      )}
                     </div>
                   </section>
 
@@ -342,20 +388,62 @@ const Artefacts = () => {
                       <div>
                         <h3 className="font-medium mb-2">Analysis Covers:</h3>
                         <ul className="space-y-1 text-muted-foreground">
-                          <li>• SMB pricing tier structure and features</li>
-                          <li>• Target market positioning and messaging</li>
-                          <li>• Geographic rollout strategy</li>
-                          <li>• Impact on our current pipeline</li>
-                          <li>• Early market and customer reaction</li>
+                          {artefact.id === '1' && (
+                            <>
+                              <li>• SMB pricing tier structure and features</li>
+                              <li>• Target market positioning and messaging</li>
+                              <li>• Geographic rollout strategy</li>
+                              <li>• Impact on our current pipeline</li>
+                              <li>• Early market and customer reaction</li>
+                            </>
+                          )}
+                          {artefact.id === '2' && (
+                            <>
+                              <li>• EU fintech startup lead enrichment</li>
+                              <li>• Contact verification and data accuracy</li>
+                              <li>• Company profiling and tech stack analysis</li>
+                              <li>• Decision maker identification</li>
+                              <li>• Behavioral scoring and segmentation</li>
+                            </>
+                          )}
+                          {artefact.id === '4' && (
+                            <>
+                              <li>• Global fintech software market sizing</li>
+                              <li>• TAM, SAM, and SOM calculations</li>
+                              <li>• Geographic market breakdown</li>
+                              <li>• Competitive landscape analysis</li>
+                              <li>• Growth projections and trends</li>
+                            </>
+                          )}
                         </ul>
                       </div>
                       <div>
                         <h3 className="font-medium mb-2">Intentionally Excludes:</h3>
                         <ul className="space-y-1 text-muted-foreground">
-                          <li>• Enterprise tier analysis (separate report)</li>
-                          <li>• Technical integration capabilities</li>
-                          <li>• Long-term strategic roadmap speculation</li>
-                          <li>• Internal cost structure analysis</li>
+                          {artefact.id === '1' && (
+                            <>
+                              <li>• Enterprise tier analysis (separate report)</li>
+                              <li>• Technical integration capabilities</li>
+                              <li>• Long-term strategic roadmap speculation</li>
+                              <li>• Customer churn and retention metrics</li>
+                            </>
+                          )}
+                          {artefact.id === '2' && (
+                            <>
+                              <li>• North American market analysis</li>
+                              <li>• Enterprise-level fintech companies</li>
+                              <li>• Traditional banking institutions</li>
+                              <li>• Cryptocurrency/DeFi segment</li>
+                            </>
+                          )}
+                          {artefact.id === '4' && (
+                            <>
+                              <li>• Cryptocurrency and DeFi markets</li>
+                              <li>• Traditional banking software</li>
+                              <li>• Regulatory compliance solutions</li>
+                              <li>• Consumer fintech applications</li>
+                            </>
+                          )}
                         </ul>
                       </div>
                     </div>
@@ -364,29 +452,76 @@ const Artefacts = () => {
                   {/* Methodology & Data Sources */}
                   <section>
                     <h2 className="text-lg font-semibold mb-4 border-b pb-2">Methodology & Data Sources</h2>
-                    <div className="space-y-4 text-sm">
-                      <div>
-                        <h3 className="font-medium mb-2">Primary Sources:</h3>
-                        <div className="grid md:grid-cols-2 gap-4">
-                          <ul className="space-y-1 text-muted-foreground">
-                            <li>• Competitor pricing pages (live scrape 2h ago)</li>
-                            <li>• Press release analysis (TechCrunch, PR Newswire)</li>
-                            <li>• G2 reviews and feature comparisons</li>
-                            <li>• LinkedIn executive posts and announcements</li>
-                          </ul>
-                          <ul className="space-y-1 text-muted-foreground">
-                            <li>• Job posting analysis (15 new hires identified)</li>
-                            <li>• BuiltWith technology stack analysis</li>
-                            <li>• Bombora intent data (last 30 days)</li>
-                            <li>• Internal CRM pipeline matching (47 overlaps)</li>
-                          </ul>
-                        </div>
-                      </div>
-                      
-                      <div className="bg-muted/20 p-3 rounded">
-                        <p><strong>Data Processing:</strong> Lead matching performed using company domain + employee count + industry vertical. Pricing data verified across 3 independent sources with 95% confidence interval.</p>
-                      </div>
-                    </div>
+                     <div className="space-y-4 text-sm">
+                       <div>
+                         <h3 className="font-medium mb-2">Data Sources Used:</h3>
+                         <div className="grid md:grid-cols-2 gap-4">
+                           {artefact.id === '1' && (
+                             <>
+                               <ul className="space-y-1 text-muted-foreground">
+                                 <li>• Competitor X pricing page (snapshot: {artefact.timestamp})</li>
+                                 <li>• Press release analysis from PR Newswire</li>
+                                 <li>• Crunchbase company profile and funding data</li>
+                                 <li>• G2 feature comparison and user reviews</li>
+                                 <li>• LinkedIn social listening (last 30 days)</li>
+                               </ul>
+                               <ul className="space-y-1 text-muted-foreground">
+                                 <li>• BuiltWith technology stack analysis</li>
+                                 <li>• Bombora intent data signals</li>
+                                 <li>• Internal CRM pipeline analysis</li>
+                                 <li>• Job postings on LinkedIn (target roles)</li>
+                                 <li>• Customer support documentation review</li>
+                               </ul>
+                             </>
+                           )}
+                           {artefact.id === '2' && (
+                             <>
+                               <ul className="space-y-1 text-muted-foreground">
+                                 <li>• EU startup databases (Crunchbase, AngelList)</li>
+                                 <li>• LinkedIn Sales Navigator for contact data</li>
+                                 <li>• BuiltWith for technology stack analysis</li>
+                                 <li>• ZoomInfo for contact verification</li>
+                                 <li>• Clearbit for company enrichment data</li>
+                               </ul>
+                               <ul className="space-y-1 text-muted-foreground">
+                                 <li>• GDPR-compliant data sources only</li>
+                                 <li>• Company websites and career pages</li>
+                                 <li>• Social media professional profiles</li>
+                                 <li>• Industry reports and funding announcements</li>
+                                 <li>• Payment processor integration listings</li>
+                               </ul>
+                             </>
+                           )}
+                           {artefact.id === '4' && (
+                             <>
+                               <ul className="space-y-1 text-muted-foreground">
+                                 <li>• Grand View Research fintech market reports</li>
+                                 <li>• McKinsey Global Payments Report 2023</li>
+                                 <li>• PwC Global Fintech Survey data</li>
+                                 <li>• Statista market sizing databases</li>
+                                 <li>• CB Insights fintech funding analysis</li>
+                               </ul>
+                               <ul className="space-y-1 text-muted-foreground">
+                                 <li>• Deloitte fintech trend analysis</li>
+                                 <li>• EY Global Fintech Adoption Index</li>
+                                 <li>• Regional central bank reports</li>
+                                 <li>• Competitive intelligence databases</li>
+                                 <li>• Industry association market data</li>
+                               </ul>
+                             </>
+                           )}
+                         </div>
+                       </div>
+                       
+                       <div>
+                         <h3 className="font-medium mb-2">Data Processing:</h3>
+                         <p className="text-muted-foreground">
+                           {artefact.id === '1' && 'Lead matching performed using company domain + employee count + industry vertical. 47 leads cross-referenced against our existing pipeline using HubSpot API integration.'}
+                           {artefact.id === '2' && 'Multi-source verification process using LinkedIn, ZoomInfo, and Clearbit APIs. Lead scoring algorithm applied based on company size, funding stage, and technology stack compatibility.'}
+                           {artefact.id === '4' && 'Market data normalized across multiple sources using weighted averages. Regional adjustments applied for currency conversion and market maturity factors. Competitive analysis based on feature parity scoring.'}
+                         </p>
+                       </div>
+                     </div>
                   </section>
 
                   {/* Detailed Findings */}
@@ -394,106 +529,175 @@ const Artefacts = () => {
                     <h2 className="text-lg font-semibold mb-4 border-b pb-2">Detailed Findings</h2>
                     
                     <div className="space-y-6">
-                      {/* Pricing Structure */}
-                      <div>
-                        <h3 className="font-medium mb-3">1. Pricing Structure & Feature Matrix</h3>
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-sm border border-border rounded">
-                            <thead className="bg-muted/20">
-                              <tr>
-                                <th className="text-left p-3 border-b">Feature</th>
-                                <th className="text-left p-3 border-b">Competitor X SMB</th>
-                                <th className="text-left p-3 border-b">Our SMB Tier</th>
-                                <th className="text-left p-3 border-b">Gap Analysis</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              <tr className="border-b">
-                                <td className="p-3">Monthly Price</td>
-                                <td className="p-3 font-medium">$79/month</td>
-                                <td className="p-3 font-medium">$99/month</td>
-                                <td className="p-3 text-green-600">23% premium justified</td>
-                              </tr>
-                              <tr className="border-b">
-                                <td className="p-3">User Limit</td>
-                                <td className="p-3">25 users</td>
-                                <td className="p-3">50 users</td>
-                                <td className="p-3 text-green-600">2x capacity advantage</td>
-                              </tr>
-                              <tr className="border-b">
-                                <td className="p-3">API Calls</td>
-                                <td className="p-3">10K/month</td>
-                                <td className="p-3">25K/month</td>
-                                <td className="p-3 text-green-600">2.5x API advantage</td>
-                              </tr>
-                              <tr>
-                                <td className="p-3">Healthcare Compliance</td>
-                                <td className="p-3">HIPAA only</td>
-                                <td className="p-3">HIPAA + SOC2</td>
-                                <td className="p-3 text-green-600">Enhanced compliance</td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-
-                      {/* Target Segment */}
-                      <div>
-                        <h3 className="font-medium mb-3">2. Target Segment Analysis</h3>
-                        <div className="bg-muted/10 p-4 rounded space-y-2 text-sm">
-                          <p><strong>Primary Target:</strong> Healthcare SaaS companies with 50-200 employees</p>
-                          <p><strong>Secondary Focus:</strong> Fintech startups in Series A/B stage</p>
-                          <p><strong>Geographic Priority:</strong> US East/West Coast markets initially</p>
-                          <p><strong>Overlap with Our ICP:</strong> 47% direct overlap, 23% adjacent segments</p>
-                        </div>
-                      </div>
-
-                      {/* Market Reaction */}
-                      <div>
-                        <h3 className="font-medium mb-3">3. Early Market Reaction</h3>
-                        <div className="grid md:grid-cols-3 gap-4 text-sm">
-                          <div className="bg-green-50 p-3 rounded border border-green-200">
-                            <p className="font-medium text-green-800">Positive Sentiment</p>
-                            <p className="text-green-700">67% of mentions</p>
-                            <p className="text-xs text-green-600 mt-1">Pricing praised as "competitive"</p>
-                          </div>
-                          <div className="bg-yellow-50 p-3 rounded border border-yellow-200">
-                            <p className="font-medium text-yellow-800">Neutral/Mixed</p>
-                            <p className="text-yellow-700">28% of mentions</p>
-                            <p className="text-xs text-yellow-600 mt-1">Feature parity concerns raised</p>
-                          </div>
-                          <div className="bg-red-50 p-3 rounded border border-red-200">
-                            <p className="font-medium text-red-800">Negative Feedback</p>
-                            <p className="text-red-700">5% of mentions</p>
-                            <p className="text-xs text-red-600 mt-1">Limited integrations noted</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Pipeline Impact */}
-                      <div>
-                        <h3 className="font-medium mb-3">4. Impact on Our Pipeline</h3>
-                        <div className="bg-orange-50 border border-orange-200 p-4 rounded">
-                          <div className="grid md:grid-cols-2 gap-4 text-sm">
-                            <div>
-                              <p className="font-medium text-orange-800 mb-2">Direct Impact:</p>
-                              <ul className="space-y-1 text-orange-700">
-                                <li>• 23 active prospects in same segment</li>
-                                <li>• $1.2M pipeline value at risk</li>
-                                <li>• 3 deals moved to "under review" status</li>
-                              </ul>
-                            </div>
-                            <div>
-                              <p className="font-medium text-orange-800 mb-2">Recommended Response:</p>
-                              <ul className="space-y-1 text-orange-700">
-                                <li>• Immediate price defense strategy</li>
-                                <li>• Accelerate enterprise feature demos</li>
-                                <li>• Proactive customer communication plan</li>
-                              </ul>
+                      {artefact.id === '1' && (
+                        <>
+                          <div>
+                            <h3 className="font-medium mb-3">Pricing Structure & Feature Matrix</h3>
+                            <div className="overflow-x-auto">
+                              <table className="w-full border border-muted text-sm">
+                                <thead>
+                                  <tr className="bg-muted/50">
+                                    <th className="p-3 text-left border-r">Feature</th>
+                                    <th className="p-3 text-center border-r">Competitor X SMB ($49/mo)</th>
+                                    <th className="p-3 text-center border-r">Our Current ($59/mo)</th>
+                                    <th className="p-3 text-center">Gap Analysis</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  <tr className="border-t">
+                                    <td className="p-3 border-r font-medium">API Calls/Month</td>
+                                    <td className="p-3 text-center border-r">10,000</td>
+                                    <td className="p-3 text-center border-r">15,000</td>
+                                    <td className="p-3 text-center text-green-600">+50% advantage</td>
+                                  </tr>
+                                  <tr className="border-t bg-muted/20">
+                                    <td className="p-3 border-r font-medium">Integrations</td>
+                                    <td className="p-3 text-center border-r">25</td>
+                                    <td className="p-3 text-center border-r">18</td>
+                                    <td className="p-3 text-center text-red-600">-28% gap</td>
+                                  </tr>
+                                  <tr className="border-t">
+                                    <td className="p-3 border-r font-medium">Advanced Analytics</td>
+                                    <td className="p-3 text-center border-r">✓</td>
+                                    <td className="p-3 text-center border-r">✓</td>
+                                    <td className="p-3 text-center text-blue-600">Parity</td>
+                                  </tr>
+                                </tbody>
+                              </table>
                             </div>
                           </div>
-                        </div>
-                      </div>
+                          
+                          <div>
+                            <h3 className="font-medium mb-3">Pipeline Impact Analysis</h3>
+                            <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
+                              <p className="text-sm text-yellow-800 mb-2"><strong>Direct Overlap:</strong> 47 prospects in our pipeline match Competitor X's target profile</p>
+                              <p className="text-sm text-yellow-800 mb-2"><strong>Risk Level:</strong> 12% of Q4 pipeline value ($2.3M ARR) potentially affected</p>
+                              <p className="text-sm text-yellow-800"><strong>Competitive Deals:</strong> 8 active opportunities now include Competitor X in evaluation</p>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                      
+                      {artefact.id === '2' && (
+                        <>
+                          <div>
+                            <h3 className="font-medium mb-3">Lead Enrichment Results</h3>
+                            <div className="overflow-x-auto">
+                              <table className="w-full border border-muted text-sm">
+                                <thead>
+                                  <tr className="bg-muted/50">
+                                    <th className="p-3 text-left border-r">Metric</th>
+                                    <th className="p-3 text-center border-r">Raw Input</th>
+                                    <th className="p-3 text-center border-r">Enriched Output</th>
+                                    <th className="p-3 text-center">Success Rate</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  <tr className="border-t">
+                                    <td className="p-3 border-r font-medium">Total Leads</td>
+                                    <td className="p-3 text-center border-r">52</td>
+                                    <td className="p-3 text-center border-r">47</td>
+                                    <td className="p-3 text-center text-green-600">90%</td>
+                                  </tr>
+                                  <tr className="border-t bg-muted/20">
+                                    <td className="p-3 border-r font-medium">Contact Accuracy</td>
+                                    <td className="p-3 text-center border-r">Unknown</td>
+                                    <td className="p-3 text-center border-r">94%</td>
+                                    <td className="p-3 text-center text-green-600">Verified</td>
+                                  </tr>
+                                  <tr className="border-t">
+                                    <td className="p-3 border-r font-medium">Decision Makers ID'd</td>
+                                    <td className="p-3 text-center border-r">0</td>
+                                    <td className="p-3 text-center border-r">41</td>
+                                    <td className="p-3 text-center text-green-600">87%</td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <h3 className="font-medium mb-3">Geographic Distribution</h3>
+                            <div className="grid md:grid-cols-3 gap-4">
+                              <div className="bg-muted/30 p-4 rounded-lg text-center">
+                                <p className="text-2xl font-bold text-primary">28</p>
+                                <p className="text-sm text-muted-foreground">UK & Ireland</p>
+                              </div>
+                              <div className="bg-muted/30 p-4 rounded-lg text-center">
+                                <p className="text-2xl font-bold text-primary">12</p>
+                                <p className="text-sm text-muted-foreground">DACH Region</p>
+                              </div>
+                              <div className="bg-muted/30 p-4 rounded-lg text-center">
+                                <p className="text-2xl font-bold text-primary">7</p>
+                                <p className="text-sm text-muted-foreground">Nordics</p>
+                              </div>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                      
+                      {artefact.id === '4' && (
+                        <>
+                          <div>
+                            <h3 className="font-medium mb-3">Market Size Breakdown</h3>
+                            <div className="space-y-4">
+                              <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                                <h4 className="font-semibold text-blue-800 mb-2">Total Addressable Market (TAM)</h4>
+                                <p className="text-3xl font-bold text-blue-900 mb-2">$47.2B</p>
+                                <p className="text-sm text-blue-700">Global fintech software market including all segments and verticals</p>
+                              </div>
+                              
+                              <div className="bg-purple-50 border border-purple-200 p-4 rounded-lg">
+                                <h4 className="font-semibold text-purple-800 mb-2">Serviceable Addressable Market (SAM)</h4>
+                                <p className="text-3xl font-bold text-purple-900 mb-2">$2.3B</p>
+                                <p className="text-sm text-purple-700">Payment processing, lending, and API infrastructure solutions</p>
+                              </div>
+                              
+                              <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
+                                <h4 className="font-semibold text-green-800 mb-2">Serviceable Obtainable Market (SOM)</h4>
+                                <p className="text-3xl font-bold text-green-900 mb-2">$180M</p>
+                                <p className="text-sm text-green-700">Realistically achievable market share based on competitive analysis</p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <h3 className="font-medium mb-3">Regional Market Distribution</h3>
+                            <div className="overflow-x-auto">
+                              <table className="w-full border border-muted text-sm">
+                                <thead>
+                                  <tr className="bg-muted/50">
+                                    <th className="p-3 text-left border-r">Region</th>
+                                    <th className="p-3 text-center border-r">Market Size</th>
+                                    <th className="p-3 text-center border-r">Growth Rate</th>
+                                    <th className="p-3 text-center">Opportunity Score</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  <tr className="border-t">
+                                    <td className="p-3 border-r font-medium">North America</td>
+                                    <td className="p-3 text-center border-r">$18.7B</td>
+                                    <td className="p-3 text-center border-r">12.3%</td>
+                                    <td className="p-3 text-center text-green-600">High</td>
+                                  </tr>
+                                  <tr className="border-t bg-muted/20">
+                                    <td className="p-3 border-r font-medium">Europe</td>
+                                    <td className="p-3 text-center border-r">$14.2B</td>
+                                    <td className="p-3 text-center border-r">15.7%</td>
+                                    <td className="p-3 text-center text-green-600">High</td>
+                                  </tr>
+                                  <tr className="border-t">
+                                    <td className="p-3 border-r font-medium">Asia-Pacific</td>
+                                    <td className="p-3 text-center border-r">$11.8B</td>
+                                    <td className="p-3 text-center border-r">18.9%</td>
+                                    <td className="p-3 text-center text-yellow-600">Medium</td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </section>
                 </div>
