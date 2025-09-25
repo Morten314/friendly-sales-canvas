@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Check, X, MessageCircle, Search, ChevronDown, FileText, TrendingUp, Users, Target, BarChart, Clock, ArrowUpRight, AlertCircle, CheckCircle, History, ArrowRight, ChevronRight, Lightbulb, Activity, Link2, Filter } from 'lucide-react';
+import { Check, X, MessageCircle, Search, ChevronDown, FileText, TrendingUp, Users, Target, BarChart, Clock, ArrowUpRight, AlertCircle, CheckCircle, History, ArrowRight, ChevronRight, Lightbulb, Activity, Link2, Filter, Download, Share, Linkedin, Mail, FolderPlus, Bot, Eye, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 interface ArtefactItem {
   id: string;
@@ -101,6 +101,7 @@ const Artefacts = () => {
   const [artefacts, setArtefacts] = useState<ArtefactItem[]>(mockArtefacts);
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedChat, setExpandedChat] = useState<string | null>(null);
+  const [expandedDeliverable, setExpandedDeliverable] = useState<string | null>(null);
   const filteredArtefacts = artefacts.filter(artefact => {
     const matchesSearch = artefact.title.toLowerCase().includes(searchQuery.toLowerCase()) || artefact.description.toLowerCase().includes(searchQuery.toLowerCase()) || artefact.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
     return matchesSearch;
@@ -119,6 +120,10 @@ const Artefacts = () => {
   };
   const toggleChat = (id: string) => {
     setExpandedChat(expandedChat === id ? null : id);
+  };
+
+  const toggleDeliverable = (id: string) => {
+    setExpandedDeliverable(expandedDeliverable === id ? null : id);
   };
   const getTypeIcon = (type: ArtefactItem['type']) => {
     switch (type) {
@@ -145,6 +150,7 @@ const Artefacts = () => {
   }) => {
     const TypeIcon = getTypeIcon(artefact.type);
     const isExpanded = expandedChat === artefact.id;
+    const isDeliverableExpanded = expandedDeliverable === artefact.id;
     const getStatusColor = (status: string) => {
       switch (status) {
         case 'completed':
@@ -237,49 +243,101 @@ const Artefacts = () => {
         </CardHeader>
         
         <CardContent className="space-y-6">
-          {/* 2. Action Performed (Agent's Work Log) */}
-          <div className="border-l-2 border-l-blue-200 pl-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Activity className="h-4 w-4 text-blue-600" />
-              <h4 className="font-semibold text-sm text-blue-700">Action Performed</h4>
-            </div>
-            <p className="text-sm text-muted-foreground leading-relaxed">{artefact.actionPerformed}</p>
-          </div>
-
-          {/* 3. Output (The Artefact Itself) */}
-          <div className="bg-muted/30 rounded-lg p-4 space-y-4">
+          {/* 2. Deliverable File Preview */}
+          <div className="space-y-4">
             <div className="flex items-center gap-2 mb-3">
               <FileText className="h-4 w-4 text-primary" />
-              <h3 className="font-semibold text-lg">{artefact.title}</h3>
+              <h4 className="font-semibold text-sm">Deliverable File Preview</h4>
             </div>
             
-            <div className="space-y-3">
-              <div>
-                <h5 className="text-sm font-medium mb-1">Summary</h5>
-                <p className="text-sm text-muted-foreground">{artefact.outputSummary}</p>
+            {/* File Preview Card */}
+            <div 
+              className="border-2 border-dashed border-muted-foreground/20 rounded-lg p-6 hover:border-primary/40 transition-colors cursor-pointer group"
+              onClick={() => toggleDeliverable(artefact.id)}
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-16 bg-gradient-to-br from-red-500 to-red-600 rounded-lg flex items-center justify-center shadow-sm">
+                  <FileText className="h-6 w-6 text-white" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-base mb-1 group-hover:text-primary transition-colors">
+                    Competitor X SMB Launch Analysis
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    {artefact.outputSummary}
+                  </p>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span>PDF • 12 pages</span>
+                    <span>•</span>
+                    <span>Generated {artefact.timestamp}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Eye className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                  <span className="text-sm text-muted-foreground group-hover:text-primary transition-colors">
+                    Click to preview
+                  </span>
+                </div>
               </div>
-              
-              <div>
-                <h5 className="text-sm font-medium mb-1">Details</h5>
-                <p className="text-sm text-muted-foreground">{artefact.outputDetails}</p>
-              </div>
-              
-              {artefact.recommendations.length > 0 && <div>
-                  <h5 className="text-sm font-medium mb-2">Recommendations</h5>
-                  <ul className="space-y-1">
-                    {artefact.recommendations.map((rec, index) => <li key={index} className="flex items-start gap-2 text-sm text-muted-foreground">
-                        <ChevronRight className="h-3 w-3 mt-0.5 text-primary flex-shrink-0" />
-                        <span>{rec}</span>
-                      </li>)}
-                  </ul>
-                </div>}
             </div>
 
-            <div className="flex flex-wrap gap-1 pt-2">
-              {artefact.tags.map((tag, index) => <Badge key={index} variant="secondary" className="text-xs">
-                  {tag}
-                </Badge>)}
-            </div>
+            {/* Expanded Deliverable View */}
+            {isDeliverableExpanded && (
+              <div className="bg-muted/30 rounded-lg p-6 space-y-4 border">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold">Competitor X SMB Launch Analysis</h3>
+                  <Button variant="ghost" size="sm" onClick={() => toggleDeliverable(artefact.id)}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-semibold mb-2">Executive Summary</h4>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      {artefact.outputSummary}
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="font-semibold mb-2">Detailed Analysis</h4>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      {artefact.outputDetails}
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="font-semibold mb-2">Action Performed</h4>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      {artefact.actionPerformed}
+                    </p>
+                  </div>
+
+                  {artefact.recommendations.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold mb-2">Key Recommendations</h4>
+                      <ul className="space-y-2">
+                        {artefact.recommendations.map((rec, index) => (
+                          <li key={index} className="flex items-start gap-2 text-sm text-muted-foreground">
+                            <ChevronRight className="h-3 w-3 mt-0.5 text-primary flex-shrink-0" />
+                            <span>{rec}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 3. Output Tags */}
+          <div className="flex flex-wrap gap-1">
+            {artefact.tags.map((tag, index) => (
+              <Badge key={index} variant="secondary" className="text-xs">
+                {tag}
+              </Badge>
+            ))}
           </div>
 
           {/* 5. History & Traceability */}
@@ -312,6 +370,36 @@ const Artefacts = () => {
                   </div>)}
               </div>
             </div>}
+
+          {/* Action Bar */}
+          <div className="border-t pt-4 mt-6">
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" size="sm" className="gap-2">
+                <Download className="h-4 w-4" />
+                Save as PDF
+              </Button>
+              <Button variant="outline" size="sm" className="gap-2">
+                <Share className="h-4 w-4" />
+                Share on Slack
+              </Button>
+              <Button variant="outline" size="sm" className="gap-2">
+                <Linkedin className="h-4 w-4" />
+                Share as LinkedIn Post
+              </Button>
+              <Button variant="outline" size="sm" className="gap-2">
+                <Mail className="h-4 w-4" />
+                Email to Colleague
+              </Button>
+              <Button variant="outline" size="sm" className="gap-2">
+                <FolderPlus className="h-4 w-4" />
+                Save to Insights
+              </Button>
+              <Button variant="outline" size="sm" className="gap-2">
+                <Bot className="h-4 w-4" />
+                Ask Agent
+              </Button>
+            </div>
+          </div>
 
           {/* Action Buttons */}
           {(artefact.status === 'pending' || artefact.status === 'needs-review') && <div className="flex items-center gap-2 pt-4 border-t">
