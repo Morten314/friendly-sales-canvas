@@ -1,16 +1,8 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Search, Bell, MessageSquare, Info } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AskBrewra } from "@/components/agent-hub/AskBrewra";
 import { ViewToggle } from "@/components/market-research/ViewToggle";
 import { useNavigate } from "react-router-dom";
@@ -25,15 +17,12 @@ export interface DeploymentData {
   additionalContext?: string;
   deployedAt: string;
 }
-
 export function Header() {
   const [openAsk, setOpenAsk] = useState(false);
   const [isAIViewActive, setIsAIViewActive] = useState(false);
   const navigate = useNavigate();
-
   const getPageTitle = () => {
     const path = window.location.pathname;
-    
     if (path === '/agent-hub') return 'Agent Hub';
     if (path === '/dashboard') return 'Dashboard';
     if (path === '/market-research') return 'Scout';
@@ -43,31 +32,26 @@ export function Header() {
     if (path === '/reports') return 'Demo Prep (Presenter)';
     if (path === '/insights') return 'Reports';
     if (path === '/settings') return 'Settings';
-
     return 'Agent Hub';
   };
-
   const handleViewModeChange = (isAIView: boolean) => {
     setIsAIViewActive(isAIView);
     // Dispatch custom event to communicate with other components
-    window.dispatchEvent(new CustomEvent('aiViewChanged', { 
-      detail: { isAIView } 
+    window.dispatchEvent(new CustomEvent('aiViewChanged', {
+      detail: {
+        isAIView
+      }
     }));
   };
-
   const handleDeployScout = () => {
     navigate('/scout-deployment');
   };
-
   const isMarketResearchPage = window.location.pathname === '/market-research';
-
-  return (
-    <header className="bg-white border-b border-gray-200 p-4 flex items-center justify-between relative z-50">
+  return <header className="bg-white border-b border-gray-200 p-4 flex items-center justify-between relative z-50">
       <div className="flex flex-col">
         <div className="flex items-center">
-          <h1 className="text-xl font-bold text-gray-800">{getPageTitle()}</h1>
-          {isMarketResearchPage && (
-            <DropdownMenu>
+          
+          {isMarketResearchPage && <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="ml-1 h-6 w-6 p-0 hover:bg-gray-100">
                   <Info className="h-4 w-4 text-gray-500 hover:text-gray-700" />
@@ -102,12 +86,9 @@ export function Header() {
                   </ul>
                 </div>
               </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+            </DropdownMenu>}
         </div>
-        {isMarketResearchPage && (
-          <span className="text-base italic font-normal text-gray-600">Find your best markets before your competitors do</span>
-        )}
+        {isMarketResearchPage && <span className="text-base italic font-normal text-gray-600">Find your best markets before your competitors do</span>}
       </div>
 
       <div className="flex items-center space-x-4">
@@ -116,30 +97,20 @@ export function Header() {
         <ViewToggle onViewChange={handleViewModeChange} />
 
         {/* Market Research specific buttons */}
-        {isMarketResearchPage && (
-          <Button 
-            className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
-            onClick={handleDeployScout}
-          >
+        {isMarketResearchPage && <Button className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2" onClick={handleDeployScout}>
             Deploy Scout
-          </Button>
-        )}
+          </Button>}
 
         {/* Ask Brewra AI Button */}
         <div className="relative">
-          <Button
-            onClick={() => setOpenAsk(!openAsk)}
-            className="h-8 px-3 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-md flex items-center"
-          >
+          <Button onClick={() => setOpenAsk(!openAsk)} className="h-8 px-3 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-md flex items-center">
             <MessageSquare className="h-4 w-4 mr-1" />
             Ask
           </Button>
 
-          {openAsk && (
-            <div className="absolute top-12 right-0 w-96 max-h-[80vh] bg-white rounded-xl shadow-xl border overflow-hidden z-50">
+          {openAsk && <div className="absolute top-12 right-0 w-96 max-h-[80vh] bg-white rounded-xl shadow-xl border overflow-hidden z-50">
               <AskBrewra />
-            </div>
-          )}
+            </div>}
         </div>
 
         {/* Notification Bell */}
@@ -178,6 +149,5 @@ export function Header() {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-    </header>
-  );
+    </header>;
 }
