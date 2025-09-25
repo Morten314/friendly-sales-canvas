@@ -256,9 +256,7 @@ const Artefacts = () => {
                   <FileText className="h-6 w-6 text-white" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-semibold text-base mb-1 group-hover:text-primary transition-colors">
-                    Competitor X SMB Launch Analysis
-                  </h3>
+                  <h3 className="font-semibold text-base mb-1 group-hover:text-primary transition-colors">EU Fintech ICP Enrichment</h3>
                   <p className="text-sm text-muted-foreground mb-2">
                     {artefact.outputSummary}
                   </p>
