@@ -429,9 +429,9 @@ const Artefacts = () => {
 
               {/* Document Content */}
               <div className="space-y-6">
-                {/* Executive Summary */}
+                {/* Snapshot */}
                 <section>
-                  <h2 className="text-lg font-semibold mb-4 border-b pb-2">Executive Summary</h2>
+                  <h2 className="text-lg font-semibold mb-4 border-b pb-2">Snapshot</h2>
                   <p className="text-sm leading-relaxed">{previewArtefact.fullReport.executiveSummary}</p>
                 </section>
 
