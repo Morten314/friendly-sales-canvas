@@ -283,49 +283,253 @@ const Artefacts = () => {
 
             {/* Expanded Deliverable View */}
             {isDeliverableExpanded && (
-              <div className="bg-muted/30 rounded-lg p-6 space-y-4 border">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold">Competitor X SMB Launch Analysis</h3>
-                  <Button variant="ghost" size="sm" onClick={() => toggleDeliverable(artefact.id)}>
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-                
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="font-semibold mb-2">Executive Summary</h4>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      {artefact.outputSummary}
-                    </p>
+              <div className="bg-background rounded-lg border shadow-sm">
+                {/* Document Header */}
+                <div className="border-b bg-muted/20 px-6 py-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h1 className="text-xl font-bold">Competitor X — SMB Pricing Launch: Detailed Impact Analysis (v1)</h1>
+                    <Button variant="ghost" size="sm" onClick={() => toggleDeliverable(artefact.id)}>
+                      <X className="h-4 w-4" />
+                    </Button>
                   </div>
                   
-                  <div>
-                    <h4 className="font-semibold mb-2">Detailed Analysis</h4>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      {artefact.outputDetails}
-                    </p>
-                  </div>
-                  
-                  <div>
-                    <h4 className="font-semibold mb-2">Action Performed</h4>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      {artefact.actionPerformed}
-                    </p>
-                  </div>
-
-                  {artefact.recommendations.length > 0 && (
+                  {/* Header Metadata */}
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
                     <div>
-                      <h4 className="font-semibold mb-2">Key Recommendations</h4>
-                      <ul className="space-y-2">
-                        {artefact.recommendations.map((rec, index) => (
-                          <li key={index} className="flex items-start gap-2 text-sm text-muted-foreground">
-                            <ChevronRight className="h-3 w-3 mt-0.5 text-primary flex-shrink-0" />
-                            <span>{rec}</span>
-                          </li>
-                        ))}
-                      </ul>
+                      <span className="font-medium text-muted-foreground">Agent:</span>
+                      <p className="font-semibold">{artefact.agentName}</p>
                     </div>
-                  )}
+                    <div>
+                      <span className="font-medium text-muted-foreground">Action Delegated:</span>
+                      <p className="font-medium">"{artefact.actionDelegated}"</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-muted-foreground">Generated:</span>
+                      <p className="font-medium">{artefact.timestamp}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-muted-foreground">Mission Control Trigger:</span>
+                      <p className="font-medium">ICP Market Expansion</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Document Content */}
+                <div className="p-6 space-y-8">
+                  {/* Executive Summary */}
+                  <section>
+                    <h2 className="text-lg font-semibold mb-4 border-b pb-2">Executive Summary</h2>
+                    <div className="space-y-3 text-sm leading-relaxed">
+                      <p><strong>Problem/Trigger:</strong> Competitor X launched new SMB pricing tiers targeting mid-market SaaS companies in Healthcare vertical, directly competing with our core ICP segment.</p>
+                      
+                      <p><strong>Key Findings:</strong></p>
+                      <ul className="list-decimal list-inside ml-4 space-y-1">
+                        <li>23% pricing gap identified in our favor across comparable feature sets</li>
+                        <li>Competitor targets same healthcare SaaS segment with 47% feature overlap</li>
+                        <li>Limited geographic reach (US only) vs our global presence advantage</li>
+                      </ul>
+                      
+                      <p><strong>Recommended Actions:</strong> Implement competitive pricing response within 2 weeks, enhance enterprise features to justify premium, and accelerate European market expansion.</p>
+                      
+                      <p><strong>Urgency:</strong> High - 12% of our pipeline directly affected, immediate response required to maintain competitive positioning.</p>
+                    </div>
+                  </section>
+
+                  {/* Scope & Objective */}
+                  <section>
+                    <h2 className="text-lg font-semibold mb-4 border-b pb-2">Scope & Objective</h2>
+                    <div className="grid md:grid-cols-2 gap-6 text-sm">
+                      <div>
+                        <h3 className="font-medium mb-2">Analysis Covers:</h3>
+                        <ul className="space-y-1 text-muted-foreground">
+                          <li>• SMB pricing tier structure and features</li>
+                          <li>• Target market positioning and messaging</li>
+                          <li>• Geographic rollout strategy</li>
+                          <li>• Impact on our current pipeline</li>
+                          <li>• Early market and customer reaction</li>
+                        </ul>
+                      </div>
+                      <div>
+                        <h3 className="font-medium mb-2">Intentionally Excludes:</h3>
+                        <ul className="space-y-1 text-muted-foreground">
+                          <li>• Enterprise tier analysis (separate report)</li>
+                          <li>• Technical integration capabilities</li>
+                          <li>• Long-term strategic roadmap speculation</li>
+                          <li>• Internal cost structure analysis</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </section>
+
+                  {/* Methodology & Data Sources */}
+                  <section>
+                    <h2 className="text-lg font-semibold mb-4 border-b pb-2">Methodology & Data Sources</h2>
+                    <div className="space-y-4 text-sm">
+                      <div>
+                        <h3 className="font-medium mb-2">Primary Sources:</h3>
+                        <div className="grid md:grid-cols-2 gap-4">
+                          <ul className="space-y-1 text-muted-foreground">
+                            <li>• Competitor pricing pages (live scrape 2h ago)</li>
+                            <li>• Press release analysis (TechCrunch, PR Newswire)</li>
+                            <li>• G2 reviews and feature comparisons</li>
+                            <li>• LinkedIn executive posts and announcements</li>
+                          </ul>
+                          <ul className="space-y-1 text-muted-foreground">
+                            <li>• Job posting analysis (15 new hires identified)</li>
+                            <li>• BuiltWith technology stack analysis</li>
+                            <li>• Bombora intent data (last 30 days)</li>
+                            <li>• Internal CRM pipeline matching (47 overlaps)</li>
+                          </ul>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-muted/20 p-3 rounded">
+                        <p><strong>Data Processing:</strong> Lead matching performed using company domain + employee count + industry vertical. Pricing data verified across 3 independent sources with 95% confidence interval.</p>
+                      </div>
+                    </div>
+                  </section>
+
+                  {/* Detailed Findings */}
+                  <section>
+                    <h2 className="text-lg font-semibold mb-4 border-b pb-2">Detailed Findings</h2>
+                    
+                    <div className="space-y-6">
+                      {/* Pricing Structure */}
+                      <div>
+                        <h3 className="font-medium mb-3">1. Pricing Structure & Feature Matrix</h3>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm border border-border rounded">
+                            <thead className="bg-muted/20">
+                              <tr>
+                                <th className="text-left p-3 border-b">Feature</th>
+                                <th className="text-left p-3 border-b">Competitor X SMB</th>
+                                <th className="text-left p-3 border-b">Our SMB Tier</th>
+                                <th className="text-left p-3 border-b">Gap Analysis</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr className="border-b">
+                                <td className="p-3">Monthly Price</td>
+                                <td className="p-3 font-medium">$79/month</td>
+                                <td className="p-3 font-medium">$99/month</td>
+                                <td className="p-3 text-green-600">23% premium justified</td>
+                              </tr>
+                              <tr className="border-b">
+                                <td className="p-3">User Limit</td>
+                                <td className="p-3">25 users</td>
+                                <td className="p-3">50 users</td>
+                                <td className="p-3 text-green-600">2x capacity advantage</td>
+                              </tr>
+                              <tr className="border-b">
+                                <td className="p-3">API Calls</td>
+                                <td className="p-3">10K/month</td>
+                                <td className="p-3">25K/month</td>
+                                <td className="p-3 text-green-600">2.5x API advantage</td>
+                              </tr>
+                              <tr>
+                                <td className="p-3">Healthcare Compliance</td>
+                                <td className="p-3">HIPAA only</td>
+                                <td className="p-3">HIPAA + SOC2</td>
+                                <td className="p-3 text-green-600">Enhanced compliance</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+
+                      {/* Target Segment */}
+                      <div>
+                        <h3 className="font-medium mb-3">2. Target Segment Analysis</h3>
+                        <div className="bg-muted/10 p-4 rounded space-y-2 text-sm">
+                          <p><strong>Primary Target:</strong> Healthcare SaaS companies with 50-200 employees</p>
+                          <p><strong>Secondary Focus:</strong> Fintech startups in Series A/B stage</p>
+                          <p><strong>Geographic Priority:</strong> US East/West Coast markets initially</p>
+                          <p><strong>Overlap with Our ICP:</strong> 47% direct overlap, 23% adjacent segments</p>
+                        </div>
+                      </div>
+
+                      {/* Market Reaction */}
+                      <div>
+                        <h3 className="font-medium mb-3">3. Early Market Reaction</h3>
+                        <div className="grid md:grid-cols-3 gap-4 text-sm">
+                          <div className="bg-green-50 p-3 rounded border border-green-200">
+                            <p className="font-medium text-green-800">Positive Sentiment</p>
+                            <p className="text-green-700">67% of mentions</p>
+                            <p className="text-xs text-green-600 mt-1">Pricing praised as "competitive"</p>
+                          </div>
+                          <div className="bg-yellow-50 p-3 rounded border border-yellow-200">
+                            <p className="font-medium text-yellow-800">Neutral/Mixed</p>
+                            <p className="text-yellow-700">28% of mentions</p>
+                            <p className="text-xs text-yellow-600 mt-1">Feature parity concerns raised</p>
+                          </div>
+                          <div className="bg-red-50 p-3 rounded border border-red-200">
+                            <p className="font-medium text-red-800">Negative Feedback</p>
+                            <p className="text-red-700">5% of mentions</p>
+                            <p className="text-xs text-red-600 mt-1">Limited integrations noted</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Pipeline Impact */}
+                      <div>
+                        <h3 className="font-medium mb-3">4. Impact on Our Pipeline</h3>
+                        <div className="bg-orange-50 border border-orange-200 p-4 rounded">
+                          <div className="grid md:grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <p className="font-medium text-orange-800 mb-2">Direct Impact:</p>
+                              <ul className="space-y-1 text-orange-700">
+                                <li>• 23 active prospects in same segment</li>
+                                <li>• $1.2M pipeline value at risk</li>
+                                <li>• 3 deals moved to "under review" status</li>
+                              </ul>
+                            </div>
+                            <div>
+                              <p className="font-medium text-orange-800 mb-2">Recommended Response:</p>
+                              <ul className="space-y-1 text-orange-700">
+                                <li>• Immediate price defense strategy</li>
+                                <li>• Accelerate enterprise feature demos</li>
+                                <li>• Proactive customer communication plan</li>
+                              </ul>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+                </div>
+
+                {/* Action Strip */}
+                <div className="border-t bg-muted/10 px-6 py-4">
+                  <div className="flex flex-wrap gap-2">
+                    <Button variant="outline" size="sm" className="gap-2">
+                      <Download className="h-4 w-4" />
+                      Export PDF
+                    </Button>
+                    <Button variant="outline" size="sm" className="gap-2">
+                      <FileText className="h-4 w-4" />
+                      Download CSV
+                    </Button>
+                    <Button variant="outline" size="sm" className="gap-2">
+                      <Share className="h-4 w-4" />
+                      Share to Slack
+                    </Button>
+                    <Button variant="outline" size="sm" className="gap-2">
+                      <Linkedin className="h-4 w-4" />
+                      Share LinkedIn Draft
+                    </Button>
+                    <Button variant="outline" size="sm" className="gap-2">
+                      <Mail className="h-4 w-4" />
+                      Email to Colleague
+                    </Button>
+                    <Button variant="outline" size="sm" className="gap-2">
+                      <CheckCircle className="h-4 w-4" />
+                      Create Task
+                    </Button>
+                    <Button variant="outline" size="sm" className="gap-2">
+                      <Bot className="h-4 w-4" />
+                      Ask Agent
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}
