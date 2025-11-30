@@ -1,0 +1,796 @@
+import json
+import shutil
+import asyncio
+import datetime
+import urllib.parse
+from datetime import datetime, timedelta, timezone
+from typing import List, Dict, Any
+
+from fastapi import FastAPI, UploadFile, File, Form, Query, HTTPException, Body, APIRouter
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from pymongo import MongoClient
+
+from config import origins, STAGE_ORDER, STAGE_MAPPING
+from models import (
+    ProspectData, Lead, Contact, SalesPipelineResponse, TimeframeResponse, StageStats,
+    CompanyProfile, UserProfile, ScoutProfile, MarketRequest, EditRequest
+)
+from database import driver, graph, client, upsert_node
+from llm_config import chain, chain2
+from services import (
+    grapher, create_prospect_node, convert_audio_to_text, process_prospect_list,
+    ICP_FUNCTIONS, COMPONENT_FUNCTIONS, ICP_generator, SIGNALS_FUNCTIONS,
+    search_signals_scout, search_signals_profiler
+)
+
+# Create FastAPI app
+app = FastAPI()
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.post("/upload_file/")
+async def upload_document(file: UploadFile = File(...)):
+    file_path = f"uploaded_{file.filename}"
+    with open(file_path, "wb") as f:
+        f.write(file.file.read())
+    grapher(file_path)
+    return {"message": f"File {file.filename} processed and graph updated."}
+
+@app.post("/create-company/")
+async def create_prospect(data: ProspectData):
+    if not data.Name or not data.Company or not data.answers:
+        raise HTTPException(status_code=400, detail="Missing name, company, or answers")
+
+    try:
+        node = create_prospect_node(data.Name, data.Company, data.answers)
+        return {"message": "Prospect node created", "node": node}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+        
+@app.get("/ask/")
+async def ask_question(question: str):
+    response = chain.run(question)
+    return {response}
+
+@app.get("/chat/")
+async def ask_question(question: str):
+    response = chain2.run(question)
+    return {"response": response}
+
+@app.get("/query/")
+async def run_query(cypher_query: str):
+    from database import query
+    result = query(cypher_query)
+    return {"result": result}
+
+@app.post("/voice_graph/")
+async def add_engagement_voice(
+    prospect_name: str = Form(...), 
+    update_type: str = Form(...),  # Can be note, offline meeting, email, online meeting
+    voice_file: UploadFile = File(...)
+):
+    audio_path = f"temp_{voice_file.filename}"
+    
+    with open(audio_path, "wb") as buffer:
+        shutil.copyfileobj(voice_file.file, buffer)
+    
+    text = convert_audio_to_text(audio_path)
+    
+    now_utc = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+    import pytz
+    ist = pytz.timezone("Asia/Kolkata")
+    now_ist = now_utc.astimezone(ist)
+    
+    newId = int(now_ist.timestamp())
+    current_time_str = now_ist.strftime("%Y-%m-%d %H:%M:%S")
+    
+    # Ensure the prospect node exists
+    from database import query
+    query(f"MERGE (p:Prospect {{Name: '{prospect_name}'}})")
+    
+    # Create a generic Engagement node and link it to the prospect
+    query(f"""
+    CREATE (e:Engagement {{
+        text: '{text}', 
+        id: {newId}, 
+        created_at: '{current_time_str}',
+        type: '{update_type}'
+    }})
+    WITH e
+    MATCH (p:Prospect {{Name: '{prospect_name}'}})
+    CREATE (p)-[:HAS_ENGAGEMENT]->(e)""")
+    
+    return {"message": f"Engagement of type '{update_type}' added for {prospect_name}"}
+
+@app.post("/text_graph/")
+async def add_engagement_text(
+    prospect_name: str = Form(...), 
+    update_type: str = Form(...),  # note, offline meeting, email, online meeting
+    text: str = Form(...)
+):
+    now_utc = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+    import pytz
+    ist = pytz.timezone("Asia/Kolkata")
+    now_ist = now_utc.astimezone(ist)
+
+    newId = int(now_ist.timestamp())
+    current_time_str = now_ist.strftime("%Y-%m-%d %H:%M:%S")
+
+    # Ensure the prospect node exists
+    from database import query
+    query(f"MERGE (p:Prospect {{Name: '{prospect_name}'}})")
+
+    # Create Engagement node and link to Prospect
+    query(f"""
+    CREATE (e:Engagement {{
+        text: '{text}', 
+        id: {newId}, 
+        created_at: '{current_time_str}',
+        type: '{update_type}'
+    }})
+    WITH e
+    MATCH (p:Prospect {{Name: '{prospect_name}'}})
+    CREATE (p)-[:HAS_ENGAGEMENT]->(e)
+    """)
+
+    return {"message": f"Engagement of type '{update_type}' added for {prospect_name}"}
+    
+@app.post('/upload')
+async def upload_prospect_list(file: UploadFile = File(...)):
+    file_path = f"/tmp/{file.filename}"
+    with open(file_path, 'wb') as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    
+    result = process_prospect_list(file_path)
+    return result
+
+@app.get("/leads/{user_id}", response_model=List[Lead])
+def get_all_leads(user_id: str):
+    query_string = """
+    MATCH (l:Lead)<-[:Has_Lead]-(c:Company)
+    OPTIONAL MATCH (c)-[:Uses_Tech]->(t:Tech)
+    OPTIONAL MATCH (c)-[:Has_Contact]->(contact:Contact)-[:Is_POC_For]->(l)
+    RETURN 
+        c.name AS company,
+        c.industry AS industry,
+        toString(c.size) AS size,
+        c.region AS region,
+        c.location AS location,
+        collect(DISTINCT t.name) AS techStack,
+        COALESCE(contact.first_name, '') + ' ' + COALESCE(contact.last_name, '') AS contact_name,
+        contact.designation AS title,
+        contact.department AS department,
+        contact.email AS email,
+        l.stage AS status
+
+    """
+
+    results = graph.query(query_string)
+    leads = []
+    for record in results:
+        lead = Lead(
+            company=record["company"],
+            industry=record["industry"],
+            size=record["size"],  # Already a string from the query
+            region=record["region"],
+            location=record["location"],
+            techStack=record.get("techStack", []),
+            contact=Contact(
+                name=record.get("contact_name"),
+                title=record.get("title"),
+                department=record.get("department"),
+                email=record.get("email")
+            ),
+            status=record["status"]
+        )
+        leads.append(lead)
+
+    return leads
+
+@app.get("/Sales_Pipeline")
+def get_sales_pipeline(user_id: str = Query(...), timeframe: int = Query(...)):
+    end_date = datetime.now(timezone.utc)
+    start_date = end_date - timedelta(days=timeframe)
+
+    query_string = """
+    MATCH (l:Lead)
+    WHERE l.last_stage_update_date >= $start_date AND l.last_stage_update_date <= $end_date
+    RETURN l.stage AS stage, count(*) AS count
+    """
+
+    with driver.session() as session:
+        results = session.run(query_string, {
+            "start_date": start_date.isoformat(),
+            "end_date": end_date.isoformat()
+        })
+
+        # Count occurrences per mapped UI stage
+        ui_stage_counts: Dict[str, int] = {stage: 0 for stage in STAGE_ORDER}
+
+        for record in results:
+            neo4j_stage = record["stage"]
+            count = record["count"]
+            mapped_stage = STAGE_MAPPING.get(neo4j_stage)
+            if mapped_stage in ui_stage_counts:
+                ui_stage_counts[mapped_stage] += count
+
+        # Build ordered stage data and calculate conversion rates
+        ordered_counts = [ui_stage_counts[stage] for stage in STAGE_ORDER]
+
+        stages = []
+        for i, stage in enumerate(STAGE_ORDER):
+            count = ordered_counts[i]
+            if i == 0:
+                conversion = 1.0
+            else:
+                prev = ordered_counts[i - 1]
+                conversion = round(count / prev, 2) if prev > 0 else 0.0
+
+            stages.append({
+                "name": stage,
+                "count": count,
+                "conversionRate": conversion
+            })
+
+        return {
+            "timeframes": [
+                {
+                    "days": timeframe,
+                    "stages": stages
+                }
+            ]
+        }
+
+@app.post("/profile/{profile_type}")
+async def create_or_update_profile(
+    profile_type: str,
+    payload: dict = Body(...)
+):
+    try:
+        with driver.session() as session:
+            if profile_type == "company":
+                profile = CompanyProfile(**payload)
+                data = profile.dict()
+                data["socialMediaUrls"] = json.dumps(data["socialMediaUrls"])
+
+                # ❌ Delete existing CompanyProfile nodes
+                session.run("MATCH (c:CompanyProfile) DELETE c")
+
+                # ✅ Insert the new CompanyProfile (Neo4j v5+)
+                session.execute_write(
+                    upsert_node,
+                    "CompanyProfile",
+                    "companyUrl",
+                    profile.companyUrl,
+                    data
+                )
+
+            elif profile_type == "user":
+                profile = UserProfile(**payload)
+                data = profile.dict()
+                data["socialMediaUrls"] = json.dumps(data["socialMediaUrls"])
+
+                # ❌ Delete existing UserProfile nodes
+                session.run("MATCH (u:UserProfile) DELETE u")
+
+                # ✅ Insert the new UserProfile (Neo4j v5+)
+                session.execute_write(
+                    upsert_node,
+                    "UserProfile",
+                    "name",
+                    profile.name,
+                    data
+                )
+
+            elif profile_type == "agent_name":
+                if payload.get("agentName") != "Scout":
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Only 'Scout' is supported as agent_name."
+                    )
+
+                profile = ScoutProfile(**payload)
+
+                # ❌ Delete existing ScoutProfile nodes
+                session.run("MATCH (s:ScoutProfile) DELETE s")
+
+                # ✅ Insert the new ScoutProfile (Neo4j v5+)
+                session.execute_write(
+                    upsert_node,
+                    "ScoutProfile",
+                    "agentName",
+                    "Scout",
+                    profile.dict()
+                )
+
+            else:
+                raise HTTPException(status_code=400, detail="Invalid profile_type.")
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    return {"message": f"{profile_type} profile processed successfully"}
+
+@app.get("/profile/{profile_type}")
+async def get_single_profile(
+    profile_type: str
+):
+    try:
+        with driver.session() as session:
+            if profile_type == "company":
+                query_string = "MATCH (c:CompanyProfile) RETURN c LIMIT 1"
+            elif profile_type == "user":
+                query_string = "MATCH (u:UserProfile) RETURN u LIMIT 1"
+            elif profile_type == "agent_name":
+                query_string = "MATCH (s:ScoutProfile) RETURN s LIMIT 1"
+            else:
+                raise HTTPException(status_code=400, detail="Invalid profile_type.")
+
+            result = session.run(query_string)
+            record = result.single()
+
+            if not record:
+                raise HTTPException(status_code=404, detail=f"No {profile_type} profile found")
+
+            profile_data = dict(record.values()[0])
+
+            # Parse JSON string if 'socialMediaUrls' exists
+            if "socialMediaUrls" in profile_data and isinstance(profile_data["socialMediaUrls"], str):
+                try:
+                    profile_data["socialMediaUrls"] = json.loads(profile_data["socialMediaUrls"])
+                except json.JSONDecodeError:
+                    pass
+
+            return profile_data
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/market-research")
+async def market_research(request: MarketRequest):
+    component_name = request.component_name.strip().lower()
+
+    # Lookup function
+    research_function = COMPONENT_FUNCTIONS.get(component_name)
+    if not research_function:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported component_name: {request.component_name}"
+        )
+
+    # MongoDB (pymongo client)
+    db = client["Scout_Agent"]
+    collection = db["Market_Intelligence"]
+
+    query = {
+        "user_id": request.user_id,
+        "component_name": component_name
+    }
+
+    # If refresh is False, fetch the latest report
+    if not request.refresh:
+        latest_report = await asyncio.to_thread(
+            collection.find_one, query, sort=[("timestamp", -1)]
+        )
+        if latest_report:
+            latest_report.pop("_id", None)
+            return {"status": "success", "data": latest_report}
+
+    # --- Neo4j query inside a thread ---
+    def fetch_company_profile():
+        with driver.session() as session:
+            result = session.run("MATCH (c:CompanyProfile) RETURN c LIMIT 1")
+            record = result.single()
+            return record
+
+    record = await asyncio.to_thread(fetch_company_profile)
+    if not record:
+        raise HTTPException(status_code=404, detail="No company profile found in Neo4j")
+
+    company_profile = dict(record.values()[0])
+    if "socialMediaUrls" in company_profile and isinstance(company_profile["socialMediaUrls"], str):
+        try:
+            company_profile["socialMediaUrls"] = json.loads(company_profile["socialMediaUrls"])
+        except json.JSONDecodeError:
+            pass
+
+    # --- Run research with retries (max 2 attempts) ---
+    max_retries = 2
+    for attempt in range(1, max_retries + 1):
+        try:
+            research_result = await asyncio.to_thread(research_function, company_profile)
+            break
+        except Exception as e:
+            if attempt == max_retries:
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Research function failed after {max_retries} attempts: {str(e)}"
+                )
+            await asyncio.sleep(1)  # retry delay
+
+    research_result.update({
+        "user_id": request.user_id,
+        "component_name": component_name,
+        "timestamp": datetime.utcnow()
+    })
+
+    # Save to DB (pymongo → wrap in to_thread)
+    await asyncio.to_thread(collection.insert_one, research_result)
+
+    research_result.pop("_id", None)
+    return {"status": "success", "data": research_result}
+
+@app.get("/icp")
+async def get_or_create_icp_config(refresh: bool = Query(False)):
+    try:
+        # MongoDB connection setup
+        username = urllib.parse.quote_plus("techbrewra")
+        password = urllib.parse.quote_plus("Brewra@Best09")
+        mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
+        client = MongoClient(mongo_uri)
+
+        db = client["Profiler"]
+        collection = db["ICP_config"]
+
+        user_id = "brewra"
+
+        existing_icp = collection.find_one({"user_id": user_id})
+
+        if existing_icp and not refresh:
+            return existing_icp.get("icps", {"icps": []})
+
+        # Generate new ICPs from Neo4j company profile
+        with driver.session() as session:
+            result = session.run("MATCH (c:CompanyProfile) RETURN c LIMIT 1")
+            record = result.single()
+            if not record:
+                raise HTTPException(status_code=404, detail="No company profile found in Neo4j")
+
+            company_profile = dict(record.values()[0])
+
+            # Convert JSON string if needed
+            if "socialMediaUrls" in company_profile and isinstance(company_profile["socialMediaUrls"], str):
+                try:
+                    company_profile["socialMediaUrls"] = json.loads(company_profile["socialMediaUrls"])
+                except json.JSONDecodeError:
+                    pass
+
+            # Generate ICPs
+            icp_result = ICP_generator(company_profile)
+
+            # Upsert the result in MongoDB
+            collection.update_one(
+                {"user_id": user_id},
+                {"$set": {"user_id": user_id, "icps": icp_result}},
+                upsert=True
+            )
+
+            return icp_result
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/icp-research")
+async def icp_research(request: MarketRequest):
+    component_name = request.component_name.strip().lower()
+
+    # Lookup the function for the given component
+    research_function = ICP_FUNCTIONS.get(component_name)
+    if not research_function:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported component_name: {request.component_name}"
+        )
+
+    # MongoDB connection
+    username = urllib.parse.quote_plus("techbrewra")
+    password = urllib.parse.quote_plus("Brewra@Best09")
+    mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
+    client = MongoClient(mongo_uri)
+    db = client["Profiler"]
+    collection = db["ICPs"]
+
+    try:
+        query = {
+            "user_id": request.user_id,
+            "component_name": component_name
+        }
+
+        # If refresh is False, fetch the latest report
+        if not request.refresh:
+            latest_report = await asyncio.to_thread(
+                collection.find_one, query, sort=[("timestamp", -1)]
+            )
+            if latest_report:
+                latest_report.pop("_id", None)
+                return {"status": "success", "data": latest_report}
+
+        # Instead of Neo4j, take predata from frontend
+        company_profile = request.data
+        if not company_profile:
+            raise HTTPException(status_code=400, detail="No predata provided from frontend")
+
+        # --- Run research with retries (max 2 attempts) ---
+        max_retries = 2
+        for attempt in range(1, max_retries + 1):
+            try:
+                research_result = await asyncio.to_thread(research_function, company_profile)
+                break
+            except Exception as e:
+                if attempt == max_retries:
+                    raise HTTPException(
+                        status_code=500,
+                        detail=f"Research function failed after {max_retries} attempts: {str(e)}"
+                    )
+                await asyncio.sleep(1)  # retry delay
+
+        # Add metadata
+        research_result.update({
+            "user_id": request.user_id,
+            "component_name": component_name,
+            "timestamp": datetime.utcnow()
+        })
+
+        # Save to DB
+        await asyncio.to_thread(collection.insert_one, research_result)
+
+        research_result.pop("_id", None)
+        return {"status": "success", "data": research_result}
+
+    finally:
+        client.close()
+
+@app.post("/signals-research")
+async def signals_research(request: MarketRequest):
+    """Research web signals for specific agents (scout/profiler)"""
+    agent_name = request.component_name.strip().lower()
+
+    # Lookup the function for the given agent
+    signals_function = SIGNALS_FUNCTIONS.get(agent_name)
+    if not signals_function:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported agent: {request.component_name}. Supported agents: scout, profiler"
+        )
+
+    # MongoDB connection for Signals DB
+    username = urllib.parse.quote_plus("techbrewra")
+    password = urllib.parse.quote_plus("Brewra@Best09")
+    mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
+    client = MongoClient(mongo_uri)
+    db = client["Signals"]
+    collection = db["signals"]
+
+    try:
+        query = {
+            "user_id": request.user_id,
+            "agent": agent_name
+        }
+
+        # If refresh is False, fetch the latest signal
+        if not request.refresh:
+            latest_signal = await asyncio.to_thread(
+                collection.find_one, query, sort=[("timestamp", -1)]
+            )
+            if latest_signal:
+                latest_signal.pop("_id", None)
+                return {"status": "success", "data": latest_signal}
+
+        # Prepare data for the signals function
+        pre_data = request.data
+        
+        # For profiler agent, also include ICP data if available
+        if agent_name == "profiler":
+            # Try to get ICP data from Profiler database
+            try:
+                profiler_client = MongoClient(mongo_uri)
+                profiler_db = profiler_client["Profiler"]
+                icp_collection = profiler_db["ICP_config"]
+                icp_data = icp_collection.find_one({"user_id": request.user_id})
+                if icp_data:
+                    pre_data = {
+                        "company_profile": request.data,
+                        "icp_data": icp_data.get("icps", {})
+                    }
+                profiler_client.close()
+            except Exception as e:
+                print(f"Warning: Could not fetch ICP data: {e}")
+
+        # Run signals research with retries (max 2 attempts)
+        max_retries = 2
+        for attempt in range(1, max_retries + 1):
+            try:
+                signals_result = await asyncio.to_thread(signals_function, pre_data)
+                break
+            except Exception as e:
+                if attempt == max_retries:
+                    raise HTTPException(
+                        status_code=500,
+                        detail=f"Signals research failed after {max_retries} attempts: {str(e)}"
+                    )
+                await asyncio.sleep(1)  # retry delay
+
+        # Add metadata
+        signals_result.update({
+            "user_id": request.user_id,
+            "agent": agent_name,
+            "timestamp": datetime.utcnow()
+        })
+
+        # Save to Signals DB
+        await asyncio.to_thread(collection.insert_one, signals_result)
+
+        signals_result.pop("_id", None)
+        return {"status": "success", "data": signals_result}
+
+    finally:
+        client.close()
+
+@app.post("/generate-signals-batch")
+async def generate_signals_batch(request: MarketRequest):
+    """Generate 2 signals for scout and 2 signals for profiler"""
+    try:
+        # MongoDB connection for Signals DB
+        username = urllib.parse.quote_plus("techbrewra")
+        password = urllib.parse.quote_plus("Brewra@Best09")
+        mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
+        client = MongoClient(mongo_uri)
+        db = client["Signals"]
+        collection = db["signals"]
+
+        # Prepare data for the signals functions
+        pre_data = request.data
+        
+        # For profiler agent, also include ICP data if available
+        profiler_pre_data = pre_data
+        try:
+            profiler_client = MongoClient(mongo_uri)
+            profiler_db = profiler_client["Profiler"]
+            icp_collection = profiler_db["ICP_config"]
+            icp_data = icp_collection.find_one({"user_id": request.user_id})
+            if icp_data:
+                profiler_pre_data = {
+                    "company_profile": request.data,
+                    "icp_data": icp_data.get("icps", {})
+                }
+            profiler_client.close()
+        except Exception as e:
+            print(f"Warning: Could not fetch ICP data: {e}")
+
+        generated_signals = []
+        batch_id = f"batch_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
+        
+        # Generate 2 signals for scout
+        for i in range(2):
+            try:
+                print(f"Generating scout signal {i+1}...")
+                signals_result = await asyncio.to_thread(search_signals_scout, pre_data)
+                signals_result.update({
+                    "user_id": request.user_id,
+                    "agent": "scout",
+                    "timestamp": datetime.utcnow(),
+                    "batch_id": batch_id
+                })
+                
+                # Save to Signals DB
+                await asyncio.to_thread(collection.insert_one, signals_result)
+                signals_result.pop("_id", None)
+                generated_signals.append(signals_result)
+                print(f"Successfully generated scout signal {i+1}")
+                
+            except Exception as e:
+                print(f"Error generating scout signal {i+1}: {e}")
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Failed to generate scout signal {i+1}: {str(e)}"
+                )
+        
+        # Generate 2 signals for profiler
+        for i in range(2):
+            try:
+                print(f"Generating profiler signal {i+1}...")
+                signals_result = await asyncio.to_thread(search_signals_profiler, profiler_pre_data)
+                signals_result.update({
+                    "user_id": request.user_id,
+                    "agent": "profiler",
+                    "timestamp": datetime.utcnow(),
+                    "batch_id": batch_id
+                })
+                
+                # Save to Signals DB
+                await asyncio.to_thread(collection.insert_one, signals_result)
+                signals_result.pop("_id", None)
+                generated_signals.append(signals_result)
+                print(f"Successfully generated profiler signal {i+1}")
+                
+            except Exception as e:
+                print(f"Error generating profiler signal {i+1}: {e}")
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Failed to generate profiler signal {i+1}: {str(e)}"
+                )
+
+        return {
+            "status": "success", 
+            "message": f"Generated {len(generated_signals)} signals",
+            "data": generated_signals
+        }
+
+    finally:
+        client.close()
+
+@app.get("/test-llm")
+async def test_llm():
+    """Test if LLM is working"""
+    try:
+        from llm_config import llm2
+        from langchain_core.messages import HumanMessage
+        
+        test_prompt = "Generate a simple JSON: {\"test\": \"hello\"}"
+        messages = [HumanMessage(content=test_prompt)]
+        response = llm2.invoke(messages)
+        return {"status": "success", "response": str(response.content)}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+@app.get("/fetch-signals")
+async def fetch_signals(user_id: str = Query(...), limit: int = Query(10)):
+    """Fetch signals and return them in a simple list format"""
+    try:
+        # MongoDB connection for Signals DB
+        username = urllib.parse.quote_plus("techbrewra")
+        password = urllib.parse.quote_plus("Brewra@Best09")
+        mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
+        client = MongoClient(mongo_uri)
+        db = client["Signals"]
+        collection = db["signals"]
+
+        # Fetch signals for the user, ordered by timestamp (newest first)
+        signals_cursor = collection.find(
+            {"user_id": user_id}
+        ).sort("timestamp", -1).limit(limit)
+        
+        signals_list = []
+        for signal in signals_cursor:
+            # Remove MongoDB _id and format for simple list
+            signal.pop("_id", None)
+            signals_list.append(signal)
+
+        return {
+            "status": "success",
+            "count": len(signals_list),
+            "signals": signals_list
+        }
+
+    finally:
+        client.close()
+
+@app.post("/edit")
+def process_edit(request: EditRequest):
+    username = urllib.parse.quote_plus("techbrewra")
+    password = urllib.parse.quote_plus("Brewra@Best09")
+    mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
+    client = MongoClient(mongo_uri)
+    db = client["Scout_Agent"]
+    collection = db["Market_Intelligence"]
+        
+    if request.edit_type == "modification":
+        # Insert modified JSON into MongoDB
+        insert_result = collection.insert_one(request.modified_json)
+        return {
+            "status": "success",
+            "inserted_id": str(insert_result.inserted_id)
+        }
+    elif request.edit_type == "comment":
+        # Placeholder for comment feature
+        return {"status": "feature coming soon"}
+    else:
+        return {"error": "Invalid edit_type. Must be 'comment' or 'modification'."}
