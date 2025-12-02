@@ -16,7 +16,7 @@ vision = ChatGroq(model="llama-3.2-90b-vision-preview", api_key=groq_api_key)
 llm2 = ChatOpenAI(
     openai_api_base="https://api.together.xyz/v1",
     openai_api_key=together_api_key,
-    model="qwen3-235b-a22b-instruct-2507-tput"
+    model="Qwen/Qwen3-235B-A22B-Instruct-2507-tput"
 )
 
 # Initialize Graph Transformer
