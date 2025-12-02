@@ -75,12 +75,14 @@ class ScoutProfile(BaseModel):
 # Market Request model
 class MarketRequest(BaseModel):
     user_id: str
+    org_id: Optional[str] = None
     component_name: str
     data: dict
     refresh: bool = False
 
 # Edit Request model
 class EditRequest(BaseModel):
+    user_id: str
     original_json: Dict[str, Any]
     modified_json: Dict[str, Any]
     edit_type: str  # "comment" or "modification"

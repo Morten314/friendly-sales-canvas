@@ -31,13 +31,50 @@ def results_to_string(results):
     ]
     return "\n".join(result_strings)
 
-# Helper function for upsert operations
+# Helper function for upsert operations - handles flexible data types
 def upsert_node(tx, label, match_field, match_value, data: dict):
-    tx.run(
-        f"""
+    """
+    Upsert a node with flexible data types.
+    Handles strings, numbers, booleans, lists, and dicts.
+    Converts complex types to JSON strings for Neo4j compatibility.
+    """
+    import json
+    
+    # Prepare data with type conversion for Neo4j compatibility
+    neo4j_data = {}
+    for key, value in data.items():
+        if isinstance(value, (dict, list)):
+            # Convert complex types to JSON string
+            neo4j_data[key] = json.dumps(value)
+        elif isinstance(value, (str, int, float, bool)):
+            # Direct assignment for primitive types
+            neo4j_data[key] = value
+        elif value is None:
+            # Skip None values (Neo4j doesn't handle None well in SET)
+            continue
+        else:
+            # Convert everything else to string
+            neo4j_data[key] = str(value)
+    
+    # Build dynamic SET clause to handle all properties
+    set_clauses = []
+    params = {"match_value": match_value}
+    
+    for key, value in neo4j_data.items():
+        param_name = f"param_{key.replace('.', '_').replace('-', '_')}"
+        set_clauses.append(f"n.{key} = ${param_name}")
+        params[param_name] = value
+    
+    if set_clauses:
+        set_clause = ", ".join(set_clauses)
+        query = f"""
         MERGE (n:{label} {{ {match_field}: $match_value }})
-        SET n += $data
-        """,
-        match_value=match_value,
-        data=data
-    )
+        SET {set_clause}
+        """
+        tx.run(query, **params)
+    else:
+        # If no data to set, just merge the node
+        query = f"""
+        MERGE (n:{label} {{ {match_field}: $match_value }})
+        """
+        tx.run(query, match_value=match_value)

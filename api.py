@@ -153,9 +153,21 @@ async def upload_prospect_list(file: UploadFile = File(...)):
     return result
 
 @app.get("/leads/{user_id}", response_model=List[Lead])
-def get_all_leads(user_id: str):
+def get_all_leads(user_id: str, org_id: str = Query(None)):
+    """
+    Get leads filtered by org_id. 
+    If org_id is 'brewra', returns leads for all users in that org.
+    Otherwise, filters by the specific org_id.
+    Uses parameterized queries for security.
+    """
+    # If no org_id provided, return empty to enforce org_id requirement
+    if not org_id:
+        return []
+    
+    # Use parameterized query for security
     query_string = """
     MATCH (l:Lead)<-[:Has_Lead]-(c:Company)
+    WHERE c.org_id = $org_id
     OPTIONAL MATCH (c)-[:Uses_Tech]->(t:Tech)
     OPTIONAL MATCH (c)-[:Has_Contact]->(contact:Contact)-[:Is_POC_For]->(l)
     RETURN 
@@ -170,28 +182,29 @@ def get_all_leads(user_id: str):
         contact.department AS department,
         contact.email AS email,
         l.stage AS status
-
     """
-
-    results = graph.query(query_string)
-    leads = []
-    for record in results:
-        lead = Lead(
-            company=record["company"],
-            industry=record["industry"],
-            size=record["size"],  # Already a string from the query
-            region=record["region"],
-            location=record["location"],
-            techStack=record.get("techStack", []),
-            contact=Contact(
-                name=record.get("contact_name"),
-                title=record.get("title"),
-                department=record.get("department"),
-                email=record.get("email")
-            ),
-            status=record["status"]
-        )
-        leads.append(lead)
+    
+    # Execute query with parameters
+    with driver.session() as session:
+        results = session.run(query_string, org_id=org_id)
+        leads = []
+        for record in results:
+            lead = Lead(
+                company=record["company"],
+                industry=record["industry"],
+                size=record["size"],  # Already a string from the query
+                region=record["region"],
+                location=record["location"],
+                techStack=record.get("techStack", []),
+                contact=Contact(
+                    name=record.get("contact_name"),
+                    title=record.get("title"),
+                    department=record.get("department"),
+                    email=record.get("email")
+                ),
+                status=record["status"]
+            )
+            leads.append(lead)
 
     return leads
 
@@ -254,66 +267,75 @@ async def create_or_update_profile(
     profile_type: str,
     payload: dict = Body(...)
 ):
+    """
+    Flexible profile endpoint that accepts any JSON structure.
+    Only checks for 'profile_type' key to determine node type.
+    All other fields are stored as-is in Neo4j.
+    """
     try:
-        with driver.session() as session:
-            if profile_type == "company":
-                profile = CompanyProfile(**payload)
-                data = profile.dict()
-                data["socialMediaUrls"] = json.dumps(data["socialMediaUrls"])
-
-                # ❌ Delete existing CompanyProfile nodes
-                session.run("MATCH (c:CompanyProfile) DELETE c")
-
-                # ✅ Insert the new CompanyProfile (Neo4j v5+)
-                session.execute_write(
-                    upsert_node,
-                    "CompanyProfile",
-                    "companyUrl",
-                    profile.companyUrl,
-                    data
-                )
-
-            elif profile_type == "user":
-                profile = UserProfile(**payload)
-                data = profile.dict()
-                data["socialMediaUrls"] = json.dumps(data["socialMediaUrls"])
-
-                # ❌ Delete existing UserProfile nodes
-                session.run("MATCH (u:UserProfile) DELETE u")
-
-                # ✅ Insert the new UserProfile (Neo4j v5+)
-                session.execute_write(
-                    upsert_node,
-                    "UserProfile",
-                    "name",
-                    profile.name,
-                    data
-                )
-
-            elif profile_type == "agent_name":
-                if payload.get("agentName") != "Scout":
-                    raise HTTPException(
-                        status_code=400,
-                        detail="Only 'Scout' is supported as agent_name."
-                    )
-
-                profile = ScoutProfile(**payload)
-
-                # ❌ Delete existing ScoutProfile nodes
-                session.run("MATCH (s:ScoutProfile) DELETE s")
-
-                # ✅ Insert the new ScoutProfile (Neo4j v5+)
-                session.execute_write(
-                    upsert_node,
-                    "ScoutProfile",
-                    "agentName",
-                    "Scout",
-                    profile.dict()
-                )
-
+        # Check if profile_type is provided in payload (optional, can use path param)
+        if "profile_type" in payload:
+            profile_type = payload["profile_type"]
+        
+        # Extract user_id if present (for multitenancy)
+        user_id = payload.get("user_id")
+        if not user_id:
+            raise HTTPException(status_code=400, detail="user_id is required in payload")
+        
+        # Prepare data - convert all values to Neo4j-compatible types
+        data = {}
+        for key, value in payload.items():
+            # Skip profile_type as it's used for node label
+            if key == "profile_type":
+                continue
+            
+            # Handle different value types
+            if isinstance(value, (dict, list)):
+                # Convert complex types to JSON string
+                data[key] = json.dumps(value)
+            elif isinstance(value, (str, int, float, bool)):
+                # Direct assignment for primitive types
+                data[key] = value
+            elif value is None:
+                # Skip None values
+                continue
             else:
-                raise HTTPException(status_code=400, detail="Invalid profile_type.")
+                # Convert everything else to string
+                data[key] = str(value)
+        
+        with driver.session() as session:
+            # Determine unique identifier field based on profile_type
+            if profile_type == "company":
+                match_field = "companyUrl"
+                match_value = payload.get("companyUrl") or payload.get("user_id")
+            elif profile_type == "user":
+                match_field = "name"
+                match_value = payload.get("name") or payload.get("user_id")
+            elif profile_type == "agent_name":
+                match_field = "agentName"
+                match_value = payload.get("agentName") or "Scout"
+            else:
+                # For any other profile_type, use user_id as match field
+                match_field = "user_id"
+                match_value = user_id
+            
+            # Delete existing profile for this user_id (multitenancy)
+            session.run(
+                f"MATCH (p:{profile_type} {{user_id: $user_id}}) DELETE p",
+                user_id=user_id
+            )
+            
+            # Insert/update the profile (Neo4j v5+)
+            session.execute_write(
+                upsert_node,
+                profile_type,
+                match_field,
+                match_value,
+                data
+            )
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -321,36 +343,43 @@ async def create_or_update_profile(
 
 @app.get("/profile/{profile_type}")
 async def get_single_profile(
-    profile_type: str
+    profile_type: str,
+    user_id: str = Query(...)
 ):
+    """
+    Flexible profile fetch endpoint that returns any JSON structure.
+    Filters by user_id for multitenancy.
+    """
     try:
         with driver.session() as session:
-            if profile_type == "company":
-                query_string = "MATCH (c:CompanyProfile) RETURN c LIMIT 1"
-            elif profile_type == "user":
-                query_string = "MATCH (u:UserProfile) RETURN u LIMIT 1"
-            elif profile_type == "agent_name":
-                query_string = "MATCH (s:ScoutProfile) RETURN s LIMIT 1"
-            else:
-                raise HTTPException(status_code=400, detail="Invalid profile_type.")
-
-            result = session.run(query_string)
+            # Query by profile_type and user_id (multitenancy)
+            query_string = f"MATCH (p:{profile_type} {{user_id: $user_id}}) RETURN p LIMIT 1"
+            
+            result = session.run(query_string, user_id=user_id)
             record = result.single()
 
             if not record:
-                raise HTTPException(status_code=404, detail=f"No {profile_type} profile found")
+                raise HTTPException(
+                    status_code=404, 
+                    detail=f"No {profile_type} profile found for user_id: {user_id}"
+                )
 
             profile_data = dict(record.values()[0])
 
-            # Parse JSON string if 'socialMediaUrls' exists
-            if "socialMediaUrls" in profile_data and isinstance(profile_data["socialMediaUrls"], str):
-                try:
-                    profile_data["socialMediaUrls"] = json.loads(profile_data["socialMediaUrls"])
-                except json.JSONDecodeError:
-                    pass
+            # Try to parse JSON strings back to objects (flexible handling)
+            for key, value in profile_data.items():
+                if isinstance(value, str):
+                    # Try to parse as JSON if it looks like JSON
+                    if value.strip().startswith(('{', '[')):
+                        try:
+                            profile_data[key] = json.loads(value)
+                        except json.JSONDecodeError:
+                            pass  # Keep as string if not valid JSON
 
             return profile_data
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -370,6 +399,7 @@ async def market_research(request: MarketRequest):
     db = client["Scout_Agent"]
     collection = db["Market_Intelligence"]
 
+    # Filter by user_id only for multitenancy
     query = {
         "user_id": request.user_id,
         "component_name": component_name
@@ -384,16 +414,20 @@ async def market_research(request: MarketRequest):
             latest_report.pop("_id", None)
             return {"status": "success", "data": latest_report}
 
-    # --- Neo4j query inside a thread ---
+    # --- Neo4j query inside a thread - filter by user_id ---
     def fetch_company_profile():
         with driver.session() as session:
-            result = session.run("MATCH (c:CompanyProfile) RETURN c LIMIT 1")
+            # Filter by user_id in CompanyProfile
+            result = session.run(
+                "MATCH (c:CompanyProfile {user_id: $user_id}) RETURN c LIMIT 1",
+                user_id=request.user_id
+            )
             record = result.single()
             return record
 
     record = await asyncio.to_thread(fetch_company_profile)
     if not record:
-        raise HTTPException(status_code=404, detail="No company profile found in Neo4j")
+        raise HTTPException(status_code=404, detail=f"No company profile found in Neo4j for user_id: {request.user_id}")
 
     company_profile = dict(record.values()[0])
     if "socialMediaUrls" in company_profile and isinstance(company_profile["socialMediaUrls"], str):
@@ -416,11 +450,16 @@ async def market_research(request: MarketRequest):
                 )
             await asyncio.sleep(1)  # retry delay
 
-    research_result.update({
-        "user_id": request.user_id,
-        "component_name": component_name,
-        "timestamp": datetime.utcnow()
-    })
+    # Ensure research_result is a dict and add user_id and metadata
+    if not isinstance(research_result, dict):
+        research_result = {"data": research_result}
+    
+    # Explicitly set user_id, component_name, and timestamp (multitenancy)
+    research_result["user_id"] = request.user_id
+    if request.org_id:
+        research_result["org_id"] = request.org_id
+    research_result["component_name"] = component_name
+    research_result["timestamp"] = datetime.utcnow()
 
     # Save to DB (pymongo → wrap in to_thread)
     await asyncio.to_thread(collection.insert_one, research_result)
@@ -429,7 +468,7 @@ async def market_research(request: MarketRequest):
     return {"status": "success", "data": research_result}
 
 @app.get("/icp")
-async def get_or_create_icp_config(refresh: bool = Query(False)):
+async def get_or_create_icp_config(user_id: str = Query(...), refresh: bool = Query(False)):
     try:
         # MongoDB connection setup
         username = urllib.parse.quote_plus("techbrewra")
@@ -440,19 +479,23 @@ async def get_or_create_icp_config(refresh: bool = Query(False)):
         db = client["Profiler"]
         collection = db["ICP_config"]
 
-        user_id = "brewra"
-
+        # Filter by user_id only for multitenancy
         existing_icp = collection.find_one({"user_id": user_id})
 
         if existing_icp and not refresh:
+            client.close()
             return existing_icp.get("icps", {"icps": []})
 
-        # Generate new ICPs from Neo4j company profile
+        # Generate new ICPs from Neo4j company profile - filter by user_id
         with driver.session() as session:
-            result = session.run("MATCH (c:CompanyProfile) RETURN c LIMIT 1")
+            result = session.run(
+                "MATCH (c:CompanyProfile {user_id: $user_id}) RETURN c LIMIT 1",
+                user_id=user_id
+            )
             record = result.single()
             if not record:
-                raise HTTPException(status_code=404, detail="No company profile found in Neo4j")
+                client.close()
+                raise HTTPException(status_code=404, detail=f"No company profile found in Neo4j for user_id: {user_id}")
 
             company_profile = dict(record.values()[0])
 
@@ -466,13 +509,14 @@ async def get_or_create_icp_config(refresh: bool = Query(False)):
             # Generate ICPs
             icp_result = ICP_generator(company_profile)
 
-            # Upsert the result in MongoDB
+            # Upsert the result in MongoDB - filter by user_id only
             collection.update_one(
                 {"user_id": user_id},
                 {"$set": {"user_id": user_id, "icps": icp_result}},
                 upsert=True
             )
 
+            client.close()
             return icp_result
 
     except Exception as e:
@@ -499,6 +543,7 @@ async def icp_research(request: MarketRequest):
     collection = db["ICPs"]
 
     try:
+        # Filter by user_id only for multitenancy
         query = {
             "user_id": request.user_id,
             "component_name": component_name
@@ -532,12 +577,14 @@ async def icp_research(request: MarketRequest):
                     )
                 await asyncio.sleep(1)  # retry delay
 
-        # Add metadata
+        # Add metadata - filter by user_id only
         research_result.update({
             "user_id": request.user_id,
             "component_name": component_name,
             "timestamp": datetime.utcnow()
         })
+        if request.org_id:
+            research_result["org_id"] = request.org_id
 
         # Save to DB
         await asyncio.to_thread(collection.insert_one, research_result)
@@ -570,6 +617,7 @@ async def signals_research(request: MarketRequest):
     collection = db["signals"]
 
     try:
+        # Filter by user_id only for multitenancy
         query = {
             "user_id": request.user_id,
             "agent": agent_name
@@ -587,7 +635,7 @@ async def signals_research(request: MarketRequest):
         # Prepare data for the signals function
         pre_data = request.data
         
-        # For profiler agent, also include ICP data if available
+        # For profiler agent, also include ICP data if available - filter by user_id
         if agent_name == "profiler":
             # Try to get ICP data from Profiler database
             try:
@@ -618,12 +666,14 @@ async def signals_research(request: MarketRequest):
                     )
                 await asyncio.sleep(1)  # retry delay
 
-        # Add metadata
+        # Add metadata - filter by user_id only
         signals_result.update({
             "user_id": request.user_id,
             "agent": agent_name,
             "timestamp": datetime.utcnow()
         })
+        if request.org_id:
+            signals_result["org_id"] = request.org_id
 
         # Save to Signals DB
         await asyncio.to_thread(collection.insert_one, signals_result)
@@ -649,7 +699,7 @@ async def generate_signals_batch(request: MarketRequest):
         # Prepare data for the signals functions
         pre_data = request.data
         
-        # For profiler agent, also include ICP data if available
+        # For profiler agent, also include ICP data if available - filter by user_id
         profiler_pre_data = pre_data
         try:
             profiler_client = MongoClient(mongo_uri)
@@ -679,6 +729,8 @@ async def generate_signals_batch(request: MarketRequest):
                     "timestamp": datetime.utcnow(),
                     "batch_id": batch_id
                 })
+                if request.org_id:
+                    signals_result["org_id"] = request.org_id
                 
                 # Save to Signals DB
                 await asyncio.to_thread(collection.insert_one, signals_result)
@@ -704,6 +756,8 @@ async def generate_signals_batch(request: MarketRequest):
                     "timestamp": datetime.utcnow(),
                     "batch_id": batch_id
                 })
+                if request.org_id:
+                    signals_result["org_id"] = request.org_id
                 
                 # Save to Signals DB
                 await asyncio.to_thread(collection.insert_one, signals_result)
@@ -743,7 +797,7 @@ async def test_llm():
 
 @app.get("/fetch-signals")
 async def fetch_signals(user_id: str = Query(...), limit: int = Query(10)):
-    """Fetch signals and return them in a simple list format"""
+    """Fetch signals and return them in a simple list format - filtered by user_id only"""
     try:
         # MongoDB connection for Signals DB
         username = urllib.parse.quote_plus("techbrewra")
@@ -753,7 +807,7 @@ async def fetch_signals(user_id: str = Query(...), limit: int = Query(10)):
         db = client["Signals"]
         collection = db["signals"]
 
-        # Fetch signals for the user, ordered by timestamp (newest first)
+        # Fetch signals for the user only (multitenancy), ordered by timestamp (newest first)
         signals_cursor = collection.find(
             {"user_id": user_id}
         ).sort("timestamp", -1).limit(limit)
@@ -781,16 +835,23 @@ def process_edit(request: EditRequest):
     client = MongoClient(mongo_uri)
     db = client["Scout_Agent"]
     collection = db["Market_Intelligence"]
-        
-    if request.edit_type == "modification":
-        # Insert modified JSON into MongoDB
-        insert_result = collection.insert_one(request.modified_json)
-        return {
-            "status": "success",
-            "inserted_id": str(insert_result.inserted_id)
-        }
-    elif request.edit_type == "comment":
-        # Placeholder for comment feature
-        return {"status": "feature coming soon"}
-    else:
-        return {"error": "Invalid edit_type. Must be 'comment' or 'modification'."}
+    
+    try:
+        if request.edit_type == "modification":
+            # Ensure user_id is in the modified_json before inserting (multitenancy)
+            modified_doc = request.modified_json.copy()
+            modified_doc["user_id"] = request.user_id
+            
+            # Insert modified JSON into MongoDB
+            insert_result = collection.insert_one(modified_doc)
+            return {
+                "status": "success",
+                "inserted_id": str(insert_result.inserted_id)
+            }
+        elif request.edit_type == "comment":
+            # Placeholder for comment feature
+            return {"status": "feature coming soon"}
+        else:
+            return {"error": "Invalid edit_type. Must be 'comment' or 'modification'."}
+    finally:
+        client.close()
