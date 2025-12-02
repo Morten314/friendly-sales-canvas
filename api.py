@@ -278,8 +278,9 @@ async def create_or_update_profile(
             profile_type = payload["profile_type"]
         
         # Extract user_id if present (for multitenancy)
+        # user_id is optional for company profiles (shared profile)
         user_id = payload.get("user_id")
-        if not user_id:
+        if profile_type != "company" and not user_id:
             raise HTTPException(status_code=400, detail="user_id is required in payload")
         
         # Prepare data - convert all values to Neo4j-compatible types
@@ -304,31 +305,48 @@ async def create_or_update_profile(
                 data[key] = str(value)
         
         with driver.session() as session:
+            # Map profile_type to Neo4j label (handle case differences)
+            neo4j_label = profile_type
+            if profile_type == "company":
+                neo4j_label = "CompanyProfile"
+            
             # Determine unique identifier field based on profile_type
             if profile_type == "company":
+                # For shared company profile, use a fixed identifier
                 match_field = "companyUrl"
-                match_value = payload.get("companyUrl") or payload.get("user_id")
+                match_value = payload.get("companyUrl") or "shared"
+                # Delete ALL existing company profiles (since there's only one shared profile)
+                session.run("MATCH (p:CompanyProfile) DELETE p")
             elif profile_type == "user":
                 match_field = "name"
                 match_value = payload.get("name") or payload.get("user_id")
+                # Delete existing profile for this user_id (multitenancy)
+                session.run(
+                    f"MATCH (p:{neo4j_label} {{user_id: $user_id}}) DELETE p",
+                    user_id=user_id
+                )
             elif profile_type == "agent_name":
                 match_field = "agentName"
                 match_value = payload.get("agentName") or "Scout"
+                # Delete existing profile for this user_id (multitenancy)
+                session.run(
+                    f"MATCH (p:{neo4j_label} {{user_id: $user_id}}) DELETE p",
+                    user_id=user_id
+                )
             else:
                 # For any other profile_type, use user_id as match field
                 match_field = "user_id"
                 match_value = user_id
-            
-            # Delete existing profile for this user_id (multitenancy)
-            session.run(
-                f"MATCH (p:{profile_type} {{user_id: $user_id}}) DELETE p",
-                user_id=user_id
-            )
+                # Delete existing profile for this user_id (multitenancy)
+                session.run(
+                    f"MATCH (p:{neo4j_label} {{user_id: $user_id}}) DELETE p",
+                    user_id=user_id
+                )
             
             # Insert/update the profile (Neo4j v5+)
             session.execute_write(
                 upsert_node,
-                profile_type,
+                neo4j_label,
                 match_field,
                 match_value,
                 data
@@ -414,20 +432,19 @@ async def market_research(request: MarketRequest):
             latest_report.pop("_id", None)
             return {"status": "success", "data": latest_report}
 
-    # --- Neo4j query inside a thread - filter by user_id ---
+    # --- Neo4j query inside a thread - get shared company profile ---
     def fetch_company_profile():
         with driver.session() as session:
-            # Filter by user_id in CompanyProfile
+            # Get the shared company profile (no user_id filter)
             result = session.run(
-                "MATCH (c:CompanyProfile {user_id: $user_id}) RETURN c LIMIT 1",
-                user_id=request.user_id
+                "MATCH (c:CompanyProfile) RETURN c LIMIT 1"
             )
             record = result.single()
             return record
 
     record = await asyncio.to_thread(fetch_company_profile)
     if not record:
-        raise HTTPException(status_code=404, detail=f"No company profile found in Neo4j for user_id: {request.user_id}")
+        raise HTTPException(status_code=404, detail="No company profile found in Neo4j")
 
     company_profile = dict(record.values()[0])
     if "socialMediaUrls" in company_profile and isinstance(company_profile["socialMediaUrls"], str):
@@ -486,16 +503,15 @@ async def get_or_create_icp_config(user_id: str = Query(...), refresh: bool = Qu
             client.close()
             return existing_icp.get("icps", {"icps": []})
 
-        # Generate new ICPs from Neo4j company profile - filter by user_id
+        # Generate new ICPs from Neo4j company profile - get shared company profile
         with driver.session() as session:
             result = session.run(
-                "MATCH (c:CompanyProfile {user_id: $user_id}) RETURN c LIMIT 1",
-                user_id=user_id
+                "MATCH (c:CompanyProfile) RETURN c LIMIT 1"
             )
             record = result.single()
             if not record:
                 client.close()
-                raise HTTPException(status_code=404, detail=f"No company profile found in Neo4j for user_id: {user_id}")
+                raise HTTPException(status_code=404, detail="No company profile found in Neo4j")
 
             company_profile = dict(record.values()[0])
 
@@ -558,10 +574,26 @@ async def icp_research(request: MarketRequest):
                 latest_report.pop("_id", None)
                 return {"status": "success", "data": latest_report}
 
-        # Instead of Neo4j, take predata from frontend
-        company_profile = request.data
-        if not company_profile:
-            raise HTTPException(status_code=400, detail="No predata provided from frontend")
+        # --- Neo4j query inside a thread - get shared company profile ---
+        def fetch_company_profile():
+            with driver.session() as session:
+                # Get the shared company profile (no user_id filter)
+                result = session.run(
+                    "MATCH (c:CompanyProfile) RETURN c LIMIT 1"
+                )
+                record = result.single()
+                return record
+
+        record = await asyncio.to_thread(fetch_company_profile)
+        if not record:
+            raise HTTPException(status_code=404, detail="No company profile found in Neo4j")
+
+        company_profile = dict(record.values()[0])
+        if "socialMediaUrls" in company_profile and isinstance(company_profile["socialMediaUrls"], str):
+            try:
+                company_profile["socialMediaUrls"] = json.loads(company_profile["socialMediaUrls"])
+            except json.JSONDecodeError:
+                pass
 
         # --- Run research with retries (max 2 attempts) ---
         max_retries = 2
