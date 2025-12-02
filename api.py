@@ -401,6 +401,43 @@ async def get_single_profile(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/cleanup-company-profiles")
+async def cleanup_company_profiles():
+    """
+    Ensure only one CompanyProfile exists in Neo4j.
+    Keeps the first one found and deletes all others.
+    """
+    try:
+        with driver.session() as session:
+            # Get all company profiles
+            result = session.run("MATCH (c:CompanyProfile) RETURN c, id(c) as node_id ORDER BY id(c)")
+            records = list(result)
+            
+            if len(records) == 0:
+                return {"message": "No company profiles found", "deleted": 0, "remaining": 0}
+            
+            if len(records) == 1:
+                return {"message": "Only one company profile exists", "deleted": 0, "remaining": 1}
+            
+            # Keep the first one (oldest by node ID)
+            first_node_id = records[0]["node_id"]
+            
+            # Delete all others
+            delete_result = session.run(
+                "MATCH (c:CompanyProfile) WHERE id(c) <> $keep_id DELETE c RETURN count(c) as deleted",
+                keep_id=first_node_id
+            )
+            deleted_count = delete_result.single()["deleted"]
+            
+            return {
+                "message": f"Cleanup completed. Kept 1 profile, deleted {deleted_count} duplicate(s).",
+                "deleted": deleted_count,
+                "remaining": 1
+            }
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/market-research")
 async def market_research(request: MarketRequest):
     component_name = request.component_name.strip().lower()
