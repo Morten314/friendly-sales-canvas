@@ -289,6 +289,9 @@ async def create_or_update_profile(
             # Skip profile_type as it's used for node label
             if key == "profile_type":
                 continue
+            # Skip user_id for company profiles (shared profile, no multitenancy)
+            if key == "user_id" and profile_type == "company":
+                continue
             
             # Handle different value types
             if isinstance(value, (dict, list)):
@@ -362,25 +365,43 @@ async def create_or_update_profile(
 @app.get("/profile/{profile_type}")
 async def get_single_profile(
     profile_type: str,
-    user_id: str = Query(...)
+    user_id: str = Query(None)
 ):
     """
     Flexible profile fetch endpoint that returns any JSON structure.
-    Filters by user_id for multitenancy.
+    Filters by user_id for multitenancy (except for company profiles which are shared).
     """
     try:
         with driver.session() as session:
-            # Query by profile_type and user_id (multitenancy)
-            query_string = f"MATCH (p:{profile_type} {{user_id: $user_id}}) RETURN p LIMIT 1"
+            # For company profiles, don't filter by user_id (shared profile)
+            if profile_type == "company":
+                neo4j_label = "CompanyProfile"
+                query_string = f"MATCH (p:{neo4j_label}) RETURN p LIMIT 1"
+                result = session.run(query_string)
+            else:
+                # For other profiles, user_id is required
+                if not user_id:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="user_id is required for non-company profiles"
+                    )
+                # Query by profile_type and user_id (multitenancy)
+                query_string = f"MATCH (p:{profile_type} {{user_id: $user_id}}) RETURN p LIMIT 1"
+                result = session.run(query_string, user_id=user_id)
             
-            result = session.run(query_string, user_id=user_id)
             record = result.single()
 
             if not record:
-                raise HTTPException(
-                    status_code=404, 
-                    detail=f"No {profile_type} profile found for user_id: {user_id}"
-                )
+                if profile_type == "company":
+                    raise HTTPException(
+                        status_code=404,
+                        detail="No company profile found"
+                    )
+                else:
+                    raise HTTPException(
+                        status_code=404, 
+                        detail=f"No {profile_type} profile found for user_id: {user_id}"
+                    )
 
             profile_data = dict(record.values()[0])
 

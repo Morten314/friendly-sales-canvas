@@ -354,47 +354,47 @@ Return your findings in the following exact JSON format --  use this data to do 
 
 
 {{
-  "executiveSummary": "The enterprise software industry is experiencing rapid transformation driven by AI adoption, cloud migration, and regulatory changes. Key trends indicate accelerated digital transformation with 78% of companies prioritizing AI integration.",
-  "aiAdoption": "78%",
-  "cloudMigration": "45%",
-  "regulatory": "12",
+  "executiveSummary": "[1-2 sentence summary of overall market opportunity and trends]",
+  "aiAdoption": "[AI adoption percentage, e.g., '78%']",
+  "cloudMigration": "[Cloud migration percentage, e.g., '45%']",
+  "regulatory": "[Number of regulatory changes, e.g., '12']",
   "trendSnapshots": [
     {{
-      "title": "AI Integration",
-      "metric": "78% adoption rate",
-      "type": "adoption"
+      "title": "[Trend title]",
+      "metric": "[Metric value]",
+      "type": "[adoption|growth|performance]"
     }},
     {{
-      "title": "Cloud Migration",
-      "metric": "45% increase YoY",
-      "type": "growth"
+      "title": "[Trend title]",
+      "metric": "[Metric value]",
+      "type": "[adoption|growth|performance]"
     }},
     {{
-      "title": "Regulatory Impact",
-      "metric": "12 new policies",
-      "type": "performance"
+      "title": "[Trend title]",
+      "metric": "[Metric value]",
+      "type": "[adoption|growth|performance]"
     }}
   ],
   "regionalHotspots": {{
-    "APAC": "78%",
-    "Europe": "65%",
-    "North America": "72%"
+    "APAC": "[Percentage value]",
+    "Europe": "[Percentage value]",
+    "North America": "[Percentage value]"
   }},
   "recommendations": {{
-    "primaryFocus": "Prioritize AI-driven solutions and cloud-native architecture to capture the growing market demand for intelligent automation.",
-    "marketEntry": "Target mid-market enterprises in APAC and Europe where regulatory compliance and AI adoption create the strongest business case."
+    "primaryFocus": "[Primary focus recommendation]",
+    "marketEntry": "[Market entry strategy recommendation]"
   }},
   "risks": [
-    "Regulatory uncertainty in AI governance could slow enterprise adoption",
-    "Cloud vendor lock-in risks may drive customers toward multi-cloud strategies",
-    "Skills shortage in AI/ML talent could limit implementation speed"
+    "[Risk #1]",
+    "[Risk #2]",
+    "[Risk #3]"
   ],
   "visualCharts": {{
-    "aiAdoptionTrends": ["Q1", "Q2", "Q3", "Q4"],
+    "aiAdoptionTrends": ["[Quarter labels]"],
     "technologyBudgetAllocation": {{
-      "AI/ML": "35%",
-      "Cloud": "40%",
-      "Security": "25%"
+      "[Category]": "[Percentage]",
+      "[Category]": "[Percentage]",
+      "[Category]": "[Percentage]"
     }}
   }}
 }}
@@ -446,30 +446,30 @@ Return your findings in the following exact JSON format --  use this data to do 
   "uiComponents": [
     {{
       "type": "section",
-      "title": "Competitor Landscape",
-      "description": "Analyze your competitive environment & market dynamics.",
+      "title": "[Section title]",
+      "description": "[Section description]",
       "metrics": [
-        {{ "label": "Top Player Market Share", "value": "48%", "trend": "up" }},
-        {{ "label": "Emerging Players Added", "value": "2", "trend": "down" }}
+        {{ "label": "[Metric label]", "value": "[Metric value]", "trend": "[up|down|stable]" }},
+        {{ "label": "[Metric label]", "value": "[Metric value]", "trend": "[up|down|stable]" }}
       ],
-      "tags": ["Microsoft Teams", "Slack", "Zoom", "Notion", "Asana"]
+      "tags": ["[Competitor name]", "[Competitor name]", "[Competitor name]"]
     }},
     {{
       "type": "report",
-      "title": "Competitor Landscape Report",
-      "executiveSummary": "The enterprise collaboration tools market is increasingly competitive, with several dominant players holding significant market share. However, emerging startups are introducing disruptive features, shifting the landscape rapidly.",
+      "title": "[Report title]",
+      "executiveSummary": "[Executive summary of competitive landscape]",
       "dataPoints": [
         {{
-          "label": "Top 3 Players",
-          "value": "Microsoft Teams (35%), Slack (28%), Zoom (22%)"
+          "label": "[Data point label]",
+          "value": "[Data point value]"
         }},
         {{
-          "label": "Emerging Players",
-          "value": "Asana (8%), Notion (7%)"
+          "label": "[Data point label]",
+          "value": "[Data point value]"
         }},
         {{
-          "label": "Key Moves",
-          "value": "$300M funding round by Notion; new AI feature launch by Teams"
+          "label": "[Data point label]",
+          "value": "[Data point value]"
         }}
       ]
     }},
@@ -477,80 +477,80 @@ Return your findings in the following exact JSON format --  use this data to do 
       "type": "swotAnalysis",
       "entities": [
         {{
-          "name": "Microsoft Teams",
-          "strengths": ["Office 365 integration", "Enterprise adoption"],
-          "weaknesses": ["Complex interface", "Resource heavy"]
+          "name": "[Competitor name]",
+          "strengths": ["[Strength]", "[Strength]"],
+          "weaknesses": ["[Weakness]", "[Weakness]"]
         }},
         {{
-          "name": "Slack",
-          "strengths": ["Developer-friendly", "Third-party apps"],
-          "weaknesses": ["Limited video features", "Premium pricing"]
+          "name": "[Competitor name]",
+          "strengths": ["[Strength]", "[Strength]"],
+          "weaknesses": ["[Weakness]", "[Weakness]"]
         }}
       ]
     }},
     {{
       "type": "news",
       "headlines": [
-        "Notion raises $300M Series C - Valuation reaches $10B as workspace tools gain traction",
-        "Microsoft Teams launches AI Copilot - New AI features for meeting summaries and task automation",
-        "Slack introduces Workflow Builder 2.0 - Enhanced automation capabilities for enterprise customers"
+        "[News headline #1]",
+        "[News headline #2]",
+        "[News headline #3]"
       ]
     }},
     {{
       "type": "marketShareCharts",
       "regions": [
         {{
-          "name": "North America",
+          "name": "[Region name]",
           "data": {{
-            "Microsoft Teams": "40%",
-            "Slack": "32%",
-            "Zoom": "18%",
-            "Others": "10%"
+            "[Competitor]": "[Market share percentage]",
+            "[Competitor]": "[Market share percentage]",
+            "[Competitor]": "[Market share percentage]",
+            "Others": "[Market share percentage]"
           }}
         }},
         {{
-          "name": "APAC Region",
+          "name": "[Region name]",
           "data": {{
-            "Microsoft Teams": "30%",
-            "Zoom": "28%",
-            "Slack": "22%",
-            "Others": "20%"
+            "[Competitor]": "[Market share percentage]",
+            "[Competitor]": "[Market share percentage]",
+            "[Competitor]": "[Market share percentage]",
+            "Others": "[Market share percentage]"
           }}
         }}
       ]
     }},
     {{
       "type": "featureComparison",
-      "features": ["Video Conferencing", "File Sharing", "Third-party Integrations", "AI Features"],
+      "features": ["[Feature]", "[Feature]", "[Feature]", "[Feature]"],
       "tools": {{
-        "Teams": ["✓", "✓✓", "✓", "✓✓"],
-        "Slack": ["Limited", "✓", "✓✓", "✓"],
-        "Zoom": ["✓✓", "✓", "✓", "✓"],
-        "Notion": ["✗", "✓✓", "✓", "✓"]
+        "[Tool name]": ["[Comparison value]", "[Comparison value]", "[Comparison value]", "[Comparison value]"],
+        "[Tool name]": ["[Comparison value]", "[Comparison value]", "[Comparison value]", "[Comparison value]"],
+        "[Tool name]": ["[Comparison value]", "[Comparison value]", "[Comparison value]", "[Comparison value]"],
+        "[Tool name]": ["[Comparison value]", "[Comparison value]", "[Comparison value]", "[Comparison value]"]
       }}
     }},
     {{
       "type": "mnaInsights",
       "insights": [
         {{
-          "label": "High Acquisition Likelihood",
-          "description": "Notion and Asana showing strong growth metrics attractive to tech giants"
+          "label": "[Insight label]",
+          "description": "[Insight description]"
         }},
         {{
-          "label": "Potential Acquirers",
-          "description": "Google, Meta, and Salesforce actively seeking collaboration tool acquisitions"
+          "label": "[Insight label]",
+          "description": "[Insight description]"
         }},
         {{
-          "label": "Market Consolidation Risk",
-          "description": "Smaller players may struggle to compete with integrated enterprise suites"
+          "label": "[Insight label]",
+          "description": "[Insight description]"
         }}
       ]
     }},
     {{
       "type": "marketTrends",
       "charts": [
-        {{ "name": "Market Share Growth", "xAxis": "Q1–Q4" }},
-        {{ "name": "Feature Adoption Rate", "xAxis": ["AI Tools", "Integration"] }}
+        {{ "name": "[Chart name]", "xAxis": "[X-axis labels]" }},
+        {{ "name": "[Chart name]", "xAxis": ["[X-axis label]", "[X-axis label]"] }}
       ]
     }}
   ]
@@ -601,115 +601,115 @@ Return your findings in the following exact JSON format --  use this data to do 
 
 
 {{
-  "executiveSummary": "The regulatory landscape for SaaS companies continues to evolve rapidly, with new compliance requirements emerging across multiple jurisdictions. Organizations must navigate an increasingly complex web of data protection, AI governance, and industry-specific regulations.",
+  "executiveSummary": "[1-2 sentence summary of regulatory landscape and compliance requirements]",
   "keyUpdates": [
     {{
-      "title": "EU AI Act enforcement starts Q1 2026",
-      "description": "February 2, 2025",
-      "tag": "New",
-      "icon": "scale"
+      "title": "[Update title]",
+      "description": "[Update description or date]",
+      "tag": "[New|Update|Risk|High Priority]",
+      "icon": "[icon name]"
     }},
     {{
-      "title": "GDPR compliance among SaaS providers",
-      "description": "68%",
-      "tag": "Update",
-      "icon": "shield"
+      "title": "[Update title]",
+      "description": "[Update description or percentage]",
+      "tag": "[New|Update|Risk|High Priority]",
+      "icon": "[icon name]"
     }},
     {{
-      "title": "Potential fines: up to 6% revenue",
-      "description": "Up to 6% of annual revenue",
-      "tag": "Risk",
-      "icon": "alert"
+      "title": "[Update title]",
+      "description": "[Update description]",
+      "tag": "[New|Update|Risk|High Priority]",
+      "icon": "[icon name]"
     }},
     {{
-      "title": "China data localization laws impacting global SaaS",
-      "description": "Mandatory for customer data",
-      "tag": "High Priority",
-      "icon": "globe"
+      "title": "[Update title]",
+      "description": "[Update description]",
+      "tag": "[New|Update|Risk|High Priority]",
+      "icon": "[icon name]"
     }}
   ],
   "visualDataCards": [
     {{
-      "title": "Compliance Adoption Rates",
-      "type": "bar-chart",
+      "title": "[Card title]",
+      "type": "[bar-chart|timeline|percentage]",
       "data": [
-        {{ "label": "GDPR", "value": 68 }},
-        {{ "label": "CCPA", "value": 45 }},
-        {{ "label": "SOC 2", "value": 72 }},
-        {{ "label": "ISO 27001", "value": 38 }}
+        {{ "label": "[Label]", "value": [numeric value] }},
+        {{ "label": "[Label]", "value": [numeric value] }},
+        {{ "label": "[Label]", "value": [numeric value] }},
+        {{ "label": "[Label]", "value": [numeric value] }}
       ]
     }},
     {{
-      "title": "Regulatory Timeline",
-      "type": "timeline",
+      "title": "[Card title]",
+      "type": "[bar-chart|timeline|percentage]",
       "data": [
-        {{ "label": "EU AI Act Phase 1", "time": "Q1 2025" }},
-        {{ "label": "GDPR Updates", "time": "Q3 2025" }},
-        {{ "label": "EU AI Act Full Enforcement", "time": "Q1 2026" }}
+        {{ "label": "[Label]", "time": "[Time period]" }},
+        {{ "label": "[Label]", "time": "[Time period]" }},
+        {{ "label": "[Label]", "time": "[Time period]" }}
       ]
     }},
     {{
-      "title": "Risk Indicators",
-      "type": "percentage",
+      "title": "[Card title]",
+      "type": "[bar-chart|timeline|percentage]",
       "data": [
-        {{ "label": "Data Breach Risk", "value": 23 }},
-        {{ "label": "Non-compliance Penalties", "value": 15 }},
-        {{ "label": "Audit Readiness", "value": 67 }}
+        {{ "label": "[Label]", "value": [numeric value] }},
+        {{ "label": "[Label]", "value": [numeric value] }},
+        {{ "label": "[Label]", "value": [numeric value] }}
       ]
     }}
   ],
   "regionalData": [
     {{
-      "region": "European Union",
-      "framework": "GDPR + AI Act",
-      "deadline": "Q1 2026",
-      "impact": "High",
-      "status": "Active",
-      "requirements": "Data protection, AI governance"
+      "region": "[Region name]",
+      "framework": "[Regulatory framework]",
+      "deadline": "[Deadline or status]",
+      "impact": "[High|Medium|Low]",
+      "status": "[Active|Evolving|Mandatory]",
+      "requirements": "[Key requirements]"
     }},
     {{
-      "region": "United States",
-      "framework": "CCPA + State Laws",
-      "deadline": "Ongoing",
-      "impact": "Medium",
-      "status": "Evolving",
-      "requirements": "Privacy rights, data handling"
+      "region": "[Region name]",
+      "framework": "[Regulatory framework]",
+      "deadline": "[Deadline or status]",
+      "impact": "[High|Medium|Low]",
+      "status": "[Active|Evolving|Mandatory]",
+      "requirements": "[Key requirements]"
     }},
     {{
-      "region": "China",
-      "framework": "PIPL + Cybersecurity Law",
-      "deadline": "Active",
-      "impact": "High",
-      "status": "Mandatory",
-      "requirements": "Data localization, security"
+      "region": "[Region name]",
+      "framework": "[Regulatory framework]",
+      "deadline": "[Deadline or status]",
+      "impact": "[High|Medium|Low]",
+      "status": "[Active|Evolving|Mandatory]",
+      "requirements": "[Key requirements]"
     }},
     {{
-      "region": "United Kingdom",
-      "framework": "UK GDPR + DPA",
-      "deadline": "Active",
-      "impact": "Medium",
-      "status": "Active",
-      "requirements": "Data protection, transfers"
+      "region": "[Region name]",
+      "framework": "[Regulatory framework]",
+      "deadline": "[Deadline or status]",
+      "impact": "[High|Medium|Low]",
+      "status": "[Active|Evolving|Mandatory]",
+      "requirements": "[Key requirements]"
     }}
   ],
   "strategicRecommendations": {{
     "mitigateRegulatoryRisks": [
-      "Implement privacy by design principles",
-      "Establish automated compliance monitoring",
-      "Regular risk assessments and audits",
-      "Cross-functional compliance team"
+      "[Recommendation #1]",
+      "[Recommendation #2]",
+      "[Recommendation #3]",
+      "[Recommendation #4]"
     ],
     "competitivePositioning": [
-      "Market compliance as differentiator",
-      "Showcase security certifications",
-      "Transparent data handling practices",
-      "Industry-leading privacy standards"
+      "[Recommendation #1]",
+      "[Recommendation #2]",
+      "[Recommendation #3]",
+      "[Recommendation #4]"
     ],
     "goToMarketStrategy": [
-      "Regional deployment capabilities",
-      "Compliance-ready product offerings",
-      "Legal-friendly contract templates",
-      "Enterprise-grade data residency"
+      "[Recommendation #1]",
+      "[Recommendation #2]",
+      "[Recommendation #3]",
+      "[Recommendation #4]"
     ]
   }}
 }}
@@ -760,57 +760,57 @@ Return your findings in the following exact JSON format --  use this data to do 
 
 
 {{
-  "executiveSummary": "The Indian SaaS market offers significant growth potential for mid-size players, but entry barriers exist due to regulatory compliance and entrenched competitors. Strategic partnerships and phased market entry approaches can help mitigate risks while maximizing opportunities.",
+  "executiveSummary": "[1-2 sentence summary of market entry opportunity and challenges]",
   "entryBarriers": [
-    "Data residency regulations",
-    "Established local competitors",
-    "Complex compliance requirements",
-    "Cultural adaptation needs"
+    "[Entry barrier #1]",
+    "[Entry barrier #2]",
+    "[Entry barrier #3]",
+    "[Entry barrier #4]"
   ],
-  "recommendedChannel": "Local partnerships",
-  "timeToMarket": "12-18 months",
-  "topBarrier": "Data residency laws",
+  "recommendedChannel": "[Recommended channel strategy]",
+  "timeToMarket": "[Time to market estimate, e.g., '12-18 months']",
+  "topBarrier": "[Top barrier description]",
   "competitiveDifferentiation": [
-    "Advanced AI capabilities",
-    "Robust security framework",
-    "Flexible deployment options",
-    "Strong API ecosystem"
+    "[Differentiation factor #1]",
+    "[Differentiation factor #2]",
+    "[Differentiation factor #3]",
+    "[Differentiation factor #4]"
   ],
   "strategicRecommendations": [
-    "Partner with local system integrators",
-    "Establish regional data centers",
-    "Develop compliance automation tools",
-    "Create localized go-to-market strategy"
+    "[Strategic recommendation #1]",
+    "[Strategic recommendation #2]",
+    "[Strategic recommendation #3]",
+    "[Strategic recommendation #4]"
   ],
   "riskAssessment": [
-    "Regulatory changes could impact timeline",
-    "Competition intensifying rapidly",
-    "Economic uncertainty affecting IT spending"
+    "[Risk #1]",
+    "[Risk #2]",
+    "[Risk #3]"
   ],
   "swot": {{
-    "strengths": ["Strong tech platform"],
-    "weaknesses": ["Limited local presence"],
-    "opportunities": ["Growing market"],
-    "threats": ["Regulatory changes"]
+    "strengths": ["[Strength]", "[Strength]"],
+    "weaknesses": ["[Weakness]", "[Weakness]"],
+    "opportunities": ["[Opportunity]", "[Opportunity]"],
+    "threats": ["[Threat]", "[Threat]"]
   }},
   "timeline": [
     {{
-      "label": "Q1 2025: Market Research",
-      "phase": "Market Research",
-      "quarter": "Q1 2025",
-      "timestamp": "2025-01-01"
+      "label": "[Timeline label]",
+      "phase": "[Phase name]",
+      "quarter": "[Quarter, e.g., 'Q1 2025']",
+      "timestamp": "[ISO timestamp, e.g., '2025-01-01']"
     }},
     {{
-      "label": "Q2 2025: Partnerships",
-      "phase": "Partnerships",
-      "quarter": "Q2 2025",
-      "timestamp": "2025-04-01"
+      "label": "[Timeline label]",
+      "phase": "[Phase name]",
+      "quarter": "[Quarter, e.g., 'Q2 2025']",
+      "timestamp": "[ISO timestamp, e.g., '2025-04-01']"
     }},
     {{
-      "label": "Q3 2025: Launch",
-      "phase": "Launch",
-      "quarter": "Q3 2025",
-      "timestamp": "2025-07-01"
+      "label": "[Timeline label]",
+      "phase": "[Phase name]",
+      "quarter": "[Quarter, e.g., 'Q3 2025']",
+      "timestamp": "[ISO timestamp, e.g., '2025-07-01']"
     }}
   ]
 }}
