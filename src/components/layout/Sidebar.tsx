@@ -582,6 +582,21 @@ export function Sidebar() {
             </li>
           )}
 
+          {/* Artefacts navigation item */}
+          <li key="artifacts">
+            <Link 
+              to="/artifacts" 
+              onClick={handleLinkClick}
+              className={cn(
+                "flex items-center px-4 py-3 text-gray-700 hover:bg-sales-gray hover:text-sales-blue rounded-lg mx-2 transition-colors",
+                location.pathname === "/artifacts" && "bg-blue-50 text-sales-blue"
+              )}
+            >
+              <Archive className="h-5 w-5" />
+              {!isCollapsed && <span className="ml-3">Artefacts</span>}
+            </Link>
+          </li>
+
           {/* Reports moved outside AI Team */}
           <li key="reports">
             <Link 
@@ -597,20 +612,6 @@ export function Sidebar() {
             </Link>
           </li>
 
-          {/* Artefacts navigation item */}
-          <li key="artifacts">
-            <Link 
-              to="/artifacts" 
-              onClick={handleLinkClick}
-              className={cn(
-                "flex items-center px-4 py-3 text-gray-700 hover:bg-sales-gray hover:text-sales-blue rounded-lg mx-2 transition-colors",
-                location.pathname === "/artifacts" && "bg-blue-50 text-sales-blue"
-              )}
-            >
-              <Archive className="h-5 w-5" />
-              {!isCollapsed && <span className="ml-3">Artefacts</span>}
-            </Link>
-          </li>
 
           {/* Settings navigation item */}
           <li key="settings">
