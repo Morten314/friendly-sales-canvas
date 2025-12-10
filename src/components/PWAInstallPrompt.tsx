@@ -11,11 +11,49 @@ const PWAInstallPrompt = () => {
   const [isInstalled, setIsInstalled] = useState(false);
 
   useEffect(() => {
-    // Check if already installed
+    // Check if already installed (standalone mode)
     if (window.matchMedia('(display-mode: standalone)').matches || 
         (window.navigator as any).standalone === true) {
       setIsInstalled(true);
+      // Save to localStorage for future reference
+      localStorage.setItem('pwa-installed', 'true');
       return;
+    }
+
+    // Check localStorage for previous installation
+    const wasInstalled = localStorage.getItem('pwa-installed') === 'true';
+    if (wasInstalled) {
+      // App was previously installed, but user is accessing via browser
+      // Check if browser still considers it installable
+      // If beforeinstallprompt doesn't fire within a short time, it's likely already installed
+      setIsInstalled(true);
+      setShowInstallButton(false);
+      
+      // Still listen for beforeinstallprompt to detect if it's actually not installed
+      const checkHandler = (e: Event) => {
+        // If beforeinstallprompt fires, it means app is NOT installed
+        // So we should show the prompt
+        e.preventDefault();
+        const promptEvent = e as BeforeInstallPromptEvent;
+        setDeferredPrompt(promptEvent);
+        setIsInstalled(false);
+        setShowInstallButton(true);
+        console.log('✅ beforeinstallprompt fired - app is not installed');
+      };
+      
+      window.addEventListener('beforeinstallprompt', checkHandler);
+      
+      // Wait a bit to see if beforeinstallprompt fires
+      const checkTimer = setTimeout(() => {
+        // If beforeinstallprompt didn't fire, app is likely already installed
+        // Keep the prompt hidden
+        window.removeEventListener('beforeinstallprompt', checkHandler);
+      }, 2000);
+      
+      return () => {
+        window.removeEventListener('beforeinstallprompt', checkHandler);
+        clearTimeout(checkTimer);
+      };
     }
 
     // Set up event listener immediately - browser will fire when ready
@@ -47,6 +85,9 @@ const PWAInstallPrompt = () => {
       setIsInstalled(true);
       setShowInstallButton(false);
       setDeferredPrompt(null);
+      // Save installation status to localStorage
+      localStorage.setItem('pwa-installed', 'true');
+      console.log('✅ App installed - saved to localStorage');
     };
     window.addEventListener('appinstalled', installedHandler);
 
@@ -67,6 +108,8 @@ const PWAInstallPrompt = () => {
         if (outcome === 'accepted') {
           setShowInstallButton(false);
           setIsInstalled(true);
+          // Save installation status to localStorage
+          localStorage.setItem('pwa-installed', 'true');
         }
       } catch (error) {
         console.error('Install prompt error:', error);
