@@ -16,12 +16,71 @@ const PWAInstallPrompt = ({ variant = 'header' }: PWAInstallPromptProps) => {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showInstallButton, setShowInstallButton] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [isLikelyInstallable, setIsLikelyInstallable] = useState(false);
   const isMobile = useIsMobile();
   
-  // Use window.location.pathname instead of useLocation() to avoid Router context issues
-  // For fixed variant, only show on login/signup pages
-  const isLoginPage = typeof window !== 'undefined' && window.location.pathname === '/login';
+  // Track current pathname for fixed variant visibility
+  const [currentPath, setCurrentPath] = useState(
+    typeof window !== 'undefined' ? window.location.pathname : ''
+  );
+  
+  // Listen for pathname changes (for fixed variant)
+  useEffect(() => {
+    if (variant === 'fixed') {
+      const updatePath = () => {
+        setCurrentPath(window.location.pathname);
+      };
+      
+      // Update on initial load
+      updatePath();
+      
+      // Listen for popstate (back/forward navigation)
+      window.addEventListener('popstate', updatePath);
+      
+      // Poll for pathname changes (since we can't use useLocation)
+      const interval = setInterval(updatePath, 100);
+      
+      return () => {
+        window.removeEventListener('popstate', updatePath);
+        clearInterval(interval);
+      };
+    }
+  }, [variant]);
+  
+  const isLoginPage = currentPath === '/login';
   const shouldShowFixed = variant === 'fixed' && isLoginPage;
+  
+  // Check if app is likely installable (has manifest, service worker, etc.)
+  useEffect(() => {
+    const checkInstallability = async () => {
+      try {
+        // Check if manifest exists
+        const manifestLink = document.querySelector('link[rel="manifest"]');
+        const hasManifest = !!manifestLink;
+        
+        // Check if service worker is registered
+        let hasServiceWorker = false;
+        if ('serviceWorker' in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          hasServiceWorker = registrations.length > 0;
+        }
+        
+        // Check if running on HTTPS or localhost
+        const isSecure = window.location.protocol === 'https:' || 
+                        window.location.hostname === 'localhost' ||
+                        window.location.hostname === '127.0.0.1';
+        
+        // If all criteria are met, app is likely installable
+        if (hasManifest && hasServiceWorker && isSecure) {
+          setIsLikelyInstallable(true);
+        }
+      } catch (error) {
+        console.error('Error checking installability:', error);
+      }
+    };
+    
+    checkInstallability();
+  }, []);
 
   useEffect(() => {
     // Check if already installed (standalone mode)
@@ -74,6 +133,7 @@ const PWAInstallPrompt = ({ variant = 'header' }: PWAInstallPromptProps) => {
       const promptEvent = e as BeforeInstallPromptEvent;
       setDeferredPrompt(promptEvent);
       setShowInstallButton(true);
+      setIsLikelyInstallable(true); // If beforeinstallprompt fires, definitely installable
       console.log('✅ beforeinstallprompt event fired!');
     };
 
@@ -84,13 +144,15 @@ const PWAInstallPrompt = ({ variant = 'header' }: PWAInstallPromptProps) => {
     // This gives better UX as the button appears right away
     setShowInstallButton(true);
     
-    // Also set a fallback timer in case beforeinstallprompt takes longer
+    // Wait longer for beforeinstallprompt to fire before assuming it won't
+    // This helps show "Install App" instead of "Install Instructions" more often
     const timer = setTimeout(() => {
-      if (!isInstalled && !deferredPrompt) {
-        // Show install button even if beforeinstallprompt didn't fire yet (iOS case or delayed prompt)
+      if (!isInstalled && !deferredPrompt && isLikelyInstallable) {
+        // If app is likely installable but beforeinstallprompt hasn't fired,
+        // it might be delayed or user dismissed it before. Still show "Install App"
         setShowInstallButton(true);
       }
-    }, 3000);
+    }, 5000); // Increased from 3000 to 5000ms
 
     // Listen for app installed event
     const installedHandler = () => {
@@ -108,11 +170,12 @@ const PWAInstallPrompt = ({ variant = 'header' }: PWAInstallPromptProps) => {
       window.removeEventListener('appinstalled', installedHandler);
       clearTimeout(timer);
     };
-  }, [isInstalled, deferredPrompt]);
+  }, [isInstalled, deferredPrompt, isLikelyInstallable]);
 
   const handleInstallClick = async () => {
+    // Use native prompt if deferredPrompt is available
     if (deferredPrompt) {
-      // Use browser's install prompt
+      // Use browser's install prompt - this is the native install prompt
       try {
         await deferredPrompt.prompt();
         const { outcome } = await deferredPrompt.userChoice;
@@ -125,9 +188,33 @@ const PWAInstallPrompt = ({ variant = 'header' }: PWAInstallPromptProps) => {
         }
       } catch (error) {
         console.error('Install prompt error:', error);
+        // If prompt fails, show instructions as fallback
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        const isAndroid = /Android/.test(navigator.userAgent);
+        
+        if (isIOS) {
+          alert(`📱 Install on iPhone/iPad:\n\n1. Tap the Share button (square with arrow) at the bottom\n2. Scroll down and tap "Add to Home Screen"\n3. Tap "Add" in the top right\n\nYour app will appear on your home screen!`);
+        } else if (isAndroid) {
+          alert(`📱 Install on Android:\n\n1. Tap the menu (3 dots) in your browser\n2. Select "Install app" or "Add to Home Screen"\n\nOR look for the install banner at the top of your screen!`);
+        } else {
+          alert('To install:\n1. Look for the install icon (➕) in your browser\'s address bar\n2. Or use the browser menu to "Install app"');
+        }
       }
       
       setDeferredPrompt(null);
+    } else if (isLikelyInstallable) {
+      // App is installable but beforeinstallprompt didn't fire (maybe user dismissed it before)
+      // Show instructions but indicate the app can be installed
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      const isAndroid = /Android/.test(navigator.userAgent);
+      
+      if (isIOS) {
+        alert(`📱 Install on iPhone/iPad:\n\n1. Tap the Share button (square with arrow) at the bottom\n2. Scroll down and tap "Add to Home Screen"\n3. Tap "Add" in the top right\n\nYour app will appear on your home screen!`);
+      } else if (isAndroid) {
+        alert(`📱 Install on Android:\n\n1. Tap the menu (3 dots) in your browser\n2. Select "Install app" or "Add to Home Screen"\n\nOR look for the install banner at the top of your screen!`);
+      } else {
+        alert('To install:\n1. Look for the install icon (➕) in your browser\'s address bar\n2. Or use the browser menu to "Install app"\n\nIf you don\'t see the install option, try refreshing the page.');
+      }
     } else {
       // Manual install instructions with better mobile detection
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
@@ -151,24 +238,27 @@ const PWAInstallPrompt = ({ variant = 'header' }: PWAInstallPromptProps) => {
   }
 
   // For fixed variant, only show on login page
-  if (variant === 'fixed' && !shouldShowFixed) {
-    return null;
-  }
-
-  // Hide button if not showing (for fixed variant)
-  if (variant === 'fixed' && !showInstallButton) {
-    return null;
+  if (variant === 'fixed') {
+    if (currentPath !== '/login') {
+      return null; // Don't show on any page other than /login
+    }
+    if (!showInstallButton) {
+      return null;
+    }
   }
 
   // Fixed variant - render as fixed bottom-right button (for login/signup pages)
   if (variant === 'fixed' && shouldShowFixed) {
+    // Show "Install App" if we have deferredPrompt OR if app is likely installable
+    // This way it shows "Install App" even if beforeinstallprompt hasn't fired yet
+    const canInstall = deferredPrompt || isLikelyInstallable;
     const buttonText = isInstalled 
       ? 'Installed'
-      : (deferredPrompt 
+      : (canInstall 
         ? 'Install App'
         : 'Install Instructions');
     
-    const subtitleText = deferredPrompt 
+    const subtitleText = canInstall 
       ? 'Add to home screen'
       : (isMobile ? 'Tap for instructions' : 'Click for instructions');
 
@@ -260,9 +350,11 @@ const PWAInstallPrompt = ({ variant = 'header' }: PWAInstallPromptProps) => {
   }
 
   // Header variant - render as header button
+  // Show "Install App" if we have deferredPrompt OR if app is likely installable
+  const canInstall = deferredPrompt || isLikelyInstallable;
   const buttonText = isInstalled 
     ? (isMobile ? 'Installed' : 'Installed')
-    : (deferredPrompt 
+    : (canInstall 
       ? (isMobile ? 'Install' : 'Install App')
       : (isMobile ? 'Install' : 'Install'));
 
@@ -273,7 +365,7 @@ const PWAInstallPrompt = ({ variant = 'header' }: PWAInstallPromptProps) => {
       onClick={handleInstallClick}
       disabled={isInstalled}
       className="flex items-center gap-2"
-      title={isInstalled ? 'App is already installed' : (deferredPrompt ? 'Install app' : 'Install instructions')}
+      title={isInstalled ? 'App is already installed' : (canInstall ? 'Install app' : 'Install instructions')}
     >
       <Download className="h-4 w-4" />
       {!isMobile && buttonText}
