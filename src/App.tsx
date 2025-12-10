@@ -115,7 +115,8 @@ const App = () => (
           </BrowserRouter>
           <Toaster />
           <Sonner />
-          <PWAInstallPrompt />
+          {/* Show fixed install button on login/signup pages */}
+          <PWAInstallPrompt variant="fixed" />
         </TooltipProvider>
         </SidebarProvider>
       </TenantProvider>
