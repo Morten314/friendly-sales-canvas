@@ -10,6 +10,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { 
   Building2, 
   Upload, 
@@ -25,15 +33,179 @@ import {
   Globe,
   Linkedin,
   Twitter,
-  Youtube
+  Youtube,
+  ChevronDown,
+  ChevronRight,
+  RefreshCw,
+  Trash2,
+  Edit,
+  MoreVertical,
+  Clock,
+  TrendingUp,
+  Activity,
+  XCircle,
+  Search,
+  Plus,
+  Grid3x3,
+  List
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+
+// Data Source Interface
+interface DataSource {
+  id: string;
+  name: string;
+  type: 'crm' | 'marketing' | 'social' | 'analytics' | 'communication' | 'file' | 'custom';
+  icon: typeof Database;
+  platform: string;
+  status: 'connected' | 'disconnected' | 'error' | 'syncing' | 'warning';
+  account?: string;
+  connectedDate?: string;
+  syncFrequency: 'realtime' | 'hourly' | '4hours' | 'daily' | 'weekly' | 'manual';
+  lastSyncTime?: string;
+  lastSyncStatus?: 'success' | 'failed' | 'partial';
+  totalRecords: number;
+  newRecordsThisWeek: number;
+  updatedRecords: number;
+  dataQualityScore: number;
+  objectsSynced: string[];
+  fieldsMapped: number;
+  filters: string[];
+  error?: {
+    message: string;
+    code: string;
+    occurredAt: string;
+  };
+}
+
+// Mock Data Sources
+const mockDataSources: DataSource[] = [
+  {
+    id: '1',
+    name: 'Salesforce',
+    type: 'crm',
+    icon: Database,
+    platform: 'Salesforce',
+    status: 'connected',
+    account: 'salesforce@company.com',
+    connectedDate: '2024-01-15',
+    syncFrequency: '4hours',
+    lastSyncTime: '2 hours ago',
+    lastSyncStatus: 'success',
+    totalRecords: 1234,
+    newRecordsThisWeek: 45,
+    updatedRecords: 12,
+    dataQualityScore: 92,
+    objectsSynced: ['Contacts', 'Accounts', 'Opportunities'],
+    fieldsMapped: 45,
+    filters: ['Active accounts only']
+  },
+  {
+    id: '2',
+    name: 'HubSpot',
+    type: 'crm',
+    icon: BarChart3,
+    platform: 'HubSpot',
+    status: 'disconnected',
+    syncFrequency: 'daily',
+    totalRecords: 0,
+    newRecordsThisWeek: 0,
+    updatedRecords: 0,
+    dataQualityScore: 0,
+    objectsSynced: [],
+    fieldsMapped: 0,
+    filters: []
+  },
+  {
+    id: '3',
+    name: 'LinkedIn Sales Navigator',
+    type: 'social',
+    icon: Linkedin,
+    platform: 'LinkedIn',
+    status: 'connected',
+    account: 'linkedin@company.com',
+    connectedDate: '2024-02-01',
+    syncFrequency: 'daily',
+    lastSyncTime: '1 day ago',
+    lastSyncStatus: 'success',
+    totalRecords: 567,
+    newRecordsThisWeek: 23,
+    updatedRecords: 8,
+    dataQualityScore: 88,
+    objectsSynced: ['Company Pages', 'Profiles'],
+    fieldsMapped: 32,
+    filters: ['Last 90 days']
+  },
+  {
+    id: '4',
+    name: 'Website Analytics',
+    type: 'analytics',
+    icon: Globe,
+    platform: 'Google Analytics',
+    status: 'error',
+    account: 'analytics@company.com',
+    connectedDate: '2024-01-20',
+    syncFrequency: 'hourly',
+    lastSyncTime: '3 days ago',
+    lastSyncStatus: 'failed',
+    totalRecords: 890,
+    newRecordsThisWeek: 0,
+    updatedRecords: 0,
+    dataQualityScore: 75,
+    objectsSynced: ['Page Views', 'Events'],
+    fieldsMapped: 28,
+    filters: [],
+    error: {
+      message: 'API rate limit exceeded',
+      code: '429',
+      occurredAt: '3 days ago'
+    }
+  },
+  {
+    id: '5',
+    name: 'LinkedIn Company',
+    type: 'social',
+    icon: Linkedin,
+    platform: 'LinkedIn',
+    status: 'disconnected',
+    syncFrequency: 'weekly',
+    totalRecords: 0,
+    newRecordsThisWeek: 0,
+    updatedRecords: 0,
+    dataQualityScore: 0,
+    objectsSynced: [],
+    fieldsMapped: 0,
+    filters: []
+  },
+  {
+    id: '6',
+    name: 'Twitter/X',
+    type: 'social',
+    icon: Twitter,
+    platform: 'Twitter',
+    status: 'disconnected',
+    syncFrequency: 'manual',
+    totalRecords: 0,
+    newRecordsThisWeek: 0,
+    updatedRecords: 0,
+    dataQualityScore: 0,
+    objectsSynced: [],
+    fieldsMapped: 0,
+    filters: []
+  }
+];
 
 const MissionControl = () => {
   const [activeTab, setActiveTab] = useState("profile");
   const [completeness, setCompleteness] = useState(65);
   const [isSaving, setIsSaving] = useState(false);
+  const [expandedSources, setExpandedSources] = useState<Set<string>>(new Set());
+  const [expandedTableRows, setExpandedTableRows] = useState<Set<string>>(new Set());
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [viewMode, setViewMode] = useState<"table" | "grid">("table");
   const { toast } = useToast();
   const { currentUser } = useAuth();
 
@@ -47,6 +219,8 @@ const MissionControl = () => {
     gtmModel: "",
     regionFocus: "",
     dealSize: "",
+    companyUrl: "",
+    keyBuyerPersona: "",
   });
 
   const handleSave = async () => {
@@ -73,6 +247,8 @@ const MissionControl = () => {
         gtm_model: companyProfile.gtmModel,
         region_focus: companyProfile.regionFocus,
         typical_deal_size: companyProfile.dealSize,
+        company_url: companyProfile.companyUrl,
+        key_buyer_persona: companyProfile.keyBuyerPersona,
       };
 
       console.log("=== MISSION CONTROL: Saving company profile ===");
@@ -146,6 +322,8 @@ const MissionControl = () => {
             gtmModel: data.gtm_model || data.gtmModel || "",
             regionFocus: data.region_focus || data.regionFocus || "",
             dealSize: data.typical_deal_size || data.dealSize || "",
+            companyUrl: data.company_url || data.companyUrl || "",
+            keyBuyerPersona: data.key_buyer_persona || data.keyBuyerPersona || "",
           });
 
           // Update completeness
@@ -158,8 +336,10 @@ const MissionControl = () => {
             gtmModel: data.gtm_model || data.gtmModel || "",
             regionFocus: data.region_focus || data.regionFocus || "",
             dealSize: data.typical_deal_size || data.dealSize || "",
+            companyUrl: data.company_url || data.companyUrl || "",
+            keyBuyerPersona: data.key_buyer_persona || data.keyBuyerPersona || "",
           }).filter(value => value !== "").length;
-          const totalFields = 8;
+          const totalFields = 10;
           const newCompleteness = Math.round((filledFields / totalFields) * 100);
           setCompleteness(newCompleteness);
         }
@@ -178,6 +358,65 @@ const MissionControl = () => {
     });
   };
 
+  const toggleExpand = (id: string) => {
+    setExpandedSources(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleTableRow = (id: string) => {
+    setExpandedTableRows(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  const getStatusColor = (status: DataSource['status']) => {
+    switch (status) {
+      case 'connected': return 'text-green-600 bg-green-50';
+      case 'syncing': return 'text-blue-600 bg-blue-50';
+      case 'warning': return 'text-yellow-600 bg-yellow-50';
+      case 'error': return 'text-red-600 bg-red-50';
+      case 'disconnected': return 'text-gray-600 bg-gray-50';
+      default: return 'text-gray-600 bg-gray-50';
+    }
+  };
+
+  const getStatusBadge = (status: DataSource['status']) => {
+    switch (status) {
+      case 'connected': return <CheckCircle className="h-4 w-4 text-green-600" />;
+      case 'syncing': return <RefreshCw className="h-4 w-4 text-blue-600 animate-spin" />;
+      case 'warning': return <AlertCircle className="h-4 w-4 text-yellow-600" />;
+      case 'error': return <XCircle className="h-4 w-4 text-red-600" />;
+      case 'disconnected': return <XCircle className="h-4 w-4 text-gray-400" />;
+      default: return null;
+    }
+  };
+
+  const getTypeLabel = (type: DataSource['type']) => {
+    const labels: Record<DataSource['type'], string> = {
+      crm: 'CRM',
+      marketing: 'Marketing',
+      social: 'Social',
+      analytics: 'Analytics',
+      communication: 'Communication',
+      file: 'File',
+      custom: 'Custom'
+    };
+    return labels[type] || type;
+  };
+
   const handleUpload = (type: string) => {
     toast({
       title: `Uploading ${type}`,
@@ -185,12 +424,41 @@ const MissionControl = () => {
     });
   };
 
+  const handleAddSource = () => {
+    toast({
+      title: "Add new data source",
+      description: "Opening the connector catalog (placeholder).",
+    });
+  };
+
+  const filteredSources = mockDataSources.filter((source) => {
+    const matchesSearch = source.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === "all" || source.status === statusFilter;
+    const matchesType = typeFilter === "all" || source.type === typeFilter;
+    return matchesSearch && matchesStatus && matchesType;
+  });
+
+  const summary = {
+    total: filteredSources.length,
+    connected: filteredSources.filter((s) => s.status === "connected").length,
+    totalRecords: filteredSources.reduce((sum, s) => sum + s.totalRecords, 0),
+    avgQuality:
+      filteredSources.filter((s) => s.status === "connected").length === 0
+        ? 0
+        : Math.round(
+            filteredSources
+              .filter((s) => s.status === "connected")
+              .reduce((sum, s) => sum + s.dataQualityScore, 0) /
+              filteredSources.filter((s) => s.status === "connected").length
+          ),
+  };
+
   return (
     <Layout>
       <div className="space-y-6">
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 gap-1 md:gap-0">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 gap-1 md:gap-0">
             <TabsTrigger value="profile" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm px-2 md:px-4">
               <Building2 className="h-3 w-3 md:h-4 md:w-4" />
               <span className="hidden sm:inline">Company Profile</span>
@@ -200,10 +468,6 @@ const MissionControl = () => {
               <Database className="h-3 w-3 md:h-4 md:w-4" />
               <span className="hidden sm:inline">Data Sources</span>
               <span className="sm:hidden">Sources</span>
-            </TabsTrigger>
-            <TabsTrigger value="uploads" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm px-2 md:px-4">
-              <Upload className="h-3 w-3 md:h-4 md:w-4" />
-              Uploads
             </TabsTrigger>
             <TabsTrigger value="advanced" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm px-2 md:px-4">
               <Settings className="h-3 w-3 md:h-4 md:w-4" />
@@ -315,6 +579,16 @@ const MissionControl = () => {
                       </SelectContent>
                     </Select>
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="company-url">Company URL</Label>
+                    <Input 
+                      id="company-url" 
+                      type="url"
+                      placeholder="https://example.com"
+                      value={companyProfile.companyUrl}
+                      onChange={(e) => setCompanyProfile(prev => ({ ...prev, companyUrl: e.target.value }))}
+                    />
+                  </div>
                 </div>
                 
                 <div className="space-y-4">
@@ -341,6 +615,20 @@ const MissionControl = () => {
                   </div>
                 </div>
                 
+                <div className="space-y-4">
+                  <h3 className="font-medium">Buyer Information</h3>
+                  <div className="space-y-2">
+                    <Label htmlFor="key-buyer-persona">Key Buyer Persona</Label>
+                    <Textarea 
+                      id="key-buyer-persona" 
+                      placeholder="Describe your key buyer persona (e.g., VP of Sales at mid-market SaaS companies, CTO at fintech startups...)"
+                      value={companyProfile.keyBuyerPersona}
+                      onChange={(e) => setCompanyProfile(prev => ({ ...prev, keyBuyerPersona: e.target.value }))}
+                      rows={4}
+                    />
+                  </div>
+                </div>
+                
                 <Button 
                   onClick={handleSave} 
                   className="w-full md:w-auto"
@@ -355,131 +643,454 @@ const MissionControl = () => {
           {/* Data Sources Tab */}
           <TabsContent value="sources">
             <div className="space-y-6">
+              {/* Data Sources Table */}
+              <div className="space-y-6">
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div>
-                <h2 className="text-lg font-semibold mb-4">Integration Sources</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {[
-                    { name: "Salesforce", icon: Database, status: "connected", lastSync: "2 hours ago" },
-                    { name: "HubSpot", icon: BarChart3, status: "not-connected" },
-                    { name: "LinkedIn Sales Navigator", icon: Linkedin, status: "connected", lastSync: "1 day ago" },
-                    { name: "Website Analytics", icon: Globe, status: "error" },
-                    { name: "LinkedIn Company", icon: Linkedin, status: "not-connected" },
-                    { name: "Twitter/X", icon: Twitter, status: "not-connected" },
-                  ].map((source) => (
-                    <Card key={source.name} className="relative">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center gap-2">
-                            <source.icon className="h-5 w-5 text-muted-foreground" />
-                            <span className="font-medium">{source.name}</span>
-                          </div>
-                          {source.status === "connected" && (
-                            <CheckCircle className="h-4 w-4 text-green-600" />
-                          )}
-                          {source.status === "error" && (
-                            <AlertCircle className="h-4 w-4 text-red-600" />
-                          )}
-                        </div>
-                        
-                        {source.status === "connected" && (
-                          <p className="text-xs text-muted-foreground mb-3">
-                            Last synced: {source.lastSync}
-                          </p>
-                        )}
-                        
-                        {source.status === "error" && (
-                          <p className="text-xs text-red-600 mb-3">
-                            Connection failed - Retry needed
-                          </p>
-                        )}
-                        
-                        <Button
-                          size="sm"
-                          variant={source.status === "connected" ? "outline" : "default"}
-                          className="w-full"
-                          onClick={() => handleConnect(source.name)}
-                        >
-                          {source.status === "connected" ? "Reconnect" : 
-                           source.status === "error" ? "Retry" : "Connect"}
+                    <h2 className="text-xl font-semibold mb-1">Data Sources</h2>
+                    <p className="text-sm text-muted-foreground">Manage and monitor your connected data sources</p>
+                  </div>
+                  <Button onClick={handleAddSource} className="w-full md:w-auto">
+                    <Database className="h-4 w-4 mr-2" />
+                    Add New Source
                         </Button>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
               </div>
 
-              <div>
-                <h3 className="text-lg font-semibold mb-4">Competitor Analysis</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <Card>
+                    <CardContent className="p-4">
+                      <p className="text-sm text-muted-foreground">Total Sources</p>
+                      <p className="text-2xl font-bold">{summary.total}</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <p className="text-sm text-muted-foreground">Connected</p>
+                      <div className="flex items-baseline gap-2">
+                        <p className="text-2xl font-bold">{summary.connected}</p>
+                        <Badge variant="outline" className="text-xs">{Math.round(summary.connected / (summary.total || 1) * 100)}%</Badge>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <p className="text-sm text-muted-foreground">Total Records</p>
+                      <p className="text-2xl font-bold">{summary.totalRecords.toLocaleString()}</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <p className="text-sm text-muted-foreground">Avg Quality</p>
+                      <p className="text-2xl font-bold">{summary.avgQuality}%</p>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="flex flex-1 flex-col sm:flex-row gap-3">
+                    <Input
+                      placeholder="Search sources"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="sm:max-w-xs"
+                    />
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                      <SelectTrigger className="sm:max-w-[180px]">
+                        <SelectValue placeholder="Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Statuses</SelectItem>
+                        <SelectItem value="connected">Connected</SelectItem>
+                        <SelectItem value="syncing">Syncing</SelectItem>
+                        <SelectItem value="warning">Warning</SelectItem>
+                        <SelectItem value="error">Error</SelectItem>
+                        <SelectItem value="disconnected">Disconnected</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select value={typeFilter} onValueChange={setTypeFilter}>
+                      <SelectTrigger className="sm:max-w-[180px]">
+                        <SelectValue placeholder="Type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Types</SelectItem>
+                        <SelectItem value="crm">CRM</SelectItem>
+                        <SelectItem value="marketing">Marketing</SelectItem>
+                        <SelectItem value="social">Social</SelectItem>
+                        <SelectItem value="analytics">Analytics</SelectItem>
+                        <SelectItem value="communication">Communication</SelectItem>
+                        <SelectItem value="file">File</SelectItem>
+                        <SelectItem value="custom">Custom</SelectItem>
+                      </SelectContent>
+                    </Select>
+                              </div>
+                  <div className="flex items-center gap-2">
+                              <Button
+                      variant={viewMode === "table" ? "default" : "outline"}
+                                size="sm"
+                      onClick={() => setViewMode("table")}
+                    >
+                      Table
+                              </Button>
+                              <Button
+                      variant={viewMode === "grid" ? "default" : "outline"}
+                                size="sm"
+                      onClick={() => setViewMode("grid")}
+                    >
+                      Grid
+                              </Button>
+                            </div>
+                          </div>
+
+                {filteredSources.length === 0 && (
+                  <Card>
+                    <CardContent className="p-8 text-center space-y-3">
+                      <p className="text-lg font-medium">No sources match these filters</p>
+                      <p className="text-sm text-muted-foreground">Try adjusting search or filters to see results.</p>
+                        </CardContent>
+                      </Card>
+                )}
+
+                {viewMode === "table" ? (
                 <Card>
-                  <CardContent className="p-4 space-y-4">
-                    <Label htmlFor="competitor-urls">Competitor URLs (up to 3)</Label>
-                    <div className="space-y-2">
-                      <Input placeholder="https://competitor1.com" />
-                      <Input placeholder="https://competitor2.com" />
-                      <Input placeholder="https://competitor3.com" />
-                    </div>
+                  <CardContent className="p-0">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[20%]">Source</TableHead>
+                          <TableHead className="w-[10%]">Type</TableHead>
+                          <TableHead className="w-[10%]">Status</TableHead>
+                          <TableHead className="w-[10%]">Records</TableHead>
+                          <TableHead className="w-[15%]">Last Sync</TableHead>
+                          <TableHead className="w-[10%]">Data Quality</TableHead>
+                          <TableHead className="w-[10%]">Sync Frequency</TableHead>
+                          <TableHead className="w-[15%]">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                          {filteredSources.map((source) => {
+                          const isExpanded = expandedTableRows.has(source.id);
+                          const SourceIcon = source.icon;
+                          
+                          return (
+                            <React.Fragment key={source.id}>
+                              <TableRow 
+                                className="cursor-pointer hover:bg-muted/50"
+                                onClick={() => toggleTableRow(source.id)}
+                              >
+                                <TableCell>
+                                  <div className="flex items-center gap-2">
+                                    <SourceIcon className="h-4 w-4 text-muted-foreground" />
+                                    <span className="font-medium">{source.name}</span>
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant="outline" className="text-xs">{getTypeLabel(source.type)}</Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-2">
+                                    {getStatusBadge(source.status)}
+                                    <span className="text-sm capitalize">{source.status}</span>
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <span className="font-medium">{source.totalRecords.toLocaleString()}</span>
+                                </TableCell>
+                                <TableCell>
+                                  {source.lastSyncTime ? (
+                                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                      <Clock className="h-3 w-3" />
+                                      <span>{source.lastSyncTime}</span>
+                                    </div>
+                                  ) : (
+                                    <span className="text-sm text-muted-foreground">Never</span>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {source.status === 'connected' ? (
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-16 bg-muted rounded-full h-2">
+                                        <div 
+                                          className={`h-2 rounded-full ${
+                                            source.dataQualityScore >= 90 ? 'bg-green-500' :
+                                            source.dataQualityScore >= 70 ? 'bg-yellow-500' : 'bg-red-500'
+                                          }`}
+                                          style={{ width: `${source.dataQualityScore}%` }}
+                                        />
+                                      </div>
+                                      <span className="text-sm font-medium">{source.dataQualityScore}%</span>
+                                    </div>
+                                  ) : (
+                                    <span className="text-sm text-muted-foreground">-</span>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  <span className="text-sm capitalize">{source.syncFrequency}</span>
+                                </TableCell>
+                                <TableCell onClick={(e) => e.stopPropagation()}>
+                                  <div className="flex items-center gap-1">
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => handleConnect(source.name)}
+                                      className="h-8 px-2"
+                                    >
+                                      {source.status === 'connected' ? 'Reconnect' : source.status === 'error' ? 'Retry' : 'Connect'}
+                                    </Button>
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                          <MoreVertical className="h-4 w-4" />
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end">
+                                        <DropdownMenuItem onClick={() => toggleTableRow(source.id)}>
+                                          {isExpanded ? 'Collapse' : 'Expand'} Details
+                                        </DropdownMenuItem>
+                                        {source.status === 'connected' && (
+                                          <>
+                                            <DropdownMenuItem onClick={() => toast({ title: "Manual sync triggered" })}>
+                                              <RefreshCw className="h-4 w-4 mr-2" />
+                                              Sync Now
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => toast({ title: "Opening configuration" })}>
+                                              <Settings className="h-4 w-4 mr-2" />
+                                              Configure
+                                            </DropdownMenuItem>
+                                          </>
+                                        )}
+                                        <DropdownMenuItem 
+                                          onClick={() => toast({ title: "Delete source", description: `Are you sure you want to delete ${source.name}?` })}
+                                          className="text-red-600"
+                                        >
+                                          <Trash2 className="h-4 w-4 mr-2" />
+                                          Delete
+                                        </DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                              
+                              {/* Expanded Row Details */}
+                              {isExpanded && (
+                                <TableRow>
+                                  <TableCell colSpan={8} className="bg-muted/30">
+                                    <div className="p-4 space-y-4">
+                                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                        {/* Connection Details */}
+                                        {source.status === 'connected' && (
+                                          <div className="space-y-2">
+                                            <p className="text-sm font-semibold">Connection Details</p>
+                                            <div className="text-sm text-muted-foreground space-y-1">
+                                              <p>Account: {source.account}</p>
+                                              <p>Connected: {source.connectedDate ? new Date(source.connectedDate).toLocaleDateString() : 'N/A'}</p>
+                                              <p>Sync Frequency: {source.syncFrequency}</p>
+                                            </div>
+                                          </div>
+                                        )}
+
+                                        {/* Data Metrics */}
+                                        {source.status === 'connected' && (
+                                          <div className="space-y-2">
+                                            <p className="text-sm font-semibold">Data Metrics</p>
+                                            <div className="text-sm text-muted-foreground space-y-1">
+                                              <p>Total: {source.totalRecords.toLocaleString()}</p>
+                                              <p>New This Week: {source.newRecordsThisWeek}</p>
+                                              <p>Updated: {source.updatedRecords}</p>
+                                            </div>
+                                          </div>
+                                        )}
+
+                                        {/* Configuration */}
+                                        {source.status === 'connected' && (
+                                          <div className="space-y-2">
+                                            <p className="text-sm font-semibold">Configuration</p>
+                                            <div className="text-sm text-muted-foreground space-y-1">
+                                              <p>Objects: {source.objectsSynced.length}</p>
+                                              <p>Fields: {source.fieldsMapped}</p>
+                                              <p>Filters: {source.filters.length}</p>
+                                            </div>
+                                          </div>
+                                        )}
+
+                                        {/* Error Details */}
+                                        {source.status === 'error' && source.error && (
+                                          <div className="space-y-2">
+                                            <p className="text-sm font-semibold text-red-600">Error Details</p>
+                                            <div className="text-sm text-muted-foreground space-y-1">
+                                              <p>{source.error.message}</p>
+                                              <p>Code: {source.error.code}</p>
+                                              <p>Occurred: {source.error.occurredAt}</p>
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+
+                                      {/* Quick Actions */}
+                                      <div className="flex items-center gap-2 pt-2 border-t">
+                                        {source.status === 'connected' && (
+                                          <>
+                                            <Button size="sm" variant="outline" onClick={() => toast({ title: "Manual sync triggered" })}>
+                                              <RefreshCw className="h-4 w-4 mr-2" />
+                                              Sync Now
+                                            </Button>
+                                            <Button size="sm" variant="outline" onClick={() => toast({ title: "Opening configuration" })}>
+                                              <Settings className="h-4 w-4 mr-2" />
+                                              Configure
+                                            </Button>
+                                            <Button size="sm" variant="outline" onClick={() => toast({ title: "Viewing logs" })}>
+                                              <FileText className="h-4 w-4 mr-2" />
+                                              View Logs
+                                            </Button>
+                                          </>
+                                        )}
+                                        {source.status === 'error' && (
+                                          <Button size="sm" onClick={() => handleConnect(source.name)}>
+                                            <RefreshCw className="h-4 w-4 mr-2" />
+                                            Retry Connection
+                                          </Button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              )}
+                            </React.Fragment>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
                   </CardContent>
                 </Card>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {filteredSources.map((source) => {
+                      const SourceIcon = source.icon;
+                      return (
+                        <Card key={source.id} className="relative">
+                          <CardContent className="p-4 space-y-3">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <SourceIcon className="h-5 w-5 text-muted-foreground" />
+                                <div>
+                                  <p className="font-semibold text-sm">{source.name}</p>
+                                  <p className="text-xs text-muted-foreground capitalize">{getTypeLabel(source.type)}</p>
               </div>
             </div>
-          </TabsContent>
-
-          {/* Uploads Tab */}
-          <TabsContent value="uploads">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[
-                { name: "Call Transcripts", icon: MessageSquare, status: "uploaded", lastUpdate: "Yesterday" },
-                { name: "Meeting Notes", icon: FileText, status: "processing" },
-                { name: "Product Documentation", icon: FileText, status: "empty" },
-                { name: "Case Studies", icon: Users, status: "uploaded", lastUpdate: "3 days ago" },
-                { name: "Support Tickets", icon: MessageSquare, status: "empty" },
-                { name: "Sales Presentations", icon: BarChart3, status: "uploaded", lastUpdate: "1 week ago" },
-              ].map((upload) => (
-                <Card key={upload.name} className="relative">
-                  <CardContent className="p-6 text-center">
-                    <div className="mb-4">
-                      <upload.icon className="h-8 w-8 mx-auto text-muted-foreground" />
+                              {getStatusBadge(source.status)}
                     </div>
-                    <h3 className="font-medium mb-2">{upload.name}</h3>
-                    
-                    {upload.status === "uploaded" && (
-                      <div className="space-y-2">
-                        <Badge variant="secondary" className="bg-green-100 text-green-800">
-                          Uploaded
-                        </Badge>
-                        <p className="text-xs text-muted-foreground">
-                          Last Updated: {upload.lastUpdate}
-                        </p>
+                            <div className="text-xs text-muted-foreground space-y-1">
+                              <p>Records: {source.totalRecords.toLocaleString()}</p>
+                              <p>Last sync: {source.lastSyncTime || "Never"}</p>
+                              {source.status === "connected" && (
+                                <div className="flex items-center gap-2">
+                                  <div className="w-16 bg-muted rounded-full h-2">
+                                    <div
+                                      className={`h-2 rounded-full ${
+                                        source.dataQualityScore >= 90 ? "bg-green-500" :
+                                        source.dataQualityScore >= 70 ? "bg-yellow-500" : "bg-red-500"
+                                      }`}
+                                      style={{ width: `${source.dataQualityScore}%` }}
+                                    />
+                                  </div>
+                                  <span className="text-xs font-medium">{source.dataQualityScore}%</span>
                       </div>
                     )}
-                    
-                    {upload.status === "processing" && (
-                      <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                        Processing
-                      </Badge>
-                    )}
-                    
-                    {upload.status === "empty" && (
-                      <div className="space-y-3">
-                        <div className="border-2 border-dashed border-muted rounded-lg p-4">
-                          <UploadIcon className="h-6 w-6 mx-auto text-muted-foreground mb-2" />
-                          <p className="text-xs text-muted-foreground">
-                            Drag & drop files here
-                          </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                size="sm"
+                                variant={source.status === "connected" ? "outline" : "default"}
+                                className="flex-1"
+                                onClick={() => handleConnect(source.name)}
+                              >
+                                {source.status === "connected" ? "Reconnect" : source.status === "error" ? "Retry" : "Connect"}
+                              </Button>
+                              <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => toast({ title: "Opening configuration" })}>
+                                <Settings className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* File Uploads Section */}
+              <div className="mt-8 pt-8 border-t space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-xl font-semibold mb-1">File Uploads</h2>
+                    <p className="text-sm text-muted-foreground">Upload documents and content to enhance your data sources</p>
                         </div>
+                </div>
+                <div className="space-y-4">
+                  {[
+                    { name: "Call Transcripts", icon: MessageSquare, status: "uploaded", lastUpdate: "Yesterday", description: "Conversation transcripts from discovery and sales calls." },
+                    { name: "Meeting Notes", icon: FileText, status: "processing", lastUpdate: "Just now", description: "Structured or freeform notes from meetings." },
+                    { name: "Product Documentation", icon: FileText, status: "empty", description: "Docs, API guides, release notes, and specs." },
+                    { name: "Case Studies", icon: Users, status: "uploaded", lastUpdate: "3 days ago", description: "Customer stories, wins, and proof points." },
+                    { name: "Support Tickets", icon: MessageSquare, status: "empty", description: "Support conversations and resolutions." },
+                    { name: "Sales Presentations", icon: BarChart3, status: "uploaded", lastUpdate: "1 week ago", description: "Decks and one-pagers used in the sales cycle." },
+                  ].map((upload) => {
+                    const statusBadge = (() => {
+                      if (upload.status === "uploaded") {
+                        return <Badge variant="secondary" className="bg-green-100 text-green-800 text-xs">Uploaded</Badge>;
+                      }
+                      if (upload.status === "processing") {
+                        return <Badge variant="secondary" className="bg-blue-100 text-blue-800 text-xs">Processing</Badge>;
+                      }
+                      return <Badge variant="outline" className="text-xs">Empty</Badge>;
+                    })();
+
+                    return (
+                      <Card key={upload.name} className="relative">
+                        <CardContent className="p-4">
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex items-center gap-3">
+                              <upload.icon className="h-5 w-5 text-muted-foreground" />
+                              <div>
+                                <p className="font-medium">{upload.name}</p>
+                                <p className="text-xs text-muted-foreground">{upload.description}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              {statusBadge}
                         <Button 
                           size="sm" 
                           variant="outline" 
-                          className="w-full"
                           onClick={() => handleUpload(upload.name)}
+                                className="h-8 px-3"
                         >
-                          Upload Files
+                                <UploadIcon className="h-4 w-4 mr-1.5" />
+                                Upload
                         </Button>
                       </div>
-                    )}
+                          </div>
+
+                          <div className="mt-3">
+                            {upload.status === "uploaded" && (
+                              <p className="text-xs text-muted-foreground">Last Updated: {upload.lastUpdate}</p>
+                            )}
+                            {upload.status === "processing" && (
+                              <p className="text-xs text-muted-foreground">We’re processing your files…</p>
+                            )}
+                            {upload.status === "empty" && (
+                              <div className="border-2 border-dashed border-muted rounded-lg p-3 mt-2">
+                                <p className="text-xs text-muted-foreground text-center">
+                                  No files uploaded yet. Drop files here or use Upload.
+                                </p>
+                              </div>
+                            )}
+                          </div>
                   </CardContent>
                 </Card>
-              ))}
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </TabsContent>
 
