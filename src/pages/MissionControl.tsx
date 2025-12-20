@@ -418,6 +418,37 @@ const MissionControl = () => {
   const [isZohoLoggingIn, setIsZohoLoggingIn] = useState(false);
   const [zohoAuthStep, setZohoAuthStep] = useState<'login' | 'permissions'>('login');
   
+  // LinkedIn Auth Modal state
+  const [isLinkedInAuthModalOpen, setIsLinkedInAuthModalOpen] = useState(false);
+  const [linkedInSourceToConnect, setLinkedInSourceToConnect] = useState<DataSource | null>(null);
+  const [linkedInEmail, setLinkedInEmail] = useState("");
+  const [linkedInPassword, setLinkedInPassword] = useState("");
+  const [isLinkedInLoggingIn, setIsLinkedInLoggingIn] = useState(false);
+  const [linkedInAuthStep, setLinkedInAuthStep] = useState<'login' | 'permissions'>('login');
+  
+  // X (Twitter) Auth Modal state
+  const [isXAuthModalOpen, setIsXAuthModalOpen] = useState(false);
+  const [xSourceToConnect, setXSourceToConnect] = useState<DataSource | null>(null);
+  const [xEmail, setXEmail] = useState("");
+  const [xPassword, setXPassword] = useState("");
+  const [isXLoggingIn, setIsXLoggingIn] = useState(false);
+  const [xAuthStep, setXAuthStep] = useState<'login' | 'permissions'>('login');
+  
+  // Google Analytics Auth Modal state
+  const [isGoogleAnalyticsAuthModalOpen, setIsGoogleAnalyticsAuthModalOpen] = useState(false);
+  const [googleAnalyticsSourceToConnect, setGoogleAnalyticsSourceToConnect] = useState<DataSource | null>(null);
+  const [googleAnalyticsEmail, setGoogleAnalyticsEmail] = useState("");
+  const [isGoogleAnalyticsSigningIn, setIsGoogleAnalyticsSigningIn] = useState(false);
+  const [googleAnalyticsAuthStep, setGoogleAnalyticsAuthStep] = useState<'signin' | 'permissions' | 'success'>('signin');
+  
+  // Mixpanel Auth Modal state
+  const [isMixpanelAuthModalOpen, setIsMixpanelAuthModalOpen] = useState(false);
+  const [mixpanelSourceToConnect, setMixpanelSourceToConnect] = useState<DataSource | null>(null);
+  const [mixpanelEmail, setMixpanelEmail] = useState("");
+  const [mixpanelPassword, setMixpanelPassword] = useState("");
+  const [isMixpanelLoggingIn, setIsMixpanelLoggingIn] = useState(false);
+  const [mixpanelAuthStep, setMixpanelAuthStep] = useState<'login' | 'permissions'>('login');
+  
   // Form states for connector inputs
   const [selectedCrm, setSelectedCrm] = useState<string>("");
   const [linkedInUrls, setLinkedInUrls] = useState<string[]>([""]);
@@ -584,7 +615,10 @@ const MissionControl = () => {
 
   const handleConnect = (sourceName: string) => {
     const source = dataSources.find(s => s.name === sourceName);
-    if (!source) return;
+    if (!source) {
+      console.error('Source not found:', sourceName, 'Available sources:', dataSources.map(s => s.name));
+      return;
+    }
 
     // If already connected, show reconnect option
     if (source.status === 'connected' || source.status === 'uploaded') {
@@ -620,6 +654,40 @@ const MissionControl = () => {
     if (source.platform === 'Zoho' || source.name === 'Zoho CRM') {
       setZohoSourceToConnect(source);
       setIsZohoAuthModalOpen(true);
+      return;
+    }
+
+    // If LinkedIn, open auth modal instead
+    if (source.platform === 'LinkedIn' || source.name === 'LinkedIn Sales Navigator' || source.name === 'LinkedIn Company') {
+      setLinkedInSourceToConnect(source);
+      setIsLinkedInAuthModalOpen(true);
+      return;
+    }
+
+    // If X/Twitter, open auth modal instead
+    if (source.platform === 'Twitter' || source.name === 'X') {
+      setXSourceToConnect(source);
+      setIsXAuthModalOpen(true);
+      return;
+    }
+
+    // If Google Analytics, open auth modal instead
+    if (source.platform === 'Google Analytics' || source.name === 'Google Analytics') {
+      setGoogleAnalyticsSourceToConnect(source);
+      setIsGoogleAnalyticsAuthModalOpen(true);
+      return;
+    }
+
+    // If Mixpanel, open auth modal instead
+    if (source.platform === 'Mixpanel' || source.name === 'Mixpanel') {
+      setMixpanelSourceToConnect(source);
+      setIsMixpanelAuthModalOpen(true);
+      return;
+    }
+
+    // If Slack, redirect to Slack OAuth
+    if (source.platform === 'Slack' || source.name.startsWith('Slack')) {
+      handleSlackConnect(source);
       return;
     }
 
@@ -1005,6 +1073,431 @@ const MissionControl = () => {
       variant: "default",
     });
   };
+
+  const handleLinkedInLogin = async () => {
+    if (!linkedInSourceToConnect) return;
+    
+    if (!linkedInEmail || !linkedInPassword) {
+      toast({
+        title: "Missing credentials",
+        description: "Please enter both email and password.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLinkedInLoggingIn(true);
+
+    // Simulate login process, then show permissions screen
+    setTimeout(() => {
+      setIsLinkedInLoggingIn(false);
+      setLinkedInAuthStep('permissions');
+    }, 1500);
+  };
+
+  const handleLinkedInApprove = () => {
+    if (!linkedInSourceToConnect) return;
+
+    // Update data source to connected
+    setDataSources(prev => prev.map(s => {
+      if (s.id === linkedInSourceToConnect.id) {
+        const mockData = {
+          status: 'connected' as const,
+          account: linkedInEmail,
+          connectedDate: new Date().toISOString().split('T')[0],
+          lastSyncTime: 'Just now',
+          lastSyncStatus: 'success' as const,
+          totalRecords: Math.floor(Math.random() * 5000) + 100,
+          newRecordsThisWeek: Math.floor(Math.random() * 100),
+          updatedRecords: Math.floor(Math.random() * 50),
+          dataQualityScore: Math.floor(Math.random() * 20) + 80, // 80-100
+          objectsSynced: linkedInSourceToConnect.name === 'LinkedIn Company' 
+            ? ['Company Page', 'Posts', 'Followers'] 
+            : ['Company Pages', 'Profiles', 'Messages'],
+          fieldsMapped: Math.floor(Math.random() * 50) + 20,
+          filters: ['Active profiles only']
+        };
+        return { ...s, ...mockData };
+      }
+      return s;
+    }));
+
+    // Close modal and reset form
+    setIsLinkedInAuthModalOpen(false);
+    setLinkedInEmail("");
+    setLinkedInPassword("");
+    setLinkedInSourceToConnect(null);
+    setLinkedInAuthStep('login');
+
+    toast({
+      title: `${linkedInSourceToConnect.name} connected successfully`,
+      description: "Your LinkedIn account is now connected and syncing. Records and sync options are now available.",
+    });
+  };
+
+  const handleLinkedInDeny = () => {
+    // Close modal and reset form
+    setIsLinkedInAuthModalOpen(false);
+    setLinkedInEmail("");
+    setLinkedInPassword("");
+    setLinkedInSourceToConnect(null);
+    setLinkedInAuthStep('login');
+
+    toast({
+      title: "Connection not authorized",
+      description: "You denied access to your LinkedIn account.",
+      variant: "default",
+    });
+  };
+
+  const handleXLogin = async () => {
+    if (!xSourceToConnect) return;
+    
+    if (!xEmail || !xPassword) {
+      toast({
+        title: "Missing credentials",
+        description: "Please enter both email and password.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsXLoggingIn(true);
+
+    // Simulate login process, then show permissions screen
+    setTimeout(() => {
+      setIsXLoggingIn(false);
+      setXAuthStep('permissions');
+    }, 1500);
+  };
+
+  const handleXApprove = () => {
+    if (!xSourceToConnect) return;
+
+    // Update data source to connected
+    setDataSources(prev => prev.map(s => {
+      if (s.id === xSourceToConnect.id) {
+        const mockData = {
+          status: 'connected' as const,
+          account: xEmail,
+          connectedDate: new Date().toISOString().split('T')[0],
+          lastSyncTime: 'Just now',
+          lastSyncStatus: 'success' as const,
+          totalRecords: Math.floor(Math.random() * 5000) + 100,
+          newRecordsThisWeek: Math.floor(Math.random() * 100),
+          updatedRecords: Math.floor(Math.random() * 50),
+          dataQualityScore: Math.floor(Math.random() * 20) + 80, // 80-100
+          objectsSynced: ['Profiles', 'Tweets', 'Engagements'],
+          fieldsMapped: Math.floor(Math.random() * 50) + 20,
+          filters: ['Active profiles only']
+        };
+        return { ...s, ...mockData };
+      }
+      return s;
+    }));
+
+    // Close modal and reset form
+    setIsXAuthModalOpen(false);
+    setXEmail("");
+    setXPassword("");
+    setXSourceToConnect(null);
+    setXAuthStep('login');
+
+    toast({
+      title: "X connected successfully",
+      description: "Your X account is now connected and syncing. Records and sync options are now available.",
+    });
+  };
+
+  const handleXDeny = () => {
+    // Close modal and reset form
+    setIsXAuthModalOpen(false);
+    setXEmail("");
+    setXPassword("");
+    setXSourceToConnect(null);
+    setXAuthStep('login');
+
+    toast({
+      title: "Connection not authorized",
+      description: "You denied access to your X account.",
+      variant: "default",
+    });
+  };
+
+  const handleGoogleAnalyticsSignIn = async () => {
+    if (!googleAnalyticsSourceToConnect) return;
+
+    setIsGoogleAnalyticsSigningIn(true);
+
+    // Simulate Google OAuth sign-in process, then show consent screen
+    setTimeout(() => {
+      setIsGoogleAnalyticsSigningIn(false);
+      setGoogleAnalyticsAuthStep('permissions');
+      // Set a mock email from Google account
+      setGoogleAnalyticsEmail("user@gmail.com");
+    }, 1500);
+  };
+
+  const handleGoogleAnalyticsApprove = () => {
+    if (!googleAnalyticsSourceToConnect) return;
+
+    // Update data source to connected
+    setDataSources(prev => prev.map(s => {
+      if (s.id === googleAnalyticsSourceToConnect.id) {
+        const mockData = {
+          status: 'connected' as const,
+          account: googleAnalyticsEmail,
+          connectedDate: new Date().toISOString().split('T')[0],
+          lastSyncTime: 'Just now',
+          lastSyncStatus: 'success' as const,
+          totalRecords: Math.floor(Math.random() * 10000) + 500,
+          newRecordsThisWeek: Math.floor(Math.random() * 500),
+          updatedRecords: Math.floor(Math.random() * 200),
+          dataQualityScore: Math.floor(Math.random() * 20) + 80, // 80-100
+          objectsSynced: ['Page Views', 'Events', 'User Sessions', 'Conversions'],
+          fieldsMapped: Math.floor(Math.random() * 50) + 30,
+          filters: ['Active properties only']
+        };
+        return { ...s, ...mockData };
+      }
+      return s;
+    }));
+
+    // Show success state, then close modal after a brief delay
+    setGoogleAnalyticsAuthStep('success');
+    
+    toast({
+      title: "Google Analytics connected successfully",
+      description: "Your Google Analytics account is now connected and syncing. Records and sync options are now available.",
+    });
+
+    // Close modal after showing success message
+    setTimeout(() => {
+      setIsGoogleAnalyticsAuthModalOpen(false);
+      setGoogleAnalyticsEmail("");
+      setGoogleAnalyticsSourceToConnect(null);
+      setGoogleAnalyticsAuthStep('signin');
+    }, 1500);
+  };
+
+  const handleGoogleAnalyticsDeny = () => {
+    // Close modal and reset form
+    setIsGoogleAnalyticsAuthModalOpen(false);
+    setGoogleAnalyticsEmail("");
+    setGoogleAnalyticsSourceToConnect(null);
+    setGoogleAnalyticsAuthStep('signin');
+
+    toast({
+      title: "Connection not authorized",
+      description: "You denied access to your Google Analytics account.",
+      variant: "default",
+    });
+  };
+
+  const handleMixpanelLogin = async () => {
+    if (!mixpanelSourceToConnect) return;
+    
+    if (!mixpanelEmail || !mixpanelPassword) {
+      toast({
+        title: "Missing credentials",
+        description: "Please enter both email and password.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsMixpanelLoggingIn(true);
+
+    // Simulate login process, then show permissions screen
+    setTimeout(() => {
+      setIsMixpanelLoggingIn(false);
+      setMixpanelAuthStep('permissions');
+    }, 1500);
+  };
+
+  const handleMixpanelApprove = () => {
+    if (!mixpanelSourceToConnect) return;
+
+    // Generate fake events count (124 as per requirement)
+    const fakeEventsCount = 124;
+
+    // Update data source to connected
+    setDataSources(prev => prev.map(s => {
+      if (s.id === mixpanelSourceToConnect.id) {
+        const mockData = {
+          status: 'connected' as const,
+          account: mixpanelEmail,
+          connectedDate: new Date().toISOString().split('T')[0],
+          lastSyncTime: 'Just now',
+          lastSyncStatus: 'success' as const,
+          totalRecords: fakeEventsCount,
+          newRecordsThisWeek: Math.floor(Math.random() * 500) + 100,
+          updatedRecords: Math.floor(Math.random() * 200) + 50,
+          dataQualityScore: Math.floor(Math.random() * 20) + 80, // 80-100
+          objectsSynced: ['Page Viewed', 'Sign Up', 'Button Clicked', 'Form Submitted'],
+          fieldsMapped: Math.floor(Math.random() * 50) + 30,
+          filters: ['Active projects only']
+        };
+        return { ...s, ...mockData };
+      }
+      return s;
+    }));
+
+    // Close modal and reset form
+    setIsMixpanelAuthModalOpen(false);
+    setMixpanelEmail("");
+    setMixpanelPassword("");
+    setMixpanelSourceToConnect(null);
+    setMixpanelAuthStep('login');
+
+    toast({
+      title: "Mixpanel connected successfully",
+      description: "Your Mixpanel account is now connected and syncing. Events and analytics are now available.",
+    });
+  };
+
+  const handleMixpanelDeny = () => {
+    // Close modal and reset form
+    setIsMixpanelAuthModalOpen(false);
+    setMixpanelEmail("");
+    setMixpanelPassword("");
+    setMixpanelSourceToConnect(null);
+    setMixpanelAuthStep('login');
+
+    toast({
+      title: "Connection not authorized",
+      description: "You denied access to your Mixpanel account.",
+      variant: "default",
+    });
+  };
+
+  const handleSlackConnect = (source: DataSource) => {
+    // Build Slack OAuth URL
+    // For demo purposes, we'll use a mock client ID
+    const clientId = '1234567890.1234567890'; // Demo client ID - replace with actual in production
+    const redirectUri = encodeURIComponent(`${window.location.origin}/mission-control`);
+    const scope = 'channels:read,chat:write,users:read,conversations:read';
+    const state = encodeURIComponent(JSON.stringify({ sourceId: source.id, sourceName: source.name }));
+    
+    const slackOAuthUrl = `https://slack.com/oauth/v2/authorize?client_id=${clientId}&scope=${scope}&redirect_uri=${redirectUri}&state=${state}`;
+    
+    // Show toast before redirecting
+    toast({
+      title: "Redirecting to Slack",
+      description: "You will be redirected to Slack to authorize the connection.",
+    });
+
+    // Store the source ID in sessionStorage to handle callback
+    sessionStorage.setItem('slackSourceToConnect', JSON.stringify({ id: source.id, name: source.name }));
+
+    // Redirect browser to Slack OAuth URL
+    window.location.href = slackOAuthUrl;
+  };
+
+  const handleSlackOAuthCallback = (source: DataSource) => {
+    // Update data source to connected
+    setDataSources(prev => prev.map(s => {
+      if (s.id === source.id || s.name === source.name || s.name.startsWith('Slack')) {
+        const mockData = {
+          status: 'connected' as const,
+          account: 'slack@company.com',
+          connectedDate: new Date().toISOString().split('T')[0],
+          lastSyncTime: 'Just now',
+          lastSyncStatus: 'success' as const,
+          totalRecords: Math.floor(Math.random() * 5000) + 100,
+          newRecordsThisWeek: Math.floor(Math.random() * 500) + 50,
+          updatedRecords: Math.floor(Math.random() * 200) + 20,
+          dataQualityScore: Math.floor(Math.random() * 20) + 80, // 80-100
+          objectsSynced: ['Messages', 'Channels', 'Conversations'],
+          fieldsMapped: Math.floor(Math.random() * 50) + 20,
+          filters: ['Active channels only']
+        };
+        return { ...s, ...mockData };
+      }
+      return s;
+    }));
+
+    // Clean up
+    sessionStorage.removeItem('slackSourceToConnect');
+
+    toast({
+      title: "Slack connected successfully",
+      description: "Your Slack workspace is now connected and syncing. Messages and channels are now available.",
+    });
+  };
+
+  // Handle Slack OAuth callback (check for code/state in URL params)
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    const state = urlParams.get('state');
+    const error = urlParams.get('error');
+
+    if (error) {
+      // User denied access
+      toast({
+        title: "Slack connection cancelled",
+        description: "You cancelled the Slack authorization.",
+        variant: "default",
+      });
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+      sessionStorage.removeItem('slackSourceToConnect');
+      return;
+    }
+
+    if (code && state) {
+      // OAuth callback received from Slack
+      try {
+        const stateData = JSON.parse(decodeURIComponent(state));
+        const storedSource = sessionStorage.getItem('slackSourceToConnect');
+        
+        if (storedSource) {
+          const sourceData = JSON.parse(storedSource);
+          
+          // Update data source to connected
+          setDataSources(prev => prev.map(s => {
+            if (s.id === sourceData.id || s.name === sourceData.name || s.name.startsWith('Slack')) {
+              const mockData = {
+                status: 'connected' as const,
+                account: 'slack@company.com',
+                connectedDate: new Date().toISOString().split('T')[0],
+                lastSyncTime: 'Just now',
+                lastSyncStatus: 'success' as const,
+                totalRecords: Math.floor(Math.random() * 5000) + 100,
+                newRecordsThisWeek: Math.floor(Math.random() * 500) + 50,
+                updatedRecords: Math.floor(Math.random() * 200) + 20,
+                dataQualityScore: Math.floor(Math.random() * 20) + 80, // 80-100
+                objectsSynced: ['Messages', 'Channels', 'Conversations'],
+                fieldsMapped: Math.floor(Math.random() * 50) + 20,
+                filters: ['Active channels only']
+              };
+              return { ...s, ...mockData };
+            }
+            return s;
+          }));
+
+          // Clean up
+          sessionStorage.removeItem('slackSourceToConnect');
+          
+          // Clean up URL
+          window.history.replaceState({}, document.title, window.location.pathname);
+
+          toast({
+            title: "Slack connected successfully",
+            description: "Your Slack workspace is now connected and syncing. Messages and channels are now available.",
+          });
+        }
+      } catch (err) {
+        console.error('Error processing Slack callback:', err);
+        toast({
+          title: "Error processing Slack callback",
+          description: "There was an error processing the Slack authorization. Please try again.",
+          variant: "destructive",
+        });
+      }
+    }
+  }, []);
 
   const handleSyncNow = (sourceName: string) => {
     const source = dataSources.find(s => s.name === sourceName);
@@ -3216,6 +3709,591 @@ const MissionControl = () => {
                     className="bg-green-600 hover:bg-green-700"
                   >
                     Approve
+                  </Button>
+                </div>
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* LinkedIn Auth Modal */}
+        <Dialog open={isLinkedInAuthModalOpen} onOpenChange={(open) => {
+          if (!open) {
+            setIsLinkedInAuthModalOpen(false);
+            setLinkedInEmail("");
+            setLinkedInPassword("");
+            setLinkedInSourceToConnect(null);
+            setLinkedInAuthStep('login');
+          }
+        }}>
+          <DialogContent className="max-w-md">
+            {linkedInAuthStep === 'login' ? (
+              <>
+                <DialogHeader>
+                  <DialogTitle>Sign in to LinkedIn</DialogTitle>
+                  <DialogDescription>
+                    Enter your LinkedIn credentials to continue.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="linkedin-email">Email</Label>
+                    <Input
+                      id="linkedin-email"
+                      type="email"
+                      placeholder="your.email@company.com"
+                      value={linkedInEmail}
+                      onChange={(e) => setLinkedInEmail(e.target.value)}
+                      disabled={isLinkedInLoggingIn}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="linkedin-password">Password</Label>
+                    <Input
+                      id="linkedin-password"
+                      type="password"
+                      placeholder="Enter your password"
+                      value={linkedInPassword}
+                      onChange={(e) => setLinkedInPassword(e.target.value)}
+                      disabled={isLinkedInLoggingIn}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !isLinkedInLoggingIn) {
+                          handleLinkedInLogin();
+                        }
+                      }}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Linkedin className="h-4 w-4" />
+                    <span>This is a demo. Any credentials will work.</span>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setIsLinkedInAuthModalOpen(false);
+                      setLinkedInEmail("");
+                      setLinkedInPassword("");
+                      setLinkedInSourceToConnect(null);
+                      setLinkedInAuthStep('login');
+                    }}
+                    disabled={isLinkedInLoggingIn}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleLinkedInLogin}
+                    disabled={isLinkedInLoggingIn || !linkedInEmail || !linkedInPassword}
+                  >
+                    {isLinkedInLoggingIn ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        Signing in...
+                      </>
+                    ) : (
+                      "Sign In"
+                    )}
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <DialogHeader>
+                  <DialogTitle>Authorize Access</DialogTitle>
+                  <DialogDescription>
+                    This application would like to access the following data from your LinkedIn account:
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="border rounded-lg p-4 space-y-3">
+                    <p className="text-sm font-semibold">Requested Permissions:</p>
+                    <ul className="space-y-2 text-sm">
+                      {linkedInSourceToConnect?.name === 'LinkedIn Company' ? (
+                        <>
+                          <li className="flex items-start gap-2">
+                            <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                            <span><strong>Company Page</strong> - Read company page information and details</span>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                            <span><strong>Posts</strong> - Read company posts and engagement data</span>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                            <span><strong>Followers</strong> - Read follower information and analytics</span>
+                          </li>
+                        </>
+                      ) : (
+                        <>
+                          <li className="flex items-start gap-2">
+                            <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                            <span><strong>Company Pages</strong> - Read company page information and details</span>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                            <span><strong>Profiles</strong> - Read profile information and contact details</span>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                            <span><strong>Messages</strong> - Read messages and conversation data</span>
+                          </li>
+                        </>
+                      )}
+                    </ul>
+                  </div>
+                  <div className="bg-muted/50 rounded-lg p-3 text-sm text-muted-foreground">
+                    <p className="font-medium mb-1">Account:</p>
+                    <p>{linkedInEmail}</p>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={handleLinkedInDeny}
+                  >
+                    Deny
+                  </Button>
+                  <Button
+                    onClick={handleLinkedInApprove}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    Approve
+                  </Button>
+                </div>
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* X (Twitter) Auth Modal */}
+        <Dialog open={isXAuthModalOpen} onOpenChange={(open) => {
+          if (!open) {
+            setIsXAuthModalOpen(false);
+            setXEmail("");
+            setXPassword("");
+            setXSourceToConnect(null);
+            setXAuthStep('login');
+          }
+        }}>
+          <DialogContent className="max-w-md">
+            {xAuthStep === 'login' ? (
+              <>
+                <DialogHeader>
+                  <DialogTitle>Sign in to X</DialogTitle>
+                  <DialogDescription>
+                    Enter your X credentials to continue.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="x-email">Email</Label>
+                    <Input
+                      id="x-email"
+                      type="email"
+                      placeholder="your.email@company.com"
+                      value={xEmail}
+                      onChange={(e) => setXEmail(e.target.value)}
+                      disabled={isXLoggingIn}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="x-password">Password</Label>
+                    <Input
+                      id="x-password"
+                      type="password"
+                      placeholder="Enter your password"
+                      value={xPassword}
+                      onChange={(e) => setXPassword(e.target.value)}
+                      disabled={isXLoggingIn}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !isXLoggingIn) {
+                          handleXLogin();
+                        }
+                      }}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Twitter className="h-4 w-4" />
+                    <span>This is a demo. Any credentials will work.</span>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setIsXAuthModalOpen(false);
+                      setXEmail("");
+                      setXPassword("");
+                      setXSourceToConnect(null);
+                      setXAuthStep('login');
+                    }}
+                    disabled={isXLoggingIn}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleXLogin}
+                    disabled={isXLoggingIn || !xEmail || !xPassword}
+                  >
+                    {isXLoggingIn ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        Signing in...
+                      </>
+                    ) : (
+                      "Sign In"
+                    )}
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <DialogHeader>
+                  <DialogTitle>Authorize Access</DialogTitle>
+                  <DialogDescription>
+                    This application would like to access the following data from your X account:
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="border rounded-lg p-4 space-y-3">
+                    <p className="text-sm font-semibold">Requested Permissions:</p>
+                    <ul className="space-y-2 text-sm">
+                      <li className="flex items-start gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                        <span><strong>Profiles</strong> - Read profile information and user data</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                        <span><strong>Tweets</strong> - Read tweets and post information</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                        <span><strong>Engagements</strong> - Read likes, retweets, and engagement metrics</span>
+                      </li>
+                    </ul>
+                  </div>
+                  <div className="bg-muted/50 rounded-lg p-3 text-sm text-muted-foreground">
+                    <p className="font-medium mb-1">Account:</p>
+                    <p>{xEmail}</p>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={handleXDeny}
+                  >
+                    Deny
+                  </Button>
+                  <Button
+                    onClick={handleXApprove}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    Approve
+                  </Button>
+                </div>
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Google Analytics Auth Modal */}
+        <Dialog open={isGoogleAnalyticsAuthModalOpen} onOpenChange={(open) => {
+          if (!open) {
+            setIsGoogleAnalyticsAuthModalOpen(false);
+            setGoogleAnalyticsEmail("");
+            setGoogleAnalyticsSourceToConnect(null);
+            setGoogleAnalyticsAuthStep('signin');
+          }
+        }}>
+          <DialogContent className="max-w-md">
+            {googleAnalyticsAuthStep === 'signin' ? (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <Globe className="h-5 w-5 text-blue-600" />
+                    Connect Google Analytics
+                  </DialogTitle>
+                  <DialogDescription>
+                    Sign in with your Google account to connect Google Analytics
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-6">
+                  <div className="flex flex-col items-center justify-center space-y-4">
+                    <div className="p-4 bg-gray-50 rounded-lg w-full">
+                      <p className="text-sm text-center text-muted-foreground mb-4">
+                        This will open Google's sign-in page in a new window
+                      </p>
+                      <Button
+                        onClick={handleGoogleAnalyticsSignIn}
+                        disabled={isGoogleAnalyticsSigningIn}
+                        className="w-full h-12 bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 shadow-sm font-medium flex items-center justify-center gap-3"
+                      >
+                        {isGoogleAnalyticsSigningIn ? (
+                          <>
+                            <RefreshCw className="h-5 w-5 animate-spin" />
+                            Signing in...
+                          </>
+                        ) : (
+                          <>
+                            <svg className="h-5 w-5" viewBox="0 0 24 24">
+                              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                            </svg>
+                            Sign in with Google
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Globe className="h-4 w-4" />
+                      <span>This is a demo. Clicking will simulate Google sign-in.</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setIsGoogleAnalyticsAuthModalOpen(false);
+                      setGoogleAnalyticsEmail("");
+                      setGoogleAnalyticsSourceToConnect(null);
+                      setGoogleAnalyticsAuthStep('signin');
+                    }}
+                    disabled={isGoogleAnalyticsSigningIn}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </>
+            ) : googleAnalyticsAuthStep === 'permissions' ? (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <Globe className="h-5 w-5 text-blue-600" />
+                    Google Account
+                  </DialogTitle>
+                  <DialogDescription>
+                    This app wants to access your Google Analytics data
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="border rounded-lg p-4 space-y-3 bg-white">
+                    <div className="flex items-center gap-3 pb-3 border-b">
+                      <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                        <span className="text-blue-600 font-semibold text-sm">
+                          {googleAnalyticsEmail.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">{googleAnalyticsEmail}</p>
+                        <p className="text-xs text-muted-foreground">Google Account</p>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold mb-3">This will allow:</p>
+                      <ul className="space-y-2 text-sm">
+                        <li className="flex items-start gap-2">
+                          <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                          <span><strong>View your Google Analytics data</strong> - Read analytics reports and metrics</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                          <span><strong>View your Analytics properties</strong> - Access property information and settings</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                          <span><strong>View your Analytics reports</strong> - Read page views, events, and user data</span>
+                        </li>
+                      </ul>
+                    </div>
+                    <div className="pt-3 border-t text-xs text-muted-foreground">
+                      <p>By continuing, you allow this app to access your Google Analytics data. You can revoke access at any time in your Google Account settings.</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={handleGoogleAnalyticsDeny}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleGoogleAnalyticsApprove}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    Allow
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    Connected Successfully
+                  </DialogTitle>
+                  <DialogDescription>
+                    Google Analytics has been connected
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-6">
+                  <div className="flex flex-col items-center justify-center space-y-4">
+                    <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center">
+                      <CheckCircle className="h-8 w-8 text-green-600" />
+                    </div>
+                    <div className="text-center">
+                      <p className="font-semibold text-lg">Google Analytics Connected</p>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        Your Google Analytics account is now connected and syncing.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    onClick={() => {
+                      setIsGoogleAnalyticsAuthModalOpen(false);
+                      setGoogleAnalyticsEmail("");
+                      setGoogleAnalyticsSourceToConnect(null);
+                      setGoogleAnalyticsAuthStep('signin');
+                    }}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    Done
+                  </Button>
+                </div>
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Mixpanel Auth Modal */}
+        <Dialog open={isMixpanelAuthModalOpen} onOpenChange={(open) => {
+          if (!open) {
+            setIsMixpanelAuthModalOpen(false);
+            setMixpanelEmail("");
+            setMixpanelPassword("");
+            setMixpanelSourceToConnect(null);
+            setMixpanelAuthStep('login');
+          }
+        }}>
+          <DialogContent className="max-w-md">
+            {mixpanelAuthStep === 'login' ? (
+              <>
+                <DialogHeader>
+                  <DialogTitle>Sign in to Mixpanel</DialogTitle>
+                  <DialogDescription>
+                    Enter your Mixpanel credentials to continue.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="mixpanel-email">Email</Label>
+                    <Input
+                      id="mixpanel-email"
+                      type="email"
+                      placeholder="your.email@company.com"
+                      value={mixpanelEmail}
+                      onChange={(e) => setMixpanelEmail(e.target.value)}
+                      disabled={isMixpanelLoggingIn}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="mixpanel-password">Password</Label>
+                    <Input
+                      id="mixpanel-password"
+                      type="password"
+                      placeholder="Enter your password"
+                      value={mixpanelPassword}
+                      onChange={(e) => setMixpanelPassword(e.target.value)}
+                      disabled={isMixpanelLoggingIn}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !isMixpanelLoggingIn) {
+                          handleMixpanelLogin();
+                        }
+                      }}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <BarChart3 className="h-4 w-4" />
+                    <span>This is a demo. Any credentials will work.</span>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setIsMixpanelAuthModalOpen(false);
+                      setMixpanelEmail("");
+                      setMixpanelPassword("");
+                      setMixpanelSourceToConnect(null);
+                      setMixpanelAuthStep('login');
+                    }}
+                    disabled={isMixpanelLoggingIn}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleMixpanelLogin}
+                    disabled={isMixpanelLoggingIn || !mixpanelEmail || !mixpanelPassword}
+                  >
+                    {isMixpanelLoggingIn ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        Signing in...
+                      </>
+                    ) : (
+                      "Continue"
+                    )}
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <DialogHeader>
+                  <DialogTitle>Authorize Mixpanel Access</DialogTitle>
+                  <DialogDescription>
+                    This app will be able to:
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="border rounded-lg p-4 space-y-3">
+                    <ul className="space-y-2 text-sm">
+                      <li className="flex items-start gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                        <span><strong>Track user events</strong> - Record and track user interactions and events</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                        <span><strong>Analyze funnels & retention</strong> - Access funnel analysis and user retention metrics</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                        <span><strong>View engagement metrics</strong> - Read engagement data and analytics reports</span>
+                      </li>
+                    </ul>
+                  </div>
+                  <div className="bg-muted/50 rounded-lg p-3 text-sm text-muted-foreground">
+                    <p className="font-medium mb-1">Account:</p>
+                    <p>{mixpanelEmail}</p>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={handleMixpanelDeny}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleMixpanelApprove}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    Allow Access
                   </Button>
                 </div>
               </>

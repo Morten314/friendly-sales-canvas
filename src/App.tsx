@@ -36,6 +36,7 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               {/* Public routes */}
+              <Route path="/" element={<Login />} />
               <Route path="/login" element={<Login />} />
               
               {/* Protected routes that require authentication only */}
@@ -46,7 +47,6 @@ const App = () => (
               } />
               
               {/* Protected routes that require both authentication and tenant selection */}
-              <Route path="/" element={<Navigate to="/login" replace />} />
               <Route path="/mission-control" element={
                 <ProtectedRoute requireTenant>
                   <MissionControl />
