@@ -239,6 +239,209 @@ router.post('/market-research', verifyJWT, (req, res) => {
 });
 ```
 
+### Required Data Source Endpoints
+
+Your backend needs to implement these endpoints for data source management with token exchange:
+
+#### 1. POST `/api/data-sources` - Create Data Source with Token Exchange
+
+**Purpose**: Create a new data source, perform OAuth2 token exchange (if needed), and store credentials securely
+
+**Request Headers**:
+```
+Authorization: Bearer <jwt-token>
+Content-Type: application/json
+```
+
+**Request Body**:
+```json
+{
+  "name": "My API Source",
+  "endpoint": "https://api.example.com/v1/data",
+  "method": "GET",
+  "authType": "oauth2",
+  "credentials": {
+    "clientId": "client-123",
+    "clientSecret": "secret-456"
+  },
+  "headers": {
+    "X-API-Version": "1.0"
+  },
+  "body": null,
+  "scopes": ["read:data", "write:data"],
+  "permissions": ["approved"],
+  "type": "crm"
+}
+```
+
+**Response (Success - 200)**:
+```json
+{
+  "success": true,
+  "message": "Data source created successfully. Token exchange completed.",
+  "dataSource": {
+    "id": "ds-123456",
+    "name": "My API Source",
+    "status": "connected",
+    "tokenExpiresAt": "2024-12-31T23:59:59Z"
+  }
+}
+```
+
+**Response (Error - 400/500)**:
+```json
+{
+  "success": false,
+  "message": "Failed to exchange token: Invalid client credentials",
+  "error": "INVALID_CREDENTIALS"
+}
+```
+
+**Backend Implementation Notes**:
+- **For OAuth2**: Exchange client credentials for access token using the external API's OAuth endpoint
+- **Store tokens securely**: Encrypt and store access tokens, refresh tokens in database
+- **Token refresh**: Implement automatic token refresh logic
+- **For API Key/Bearer**: Store credentials encrypted in database
+- **Validate endpoint**: Verify the endpoint URL is accessible
+- **Tenant isolation**: Associate data source with the tenant from JWT token
+
+#### 2. POST `/api/data-sources/test` - Test Data Source Connection
+
+**Purpose**: Test connection to an API endpoint without creating a data source
+
+**Request Headers**:
+```
+Authorization: Bearer <jwt-token>
+Content-Type: application/json
+```
+
+**Request Body**:
+```json
+{
+  "endpoint": "https://api.example.com/v1/data",
+  "method": "GET",
+  "authType": "oauth2",
+  "credentials": {
+    "clientId": "client-123",
+    "clientSecret": "secret-456"
+  },
+  "headers": {
+    "X-API-Version": "1.0"
+  },
+  "body": null
+}
+```
+
+**Response (Success - 200)**:
+```json
+{
+  "success": true,
+  "message": "Connection successful",
+  "statusCode": 200,
+  "data": {}
+}
+```
+
+**Response (Error - 400/500)**:
+```json
+{
+  "success": false,
+  "message": "Failed to connect: Invalid credentials",
+  "error": "CONNECTION_FAILED"
+}
+```
+
+#### 3. GET `/api/data-sources` - List Data Sources
+
+**Purpose**: Retrieve all data sources for the authenticated tenant
+
+**Request Headers**:
+```
+Authorization: Bearer <jwt-token>
+```
+
+**Response (Success - 200)**:
+```json
+{
+  "success": true,
+  "dataSources": [
+    {
+      "id": "ds-123456",
+      "name": "My API Source",
+      "endpoint": "https://api.example.com/v1/data",
+      "type": "crm",
+      "status": "connected",
+      "createdAt": "2024-01-01T00:00:00Z"
+    }
+  ]
+}
+```
+
+#### 4. DELETE `/api/data-sources/:id` - Delete Data Source
+
+**Purpose**: Delete a data source and revoke associated tokens
+
+**Request Headers**:
+```
+Authorization: Bearer <jwt-token>
+```
+
+**Response (Success - 200)**:
+```json
+{
+  "success": true,
+  "message": "Data source deleted successfully"
+}
+```
+
+**OAuth2 Token Exchange Flow (Backend)**:
+
+```javascript
+// Example backend implementation for OAuth2 token exchange
+async function exchangeOAuth2Token(clientId, clientSecret, scopes, endpoint) {
+  // 1. Determine OAuth2 token endpoint from the API endpoint
+  const tokenEndpoint = getTokenEndpoint(endpoint); // e.g., https://api.example.com/oauth/token
+  
+  // 2. Exchange credentials for access token
+  const response = await fetch(tokenEndpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: new URLSearchParams({
+      grant_type: 'client_credentials',
+      client_id: clientId,
+      client_secret: clientSecret,
+      scope: scopes.join(' ')
+    })
+  });
+  
+  const tokenData = await response.json();
+  
+  // 3. Store encrypted tokens in database
+  const encryptedToken = encrypt(tokenData.access_token);
+  const encryptedRefreshToken = encrypt(tokenData.refresh_token);
+  
+  // 4. Save to database with tenant association
+  await db.dataSources.create({
+    tenantId: currentTenantId,
+    accessToken: encryptedToken,
+    refreshToken: encryptedRefreshToken,
+    expiresAt: new Date(Date.now() + tokenData.expires_in * 1000)
+  });
+  
+  return tokenData;
+}
+```
+
+**Security Requirements for Data Sources**:
+1. **Encrypt credentials**: Use strong encryption (AES-256) for storing client secrets and tokens
+2. **Token rotation**: Implement automatic token refresh before expiration
+3. **Secure storage**: Never log credentials or tokens
+4. **Tenant isolation**: Ensure users can only access their tenant's data sources
+5. **Validate endpoints**: Sanitize and validate all endpoint URLs
+6. **Rate limiting**: Limit token exchange requests per tenant
+
 ### Security Requirements
 
 1. **Use HTTPS** in production
@@ -247,6 +450,8 @@ router.post('/market-research', verifyJWT, (req, res) => {
 4. **Validate tenant access** - ensure users can only access their tenant's data
 5. **Log authentication events** for security monitoring
 6. **Rate limit** authentication endpoints
+7. **Encrypt data source credentials** - use AES-256 encryption for stored tokens and secrets
+8. **Implement token refresh** - automatically refresh OAuth2 tokens before expiration
 
 ### Testing Endpoints
 

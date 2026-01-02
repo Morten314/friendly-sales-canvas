@@ -92,6 +92,53 @@ class ApiService {
   async postTenantData(endpoint: string, data: any): Promise<any> {
     return this.post(`/tenant${endpoint}`, data);
   }
+
+  // Data Source API methods
+  async createDataSource(data: {
+    name: string;
+    endpoint: string;
+    method: string;
+    authType: string;
+    credentials?: {
+      apiKey?: string;
+      clientId?: string;
+      clientSecret?: string;
+      username?: string;
+      password?: string;
+    };
+    headers?: Record<string, string>;
+    body?: any;
+    scopes?: string[];
+    permissions?: string[];
+    type: string;
+  }): Promise<any> {
+    return this.post('/data-sources', data);
+  }
+
+  async testDataSourceConnection(data: {
+    endpoint: string;
+    method: string;
+    authType: string;
+    credentials?: {
+      apiKey?: string;
+      clientId?: string;
+      clientSecret?: string;
+      username?: string;
+      password?: string;
+    };
+    headers?: Record<string, string>;
+    body?: any;
+  }): Promise<any> {
+    return this.post('/data-sources/test', data);
+  }
+
+  async getDataSources(): Promise<any> {
+    return this.get('/data-sources');
+  }
+
+  async deleteDataSource(id: string): Promise<any> {
+    return this.delete(`/data-sources/${id}`);
+  }
 }
 
 export default new ApiService();

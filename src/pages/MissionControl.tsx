@@ -72,6 +72,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import ApiService from "@/services/api";
 
 // Data Source Interface
 interface DataSource {
@@ -375,8 +376,31 @@ const MissionControl = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [isConnectorDialogOpen, setIsConnectorDialogOpen] = useState(false);
+  const [isAddResourcePopoverOpen, setIsAddResourcePopoverOpen] = useState(false);
   const [connectorSearch, setConnectorSearch] = useState("");
   const [connectorCategoryFilter, setConnectorCategoryFilter] = useState<string>("all");
+  const [customResourceName, setCustomResourceName] = useState("");
+  const [customResourceType, setCustomResourceType] = useState<'crm' | 'marketing' | 'social' | 'analytics' | 'communication' | 'file' | 'custom'>('custom');
+  const [customFileUploadName, setCustomFileUploadName] = useState("");
+  const [customFileUploadFile, setCustomFileUploadFile] = useState<File | null>(null);
+  const [addResourceMode, setAddResourceMode] = useState<'quick' | 'custom' | 'file' | 'api'>('quick');
+  // API Integration state
+  const [apiResourceName, setApiResourceName] = useState("");
+  const [apiEndpoint, setApiEndpoint] = useState("");
+  const [apiMethod, setApiMethod] = useState<'GET' | 'POST' | 'PUT' | 'PATCH'>('GET');
+  const [apiKey, setApiKey] = useState("");
+  const [apiHeaders, setApiHeaders] = useState("");
+  const [apiBody, setApiBody] = useState("");
+  const [apiResourceType, setApiResourceType] = useState<'crm' | 'marketing' | 'social' | 'analytics' | 'communication' | 'custom'>('custom');
+  const [isTestingApi, setIsTestingApi] = useState(false);
+  // OAuth2 and Authentication fields
+  const [authType, setAuthType] = useState<'none' | 'api_key' | 'bearer' | 'oauth2' | 'basic'>('api_key');
+  const [clientId, setClientId] = useState("");
+  const [clientSecret, setClientSecret] = useState("");
+  const [oauthScopes, setOauthScopes] = useState<string[]>([]);
+  const [availableScopes, setAvailableScopes] = useState<string[]>(['read', 'write', 'read:data', 'write:data', 'admin']);
+  const [permissionsApproved, setPermissionsApproved] = useState(false);
+  const [isAddingApiResource, setIsAddingApiResource] = useState(false);
   const [dataSources, setDataSources] = useState<DataSource[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [sourceToDelete, setSourceToDelete] = useState<DataSource | null>(null);
@@ -1650,7 +1674,386 @@ const MissionControl = () => {
   };
 
   const handleAddSource = () => {
-    setIsConnectorDialogOpen(true);
+    setIsAddResourcePopoverOpen(true);
+  };
+
+  const handleAddCustomResource = () => {
+    if (!customResourceName.trim()) {
+      toast({
+        title: "Name required",
+        description: "Please enter a name for the resource.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if source already exists
+    const existingSource = dataSources.find(s => s.name === customResourceName.trim());
+    if (existingSource) {
+      toast({
+        title: "Already exists",
+        description: `${customResourceName.trim()} is already in your sources.`,
+        variant: "default",
+      });
+      return;
+    }
+
+    const resourceName = customResourceName.trim();
+
+    // Create new custom data source
+    const newSource: DataSource = {
+      id: `custom-${Date.now()}`,
+      name: resourceName,
+      type: customResourceType,
+      icon: Database,
+      platform: 'Custom',
+      status: 'disconnected',
+      syncFrequency: 'daily',
+      totalRecords: 0,
+      newRecordsThisWeek: 0,
+      updatedRecords: 0,
+      dataQualityScore: 0,
+      objectsSynced: [],
+      fieldsMapped: 0,
+      filters: [],
+      description: `Custom ${customResourceType} resource`
+    };
+
+    // Add to data sources
+    setDataSources(prev => [...prev, newSource]);
+    
+    // Reset form
+    setCustomResourceName("");
+    setCustomResourceType('custom');
+    setIsAddResourcePopoverOpen(false);
+    
+    toast({
+      title: `${resourceName} added`,
+      description: `Click "Connect" to set up the integration.`,
+    });
+  };
+
+  const handleAddCustomFileUpload = () => {
+    if (!customFileUploadName.trim()) {
+      toast({
+        title: "Name required",
+        description: "Please enter a name for the file upload.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if source already exists
+    const existingSource = dataSources.find(s => s.name === customFileUploadName.trim());
+    if (existingSource) {
+      toast({
+        title: "Already exists",
+        description: `${customFileUploadName.trim()} is already in your sources.`,
+        variant: "default",
+      });
+      return;
+    }
+
+    const uploadName = customFileUploadName.trim();
+
+    // Create new file upload source
+    const newSource: DataSource = {
+      id: `file-custom-${Date.now()}`,
+      name: uploadName,
+      type: 'file',
+      icon: FileText,
+      platform: 'File Upload',
+      status: customFileUploadFile ? 'uploaded' : 'disconnected',
+      syncFrequency: 'manual',
+      totalRecords: 0,
+      newRecordsThisWeek: 0,
+      updatedRecords: 0,
+      dataQualityScore: 0,
+      objectsSynced: [],
+      fieldsMapped: 0,
+      filters: [],
+      description: customFileUploadFile ? `File: ${customFileUploadFile.name}` : 'Custom file upload'
+    };
+
+    // Add to data sources
+    setDataSources(prev => [...prev, newSource]);
+    
+    // Reset form
+    setCustomFileUploadName("");
+    setCustomFileUploadFile(null);
+    setIsAddResourcePopoverOpen(false);
+    
+    toast({
+      title: `${uploadName} added`,
+      description: customFileUploadFile ? "File uploaded successfully." : "Click 'Connect' to upload files.",
+    });
+  };
+
+  const handleTestApiConnection = async () => {
+    if (!apiEndpoint.trim()) {
+      toast({
+        title: "API Endpoint required",
+        description: "Please enter an API endpoint URL.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsTestingApi(true);
+    
+    try {
+      // Parse headers if provided
+      let headers: Record<string, string> = {};
+      if (apiHeaders.trim()) {
+        try {
+          headers = JSON.parse(apiHeaders);
+        } catch (e) {
+          toast({
+            title: "Invalid headers",
+            description: "Headers must be valid JSON format.",
+            variant: "destructive",
+          });
+          setIsTestingApi(false);
+          return;
+        }
+      }
+
+      // Prepare credentials based on auth type
+      const credentials: any = {};
+      if (authType === 'api_key' || authType === 'bearer') {
+        if (apiKey.trim()) {
+          credentials.apiKey = apiKey.trim();
+        }
+      } else if (authType === 'oauth2') {
+        if (clientId.trim()) credentials.clientId = clientId.trim();
+        if (clientSecret.trim()) credentials.clientSecret = clientSecret.trim();
+      }
+
+      // Parse body if provided
+      let body: any = undefined;
+      if (['POST', 'PUT', 'PATCH'].includes(apiMethod) && apiBody.trim()) {
+        try {
+          body = JSON.parse(apiBody);
+        } catch (e) {
+          body = apiBody;
+        }
+      }
+
+      // Send test request to backend
+      const result = await ApiService.testDataSourceConnection({
+        endpoint: apiEndpoint.trim(),
+        method: apiMethod,
+        authType,
+        credentials: Object.keys(credentials).length > 0 ? credentials : undefined,
+        headers: Object.keys(headers).length > 0 ? headers : undefined,
+        body,
+      });
+
+      if (result.success) {
+        toast({
+          title: "API Connection Successful",
+          description: result.message || `Successfully connected to API.`,
+        });
+      } else {
+        toast({
+          title: "API Connection Failed",
+          description: result.message || "Failed to connect to API.",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "API Connection Error",
+        description: error?.message || "Failed to connect to API. Please check your credentials and endpoint.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsTestingApi(false);
+    }
+  };
+
+  const handleAddApiResource = async () => {
+    if (!apiResourceName.trim()) {
+      toast({
+        title: "Name required",
+        description: "Please enter a name for the API source.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!apiEndpoint.trim()) {
+      toast({
+        title: "API Endpoint required",
+        description: "Please enter an API endpoint URL.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate URL format
+    try {
+      new URL(apiEndpoint.trim());
+    } catch (e) {
+      toast({
+        title: "Invalid URL",
+        description: "Please enter a valid URL (e.g., https://api.example.com/endpoint)",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate OAuth2 fields if OAuth2 is selected
+    if (authType === 'oauth2') {
+      if (!clientId.trim()) {
+        toast({
+          title: "Client ID required",
+          description: "Please enter OAuth2 Client ID.",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (!clientSecret.trim()) {
+        toast({
+          title: "Client Secret required",
+          description: "Please enter OAuth2 Client Secret.",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (!permissionsApproved) {
+        toast({
+          title: "Permissions required",
+          description: "Please approve the required permissions.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
+    // Check if source already exists
+    const existingSource = dataSources.find(s => s.name === apiResourceName.trim());
+    if (existingSource) {
+      toast({
+        title: "Already exists",
+        description: `${apiResourceName.trim()} is already in your sources.`,
+        variant: "default",
+      });
+      return;
+    }
+
+    setIsAddingApiResource(true);
+
+    try {
+      // Parse headers if provided
+      let headers: Record<string, string> = {};
+      if (apiHeaders.trim()) {
+        try {
+          headers = JSON.parse(apiHeaders);
+        } catch (e) {
+          toast({
+            title: "Invalid headers",
+            description: "Headers must be valid JSON format.",
+            variant: "destructive",
+          });
+          setIsAddingApiResource(false);
+          return;
+        }
+      }
+
+      // Prepare credentials based on auth type
+      const credentials: any = {};
+      if (authType === 'api_key' || authType === 'bearer') {
+        if (apiKey.trim()) {
+          credentials.apiKey = apiKey.trim();
+        }
+      } else if (authType === 'oauth2') {
+        credentials.clientId = clientId.trim();
+        credentials.clientSecret = clientSecret.trim();
+      }
+
+      // Parse body if provided
+      let body: any = undefined;
+      if (['POST', 'PUT', 'PATCH'].includes(apiMethod) && apiBody.trim()) {
+        try {
+          body = JSON.parse(apiBody);
+        } catch (e) {
+          body = apiBody;
+        }
+      }
+
+      // Send to backend for token exchange and data source creation
+      const result = await ApiService.createDataSource({
+        name: apiResourceName.trim(),
+        endpoint: apiEndpoint.trim(),
+        method: apiMethod,
+        authType,
+        credentials: Object.keys(credentials).length > 0 ? credentials : undefined,
+        headers: Object.keys(headers).length > 0 ? headers : undefined,
+        body,
+        scopes: oauthScopes.length > 0 ? oauthScopes : undefined,
+        permissions: permissionsApproved ? ['approved'] : undefined,
+        type: apiResourceType,
+      });
+
+      if (result.success) {
+        // Create new source from backend response
+        const newSource: DataSource = {
+          id: result.dataSource?.id || `api-${Date.now()}`,
+          name: apiResourceName.trim(),
+          type: apiResourceType,
+          icon: Database,
+          platform: 'API Integration',
+          status: result.dataSource?.status || 'connected',
+          syncFrequency: 'daily',
+          totalRecords: 0,
+          newRecordsThisWeek: 0,
+          updatedRecords: 0,
+          dataQualityScore: 0,
+          objectsSynced: [],
+          fieldsMapped: 0,
+          filters: [],
+          description: `API: ${apiEndpoint.trim()} (${apiMethod})${authType !== 'none' ? ' • Authenticated' : ''}`
+        };
+        
+        // Add to data sources
+        setDataSources(prev => [...prev, newSource]);
+        
+        // Reset form
+        setApiResourceName("");
+        setApiEndpoint("");
+        setApiMethod('GET');
+        setApiKey("");
+        setApiHeaders("");
+        setApiBody("");
+        setApiResourceType('custom');
+        setAuthType('api_key');
+        setClientId("");
+        setClientSecret("");
+        setOauthScopes([]);
+        setPermissionsApproved(false);
+        setIsAddResourcePopoverOpen(false);
+        
+        toast({
+          title: `${apiResourceName.trim()} added`,
+          description: result.message || `API source connected successfully. Token exchange completed.`,
+        });
+      } else {
+        toast({
+          title: "Failed to add data source",
+          description: result.message || "Failed to create data source. Please check your credentials.",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error adding data source",
+        description: error?.message || "An error occurred while adding the data source.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAddingApiResource(false);
+    }
   };
 
   const handleConnectSource = (connector: Connector) => {
@@ -1937,15 +2340,478 @@ const MissionControl = () => {
             <div className="space-y-6">
               {/* Data Sources Table */}
               <div className="space-y-6">
-                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <h2 className="text-xl font-semibold mb-1">Data Sources</h2>
-                    <p className="text-sm text-muted-foreground">Manage integrations and file uploads in one place</p>
+                <div className="space-y-4">
+                  <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <h2 className="text-xl font-semibold mb-1">Data Sources</h2>
+                      <p className="text-sm text-muted-foreground">Manage integrations and file uploads in one place</p>
+                    </div>
+                    <Button 
+                      variant="outline"
+                      onClick={() => setIsAddResourcePopoverOpen(!isAddResourcePopoverOpen)}
+                      className="w-full md:w-auto"
+                    >
+                      {isAddResourcePopoverOpen ? (
+                        <>
+                          <XCircle className="h-4 w-4 mr-2" />
+                          Cancel
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Source
+                        </>
+                      )}
+                    </Button>
                   </div>
-                  <Button onClick={handleAddSource} className="w-full md:w-auto">
-                    <Database className="h-4 w-4 mr-2" />
-                    Add Source
-                  </Button>
+
+                  {/* Inline Add Resource Form */}
+                  {isAddResourcePopoverOpen && (
+                    <Card className="border-2 border-dashed">
+                      <CardContent className="p-6">
+                        <div className="space-y-4">
+                          <div>
+                            <h3 className="font-medium mb-2">Add New Resource</h3>
+                            <p className="text-sm text-muted-foreground mb-4">Choose how you want to add a resource</p>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                              <Button
+                                variant={addResourceMode === 'quick' ? 'default' : 'outline'}
+                                size="sm"
+                                className="flex-1"
+                                onClick={() => setAddResourceMode('quick')}
+                              >
+                                Quick Add
+                              </Button>
+                              <Button
+                                variant={addResourceMode === 'custom' ? 'default' : 'outline'}
+                                size="sm"
+                                className="flex-1"
+                                onClick={() => setAddResourceMode('custom')}
+                              >
+                                Custom Resource
+                              </Button>
+                              <Button
+                                variant={addResourceMode === 'file' ? 'default' : 'outline'}
+                                size="sm"
+                                className="flex-1"
+                                onClick={() => setAddResourceMode('file')}
+                              >
+                                File Upload
+                              </Button>
+                              <Button
+                                variant={addResourceMode === 'api' ? 'default' : 'outline'}
+                                size="sm"
+                                className="flex-1"
+                                onClick={() => setAddResourceMode('api')}
+                              >
+                                API Integration
+                              </Button>
+                            </div>
+                          </div>
+
+                          {addResourceMode === 'quick' && (
+                            <div className="space-y-4 pt-2">
+                              <div className="space-y-2">
+                                <Label>Select from available connectors</Label>
+                                <Select onValueChange={(value) => {
+                                  const connector = availableConnectors.find(c => c.id === value);
+                                  if (connector) {
+                                    handleConnectSource(connector);
+                                    setIsAddResourcePopoverOpen(false);
+                                  }
+                                }}>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Choose a connector..." />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {availableConnectors
+                                      .filter(c => !dataSources.some(s => s.name === c.name && (s.status === 'connected' || s.status === 'uploaded')))
+                                      .map((connector) => (
+                                        <SelectItem key={connector.id} value={connector.id}>
+                                          {connector.name}
+                                        </SelectItem>
+                                      ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                          )}
+
+                          {addResourceMode === 'custom' && (
+                            <div className="space-y-4 pt-2">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                  <Label htmlFor="custom-resource-name">Resource Name</Label>
+                                  <Input
+                                    id="custom-resource-name"
+                                    placeholder="Enter resource name"
+                                    value={customResourceName}
+                                    onChange={(e) => setCustomResourceName(e.target.value)}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor="custom-resource-type">Type</Label>
+                                  <Select value={customResourceType} onValueChange={(value: any) => setCustomResourceType(value)}>
+                                    <SelectTrigger id="custom-resource-type">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="custom">Custom</SelectItem>
+                                      <SelectItem value="crm">CRM</SelectItem>
+                                      <SelectItem value="marketing">Marketing</SelectItem>
+                                      <SelectItem value="social">Social</SelectItem>
+                                      <SelectItem value="analytics">Analytics</SelectItem>
+                                      <SelectItem value="communication">Communication</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
+                              <div className="flex gap-2">
+                                <Button onClick={handleAddCustomResource} className="flex-1">
+                                  Add Resource
+                                </Button>
+                                <Button 
+                                  variant="outline" 
+                                  onClick={() => {
+                                    setCustomResourceName("");
+                                    setCustomResourceType('custom');
+                                  }}
+                                >
+                                  Clear
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+
+                          {addResourceMode === 'file' && (
+                            <div className="space-y-4 pt-2">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                  <Label htmlFor="custom-file-name">File Upload Name</Label>
+                                  <Input
+                                    id="custom-file-name"
+                                    placeholder="Enter name for this file upload"
+                                    value={customFileUploadName}
+                                    onChange={(e) => setCustomFileUploadName(e.target.value)}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor="custom-file-upload">Upload File (Optional)</Label>
+                                  <Input
+                                    id="custom-file-upload"
+                                    type="file"
+                                    onChange={(e) => {
+                                      const file = e.target.files?.[0];
+                                      if (file) {
+                                        setCustomFileUploadFile(file);
+                                      }
+                                    }}
+                                  />
+                                  {customFileUploadFile && (
+                                    <p className="text-xs text-muted-foreground">Selected: {customFileUploadFile.name}</p>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex gap-2">
+                                <Button onClick={handleAddCustomFileUpload} className="flex-1">
+                                  Add File Upload
+                                </Button>
+                                <Button 
+                                  variant="outline" 
+                                  onClick={() => {
+                                    setCustomFileUploadName("");
+                                    setCustomFileUploadFile(null);
+                                  }}
+                                >
+                                  Clear
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+
+                          {addResourceMode === 'api' && (
+                            <div className="space-y-4 pt-2">
+                              <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                                <p className="text-sm text-blue-900 dark:text-blue-100">
+                                  <strong>Add Source via API URL:</strong> Enter an API endpoint URL to connect an external data source. This will create a new source that can fetch data from the provided API.
+                                </p>
+                              </div>
+
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                  <Label htmlFor="api-resource-name">Source Name *</Label>
+                                  <Input
+                                    id="api-resource-name"
+                                    placeholder="e.g., My Custom API, External Data Source"
+                                    value={apiResourceName}
+                                    onChange={(e) => setApiResourceName(e.target.value)}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor="api-resource-type">Source Type</Label>
+                                  <Select value={apiResourceType} onValueChange={(value: any) => setApiResourceType(value)}>
+                                    <SelectTrigger id="api-resource-type">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="custom">Custom</SelectItem>
+                                      <SelectItem value="crm">CRM</SelectItem>
+                                      <SelectItem value="marketing">Marketing</SelectItem>
+                                      <SelectItem value="social">Social</SelectItem>
+                                      <SelectItem value="analytics">Analytics</SelectItem>
+                                      <SelectItem value="communication">Communication</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
+                              
+                              <div className="space-y-2">
+                                <Label htmlFor="api-endpoint">API Endpoint URL *</Label>
+                                <Input
+                                  id="api-endpoint"
+                                  type="url"
+                                  placeholder="https://api.example.com/v1/data or https://jsonplaceholder.typicode.com/posts"
+                                  value={apiEndpoint}
+                                  onChange={(e) => setApiEndpoint(e.target.value)}
+                                />
+                                <p className="text-xs text-muted-foreground">Enter the full URL of the API endpoint you want to connect to</p>
+                              </div>
+
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                  <Label htmlFor="api-method">HTTP Method</Label>
+                                  <Select value={apiMethod} onValueChange={(value: any) => setApiMethod(value)}>
+                                    <SelectTrigger id="api-method">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="GET">GET</SelectItem>
+                                      <SelectItem value="POST">POST</SelectItem>
+                                      <SelectItem value="PUT">PUT</SelectItem>
+                                      <SelectItem value="PATCH">PATCH</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor="auth-type">Authentication Type</Label>
+                                  <Select value={authType} onValueChange={(value: any) => {
+                                    setAuthType(value);
+                                    // Reset credentials when changing auth type
+                                    if (value !== 'api_key' && value !== 'bearer') {
+                                      setApiKey("");
+                                    }
+                                    if (value !== 'oauth2') {
+                                      setClientId("");
+                                      setClientSecret("");
+                                      setOauthScopes([]);
+                                      setPermissionsApproved(false);
+                                    }
+                                  }}>
+                                    <SelectTrigger id="auth-type">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="none">None</SelectItem>
+                                      <SelectItem value="api_key">API Key</SelectItem>
+                                      <SelectItem value="bearer">Bearer Token</SelectItem>
+                                      <SelectItem value="oauth2">OAuth2</SelectItem>
+                                      <SelectItem value="basic">Basic Auth</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
+
+                              {/* API Key / Bearer Token Field */}
+                              {(authType === 'api_key' || authType === 'bearer') && (
+                                <div className="space-y-2">
+                                  <Label htmlFor="api-key">
+                                    {authType === 'api_key' ? 'API Key' : 'Bearer Token'} *
+                                  </Label>
+                                  <Input
+                                    id="api-key"
+                                    type="password"
+                                    placeholder={authType === 'api_key' ? "Enter API key" : "Enter Bearer token"}
+                                    value={apiKey}
+                                    onChange={(e) => setApiKey(e.target.value)}
+                                  />
+                                </div>
+                              )}
+
+                              {/* OAuth2 Fields */}
+                              {authType === 'oauth2' && (
+                                <div className="space-y-4 border rounded-lg p-4 bg-muted/30">
+                                  <div className="flex items-center gap-2">
+                                    <Zap className="h-4 w-4 text-blue-600" />
+                                    <Label className="text-base font-semibold">OAuth2 Configuration</Label>
+                                  </div>
+                                  
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                      <Label htmlFor="client-id">Client ID *</Label>
+                                      <Input
+                                        id="client-id"
+                                        type="text"
+                                        placeholder="Enter OAuth2 Client ID"
+                                        value={clientId}
+                                        onChange={(e) => setClientId(e.target.value)}
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <Label htmlFor="client-secret">Client Secret *</Label>
+                                      <Input
+                                        id="client-secret"
+                                        type="password"
+                                        placeholder="Enter OAuth2 Client Secret"
+                                        value={clientSecret}
+                                        onChange={(e) => setClientSecret(e.target.value)}
+                                      />
+                                    </div>
+                                  </div>
+
+                                  <div className="space-y-2">
+                                    <Label>Requested Permissions (Scopes)</Label>
+                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                      {availableScopes.map((scope) => (
+                                        <div key={scope} className="flex items-center space-x-2">
+                                          <Checkbox
+                                            id={`scope-${scope}`}
+                                            checked={oauthScopes.includes(scope)}
+                                            onCheckedChange={(checked) => {
+                                              if (checked) {
+                                                setOauthScopes([...oauthScopes, scope]);
+                                              } else {
+                                                setOauthScopes(oauthScopes.filter(s => s !== scope));
+                                              }
+                                            }}
+                                          />
+                                          <Label
+                                            htmlFor={`scope-${scope}`}
+                                            className="text-sm font-normal cursor-pointer"
+                                          >
+                                            {scope}
+                                          </Label>
+                                        </div>
+                                      ))}
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">
+                                      Select the permissions your application needs to access the API
+                                    </p>
+                                  </div>
+
+                                  <div className="space-y-2">
+                                    <div className="flex items-start space-x-2">
+                                      <Checkbox
+                                        id="permissions-approval"
+                                        checked={permissionsApproved}
+                                        onCheckedChange={(checked) => setPermissionsApproved(checked === true)}
+                                      />
+                                      <div className="flex-1">
+                                        <Label
+                                          htmlFor="permissions-approval"
+                                          className="text-sm font-normal cursor-pointer"
+                                        >
+                                          I approve the requested permissions and authorize token exchange
+                                        </Label>
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                          By checking this, you authorize the backend to exchange credentials for access tokens on your behalf.
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+
+                              <div className="space-y-2">
+                                <Label htmlFor="api-headers">Custom Headers (JSON, Optional)</Label>
+                                <Textarea
+                                  id="api-headers"
+                                  placeholder='{"X-API-Version": "1.0", "Accept": "application/json"}'
+                                  value={apiHeaders}
+                                  onChange={(e) => setApiHeaders(e.target.value)}
+                                  rows={2}
+                                />
+                                <p className="text-xs text-muted-foreground">Optional: Add custom headers as a JSON object</p>
+                              </div>
+
+                              {['POST', 'PUT', 'PATCH'].includes(apiMethod) && (
+                                <div className="space-y-2">
+                                  <Label htmlFor="api-body">Request Body (JSON, Optional)</Label>
+                                  <Textarea
+                                    id="api-body"
+                                    placeholder='{"key": "value", "filters": {}}'
+                                    value={apiBody}
+                                    onChange={(e) => setApiBody(e.target.value)}
+                                    rows={3}
+                                  />
+                                  <p className="text-xs text-muted-foreground">Optional: Request body as JSON (for POST, PUT, PATCH requests)</p>
+                                </div>
+                              )}
+
+                              <div className="flex gap-2">
+                                <Button 
+                                  onClick={handleTestApiConnection} 
+                                  variant="outline"
+                                  disabled={isTestingApi || !apiEndpoint.trim()}
+                                  className="flex-1"
+                                >
+                                  {isTestingApi ? (
+                                    <>
+                                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                                      Testing...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Activity className="h-4 w-4 mr-2" />
+                                      Test Connection
+                                    </>
+                                  )}
+                                </Button>
+                                <Button 
+                                  onClick={handleAddApiResource} 
+                                  disabled={!apiResourceName.trim() || !apiEndpoint.trim() || isAddingApiResource}
+                                  className="flex-1"
+                                >
+                                  {isAddingApiResource ? (
+                                    <>
+                                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                                      Connecting...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Plus className="h-4 w-4 mr-2" />
+                                      Add Source
+                                    </>
+                                  )}
+                                </Button>
+                                <Button 
+                                  variant="outline" 
+                                  onClick={() => {
+                                    setApiResourceName("");
+                                    setApiEndpoint("");
+                                    setApiMethod('GET');
+                                    setApiKey("");
+                                    setApiHeaders("");
+                                    setApiBody("");
+                                    setApiResourceType('custom');
+                                    setAuthType('api_key');
+                                    setClientId("");
+                                    setClientSecret("");
+                                    setOauthScopes([]);
+                                    setPermissionsApproved(false);
+                                  }}
+                                >
+                                  Clear
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
