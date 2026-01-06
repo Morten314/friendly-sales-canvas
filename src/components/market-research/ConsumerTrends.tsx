@@ -358,6 +358,7 @@ import {
   ExternalLink, Briefcase, Building, MapPin, Loader2, RefreshCw
 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Lead {
   company: string;
@@ -387,12 +388,14 @@ interface ConsumerTrendsProps {
 
 export const ConsumerTrends = ({ 
   apiEndpoint = "https://backend-11kr.onrender.com/leads",
-  userId = "brewra",
+  userId,
   selectedIndustry = "all",
   selectedSize = "all", 
   selectedRegion = "all",
   onFiltersChange
 }: ConsumerTrendsProps) => {
+  const { currentUser } = useAuth();
+  const effectiveUserId = userId || currentUser?.uid || "";
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -448,7 +451,7 @@ export const ConsumerTrends = ({
       setError(null);
 
       // Construct the full URL
-      const fullUrl = `${apiEndpoint}/${userId}`;
+      const fullUrl = `${apiEndpoint}/${effectiveUserId}`;
       console.log('Fetching from:', fullUrl);
 
       const response = await fetch(fullUrl, {
@@ -607,7 +610,7 @@ export const ConsumerTrends = ({
   // Initial load
   useEffect(() => {
     fetchLeads();
-  }, [apiEndpoint, userId]);
+  }, [apiEndpoint, effectiveUserId]);
 
   // Handle refresh
   const handleRefresh = () => {
@@ -679,7 +682,7 @@ export const ConsumerTrends = ({
               <strong>API Error:</strong> {error}
             </div>
             <div className="text-sm text-gray-600 mb-4">
-              Endpoint: {apiEndpoint}/{userId}
+              Endpoint: {apiEndpoint}/{effectiveUserId}
             </div>
             <div className="text-sm text-blue-600 mb-4">
               Showing demo data for testing purposes
@@ -710,7 +713,7 @@ export const ConsumerTrends = ({
                 ICP: Mid-Market SaaS in North America
               </Badge>
               <Badge variant="outline" className="px-2 py-1 text-xs bg-green-50 text-green-700 border-green-200">
-                User: {userId}
+                User: {effectiveUserId}
               </Badge>
               <Button variant="outline" size="sm" className="h-7 text-xs">
                 Edit ICP

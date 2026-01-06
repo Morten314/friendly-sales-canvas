@@ -81,6 +81,15 @@ class EnhancedApiClient {
       
       console.log(`🚀 ${componentName} - Making API request to: ${url}`);
       
+      // Get JWT token for authentication
+      let authHeader = '';
+      try {
+        const jwtManager = (await import('./jwt')).default;
+        authHeader = await jwtManager.getAuthHeader();
+      } catch (error) {
+        console.warn(`🔐 ${componentName} - No JWT token available:`, error);
+      }
+      
       const controller = new AbortController();
       const timeoutId = setTimeout(() => {
         console.log(`⏰ ${componentName} - Request timeout after ${timeout}ms, aborting...`);
@@ -93,7 +102,8 @@ class EnhancedApiClient {
           'Content-Type': 'application/json',
           'Cache-Control': 'no-cache, no-store, must-revalidate',
           'Pragma': 'no-cache',
-          'Expires': '0'
+          'Expires': '0',
+          ...(authHeader && { 'Authorization': authHeader })
         },
         body: JSON.stringify(payload),
         signal: controller.signal
@@ -122,7 +132,8 @@ class EnhancedApiClient {
                 'Content-Type': 'application/json',
                 'Cache-Control': 'no-cache, no-store, must-revalidate',
                 'Pragma': 'no-cache',
-                'Expires': '0'
+                'Expires': '0',
+                ...(authHeader && { 'Authorization': authHeader })
               },
               body: JSON.stringify(payload),
               signal: controller.signal

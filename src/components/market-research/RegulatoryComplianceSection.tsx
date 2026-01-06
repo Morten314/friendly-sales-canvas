@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useAuth } from '@/contexts/AuthContext';
+import { getUserLocalStorage, setUserLocalStorage } from '@/utils/cacheUtils';
 import { EditDropdownMenu } from './EditDropdownMenu';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -46,6 +48,8 @@ import { EditRecord } from './types';
 import { toUTCTimestamp, isTimestampNewer, getCurrentUTCTimestamp, logTimestampComparison } from '@/lib/timestampUtils';
 import MiniPieChart from '../MiniPieChart';
 import MiniLineChart from '../MiniLineChart';
+import { apiFetchJson } from '@/lib/api';
+import { executeWithRateLimit } from '@/lib/rateLimitManager';
 
 interface RegulatoryComplianceSectionProps {
   isEditing: boolean;
@@ -113,6 +117,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   companyProfile,
   regulatoryData: propRegulatoryData
 }) => {
+  const { currentUser } = useAuth();
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
   // Use centralized data from parent instead of local state
   const regulatoryData = propRegulatoryData;
@@ -121,21 +126,21 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   const [error, setError] = useState<string | null>(null);
   const [regulatoryExpanded, setRegulatoryExpanded] = useState(true);
 
-  // Local state for editing - prioritize API data over localStorage for fresh updates
+  // Local state for editing - prioritize API data over localStorage for fresh updates (user-specific)
   const [localExecutiveSummary, setLocalExecutiveSummary] = useState(() => {
-    return regulatoryData?.executiveSummary || executiveSummary || localStorage.getItem('regulatory_executiveSummary') || '';
+    return regulatoryData?.executiveSummary || executiveSummary || getUserLocalStorage('regulatory_executiveSummary', currentUser?.uid) || '';
   });
   const [localEuAiActDeadline, setLocalEuAiActDeadline] = useState(() => {
-    return regulatoryData?.euAiActDeadline || euAiActDeadline || localStorage.getItem('regulatory_euAiActDeadline') || '';
+    return regulatoryData?.euAiActDeadline || euAiActDeadline || getUserLocalStorage('regulatory_euAiActDeadline', currentUser?.uid) || '';
   });
   const [localGdprCompliance, setLocalGdprCompliance] = useState(() => {
-    return regulatoryData?.gdprCompliance || gdprCompliance || localStorage.getItem('regulatory_gdprCompliance') || '';
+    return regulatoryData?.gdprCompliance || gdprCompliance || getUserLocalStorage('regulatory_gdprCompliance', currentUser?.uid) || '';
   });
   const [localPotentialFines, setLocalPotentialFines] = useState(() => {
-    return regulatoryData?.potentialFines || potentialFines || localStorage.getItem('regulatory_potentialFines') || '';
+    return regulatoryData?.potentialFines || potentialFines || getUserLocalStorage('regulatory_potentialFines', currentUser?.uid) || '';
   });
   const [localDataLocalization, setLocalDataLocalization] = useState(() => {
-    return regulatoryData?.dataLocalization || dataLocalization || localStorage.getItem('regulatory_dataLocalization') || '';
+    return regulatoryData?.dataLocalization || dataLocalization || getUserLocalStorage('regulatory_dataLocalization', currentUser?.uid) || '';
   });
 
   // Debug: Log when regulatoryData prop changes
@@ -283,12 +288,36 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     if (!isEditing && regulatoryData?.keyUpdates) {
       const initialValues: Record<string, string> = {};
       regulatoryData.keyUpdates.forEach((update: any) => {
+        if (update.title) {
+          const id = update.title.toLowerCase().replace(/\s+/g, '-');
+          initialValues[id] = update.description || '';
+        }
+      });
+      setLocalKeyDataValues(initialValues);
+    }
+  }, [regulatoryData?.keyUpdates, isEditing]);
+
+  // Handle modify button click - initialize edit fields with current data
+  const handleModify = () => {
+    // Initialize all edit fields with current data
+    setLocalExecutiveSummary(regulatoryData?.executiveSummary || executiveSummary || '');
+    setLocalEuAiActDeadline(regulatoryData?.euAiActDeadline || euAiActDeadline || '');
+    setLocalGdprCompliance(regulatoryData?.gdprCompliance || gdprCompliance || '');
+    setLocalPotentialFines(regulatoryData?.potentialFines || potentialFines || '');
+    setLocalDataLocalization(regulatoryData?.dataLocalization || dataLocalization || '');
+    
+    // Initialize dynamic key data values
+    if (regulatoryData?.keyUpdates) {
+      const initialValues: Record<string, string> = {};
+      regulatoryData.keyUpdates.forEach((update: any) => {
         const id = update.title.toLowerCase().replace(/\s+/g, '-');
         initialValues[id] = update.description || '';
       });
       setLocalKeyDataValues(initialValues);
     }
-  }, [regulatoryData?.keyUpdates, isEditing]);
+    
+    onToggleEdit();
+  };
 
   // Disabled: Update local state when regulatoryData prop changes (causes local state to be overwritten)
   // useEffect(() => {
@@ -378,14 +407,21 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
       const currentTime = Date.now();
       const randomId = Math.random().toString(36).substring(7);
       
-      // Get company profile data for dynamic reports
-      const profile = companyProfile || JSON.parse(localStorage.getItem('companyProfile') || '{}');
+      // Get company profile data for dynamic reports (user-specific)
+      const profile = companyProfile || JSON.parse(getUserLocalStorage('companyProfile', currentUser?.uid) || '{}');
       console.log('🔍 Regulatory Compliance - Company profile being used:', profile);
       console.log('🔍 Regulatory Compliance - companyProfile prop:', companyProfile);
-      console.log('🔍 Regulatory Compliance - localStorage profile:', JSON.parse(localStorage.getItem('companyProfile') || '{}'));
+      console.log('🔍 Regulatory Compliance - localStorage profile (user-specific):', JSON.parse(getUserLocalStorage('companyProfile', currentUser?.uid) || '{}'));
+      
+      if (!currentUser?.uid) {
+        console.error('User not authenticated');
+        setError('User not authenticated');
+        setIsLoading(false);
+        return;
+      }
       
       const payload = {
-        user_id: "brewra",
+        user_id: currentUser.uid,
         component_name: "regulatory & compliance highlights", // Exact match for regulatory compliance
         refresh: refresh,
         force_refresh: refresh,
@@ -393,36 +429,18 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
         bypass_all_cache: refresh,
         request_timestamp: currentTime,
         request_id: randomId,
-        additionalPrompt: profile.companyUrl ? `Company: ${profile.companyUrl}, Industry: ${profile.industry}, Size: ${profile.companySize}, GTM: ${profile.primaryGTMModel}, Goals: ${profile.strategicGoals}` : "",
-        data: {
-          company: profile.companyUrl || "OrbiSelf",
-          product: "Convoic.AI", 
-          target_market: profile.targetMarkets?.[0] || "Indian college students (Tier 2 & 3)",
-          region: profile.targetMarkets?.[0] || "India",
-          timestamp: currentTime,
-          force_new_data: refresh
-        }
+        data: {}
       };
-
-      console.log('🔍 Regulatory Compliance - additionalPrompt being sent:', payload.additionalPrompt);
 
       console.log('📤 RegulatoryComplianceSection: Sending API request with payload:', payload);
 
-      const response = await fetch('https://backend-11kr.onrender.com/market-research', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload)
-      });
-
-      console.log('📨 RegulatoryComplianceSection: API response status:', response.status);
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
+      const result = await executeWithRateLimit(
+        () => apiFetchJson('market-research', {
+          method: 'POST',
+          body: payload
+        }),
+        'Regulatory Compliance'
+      );
       console.log('📊 RegulatoryComplianceSection: API result:', result);
       
       if (result.status === 'success' && result.data) {
@@ -466,7 +484,40 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
       }
     } catch (error) {
       console.error('❌ RegulatoryComplianceSection: Error fetching data:', error);
-      setError(error instanceof Error ? error.message : 'Failed to load regulatory data');
+      
+      // Handle errors with fallback logic
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load regulatory data';
+      const isTimeout = errorMessage.includes('timeout');
+      const isApiError = errorMessage.includes('API error');
+      
+      if (isTimeout || isApiError) {
+        console.log('🔄 Regulatory Compliance: API failed, using fallback data');
+        
+        // Set fallback data to prevent empty state
+        const fallbackData = {
+          executiveSummary: 'Regulatory compliance analysis is being prepared. Please try refreshing in a few moments.',
+          euAiActDeadline: 'Loading...',
+          gdprCompliance: 'Loading...',
+          potentialFines: 'Loading...',
+          dataLocalization: 'Loading...'
+        };
+        
+        setLocalExecutiveSummary(fallbackData.executiveSummary);
+        setLocalEuAiActDeadline(fallbackData.euAiActDeadline);
+        setLocalGdprCompliance(fallbackData.gdprCompliance);
+        setLocalPotentialFines(fallbackData.potentialFines);
+        setLocalDataLocalization(fallbackData.dataLocalization);
+        
+        onExecutiveSummaryChange(fallbackData.executiveSummary);
+        onEuAiActDeadlineChange(fallbackData.euAiActDeadline);
+        onGdprComplianceChange(fallbackData.gdprCompliance);
+        onPotentialFinesChange(fallbackData.potentialFines);
+        onDataLocalizationChange(fallbackData.dataLocalization);
+        
+        setError('Data is being prepared. Please refresh in a few moments.');
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -478,11 +529,11 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     setIsLoading(true);
     setError(null);
     
-    // Add delay to prevent conflicts with other components
+    // Reduced delay for faster loading
     const timer = setTimeout(() => {
       console.log('🚀 Regulatory Compliance Component mounted - fetching initial data');
       fetchRegulatoryComplianceData(false); // refresh = false for initial load
-    }, 600); // Slightly longer delay to prevent conflicts
+    }, 1000);
 
     return () => clearTimeout(timer);
   }, []);
@@ -507,18 +558,26 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
       // Wait a bit for the backend to process the profile update
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Fetch the latest company profile from backend
+      // Fetch the latest company profile from backend (with user_id)
       try {
-        const profileResponse = await fetch('https://backend-11kr.onrender.com/profile/company', {
+        const profileUrl = currentUser?.uid 
+          ? `https://backend-11kr.onrender.com/profile/company?user_id=${currentUser.uid}`
+          : 'https://backend-11kr.onrender.com/profile/company';
+        const profileResponse = await fetch(profileUrl, {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' }
         });
         if (profileResponse.ok) {
           const latestProfile = await profileResponse.json();
           console.log('📋 Regulatory Compliance - Retrieved latest company profile:', latestProfile);
-          // Store in localStorage so the API call can use it
-          localStorage.setItem('companyProfile', JSON.stringify(latestProfile));
-          localStorage.setItem('companyProfileForRefresh', JSON.stringify(latestProfile));
+          // Verify profile belongs to current user before storing
+          if (latestProfile.user_id === currentUser?.uid || !latestProfile.user_id) {
+            // Store in user-specific localStorage so the API call can use it
+            setUserLocalStorage('companyProfile', JSON.stringify(latestProfile), currentUser?.uid);
+            setUserLocalStorage('companyProfileForRefresh', JSON.stringify(latestProfile), currentUser?.uid);
+          } else {
+            console.warn('⚠️ Regulatory Compliance - Profile user_id mismatch, not storing');
+          }
         }
       } catch (error) {
         console.warn('⚠️ Regulatory Compliance - Could not fetch latest profile:', error);
@@ -570,9 +629,14 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   const getIconByName = (iconName: string) => {
     switch (iconName) {
       case 'sun': return Sun;
-      case 'chart': return BarChart3;
+      case 'chart': 
+      case 'chart-line': return BarChart3;
       case 'government': return Building;
       case 'competition': return Factory;
+      case 'arrow-up': return TrendingUp;
+      case 'users': return Users;
+      case 'gavel': return Scale;
+      case 'scale': return Scale;
       default: return Scale;
     }
   };
@@ -584,6 +648,8 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
       case 'Support': return 'bg-green-100 text-green-800';
       case 'Competitive': return 'bg-purple-100 text-purple-800';
       case 'Risk': return 'bg-red-100 text-red-800';
+      case 'Market Leaders': return 'bg-green-100 text-green-800';
+      case 'Regulatory': return 'bg-purple-100 text-purple-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -628,14 +694,30 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     }
   ];
 
-  const keyDataPoints = regulatoryData?.keyUpdates ? regulatoryData.keyUpdates.map((update: any) => ({
-    id: update.title?.toLowerCase().replace(/\s+/g, '-') || '',
+  // Debug logging for keyDataPoints
+  console.log('🔍 RegulatoryComplianceSection - regulatoryData:', regulatoryData);
+  console.log('🔍 RegulatoryComplianceSection - regulatoryData?.keyUpdates:', regulatoryData?.keyUpdates);
+  if (regulatoryData?.keyUpdates) {
+    console.log('🔍 RegulatoryComplianceSection - keyUpdates details:');
+    regulatoryData.keyUpdates.forEach((update: any, index: number) => {
+      console.log(`  [${index}] Full update object:`, update);
+      console.log(`  [${index}] title: "${update.title}", description: "${update.description}", tag: "${update.tag}"`);
+      console.log(`  [${index}] All keys:`, Object.keys(update));
+    });
+  }
+  console.log('🔍 RegulatoryComplianceSection - euAiActDeadline:', euAiActDeadline);
+  console.log('🔍 RegulatoryComplianceSection - gdprCompliance:', gdprCompliance);
+  console.log('🔍 RegulatoryComplianceSection - potentialFines:', potentialFines);
+  console.log('🔍 RegulatoryComplianceSection - dataLocalization:', dataLocalization);
+
+  const keyDataPoints = regulatoryData?.keyUpdates ? regulatoryData.keyUpdates.map((update: any, index: number) => ({
+    id: update.title?.toLowerCase().replace(/\s+/g, '-') || `update-${index}`,
     icon: getIconByName(update.icon || 'scale'),
-    title: update.title,
-    value: update.description,
-    badge: update.tag,
+    title: update.title || `Update ${index + 1}`,
+    value: update.description || '',
+    badge: update.tag || 'Update',
     badgeColor: getBadgeColor(update.tag),
-    tooltip: update.description
+    tooltip: update.description || ''
   })) : [
     {
       id: 'eu-ai-act',
@@ -674,6 +756,15 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
       tooltip: 'New data residency requirements affecting international SaaS deployment strategies.'
     }
   ];
+
+  console.log('🔍 RegulatoryComplianceSection - keyDataPoints:', keyDataPoints);
+  console.log('🔍 RegulatoryComplianceSection - keyDataPoints length:', keyDataPoints.length);
+  if (keyDataPoints.length > 0) {
+    console.log('🔍 RegulatoryComplianceSection - keyDataPoints details:');
+    keyDataPoints.forEach((point, index) => {
+      console.log(`  [${index}] id: "${point.id}", title: "${point.title}", value: "${point.value}"`);
+    });
+  }
 
   const visualDataCards = regulatoryData?.visualDataCards || [
     {
@@ -765,7 +856,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
             
             {/* Edit Dropdown */}
             <EditDropdownMenu
-              onModify={onToggleEdit}
+              onModify={handleModify}
               onComment={() => onScoutIconClick('regulatory-compliance', hasEdits)}
               className="h-8 w-8"
             />
@@ -920,15 +1011,16 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                   <X className="h-4 w-4 text-red-600" />
                 </button>
                 <h4 className="text-sm font-medium text-gray-700 mb-4">Compliance Analytics</h4>
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  {/* Compliance Adoption Rates - Bar Chart */}
-                  <div className="bg-white border border-gray-200 rounded-lg p-4">
-                    <h5 className="font-medium text-gray-900 mb-3 flex items-center">
-                      <Users className="h-4 w-4 mr-2 text-blue-600" />
-                      Compliance Adoption Rates
-                    </h5>
-                    <div className="space-y-3">
-                      {visualDataCards[0].data.map((item, index) => (
+                {visualDataCards && visualDataCards.length >= 3 ? (
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Compliance Adoption Rates - Bar Chart */}
+                    <div className="bg-white border border-gray-200 rounded-lg p-4">
+                      <h5 className="font-medium text-gray-900 mb-3 flex items-center">
+                        <Users className="h-4 w-4 mr-2 text-blue-600" />
+                        Compliance Adoption Rates
+                      </h5>
+                      <div className="space-y-3">
+                        {visualDataCards[0]?.data && visualDataCards[0].data.length > 0 ? visualDataCards[0].data.map((item, index) => (
                         <div key={index} className="flex items-center justify-between">
                           <span className="text-sm text-gray-600">{item.name}</span>
                           <div className="flex items-center space-x-2">
@@ -944,7 +1036,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                             <span className="text-sm font-medium text-gray-900">{item.value}%</span>
                           </div>
                         </div>
-                      ))}
+                      )) : <p className="text-gray-500 text-sm">No compliance adoption data available</p>}
                     </div>
                   </div>
 
@@ -955,7 +1047,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                       Regulatory Timeline
                     </h5>
                     <div className="space-y-3">
-                      {visualDataCards[1].data.map((item, index) => (
+                      {visualDataCards[1]?.data && visualDataCards[1].data.length > 0 ? visualDataCards[1].data.map((item, index) => (
                         <div key={index} className="flex items-start space-x-3">
                           <div className={`w-2 h-2 rounded-full mt-2 ${
                             item.status === 'critical' ? 'bg-red-500' : 'bg-blue-500'
@@ -965,7 +1057,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                             <p className="text-xs text-gray-500">{item.date}</p>
                           </div>
                         </div>
-                      ))}
+                      )) : <p className="text-gray-500 text-sm">No regulatory timeline data available</p>}
                     </div>
                   </div>
 
@@ -976,7 +1068,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                       Risk Indicators
                     </h5>
                     <div className="space-y-3">
-                      {visualDataCards[2].data.map((item, index) => (
+                      {visualDataCards[2]?.data && visualDataCards[2].data.length > 0 ? visualDataCards[2].data.map((item, index) => (
                         <div key={index} className="flex items-center justify-between">
                           <span className="text-sm text-gray-600">{item.metric}</span>
                           <div className="flex items-center space-x-2">
@@ -986,10 +1078,13 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                             } ${item.trend === 'down' ? 'rotate-180' : ''}`} />
                           </div>
                         </div>
-                      ))}
+                      )) : <p className="text-gray-500 text-sm">No risk indicators data available</p>}
                     </div>
                   </div>
                 </div>
+                ) : (
+                  <p className="text-gray-500 text-sm">No compliance analytics data available</p>
+                )}
               </div>
             )}
 
@@ -1159,9 +1254,9 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                      console.log('⚖️ Regulatory Compliance Section - original_json:', JSON.stringify(originalJson, null, 2));
                      console.log('⚖️ Regulatory Compliance Section - modified_json:', JSON.stringify(modifiedJson, null, 2));
 
-                     // Store JSON data in localStorage for Scout API
-                     localStorage.setItem('regulatory-compliance_original_json', JSON.stringify(originalJson));
-                     localStorage.setItem('regulatory-compliance_modified_json', JSON.stringify(modifiedJson));
+                     // Store JSON data in localStorage for Scout API (user-specific)
+                     setUserLocalStorage('regulatory-compliance_original_json', JSON.stringify(originalJson), currentUser?.uid);
+                     setUserLocalStorage('regulatory-compliance_modified_json', JSON.stringify(modifiedJson), currentUser?.uid);
 
                      // First, call all the change handlers to update parent state with local values
                     onExecutiveSummaryChange(localExecutiveSummary);
@@ -1276,7 +1371,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                 <Button
                   onClick={() => onExpandToggle(true)}
                   variant="outline"
-                  className="flex items-center space-x-2 text-sm"
+                  className="flex items-center space-x-2 text-sm hover:bg-gray-50"
                 >
                   <span>Read More</span>
                   <ChevronDown className="h-4 w-4" />

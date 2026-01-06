@@ -112,7 +112,9 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
   ) : undefined;
 
   console.log('🔍 MarketIntelligenceSections - marketSizeBySegment from props:', props.marketSizeBySegment);
+  console.log('🔍 MarketIntelligenceSections - marketSizeBySegment type:', typeof props.marketSizeBySegment);
   console.log('🔍 MarketIntelligenceSections - growthProjections from props:', props.growthProjections);
+  console.log('🔍 MarketIntelligenceSections - growthProjections type:', typeof props.growthProjections);
   
   return (
     <>
@@ -155,6 +157,8 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
         isLoading={props.isMarketSizeLoading}
         error={props.marketSizeError}
         onRefresh={props.onMarketSizeRefresh}
+        isRefreshing={props.isRefreshing}
+        companyProfile={props.companyProfile}
       />
 
       {/* Industry Trends Section */}
@@ -187,6 +191,14 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
             trendSnapshots={props.industryTrendSnapshots}
             recommendations={props.industryTrendsRecommendations}
             risks={props.industryTrendsRisks}
+            regionalHotspots={props.industryTrendsRegionalHotspots}
+            visualCharts={props.industryTrendsVisualCharts}
+            // Pass individual field update functions
+            onIndustryTrendsExecutiveSummaryChange={props.onIndustryTrendsExecutiveSummaryChange}
+            onIndustryTrendsAiAdoptionChange={props.onIndustryTrendsAiAdoptionChange}
+            onIndustryTrendsCloudMigrationChange={props.onIndustryTrendsCloudMigrationChange}
+            onIndustryTrendsRegulatoryChange={props.onIndustryTrendsRegulatoryChange}
+            onIndustryTrendSnapshotsChange={props.onIndustryTrendSnapshotsChange}
           />
         </div>
         {props.showIndustryTrendsScoutChat && industryTrendsScoutChatPanel && (
@@ -290,14 +302,14 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
         hasEdits={props.marketEntryHasEdits || false}
         deletedSections={props.marketEntryDeletedSections || new Set()}
         editHistory={props.marketEntryEditHistory || []}
-        executiveSummary={props.marketEntryExecutiveSummary || 'The Indian SaaS market offers significant growth potential for mid-size players, but entry barriers exist due to regulatory compliance and entrenched competitors. Strategic partnerships and phased market entry approaches can help mitigate risks while maximizing opportunities.'}
-        entryBarriers={props.marketEntryBarriers || ['Data residency regulations', 'Established local competitors', 'Complex compliance requirements', 'Cultural adaptation needs']}
-        recommendedChannel={props.marketEntryRecommendedChannel || 'Local partnerships'}
-        timeToMarket={props.marketEntryTimeToMarket || '12-18 months'}
-        topBarrier={props.marketEntryTopBarrier || 'Data residency laws'}
-        competitiveDifferentiation={props.marketEntryCompetitiveDifferentiation || ['Advanced AI capabilities', 'Robust security framework', 'Flexible deployment options', 'Strong API ecosystem']}
-        strategicRecommendations={props.marketEntryStrategicRecommendations || ['Partner with local system integrators', 'Establish regional data centers', 'Develop compliance automation tools', 'Create localized go-to-market strategy']}
-        riskAssessment={props.marketEntryRiskAssessment || ['Regulatory changes could impact timeline', 'Competition intensifying rapidly', 'Economic uncertainty affecting IT spending']}
+        executiveSummary={props.marketEntryExecutiveSummary || ''}
+        entryBarriers={props.marketEntryBarriers || []}
+        recommendedChannel={props.marketEntryRecommendedChannel || ''}
+        timeToMarket={props.marketEntryTimeToMarket || ''}
+        topBarrier={props.marketEntryTopBarrier || ''}
+        competitiveDifferentiation={props.marketEntryCompetitiveDifferentiation || []}
+        strategicRecommendations={props.marketEntryStrategicRecommendations || []}
+        riskAssessment={props.marketEntryRiskAssessment || []}
         onToggleEdit={props.onMarketEntryToggleEdit || (() => {})}
         onScoutIconClick={props.onMarketEntryScoutIconClick || props.onMarketSizeScoutIconClick}
         onEditHistoryOpen={props.onMarketEntryEditHistoryOpen || (() => {})}

@@ -9,6 +9,9 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { EditRecord } from './types';
 import { toUTCTimestamp, isTimestampNewer } from '@/lib/timestampUtils';
 import { executeWithRateLimit } from '@/lib/rateLimitManager';
+import { apiFetchJson } from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
+import { getUserLocalStorage } from '@/utils/cacheUtils';
 
 interface MarketEntrySectionProps {
   isEditing: boolean;
@@ -84,9 +87,32 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
   isRefreshing = false,
   companyProfile
 }) => {
+  const { currentUser } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [marketEntryData, setMarketEntryData] = useState<any>(null);
+  
+  // Local edit state variables
+  const [editExecutiveSummary, setEditExecutiveSummary] = useState('');
+  const [editEntryBarriers, setEditEntryBarriers] = useState<string[]>([]);
+  const [editRecommendedChannel, setEditRecommendedChannel] = useState('');
+  const [editTimeToMarket, setEditTimeToMarket] = useState('');
+  const [editTopBarrier, setEditTopBarrier] = useState('');
+  const [editCompetitiveDifferentiation, setEditCompetitiveDifferentiation] = useState<string[]>([]);
+  const [editStrategicRecommendations, setEditStrategicRecommendations] = useState<string[]>([]);
+  const [editRiskAssessment, setEditRiskAssessment] = useState<string[]>([]);
+
+  // Debug logging for state changes
+  useEffect(() => {
+    console.log('🔍 Market Entry - State Debug:', {
+      isEditing,
+      editExecutiveSummary: editExecutiveSummary.substring(0, 50) + '...',
+      propExecutiveSummary: (executiveSummary || '').substring(0, 50) + '...',
+      editRecommendedChannel,
+      propRecommendedChannel: recommendedChannel,
+      timestamp: Date.now()
+    });
+  }, [isEditing, editExecutiveSummary, executiveSummary, editRecommendedChannel, recommendedChannel]);
 
   // Fetch Market Entry data from API
   const fetchMarketEntryData = async (refresh = false) => {
@@ -95,11 +121,18 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
       setIsLoading(true);
       setError(null);
 
-      // Get company profile data for dynamic reports
-      const profile = companyProfile || JSON.parse(localStorage.getItem('companyProfile') || '{}');
+      // Get company profile data for dynamic reports (user-specific)
+      const profile = companyProfile || JSON.parse(getUserLocalStorage('companyProfile', currentUser?.uid) || '{}');
+      
+      if (!currentUser?.uid) {
+        console.error('User not authenticated');
+        setErrorData('User not authenticated');
+        setIsLoadingData(false);
+        return;
+      }
       
       const payload = {
-        user_id: "brewra",
+        user_id: currentUser.uid,
         component_name: "Market Entry & Growth Strategy", // Exact match from swagger
         refresh: refresh,
         force_refresh: refresh,
@@ -107,38 +140,20 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
         bypass_all_cache: refresh,
         request_timestamp: Date.now(),
         request_id: Math.random().toString(36).substr(2, 6),
-        additionalPrompt: profile.companyUrl ? `Company: ${profile.companyUrl}, Industry: ${profile.industry}, Size: ${profile.companySize}, GTM: ${profile.primaryGTMModel}, Goals: ${profile.strategicGoals}` : "",
-        data: {
-          company: profile.companyUrl || "OrbiSelf",
-          product: "Convoic.AI", 
-          target_market: profile.targetMarkets?.[0] || "Indian college students (Tier 2 & 3)",
-          region: profile.targetMarkets?.[0] || "India",
-          timestamp: Date.now(),
-          force_new_data: refresh
-        }
+        data: {}
       };
 
-      console.log('📤 MarketEntrySection: Sending API request with payload:', payload);
+      console.log('🔧 MARKET ENTRY SECTION CALL: Sending API request with payload:', payload);
+      console.log('🔧 MARKET ENTRY SECTION CALL: Component name:', payload.component_name);
       console.log('⏰ MARKET ENTRY REQUEST TIMESTAMP:', payload.request_timestamp);
 
-      const response = await executeWithRateLimit(
-        () => fetch('https://backend-11kr.onrender.com/market-research', {
+      const result = await executeWithRateLimit(
+        () => apiFetchJson('market-research', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload)
+          body: payload
         }),
         'Market Entry'
       );
-
-      console.log('📨 MarketEntrySection: API response status:', response.status);
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
       console.log('📊 MarketEntrySection: API result:', result);
       console.log('📊 Full API Response Structure:', result);
 
@@ -179,47 +194,122 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
     }
   };
 
-  // Remove internal data fetching - let parent handle all data fetching
-  // useEffect(() => {
-  //   console.log('🚀 MarketEntrySection: Component mounted - fetching fresh data');
-  //   const timer = setTimeout(() => {
-  //     fetchMarketEntryData(false);
-  //   }, 600); // Slight delay to avoid conflicts with other components
-  //   
-  //   return () => clearTimeout(timer);
-  // }, []);
+  // Fetch data when component mounts if no data is available
+  useEffect(() => {
+    console.log('🚀 MarketEntrySection: Component mounted - checking for data');
+    
+    // Check if we have any meaningful data in our local state OR props
+    const hasLocalData = marketEntryData && (marketEntryData.executiveSummary || marketEntryData.entryBarriers?.length > 0);
+    const hasPropsData = executiveSummary || entryBarriers.length > 0 || recommendedChannel || timeToMarket || topBarrier || competitiveDifferentiation.length > 0 || strategicRecommendations.length > 0 || riskAssessment.length > 0;
+    
+    // Check if we're receiving fallback data from parent (the "being prepared" message)
+    const isReceivingFallbackData = executiveSummary?.includes('being prepared') || 
+                                   executiveSummary?.includes('Market entry analysis is being prepared');
+    
+    if (!hasLocalData && (!hasPropsData || isReceivingFallbackData)) {
+      console.log('🚀 MarketEntrySection: No data found or receiving fallback data, fetching fresh data');
+      // Reduced delay for faster loading
+      const timer = setTimeout(() => {
+        fetchMarketEntryData(false);
+      }, 1500);
+      
+      return () => clearTimeout(timer);
+    } else {
+      console.log('🚀 MarketEntrySection: Data already available, skipping fetch');
+    }
+  }, []);
   
-  // Remove internal refresh logic - let parent handle all refresh logic
-  // useEffect(() => {
-  //   if (isRefreshing) {
-  //     console.log('🔄 Market Entry - Refresh triggered by parent');
-  //     // Clear old data immediately to prevent showing stale data
-  //     setMarketEntryData(null);
-  //     setError(null);
-  //     setIsLoading(true);
-  //     fetchMarketEntryData(true);
-  //   }
-  // }, [isRefreshing]);
+  // Handle refresh when parent triggers it
+  useEffect(() => {
+    if (isRefreshing) {
+      console.log('🔄 Market Entry - Refresh triggered by parent');
+      // Don't clear data immediately - let fresh data replace it
+      setError(null);
+      setIsLoading(true);
+      fetchMarketEntryData(true);
+    }
+  }, [isRefreshing]);
+
+  // Sync with props when they change (similar to other components)
+  // Only sync when not editing to avoid overwriting user's current edits
+  useEffect(() => {
+    if (!isEditing) {
+      console.log('🔄 MarketEntrySection - Props changed, syncing with local state (not editing)');
+      
+      // If we have fresh props data and no local data, or if props are more recent
+      const hasPropsData = executiveSummary || entryBarriers.length > 0 || recommendedChannel || timeToMarket || topBarrier || competitiveDifferentiation.length > 0 || strategicRecommendations.length > 0 || riskAssessment.length > 0;
+      
+      if (hasPropsData) {
+        // Always update local data with props when not editing to reflect parent state changes
+        console.log('🔄 MarketEntrySection - Updating local data with props');
+        setMarketEntryData({
+          executiveSummary,
+          entryBarriers,
+          recommendedChannel,
+          timeToMarket,
+          topBarrier,
+          competitiveDifferentiation,
+          strategicRecommendations,
+          riskAssessment,
+          timestamp: Date.now()
+        });
+      }
+    }
+  }, [executiveSummary, entryBarriers, recommendedChannel, timeToMarket, topBarrier, competitiveDifferentiation, strategicRecommendations, riskAssessment, isEditing]);
+
+  // Handle modify button click - initialize edit fields with current data
+  const handleModify = () => {
+    // Initialize all edit fields with current data
+    setEditExecutiveSummary(displayData.executiveSummary || '');
+    setEditEntryBarriers(displayData.entryBarriers || []);
+    setEditRecommendedChannel(displayData.recommendedChannel || '');
+    setEditTimeToMarket(displayData.timeToMarket || '');
+    setEditTopBarrier(displayData.topBarrier || '');
+    setEditCompetitiveDifferentiation(displayData.competitiveDifferentiation || []);
+    setEditStrategicRecommendations(displayData.strategicRecommendations || []);
+    setEditRiskAssessment(displayData.riskAssessment || []);
+    
+    onToggleEdit();
+  };
 
   const handleMarketEntrySaveChanges = () => {
     console.log('🚀 Market Entry Section - Save function called!');
     
+    // Apply local edits to parent state
+    onExecutiveSummaryChange(editExecutiveSummary);
+    onEntryBarriersChange(editEntryBarriers);
+    onRecommendedChannelChange(editRecommendedChannel);
+    onTimeToMarketChange(editTimeToMarket);
+    onTopBarrierChange(editTopBarrier);
+    onCompetitiveDifferentiationChange(editCompetitiveDifferentiation);
+    onStrategicRecommendationsChange(editStrategicRecommendations);
+    onRiskAssessmentChange(editRiskAssessment);
+    
     // Log original and modified JSON for debugging
-    // Note: Since this component updates parent state directly through onChange handlers,
-    // both original and modified will show the current state (which represents the edited values)
-    const currentJson = {
-      executiveSummary: executiveSummary || '',
-      entryBarriers: entryBarriers || [],
-      recommendedChannel: recommendedChannel || '',
-      timeToMarket: timeToMarket || '',
-      topBarrier: topBarrier || '',
-      competitiveDifferentiation: competitiveDifferentiation || [],
-      strategicRecommendations: strategicRecommendations || [],
-      riskAssessment: riskAssessment || []
+    const originalJson = {
+      executiveSummary: displayData.executiveSummary || '',
+      entryBarriers: displayData.entryBarriers || [],
+      recommendedChannel: displayData.recommendedChannel || '',
+      timeToMarket: displayData.timeToMarket || '',
+      topBarrier: displayData.topBarrier || '',
+      competitiveDifferentiation: displayData.competitiveDifferentiation || [],
+      strategicRecommendations: displayData.strategicRecommendations || [],
+      riskAssessment: displayData.riskAssessment || []
     };
 
-    console.log('🚀 Market Entry Section - original_json:', JSON.stringify(currentJson, null, 2));
-    console.log('🚀 Market Entry Section - modified_json:', JSON.stringify(currentJson, null, 2));
+    const modifiedJson = {
+      executiveSummary: editExecutiveSummary,
+      entryBarriers: editEntryBarriers,
+      recommendedChannel: editRecommendedChannel,
+      timeToMarket: editTimeToMarket,
+      topBarrier: editTopBarrier,
+      competitiveDifferentiation: editCompetitiveDifferentiation,
+      strategicRecommendations: editStrategicRecommendations,
+      riskAssessment: editRiskAssessment
+    };
+
+    console.log('🚀 Market Entry Section - original_json:', JSON.stringify(originalJson, null, 2));
+    console.log('🚀 Market Entry Section - modified_json:', JSON.stringify(modifiedJson, null, 2));
 
     onSaveChanges();
   };
@@ -232,27 +322,27 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
       // Prepare original data
       const originalData = {
         section: 'market-entry',
-        executiveSummary: executiveSummary,
-        entryBarriers: entryBarriers,
-        recommendedChannel: recommendedChannel,
-        timeToMarket: timeToMarket,
-        topBarrier: topBarrier,
-        competitiveDifferentiation: competitiveDifferentiation,
-        strategicRecommendations: strategicRecommendations,
-        riskAssessment: riskAssessment
+        executiveSummary: displayData.executiveSummary,
+        entryBarriers: displayData.entryBarriers,
+        recommendedChannel: displayData.recommendedChannel,
+        timeToMarket: displayData.timeToMarket,
+        topBarrier: displayData.topBarrier,
+        competitiveDifferentiation: displayData.competitiveDifferentiation,
+        strategicRecommendations: displayData.strategicRecommendations,
+        riskAssessment: displayData.riskAssessment
       };
 
-      // Prepare modified data (same since onChange handlers update immediately)
+      // Prepare modified data using local edit state
       const modifiedData = {
         section: 'market-entry',
-        executiveSummary: executiveSummary,
-        entryBarriers: entryBarriers,
-        recommendedChannel: recommendedChannel,
-        timeToMarket: timeToMarket,
-        topBarrier: topBarrier,
-        competitiveDifferentiation: competitiveDifferentiation,
-        strategicRecommendations: strategicRecommendations,
-        riskAssessment: riskAssessment
+        executiveSummary: editExecutiveSummary,
+        entryBarriers: editEntryBarriers,
+        recommendedChannel: editRecommendedChannel,
+        timeToMarket: editTimeToMarket,
+        topBarrier: editTopBarrier,
+        competitiveDifferentiation: editCompetitiveDifferentiation,
+        strategicRecommendations: editStrategicRecommendations,
+        riskAssessment: editRiskAssessment
       };
 
       // Prepare data for API according to schema
@@ -290,50 +380,33 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      // Fetch updated data using GET API
-      const getResponse = await fetch('https://backend-11kr.onrender.com/market_intelligence', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-
-      console.log('📥 GET /market_intelligence status:', getResponse.status);
-
-      if (!getResponse.ok) {
-        throw new Error(`HTTP error! status: ${getResponse.status}`);
-      }
-
-      const getData = await getResponse.json();
-      console.log('✅ Market Entry - GET /market_intelligence successful:', getData);
+      // Update parent state with local values (trust the user's edits)
+      onExecutiveSummaryChange(editExecutiveSummary);
+      onEntryBarriersChange(editEntryBarriers);
+      onRecommendedChannelChange(editRecommendedChannel);
+      onTimeToMarketChange(editTimeToMarket);
+      onTopBarrierChange(editTopBarrier);
+      onCompetitiveDifferentiationChange(editCompetitiveDifferentiation);
+      onStrategicRecommendationsChange(editStrategicRecommendations);
+      onRiskAssessmentChange(editRiskAssessment);
       
-      // Update component with fresh data from API response
-      if (getData && getData.market_entry_data) {
-        const apiData = getData.market_entry_data;
-        
-        // Update local state with API response data
-        onExecutiveSummaryChange(apiData.executiveSummary || '');
-        onEntryBarriersChange(apiData.entryBarriers || []);
-        const channelValue = typeof apiData.recommendedChannel === 'object' 
-          ? (apiData.recommendedChannel?.channel || JSON.stringify(apiData.recommendedChannel))
-          : apiData.recommendedChannel || '';
-        onRecommendedChannelChange(channelValue);
-        onTimeToMarketChange(apiData.timeToMarket || '');
-        onTopBarrierChange(apiData.topBarrier || '');
-        onCompetitiveDifferentiationChange(apiData.competitiveDifferentiation || []);
-        onStrategicRecommendationsChange(apiData.strategicRecommendations || []);
-        onRiskAssessmentChange(apiData.riskAssessment || []);
-        
-        console.log('✅ Market Entry - State updated with API response data');
-      }
-      
-      // Also refresh the component data
-      await fetchMarketEntryData();
+      console.log('✅ Market Entry - Parent state updated with local edits');
       
       // Call the original save function
       onSaveChanges();
     } catch (error) {
       console.error('❌ Market Entry - Error saving changes:', error);
+      
+      // Even if API fails, update parent state with local values
+      onExecutiveSummaryChange(editExecutiveSummary);
+      onEntryBarriersChange(editEntryBarriers);
+      onRecommendedChannelChange(editRecommendedChannel);
+      onTimeToMarketChange(editTimeToMarket);
+      onTopBarrierChange(editTopBarrier);
+      onCompetitiveDifferentiationChange(editCompetitiveDifferentiation);
+      onStrategicRecommendationsChange(editStrategicRecommendations);
+      onRiskAssessmentChange(editRiskAssessment);
+      
       // Still call the original save function even if API fails
       onSaveChanges();
     }
@@ -377,6 +450,78 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
     </div>
   );
 
+  // Check if we have any meaningful data to display (prioritize local data over props)
+  const displayData = marketEntryData || {
+    executiveSummary,
+    entryBarriers,
+    recommendedChannel,
+    timeToMarket,
+    topBarrier,
+    competitiveDifferentiation,
+    strategicRecommendations,
+    riskAssessment
+  };
+  
+  // Check if we're showing fallback data (the "being prepared" message)
+  const isShowingFallbackData = displayData.executiveSummary?.includes('being prepared') || 
+                                displayData.executiveSummary?.includes('Market entry analysis is being prepared');
+  
+  const hasData = displayData.executiveSummary || displayData.entryBarriers?.length > 0 || displayData.recommendedChannel || displayData.timeToMarket || displayData.topBarrier || displayData.competitiveDifferentiation?.length > 0 || displayData.strategicRecommendations?.length > 0 || displayData.riskAssessment?.length > 0;
+
+  // Show loading state only when actively loading and have no data, not when showing fallback data
+  if (isLoading && !hasData) {
+    return (
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+            <MapPin className="h-5 w-5 text-purple-600" />
+            Market Entry & Growth Strategy
+          </h2>
+        </div>
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading market entry data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show empty state if we have no data and not loading
+  if (!hasData && !isLoading) {
+    return (
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+            <MapPin className="h-5 w-5 text-purple-600" />
+            Market Entry & Growth Strategy
+          </h2>
+          <div className="flex items-center gap-3">
+            {!isSplitView && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="sm" onClick={() => onScoutIconClick('market-entry')} className="text-purple-600 hover:text-purple-700 hover:bg-purple-50 transition-all duration-200 hover:shadow-md hover:shadow-purple-200/50 relative">
+                    <div className="absolute inset-0 rounded-md bg-gradient-to-r from-purple-400/20 to-blue-400/20 animate-pulse opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
+                    <Bot className="h-5 w-5 relative z-10" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Generate Market Entry Report with Scout</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
+        </div>
+        <div className="text-center py-12">
+          <p className="text-gray-600 mb-4">No market entry data available</p>
+          <Button onClick={() => onScoutIconClick('market-entry')} variant="outline" className="text-purple-600 border-purple-200 hover:bg-purple-50">
+            <Bot className="h-4 w-4 mr-2" />
+            Generate Report with Scout
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-6">
       <div className="flex items-center justify-between mb-6">
@@ -386,7 +531,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
         </h2>
         <div className="flex items-center gap-3">
           <EditDropdownMenu
-            onModify={onToggleEdit}
+            onModify={handleModify}
             onComment={() => onScoutIconClick('market-entry', hasEdits)}
             className="text-purple-800 hover:text-purple-900"
           />
@@ -415,23 +560,25 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
       {!isExpanded && !isEditing && (
         <div className="space-y-4">
           <div className="text-sm text-gray-700 leading-relaxed">
-            {executiveSummary.slice(0, 200)}...
+            {displayData.executiveSummary?.slice(0, 200)}...
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-purple-50 p-3 rounded-lg border border-purple-200">
               <div className="text-xs font-medium text-purple-700 mb-1">Top Entry Channel</div>
               <div className="text-sm font-semibold text-purple-900">
-                {recommendedChannel ? String(recommendedChannel) : 'N/A'}
+                {typeof displayData.recommendedChannel === 'object' && displayData.recommendedChannel !== null 
+                  ? (displayData.recommendedChannel.channel || JSON.stringify(displayData.recommendedChannel))
+                  : displayData.recommendedChannel || 'N/A'}
               </div>
             </div>
             <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
               <div className="text-xs font-medium text-blue-700 mb-1">Time to Market</div>
-              <div className="text-sm font-semibold text-blue-900">{timeToMarket}</div>
+              <div className="text-sm font-semibold text-blue-900">{displayData.timeToMarket}</div>
             </div>
             <div className="bg-orange-50 p-3 rounded-lg border border-orange-200">
               <div className="text-xs font-medium text-orange-700 mb-1">Top Barrier</div>
-              <div className="text-sm font-semibold text-orange-900">{topBarrier}</div>
+              <div className="text-sm font-semibold text-orange-900">{displayData.topBarrier}</div>
             </div>
           </div>
 
@@ -446,16 +593,19 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
             </div>
           </div>
 
-          <div className="flex justify-center pt-4">
-            <Button
-              onClick={() => onExpandToggle(true)}
-              variant="outline"
-              className="flex items-center space-x-2 text-sm"
-            >
-              <span>Read More</span>
-              <ChevronDown className="h-4 w-4" />
-            </Button>
-          </div>
+          {/* Read More Button - Only show when not expanded and not in split view */}
+          {!isExpanded && !isSplitView && (
+            <div className="flex justify-center pt-4">
+              <Button
+                onClick={() => onExpandToggle(true)}
+                variant="outline"
+                className="flex items-center space-x-2 text-sm hover:bg-gray-50"
+              >
+                <span>Read More</span>
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </div>
       )}
 
@@ -468,7 +618,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
               Executive Summary
             </h3>
             <div className="text-sm text-gray-700 leading-relaxed space-y-3">
-              {executiveSummary.split('\n').map((paragraph, index) => (
+              {displayData.executiveSummary.split('\n').map((paragraph, index) => (
                 <p key={index}>{paragraph}</p>
               ))}
             </div>
@@ -478,16 +628,18 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
             <div className="bg-purple-50 p-3 rounded-lg border border-purple-200">
               <div className="text-xs font-medium text-purple-700 mb-1">Top Entry Channel</div>
               <div className="text-sm font-semibold text-purple-900">
-                {recommendedChannel ? String(recommendedChannel) : 'N/A'}
+                {typeof displayData.recommendedChannel === 'object' && displayData.recommendedChannel !== null 
+                  ? (displayData.recommendedChannel.channel || JSON.stringify(displayData.recommendedChannel))
+                  : displayData.recommendedChannel || 'N/A'}
               </div>
             </div>
             <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
               <div className="text-xs font-medium text-blue-700 mb-1">Time to Market</div>
-              <div className="text-sm font-semibold text-blue-900">{timeToMarket}</div>
+              <div className="text-sm font-semibold text-blue-900">{displayData.timeToMarket}</div>
             </div>
             <div className="bg-orange-50 p-3 rounded-lg border border-orange-200">
               <div className="text-xs font-medium text-orange-700 mb-1">Top Barrier</div>
-              <div className="text-sm font-semibold text-orange-900">{topBarrier}</div>
+              <div className="text-sm font-semibold text-orange-900">{displayData.topBarrier}</div>
             </div>
           </div>
 
@@ -509,7 +661,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
                 Entry Barriers
               </h4>
               <ul className="space-y-2">
-                {entryBarriers.map((barrier, index) => (
+                {displayData.entryBarriers.map((barrier, index) => (
                   <li key={index} className="text-sm text-gray-700 flex items-start gap-2">
                     <span className="text-orange-500 mt-1">•</span>
                     {barrier}
@@ -524,7 +676,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
                 Competitive Differentiation
               </h4>
               <ul className="space-y-2">
-                {competitiveDifferentiation.map((diff, index) => (
+                {displayData.competitiveDifferentiation.map((diff, index) => (
                   <li key={index} className="text-sm text-gray-700 flex items-start gap-2">
                     <span className="text-green-500 mt-1">•</span>
                     {diff}
@@ -540,7 +692,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
               Strategic Recommendations
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {strategicRecommendations.map((recommendation, index) => (
+              {displayData.strategicRecommendations.map((recommendation, index) => (
                 <div key={index} className="bg-blue-50 p-3 rounded-lg border border-blue-200">
                   <div className="text-sm font-medium text-blue-900">{recommendation}</div>
                 </div>
@@ -554,7 +706,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
               Risk Assessment
             </h4>
             <div className="space-y-2">
-              {riskAssessment.map((risk, index) => (
+              {displayData.riskAssessment.map((risk, index) => (
                 <div key={index} className="bg-red-50 p-3 rounded-lg border border-red-200">
                   <div className="text-sm text-red-900">{risk}</div>
                 </div>
@@ -610,8 +762,8 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
               </Label>
               <Textarea
                 id="market-entry-executive-summary"
-                value={executiveSummary}
-                onChange={(e) => onExecutiveSummaryChange(e.target.value)}
+                value={editExecutiveSummary}
+                onChange={(e) => setEditExecutiveSummary(e.target.value)}
                 rows={4}
                 className="w-full"
                 placeholder="Enter executive summary for market entry strategy..."
@@ -636,8 +788,8 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
                 </Label>
                 <Input
                   id="recommended-channel"
-                  value={recommendedChannel}
-                  onChange={(e) => onRecommendedChannelChange(e.target.value)}
+                  value={editRecommendedChannel}
+                  onChange={(e) => setEditRecommendedChannel(e.target.value)}
                   placeholder="e.g., Local partnerships"
                 />
               </div>
@@ -647,8 +799,8 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
                 </Label>
                 <Input
                   id="time-to-market"
-                  value={timeToMarket}
-                  onChange={(e) => onTimeToMarketChange(e.target.value)}
+                  value={editTimeToMarket}
+                  onChange={(e) => setEditTimeToMarket(e.target.value)}
                   placeholder="e.g., 12-18 months"
                 />
               </div>
@@ -658,8 +810,8 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
                 </Label>
                 <Input
                   id="top-barrier"
-                  value={topBarrier}
-                  onChange={(e) => onTopBarrierChange(e.target.value)}
+                  value={editTopBarrier}
+                  onChange={(e) => setEditTopBarrier(e.target.value)}
                   placeholder="e.g., Data residency laws"
                 />
               </div>
@@ -678,14 +830,14 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
             </button>
             <div className="space-y-4">
               <Label className="text-sm font-medium text-gray-700">Entry Barriers</Label>
-              {entryBarriers.map((barrier, index) => (
+              {editEntryBarriers.map((barrier, index) => (
                 <div key={index} className="flex gap-2">
                   <Input
                     value={barrier}
                     onChange={(e) => {
-                      const updated = [...entryBarriers];
+                      const updated = [...editEntryBarriers];
                       updated[index] = e.target.value;
-                      onEntryBarriersChange(updated);
+                      setEditEntryBarriers(updated);
                     }}
                     placeholder={`Entry barrier ${index + 1}`}
                   />
@@ -693,8 +845,8 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      const updated = entryBarriers.filter((_, i) => i !== index);
-                      onEntryBarriersChange(updated);
+                      const updated = editEntryBarriers.filter((_, i) => i !== index);
+                      setEditEntryBarriers(updated);
                     }}
                   >
                     <X className="h-4 w-4" />
@@ -704,7 +856,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => onEntryBarriersChange([...entryBarriers, ''])}
+                onClick={() => setEditEntryBarriers([...editEntryBarriers, ''])}
               >
                 Add Barrier
               </Button>

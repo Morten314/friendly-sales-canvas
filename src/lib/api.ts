@@ -1,8 +1,9 @@
 // API utility for handling base URL and proxy configuration
 const isDevelopment = import.meta.env.DEV;
+const isVercel = import.meta.env.VITE_VERCEL || window.location.hostname.includes('vercel.app');
 
-// Use proxy in development, direct URL in production
-export const API_BASE_URL = isDevelopment 
+// Use proxy in development and Vercel, direct URL in other production environments
+export const API_BASE_URL = (isDevelopment || isVercel)
   ? '/api' 
   : 'https://backend-11kr.onrender.com';
 
@@ -29,9 +30,19 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
     console.log('🔧 API Fetch: Body type:', typeof options.body);
   }
   
+  // Get JWT token for authentication
+  let authHeader = '';
+  try {
+    const jwtManager = (await import('./jwt')).default;
+    authHeader = await jwtManager.getAuthHeader();
+  } catch (error) {
+    console.warn('🔐 No JWT token available for API request:', error);
+  }
+  
   const defaultOptions: RequestInit = {
     headers: {
       'Content-Type': 'application/json',
+      ...(authHeader && { 'Authorization': authHeader }),
       ...options.headers,
     },
     ...options,
@@ -60,28 +71,9 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
   return response;
 };
 
-// Helper function for JSON responses with cache busting
+// Helper function for JSON responses
 export const apiFetchJson = async (endpoint: string, options: RequestInit = {}) => {
   const response = await apiFetch(endpoint, options);
-  return response.json();
-};
-
-// Helper function for cache-busted API calls
-export const apiFetchJsonWithCacheBust = async (endpoint: string, options: RequestInit = {}) => {
-  // Add cache busting parameter
-  const cacheBuster = `_cb=${Date.now()}&_r=${Math.random().toString(36).substring(7)}`;
-  const separator = endpoint.includes('?') ? '&' : '?';
-  const cacheBustedEndpoint = `${endpoint}${separator}${cacheBuster}`;
-  
-  const response = await apiFetch(cacheBustedEndpoint, {
-    ...options,
-    headers: {
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
-      'Expires': '0',
-      ...options.headers,
-    }
-  });
   return response.json();
 };
 

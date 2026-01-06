@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PWA Icon Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .icon-preview {
+            display: inline-block;
+            margin: 20px;
+            text-align: center;
+        }
+        canvas {
+            border: 1px solid #ccc;
+            margin: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        button:hover {
+            background: #1d4ed8;
+        }
+    </style>
+</head>
+<body>
+    <h1>PWA Icon Generator</h1>
+    <p>Click the buttons below to generate PWA icons. The icons will be downloaded automatically.</p>
+    
+    <div class="icon-preview">
+        <h3>192x192 Icon</h3>
+        <canvas id="canvas192" width="192" height="192"></canvas>
+        <br>
+        <button onclick="generateIcon(192)">Generate & Download 192x192</button>
+    </div>
+    
+    <div class="icon-preview">
+        <h3>512x512 Icon</h3>
+        <canvas id="canvas512" width="512" height="512"></canvas>
+        <br>
+        <button onclick="generateIcon(512)">Generate & Download 512x512</button>
+    </div>
+    
+    <div class="icon-preview">
+        <h3>Apple Touch Icon (180x180)</h3>
+        <canvas id="canvas180" width="180" height="180"></canvas>
+        <br>
+        <button onclick="generateIcon(180)">Generate & Download Apple Touch Icon</button>
+    </div>
+
+    <script>
+        let logoImage = null;
+        
+        // Load the logo image first
+        const img = new Image();
+        img.onload = () => {
+            logoImage = img;
+            // Generate previews once logo is loaded (without downloading)
+            drawPreview(192);
+            drawPreview(512);
+            drawPreview(180);
+        };
+        img.onerror = () => {
+            console.error('Could not load logo.png. Make sure logo.png exists in the same folder.');
+            // Fallback: show message
+            document.body.innerHTML += '<p style="color: red;">Error: Could not load logo.png. Please make sure logo.png exists in the public folder.</p>';
+        };
+        img.src = 'logo.png';
+        
+        // Function to draw preview on canvas (no download)
+        function drawPreview(size) {
+            const canvas = document.getElementById(`canvas${size}`);
+            if (!canvas) return;
+            
+            const ctx = canvas.getContext('2d');
+            
+            if (!logoImage) {
+                return;
+            }
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, size, size);
+            
+            // Draw the logo image, scaled to fit the canvas
+            ctx.drawImage(logoImage, 0, 0, size, size);
+        }
+        
+        // Function to generate and download icon
+        function generateIcon(size) {
+            const canvas = document.getElementById(`canvas${size}`);
+            if (!canvas) return;
+            
+            const ctx = canvas.getContext('2d');
+            
+            if (!logoImage) {
+                alert('Logo not loaded yet. Please wait a moment and try again.');
+                return;
+            }
+            
+            // Make sure canvas has the logo drawn
+            ctx.clearRect(0, 0, size, size);
+            ctx.drawImage(logoImage, 0, 0, size, size);
+            
+            // Download with proper MIME type
+            const filename = size === 180 ? 'apple-touch-icon.png' : `pwa-${size}x${size}.png`;
+            canvas.toBlob((blob) => {
+                if (!blob) {
+                    alert('Failed to generate icon. Please try again.');
+                    return;
+                }
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a); // Required for some browsers
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                console.log(`Downloaded: ${filename}`);
+            }, 'image/png');
+        }
+    </script>
+</body>
+</html>
+
+

@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,6 +26,7 @@ interface UserProfileProps {
 }
 
 export function UserProfile({ onProfileUpdate, isEditMode = false, profileData }: UserProfileProps) {
+  const { currentUser } = useAuth();
   const [formData, setFormData] = useState({
     name: "",
     role: "",
@@ -48,7 +50,7 @@ export function UserProfile({ onProfileUpdate, isEditMode = false, profileData }
         professionalBackground: profileData.professionalBackground || "",
         personalKPIs: profileData.personalKPIs || "",
       });
-      setSocialMediaUrls(profileData.socialMediaUrls || []);
+      setSocialMediaUrls(Array.isArray(profileData.socialMediaUrls) ? profileData.socialMediaUrls : []);
     }
   }, [profileData]);
 
@@ -91,21 +93,27 @@ export function UserProfile({ onProfileUpdate, isEditMode = false, profileData }
   // };
 
   const handleSave = async () => {
+    if (!currentUser?.uid) {
+      console.error('User not authenticated');
+      alert('Please log in to save your profile');
+      return;
+    }
     const payload = {
+      user_id: currentUser.uid,
       name: formData.name,
       role: formData.role,
       department: formData.department,
       experienceLevel: formData.experienceLevel,
       professionalBackground: formData.professionalBackground,
       personalKPIs: formData.personalKPIs,
-      socialMediaUrls: socialMediaUrls.map(url => ({
+      socialMediaUrls: Array.isArray(socialMediaUrls) ? socialMediaUrls.map(url => ({
         platform: url.platform,
         url: url.url,
-      })),
+      })) : [],
     };
 
     try {
-      const response = await fetch("https://backend-11kr.onrender.com/profile/user", {
+      const response = await fetch("/api/profile/user", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -230,7 +238,7 @@ export function UserProfile({ onProfileUpdate, isEditMode = false, profileData }
 
           <div className="space-y-2 md:col-span-2">
             <Label htmlFor="socialMediaUrls">Social Media URLs</Label>
-            {socialMediaUrls.map((socialUrl, index) => (
+            {Array.isArray(socialMediaUrls) && socialMediaUrls.map((socialUrl, index) => (
               <div key={index} className="flex gap-2 items-center">
                 <div className="w-24 text-sm font-medium text-gray-600">
                   {getPlatformLabel(socialUrl.platform)}:

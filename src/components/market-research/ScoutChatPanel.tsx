@@ -3,6 +3,8 @@ import { Card } from '@/components/ui/card';
 import { Bot, X, Send, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useAuth } from '@/contexts/AuthContext';
+import { getUserLocalStorage } from '@/utils/cacheUtils';
 
 interface ScoutChatPanelProps {
   showScoutChat: boolean;
@@ -29,6 +31,7 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
   customMessage,
   onClose
 }) => {
+  const { currentUser } = useAuth();
   const [userInput, setUserInput] = useState('');
   const [chatResponse, setChatResponse] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
@@ -50,7 +53,7 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
     try {
       // Determine API endpoint based on context and edit state
       const isEditMode = hasEdits || isPostSave;
-      const baseUrl = 'https://backend-11kr.onrender.com';
+      const baseUrl = '/api';
       
       let url: string;
       let requestOptions: RequestInit;
@@ -59,9 +62,9 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
         // Use /ask endpoint with GET method for edit context
         url = `${baseUrl}/ask/?question=${encodeURIComponent(question)}`;
         
-        // Get the stored JSON data from localStorage
-        const storedOriginalJson = localStorage.getItem(`${context}_original_json`);
-        const storedModifiedJson = localStorage.getItem(`${context}_modified_json`);
+        // Get the stored JSON data from localStorage (user-specific)
+        const storedOriginalJson = getUserLocalStorage(`${context}_original_json`, currentUser?.uid);
+        const storedModifiedJson = getUserLocalStorage(`${context}_modified_json`, currentUser?.uid);
         
         if (storedOriginalJson && storedModifiedJson) {
           console.log('📤 Sending to /ask API with JSON context:', { 

@@ -36,7 +36,7 @@ export function ScoutSettingsForm({ isOpen, onOpenChange }: ScoutSettingsFormPro
 
   const handleSave = async () => {
   try {
-    const response = await fetch("https://backend-11kr.onrender.com/profile/agent_name", {
+    const response = await fetch("/api/profile/agent_name", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

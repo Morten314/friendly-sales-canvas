@@ -11,6 +11,8 @@ import { Globe, TrendingUp, Users, Building, MapPin, Target, Bot, MessageSquare,
 import { ProfilerChatPanel } from "./ProfilerChatPanel";
 import { ICPEditHistory } from "./ICPEditHistory";
 import { useToast } from "@/hooks/use-toast";
+import { profilerCache } from "@/lib/profilerCache";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface SuggestedICP {
   id: string;
@@ -27,12 +29,12 @@ interface SuggestedICPsGalleryProps {
   onICPSelect?: (icp: SuggestedICP) => void;
   onProfilerChatOpen?: (context?: string) => void;
   refreshTrigger?: number;
-  onManualRefresh?: () => void;
   isRefreshing?: boolean;
   onRefreshComplete?: () => void; // Callback to notify when refresh is complete
 }
 
-export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshTrigger, onManualRefresh, isRefreshing = false, onRefreshComplete }: SuggestedICPsGalleryProps) => {
+export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshTrigger, isRefreshing = false, onRefreshComplete }: SuggestedICPsGalleryProps) => {
+  const { currentUser } = useAuth();
   const [selectedICP, setSelectedICP] = useState<string | null>(null);
   const [editingICP, setEditingICP] = useState<string | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
@@ -93,6 +95,32 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
       console.log("Timestamp:", new Date().toISOString());
       console.log("RefreshTrigger:", refreshTrigger);
       console.log("Is Refresh Mode:", refreshTrigger > 0);
+      
+      // Check cache first (unless it's a refresh trigger)
+      if (refreshTrigger === 0 && profilerCache.hasValidCache(currentUser?.uid)) {
+        console.log("📦 Using cached ICP data");
+        const cachedData = profilerCache.getCachedData(currentUser?.uid);
+        if (cachedData && cachedData.icpCards.length > 0) {
+          // Convert cached data to SuggestedICP format
+          const cachedICPs: SuggestedICP[] = cachedData.icpCards.map(icp => ({
+            id: icp.id,
+            industry: icp.industry,
+            segment: icp.name,
+            companySize: icp.companySize,
+            decisionMakers: icp.buyingSignals || [],
+            regions: [], // Not stored in cache
+            keyAttributes: icp.painPoints || [],
+            growthIndicator: "High" // Default value
+          }));
+          
+          setSuggestedICPs(cachedICPs);
+          setLoading(false);
+          setError(null);
+          console.log("✅ Loaded", cachedICPs.length, "ICPs from cache");
+          return;
+        }
+      }
+      
       setLoading(true);
       setError(null);
       
@@ -102,15 +130,30 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
       // Add timestamp to force fresh data and avoid caching
       const timestamp = new Date().getTime();
       
+      // Build base API URL with user_id
+      const baseParams = new URLSearchParams({
+        t: timestamp.toString(),
+        fresh: 'true'
+      });
+      
+      // Always include user_id if available
+      if (currentUser?.uid) {
+        baseParams.set('user_id', currentUser.uid);
+      }
+      
       // For refresh mode, fetch company profile and include it in the request
-      let apiUrl = `/api/icp?t=${timestamp}&fresh=true`;
+      let apiUrl = `/api/icp?${baseParams.toString()}`;
       
       if (refreshTrigger > 0) {
         console.log("🔄 REFRESH MODE - Fetching company profile for ICP generation");
         
         try {
-          // Fetch the latest company profile from backend
-          const profileResponse = await fetch('/api/profile/company', {
+          // Fetch the latest company profile from backend with user_id
+          const profileUrl = currentUser?.uid 
+            ? `/api/profile/company?user_id=${currentUser.uid}`
+            : '/api/profile/company';
+          
+          const profileResponse = await fetch(profileUrl, {
             method: 'GET',
             headers: {
               'Content-Type': 'application/json',
@@ -215,7 +258,14 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
           
           // Only try basic request if it's not a rate limit (rate limits affect all requests)
           if (!isRateLimit) {
-            const basicUrl = `/api/icp?t=${Date.now()}&refresh=true`;
+            const basicParams = new URLSearchParams({
+              t: Date.now().toString(),
+              refresh: 'true'
+            });
+            if (currentUser?.uid) {
+              basicParams.set('user_id', currentUser.uid);
+            }
+            const basicUrl = `/api/icp?${basicParams.toString()}`;
             console.log("Basic fallback URL:", basicUrl);
             
             try {
@@ -388,6 +438,27 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
       
       setSuggestedICPs(transformedICPs);
       setError(null);
+      
+      // Cache the transformed ICPs for future use
+      if (transformedICPs.length > 0) {
+        console.log("💾 Caching ICP data for future use");
+        const cacheData = transformedICPs.map(icp => ({
+          id: icp.id,
+          name: icp.segment,
+          description: `${icp.industry} - ${icp.segment}`,
+          industry: icp.industry,
+          companySize: icp.companySize,
+          painPoints: icp.keyAttributes,
+          buyingSignals: icp.decisionMakers,
+          marketSize: "TBD", // Will be populated by ICPSummaryOpportunity
+          competitiveLandscape: "TBD", // Will be populated by ICPSummaryOpportunity
+          lastUpdated: Date.now(),
+          dataSource: 'api' as const
+        }));
+        
+        profilerCache.setCachedData(cacheData, currentUser?.uid);
+        console.log("✅ Cached", cacheData.length, "ICPs");
+      }
       
       // Auto-select the first ICP if available
       if (transformedICPs.length > 0) {
@@ -725,38 +796,6 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
           </p>
         </div>
         
-        {/* Refresh Status & Button */}
-        <div className="flex items-center gap-3">
-          {/* Refresh Status Indicator */}
-          <div className="flex items-center gap-2 text-sm">
-            <div className={`w-2 h-2 rounded-full ${
-              refreshTrigger === 0 ? 'bg-blue-500' : 'bg-green-500'
-            }`}></div>
-            <span className="text-gray-600">
-              {refreshTrigger === 0 ? 'Initial Load' : 'Refreshed'}
-            </span>
-          </div>
-          
-          {/* Refresh Button */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onManualRefresh}
-            disabled={isRefreshing || loading}
-            className="flex items-center gap-2"
-            title="Refresh ICPs from latest company profile"
-          >
-            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            {isRefreshing ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Refreshing...
-              </>
-            ) : (
-              "Refresh"
-            )}
-          </Button>
-        </div>
       </div>
 
       {/* Loading State */}
@@ -808,14 +847,14 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
       )}
 
       {/* Debug Info */}
-      {!loading && (
+      {/* {!loading && (
         <div className="text-xs text-gray-500 mb-2 p-2 bg-gray-50 rounded">
           Debug: Found {suggestedICPs.length} ICPs | Loading: {loading.toString()} | Error: {error ? 'Yes' : 'No'}
           {suggestedICPs.length > 0 && (
             <div>First ICP: {suggestedICPs[0].segment}</div>
           )}
         </div>
-      )}
+      )} */}
 
       {/* Carousel Container */}
       {!loading && !error && suggestedICPs.length > 0 && (

@@ -28,7 +28,7 @@ const ApiTest: React.FC = () => {
       
       const response = await apiFetchJson('market-research', {
         method: 'POST',
-        body: JSON.stringify(payload)
+        body: payload
       });
 
       console.log('🧪 API Response:', response);

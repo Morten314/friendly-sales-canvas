@@ -24,11 +24,11 @@ class RateLimitManager {
 
   constructor(config: Partial<RateLimitConfig> = {}) {
     this.config = {
-      maxRequestsPerMinute: 200, // Increased for even faster parallel loading
-      maxRetries: 1, // Minimal retries for faster failure handling
-      baseDelayMs: 10, // Reduced from 25ms to 10ms for faster processing
-      maxDelayMs: 200, // Reduced from 500ms to 200ms for faster processing
-      jitterMs: 5, // Reduced from 10ms to 5ms for more predictable timing
+      maxRequestsPerMinute: 30, // Increased limit for faster processing
+      maxRetries: 1, // Reduced retries for faster failure handling
+      baseDelayMs: 500, // Reduced base delay between requests
+      maxDelayMs: 2000, // Reduced max delay for retries
+      jitterMs: 100, // Reduced jitter for faster processing
       ...config
     };
   }
@@ -79,8 +79,8 @@ class RateLimitManager {
           // Put the request back at the front of the queue
           this.requestQueue.unshift(request);
           
-          // Wait for the next available slot (but cap at 5 seconds max)
-          const waitTime = Math.min(60000 - (Date.now() - this.requestHistory[0]?.timestamp || 0), 5000);
+          // Wait for the next available slot (but cap at 1 second max for faster processing)
+          const waitTime = Math.min(60000 - (Date.now() - this.requestHistory[0]?.timestamp || 0), 1000);
           if (waitTime > 0) {
             console.log(`⏳ Rate limit reached. Waiting ${Math.ceil(waitTime / 1000)}s before next request...`);
             await new Promise(resolve => setTimeout(resolve, waitTime));
@@ -125,11 +125,21 @@ class RateLimitManager {
     if (!error) return false;
     
     const errorMessage = error.message || error.toString();
+    const errorString = errorMessage.toLowerCase();
+    
     return (
-      errorMessage.includes('rate limit') ||
-      errorMessage.includes('429') ||
-      errorMessage.includes('model_rate_limit') ||
-      errorMessage.includes('DeepSeek-R1-Distill-Llama-70B-free')
+      errorString.includes('rate limit') ||
+      errorString.includes('429') ||
+      errorString.includes('model_rate_limit') ||
+      errorString.includes('deepseek-r1-distill-llama-70b-free') ||
+      errorString.includes('too many requests') ||
+      errorString.includes('quota exceeded') ||
+      errorString.includes('throttled') ||
+      errorString.includes('rate_limit_exceeded') ||
+      errorString.includes('api rate limit') ||
+      errorString.includes('request limit') ||
+      errorString.includes('concurrent request limit') ||
+      errorString.includes('model rate limit exceeded')
     );
   }
 

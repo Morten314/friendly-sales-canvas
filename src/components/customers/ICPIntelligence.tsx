@@ -13,6 +13,8 @@ import { SuggestedICPsGallery } from "./SuggestedICPsGallery";
 import { ICPBuilder } from "./ICPBuilder";
 import { ICPInsights } from "./ICPInsights";
 import { ICPProfilesList } from "./ICPProfilesList";
+import { profilerCache } from "@/lib/profilerCache";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface SuggestedICP {
   id: string;
@@ -98,12 +100,34 @@ export const ICPIntelligence = () => {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [renderError, setRenderError] = useState<string | null>(null);
+  const [hasCachedData, setHasCachedData] = useState(false);
+
+  // Initialize cache status on component mount
+  useEffect(() => {
+    const checkCacheStatus = () => {
+      const cacheStatus = profilerCache.getCacheStatus();
+      setHasCachedData(cacheStatus.hasCache);
+      console.log("=== CACHE STATUS CHECK ===");
+      console.log("Has cached data:", cacheStatus.hasCache);
+      console.log("Cache age:", cacheStatus.cacheAge);
+      console.log("ICP count:", cacheStatus.icpCount);
+    };
+
+    checkCacheStatus();
+  }, []);
 
   // Listen for company profile updates
+  const { currentUser } = useAuth();
+  
   useEffect(() => {
     const handleCompanyProfileUpdate = (event: CustomEvent) => {
-      console.log("=== COMPANY PROFILE UPDATED - TRIGGERING ICP REFRESH ===");
+      console.log("=== COMPANY PROFILE UPDATED - CLEARING CACHE ===");
       console.log("Profile update event:", event.detail);
+      
+      // Clear cache when company profile is updated
+      profilerCache.clearCache(currentUser?.uid);
+      setHasCachedData(false);
+      
       console.log("Current refreshTrigger:", refreshTrigger);
       console.log("Setting refreshTrigger to:", refreshTrigger + 1);
       setRefreshTrigger(prev => {
@@ -118,6 +142,22 @@ export const ICPIntelligence = () => {
     return () => {
       console.log("=== REMOVING COMPANY PROFILE EVENT LISTENER ===");
       window.removeEventListener('companyProfileUpdated', handleCompanyProfileUpdate as EventListener);
+    };
+  }, []);
+
+  // Listen for profiler refresh events from header
+  useEffect(() => {
+    const handleProfilerRefresh = () => {
+      console.log("=== PROFILER REFRESH TRIGGERED FROM HEADER ===");
+      handleManualRefresh();
+    };
+
+    console.log("=== SETTING UP PROFILER REFRESH EVENT LISTENER ===");
+    window.addEventListener('profilerRefresh', handleProfilerRefresh);
+    
+    return () => {
+      console.log("=== REMOVING PROFILER REFRESH EVENT LISTENER ===");
+      window.removeEventListener('profilerRefresh', handleProfilerRefresh);
     };
   }, []);
 
@@ -164,6 +204,9 @@ export const ICPIntelligence = () => {
 
   const handleManualRefresh = () => {
     console.log("=== MANUAL REFRESH TRIGGERED ===");
+    // Clear cache for manual refresh
+    profilerCache.clearCache(currentUser?.uid);
+    setHasCachedData(false);
     setIsRefreshing(true);
     setRefreshTrigger(prev => prev + 1);
   };
@@ -171,6 +214,9 @@ export const ICPIntelligence = () => {
   const handleRefreshComplete = () => {
     console.log("=== REFRESH COMPLETED ===");
     setIsRefreshing(false);
+    // Update cache status after refresh
+    const cacheStatus = profilerCache.getCacheStatus();
+    setHasCachedData(cacheStatus.hasCache);
   };
 
   // Error boundary pattern
@@ -191,10 +237,11 @@ export const ICPIntelligence = () => {
 
   return (
     <div className="space-y-6">
+      
       {/* Debug Info */}
-      <div className="text-xs text-gray-500 p-2 bg-gray-50 rounded">
+      {/* <div className="text-xs text-gray-500 p-2 bg-gray-50 rounded">
         Debug: selectedICP = {selectedICP ? selectedICP.segment : 'null'} | refreshTrigger = {refreshTrigger} | isRefreshing = {isRefreshing.toString()}
-      </div>
+      </div> */}
 
       {/* Page Header */}
       <div className="space-y-2">
@@ -207,7 +254,6 @@ export const ICPIntelligence = () => {
         onICPSelect={handleICPSelect} 
         onProfilerChatOpen={handleProfilerChatOpen}
         refreshTrigger={refreshTrigger}
-        onManualRefresh={handleManualRefresh}
         isRefreshing={isRefreshing}
         onRefreshComplete={handleRefreshComplete}
       />

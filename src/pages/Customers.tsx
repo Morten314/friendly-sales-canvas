@@ -30,6 +30,29 @@ const Customers = () => {
     };
   }, []);
 
+  // Listen for custom events from header buttons
+  useEffect(() => {
+    const handleProfilerExportData = () => {
+      // Handle export data functionality
+      console.log('Export data triggered from header');
+      // Add your export logic here
+    };
+
+    const handleProfilerCreateICP = () => {
+      // Handle create new ICP functionality
+      console.log('Create new ICP triggered from header');
+      // Add your create ICP logic here
+    };
+
+    window.addEventListener('profilerExportData', handleProfilerExportData);
+    window.addEventListener('profilerCreateICP', handleProfilerCreateICP);
+
+    return () => {
+      window.removeEventListener('profilerExportData', handleProfilerExportData);
+      window.removeEventListener('profilerCreateICP', handleProfilerCreateICP);
+    };
+  }, []);
+
   const handleSendMessage = () => {
     if (!inputValue.trim()) return;
     
@@ -50,8 +73,8 @@ const Customers = () => {
   return (
     <Layout>
       <div className="animate-fade-in h-full w-full">
-        {/* Header with action buttons */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+        {/* Header with action buttons moved to main header - commented out for future use */}
+        {/* <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Profiler</h1>
             <p className="text-gray-600">Define ideal customers, find prospects, and enrich your data</p>
@@ -74,7 +97,7 @@ const Customers = () => {
               Create New ICP
             </Button>
           </div>
-        </div>
+        </div> */}
 
         {/* Chat Window */}
         {isChatOpen && (
@@ -134,18 +157,21 @@ const Customers = () => {
         {/* Main Tabs - Full Width */}
         <div className="h-full w-full">
           <Tabs defaultValue="icp-intelligence" className="h-full w-full">
-            <TabsList className="mb-6 w-full">
-              <TabsTrigger value="icp-intelligence" className="flex items-center gap-2 flex-1">
-                <Users className="h-4 w-4" />
-                ICP Intelligence
+            <TabsList className="mb-4 md:mb-6 w-full grid grid-cols-3 h-auto">
+              <TabsTrigger value="icp-intelligence" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm px-2 md:px-4 py-2">
+                <Users className="h-3 w-3 md:h-4 md:w-4" />
+                <span className="hidden sm:inline">ICP Intelligence</span>
+                <span className="sm:hidden">ICP</span>
               </TabsTrigger>
-              <TabsTrigger value="icp-battlemap" className="flex items-center gap-2 flex-1">
-                <Target className="h-4 w-4" />
-                ICP Battlemap
+              <TabsTrigger value="icp-battlemap" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm px-2 md:px-4 py-2">
+                <Target className="h-3 w-3 md:h-4 md:w-4" />
+                <span className="hidden sm:inline">ICP Battlemap</span>
+                <span className="sm:hidden">Battlemap</span>
               </TabsTrigger>
-              <TabsTrigger value="chat-profiler" className="flex items-center gap-2 flex-1">
-                <MessageSquare className="h-4 w-4" />
-                Chat with Profiler
+              <TabsTrigger value="chat-profiler" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm px-2 md:px-4 py-2">
+                <MessageSquare className="h-3 w-3 md:h-4 md:w-4" />
+                <span className="hidden sm:inline">Chat with Profiler</span>
+                <span className="sm:hidden">Chat</span>
               </TabsTrigger>
             </TabsList>
             

@@ -25,12 +25,6 @@ const AgentHub: React.FC = () => {
     <Layout>
       {showAITeam ? (
         <div className="animate-fade-in space-y-6">
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold mb-1">Your AI Team</h1>
-            <p className="text-gray-600">
-              Work with specialized AI agents to accelerate your revenue efforts
-            </p>
-          </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <AgentTeamOverview />
           </div>
@@ -40,28 +34,28 @@ const AgentHub: React.FC = () => {
           <WelcomeMessage />
 
           <div>
-            <h2 className="text-lg font-bold mb-3">Today's Focus</h2>
+            <h2 className="text-base md:text-lg font-bold mb-3">Today's Focus</h2>
             <TodaysFocus />
           </div>
 
           <div>
-            <h2 className="text-lg font-bold mb-3">Your Monthly Progress</h2>
+            <h2 className="text-base md:text-lg font-bold mb-3">Your Monthly Progress</h2>
             <QuotaTracker />
           </div>
 
           <div>
-            <h2 className="text-lg font-bold mb-3">Pipeline at a Glance</h2>
+            <h2 className="text-base md:text-lg font-bold mb-3">Pipeline at a Glance</h2>
             <PipelineSnapshot />
           </div>
 
           <div>
-            <h2 className="text-lg font-bold mb-3">Sales Metrics Over Time</h2>
+            <h2 className="text-base md:text-lg font-bold mb-3">Sales Metrics Over Time</h2>
             <InsightsAnalytics />
           </div>
 
-          <div className="mt-8">
-            <h2 className="text-2xl font-bold mb-2">AI Agent Activity</h2>
-            <p className="text-gray-600 mb-6">Here's what your agents have been up to this week.</p>
+          <div className="mt-6 md:mt-8">
+            <h2 className="text-xl md:text-2xl font-bold mb-2">AI Agent Activity</h2>
+            <p className="text-sm md:text-base text-gray-600 mb-4 md:mb-6">Here's what your agents have been up to this week.</p>
             <AgentActivityKanban />
           </div>
         </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BarChart3, Bot, Edit, Target, TrendingUp, PieChart, X, FileText, Save, Share, Clock, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,9 @@ import MiniLineChart from '@/components/ui/MiniLineChart';
 import { EditRecord } from './types';
 import { EditDropdownMenu } from './EditDropdownMenu';
 import { executeWithRateLimit } from '@/lib/rateLimitManager';
+import { apiFetchJson } from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
+import { getUserLocalStorage, setUserLocalStorage, removeUserLocalStorage } from '@/utils/cacheUtils';
 
 interface MarketSizeSectionProps {
   isEditing: boolean;
@@ -52,6 +55,8 @@ interface MarketSizeSectionProps {
   isLoading?: boolean;
   error?: string | null;
   onRefresh?: () => void;
+  isRefreshing?: boolean;
+  companyProfile?: any;
 }
 
 const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
@@ -91,8 +96,21 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
   scoutChatPanel,
   isLoading,
   error,
-  onRefresh
+  onRefresh,
+  isRefreshing,
+  companyProfile
 }) => {
+  const { currentUser } = useAuth();
+  // Track previous user to detect user switches
+  const previousUserRef = useRef<string | null | undefined>(currentUser?.uid);
+  // Track if we just cleared due to user switch (to prevent immediate sync with stale props)
+  const justClearedRef = useRef<boolean>(false);
+  
+  // API data fetching state
+  const [isLoadingData, setIsLoadingData] = useState(false);
+  const [errorData, setErrorData] = useState<string | null>(null);
+  const [marketSizeData, setMarketSizeData] = useState<any>(null);
+
   // Local editing state for inline editing - initialize once and keep values
   const [localExecutiveSummary, setLocalExecutiveSummary] = useState(executiveSummary || '');
   const [localTamValue, setLocalTamValue] = useState(tamValue || '');
@@ -102,6 +120,18 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
   const [localStrategicRecommendations, setLocalStrategicRecommendations] = useState<string[]>(strategicRecommendations || []);
   const [localMarketDrivers, setLocalMarketDrivers] = useState<string[]>(marketDrivers || []);
   const [localError, setLocalError] = useState<string | null>(null);
+
+  // Debug logging for state changes
+  useEffect(() => {
+    console.log('🔍 Market Size - State Debug:', {
+      isEditing,
+      localExecutiveSummary: localExecutiveSummary.substring(0, 50) + '...',
+      propExecutiveSummary: (executiveSummary || '').substring(0, 50) + '...',
+      localTamValue,
+      propTamValue: tamValue,
+      timestamp: Date.now()
+    });
+  }, [isEditing, localExecutiveSummary, executiveSummary, localTamValue, tamValue]);
 
   const { toast } = useToast();
 
@@ -140,22 +170,76 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
       setLocalStrategicRecommendations(strategicRecommendations || []);
       setLocalMarketDrivers(marketDrivers || []);
     }
-  }, [isEditing, executiveSummary, tamValue, samValue, apacGrowthRate, marketEntry, strategicRecommendations, marketDrivers]);
+  }, [isEditing]);
 
-  // Sync local state with props when they change (for refresh scenarios)
+  // Sync local state with props when they change (but only when not editing)
+  // IMPORTANT: Always sync with props when they change, but verify data belongs to current user
   useEffect(() => {
-    console.log('🔄 Market Size - Props changed, syncing with local state');
-    console.log('🔄 Props:', { executiveSummary, tamValue, samValue, apacGrowthRate, marketEntry, strategicRecommendations, marketDrivers });
-    
-    // Always sync with props when they change (even if empty, to clear stale data)
-    setLocalExecutiveSummary(executiveSummary || '');
-    setLocalTamValue(tamValue || '');
-    setLocalSamValue(samValue || '');
-    setLocalApacGrowthRate(apacGrowthRate || '');
-    setLocalMarketEntry(marketEntry || '');
-    setLocalStrategicRecommendations(strategicRecommendations || []);
-    setLocalMarketDrivers(marketDrivers || []);
-  }, [executiveSummary, tamValue, samValue, apacGrowthRate, marketEntry, strategicRecommendations, marketDrivers]);
+    if (!isEditing && currentUser?.uid) {
+      // Skip syncing if we just cleared due to user switch (prevent syncing with stale props)
+      if (justClearedRef.current) {
+        console.log('🔄 [MARKET SIZE] Skipping sync - data was just cleared due to user switch, waiting for new user data');
+        return;
+      }
+      
+      console.log('🔄 MarketSizeSection: Syncing with props (not editing):', {
+        executiveSummary,
+        tamValue,
+        samValue,
+        apacGrowthRate,
+        marketEntry,
+        strategicRecommendations: strategicRecommendations?.length || 0,
+        marketDrivers: marketDrivers?.length || 0,
+        currentUserId: currentUser.uid
+      });
+      
+      // Always sync with props when they change (if not editing)
+      // This ensures we get fresh data from parent/API
+      if (executiveSummary && executiveSummary !== localExecutiveSummary) {
+        setLocalExecutiveSummary(executiveSummary);
+      }
+      if (tamValue && tamValue !== localTamValue) {
+        setLocalTamValue(tamValue);
+      }
+      if (samValue && samValue !== localSamValue) {
+        setLocalSamValue(samValue);
+      }
+      if (apacGrowthRate && apacGrowthRate !== localApacGrowthRate) {
+        setLocalApacGrowthRate(apacGrowthRate);
+      }
+      if (marketEntry && marketEntry !== localMarketEntry) {
+        setLocalMarketEntry(marketEntry);
+      }
+      // Always sync arrays - update if props have data, clear if props are empty
+      if (Array.isArray(strategicRecommendations)) {
+        const currentStr = JSON.stringify(localStrategicRecommendations);
+        const newStr = JSON.stringify(strategicRecommendations);
+        if (currentStr !== newStr) {
+          console.log('🔄 Updating localStrategicRecommendations from props:', strategicRecommendations);
+          setLocalStrategicRecommendations(strategicRecommendations.length > 0 ? [...strategicRecommendations] : []);
+        }
+      } else if (localStrategicRecommendations.length > 0) {
+        // Clear if props are not an array but local has data
+        console.log('🔄 Clearing localStrategicRecommendations - props not array');
+        setLocalStrategicRecommendations([]);
+      }
+      
+      if (Array.isArray(marketDrivers)) {
+        const currentStr = JSON.stringify(localMarketDrivers);
+        const newStr = JSON.stringify(marketDrivers);
+        if (currentStr !== newStr) {
+          console.log('🔄 Updating localMarketDrivers from props:', marketDrivers);
+          setLocalMarketDrivers(marketDrivers.length > 0 ? [...marketDrivers] : []);
+        }
+      } else if (localMarketDrivers.length > 0) {
+        // Clear if props are not an array but local has data
+        console.log('🔄 Clearing localMarketDrivers - props not array');
+        setLocalMarketDrivers([]);
+      }
+    }
+  }, [executiveSummary, tamValue, samValue, apacGrowthRate, marketEntry, strategicRecommendations, marketDrivers, isEditing, currentUser?.uid]);
+
+  // REMOVED: Duplicate sync effect - the above effect handles all syncing
 
   const handleSave = async () => {
     try {
@@ -189,9 +273,9 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
       console.log('📤 Market Size - original_json:', originalData);
       console.log('📤 Market Size - modified_json:', modifiedData);
 
-      // Store data for /ask API
-      localStorage.setItem('market-size_original_json', JSON.stringify(originalData));
-      localStorage.setItem('market-size_modified_json', JSON.stringify(modifiedData));
+      // Store data for /ask API (user-specific)
+      setUserLocalStorage('market-size_original_json', JSON.stringify(originalData), currentUser?.uid);
+      setUserLocalStorage('market-size_modified_json', JSON.stringify(modifiedData), currentUser?.uid);
 
       // Call GET API to save edits using /ask endpoint with query parameters
       const queryParams = new URLSearchParams({
@@ -214,92 +298,284 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
         throw new Error(`Failed to save: ${response.status}`);
       }
 
-      // Fetch updated data using GET API
-      const getResponse = await fetch('https://backend-11kr.onrender.com/market_intelligence', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-
-      console.log('📥 GET /market_intelligence status:', getResponse.status);
-
-      if (!getResponse.ok) {
-        throw new Error(`Failed to fetch updated data: ${getResponse.status}`);
-      }
-
-      const getData = await getResponse.json();
-      console.log('✅ Market Size - GET /market_intelligence successful:', getData);
+      // Update parent state with local values (trust the user's edits)
+      onExecutiveSummaryChange(localExecutiveSummary);
+      onTamValueChange(localTamValue);
+      onSamValueChange(localSamValue);
+      onApacGrowthRateChange(localApacGrowthRate);
+      onMarketEntryChange(localMarketEntry);
+      onStrategicRecommendationsChange(localStrategicRecommendations);
+      onMarketDriversChange(localMarketDrivers);
       
-      // Update component with fresh data from API response
-      if (getData && getData.market_size_data) {
-        const apiData = getData.market_size_data;
-        
-        // Update local state with API response data
-        setLocalExecutiveSummary(apiData.executiveSummary || '');
-        setLocalTamValue(apiData.tamValue || '');
-        setLocalSamValue(apiData.samValue || '');
-        setLocalApacGrowthRate(apiData.apacGrowthRate || '');
-        setLocalMarketEntry(apiData.marketEntry || '');
-        setLocalStrategicRecommendations(apiData.strategicRecommendations || []);
-        setLocalMarketDrivers(apiData.marketDrivers || []);
-        
-        // Update parent state with API response data
-        onExecutiveSummaryChange(apiData.executiveSummary || '');
-        onTamValueChange(apiData.tamValue || '');
-        onSamValueChange(apiData.samValue || '');
-        onApacGrowthRateChange(apiData.apacGrowthRate || '');
-        onMarketEntryChange(apiData.marketEntry || '');
-        onStrategicRecommendationsChange(apiData.strategicRecommendations || []);
-        onMarketDriversChange(apiData.marketDrivers || []);
-        
-        console.log('✅ Market Size - State updated with API response data');
-      } else {
-        // Fallback: Update parent state with local values
-        onExecutiveSummaryChange(localExecutiveSummary);
-        onTamValueChange(localTamValue);
-        onSamValueChange(localSamValue);
-        onApacGrowthRateChange(localApacGrowthRate);
-        onMarketEntryChange(localMarketEntry);
-        onStrategicRecommendationsChange(localStrategicRecommendations);
-        onMarketDriversChange(localMarketDrivers);
-      }
-      
-      // Also refresh the component data
-      await fetchUpdatedData();
+      console.log('✅ Market Size - Parent state updated with local edits');
       
       // Call the original save function to trigger chat panel
       onSaveChanges();
       
     } catch (error) {
       console.error('❌ Market Size - Error saving changes:', error);
+      
+      // Even if API fails, update parent state with local values
+      onExecutiveSummaryChange(localExecutiveSummary);
+      onTamValueChange(localTamValue);
+      onSamValueChange(localSamValue);
+      onApacGrowthRateChange(localApacGrowthRate);
+      onMarketEntryChange(localMarketEntry);
+      onStrategicRecommendationsChange(localStrategicRecommendations);
+      onMarketDriversChange(localMarketDrivers);
+      
       // Still call the original save function even if API fails
       onSaveChanges();
     }
   };
 
   const fetchUpdatedData = async () => {
+    if (!currentUser?.uid) {
+      console.error('User not authenticated');
+      return;
+    }
     try {
-      const response = await executeWithRateLimit(
-        () => fetch('https://backend-11kr.onrender.com/market-research', {
+      const data = await executeWithRateLimit(
+        () => apiFetchJson('market-research', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ component_name: "market_size", user_id: "user_123" })
+          body: { component_name: "market_size", user_id: currentUser.uid }
         }),
         'Market Size Update'
       );
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Updated data fetched:', data);
-        // The parent component should handle updating the data
-        if (onRefresh) {
-          onRefresh();
-        }
+      console.log('Updated data fetched:', data);
+      // The parent component should handle updating the data
+      if (onRefresh) {
+        onRefresh();
       }
     } catch (error) {
       console.error('Error fetching updated data:', error);
     }
   };
+
+  // Fetch Market Size data from API
+  const fetchMarketSizeData = async (refresh = false) => {
+    console.log('🚀 MarketSizeSection: Starting fetchMarketSizeData with refresh:', refresh);
+    try {
+      setIsLoadingData(true);
+      setErrorData(null);
+
+      // Get company profile data for dynamic reports (user-specific)
+      const profile = companyProfile || JSON.parse(getUserLocalStorage('companyProfile', currentUser?.uid) || '{}');
+      
+      if (!currentUser?.uid) {
+        console.error('User not authenticated');
+        setErrorData('User not authenticated');
+        setIsLoadingData(false);
+        return;
+      }
+      
+      const payload = {
+        user_id: currentUser.uid,
+        component_name: "market size & opportunity", // Exact match from swagger
+        refresh: refresh,
+        force_refresh: refresh,
+        cache_bypass: refresh,
+        bypass_all_cache: refresh,
+        request_timestamp: Date.now(),
+        request_id: Math.random().toString(36).substr(2, 6),
+        data: {}
+      };
+
+      console.log('🔧 MARKET SIZE SECTION CALL: Sending API request with payload:', payload);
+      console.log('🔧 MARKET SIZE SECTION CALL: Component name:', payload.component_name);
+      console.log('⏰ MARKET SIZE REQUEST TIMESTAMP:', payload.request_timestamp);
+
+      const result = await executeWithRateLimit(
+        () => apiFetchJson('market-research', {
+          method: 'POST',
+          body: payload
+        }),
+        'Market Size'
+      );
+
+      console.log('✅ Market Size API response:', result);
+      console.log('🔍 MarketSizeSection: Full API response structure:', JSON.stringify(result, null, 2));
+      
+      if (result.status === 'success' && result.data) {
+        const apiData = result.data;
+        console.log('🎯 MarketSizeSection: Processing API data:', apiData);
+        console.log('🎯 MarketSizeSection: API data keys:', Object.keys(apiData));
+        console.log('🔍 MarketSizeSection: strategicRecommendations type:', typeof apiData.strategicRecommendations);
+        console.log('🔍 MarketSizeSection: strategicRecommendations value:', apiData.strategicRecommendations);
+        console.log('🔍 MarketSizeSection: marketDrivers type:', typeof apiData.marketDrivers);
+        console.log('🔍 MarketSizeSection: marketDrivers value:', apiData.marketDrivers);
+        
+        // Check if we have the expected Market Size data structure
+        // Also check for nested data structures that might be in the API response
+        const hasDirectData = apiData.executiveSummary || apiData.tamValue || apiData.samValue || apiData.strategicRecommendations;
+        const hasNestedData = apiData.market_size_data || apiData.marketSizeData || apiData.marketSize;
+        
+        if (hasDirectData || hasNestedData) {
+          console.log('✅ MarketSizeSection: Found Market Size data - updating component');
+          
+          // Use nested data if available, otherwise use direct data
+          const dataToUse = apiData.market_size_data || apiData.marketSizeData || apiData.marketSize || apiData;
+          
+          // Store the data
+          setMarketSizeData(dataToUse);
+          
+          // Update parent state with API response data (only if data exists)
+          if (dataToUse.executiveSummary) onExecutiveSummaryChange(dataToUse.executiveSummary);
+          if (dataToUse.tamValue) onTamValueChange(dataToUse.tamValue);
+          if (dataToUse.samValue) onSamValueChange(dataToUse.samValue);
+          if (dataToUse.apacGrowthRate) onApacGrowthRateChange(dataToUse.apacGrowthRate);
+          if (dataToUse.marketEntry) onMarketEntryChange(dataToUse.marketEntry);
+          
+          // Handle strategic recommendations - check if it's an array or needs to be converted
+          if (dataToUse.strategicRecommendations) {
+            let recommendations = dataToUse.strategicRecommendations;
+            console.log('🎯 Processing strategicRecommendations:', recommendations);
+            if (typeof recommendations === 'string') {
+              // If it's a string, try to split it or convert to array
+              recommendations = recommendations.split('\n').filter(r => r.trim());
+            }
+            if (Array.isArray(recommendations)) {
+              console.log('✅ Calling onStrategicRecommendationsChange with:', recommendations);
+              onStrategicRecommendationsChange(recommendations);
+            }
+          }
+          
+          // Handle market drivers - check if it's an array or needs to be converted
+          if (dataToUse.marketDrivers) {
+            let drivers = dataToUse.marketDrivers;
+            console.log('🎯 Processing marketDrivers:', drivers);
+            if (typeof drivers === 'string') {
+              // If it's a string, try to split it or convert to array
+              drivers = drivers.split('\n').filter(d => d.trim());
+            }
+            if (Array.isArray(drivers)) {
+              console.log('✅ Calling onMarketDriversChange with:', drivers);
+              onMarketDriversChange(drivers);
+            }
+          }
+          
+          console.log('✅ Market Size - State updated with API response data');
+        } else {
+          console.log('ℹ️ MarketSizeSection: No Market Size specific data found in response');
+          console.log('🔍 MarketSizeSection: Available keys in response:', Object.keys(apiData));
+        }
+      } else {
+        console.warn('⚠️ Market Size - No data in API response');
+      }
+      
+    } catch (error) {
+      console.error('❌ Market Size - Error fetching data:', error);
+      setErrorData(error instanceof Error ? error.message : 'Failed to fetch market size data');
+    } finally {
+      setIsLoadingData(false);
+    }
+  };
+
+  // Clear state when user changes to prevent data leakage
+  useEffect(() => {
+    const previousUserId = previousUserRef.current;
+    const currentUserId = currentUser?.uid;
+    
+    // Only clear if user actually changed (not on initial mount)
+    if (previousUserId !== undefined && previousUserId !== currentUserId) {
+      console.log('🔄 [MARKET SIZE] User changed from', previousUserId, 'to', currentUserId, '- clearing all local state');
+      setMarketSizeData(null);
+      setErrorData(null);
+      setIsLoadingData(false);
+      // Reset local state to empty to force fresh fetch
+      setLocalExecutiveSummary('');
+      setLocalTamValue('');
+      setLocalSamValue('');
+      setLocalApacGrowthRate('');
+      setLocalMarketEntry('');
+      setLocalStrategicRecommendations([]);
+      setLocalMarketDrivers([]);
+      // Mark that we just cleared to prevent immediate sync with stale props
+      justClearedRef.current = true;
+      // Force a small delay to ensure state is cleared before any sync happens
+      const clearTimer = setTimeout(() => {
+        console.log('✅ [MARKET SIZE] State cleared, ready for new user data');
+        // Reset the flag after a delay to allow new data to come in
+        setTimeout(() => {
+          justClearedRef.current = false;
+        }, 200);
+      }, 50);
+      return () => clearTimeout(clearTimer);
+    }
+    
+    // Update ref for next comparison - do this AFTER clearing to prevent race conditions
+    const updateTimer = setTimeout(() => {
+      previousUserRef.current = currentUserId;
+    }, 100);
+    
+    return () => clearTimeout(updateTimer);
+  }, [currentUser?.uid]);
+
+  // Fetch data when component mounts or user changes if no data is available
+  useEffect(() => {
+    if (!currentUser?.uid) {
+      return; // Don't fetch if user is not authenticated
+    }
+    
+    console.log('🚀 MarketSizeSection: User authenticated, checking for data');
+    
+    // Always check if we have fresh data for this user
+    // The parent component should pass fresh data, but if not, we fetch
+    const hasData = executiveSummary || tamValue || samValue || apacGrowthRate || strategicRecommendations.length > 0 || marketEntry || marketDrivers.length > 0;
+    
+    if (!hasData && !isLoadingData) {
+      console.log('🚀 MarketSizeSection: No data found for current user, fetching fresh data');
+      const timer = setTimeout(() => {
+        fetchMarketSizeData(false);
+      }, 1000);
+      
+      return () => clearTimeout(timer);
+    } else if (hasData) {
+      console.log('🚀 MarketSizeSection: Data already available for current user, skipping fetch');
+    }
+  }, [currentUser?.uid, executiveSummary, tamValue, samValue, apacGrowthRate, strategicRecommendations.length, marketEntry, marketDrivers.length]);
+  
+  // Handle refresh when parent triggers it
+  useEffect(() => {
+    if (isRefreshing) {
+      console.log('🔄 Market Size - Refresh triggered by parent');
+      // Clear old data immediately to prevent showing stale data
+      setMarketSizeData(null);
+      setErrorData(null);
+      setIsLoadingData(true);
+      fetchMarketSizeData(true);
+    }
+  }, [isRefreshing]);
+
+  // Check if we have any meaningful data
+  const hasData = executiveSummary || tamValue || samValue || apacGrowthRate || strategicRecommendations.length > 0 || marketEntry || marketDrivers.length > 0;
+
+  // Loading state
+  if (isLoadingData && !hasData) {
+    return (
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading market size data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Empty state
+  if (!hasData && !isLoadingData) {
+    return (
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="text-center py-12">
+          <p className="text-gray-600 mb-4">No market size data available</p>
+          <Button onClick={() => onScoutIconClick('market-size')} variant="outline">
+            <Bot className="h-4 w-4 mr-2" />
+            Generate Report with Scout
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`${showScoutChat ? 'flex gap-6' : ''}`}>
@@ -628,7 +904,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
               <Button
                 onClick={() => onExpandToggle(true)}
                 variant="outline"
-                className="flex items-center space-x-2 text-sm"
+                className="flex items-center space-x-2 text-sm hover:bg-gray-50"
               >
                 <span>Read More</span>
                 <ChevronDown className="h-4 w-4" />
@@ -659,7 +935,14 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                          console.log('🎯 RENDER CHECK - Length:', strategicRecommendations?.length);
                          return null;
                        })()}
-                         {Array.isArray(strategicRecommendations) ? (
+                         {Array.isArray(localStrategicRecommendations) && localStrategicRecommendations.length > 0 ? (
+                           localStrategicRecommendations.map((rec, index) => (
+                             <li key={index} className="flex items-start gap-2">
+                               <div className="w-2 h-2 rounded-full bg-green-500 mt-2 flex-shrink-0"></div>
+                               {rec}
+                             </li>
+                           ))
+                         ) : Array.isArray(strategicRecommendations) && strategicRecommendations.length > 0 ? (
                            strategicRecommendations.map((rec, index) => (
                              <li key={index} className="flex items-start gap-2">
                                <div className="w-2 h-2 rounded-full bg-green-500 mt-2 flex-shrink-0"></div>
@@ -699,19 +982,56 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                        <h4 className="font-medium text-gray-900 mb-3">Market Size by Segment</h4>
                        {(() => {
                          console.log('🔍 MarketSizeSection - marketSizeBySegment:', marketSizeBySegment);
+                         console.log('🔍 MarketSizeSection - marketSizeBySegment type:', typeof marketSizeBySegment);
                          console.log('🔍 MarketSizeSection - marketSizeBySegment exists:', !!marketSizeBySegment);
+                         if (typeof marketSizeBySegment === 'string') {
+                           console.log('🔍 MarketSizeSection - marketSizeBySegment string content:', marketSizeBySegment);
+                         }
                          return null;
                        })()}
                        <MiniPieChart 
-                         data={marketSizeBySegment ? Object.entries(marketSizeBySegment).map(([name, value], index) => ({
-                           name,
-                           value: parseInt(value.replace('%', '')),
-                           color: ["#3B82F6", "#10B981", "#8B5CF6", "#F59E0B"][index % 4]
-                         })) : [
-                           { name: "Enterprise", value: 45, color: "#3B82F6" },
-                           { name: "Mid-Market", value: 35, color: "#10B981" },
-                           { name: "SMB", value: 20, color: "#8B5CF6" }
-                         ]} 
+                         data={(() => {
+                           if (!marketSizeBySegment) {
+                             return [
+                               { name: "Enterprise", value: 45, color: "#3B82F6" },
+                               { name: "Mid-Market", value: 35, color: "#10B981" },
+                               { name: "SMB", value: 20, color: "#8B5CF6" }
+                             ];
+                           }
+                           
+                           // If marketSizeBySegment is a string, try to parse it as JSON first
+                           if (typeof marketSizeBySegment === 'string') {
+                             console.log('🔧 marketSizeBySegment is string, attempting to parse:', marketSizeBySegment);
+                             try {
+                               const parsedSegments = JSON.parse(marketSizeBySegment);
+                               if (parsedSegments && typeof parsedSegments === 'object') {
+                                 console.log('✅ Successfully parsed marketSizeBySegment from string to object');
+                                 return Object.entries(parsedSegments).map(([name, value], index) => ({
+                                   name,
+                                   value: parseInt(value.toString().replace('%', '')),
+                                   color: ["#3B82F6", "#10B981", "#8B5CF6", "#F59E0B"][index % 4]
+                                 }));
+                               }
+                             } catch (parseError) {
+                               console.log('❌ Failed to parse marketSizeBySegment string as JSON:', parseError);
+                             }
+                             
+                             // Only use fallback data if parsing fails
+                             console.log('🔧 marketSizeBySegment string parsing failed, using fallback data');
+                             return [
+                               { name: "Enterprise", value: 45, color: "#3B82F6" },
+                               { name: "Mid-Market", value: 35, color: "#10B981" },
+                               { name: "SMB", value: 20, color: "#8B5CF6" }
+                             ];
+                           }
+                           
+                           // If it's an object, use it directly
+                           return Object.entries(marketSizeBySegment).map(([name, value], index) => ({
+                             name,
+                             value: parseInt(value.toString().replace('%', '')),
+                             color: ["#3B82F6", "#10B981", "#8B5CF6", "#F59E0B"][index % 4]
+                           }));
+                         })()} 
                          title="" 
                        />
                     </div>
@@ -719,7 +1039,11 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                        <h4 className="font-medium text-gray-900 mb-3">Growth Projections</h4>
                        {(() => {
                          console.log('🔍 MarketSizeSection - growthProjections:', growthProjections);
+                         console.log('🔍 MarketSizeSection - growthProjections type:', typeof growthProjections);
                          console.log('🔍 MarketSizeSection - growthProjections exists:', !!growthProjections);
+                         if (typeof growthProjections === 'string') {
+                           console.log('🔍 MarketSizeSection - growthProjections string content:', growthProjections);
+                         }
                          return null;
                        })()}
                         <MiniLineChart 
@@ -733,9 +1057,28 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                               ];
                             }
                             
-                            // If growthProjections is a string, use fallback data
+                            // If growthProjections is a string, try to parse it as JSON first
                             if (typeof growthProjections === 'string') {
-                              console.log('🔧 growthProjections is string, using fallback data');
+                              console.log('🔧 growthProjections is string, attempting to parse:', growthProjections);
+                              try {
+                                const parsedProjections = JSON.parse(growthProjections);
+                                if (parsedProjections && typeof parsedProjections === 'object') {
+                                  console.log('✅ Successfully parsed growthProjections from string to object');
+                                  return Object.entries(parsedProjections).map(([year, value]) => {
+                                    const numericValue = parseFloat(value.toString());
+                                    console.log(`🔧 Converting ${year}: ${value} -> ${numericValue}`);
+                                    return {
+                                      name: year,
+                                      value: isNaN(numericValue) ? 100 : numericValue * 100
+                                    };
+                                  });
+                                }
+                              } catch (parseError) {
+                                console.log('❌ Failed to parse growthProjections string as JSON:', parseError);
+                              }
+                              
+                              // Only use fallback data if parsing fails
+                              console.log('🔧 growthProjections string parsing failed, using fallback data');
                               return [
                                 { name: "2023", value: 100 },
                                 { name: "2024", value: 120 },
@@ -763,12 +1106,18 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                   <div className="bg-gray-50 p-4 rounded-lg">
                     <h4 className="font-medium text-gray-900 mb-3">Key Market Drivers</h4>
                      <ul className="space-y-2 text-gray-700">
-                       {marketDrivers.map((driver, index) => (
+                       {(Array.isArray(localMarketDrivers) && localMarketDrivers.length > 0 ? localMarketDrivers : marketDrivers || []).map((driver, index) => (
                          <li key={index} className="flex items-start gap-2">
                            <div className="w-2 h-2 rounded-full bg-purple-500 mt-2 flex-shrink-0"></div>
                            {driver}
                          </li>
                        ))}
+                       {(!localMarketDrivers || localMarketDrivers.length === 0) && (!marketDrivers || marketDrivers.length === 0) && (
+                         <li className="flex items-start gap-2">
+                           <div className="w-2 h-2 rounded-full bg-purple-500 mt-2 flex-shrink-0"></div>
+                           No market drivers available
+                         </li>
+                       )}
                      </ul>
                   </div>
                 </div>

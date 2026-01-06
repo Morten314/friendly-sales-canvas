@@ -111,6 +111,7 @@
 
 
 import React, { useState, useEffect } from 'react';
+import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
@@ -189,7 +190,9 @@ interface PipelineSnapshotProps {
   userId?: string;
 }
 
-export function PipelineSnapshot({ userId = 'brewra' }: PipelineSnapshotProps) {
+export function PipelineSnapshot({ userId }: PipelineSnapshotProps) {
+  const { currentUser } = useAuth();
+  const effectiveUserId = userId || currentUser?.uid || '';
   const [timeframe, setTimeframe] = useState('7');
   const [pipelineData, setPipelineData] = useState<PipelineStage[]>([]);
   const [availableTimeframes, setAvailableTimeframes] = useState<string[]>(['7', '15', '30', '60']); // Default to common timeframes
@@ -230,7 +233,7 @@ export function PipelineSnapshot({ userId = 'brewra' }: PipelineSnapshotProps) {
 
   const fetchSingleTimeframeData = async (timeframeDays: string) => {
     const params = new URLSearchParams({
-      user_id: userId,
+      user_id: effectiveUserId,
       timeframe: timeframeDays
     });
     
@@ -256,7 +259,7 @@ export function PipelineSnapshot({ userId = 'brewra' }: PipelineSnapshotProps) {
     
     try {
       console.log('🔍 API Call Details:');
-      console.log('User ID:', userId);
+      console.log('User ID:', effectiveUserId);
       console.log('Selected Timeframe:', selectedTimeframe);
       
       // First, try to fetch data for the selected timeframe
@@ -353,7 +356,7 @@ export function PipelineSnapshot({ userId = 'brewra' }: PipelineSnapshotProps) {
 
   useEffect(() => {
     fetchPipelineData(timeframe);
-  }, [timeframe, userId]);
+  }, [timeframe, effectiveUserId]);
 
   const handleTimeframeChange = (value: string) => {
     setTimeframe(value);

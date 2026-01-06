@@ -3,7 +3,7 @@
 
 
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +16,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Plus, X } from "lucide-react";
+import { profilerCache } from "@/lib/profilerCache";
+import { useAuth } from "@/contexts/AuthContext";
+import { getUserLocalStorage, setUserLocalStorage, removeUserLocalStorage } from "@/utils/cacheUtils";
 
 interface SocialMediaUrl {
   platform: string;
@@ -29,6 +32,7 @@ interface CompanyProfileProps {
 }
 
 export function CompanyProfile({ onProfileUpdate, isEditMode = false, profileData }: CompanyProfileProps) {
+  const { currentUser } = useAuth();
   const [formData, setFormData] = useState({
     industry: "",
     companySize: "",
@@ -42,10 +46,198 @@ export function CompanyProfile({ onProfileUpdate, isEditMode = false, profileDat
   const [targetMarkets, setTargetMarkets] = useState<string[]>([""]);
   const [socialMediaUrls, setSocialMediaUrls] = useState<SocialMediaUrl[]>([]);
   const [selectedPlatform, setSelectedPlatform] = useState<string>("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Update form data when profileData changes
+  // Fetch company profile from API (similar to Signals pattern)
+  const fetchCompanyProfile = async (userId: string) => {
+    try {
+      const response = await fetch(`/api/profile/company?user_id=${userId}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      
+      if (!response.ok) {
+        console.log('No existing company profile found in API');
+        return null;
+      }
+      
+      const data = await response.json();
+      // Verify the data belongs to the current user
+      if (data.user_id && data.user_id !== userId) {
+        console.warn('⚠️ [COMPANY PROFILE] API returned profile with different user_id, ignoring');
+        return null;
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('Error fetching company profile:', error);
+      return null;
+    }
+  };
+
+  // Track previous user to detect user changes
+  const previousUserIdRef = useRef<string | null | undefined>(currentUser?.uid);
+
+  // Load user-specific company profile from localStorage and API on mount or when user changes
   useEffect(() => {
+    const previousUserId = previousUserIdRef.current;
+    const currentUserId = currentUser?.uid;
+
+    // CRITICAL: Clear form immediately when user changes (before loading new data)
+    if (previousUserId !== undefined && previousUserId !== currentUserId) {
+      console.log('🔄 [COMPANY PROFILE] User changed from', previousUserId, 'to', currentUserId, '- clearing form immediately');
+      setFormData({
+        industry: "",
+        companySize: "",
+        companyUrl: "",
+        strategicGoals: "",
+        primaryGTMModel: "",
+        revenueStage: "",
+        keyBuyerPersona: "",
+      });
+      setTargetMarkets([""]);
+      setSocialMediaUrls([]);
+    }
+
+    if (!currentUserId) {
+      // User logged out - clear form
+      console.log('🔄 [COMPANY PROFILE] User logged out, clearing form');
+      setFormData({
+        industry: "",
+        companySize: "",
+        companyUrl: "",
+        strategicGoals: "",
+        primaryGTMModel: "",
+        revenueStage: "",
+        keyBuyerPersona: "",
+      });
+      setTargetMarkets([""]);
+      setSocialMediaUrls([]);
+      previousUserIdRef.current = currentUserId;
+      return;
+    }
+    
+    const loadProfile = async () => {
+      console.log('🔄 [COMPANY PROFILE] Loading profile for user:', currentUserId);
+      
+      // First, try to load from localStorage
+      const storedProfile = getUserLocalStorage('companyProfile', currentUserId);
+      if (storedProfile) {
+        try {
+          const parsedProfile = JSON.parse(storedProfile);
+          // CRITICAL: Only load if user_id matches exactly - reject data without user_id
+          if (parsedProfile.user_id === currentUserId) {
+            console.log('✅ [COMPANY PROFILE] Found stored profile for user:', currentUserId);
+            setFormData({
+              industry: parsedProfile.industry || "",
+              companySize: parsedProfile.companySize || "",
+              companyUrl: parsedProfile.companyUrl || "",
+              strategicGoals: parsedProfile.strategicGoals || "",
+              primaryGTMModel: parsedProfile.primaryGTMModel || "",
+              revenueStage: parsedProfile.revenueStage || "",
+              keyBuyerPersona: parsedProfile.keyBuyerPersona || "",
+            });
+            setTargetMarkets(Array.isArray(parsedProfile.targetMarkets) && parsedProfile.targetMarkets.length > 0 
+              ? parsedProfile.targetMarkets 
+              : [""]);
+            setSocialMediaUrls(Array.isArray(parsedProfile.socialMediaUrls) ? parsedProfile.socialMediaUrls : []);
+            previousUserIdRef.current = currentUserId;
+            return; // Don't fetch from API if we have valid localStorage data
+          } else {
+            // Data belongs to different user or has no user_id - clear it
+            console.warn('⚠️ [COMPANY PROFILE] Stored profile user_id mismatch or missing! Stored:', parsedProfile.user_id, 'Current:', currentUserId);
+            console.warn('⚠️ [COMPANY PROFILE] Clearing invalid data to prevent data leakage');
+            removeUserLocalStorage('companyProfile', currentUserId);
+            removeUserLocalStorage('companyProfileForRefresh', currentUserId);
+            // Also clear old format if it exists
+            localStorage.removeItem('companyProfile');
+            localStorage.removeItem('companyProfileForRefresh');
+          }
+        } catch (error) {
+          console.error('❌ [COMPANY PROFILE] Error parsing stored profile:', error);
+          // Clear corrupted data
+          removeUserLocalStorage('companyProfile', currentUserId);
+          removeUserLocalStorage('companyProfileForRefresh', currentUserId);
+        }
+      }
+      
+      // If no localStorage data or it was invalid, fetch from API
+      console.log('📝 [COMPANY PROFILE] No valid stored profile found, fetching from API for user:', currentUserId);
+      setIsLoading(true);
+      const apiData = await fetchCompanyProfile(currentUserId);
+      
+      if (apiData) {
+        // CRITICAL: Validate API response belongs to current user
+        if (apiData.user_id && apiData.user_id !== currentUserId) {
+          console.error('❌ [COMPANY PROFILE] API returned profile for different user! API user_id:', apiData.user_id, 'Current:', currentUserId);
+          console.error('❌ [COMPANY PROFILE] Rejecting data to prevent data leakage');
+          setIsLoading(false);
+          previousUserIdRef.current = currentUserId;
+          return;
+        }
+
+        console.log('✅ [COMPANY PROFILE] Loaded profile from API for user:', currentUserId);
+        // Store in localStorage for future use - ALWAYS include user_id
+        const profileToSave = {
+          ...apiData,
+          user_id: currentUserId // Ensure user_id is always included
+        };
+        setUserLocalStorage('companyProfile', JSON.stringify(profileToSave), currentUserId);
+        setUserLocalStorage('companyProfileForRefresh', JSON.stringify(profileToSave), currentUserId);
+        
+        // Update form with API data
+        setFormData({
+          industry: apiData.industry || "",
+          companySize: apiData.companySize || "",
+          companyUrl: apiData.companyUrl || "",
+          strategicGoals: apiData.strategicGoals || "",
+          primaryGTMModel: apiData.primaryGTMModel || "",
+          revenueStage: apiData.revenueStage || "",
+          keyBuyerPersona: apiData.keyBuyerPersona || "",
+        });
+        setTargetMarkets(Array.isArray(apiData.targetMarkets) && apiData.targetMarkets.length > 0 
+          ? apiData.targetMarkets 
+          : [""]);
+        setSocialMediaUrls(Array.isArray(apiData.socialMediaUrls) ? apiData.socialMediaUrls : []);
+      } else {
+        console.log('📝 [COMPANY PROFILE] No profile data found in API for user:', currentUserId, '- using empty form');
+      }
+      
+      setIsLoading(false);
+      previousUserIdRef.current = currentUserId;
+    };
+    
+    loadProfile();
+  }, [currentUser?.uid]);
+
+  // Update form data when profileData prop changes (from API)
+  useEffect(() => {
+    if (!currentUser?.uid) {
+      return; // Don't update if no user logged in
+    }
+
     if (profileData) {
+      // CRITICAL: Verify profileData belongs to current user
+      if (profileData.user_id && profileData.user_id !== currentUser.uid) {
+        console.warn('⚠️ [COMPANY PROFILE] profileData user_id mismatch, ignoring. Stored:', profileData.user_id, 'Current:', currentUser.uid);
+        return;
+      }
+      
+      // Also save to localStorage if it came from API (has user_id)
+      if (profileData.user_id === currentUser.uid) {
+        console.log('🔄 [COMPANY PROFILE] Updating form from profileData prop and saving to localStorage');
+        const profileToSave = {
+          ...profileData,
+          user_id: currentUser.uid
+        };
+        setUserLocalStorage('companyProfile', JSON.stringify(profileToSave), currentUser.uid);
+        setUserLocalStorage('companyProfileForRefresh', JSON.stringify(profileToSave), currentUser.uid);
+      } else {
+        console.log('🔄 [COMPANY PROFILE] Updating form from profileData prop');
+      }
+      
       setFormData({
         industry: profileData.industry || "",
         companySize: profileData.companySize || "",
@@ -55,10 +247,12 @@ export function CompanyProfile({ onProfileUpdate, isEditMode = false, profileDat
         revenueStage: profileData.revenueStage || "",
         keyBuyerPersona: profileData.keyBuyerPersona || "",
       });
-      setTargetMarkets(profileData.targetMarkets || [""]);
-      setSocialMediaUrls(profileData.socialMediaUrls || []);
+      setTargetMarkets(Array.isArray(profileData.targetMarkets) && profileData.targetMarkets.length > 0 
+        ? profileData.targetMarkets 
+        : [""]);
+      setSocialMediaUrls(Array.isArray(profileData.socialMediaUrls) ? profileData.socialMediaUrls : []);
     }
-  }, [profileData]);
+  }, [profileData, currentUser?.uid]);
 
   const socialPlatforms = [
     { value: "linkedin", label: "LinkedIn" },
@@ -78,11 +272,11 @@ export function CompanyProfile({ onProfileUpdate, isEditMode = false, profileDat
   };
 
   const addTargetMarket = () => {
-    setTargetMarkets([...targetMarkets, ""]);
+    setTargetMarkets([...(Array.isArray(targetMarkets) ? targetMarkets : []), ""]);
   };
 
   const removeTargetMarket = (index: number) => {
-    if (targetMarkets.length > 1) {
+    if (Array.isArray(targetMarkets) && targetMarkets.length > 1) {
       const newTargetMarkets = targetMarkets.filter((_, i) => i !== index);
       setTargetMarkets(newTargetMarkets);
     }
@@ -90,20 +284,24 @@ export function CompanyProfile({ onProfileUpdate, isEditMode = false, profileDat
 
   const addSocialMediaUrl = () => {
     if (selectedPlatform) {
-      setSocialMediaUrls([...socialMediaUrls, { platform: selectedPlatform, url: "" }]);
+      setSocialMediaUrls([...(Array.isArray(socialMediaUrls) ? socialMediaUrls : []), { platform: selectedPlatform, url: "" }]);
       setSelectedPlatform("");
     }
   };
 
   const removeSocialMediaUrl = (index: number) => {
-    const newSocialMediaUrls = socialMediaUrls.filter((_, i) => i !== index);
-    setSocialMediaUrls(newSocialMediaUrls);
+    if (Array.isArray(socialMediaUrls)) {
+      const newSocialMediaUrls = socialMediaUrls.filter((_, i) => i !== index);
+      setSocialMediaUrls(newSocialMediaUrls);
+    }
   };
 
   const handleSocialMediaUrlChange = (index: number, value: string) => {
-    const newSocialMediaUrls = [...socialMediaUrls];
-    newSocialMediaUrls[index].url = value;
-    setSocialMediaUrls(newSocialMediaUrls);
+    if (Array.isArray(socialMediaUrls)) {
+      const newSocialMediaUrls = [...socialMediaUrls];
+      newSocialMediaUrls[index].url = value;
+      setSocialMediaUrls(newSocialMediaUrls);
+    }
   };
 
   const getPlatformLabel = (platform: string) => {
@@ -116,25 +314,37 @@ export function CompanyProfile({ onProfileUpdate, isEditMode = false, profileDat
     console.log("Target markets:", targetMarkets);
     console.log("Social media URLs:", socialMediaUrls);
     
+    if (!currentUser?.uid) {
+      console.error('User not authenticated');
+      alert('Please log in to save your company profile');
+      return;
+    }
     const payload = {
+      user_id: currentUser.uid,
       industry: formData.industry,
       companySize: formData.companySize,
       companyUrl: formData.companyUrl,
+      website: formData.companyUrl,
       strategicGoals: formData.strategicGoals,
       primaryGTMModel: formData.primaryGTMModel,
+      gtmModel: formData.primaryGTMModel,
       revenueStage: formData.revenueStage,
       keyBuyerPersona: formData.keyBuyerPersona,
-      targetMarkets: targetMarkets.filter(market => market.trim() !== ""),
-      socialMediaUrls: socialMediaUrls.map(url => ({
+      targetMarkets: Array.isArray(targetMarkets) ? targetMarkets.filter(market => market.trim() !== "") : [],
+      socialMediaUrls: Array.isArray(socialMediaUrls) ? socialMediaUrls.map(url => ({
         platform: getPlatformLabel(url.platform),
         url: url.url,
-      })),
+      })) : [],
     };
 
     console.log("=== PAYLOAD TO SEND ===", payload);
 
     try {
-      const response = await fetch("https://backend-11kr.onrender.com/profile/company", {
+      // Include user_id in URL query parameter like Signals does, AND in body
+      const apiUrl = currentUser?.uid 
+        ? `/api/profile/company?user_id=${currentUser.uid}`
+        : "/api/profile/company";
+      const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -147,20 +357,30 @@ export function CompanyProfile({ onProfileUpdate, isEditMode = false, profileDat
       console.log("OK:", response.ok);
 
       if (!response.ok) {
-        throw new Error(`API error: ${response.statusText}`);
+        const errorText = await response.text();
+        console.error("=== API ERROR DETAILS ===");
+        console.error("Status:", response.status);
+        console.error("Status Text:", response.statusText);
+        console.error("Error Response:", errorText);
+        throw new Error(`API error: ${response.status} - ${errorText}`);
       }
 
       const data = await response.json();
       console.log("Company profile saved successfully:", data);
       alert("Company profile saved successfully!");
       
-      // Store the updated profile data immediately in localStorage
-      console.log("=== STORING UPDATED PROFILE DATA ===");
-      localStorage.setItem('companyProfile', JSON.stringify(profileData));
-      localStorage.setItem('companyProfileForRefresh', JSON.stringify(profileData));
+      // Store the updated profile data immediately in user-specific localStorage
+      console.log("=== STORING UPDATED PROFILE DATA (USER-SPECIFIC) ===");
+      console.log("User ID:", currentUser?.uid);
+      const payloadWithUserId = {
+        ...payload,
+        user_id: currentUser.uid // Ensure user_id is included
+      };
+      setUserLocalStorage('companyProfile', JSON.stringify(payloadWithUserId), currentUser?.uid);
+      setUserLocalStorage('companyProfileForRefresh', JSON.stringify(payloadWithUserId), currentUser?.uid);
       
-      // Set flag to indicate new company profile data is available
-      localStorage.setItem('companyProfileUpdated', '1');
+      // Set flag to indicate new company profile data is available (user-specific)
+      setUserLocalStorage('companyProfileUpdated', '1', currentUser?.uid);
       console.log("🏁 Company profile update flag set to 1 - new data will persist until next profile update");
       
       // Clear market data cache
@@ -169,12 +389,16 @@ export function CompanyProfile({ onProfileUpdate, isEditMode = false, profileDat
         (window as any).cacheTimestamp = null;
       }
       
+      // Clear profiler cache when company profile is updated
+      console.log("🧹 Clearing profiler cache due to company profile update");
+      profilerCache.clearCache(currentUser?.uid);
+      
       // Dispatch a global event to notify other components
       console.log("=== DISPATCHING COMPANY PROFILE UPDATE EVENT ===");
-      console.log("Profile data being dispatched:", profileData);
+      console.log("Profile data being dispatched:", payload);
       const event = new CustomEvent('companyProfileUpdated', {
         detail: {
-          profileData,
+          profileData: payload,
           timestamp: new Date().toISOString(),
           action: 'PROFILE_SAVED',
           triggerICPRefresh: true,
@@ -197,6 +421,12 @@ export function CompanyProfile({ onProfileUpdate, isEditMode = false, profileDat
         <p className="text-sm text-blue-700 mb-4">
           Configure your company information to help AI agents understand your business context and goals.
         </p>
+        
+        {isLoading && (
+          <div className="mb-4 p-3 bg-blue-100 rounded-lg">
+            <p className="text-sm text-blue-700">Loading your company profile...</p>
+          </div>
+        )}
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
@@ -247,7 +477,7 @@ export function CompanyProfile({ onProfileUpdate, isEditMode = false, profileDat
           
           <div className="space-y-2 md:col-span-2">
             <Label htmlFor="socialMediaUrls">Social Media URLs</Label>
-            {socialMediaUrls.map((socialUrl, index) => (
+            {Array.isArray(socialMediaUrls) && socialMediaUrls.map((socialUrl, index) => (
               <div key={index} className="flex gap-2 items-center">
                 <div className="w-24 text-sm font-medium text-gray-600">
                   {getPlatformLabel(socialUrl.platform)}:
@@ -276,7 +506,7 @@ export function CompanyProfile({ onProfileUpdate, isEditMode = false, profileDat
                 </SelectTrigger>
                 <SelectContent>
                   {socialPlatforms
-                    .filter(platform => !socialMediaUrls.some(url => url.platform === platform.value))
+                    .filter(platform => !Array.isArray(socialMediaUrls) || !socialMediaUrls.some(url => url.platform === platform.value))
                     .map(platform => (
                       <SelectItem key={platform.value} value={platform.value}>
                         {platform.label}
@@ -300,7 +530,7 @@ export function CompanyProfile({ onProfileUpdate, isEditMode = false, profileDat
 
           <div className="space-y-2 md:col-span-2">
             <Label htmlFor="targetMarkets">Target Markets</Label>
-            {targetMarkets.map((market, index) => (
+            {Array.isArray(targetMarkets) && targetMarkets.map((market, index) => (
               <div key={index} className="flex gap-2 items-center">
                 <Input
                   value={market}

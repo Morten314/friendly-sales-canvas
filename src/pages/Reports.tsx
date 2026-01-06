@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +13,30 @@ const Reports = () => {
     { role: "ai", content: "Hello! I'm Presenter. How can I help with your demo preparation today?" }
   ]);
   const [inputValue, setInputValue] = useState("");
+
+  // Listen for presenter events from header
+  useEffect(() => {
+    const handlePresenterChat = () => {
+      console.log("=== PRESENTER CHAT TRIGGERED FROM HEADER ===");
+      setIsChatOpen(!isChatOpen);
+    };
+
+    const handlePresenterCreateDemo = () => {
+      console.log("=== PRESENTER CREATE DEMO TRIGGERED FROM HEADER ===");
+      // TODO: Implement create new demo functionality
+      alert("Create New Demo functionality will be implemented here");
+    };
+
+    console.log("=== SETTING UP PRESENTER EVENT LISTENERS ===");
+    window.addEventListener('presenterChat', handlePresenterChat);
+    window.addEventListener('presenterCreateDemo', handlePresenterCreateDemo);
+    
+    return () => {
+      console.log("=== REMOVING PRESENTER EVENT LISTENERS ===");
+      window.removeEventListener('presenterChat', handlePresenterChat);
+      window.removeEventListener('presenterCreateDemo', handlePresenterCreateDemo);
+    };
+  }, [isChatOpen]);
 
   const handleSendMessage = () => {
     if (!inputValue.trim()) return;
@@ -34,22 +58,6 @@ const Reports = () => {
   return (
     <Layout>
       <div className="animate-fade-in">
-        <div className="flex justify-end items-center mb-6">
-          <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              className="flex items-center gap-2"
-              onClick={() => setIsChatOpen(!isChatOpen)}
-            >
-              <MessageSquare className="h-4 w-4" />
-              Chat with Presenter
-            </Button>
-            <Button className="bg-red-600 hover:bg-red-700 text-white flex items-center gap-2">
-              <PlusCircle className="h-4 w-4" />
-              Create New Demo
-            </Button>
-          </div>
-        </div>
         
         {isChatOpen && (
           <Card className="border-blue-200 bg-blue-50/40 mb-6">

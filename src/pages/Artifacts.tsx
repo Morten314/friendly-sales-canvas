@@ -1,12 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Search, FileText, TrendingUp, Users, Target, BarChart, Clock, AlertCircle, CheckCircle, ArrowRight, Lightbulb, Download, Share, Linkedin, FolderPlus, Bot, Eye, Grid, List } from 'lucide-react';
+import { FileText, TrendingUp, Users, Target, BarChart, Clock, AlertCircle, CheckCircle, Lightbulb, Download, Bot, Edit, Trash2 } from 'lucide-react';
 
 interface ArtefactItem {
   id: string;
@@ -136,9 +135,21 @@ const Artefacts = () => {
   usePageTitle('Artefacts - Brewra');
   const [artefacts, setArtefacts] = useState<ArtefactItem[]>(mockArtefacts);
   const [searchQuery, setSearchQuery] = useState('');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [expandedArtefact, setExpandedArtefact] = useState<string | null>(null);
-  const [previewArtefact, setPreviewArtefact] = useState<ArtefactItem | null>(null);
+  const [editingArtefact, setEditingArtefact] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+
+  // Listen for search events from header
+  useEffect(() => {
+    const handleSearch = (event: CustomEvent) => {
+      setSearchQuery(event.detail.query);
+    };
+
+    window.addEventListener('artifactsSearch', handleSearch as EventListener);
+    return () => {
+      window.removeEventListener('artifactsSearch', handleSearch as EventListener);
+    };
+  }, []);
 
   const filteredArtefacts = artefacts.filter(artefact => 
     artefact.agentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -150,12 +161,185 @@ const Artefacts = () => {
     setExpandedArtefact(expandedArtefact === id ? null : id);
   };
 
-  const handlePreviewClick = (artefact: ArtefactItem) => {
-    setPreviewArtefact(artefact);
+  const handleEditClick = (artefact: ArtefactItem, event: React.MouseEvent) => {
+    event.stopPropagation();
+    event.preventDefault();
+    setEditingArtefact(artefact.id);
+    setEditName(artefact.fullReport.title);
+  };
+
+  const handleDeleteClick = (id: string, event: React.MouseEvent) => {
+    event.stopPropagation();
+    setArtefacts(prev => prev.filter(artefact => artefact.id !== id));
+  };
+
+  const handleSaveEdit = (id: string) => {
+    setArtefacts(prev => prev.map(artefact => 
+      artefact.id === id 
+        ? { ...artefact, fullReport: { ...artefact.fullReport, title: editName } }
+        : artefact
+    ));
+    setEditingArtefact(null);
+    setEditName('');
+  };
+
+  const handleCancelEdit = () => {
+    setEditingArtefact(null);
+    setEditName('');
+  };
+
+  const handleDownloadClick = (artefact: ArtefactItem) => {
     // Mark as viewed if it was new
     if (artefact.status === 'new') {
       setArtefacts(prev => prev.map(a => a.id === artefact.id ? { ...a, status: 'viewed' as const } : a));
     }
+    
+    // Generate and download PDF
+    generateAndDownloadPDF(artefact);
+  };
+
+  const generateAndDownloadPDF = (artefact: ArtefactItem) => {
+    // Create a simple PDF using jsPDF-like approach
+    const pdfContent = createSimplePDF(artefact);
+    
+    // Create a blob with PDF content
+    const blob = new Blob([pdfContent], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    
+    // Create a temporary link element and trigger download
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${artefact.fullReport.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    // Clean up the URL object
+    URL.revokeObjectURL(url);
+  };
+
+  const createSimplePDF = (artefact: ArtefactItem) => {
+    // Create a minimal PDF structure
+    const title = artefact.fullReport.title;
+    const agentName = artefact.agentName;
+    const timestamp = artefact.timestamp;
+    const taskId = artefact.taskNumber;
+    const executiveSummary = artefact.fullReport.executiveSummary;
+    const keyFindings = artefact.fullReport.keyFindings;
+    const analysis = artefact.fullReport.analysis;
+    const recommendations = artefact.fullReport.recommendations;
+    const date = new Date().toLocaleDateString();
+
+    // Simple PDF content structure
+    const pdfData = `%PDF-1.4
+1 0 obj
+<<
+/Type /Catalog
+/Pages 2 0 R
+>>
+endobj
+
+2 0 obj
+<<
+/Type /Pages
+/Kids [3 0 R]
+/Count 1
+>>
+endobj
+
+3 0 obj
+<<
+/Type /Page
+/Parent 2 0 R
+/MediaBox [0 0 612 792]
+/Contents 4 0 R
+/Resources <<
+/Font <<
+/F1 5 0 R
+/F2 6 0 R
+>>
+>>
+>>
+endobj
+
+4 0 obj
+<<
+/Length 2000
+>>
+stream
+BT
+/F1 16 Tf
+50 750 Td
+(${title}) Tj
+0 -30 Td
+/F2 10 Tf
+(Generated by: ${agentName} | ${timestamp} | Task ID: ${taskId}) Tj
+0 -40 Td
+/F1 14 Tf
+(EXECUTIVE SUMMARY) Tj
+0 -20 Td
+/F2 10 Tf
+(${executiveSummary}) Tj
+0 -40 Td
+/F1 14 Tf
+(KEY FINDINGS) Tj
+0 -20 Td
+/F2 10 Tf
+${keyFindings.map((finding, index) => `(${index + 1}. ${finding}) Tj 0 -15 Td`).join('\n')}
+0 -20 Td
+/F1 14 Tf
+(ANALYSIS) Tj
+0 -20 Td
+/F2 10 Tf
+(${analysis}) Tj
+0 -40 Td
+/F1 14 Tf
+(RECOMMENDATIONS) Tj
+0 -20 Td
+/F2 10 Tf
+${recommendations.map((rec, index) => `(${index + 1}. ${rec}) Tj 0 -15 Td`).join('\n')}
+0 -40 Td
+/F2 8 Tf
+(Generated by Brewra AI • ${date}) Tj
+ET
+endstream
+endobj
+
+5 0 obj
+<<
+/Type /Font
+/Subtype /Type1
+/BaseFont /Helvetica-Bold
+>>
+endobj
+
+6 0 obj
+<<
+/Type /Font
+/Subtype /Type1
+/BaseFont /Helvetica
+>>
+endobj
+
+xref
+0 7
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000274 00000 n 
+0000002000 00000 n 
+0000002500 00000 n 
+trailer
+<<
+/Size 7
+/Root 1 0 R
+>>
+startxref
+3000
+%%EOF`;
+
+    return pdfData;
   };
 
   const getTypeIcon = (type: ArtefactItem['type']) => {
@@ -183,6 +367,7 @@ const Artefacts = () => {
   const LibraryCard = ({ artefact }: { artefact: ArtefactItem }) => {
     const TypeIcon = getTypeIcon(artefact.type);
     const isExpanded = expandedArtefact === artefact.id;
+    const isEditing = editingArtefact === artefact.id;
 
     return (
       <Card className={`cursor-pointer transition-all duration-200 hover:shadow-lg ${isExpanded ? 'ring-2 ring-primary/20' : ''}`}>
@@ -207,17 +392,64 @@ const Artefacts = () => {
                 <span>{artefact.timestamp}</span>
               </div>
             </div>
+            {/* Edit and Delete Icons */}
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => handleEditClick(artefact, e)}
+                className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
+              >
+                <Edit className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => handleDeleteClick(artefact.id, e)}
+                className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
 
-          <Button 
-            variant="ghost" 
-            className="w-full justify-start p-0 h-auto font-normal"
-            onClick={() => handleArtefactClick(artefact.id)}
-          >
-            <span className="text-sm text-left truncate">
-              {artefact.actionDelegated}
-            </span>
-          </Button>
+          {isEditing ? (
+            <div className="space-y-2">
+              <Input
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                className="text-sm font-semibold"
+                placeholder="Enter report title"
+              />
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => handleSaveEdit(artefact.id)}
+                  className="h-6 px-2 text-xs"
+                >
+                  Save
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleCancelEdit}
+                  className="h-6 px-2 text-xs"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <Button 
+              variant="ghost" 
+              className="w-full justify-start p-0 h-auto font-normal"
+              onClick={() => handleArtefactClick(artefact.id)}
+            >
+              <span className="text-sm text-left truncate">
+                {artefact.actionDelegated}
+              </span>
+            </Button>
+          )}
 
           {/* Expanded View */}
           {isExpanded && (
@@ -241,42 +473,36 @@ const Artefacts = () => {
               </div>
 
               {/* Action Performed - File Preview */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-primary" />
-                  <h4 className="font-semibold text-sm">Action Performed</h4>
-                </div>
-                
-                <div 
-                  className="border-2 border-dashed border-muted-foreground/20 rounded-lg p-4 hover:border-primary/40 transition-colors cursor-pointer group"
-                  onClick={() => handlePreviewClick(artefact)}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-12 bg-gradient-to-br from-primary to-primary/80 rounded-lg flex items-center justify-center shadow-sm">
-                      <FileText className="h-5 w-5 text-white" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-sm mb-1 group-hover:text-primary transition-colors truncate">
-                        {artefact.fullReport.title}
-                      </h3>
-                      <p className="text-xs text-muted-foreground mb-1 line-clamp-2">
-                        {artefact.outputSummary}
-                      </p>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span>PDF • 12 pages</span>
-                        <span>•</span>
-                        <span>{artefact.timestamp}</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Eye className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                      <span className="text-xs text-muted-foreground group-hover:text-primary transition-colors">
-                        Preview
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+                 <div className="space-y-3">
+                 <div className="flex items-center gap-2">
+                   <FileText className="h-4 w-4 text-primary" />
+                   <h4 className="font-semibold text-sm">Action Performed</h4>
+                 </div>
+                 
+                 <div className="border-2 border-dashed border-muted-foreground/20 rounded-lg p-4">
+                   <div className="flex items-center gap-3">
+                     <div className="w-10 h-12 bg-gradient-to-br from-primary to-primary/80 rounded-lg flex items-center justify-center shadow-sm">
+                       <FileText className="h-5 w-5 text-white" />
+                     </div>
+                     <div className="flex-1 min-w-0">
+                       <h3 
+                         className="font-semibold text-sm mb-1 hover:text-primary transition-colors cursor-pointer truncate"
+                         onClick={() => handleDownloadClick(artefact)}
+                       >
+                         {artefact.fullReport.title}
+                       </h3>
+                       <p className="text-xs text-muted-foreground mb-1 line-clamp-2">
+                         {artefact.outputSummary}
+                       </p>
+                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                         <span>PDF • 12 pages</span>
+                         <span>•</span>
+                         <span>{artefact.timestamp}</span>
+                       </div>
+                     </div>
+                   </div>
+                 </div>
+               </div>
             </div>
           )}
         </CardContent>
@@ -287,44 +513,7 @@ const Artefacts = () => {
   return (
     <Layout>
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Artefacts</h1>
-            <p className="text-muted-foreground">
-              Agent-generated insights and deliverables from your workflows
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input 
-                placeholder="Search artefacts..." 
-                value={searchQuery} 
-                onChange={(e) => setSearchQuery(e.target.value)} 
-                className="pl-8 w-[300px]" 
-              />
-            </div>
-            <div className="flex items-center border rounded-lg">
-              <Button
-                variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('grid')}
-                className="rounded-r-none"
-              >
-                <Grid className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={viewMode === 'list' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('list')}
-                className="rounded-l-none"
-              >
-                <List className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </div>
+        {/* Header - Content moved to main header */}
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -375,9 +564,9 @@ const Artefacts = () => {
         </div>
 
         {/* Artefacts Library */}
-        <div className={viewMode === 'grid' ? 'grid grid-cols-1 lg:grid-cols-2 gap-4' : 'space-y-4'}>
+        <div className="space-y-4">
           {filteredArtefacts.length === 0 ? (
-            <Card className="col-span-full">
+            <Card>
               <CardContent className="p-8 text-center">
                 <Bot className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="text-lg font-semibold mb-2">No artefacts found</h3>
@@ -394,110 +583,6 @@ const Artefacts = () => {
         </div>
       </div>
 
-      {/* Preview Modal */}
-      <Dialog open={!!previewArtefact} onOpenChange={() => setPreviewArtefact(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          {previewArtefact && (
-            <>
-              <DialogHeader>
-                <DialogTitle className="text-xl font-bold">
-                  {previewArtefact.fullReport.title}
-                </DialogTitle>
-              </DialogHeader>
-              
-              {/* Document Header */}
-              <div className="border-b bg-muted/20 px-6 py-4 -mx-6 -mt-4">
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
-                  <div>
-                    <span className="font-medium text-muted-foreground">Agent:</span>
-                    <p className="font-semibold">{previewArtefact.agentName}</p>
-                  </div>
-                  <div>
-                    <span className="font-medium text-muted-foreground">Task ID:</span>
-                    <p className="font-mono font-medium">{previewArtefact.taskNumber}</p>
-                  </div>
-                  <div>
-                    <span className="font-medium text-muted-foreground">Generated:</span>
-                    <p className="font-medium">{previewArtefact.timestamp}</p>
-                  </div>
-                  <div>
-                    <span className="font-medium text-muted-foreground">Type:</span>
-                    <p className="font-medium capitalize">{previewArtefact.type}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Document Content */}
-              <div className="space-y-6">
-                {/* Snapshot */}
-                <section>
-                  <h2 className="text-lg font-semibold mb-4 border-b pb-2">Snapshot</h2>
-                  <p className="text-sm leading-relaxed">{previewArtefact.fullReport.executiveSummary}</p>
-                </section>
-
-                {/* Key Findings */}
-                <section>
-                  <h2 className="text-lg font-semibold mb-4 border-b pb-2">Key Findings</h2>
-                  <ul className="space-y-2">
-                    {previewArtefact.fullReport.keyFindings.map((finding, index) => (
-                      <li key={index} className="flex items-start gap-2 text-sm">
-                        <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                        <span>{finding}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-
-                {/* Analysis */}
-                <section>
-                  <h2 className="text-lg font-semibold mb-4 border-b pb-2">Analysis</h2>
-                  <p className="text-sm leading-relaxed">{previewArtefact.fullReport.analysis}</p>
-                </section>
-
-                {/* Recommendations */}
-                <section>
-                  <h2 className="text-lg font-semibold mb-4 border-b pb-2">Recommendations</h2>
-                  <div className="space-y-2">
-                    {previewArtefact.fullReport.recommendations.map((recommendation, index) => (
-                      <div key={index} className="flex items-start gap-2 text-sm">
-                        <ArrowRight className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                        <span>{recommendation}</span>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="border-t bg-muted/20 px-6 py-4 -mx-6 -mb-6 mt-6">
-                <div className="flex items-center justify-between">
-                  <div className="text-sm text-muted-foreground">
-                    Generated by {previewArtefact.agentName} • {previewArtefact.timestamp}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm">
-                      <Download className="h-4 w-4 mr-2" />
-                      Save as PDF
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      <Share className="h-4 w-4 mr-2" />
-                      Share to Slack
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      <Linkedin className="h-4 w-4 mr-2" />
-                      Post to LinkedIn
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      <FolderPlus className="h-4 w-4 mr-2" />
-                      Save to Workspace
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
     </Layout>
   );
 };

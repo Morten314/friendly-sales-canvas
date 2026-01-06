@@ -12,6 +12,9 @@ import MiniLineChart from '@/components/ui/MiniLineChart';
 import { toUTCTimestamp, isTimestampNewer, getCurrentUTCTimestamp, logTimestampComparison } from '@/lib/timestampUtils';
 import { EditDropdownMenu } from './EditDropdownMenu';
 import { executeWithRateLimit } from '@/lib/rateLimitManager';
+import { apiFetchJson } from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
+import { getUserLocalStorage, setUserLocalStorage } from '@/utils/cacheUtils';
 
 interface EditRecord {
   id: string;
@@ -86,6 +89,25 @@ interface IndustryTrendsSectionProps {
   trendSnapshots?: TrendSnapshot[];
   recommendations?: IndustryTrendsRecommendations;
   risks?: string[];
+  regionalHotspots?: {
+    APAC: string;
+    Europe: string;
+    "North America": string;
+  };
+  visualCharts?: {
+    aiAdoptionTrends: string[];
+    technologyBudgetAllocation: {
+      "AI/ML": string;
+      Cloud: string;
+      Security: string;
+    };
+  };
+  // Add individual field update functions
+  onIndustryTrendsExecutiveSummaryChange?: (value: string) => void;
+  onIndustryTrendsAiAdoptionChange?: (value: string) => void;
+  onIndustryTrendsCloudMigrationChange?: (value: string) => void;
+  onIndustryTrendsRegulatoryChange?: (value: string) => void;
+  onIndustryTrendSnapshotsChange?: (snapshots: TrendSnapshot[]) => void;
 }
 
 const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
@@ -114,8 +136,17 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
   regulatory: propRegulatory,
   trendSnapshots: propTrendSnapshots,
   recommendations: propRecommendations,
-  risks: propRisks
+  risks: propRisks,
+  regionalHotspots: propRegionalHotspots,
+  visualCharts: propVisualCharts,
+  // Individual field update functions
+  onIndustryTrendsExecutiveSummaryChange,
+  onIndustryTrendsAiAdoptionChange,
+  onIndustryTrendsCloudMigrationChange,
+  onIndustryTrendsRegulatoryChange,
+  onIndustryTrendSnapshotsChange
 }) => {
+  const { currentUser } = useAuth();
   // State for API data
   const [industryTrendsData, setIndustryTrendsData] = useState<IndustryTrendsData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -130,38 +161,56 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
   const [editRegulatory, setEditRegulatory] = useState('');
   const [editTrendSnapshots, setEditTrendSnapshots] = useState<TrendSnapshot[]>([]);
 
-  // Save individual fields to localStorage whenever they change
+  // Debug logging for state changes
   useEffect(() => {
-    if (editExecutiveSummary) {
-      localStorage.setItem('industry-trends_executiveSummary', editExecutiveSummary);
+    console.log('🔍 Industry Trends - State Debug:', {
+      isEditing: isIndustryTrendsEditing,
+      editExecutiveSummary: editExecutiveSummary.substring(0, 50) + '...',
+      propExecutiveSummary: (propExecutiveSummary || '').substring(0, 50) + '...',
+      industryTrendsData: industryTrendsData?.executiveSummary?.substring(0, 50) + '...',
+      timestamp: Date.now()
+    });
+  }, [isIndustryTrendsEditing, editExecutiveSummary, propExecutiveSummary, industryTrendsData]);
+
+  // Save individual fields to localStorage whenever they change (user-specific)
+  useEffect(() => {
+    if (editExecutiveSummary && currentUser?.uid) {
+      setUserLocalStorage('industry-trends_executiveSummary', editExecutiveSummary, currentUser.uid);
     }
-  }, [editExecutiveSummary]);
+  }, [editExecutiveSummary, currentUser?.uid]);
 
   useEffect(() => {
-    if (editAiAdoption) {
-      localStorage.setItem('industry-trends_aiAdoption', editAiAdoption);
+    if (editAiAdoption && currentUser?.uid) {
+      setUserLocalStorage('industry-trends_aiAdoption', editAiAdoption, currentUser.uid);
     }
-  }, [editAiAdoption]);
+  }, [editAiAdoption, currentUser?.uid]);
 
   useEffect(() => {
-    if (editCloudMigration) {
-      localStorage.setItem('industry-trends_cloudMigration', editCloudMigration);
+    if (editCloudMigration && currentUser?.uid) {
+      setUserLocalStorage('industry-trends_cloudMigration', editCloudMigration, currentUser.uid);
     }
-  }, [editCloudMigration]);
+  }, [editCloudMigration, currentUser?.uid]);
 
   useEffect(() => {
-    if (editRegulatory) {
-      localStorage.setItem('industry-trends_regulatory', editRegulatory);
+    if (editRegulatory && currentUser?.uid) {
+      setUserLocalStorage('industry-trends_regulatory', editRegulatory, currentUser.uid);
     }
-  }, [editRegulatory]);
+  }, [editRegulatory, currentUser?.uid]);
 
   useEffect(() => {
-    if (editTrendSnapshots && editTrendSnapshots.length > 0) {
-      localStorage.setItem('industry-trends_trendSnapshots', JSON.stringify(editTrendSnapshots));
+    if (editTrendSnapshots && editTrendSnapshots.length > 0 && currentUser?.uid) {
+      setUserLocalStorage('industry-trends_trendSnapshots', JSON.stringify(editTrendSnapshots), currentUser.uid);
     }
-  }, [editTrendSnapshots]);
+  }, [editTrendSnapshots, currentUser?.uid]);
 
   const handleModify = () => {
+    // Initialize edit fields with current data
+    setEditExecutiveSummary(propExecutiveSummary || industryTrendsData?.executiveSummary || '');
+    setEditAiAdoption(propAiAdoption || industryTrendsData?.aiAdoption || '');
+    setEditCloudMigration(propCloudMigration || industryTrendsData?.cloudMigration || '');
+    setEditRegulatory(propRegulatory || industryTrendsData?.regulatory || '');
+    setEditTrendSnapshots(propTrendSnapshots || industryTrendsData?.trendSnapshots || []);
+    
     onIndustryTrendsToggleEdit();
   };
 
@@ -178,11 +227,18 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
       const currentTime = Date.now();
       const randomId = Math.random().toString(36).substring(7);
       
-      // Get company profile data for dynamic reports
-      const profile = companyProfile || JSON.parse(localStorage.getItem('companyProfile') || '{}');
+      // Get company profile data for dynamic reports (user-specific)
+      const profile = companyProfile || JSON.parse(getUserLocalStorage('companyProfile', currentUser?.uid) || '{}');
+      
+      if (!currentUser?.uid) {
+        console.error('User not authenticated');
+        setError('User not authenticated');
+        setIsLoading(false);
+        return;
+      }
       
       const payload = {
-        user_id: "brewra",
+        user_id: currentUser.uid,
         component_name: "industry trends report",
         refresh: refresh,
         force_refresh: refresh,
@@ -190,37 +246,18 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
         bypass_all_cache: refresh,
         request_timestamp: currentTime,
         request_id: randomId,
-        additionalPrompt: profile.companyUrl ? `Company: ${profile.companyUrl}, Industry: ${profile.industry}, Size: ${profile.companySize}, GTM: ${profile.primaryGTMModel}, Goals: ${profile.strategicGoals}` : "",
-        data: {
-          company: profile.companyUrl || "OrbiSelf",
-          product: "Convoic.AI", 
-          target_market: profile.targetMarkets?.[0] || "Indian college students (Tier 2 & 3)",
-          region: profile.targetMarkets?.[0] || "India",
-          timestamp: currentTime,
-          force_new_data: refresh
-        }
+        data: {}
       };
 
       const requestTimestamp = Date.now();
       
-      const response = await executeWithRateLimit(
-        () => fetch('https://backend-11kr.onrender.com/market-research', {
+      const result = await executeWithRateLimit(
+        () => apiFetchJson('market-research', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload)
+          body: payload
         }),
         'Industry Trends'
       );
-
-      
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
       
       if (result.status === 'success' && result.data) {
         const reportData = result.data;
@@ -299,7 +336,27 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
             trendSnapshots,
             regionalHotspots,
             strategicRecommendations,
-            visualCharts: reportData.visualCharts || {},
+            visualCharts: (reportData.visualCharts && typeof reportData.visualCharts === 'object' && Object.keys(reportData.visualCharts).length > 0)
+              ? {
+                  aiAdoptionTrends: (reportData.visualCharts.aiAdoptionTrends && Array.isArray(reportData.visualCharts.aiAdoptionTrends) && reportData.visualCharts.aiAdoptionTrends.length > 0)
+                    ? reportData.visualCharts.aiAdoptionTrends
+                    : [],
+                  technologyBudgetAllocation: (reportData.visualCharts.technologyBudgetAllocation && typeof reportData.visualCharts.technologyBudgetAllocation === 'object' && Object.keys(reportData.visualCharts.technologyBudgetAllocation).length > 0)
+                    ? reportData.visualCharts.technologyBudgetAllocation
+                    : {
+                        "AI/ML": '',
+                        Cloud: '',
+                        Security: ''
+                      }
+                }
+              : {
+                  aiAdoptionTrends: [],
+                  technologyBudgetAllocation: {
+                    "AI/ML": '',
+                    Cloud: '',
+                    Security: ''
+                  }
+                },
             risks: reportData.risks || [],
             marketDrivers: reportData.marketDrivers || [],
             executiveSummary: reportData.executiveSummary || '',
@@ -341,8 +398,9 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
       // Clear old data immediately to prevent showing stale data
       setIndustryTrendsData(null);
       setError(null);
-      // Don't set loading to true - parent handles loading state
-      // Don't call fetchIndustryTrendsData - parent provides data via props
+      setIsLoading(true);
+      // Force fetch new data on refresh
+      fetchIndustryTrendsData(true);
     }
   }, [isRefreshing]);
 
@@ -362,24 +420,71 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
   }, [propExecutiveSummary, propAiAdoption, propCloudMigration, propRegulatory, propTrendSnapshots, propRecommendations, propRisks, isRefreshing, companyProfile]);
 
   // Sync with props when they change (for refresh scenarios)
+  // Only sync when not editing to avoid overwriting user's current edits
   useEffect(() => {
-    if (propExecutiveSummary || propAiAdoption || propCloudMigration || propRegulatory) {
-      console.log('🔄 Industry Trends - Props changed, syncing with local state');
+    if (!isIndustryTrendsEditing && (propExecutiveSummary || propAiAdoption || propCloudMigration || propRegulatory)) {
+      console.log('🔄 Industry Trends - Props changed, syncing with local state (not editing)');
       console.log('🔄 Props:', { propExecutiveSummary, propAiAdoption, propCloudMigration, propRegulatory });
       
-      // Update local state with prop data
-      setIndustryTrendsData(prevData => ({
-        ...prevData,
-        executiveSummary: propExecutiveSummary || prevData?.executiveSummary || '',
-        aiAdoption: propAiAdoption || prevData?.aiAdoption || '',
-        cloudMigration: propCloudMigration || prevData?.cloudMigration || '',
-        regulatory: propRegulatory || prevData?.regulatory || '',
-        trendSnapshots: propTrendSnapshots || prevData?.trendSnapshots || [],
-        // recommendations removed as not part of IndustryTrendsData type
-        risks: propRisks || prevData?.risks || []
-      }));
+      // Only update if current data is empty to avoid overwriting user edits
+      setIndustryTrendsData(prevData => {
+        if (!prevData) {
+          return {
+            executiveSummary: propExecutiveSummary || '',
+            aiAdoption: propAiAdoption || '',
+            cloudMigration: propCloudMigration || '',
+            regulatory: propRegulatory || '',
+            trendSnapshots: propTrendSnapshots || [],
+            recommendations: propRecommendations || { primaryFocus: '', marketEntry: '' },
+            risks: propRisks || [],
+            regionalHotspots: propRegionalHotspots || {
+              APAC: '',
+              Europe: '',
+              "North America": ''
+            },
+            visualCharts: propVisualCharts || {
+              aiAdoptionTrends: [],
+              technologyBudgetAllocation: {
+                "AI/ML": '',
+                Cloud: '',
+                Security: ''
+              }
+            },
+            timestamp: Date.now()
+          };
+        }
+        
+        // Only update fields that are empty
+        return {
+          ...prevData,
+          executiveSummary: prevData.executiveSummary || propExecutiveSummary || '',
+          aiAdoption: prevData.aiAdoption || propAiAdoption || '',
+          cloudMigration: prevData.cloudMigration || propCloudMigration || '',
+          regulatory: prevData.regulatory || propRegulatory || '',
+          trendSnapshots: prevData.trendSnapshots?.length > 0 ? prevData.trendSnapshots : (propTrendSnapshots || []),
+          recommendations: prevData.recommendations?.primaryFocus ? prevData.recommendations : (propRecommendations || { primaryFocus: '', marketEntry: '' }),
+          risks: prevData.risks?.length > 0 ? prevData.risks : (propRisks || []),
+          regionalHotspots: (prevData.regionalHotspots && Object.keys(prevData.regionalHotspots).length > 0 && prevData.regionalHotspots.APAC) 
+            ? prevData.regionalHotspots 
+            : (propRegionalHotspots || {
+                APAC: '',
+                Europe: '',
+                "North America": ''
+              }),
+          visualCharts: (prevData.visualCharts && Object.keys(prevData.visualCharts).length > 0 && prevData.visualCharts.aiAdoptionTrends?.length > 0)
+            ? prevData.visualCharts
+            : (propVisualCharts || {
+                aiAdoptionTrends: [],
+                technologyBudgetAllocation: {
+                  "AI/ML": '',
+                  Cloud: '',
+                  Security: ''
+                }
+              })
+        };
+      });
     }
-  }, [propExecutiveSummary, propAiAdoption, propCloudMigration, propRegulatory, propTrendSnapshots, propRecommendations, propRisks]);
+  }, [propExecutiveSummary, propAiAdoption, propCloudMigration, propRegulatory, propTrendSnapshots, propRecommendations, propRisks, propRegionalHotspots, propVisualCharts, isIndustryTrendsEditing]);
 
   // Handle save changes
   const handleSaveChanges = async () => {
@@ -429,101 +534,30 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
           cloudMigration: editCloudMigration,
           regulatory: editRegulatory,
           trendSnapshots: editTrendSnapshots,
-          timestamp: prev.timestamp || new Date().toISOString() // Keep as string
+          timestamp: Date.now() // Force update with new timestamp
         };
       });
       
       console.log('✅ Industry Trends - UI updated with edited values');
 
-      // Fetch updated data using GET API
-      const getResponse = await fetch('https://backend-11kr.onrender.com/market_intelligence', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      console.log('📥 GET /market_intelligence status:', getResponse.status);
-
-      if (!getResponse.ok) {
-        throw new Error(`Failed to fetch updated data: ${getResponse.status}`);
+      // Update parent state with local values (trust the user's edits)
+      if (onIndustryTrendsExecutiveSummaryChange) {
+        onIndustryTrendsExecutiveSummaryChange(editExecutiveSummary);
       }
-
-      const getData = await getResponse.json();
-      console.log('✅ Industry Trends - GET /market_intelligence successful:', getData);
-      console.log('🔍 Industry Trends - API Response Structure:', {
-        hasIndustryTrendsData: !!getData.industry_trends_data,
-        industryTrendsDataKeys: getData.industry_trends_data ? Object.keys(getData.industry_trends_data) : 'N/A',
-        fullResponseKeys: Object.keys(getData),
-        responseType: typeof getData
-      });
-      
-      // Check if API returned updated data, otherwise use local edited values
-      if (getData && getData.industry_trends_data) {
-        const apiData = getData.industry_trends_data;
-        
-        // Update the displayed data with API response
-        setIndustryTrendsData(prev => {
-          if (!prev) return prev;
-          
-          return {
-            ...prev,
-            executiveSummary: apiData.executiveSummary || editExecutiveSummary,
-            aiAdoption: apiData.aiAdoption || editAiAdoption,
-            cloudMigration: apiData.cloudMigration || editCloudMigration,
-            regulatory: apiData.regulatory || editRegulatory,
-            trendSnapshots: apiData.trendSnapshots || editTrendSnapshots,
-            timestamp: prev.timestamp // Keep the existing timestamp
-          };
-        });
-        
-        // Update local edit state with the saved values to reflect in UI
-        setEditExecutiveSummary(apiData.executiveSummary || editExecutiveSummary);
-        setEditAiAdoption(apiData.aiAdoption || editAiAdoption);
-        setEditCloudMigration(apiData.cloudMigration || editCloudMigration);
-        setEditRegulatory(apiData.regulatory || editRegulatory);
-        setEditTrendSnapshots(apiData.trendSnapshots || editTrendSnapshots);
-        
-        console.log('✅ Industry Trends - State updated with API response data');
-        console.log('✅ Industry Trends - Updated edit state values:', {
-          executiveSummary: apiData.executiveSummary || editExecutiveSummary,
-          aiAdoption: apiData.aiAdoption || editAiAdoption,
-          cloudMigration: apiData.cloudMigration || editCloudMigration,
-          regulatory: apiData.regulatory || editRegulatory
-        });
-      } else {
-        // Fallback: Update the displayed data with the edited values
-        console.log('⚠️ Industry Trends - API response structure not as expected, using fallback');
-        console.log('🔍 Industry Trends - Available response keys:', Object.keys(getData));
-        
-        setIndustryTrendsData(prev => {
-          if (!prev) return prev;
-          
-          return {
-            ...prev,
-            executiveSummary: editExecutiveSummary,
-            aiAdoption: editAiAdoption,
-            cloudMigration: editCloudMigration,
-            regulatory: editRegulatory,
-            trendSnapshots: editTrendSnapshots,
-            timestamp: prev.timestamp // Keep the existing timestamp
-          };
-        });
-        
-        // Local edit state is already updated with the edited values, so no need to update again
-        console.log('✅ Industry Trends - State updated with edited values (fallback)');
-        console.log('✅ Industry Trends - Updated values:', {
-          executiveSummary: editExecutiveSummary,
-          aiAdoption: editAiAdoption,
-          cloudMigration: editCloudMigration,
-          regulatory: editRegulatory
-        });
+      if (onIndustryTrendsAiAdoptionChange) {
+        onIndustryTrendsAiAdoptionChange(editAiAdoption);
+      }
+      if (onIndustryTrendsCloudMigrationChange) {
+        onIndustryTrendsCloudMigrationChange(editCloudMigration);
+      }
+      if (onIndustryTrendsRegulatoryChange) {
+        onIndustryTrendsRegulatoryChange(editRegulatory);
+      }
+      if (onIndustryTrendSnapshotsChange) {
+        onIndustryTrendSnapshotsChange(editTrendSnapshots);
       }
       
-      // UI already updated above, no need to update again
-      
-      // Also refresh the component data
-      await fetchUpdatedData();
+      console.log('✅ Industry Trends - Parent state updated with local edits');
       
       // Call the original save function to trigger chat panel
       onIndustryTrendsSaveChanges();
@@ -538,10 +572,10 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
   const fetchUpdatedData = async () => {
     try {
       const response = await executeWithRateLimit(
-        () => fetch('https://backend-11kr.onrender.com/market-research', {
+        () => fetch('/api/market-research', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ component_name: "industry_trends", user_id: "user_123" })
+          body: JSON.stringify({ component_name: "industry_trends", user_id: currentUser?.uid || "" })
         }),
         'Industry Trends Update'
       );
@@ -876,11 +910,9 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
           {!industryTrendsExpanded && !isSplitView && (
             <div className="flex justify-center pt-4">
               <Button
-                onClick={() => {
-                  onIndustryTrendsExpandToggle(true);
-                }}
+                onClick={() => onIndustryTrendsExpandToggle(true)}
                 variant="outline"
-                className="flex items-center space-x-2 text-sm"
+                className="flex items-center space-x-2 text-sm hover:bg-gray-50"
               >
                 <span>Read More</span>
                 <ChevronDown className="h-4 w-4" />
@@ -892,18 +924,6 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
           {(industryTrendsExpanded || isSplitView) && (
             <div className="animate-fade-in space-y-8">
               <div className="border-t pt-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-8">
-                  Industry Trends Report
-                </h2>
-                
-
-                {/* Executive Summary */}
-                <div className="mb-8">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Executive Summary</h3>
-                  <p className="text-gray-700 bg-gray-50 p-4 rounded-lg">
-                    {propExecutiveSummary || industryTrendsData?.executiveSummary || 'No executive summary available'}
-                  </p>
-                </div>
 
                 {/* Key Trend Snapshots */}
                 <div className="mb-8">
@@ -977,28 +997,49 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                 {/* Visual Charts Section */}
                 <div className="mb-8">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Visual Charts</h3>
-                  {industryTrendsData && industryTrendsData.visualCharts ? (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      <div className="bg-white border border-gray-200 rounded-lg p-4">
-                        <h4 className="font-medium text-gray-900 mb-3">AI Adoption Trends</h4>
-                        {industryTrendsData.visualCharts.aiAdoptionTrends && Array.isArray(industryTrendsData.visualCharts.aiAdoptionTrends) ? (
-                          <MiniLineChart 
-                            data={industryTrendsData.visualCharts.aiAdoptionTrends.map((quarter, index) => ({
-                              name: quarter || `Q${index + 1}`,
-                              value: 45 + (index * 11) // Dynamic values based on quarters
-                            }))} 
-                            title="" 
-                            color="#8B5CF6" 
-                          />
-                        ) : (
-                          <p className="text-gray-500 text-sm">No AI adoption trends data available</p>
-                        )}
+                  {(() => {
+                    // Use props first, then fall back to internal state
+                    const visualCharts = propVisualCharts || industryTrendsData?.visualCharts;
+                    
+                    if (!visualCharts) {
+                      return <p className="text-gray-500">No visual charts data available</p>;
+                    }
+                    
+                    return (
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div className="bg-white border border-gray-200 rounded-lg p-4">
+                          <h4 className="font-medium text-gray-900 mb-3">AI Adoption Trends</h4>
+                          {(() => {
+                            const trendsData = visualCharts?.aiAdoptionTrends;
+                            console.log('🔍 AI Adoption Trends Debug:', {
+                              hasVisualCharts: !!visualCharts,
+                              hasAiAdoptionTrends: !!visualCharts?.aiAdoptionTrends,
+                              trendsDataLength: trendsData?.length,
+                              trendsData: trendsData,
+                              propVisualCharts: propVisualCharts,
+                              industryTrendsDataVisualCharts: industryTrendsData?.visualCharts
+                            });
+                            
+                            if (trendsData && Array.isArray(trendsData) && trendsData.length > 0) {
+                              return (
+                                <MiniLineChart 
+                                  data={trendsData.map((quarter, index) => ({
+                                    name: quarter || `Q${index + 1}`,
+                                    value: 45 + (index * 11) // Dynamic values based on quarters
+                                  }))} 
+                                  title="" 
+                                  color="#8B5CF6" 
+                                />
+                              );
+                            }
+                            return <p className="text-gray-500 text-sm">No AI adoption trends data available</p>;
+                          })()}
                       </div>
                       <div className="bg-white border border-gray-200 rounded-lg p-4">
                         <h4 className="font-medium text-gray-900 mb-3">Technology Budget Allocation</h4>
                         {(() => {
                           try {
-                            const budgetData = industryTrendsData?.visualCharts?.technologyBudgetAllocation;
+                            const budgetData = visualCharts?.technologyBudgetAllocation || industryTrendsData?.visualCharts?.technologyBudgetAllocation;
                             if (!budgetData) {
                               return <p className="text-gray-500 text-sm">No budget allocation data available</p>;
                             }
@@ -1037,9 +1078,8 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                         })()}
                       </div>
                     </div>
-                  ) : (
-                    <p className="text-gray-500">No visual charts data available</p>
-                  )}
+                    );
+                  })()}
                 </div>
 
                 {/* Export Footer */}

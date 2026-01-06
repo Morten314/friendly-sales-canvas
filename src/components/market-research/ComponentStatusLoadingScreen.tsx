@@ -1,7 +1,8 @@
 import React from 'react';
-import { CheckCircle, XCircle, Loader2, BarChart3, Zap, MapPin, Building2, Shield } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2, BarChart3, Zap, MapPin, Building2, Shield, X } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 interface ComponentStatus {
   name: string;
@@ -18,6 +19,7 @@ interface ComponentStatusLoadingScreenProps {
   consecutiveValidations?: number;
   loadingPhase?: 'api' | 'rendering' | 'complete';
   componentRenderingStatus?: Record<string, 'pending' | 'rendering' | 'complete'>;
+  onClose?: () => void;
 }
 
 export const ComponentStatusLoadingScreen: React.FC<ComponentStatusLoadingScreenProps> = ({
@@ -28,7 +30,8 @@ export const ComponentStatusLoadingScreen: React.FC<ComponentStatusLoadingScreen
   validationAttempt = 0,
   consecutiveValidations = 0,
   loadingPhase = 'api',
-  componentRenderingStatus = {}
+  componentRenderingStatus = {},
+  onClose
 }) => {
   const components: ComponentStatus[] = [
     { name: 'Market Size', status: componentStatus['Market Size'], icon: BarChart3 },
@@ -158,7 +161,20 @@ export const ComponentStatusLoadingScreen: React.FC<ComponentStatusLoadingScreen
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-8 max-w-2xl mx-4 w-full max-h-[80vh] overflow-y-auto">
+      <div className="bg-white rounded-lg p-8 max-w-2xl mx-4 w-full max-h-[80vh] overflow-y-auto relative">
+        {/* Close Button */}
+        {onClose && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onClose}
+            className="absolute top-4 right-4 h-8 w-8 rounded-full hover:bg-gray-100 z-10"
+            aria-label="Close loading screen"
+          >
+            <X className="h-5 w-5" />
+          </Button>
+        )}
+        
         {/* Header */}
         <div className={`mb-6 p-4 rounded-lg bg-gradient-to-r ${overallStatus.bgColor} border ${overallStatus.borderColor}`}>
           <div className="flex items-center gap-3 mb-2">
@@ -219,8 +235,8 @@ export const ComponentStatusLoadingScreen: React.FC<ComponentStatusLoadingScreen
           })}
         </div>
 
-        {/* Validation Progress */}
-        {isValidating && (
+        {/* Validation Progress - Hidden per user request */}
+        {/* {isValidating && (
           <div className="bg-blue-50 rounded-lg p-4 mb-4">
             <div className="flex items-center gap-2 mb-2">
               <Loader2 className="h-4 w-4 text-blue-600 animate-spin" />
@@ -232,7 +248,7 @@ export const ComponentStatusLoadingScreen: React.FC<ComponentStatusLoadingScreen
               <p>All 5 components must pass validation before loading screen disappears</p>
             </div>
           </div>
-        )}
+        )} */}
 
         {/* Progress Summary */}
         <div className="bg-gray-50 rounded-lg p-4">

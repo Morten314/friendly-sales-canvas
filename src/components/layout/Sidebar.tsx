@@ -331,17 +331,32 @@ import {
   Presentation,
   Shield,
   FileCheck,
-  Target
+  Target,
+  Activity,
+  Command,
+  Archive,
+  X
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+import { useTenant } from "@/contexts/TenantContext";
+import { clearUserCache } from "@/utils/cacheUtils";
+import { useSidebar } from "@/contexts/SidebarContext";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { 
   Collapsible, 
   CollapsibleContent, 
   CollapsibleTrigger 
 } from "@/components/ui/collapsible";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 
 type NavItem = {
   icon: React.ElementType;
@@ -350,54 +365,124 @@ type NavItem = {
 };
 
 const navItems: NavItem[] = [
-  { icon: LayoutDashboard, label: "Dashboard", href: "/agent-hub" },
+  // { icon: LayoutDashboard, label: "Dashboard", href: "/agent-hub" }, // Commented out for future use
   { icon: Search, label: "Scout", href: "/market-research" },
   { icon: Users, label: "Profiler", href: "/customers" },
   { icon: FileText, label: "Strategist", href: "/deals" },
-  { icon: Calendar, label: "Activator", href: "/calendar" },
-  { icon: Presentation, label: "Presenter", href: "/reports" },
+  // { icon: Calendar, label: "Activator", href: "/calendar" }, // Commented out
+  // { icon: Presentation, label: "Presenter", href: "/reports" }, // Commented out
   { icon: BarChart, label: "Reports", href: "/insights" },
-  { icon: FileCheck, label: "Artefacts", href: "/artefacts" },
   { icon: Settings, label: "Settings", href: "/settings" },
 ];
 
 export function Sidebar() {
-  const [collapsed, setCollapsed] = useState(false);
-  const [aiTeamOpen, setAiTeamOpen] = useState(false);
-  const location = useLocation();
+  const { logout, currentUser } = useAuth();
+  const { clearTenant } = useTenant();
   const navigate = useNavigate();
+  const { mobileOpen, setMobileOpen } = useSidebar();
+  const isMobile = useIsMobile();
+  const [collapsed, setCollapsed] = useState(false);
+  const [fullName, setFullName] = useState<string>('');
+  const [aiTeamOpen, setAiTeamOpen] = useState(() => {
+    // Check if there's a session-based state (not persistent across page reloads)
+    return sessionStorage.getItem('aiTeamDropdownOpen') === 'true';
+  });
+  const location = useLocation();
 
-  const handleAITeamClick = () => {
-    setAiTeamOpen(!aiTeamOpen);
+  // Get user's full name from localStorage
+  useEffect(() => {
+    if (currentUser?.uid) {
+      const storedFullName = localStorage.getItem(`userFullName_${currentUser.uid}`);
+      if (storedFullName) {
+        setFullName(storedFullName);
+      }
+    } else {
+      setFullName('');
+    }
+  }, [currentUser?.uid]);
+
+  // Get initials from full name
+  const getInitials = (name: string): string => {
+    if (!name) return 'U';
+    const parts = name.trim().split(' ');
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
+
+  const handleAITeamTextClick = () => {
     navigate("/agent-hub?view=ai-team");
   };
 
-  return (
-    <div className={cn(
-      "bg-white border-r border-gray-200 h-screen flex flex-col transition-all duration-300",
-      collapsed ? "w-16" : "w-64"
-    )}>
+  const handleDropdownToggle = () => {
+    const newState = !aiTeamOpen;
+    setAiTeamOpen(newState);
+    // Store in sessionStorage to persist during navigation but not across page reloads
+    sessionStorage.setItem('aiTeamDropdownOpen', newState.toString());
+  };
+
+  const handleLinkClick = () => {
+    // Close mobile sidebar when a link is clicked
+    if (isMobile) {
+      setMobileOpen(false);
+    }
+  };
+
+  // On mobile, always show full sidebar (not collapsed)
+  const isCollapsed = isMobile ? false : collapsed;
+
+  const sidebarContent = (
+    <>
       {/* Logo Section */}
       <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-        {!collapsed && (
+        {!isCollapsed && (
           <div className="text-xl font-bold text-sales-blue">Brewra</div>
         )}
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={() => setCollapsed(!collapsed)}
-          className="ml-auto"
-        >
-          <Menu className="h-5 w-5" />
-          <span className="sr-only">Toggle sidebar</span>
-        </Button>
+        {!isMobile && (
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => setCollapsed(!collapsed)}
+            className="ml-auto"
+          >
+            <Menu className="h-5 w-5" />
+            <span className="sr-only">Toggle sidebar</span>
+          </Button>
+        )}
+        {isMobile && (
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => setMobileOpen(false)}
+            className="ml-auto"
+          >
+            <X className="h-5 w-5" />
+            <span className="sr-only">Close sidebar</span>
+          </Button>
+        )}
       </div>
 
       {/* Navigation */}
       <nav className="flex-1 py-4">
         <ul className="space-y-2">
-          {/* Agent Hub link */}
+          {/* Mission Control link - First item */}
           <li>
+            <Link 
+              to="/mission-control" 
+              onClick={handleLinkClick}
+              className={cn(
+                "flex items-center px-4 py-3 text-gray-700 hover:bg-sales-gray hover:text-sales-blue rounded-lg mx-2 transition-colors",
+                location.pathname === "/mission-control" && "bg-blue-50 text-sales-blue"
+              )}
+            >
+              <Command className="h-5 w-5" />
+              {!isCollapsed && <span className="ml-3">Mission Control</span>}
+            </Link>
+          </li>
+          
+          {/* Dashboard link - Commented out for future use */}
+          {/* <li>
             <Link 
               to="/agent-hub" 
               className={cn(
@@ -408,61 +493,85 @@ export function Sidebar() {
               <LayoutDashboard className="h-5 w-5" />
               {!collapsed && <span className="ml-3">Dashboard</span>}
             </Link>
-          </li>
+          </li> */}
           
-          {/* AI Team Collapsible Section */}
-          {!collapsed && (
+          {/* AI Team Section - Manual Dropdown Control */}
+          {!isCollapsed && (
             <li>
-              <Collapsible 
-                open={aiTeamOpen}
-                onOpenChange={setAiTeamOpen}
-                className="mx-2"
-              >
-                <CollapsibleTrigger asChild>
-                  <div 
-                    className={cn(
-                      "flex items-center px-4 py-3 text-gray-700 hover:bg-sales-gray hover:text-sales-blue rounded-lg transition-colors cursor-pointer",
-                      (aiTeamOpen || location.search.includes("view=ai-team")) && "bg-blue-50 text-sales-blue"
-                    )}
-                    onClick={handleAITeamClick}
+              <div className="mx-2">
+                <div 
+                  className={cn(
+                    "flex items-center px-4 py-3 text-gray-700 hover:bg-sales-gray hover:text-sales-blue rounded-lg transition-colors",
+                    location.search.includes("view=ai-team") && "bg-blue-50 text-sales-blue"
+                  )}
+                >
+                  <Users className="h-5 w-5" />
+                  <span 
+                    className="ml-3 flex-1 cursor-pointer"
+                    onClick={handleAITeamTextClick}
                   >
-                    <Users className="h-5 w-5" />
-                    <span className="ml-3 flex-1">Your AI Team</span>
+                    Your AI Team
+                  </span>
+                  <button
+                    onClick={handleDropdownToggle}
+                    className="p-1 hover:bg-gray-200 rounded transition-colors"
+                  >
                     {aiTeamOpen ? (
                       <ChevronUp className="h-4 w-4" />
                     ) : (
                       <ChevronDown className="h-4 w-4" />
                     )}
+                  </button>
+                </div>
+                
+                {/* Manual Dropdown Content */}
+                {aiTeamOpen && (
+                  <div className="mt-1">
+                    <ul className="space-y-1">
+                      {navItems.slice(0, 3).map((item) => (
+                        <li key={item.label}>
+                          <Link
+                            to={item.href}
+                            onClick={handleLinkClick}
+                            className={cn(
+                              "flex items-center px-4 py-2 text-sm text-gray-600 hover:bg-sales-gray hover:text-sales-blue rounded-lg transition-colors ml-9",
+                              location.pathname === item.href && "bg-blue-50 text-sales-blue"
+                            )}
+                          >
+                            <item.icon className="h-4 w-4" />
+                            <span className="ml-3">{item.label}</span>
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  {/* Individual agents */}
-                  {navItems.slice(1, 6).map((item) => (
-                    <li key={item.label}>
-                      <a 
-                        href={item.href} 
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={cn(
-                          "flex items-center px-4 py-2 text-sm text-gray-600 hover:bg-sales-gray hover:text-sales-blue rounded-lg transition-colors ml-9",
-                          window.location.pathname === item.href && "bg-blue-50 text-sales-blue"
-                        )}
-                      >
-                        <item.icon className="h-4 w-4" />
-                        <span className="ml-3">{item.label}</span>
-                      </a>
-                    </li>
-                  ))}
-                </CollapsibleContent>
-              </Collapsible>
+                )}
+              </div>
+            </li>
+          )}
+
+          {/* Show Mission Control icon when collapsed */}
+          {collapsed && !isMobile && (
+            <li>
+              <Link
+                to="/mission-control"
+                onClick={handleLinkClick}
+                className={cn(
+                  "flex items-center justify-center py-3 text-gray-700 hover:bg-sales-gray hover:text-sales-blue rounded-lg mx-2 transition-colors",
+                  location.pathname === "/mission-control" && "bg-blue-50 text-sales-blue"
+                )}
+              >
+                <Command className="h-5 w-5" />
+              </Link>
             </li>
           )}
 
           {/* Show AI Team icon when collapsed */}
-          {collapsed && (
+          {collapsed && !isMobile && (
             <li>
               <Link
                 to="/agent-hub?view=ai-team"
+                onClick={handleLinkClick}
                 className={cn(
                   "flex items-center justify-center py-3 text-gray-700 hover:bg-sales-gray hover:text-sales-blue rounded-lg mx-2 transition-colors",
                   location.search.includes("view=ai-team") && "bg-blue-50 text-sales-blue"
@@ -473,45 +582,49 @@ export function Sidebar() {
             </li>
           )}
 
-          {/* Reports moved outside AI Team */}
-          <li key="reports">
+          {/* Artefacts navigation item */}
+          <li key="artifacts">
             <Link 
-              to="/insights" 
+              to="/artifacts" 
+              onClick={handleLinkClick}
               className={cn(
                 "flex items-center px-4 py-3 text-gray-700 hover:bg-sales-gray hover:text-sales-blue rounded-lg mx-2 transition-colors",
-                window.location.pathname === "/insights" && "bg-blue-50 text-sales-blue"
+                location.pathname === "/artifacts" && "bg-blue-50 text-sales-blue"
               )}
             >
-              <BarChart className="h-5 w-5" />
-              {!collapsed && <span className="ml-3">Reports</span>}
+              <Archive className="h-5 w-5" />
+              {!isCollapsed && <span className="ml-3">Artefacts</span>}
             </Link>
           </li>
 
-          {/* Artefacts navigation item */}
-          <li key="artefacts">
+          {/* Reports moved outside AI Team */}
+          {/* <li key="reports">
             <Link 
-              to="/artefacts" 
+              to="/insights" 
+              onClick={handleLinkClick}
               className={cn(
                 "flex items-center px-4 py-3 text-gray-700 hover:bg-sales-gray hover:text-sales-blue rounded-lg mx-2 transition-colors",
-                window.location.pathname === "/artefacts" && "bg-blue-50 text-sales-blue"
+                location.pathname === "/insights" && "bg-blue-50 text-sales-blue"
               )}
             >
-              <FileCheck className="h-5 w-5" />
-              {!collapsed && <span className="ml-3">Artefacts</span>}
+              <BarChart className="h-5 w-5" />
+              {!isCollapsed && <span className="ml-3">Reports</span>}
             </Link>
-          </li>
+          </li> */}
+
 
           {/* Settings navigation item */}
           <li key="settings">
             <Link 
               to="/settings" 
+              onClick={handleLinkClick}
               className={cn(
                 "flex items-center px-4 py-3 text-gray-700 hover:bg-sales-gray hover:text-sales-blue rounded-lg mx-2 transition-colors",
-                window.location.pathname === "/settings" && "bg-blue-50 text-sales-blue"
+                location.pathname === "/settings" && "bg-blue-50 text-sales-blue"
               )}
             >
               <Settings className="h-5 w-5" />
-              {!collapsed && <span className="ml-3">Settings</span>}
+              {!isCollapsed && <span className="ml-3">Settings</span>}
             </Link>
           </li>
         </ul>
@@ -520,28 +633,78 @@ export function Sidebar() {
       {/* User Section */}
       <div className={cn(
         "border-t border-gray-200 p-4",
-        collapsed ? "flex justify-center" : "flex items-center"
+        isCollapsed ? "flex justify-center" : "flex items-center"
       )}>
-        {!collapsed ? (
+        {!isCollapsed ? (
           <>
             <div className="w-10 h-10 rounded-full bg-sales-blue text-white flex items-center justify-center font-medium">
-              AR
+              {getInitials(fullName)}
             </div>
             <div className="ml-3">
-              <div className="font-medium text-sm">Alex Rodriguez</div>
-              <div className="text-xs text-gray-500">Revenue Leader</div>
+              <div className="font-medium text-sm">{fullName || 'User'}</div>
             </div>
-            <Button variant="ghost" size="icon" className="ml-auto">
+            <Button 
+              variant="ghost" 
+              size="sm"
+              className="ml-auto flex items-center gap-2 text-gray-600 hover:text-gray-900"
+              onClick={async () => {
+                // Clear all user-specific cache before logout
+                clearUserCache(currentUser?.uid);
+                clearTenant();
+                await logout();
+                navigate('/login');
+              }}
+            >
               <LogOut className="h-4 w-4" />
-              <span className="sr-only">Log out</span>
+              <span>Logout</span>
             </Button>
           </>
         ) : (
-          <div className="w-10 h-10 rounded-full bg-sales-blue text-white flex items-center justify-center font-medium">
-            AR
+          <div className="flex flex-col items-center gap-2">
+            <div className="w-10 h-10 rounded-full bg-sales-blue text-white flex items-center justify-center font-medium">
+              {getInitials(fullName)}
+            </div>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-8 w-8"
+              onClick={async () => {
+                // Clear all user-specific cache before logout
+                clearUserCache(currentUser?.uid);
+                clearTenant();
+                await logout();
+                navigate('/login');
+              }}
+              title="Log out"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
           </div>
         )}
       </div>
+    </>
+  );
+
+  // Mobile: Render as Sheet (drawer)
+  if (isMobile) {
+    return (
+      <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+        <SheetContent side="left" className="w-[280px] p-0">
+          <div className="bg-white h-full flex flex-col">
+            {sidebarContent}
+          </div>
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
+  // Desktop: Render as fixed sidebar
+  return (
+    <div className={cn(
+      "bg-white border-r border-gray-200 h-screen flex flex-col transition-all duration-300",
+      collapsed ? "w-16" : "w-64"
+    )}>
+      {sidebarContent}
     </div>
   );
 }

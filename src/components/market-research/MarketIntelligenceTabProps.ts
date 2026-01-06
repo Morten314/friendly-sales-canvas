@@ -44,6 +44,19 @@ export interface MarketIntelligenceTabProps {
   industryTrendSnapshots: TrendSnapshot[];
   industryTrendsRecommendations: IndustryTrendsRecommendations;
   industryTrendsRisks: string[];
+  industryTrendsRegionalHotspots?: {
+    APAC: string;
+    Europe: string;
+    "North America": string;
+  };
+  industryTrendsVisualCharts?: {
+    aiAdoptionTrends: string[];
+    technologyBudgetAllocation: {
+      "AI/ML": string;
+      Cloud: string;
+      Security: string;
+    };
+  };
   industryTrendsLastEditedField: string;
   
   // Competitor Landscape Section
