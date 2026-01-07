@@ -59,7 +59,7 @@ const SUGGESTED_TAGS = [
   "Market Research",
 ];
 
-type InlineStep = "type" | "name" | "url" | "file" | "tags";
+type InlineStep = "type" | "name" | "url" | "file" | "description" | "tags";
 
 const DataSourcesManager: React.FC = () => {
   const { toast } = useToast();
@@ -135,6 +135,15 @@ const DataSourcesManager: React.FC = () => {
   const handleUrlKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && sourceUrl.trim()) {
       e.preventDefault();
+      setInlineStep("description");
+    } else if (e.key === "Escape") {
+      handleCancelInline();
+    }
+  };
+
+  const handleDescriptionKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
       setInlineStep("tags");
     } else if (e.key === "Escape") {
       handleCancelInline();
@@ -145,7 +154,7 @@ const DataSourcesManager: React.FC = () => {
     const file = e.target.files?.[0];
     if (file) {
       setSelectedFile(file);
-      setInlineStep("tags");
+      setInlineStep("description");
     }
   };
 
@@ -397,7 +406,7 @@ const DataSourcesManager: React.FC = () => {
                 <p className="text-xs text-muted-foreground">Press Enter to continue</p>
               )}
             </div>
-          ) : selectedType === "url" && (inlineStep === "tags") ? (
+          ) : selectedType === "url" && (inlineStep === "description" || inlineStep === "tags") ? (
             <span className="text-sm truncate max-w-[200px] block">{sourceUrl || "—"}</span>
           ) : selectedType === "file" && inlineStep === "file" ? (
             <div className="flex items-center gap-2">
@@ -422,7 +431,7 @@ const DataSourcesManager: React.FC = () => {
               </label>
               <span className="text-xs text-muted-foreground">PDF, DOCX, PPT, CSV</span>
             </div>
-          ) : selectedType === "file" && inlineStep === "tags" ? (
+          ) : selectedType === "file" && (inlineStep === "description" || inlineStep === "tags") ? (
             <span className="text-sm">{selectedFile?.name || "—"}</span>
           ) : (
             <span className="text-sm text-muted-foreground">—</span>
@@ -431,13 +440,20 @@ const DataSourcesManager: React.FC = () => {
 
         {/* Description Cell */}
         <TableCell className="py-3 hidden lg:table-cell">
-          {inlineStep === "tags" ? (
-            <Input
-              placeholder="Brief description..."
-              value={sourceDescription}
-              onChange={(e) => setSourceDescription(e.target.value)}
-              className="h-9 text-sm max-w-xs"
-            />
+          {inlineStep === "description" ? (
+            <div className="space-y-1">
+              <Input
+                placeholder="Brief description..."
+                value={sourceDescription}
+                onChange={(e) => setSourceDescription(e.target.value)}
+                onKeyDown={handleDescriptionKeyDown}
+                className="h-9 text-sm max-w-xs"
+                autoFocus
+              />
+              <p className="text-xs text-muted-foreground">Press Enter to continue</p>
+            </div>
+          ) : inlineStep === "tags" ? (
+            <span className="text-sm">{sourceDescription || "—"}</span>
           ) : (
             <span className="text-sm text-muted-foreground">—</span>
           )}
