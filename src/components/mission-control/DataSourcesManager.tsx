@@ -42,6 +42,7 @@ interface DataSource {
   name: string;
   url?: string;
   fileName?: string;
+  description?: string;
   tags: string[];
   status: SourceStatus;
   createdAt: Date;
@@ -73,6 +74,7 @@ const DataSourcesManager: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [customTag, setCustomTag] = useState("");
+  const [sourceDescription, setSourceDescription] = useState("");
   
   // Edit state
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -99,6 +101,7 @@ const DataSourcesManager: React.FC = () => {
     setSelectedFile(null);
     setSelectedTags([]);
     setCustomTag("");
+    setSourceDescription("");
     setEditingId(null);
   };
 
@@ -202,6 +205,7 @@ const DataSourcesManager: React.FC = () => {
       name: sourceName.trim(),
       url: selectedType === "url" ? sourceUrl.trim() : undefined,
       fileName: selectedType === "file" ? selectedFile?.name : undefined,
+      description: sourceDescription.trim() || undefined,
       tags: selectedTags,
       status: "processing",
       createdAt: new Date(),
@@ -242,6 +246,7 @@ const DataSourcesManager: React.FC = () => {
     setSelectedType(source.type);
     setSourceName(source.name);
     setSourceUrl(source.url || "");
+    setSourceDescription(source.description || "");
     setSelectedTags(source.tags);
     setInlineStep("tags");
     setIsAddingInline(true);
@@ -375,20 +380,26 @@ const DataSourcesManager: React.FC = () => {
           )}
         </TableCell>
 
-        {/* URL/File & Tags Cell */}
+        {/* URL Cell */}
         <TableCell className="py-3 hidden md:table-cell">
-          {inlineStep === "url" && (
-            <Input
-              ref={urlInputRef}
-              type="url"
-              placeholder="https://example.com"
-              value={sourceUrl}
-              onChange={(e) => setSourceUrl(e.target.value)}
-              onKeyDown={handleUrlKeyDown}
-              className="h-9 text-sm max-w-xs"
-            />
-          )}
-          {inlineStep === "file" && (
+          {selectedType === "url" && inlineStep === "url" ? (
+            <div className="space-y-1">
+              <Input
+                ref={urlInputRef}
+                type="url"
+                placeholder="https://example.com"
+                value={sourceUrl}
+                onChange={(e) => setSourceUrl(e.target.value)}
+                onKeyDown={handleUrlKeyDown}
+                className="h-9 text-sm max-w-xs"
+              />
+              {sourceUrl.trim() && (
+                <p className="text-xs text-muted-foreground">Press Enter to continue</p>
+              )}
+            </div>
+          ) : selectedType === "url" && (inlineStep === "tags") ? (
+            <span className="text-sm truncate max-w-[200px] block">{sourceUrl || "—"}</span>
+          ) : selectedType === "file" && inlineStep === "file" ? (
             <div className="flex items-center gap-2">
               <input
                 ref={fileInputRef}
@@ -411,8 +422,30 @@ const DataSourcesManager: React.FC = () => {
               </label>
               <span className="text-xs text-muted-foreground">PDF, DOCX, PPT, CSV</span>
             </div>
+          ) : selectedType === "file" && inlineStep === "tags" ? (
+            <span className="text-sm">{selectedFile?.name || "—"}</span>
+          ) : (
+            <span className="text-sm text-muted-foreground">—</span>
           )}
-          {inlineStep === "tags" && (
+        </TableCell>
+
+        {/* Description Cell */}
+        <TableCell className="py-3 hidden lg:table-cell">
+          {inlineStep === "tags" ? (
+            <Input
+              placeholder="Brief description..."
+              value={sourceDescription}
+              onChange={(e) => setSourceDescription(e.target.value)}
+              className="h-9 text-sm max-w-xs"
+            />
+          ) : (
+            <span className="text-sm text-muted-foreground">—</span>
+          )}
+        </TableCell>
+
+        {/* Tags Cell */}
+        <TableCell className="py-3 hidden lg:table-cell">
+          {inlineStep === "tags" ? (
             <div className="space-y-2">
               <div className="flex flex-wrap gap-1.5">
                 {SUGGESTED_TAGS.map((tag) => (
@@ -461,8 +494,7 @@ const DataSourcesManager: React.FC = () => {
                 </div>
               )}
             </div>
-          )}
-          {(inlineStep === "type" || inlineStep === "name") && (
+          ) : (
             <span className="text-sm text-muted-foreground">—</span>
           )}
         </TableCell>
@@ -543,11 +575,13 @@ const DataSourcesManager: React.FC = () => {
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/50">
-                <TableHead className="w-[150px]">Type</TableHead>
-                <TableHead className="w-[200px]">Name</TableHead>
-                <TableHead className="hidden md:table-cell">Description / Tags</TableHead>
-                <TableHead className="w-[120px]">Status</TableHead>
-                <TableHead className="w-[100px] text-right">Actions</TableHead>
+                <TableHead className="w-[130px]">Type</TableHead>
+                <TableHead className="w-[180px]">Name</TableHead>
+                <TableHead className="hidden md:table-cell w-[200px]">URL / File</TableHead>
+                <TableHead className="hidden lg:table-cell w-[150px]">Description</TableHead>
+                <TableHead className="hidden lg:table-cell">Tags</TableHead>
+                <TableHead className="w-[110px]">Status</TableHead>
+                <TableHead className="w-[90px] text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -565,6 +599,22 @@ const DataSourcesManager: React.FC = () => {
                   </TableCell>
                   <TableCell className="font-medium">{source.name}</TableCell>
                   <TableCell className="hidden md:table-cell">
+                    {source.type === "url" && source.url ? (
+                      <span className="text-sm truncate max-w-[180px] block" title={source.url}>
+                        {source.url}
+                      </span>
+                    ) : source.type === "file" && source.fileName ? (
+                      <span className="text-sm">{source.fileName}</span>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell">
+                    <span className="text-sm text-muted-foreground">
+                      {source.description || "—"}
+                    </span>
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell">
                     <div className="flex flex-wrap gap-1">
                       {source.tags.length > 0 ? (
                         source.tags.slice(0, 3).map((tag) => (
