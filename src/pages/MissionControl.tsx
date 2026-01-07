@@ -2179,15 +2179,15 @@ const MissionControl = () => {
               <span className="hidden sm:inline">Company Profile</span>
               <span className="sm:hidden">Profile</span>
             </TabsTrigger>
+            <TabsTrigger value="customer-profile" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm px-2 md:px-4">
+              <Users className="h-3 w-3 md:h-4 md:w-4" />
+              <span className="hidden sm:inline">Customer Profile</span>
+              <span className="sm:hidden">Customer</span>
+            </TabsTrigger>
             <TabsTrigger value="sources" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm px-2 md:px-4">
               <Database className="h-3 w-3 md:h-4 md:w-4" />
               <span className="hidden sm:inline">Data Sources</span>
               <span className="sm:hidden">Sources</span>
-            </TabsTrigger>
-            <TabsTrigger value="advanced" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm px-2 md:px-4">
-              <Settings className="h-3 w-3 md:h-4 md:w-4" />
-              <span className="hidden sm:inline">Advanced Inputs</span>
-              <span className="sm:hidden">Advanced</span>
             </TabsTrigger>
           </TabsList>
 
@@ -2211,6 +2211,16 @@ const MissionControl = () => {
                       placeholder="Enter company name"
                       value={companyProfile.companyName}
                       onChange={(e) => setCompanyProfile(prev => ({ ...prev, companyName: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="company-url">Company URL</Label>
+                    <Input 
+                      id="company-url" 
+                      type="url"
+                      placeholder="https://example.com"
+                      value={companyProfile.companyUrl}
+                      onChange={(e) => setCompanyProfile(prev => ({ ...prev, companyUrl: e.target.value }))}
                     />
                   </div>
                   <div className="space-y-2">
@@ -2294,18 +2304,90 @@ const MissionControl = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="company-url">Company URL</Label>
-                    <Input 
-                      id="company-url" 
-                      type="url"
-                      placeholder="https://example.com"
-                      value={companyProfile.companyUrl}
-                      onChange={(e) => setCompanyProfile(prev => ({ ...prev, companyUrl: e.target.value }))}
-                    />
-                  </div>
                 </div>
                 
+                <Accordion type="multiple" className="space-y-4 mt-6">
+                  <AccordionItem value="priorities">
+                    <AccordionTrigger className="text-lg font-medium">
+                      Goals
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <Card>
+                        <CardContent className="p-4 space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="business-goals">Primary Business Goals</Label>
+                            <Textarea id="business-goals" placeholder="Be as specific as possible - clearer goals help Brewra generate more accurate insights." />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="pain-points">Key Pain Points We Solve</Label>
+                            <Textarea id="pain-points" placeholder="Describe the key problems you're trying to solve. More detail leads to more relevant insights." />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </AccordionContent>
+                  </AccordionItem>
+
+                  <AccordionItem value="positioning">
+                    <AccordionTrigger className="text-lg font-medium">
+                      Market Positioning
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <Card>
+                        <CardContent className="p-4 space-y-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="target-segments">Target Segments (Include)</Label>
+                              <Textarea id="target-segments" placeholder="e.g., Mid-market SaaS companies, Financial services..." />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="exclude-segments">Exclude Segments</Label>
+                              <Textarea id="exclude-segments" placeholder="e.g., Startups under 50 employees, Government..." />
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </AccordionContent>
+                  </AccordionItem>
+
+                  <AccordionItem value="compliance">
+                    <AccordionTrigger className="text-lg font-medium">
+                      Compliance & Constraints
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <Card>
+                        <CardContent className="p-4 space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="compliance-reqs">Compliance Requirements</Label>
+                            <Textarea id="compliance-reqs" placeholder="e.g., GDPR, HIPAA, SOC2..." />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="messaging-constraints">Messaging Constraints</Label>
+                            <Textarea id="messaging-constraints" placeholder="e.g., Avoid certain terms, required disclaimers..." />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+                
+                <Button 
+                  onClick={handleSave} 
+                  className="w-full md:w-auto"
+                  disabled={isSaving}
+                >
+                  {isSaving ? "Saving..." : "Save Changes"}
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Customer Profile Tab */}
+          <TabsContent value="customer-profile">
+            <Card>
+              <CardHeader>
+                <CardTitle>Customer Profile</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
                 <div className="space-y-4">
                   <h3 className="font-medium">ICP Basics (Optional)</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -3145,100 +3227,6 @@ const MissionControl = () => {
                   </div>
                 )}
               </div>
-            </div>
-          </TabsContent>
-
-          {/* Advanced Inputs Tab */}
-          <TabsContent value="advanced">
-            <Accordion type="multiple" className="space-y-4">
-              <AccordionItem value="buying-committee">
-                <AccordionTrigger className="text-lg font-medium">
-                  Buying Committee Mapping
-                </AccordionTrigger>
-                <AccordionContent>
-                  <Card>
-                    <CardContent className="p-4 space-y-4">
-                      <Label>Select typical roles in your buying process</Label>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                        {["Decision Maker", "Influencer", "Blocker", "Champion", "Budget Holder", "Technical Evaluator"].map((role) => (
-                          <Label key={role} className="flex items-center gap-2 cursor-pointer p-2 rounded border hover:bg-muted">
-                            <input type="checkbox" className="rounded" />
-                            {role}
-                          </Label>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="priorities">
-                <AccordionTrigger className="text-lg font-medium">
-                  Strategic Priorities
-                </AccordionTrigger>
-                <AccordionContent>
-                  <Card>
-                    <CardContent className="p-4 space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="business-goals">Primary Business Goals</Label>
-                        <Textarea id="business-goals" placeholder="e.g., Increase revenue by 40%, expand into new markets..." />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="pain-points">Key Pain Points We Solve</Label>
-                        <Textarea id="pain-points" placeholder="e.g., Manual processes, data silos, compliance challenges..." />
-                      </div>
-                    </CardContent>
-                  </Card>
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="positioning">
-                <AccordionTrigger className="text-lg font-medium">
-                  Market Positioning
-                </AccordionTrigger>
-                <AccordionContent>
-                  <Card>
-                    <CardContent className="p-4 space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="target-segments">Target Segments (Include)</Label>
-                          <Textarea id="target-segments" placeholder="e.g., Mid-market SaaS companies, Financial services..." />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="exclude-segments">Exclude Segments</Label>
-                          <Textarea id="exclude-segments" placeholder="e.g., Startups under 50 employees, Government..." />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="compliance">
-                <AccordionTrigger className="text-lg font-medium">
-                  Compliance & Constraints
-                </AccordionTrigger>
-                <AccordionContent>
-                  <Card>
-                    <CardContent className="p-4 space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="compliance-reqs">Compliance Requirements</Label>
-                        <Textarea id="compliance-reqs" placeholder="e.g., GDPR, HIPAA, SOC2..." />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="messaging-constraints">Messaging Constraints</Label>
-                        <Textarea id="messaging-constraints" placeholder="e.g., Avoid certain terms, required disclaimers..." />
-                      </div>
-                    </CardContent>
-                  </Card>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-
-            <div className="sticky bottom-0 bg-background border-t pt-4 pb-4">
-              <Button className="w-full md:w-auto" onClick={handleSave}>
-                Save & Apply Configuration
-              </Button>
             </div>
           </TabsContent>
         </Tabs>
