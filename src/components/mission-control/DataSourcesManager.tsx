@@ -560,14 +560,15 @@ const DataSourcesManager: React.FC = () => {
             Manage sources that help agents understand your business context
           </p>
         </div>
-        <Button 
-          onClick={handleStartAdd} 
-          className="gap-2"
-          disabled={isAddingInline}
-        >
-          <Plus className="h-4 w-4" />
-          Add Data Source
-        </Button>
+        {dataSources.length > 0 && !isAddingInline && (
+          <Button 
+            onClick={handleStartAdd} 
+            className="gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            Add Data Source
+          </Button>
+        )}
       </div>
 
       {/* Empty State */}
