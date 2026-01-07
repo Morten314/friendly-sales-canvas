@@ -1,15 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -36,6 +28,7 @@ import {
   FileText,
   Settings,
   X,
+  Check,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -65,64 +58,83 @@ const SUGGESTED_TAGS = [
   "Market Research",
 ];
 
+type InlineStep = "type" | "name" | "url" | "file" | "tags";
+
 const DataSourcesManager: React.FC = () => {
   const { toast } = useToast();
   const [dataSources, setDataSources] = useState<DataSource[]>([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedType, setSelectedType] = useState<SourceType | "">("");
   
-  // Form state
-  const [formStep, setFormStep] = useState<"type" | "name" | "url" | "file" | "tags">("type");
+  // Inline editing state
+  const [isAddingInline, setIsAddingInline] = useState(false);
+  const [inlineStep, setInlineStep] = useState<InlineStep>("type");
+  const [selectedType, setSelectedType] = useState<SourceType | "">("");
   const [sourceName, setSourceName] = useState("");
   const [sourceUrl, setSourceUrl] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [customTag, setCustomTag] = useState("");
-
+  
   // Edit state
-  const [editingSource, setEditingSource] = useState<DataSource | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  const urlInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const resetForm = () => {
+  // Focus management
+  useEffect(() => {
+    if (inlineStep === "name" && nameInputRef.current) {
+      nameInputRef.current.focus();
+    } else if (inlineStep === "url" && urlInputRef.current) {
+      urlInputRef.current.focus();
+    }
+  }, [inlineStep]);
+
+  const resetInlineForm = () => {
+    setIsAddingInline(false);
+    setInlineStep("type");
     setSelectedType("");
-    setFormStep("type");
     setSourceName("");
     setSourceUrl("");
     setSelectedFile(null);
     setSelectedTags([]);
     setCustomTag("");
-    setEditingSource(null);
+    setEditingId(null);
   };
 
-  const handleOpenModal = () => {
-    resetForm();
-    setIsModalOpen(true);
+  const handleStartAdd = () => {
+    resetInlineForm();
+    setIsAddingInline(true);
   };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    resetForm();
+  const handleCancelInline = () => {
+    resetInlineForm();
   };
 
   const handleTypeSelect = (type: SourceType) => {
     setSelectedType(type);
     if (type === "system") {
-      // System integration is coming soon - don't proceed
+      // System is disabled - show message but don't proceed
     } else {
-      setFormStep("name");
+      setInlineStep("name");
     }
   };
 
   const handleNameKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && sourceName.trim()) {
       e.preventDefault();
-      setFormStep(selectedType === "url" ? "url" : "file");
+      setInlineStep(selectedType === "url" ? "url" : "file");
+    } else if (e.key === "Escape") {
+      handleCancelInline();
     }
   };
 
   const handleUrlKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && sourceUrl.trim()) {
       e.preventDefault();
-      setFormStep("tags");
+      setInlineStep("tags");
+    } else if (e.key === "Escape") {
+      handleCancelInline();
     }
   };
 
@@ -130,7 +142,7 @@ const DataSourcesManager: React.FC = () => {
     const file = e.target.files?.[0];
     if (file) {
       setSelectedFile(file);
-      setFormStep("tags");
+      setInlineStep("tags");
     }
   };
 
@@ -151,6 +163,8 @@ const DataSourcesManager: React.FC = () => {
     if (e.key === "Enter") {
       e.preventDefault();
       handleAddCustomTag();
+    } else if (e.key === "Escape") {
+      handleCancelInline();
     }
   };
 
@@ -183,19 +197,19 @@ const DataSourcesManager: React.FC = () => {
     }
 
     const newSource: DataSource = {
-      id: editingSource?.id || `source-${Date.now()}`,
+      id: editingId || `source-${Date.now()}`,
       type: selectedType as SourceType,
       name: sourceName.trim(),
       url: selectedType === "url" ? sourceUrl.trim() : undefined,
       fileName: selectedType === "file" ? selectedFile?.name : undefined,
       tags: selectedTags,
       status: "processing",
-      createdAt: editingSource?.createdAt || new Date(),
+      createdAt: new Date(),
     };
 
-    if (editingSource) {
+    if (editingId) {
       setDataSources((prev) =>
-        prev.map((s) => (s.id === editingSource.id ? newSource : s))
+        prev.map((s) => (s.id === editingId ? newSource : s))
       );
       toast({
         title: "Source updated",
@@ -220,17 +234,17 @@ const DataSourcesManager: React.FC = () => {
       );
     }, 2000);
 
-    handleCloseModal();
+    resetInlineForm();
   };
 
   const handleEditSource = (source: DataSource) => {
-    setEditingSource(source);
+    setEditingId(source.id);
     setSelectedType(source.type);
     setSourceName(source.name);
     setSourceUrl(source.url || "");
     setSelectedTags(source.tags);
-    setFormStep("tags"); // Go directly to tags for editing
-    setIsModalOpen(true);
+    setInlineStep("tags");
+    setIsAddingInline(true);
   };
 
   const handleDeleteSource = (id: string) => {
@@ -245,19 +259,19 @@ const DataSourcesManager: React.FC = () => {
     switch (status) {
       case "active":
         return (
-          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-400 dark:border-green-800">
             🟢 Active
           </Badge>
         );
       case "failed":
         return (
-          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 dark:bg-red-950 dark:text-red-400 dark:border-red-800">
             🔴 Failed
           </Badge>
         );
       case "processing":
         return (
-          <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+          <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-950 dark:text-yellow-400 dark:border-yellow-800">
             🟡 Processing
           </Badge>
         );
@@ -286,6 +300,203 @@ const DataSourcesManager: React.FC = () => {
     }
   };
 
+  const canSave = 
+    selectedType && 
+    selectedType !== "system" && 
+    sourceName.trim() && 
+    (selectedType === "url" ? sourceUrl.trim() : selectedFile) &&
+    inlineStep === "tags";
+
+  // Render the inline editing row
+  const renderInlineEditRow = () => {
+    if (!isAddingInline) return null;
+
+    return (
+      <TableRow className="bg-muted/30 border-b-2 border-primary/20">
+        {/* Type Cell */}
+        <TableCell className="py-3">
+          <Select
+            value={selectedType}
+            onValueChange={(value) => handleTypeSelect(value as SourceType)}
+          >
+            <SelectTrigger className="w-[130px] h-9 text-sm">
+              <SelectValue placeholder="Select type" />
+            </SelectTrigger>
+            <SelectContent className="bg-popover z-50">
+              <SelectItem value="url">
+                <div className="flex items-center gap-2">
+                  <LinkIcon className="h-3.5 w-3.5" />
+                  <span>Add URL</span>
+                </div>
+              </SelectItem>
+              <SelectItem value="file">
+                <div className="flex items-center gap-2">
+                  <Upload className="h-3.5 w-3.5" />
+                  <span>Upload File</span>
+                </div>
+              </SelectItem>
+              <SelectItem value="system" disabled>
+                <div className="flex items-center gap-2 opacity-50">
+                  <Database className="h-3.5 w-3.5" />
+                  <span>Connect System</span>
+                </div>
+              </SelectItem>
+            </SelectContent>
+          </Select>
+          {selectedType === "system" && (
+            <p className="text-xs text-muted-foreground mt-1.5 max-w-[140px]">
+              Coming soon
+            </p>
+          )}
+        </TableCell>
+
+        {/* Name Cell */}
+        <TableCell className="py-3">
+          {inlineStep === "type" && selectedType && selectedType !== "system" ? (
+            <span className="text-sm text-muted-foreground italic">
+              Select type first...
+            </span>
+          ) : inlineStep !== "type" ? (
+            <Input
+              ref={nameInputRef}
+              placeholder="e.g., Competitor Pricing Page"
+              value={sourceName}
+              onChange={(e) => setSourceName(e.target.value)}
+              onKeyDown={handleNameKeyDown}
+              className="h-9 text-sm"
+            />
+          ) : (
+            <span className="text-sm text-muted-foreground">—</span>
+          )}
+        </TableCell>
+
+        {/* URL/File & Tags Cell */}
+        <TableCell className="py-3 hidden md:table-cell">
+          {inlineStep === "url" && (
+            <Input
+              ref={urlInputRef}
+              type="url"
+              placeholder="https://example.com"
+              value={sourceUrl}
+              onChange={(e) => setSourceUrl(e.target.value)}
+              onKeyDown={handleUrlKeyDown}
+              className="h-9 text-sm max-w-xs"
+            />
+          )}
+          {inlineStep === "file" && (
+            <div className="flex items-center gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                onChange={handleFileChange}
+                className="hidden"
+                id="inline-file-upload"
+                accept=".pdf,.docx,.pptx,.csv,.xlsx"
+              />
+              <label
+                htmlFor="inline-file-upload"
+                className="inline-flex items-center gap-2 px-3 py-1.5 border border-dashed rounded-md cursor-pointer hover:bg-muted/50 transition-colors text-sm"
+              >
+                <Upload className="h-4 w-4 text-muted-foreground" />
+                {selectedFile ? (
+                  <span className="text-foreground">{selectedFile.name}</span>
+                ) : (
+                  <span className="text-muted-foreground">Browse files...</span>
+                )}
+              </label>
+              <span className="text-xs text-muted-foreground">PDF, DOCX, PPT, CSV</span>
+            </div>
+          )}
+          {inlineStep === "tags" && (
+            <div className="space-y-2">
+              <div className="flex flex-wrap gap-1.5">
+                {SUGGESTED_TAGS.map((tag) => (
+                  <Badge
+                    key={tag}
+                    variant={selectedTags.includes(tag) ? "default" : "outline"}
+                    className="cursor-pointer text-xs h-6"
+                    onClick={() => handleTagToggle(tag)}
+                  >
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+              <div className="flex items-center gap-2">
+                <Input
+                  placeholder="Custom tag..."
+                  value={customTag}
+                  onChange={(e) => setCustomTag(e.target.value)}
+                  onKeyDown={handleCustomTagKeyDown}
+                  className="h-8 text-sm w-32"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleAddCustomTag}
+                  disabled={!customTag.trim()}
+                  className="h-8 px-2"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+              {selectedTags.filter((t) => !SUGGESTED_TAGS.includes(t)).length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {selectedTags
+                    .filter((tag) => !SUGGESTED_TAGS.includes(tag))
+                    .map((tag) => (
+                      <Badge key={tag} variant="secondary" className="text-xs gap-1">
+                        {tag}
+                        <X
+                          className="h-3 w-3 cursor-pointer"
+                          onClick={() => handleTagToggle(tag)}
+                        />
+                      </Badge>
+                    ))}
+                </div>
+              )}
+            </div>
+          )}
+          {(inlineStep === "type" || inlineStep === "name") && (
+            <span className="text-sm text-muted-foreground">—</span>
+          )}
+        </TableCell>
+
+        {/* Status Cell */}
+        <TableCell className="py-3">
+          <span className="text-sm text-muted-foreground italic">Unsaved</span>
+        </TableCell>
+
+        {/* Actions Cell */}
+        <TableCell className="py-3 text-right">
+          <div className="flex items-center justify-end gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-950"
+              onClick={handleSaveSource}
+              disabled={!canSave}
+              title="Save"
+            >
+              <Check className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-muted-foreground hover:text-foreground"
+              onClick={handleCancelInline}
+              title="Cancel"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </TableCell>
+      </TableRow>
+    );
+  };
+
+  const showTable = dataSources.length > 0 || isAddingInline;
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -296,46 +507,55 @@ const DataSourcesManager: React.FC = () => {
             Manage sources that help agents understand your business context
           </p>
         </div>
-        <Button onClick={handleOpenModal} className="gap-2">
+        <Button 
+          onClick={handleStartAdd} 
+          className="gap-2"
+          disabled={isAddingInline}
+        >
           <Plus className="h-4 w-4" />
-          Add Source
+          Add Data Source
         </Button>
       </div>
 
-      {/* Empty State or Table */}
-      {dataSources.length === 0 ? (
+      {/* Empty State */}
+      {!showTable && (
         <div className="flex flex-col items-center justify-center py-16 px-4 border-2 border-dashed rounded-lg bg-muted/20">
           <Database className="h-12 w-12 text-muted-foreground mb-4" />
           <h3 className="text-lg font-medium mb-2">No data sources added yet</h3>
           <p className="text-sm text-muted-foreground text-center max-w-md mb-6">
             Add sources to help agents understand your business context.
           </p>
-          <Button onClick={handleOpenModal} className="gap-2">
+          <Button onClick={handleStartAdd} className="gap-2">
             <Plus className="h-4 w-4" />
-            Add Source
+            Add Data Source
           </Button>
         </div>
-      ) : (
+      )}
+
+      {/* Table (visible only when there are sources OR adding inline) */}
+      {showTable && (
         <div className="border rounded-lg overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/50">
-                <TableHead className="w-[80px]">Type</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead className="hidden md:table-cell">Description</TableHead>
+                <TableHead className="w-[150px]">Type</TableHead>
+                <TableHead className="w-[200px]">Name</TableHead>
+                <TableHead className="hidden md:table-cell">Description / Tags</TableHead>
                 <TableHead className="w-[120px]">Status</TableHead>
-                <TableHead className="w-[80px] text-right">Actions</TableHead>
+                <TableHead className="w-[100px] text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
+              {/* Inline Add Row (at top) */}
+              {renderInlineEditRow()}
+              
+              {/* Existing Sources */}
               {dataSources.map((source) => (
                 <TableRow key={source.id}>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       {getTypeIcon(source.type)}
-                      <span className="text-sm text-muted-foreground">
-                        {getTypeLabel(source.type)}
-                      </span>
+                      <span className="text-sm">{getTypeLabel(source.type)}</span>
                     </div>
                   </TableCell>
                   <TableCell className="font-medium">{source.name}</TableCell>
@@ -365,6 +585,7 @@ const DataSourcesManager: React.FC = () => {
                         size="icon"
                         className="h-8 w-8"
                         onClick={() => handleEditSource(source)}
+                        disabled={isAddingInline}
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -373,6 +594,7 @@ const DataSourcesManager: React.FC = () => {
                         size="icon"
                         className="h-8 w-8 text-destructive hover:text-destructive"
                         onClick={() => handleDeleteSource(source.id)}
+                        disabled={isAddingInline}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -384,275 +606,6 @@ const DataSourcesManager: React.FC = () => {
           </Table>
         </div>
       )}
-
-      {/* Add Source Modal */}
-      <Dialog open={isModalOpen} onOpenChange={(open) => !open && handleCloseModal()}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              {editingSource ? "Edit Source" : "Add Source"}
-            </DialogTitle>
-            <DialogDescription>
-              {formStep === "type" && "Select the type of source you want to add."}
-              {formStep === "name" && "Enter a name for this source."}
-              {formStep === "url" && "Enter the website URL."}
-              {formStep === "file" && "Upload your file."}
-              {formStep === "tags" && "Add context tags to help agents understand this source."}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            {/* Step 1: Type Selection */}
-            {formStep === "type" && (
-              <div className="space-y-2">
-                <Label>Type</Label>
-                <Select
-                  value={selectedType}
-                  onValueChange={(value) => handleTypeSelect(value as SourceType)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select source type..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="url">
-                      <div className="flex items-center gap-2">
-                        <LinkIcon className="h-4 w-4" />
-                        Add URL
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="file">
-                      <div className="flex items-center gap-2">
-                        <Upload className="h-4 w-4" />
-                        Upload a File
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="system">
-                      <div className="flex items-center gap-2">
-                        <Database className="h-4 w-4" />
-                        Connect a System
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-
-                {selectedType === "system" && (
-                  <div className="mt-4 p-4 bg-muted rounded-lg text-center">
-                    <Database className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">
-                      We're building system integrations. You'll be notified when this is available.
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Step 2: Name Field */}
-            {formStep === "name" && (
-              <div className="space-y-2">
-                <Label htmlFor="source-name">Source Name</Label>
-                <Input
-                  id="source-name"
-                  placeholder="e.g., Competitor Pricing Page"
-                  value={sourceName}
-                  onChange={(e) => setSourceName(e.target.value)}
-                  onKeyDown={handleNameKeyDown}
-                  autoFocus
-                />
-                <p className="text-xs text-muted-foreground">
-                  Press Enter to continue
-                </p>
-              </div>
-            )}
-
-            {/* Step 3a: URL Field */}
-            {formStep === "url" && (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Source Name</Label>
-                  <div className="text-sm text-muted-foreground">{sourceName}</div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="source-url">Website URL</Label>
-                  <Input
-                    id="source-url"
-                    type="url"
-                    placeholder="https://example.com"
-                    value={sourceUrl}
-                    onChange={(e) => setSourceUrl(e.target.value)}
-                    onKeyDown={handleUrlKeyDown}
-                    autoFocus
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Press Enter to continue
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Step 3b: File Upload */}
-            {formStep === "file" && (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Source Name</Label>
-                  <div className="text-sm text-muted-foreground">{sourceName}</div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Upload File</Label>
-                  <div className="border-2 border-dashed rounded-lg p-6 text-center hover:bg-muted/50 transition-colors">
-                    <Input
-                      type="file"
-                      onChange={handleFileChange}
-                      className="hidden"
-                      id="file-upload"
-                      accept=".pdf,.docx,.pptx,.csv,.xlsx"
-                    />
-                    <label htmlFor="file-upload" className="cursor-pointer">
-                      <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                      {selectedFile ? (
-                        <p className="text-sm font-medium">{selectedFile.name}</p>
-                      ) : (
-                        <>
-                          <p className="text-sm font-medium">
-                            Drag & drop or click to browse
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            PDF, DOCX, PPT, CSV accepted
-                          </p>
-                        </>
-                      )}
-                    </label>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Step 4: Tags */}
-            {formStep === "tags" && (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Source Name</Label>
-                  <div className="text-sm text-muted-foreground">{sourceName}</div>
-                </div>
-                {selectedType === "url" && sourceUrl && (
-                  <div className="space-y-2">
-                    <Label>URL</Label>
-                    <div className="text-sm text-muted-foreground break-all">
-                      {sourceUrl}
-                    </div>
-                  </div>
-                )}
-                {selectedType === "file" && selectedFile && (
-                  <div className="space-y-2">
-                    <Label>File</Label>
-                    <div className="text-sm text-muted-foreground">
-                      {selectedFile.name}
-                    </div>
-                  </div>
-                )}
-                <div className="space-y-2">
-                  <Label>Context Tags</Label>
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    {SUGGESTED_TAGS.map((tag) => (
-                      <Badge
-                        key={tag}
-                        variant={selectedTags.includes(tag) ? "default" : "outline"}
-                        className="cursor-pointer"
-                        onClick={() => handleTagToggle(tag)}
-                      >
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Add custom tag..."
-                      value={customTag}
-                      onChange={(e) => setCustomTag(e.target.value)}
-                      onKeyDown={handleCustomTagKeyDown}
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={handleAddCustomTag}
-                      disabled={!customTag.trim()}
-                    >
-                      Add
-                    </Button>
-                  </div>
-                  {selectedTags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {selectedTags
-                        .filter((tag) => !SUGGESTED_TAGS.includes(tag))
-                        .map((tag) => (
-                          <Badge
-                            key={tag}
-                            variant="default"
-                            className="gap-1"
-                          >
-                            {tag}
-                            <X
-                              className="h-3 w-3 cursor-pointer"
-                              onClick={() => handleTagToggle(tag)}
-                            />
-                          </Badge>
-                        ))}
-                    </div>
-                  )}
-                  <p className="text-xs text-muted-foreground">
-                    Tags help agents understand how to use this source.
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Footer Actions */}
-          <div className="flex justify-between">
-            <div>
-              {formStep !== "type" && !editingSource && (
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    if (formStep === "name") setFormStep("type");
-                    else if (formStep === "url" || formStep === "file") setFormStep("name");
-                    else if (formStep === "tags") setFormStep(selectedType === "url" ? "url" : "file");
-                  }}
-                >
-                  Back
-                </Button>
-              )}
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={handleCloseModal}>
-                Cancel
-              </Button>
-              {formStep === "tags" && (
-                <Button onClick={handleSaveSource}>
-                  Save Source
-                </Button>
-              )}
-              {(formStep === "name" || formStep === "url") && (
-                <Button
-                  onClick={() => {
-                    if (formStep === "name" && sourceName.trim()) {
-                      setFormStep(selectedType === "url" ? "url" : "file");
-                    } else if (formStep === "url" && sourceUrl.trim()) {
-                      setFormStep("tags");
-                    }
-                  }}
-                  disabled={
-                    (formStep === "name" && !sourceName.trim()) ||
-                    (formStep === "url" && !sourceUrl.trim())
-                  }
-                >
-                  Continue
-                </Button>
-              )}
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
