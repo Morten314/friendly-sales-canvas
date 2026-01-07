@@ -13,6 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -68,7 +69,10 @@ import {
   Calendar,
   Zap,
   Github,
-  Slack
+  Slack,
+  Link,
+  X,
+  Info
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -381,6 +385,14 @@ const MissionControl = () => {
   const [connectorCategoryFilter, setConnectorCategoryFilter] = useState<string>("all");
   const [customResourceName, setCustomResourceName] = useState("");
   const [customResourceType, setCustomResourceType] = useState<'crm' | 'marketing' | 'social' | 'analytics' | 'communication' | 'file' | 'custom'>('custom');
+  // New Add Source state
+  const [addSourceMode, setAddSourceMode] = useState<'link' | 'file' | 'system'>('link');
+  const [activeSections, setActiveSections] = useState<{link: boolean, file: boolean, system: boolean}>({link: true, file: false, system: false});
+  const [sourceUrls, setSourceUrls] = useState<Array<{id: string, url: string, status: 'pending' | 'success' | 'error'}>>([{id: Date.now().toString(), url: '', status: 'pending'}]);
+  const [sourceFiles, setSourceFiles] = useState<Array<{id: string, file: File | null, status: 'pending' | 'success' | 'error'}>>([{id: Date.now().toString(), file: null, status: 'pending'}]);
+  const [isProcessing, setIsProcessing] = useState(false);
+  
+  // Legacy state (to be removed)
   const [customFileUploadName, setCustomFileUploadName] = useState("");
   const [customFileUploadFile, setCustomFileUploadFile] = useState<File | null>(null);
   const [customFileUploadUrl, setCustomFileUploadUrl] = useState("");
@@ -1809,6 +1821,220 @@ const MissionControl = () => {
     });
   };
 
+  // New handlers for Add Source
+  const handleAddUrl = () => {
+    setSourceUrls(prev => [...prev, {id: Date.now().toString(), url: '', status: 'pending'}]);
+  };
+
+  const handleRemoveUrl = (id: string) => {
+    setSourceUrls(prev => prev.filter(item => item.id !== id));
+  };
+
+  const handleUrlChange = (id: string, url: string) => {
+    setSourceUrls(prev => prev.map(item => 
+      item.id === id ? { ...item, url, status: 'pending' as const } : item
+    ));
+  };
+
+  const handleAddFile = () => {
+    setSourceFiles(prev => [...prev, {id: Date.now().toString(), file: null, status: 'pending'}]);
+  };
+
+  const handleRemoveFile = (id: string) => {
+    setSourceFiles(prev => prev.filter(item => item.id !== id));
+  };
+
+  const handleFileChange = (id: string, file: File | null) => {
+    setSourceFiles(prev => prev.map(item => 
+      item.id === id ? { ...item, file, status: 'pending' as const } : item
+    ));
+  };
+
+  const handleVerifyUrl = async (id: string, url: string) => {
+    if (!url.trim()) return;
+    
+    setSourceUrls(prev => prev.map(item => 
+      item.id === id ? { ...item, status: 'pending' as const } : item
+    ));
+    
+    setIsProcessing(true);
+    
+    try {
+      // Simulate verification - replace with actual API call
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Simple URL validation
+      const isValid = /^https?:\/\/.+/.test(url.trim());
+      
+      setSourceUrls(prev => prev.map(item => 
+        item.id === id ? { ...item, status: isValid ? 'success' : 'error' } : item
+      ));
+      
+      if (isValid) {
+        toast({
+          title: "URL verified",
+          description: "The URL has been successfully verified.",
+        });
+      } else {
+        toast({
+          title: "Invalid URL",
+          description: "Please enter a valid URL starting with http:// or https://",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      setSourceUrls(prev => prev.map(item => 
+        item.id === id ? { ...item, status: 'error' } : item
+      ));
+      toast({
+        title: "Verification failed",
+        description: "Failed to verify the URL. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleVerifyFile = async (id: string, file: File | null) => {
+    if (!file) return;
+    
+    setSourceFiles(prev => prev.map(item => 
+      item.id === id ? { ...item, status: 'pending' as const } : item
+    ));
+    
+    setIsProcessing(true);
+    
+    try {
+      // Simulate file verification - replace with actual API call
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Simple file validation (size check)
+      const isValid = file.size > 0 && file.size < 100 * 1024 * 1024; // 100MB limit
+      
+      setSourceFiles(prev => prev.map(item => 
+        item.id === id ? { ...item, status: isValid ? 'success' : 'error' } : item
+      ));
+      
+      if (isValid) {
+        toast({
+          title: "File verified",
+          description: "The file has been successfully verified.",
+        });
+      } else {
+        toast({
+          title: "Invalid file",
+          description: "File is empty or too large. Maximum size is 100MB.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      setSourceFiles(prev => prev.map(item => 
+        item.id === id ? { ...item, status: 'error' } : item
+      ));
+      toast({
+        title: "Verification failed",
+        description: "Failed to verify the file. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleSubmitSources = async () => {
+    const validUrls = activeSections.link ? sourceUrls.filter(item => item.url.trim() && item.status === 'success') : [];
+    const validFiles = activeSections.file ? sourceFiles.filter(item => item.file && item.status === 'success') : [];
+    
+    // Check if at least one valid source exists
+    if (validUrls.length === 0 && validFiles.length === 0) {
+      toast({
+        title: "No valid sources",
+        description: "Please add and verify at least one URL or file.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    let addedCount = 0;
+    
+    // Process URLs - create data sources
+    if (validUrls.length > 0) {
+      for (const urlItem of validUrls) {
+        const newSource: DataSource = {
+          id: `url-${Date.now()}-${Math.random()}`,
+          name: `URL Source ${new Date().toLocaleDateString()}`,
+          type: 'file',
+          icon: FileText,
+          platform: 'URL',
+          status: 'uploaded',
+          syncFrequency: 'manual',
+          totalRecords: 0,
+          newRecordsThisWeek: 0,
+          updatedRecords: 0,
+          dataQualityScore: 0,
+          objectsSynced: [],
+          fieldsMapped: 0,
+          filters: [],
+          description: urlItem.url
+        };
+        setDataSources(prev => [...prev, newSource]);
+        addedCount++;
+      }
+    }
+    
+    // Process files - create data sources
+    if (validFiles.length > 0) {
+      for (const fileItem of validFiles) {
+        if (fileItem.file) {
+          const newSource: DataSource = {
+            id: `file-${Date.now()}-${Math.random()}`,
+            name: fileItem.file.name,
+            type: 'file',
+            icon: FileText,
+            platform: 'File Upload',
+            status: 'uploaded',
+            syncFrequency: 'manual',
+            totalRecords: 0,
+            newRecordsThisWeek: 0,
+            updatedRecords: 0,
+            dataQualityScore: 0,
+            objectsSynced: [],
+            fieldsMapped: 0,
+            filters: [],
+            description: `File: ${fileItem.file.name}`
+          };
+          setDataSources(prev => [...prev, newSource]);
+          addedCount++;
+        }
+      }
+    }
+    
+    const sourcesAdded = [];
+    if (validUrls.length > 0) sourcesAdded.push(`${validUrls.length} URL(s)`);
+    if (validFiles.length > 0) sourcesAdded.push(`${validFiles.length} file(s)`);
+    
+    toast({
+      title: "Sources added",
+      description: `${sourcesAdded.join(' and ')} added successfully.`,
+    });
+    
+    // Reset only the sections that were submitted
+    if (validUrls.length > 0) {
+      setSourceUrls([{id: Date.now().toString(), url: '', status: 'pending'}]);
+    }
+    if (validFiles.length > 0) {
+      setSourceFiles([{id: Date.now().toString(), file: null, status: 'pending'}]);
+    }
+    
+    // Close form if all active sections are empty
+    const hasRemainingUrls = activeSections.link && sourceUrls.some(item => item.url.trim());
+    const hasRemainingFiles = activeSections.file && sourceFiles.some(item => item.file);
+    if (!hasRemainingUrls && !hasRemainingFiles) {
+      setIsAddResourcePopoverOpen(false);
+    }
+  };
+
   const handleTestApiConnection = async () => {
     if (!apiEndpoint.trim()) {
       toast({
@@ -2450,7 +2676,16 @@ const MissionControl = () => {
                     </div>
                     <Button 
                       variant="outline"
-                      onClick={() => setIsAddResourcePopoverOpen(!isAddResourcePopoverOpen)}
+                      onClick={() => {
+                        if (isAddResourcePopoverOpen) {
+                          // Reset form when closing
+                          setAddSourceMode('link');
+                          setActiveSections({link: true, file: false, system: false});
+                          setSourceUrls([{id: Date.now().toString(), url: '', status: 'pending'}]);
+                          setSourceFiles([{id: Date.now().toString(), file: null, status: 'pending'}]);
+                        }
+                        setIsAddResourcePopoverOpen(!isAddResourcePopoverOpen);
+                      }}
                       className="w-full md:w-auto"
                     >
                       {isAddResourcePopoverOpen ? (
@@ -2471,10 +2706,254 @@ const MissionControl = () => {
                   {isAddResourcePopoverOpen && (
                     <Card className="border-2 border-dashed">
                       <CardContent className="p-6">
+                        <div className="space-y-6">
+                          <div>
+                            <h3 className="font-medium mb-2">Add Data Source</h3>
+                            <p className="text-sm text-muted-foreground">Choose how you want to add a data source</p>
+                          </div>
+                          
+                          {/* Three Options */}
+                          <div className="flex flex-col md:flex-row items-center gap-2 md:gap-4">
+                            <Button
+                              variant={activeSections.link ? 'default' : 'outline'}
+                              className="flex flex-row items-center gap-2 py-2 px-3 h-auto"
+                              onClick={() => setActiveSections(prev => ({...prev, link: !prev.link}))}
+                            >
+                              <Link className="h-4 w-4 shrink-0" />
+                              <span className="text-lg font-medium">Paste a link</span>
+                            </Button>
+                            <span className="text-sm font-medium text-muted-foreground">OR</span>
+                            <Button
+                              variant={activeSections.file ? 'default' : 'outline'}
+                              className="flex flex-row items-center gap-2 py-2 px-3 h-auto"
+                              onClick={() => setActiveSections(prev => ({...prev, file: !prev.file}))}
+                            >
+                              <Upload className="h-4 w-4 shrink-0" />
+                              <span className="text-lg font-medium">Upload a file</span>
+                            </Button>
+                            <span className="text-sm font-medium text-muted-foreground">OR</span>
+                            <Button
+                              variant="outline"
+                              className="flex flex-row items-center gap-2 py-2 px-3 h-auto opacity-60 cursor-not-allowed"
+                              disabled
+                            >
+                              <Database className="h-4 w-4 shrink-0" />
+                              <span className="text-lg font-medium">Connect a system</span>
+                              <Badge variant="secondary" className="text-xs ml-1">Coming Soon</Badge>
+                            </Button>
+                          </div>
+
+                          {/* Paste a Link Section */}
+                          {activeSections.link && (
+                            <div className="space-y-4">
+                              <div className="flex items-center gap-2">
+                                <h4 className="font-medium">Paste a link</h4>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <button type="button" className="inline-flex items-center justify-center">
+                                        <Info className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                                      </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="max-w-sm">
+                                      <div className="space-y-2">
+                                        <p className="font-semibold">What can I add?</p>
+                                        <ul className="text-xs space-y-1 list-disc list-inside">
+                                          <li>Website, landing pages, blogs</li>
+                                          <li>Product docs, pitch decks</li>
+                                          <li>CRM data, customer lists</li>
+                                          <li>Support tickets, call transcripts</li>
+                                          <li>Cold emails, sales messaging</li>
+                                          <li>Competitor websites or materials</li>
+                                          <li>Social media</li>
+                                          <li>Connect a CRM</li>
+                                        </ul>
+                                        <p className="text-xs italic mt-2">*Share whatever you have – Brewra will figure out the rest</p>
+                                      </div>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </div>
+                              <div className="space-y-3">
+                                {sourceUrls.map((urlItem, index) => (
+                                  <div key={urlItem.id} className="flex gap-2 items-start">
+                                    <div className="flex-1 relative">
+                                      <Input
+                                        type="url"
+                                        placeholder="Paste URL here (e.g., https://example.com/data.csv)"
+                                        value={urlItem.url}
+                                        onChange={(e) => handleUrlChange(urlItem.id, e.target.value)}
+                                        onBlur={() => urlItem.url.trim() && handleVerifyUrl(urlItem.id, urlItem.url)}
+                                        className="pr-20"
+                                      />
+                                      <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                                        {urlItem.status === 'success' && (
+                                          <CheckCircle className="h-5 w-5 text-green-500" />
+                                        )}
+                                        {urlItem.status === 'error' && (
+                                          <X className="h-5 w-5 text-red-500" />
+                                        )}
+                                        {urlItem.status === 'pending' && urlItem.url.trim() && isProcessing && (
+                                          <RefreshCw className="h-4 w-4 animate-spin text-muted-foreground" />
+                                        )}
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-6 w-6"
+                                          onClick={() => handleRemoveUrl(urlItem.id)}
+                                        >
+                                          <Trash2 className="h-4 w-4 text-red-500" />
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={handleAddUrl}
+                                  className="flex items-center gap-2"
+                                >
+                                  <Plus className="h-4 w-4" />
+                                  Add another URL
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Upload a File Section */}
+                          {activeSections.file && (
+                            <div className="space-y-4">
+                              <div className="flex items-center gap-2">
+                                <h4 className="font-medium">Upload a file</h4>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <button type="button" className="inline-flex items-center justify-center">
+                                        <Info className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                                      </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="max-w-sm">
+                                      <div className="space-y-2">
+                                        <p className="font-semibold">What can I add?</p>
+                                        <ul className="text-xs space-y-1 list-disc list-inside">
+                                          <li>Website, landing pages, blogs</li>
+                                          <li>Product docs, pitch decks</li>
+                                          <li>CRM data, customer lists</li>
+                                          <li>Support tickets, call transcripts</li>
+                                          <li>Cold emails, sales messaging</li>
+                                          <li>Competitor websites or materials</li>
+                                          <li>Social media</li>
+                                          <li>Connect a CRM</li>
+                                        </ul>
+                                        <p className="text-xs italic mt-2">*Share whatever you have – Brewra will figure out the rest</p>
+                                      </div>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </div>
+                              <div className="space-y-3">
+                                {sourceFiles.map((fileItem, index) => (
+                                  <div key={fileItem.id} className="flex gap-2 items-start">
+                                    <div className="flex-1 relative">
+                                      <div className="flex items-center gap-2">
+                                        <Input
+                                          type="file"
+                                          onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            if (file) {
+                                              handleFileChange(fileItem.id, file);
+                                              setTimeout(() => handleVerifyFile(fileItem.id, file), 100);
+                                            }
+                                          }}
+                                          className="flex-1"
+                                        />
+                                        <div className="flex items-center gap-1 min-w-[80px]">
+                                          {fileItem.status === 'success' && (
+                                            <CheckCircle className="h-5 w-5 text-green-500" />
+                                          )}
+                                          {fileItem.status === 'error' && (
+                                            <X className="h-5 w-5 text-red-500" />
+                                          )}
+                                          {fileItem.status === 'pending' && fileItem.file && isProcessing && (
+                                            <RefreshCw className="h-4 w-4 animate-spin text-muted-foreground" />
+                                          )}
+                                          <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-6 w-6"
+                                            onClick={() => handleRemoveFile(fileItem.id)}
+                                          >
+                                            <Trash2 className="h-4 w-4 text-red-500" />
+                                          </Button>
+                                        </div>
+                                      </div>
+                                      {fileItem.file && (
+                                        <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
+                                          <FileText className="h-4 w-4" />
+                                          <span>{fileItem.file.name}</span>
+                                          <span className="text-xs">({(fileItem.file.size / 1024).toFixed(2)} KB)</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={handleAddFile}
+                                  className="flex items-center gap-2"
+                                >
+                                  <Plus className="h-4 w-4" />
+                                  Add another file
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Connect a System Section */}
+                          {activeSections.system && (
+                            <div className="space-y-4">
+                              <div className="p-4 bg-muted rounded-lg text-center">
+                                <Database className="h-12 w-12 mx-auto mb-2 text-muted-foreground" />
+                                <p className="text-sm text-muted-foreground">System integration is coming soon</p>
+                                <Badge variant="secondary" className="mt-2">Coming Soon</Badge>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Combined Submit Button */}
+                          {(activeSections.link || activeSections.file) && (
+                            <div className="pt-4 border-t">
+                              <Button
+                                onClick={handleSubmitSources}
+                                disabled={
+                                  isProcessing || 
+                                  ((!activeSections.link || sourceUrls.every(item => !item.url.trim() || item.status !== 'success')) &&
+                                   (!activeSections.file || sourceFiles.every(item => !item.file || item.status !== 'success')))
+                                }
+                                className="w-full"
+                              >
+                                {isProcessing ? "Processing..." : "Add Sources"}
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Legacy form - to be removed */}
+                  {false && isAddResourcePopoverOpen && (
+                    <Card className="border-2 border-dashed">
+                      <CardContent className="p-6">
                         <div className="space-y-4">
                           <div>
                             <h3 className="font-medium mb-2">Add New Resource</h3>
-                            {/* <p className="text-sm text-muted-foreground mb-4">Choose how you want to add a resource</p> */}
                           </div>
                           
                           <div className="space-y-2">
