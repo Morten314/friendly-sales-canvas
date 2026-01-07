@@ -2,7 +2,7 @@ import { apiFetch, apiFetchJson } from './api';
 import { callApi, callICPresearch } from './enhancedApi';
 import jwtManager from './jwt';
 
-interface AuthenticatedApiOptions {
+export interface AuthenticatedApiOptions {
   requireAuth?: boolean;
   retryOnAuthFailure?: boolean;
   componentName?: string;

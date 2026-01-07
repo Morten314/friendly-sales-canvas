@@ -42,7 +42,7 @@ interface IndustryTrendsData {
   aiAdoption: string;
   cloudMigration: string;
   regulatory: string;
-  timestamp?: string; // Add timestamp to track data generation time
+  timestamp?: string | number; // Allow both string and number for flexibility
   trendSnapshots: TrendSnapshot[];
   regionalHotspots: {
     APAC: string;
@@ -50,6 +50,7 @@ interface IndustryTrendsData {
     "North America": string;
   };
   strategicRecommendations: IndustryTrendsRecommendations;
+  recommendations?: IndustryTrendsRecommendations; // Allow both property names for compatibility
   risks: string[];
   visualCharts: {
     aiAdoptionTrends: string[];
@@ -435,6 +436,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
             cloudMigration: propCloudMigration || '',
             regulatory: propRegulatory || '',
             trendSnapshots: propTrendSnapshots || [],
+            strategicRecommendations: propRecommendations || { primaryFocus: '', marketEntry: '' },
             recommendations: propRecommendations || { primaryFocus: '', marketEntry: '' },
             risks: propRisks || [],
             regionalHotspots: propRegionalHotspots || {
@@ -450,7 +452,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                 Security: ''
               }
             },
-            timestamp: Date.now()
+            timestamp: String(Date.now())
           };
         }
         
@@ -462,7 +464,8 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
           cloudMigration: prevData.cloudMigration || propCloudMigration || '',
           regulatory: prevData.regulatory || propRegulatory || '',
           trendSnapshots: prevData.trendSnapshots?.length > 0 ? prevData.trendSnapshots : (propTrendSnapshots || []),
-          recommendations: prevData.recommendations?.primaryFocus ? prevData.recommendations : (propRecommendations || { primaryFocus: '', marketEntry: '' }),
+          strategicRecommendations: (prevData.strategicRecommendations?.primaryFocus || prevData.recommendations?.primaryFocus) ? (prevData.strategicRecommendations || prevData.recommendations) : (propRecommendations || { primaryFocus: '', marketEntry: '' }),
+          recommendations: (prevData.strategicRecommendations?.primaryFocus || prevData.recommendations?.primaryFocus) ? (prevData.strategicRecommendations || prevData.recommendations) : (propRecommendations || { primaryFocus: '', marketEntry: '' }),
           risks: prevData.risks?.length > 0 ? prevData.risks : (propRisks || []),
           regionalHotspots: (prevData.regionalHotspots && Object.keys(prevData.regionalHotspots).length > 0 && prevData.regionalHotspots.APAC) 
             ? prevData.regionalHotspots 
@@ -534,7 +537,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
           cloudMigration: editCloudMigration,
           regulatory: editRegulatory,
           trendSnapshots: editTrendSnapshots,
-          timestamp: Date.now() // Force update with new timestamp
+          timestamp: String(Date.now()) // Force update with new timestamp
         };
       });
       
