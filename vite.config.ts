@@ -34,7 +34,10 @@ export default defineConfig(({ mode }) => ({
     VitePWA({
       registerType: 'autoUpdate',
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}']
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        // Lovable preview/dev builds can produce a large single JS bundle.
+        // Workbox defaults to a 2 MiB precache limit which can break builds.
+        maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
       },
       includeAssets: ['favicon.ico', 'robots.txt'],
       manifest: {
