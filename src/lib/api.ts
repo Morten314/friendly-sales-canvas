@@ -16,8 +16,13 @@ export const buildApiUrl = (endpoint: string): string => {
   return `${API_BASE_URL}/${cleanEndpoint}`;
 };
 
+// Extended options type that allows object body (will be JSON stringified)
+export interface ApiFetchOptions extends Omit<RequestInit, 'body'> {
+  body?: BodyInit | Record<string, any> | null;
+}
+
 // Helper function for fetch with common configuration
-export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
+export const apiFetch = async (endpoint: string, options: ApiFetchOptions = {}) => {
   const url = buildApiUrl(endpoint);
   
   // Handle body stringification for JSON requests
@@ -46,7 +51,7 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
       ...options.headers,
     },
     ...options,
-    body: processedBody,
+    body: processedBody as BodyInit | null | undefined,
   };
 
   console.log(`🌐 API Request: ${defaultOptions.method || 'GET'} ${url}`);
@@ -72,7 +77,7 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
 };
 
 // Helper function for JSON responses
-export const apiFetchJson = async (endpoint: string, options: RequestInit = {}) => {
+export const apiFetchJson = async (endpoint: string, options: ApiFetchOptions = {}) => {
   const response = await apiFetch(endpoint, options);
   return response.json();
 };
