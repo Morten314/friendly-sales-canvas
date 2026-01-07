@@ -357,14 +357,19 @@ const DataSourcesManager: React.FC = () => {
               Select type first...
             </span>
           ) : inlineStep !== "type" ? (
-            <Input
-              ref={nameInputRef}
-              placeholder="e.g., Competitor Pricing Page"
-              value={sourceName}
-              onChange={(e) => setSourceName(e.target.value)}
-              onKeyDown={handleNameKeyDown}
-              className="h-9 text-sm"
-            />
+            <div className="space-y-1">
+              <Input
+                ref={nameInputRef}
+                placeholder="e.g., Competitor Pricing Page"
+                value={sourceName}
+                onChange={(e) => setSourceName(e.target.value)}
+                onKeyDown={handleNameKeyDown}
+                className="h-9 text-sm"
+              />
+              {inlineStep === "name" && sourceName.trim() && (
+                <p className="text-xs text-muted-foreground">Press Enter to continue</p>
+              )}
+            </div>
           ) : (
             <span className="text-sm text-muted-foreground">—</span>
           )}
