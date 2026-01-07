@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Layout } from "@/components/layout/Layout";
 import DataSourcesManager from "@/components/mission-control/DataSourcesManager";
+import ICPManager from "@/components/mission-control/ICPManager";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -2611,55 +2612,8 @@ const MissionControl = () => {
           {/* Customer Profile Tab */}
           <TabsContent value="customer-profile">
             <Card>
-              <CardHeader>
-                <CardTitle>Customer Profile</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <h3 className="font-medium">ICP Basics (Optional)</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="region-focus">Region Focus</Label>
-                      <Input 
-                        id="region-focus" 
-                        placeholder="e.g., North America, EMEA"
-                        value={companyProfile.regionFocus}
-                        onChange={(e) => setCompanyProfile(prev => ({ ...prev, regionFocus: e.target.value }))}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="deal-size">Typical Deal Size</Label>
-                      <Input 
-                        id="deal-size" 
-                        placeholder="e.g., $10K - $50K"
-                        value={companyProfile.dealSize}
-                        onChange={(e) => setCompanyProfile(prev => ({ ...prev, dealSize: e.target.value }))}
-                      />
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="space-y-4">
-                  <h3 className="font-medium">Buyer Information</h3>
-                  <div className="space-y-2">
-                    <Label htmlFor="key-buyer-persona">Key Buyer Persona</Label>
-                    <Textarea 
-                      id="key-buyer-persona" 
-                      placeholder="Describe your key buyer persona (e.g., VP of Sales at mid-market SaaS companies, CTO at fintech startups...)"
-                      value={companyProfile.keyBuyerPersona}
-                      onChange={(e) => setCompanyProfile(prev => ({ ...prev, keyBuyerPersona: e.target.value }))}
-                      rows={4}
-                    />
-                  </div>
-                </div>
-                
-                <Button 
-                  onClick={handleSave} 
-                  className="w-full md:w-auto"
-                  disabled={isSaving}
-                >
-                  {isSaving ? "Saving..." : "Save Changes"}
-                </Button>
+              <CardContent className="pt-6">
+                <ICPManager />
               </CardContent>
             </Card>
           </TabsContent>
