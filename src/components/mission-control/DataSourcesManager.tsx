@@ -75,7 +75,6 @@ const DataSourcesManager: React.FC = () => {
   const { currentUser } = useAuth();
   const [dataSources, setDataSources] = useState<DataSource[]>([]);
   const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
-  const [isCompanyProfileComplete, setIsCompanyProfileComplete] = useState(false);
 
   // Load company profile from localStorage
   useEffect(() => {
@@ -92,16 +91,12 @@ const DataSourcesManager: React.FC = () => {
             companyName: parsed.companyName || "",
             companyUrl: parsed.companyUrl || "",
           });
-          // Consider profile complete if company name is filled
-          setIsCompanyProfileComplete(!!parsed.companyName?.trim());
         } catch (e) {
           console.error("Failed to parse company profile:", e);
           setCompanyProfile(null);
-          setIsCompanyProfileComplete(false);
         }
       } else {
         setCompanyProfile(null);
-        setIsCompanyProfileComplete(false);
       }
     };
 
@@ -629,153 +624,131 @@ const DataSourcesManager: React.FC = () => {
         </a>
       </div>
 
-      {/* Lock State - Show when company profile is not complete */}
-      {!isCompanyProfileComplete && (
-        <div className="flex flex-col items-center justify-center py-16 px-4 border-2 border-dashed rounded-lg bg-muted/20">
-          <Lock className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-medium mb-2">Complete Company Profile</h3>
-          <p className="text-sm text-muted-foreground text-center max-w-md mb-6">
-            🔒 Complete Company Profile to add Data Sources
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-semibold">Data Sources</h2>
+          <p className="text-sm text-muted-foreground">
+            Manage sources that help agents understand your business context
           </p>
-          <Button asChild variant="outline" className="gap-2">
-            <a href="/settings">
-              <Building2 className="h-4 w-4" />
-              Go to Company Profile
-            </a>
+        </div>
+        {dataSources.length > 0 && !isAddingInline && (
+          <Button 
+            onClick={handleStartAdd} 
+            className="gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            Add Data Source
+          </Button>
+        )}
+      </div>
+
+      {/* Empty State */}
+      {!showTable && (
+        <div className="flex flex-col items-center justify-center py-16 px-4 border-2 border-dashed rounded-lg bg-muted/20">
+          <Database className="h-12 w-12 text-muted-foreground mb-4" />
+          <h3 className="text-lg font-medium mb-2">No data sources added yet</h3>
+          <p className="text-sm text-muted-foreground text-center max-w-md mb-6">
+            Add sources to help agents understand your business context.
+          </p>
+          <Button onClick={handleStartAdd} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Add Data Source
           </Button>
         </div>
       )}
 
-      {/* Data Sources Content - Only show when company profile is complete */}
-      {isCompanyProfileComplete && (
-        <>
-          {/* Header */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-semibold">Data Sources</h2>
-              <p className="text-sm text-muted-foreground">
-                Manage sources that help agents understand your business context
-              </p>
-            </div>
-            {dataSources.length > 0 && !isAddingInline && (
-              <Button 
-                onClick={handleStartAdd} 
-                className="gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                Add Data Source
-              </Button>
-            )}
-          </div>
-
-          {/* Empty State */}
-          {!showTable && (
-            <div className="flex flex-col items-center justify-center py-16 px-4 border-2 border-dashed rounded-lg bg-muted/20">
-              <Database className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-medium mb-2">No data sources added yet</h3>
-              <p className="text-sm text-muted-foreground text-center max-w-md mb-6">
-                Add sources to help agents understand your business context.
-              </p>
-              <Button onClick={handleStartAdd} className="gap-2">
-                <Plus className="h-4 w-4" />
-                Add Data Source
-              </Button>
-            </div>
-          )}
-
-          {/* Table (visible only when there are sources OR adding inline) */}
-          {showTable && (
-            <div className="border rounded-lg overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead className="w-[130px]">Type</TableHead>
-                    <TableHead className="w-[180px]">Name</TableHead>
-                    <TableHead className="hidden md:table-cell w-[200px]">URL / File</TableHead>
-                    <TableHead className="hidden lg:table-cell w-[150px]">Description</TableHead>
-                    <TableHead className="hidden lg:table-cell">Tags</TableHead>
-                    <TableHead className="w-[110px]">Status</TableHead>
-                    <TableHead className="w-[90px] text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {/* Inline Add Row (at top) */}
-                  {renderInlineEditRow()}
-                  
-                  {/* Existing Sources */}
-                  {dataSources.map((source) => (
-                    <TableRow key={source.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {getTypeIcon(source.type)}
-                          <span className="text-sm">{getTypeLabel(source.type)}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-medium">{source.name}</TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        {source.type === "url" && source.url ? (
-                          <span className="text-sm truncate max-w-[180px] block" title={source.url}>
-                            {source.url}
-                          </span>
-                        ) : source.type === "file" && source.fileName ? (
-                          <span className="text-sm">{source.fileName}</span>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="hidden lg:table-cell">
-                        <span className="text-sm text-muted-foreground">
-                          {source.description || "—"}
-                        </span>
-                      </TableCell>
-                      <TableCell className="hidden lg:table-cell">
-                        <div className="flex flex-wrap gap-1">
-                          {source.tags.length > 0 ? (
-                            source.tags.slice(0, 3).map((tag) => (
-                              <Badge key={tag} variant="secondary" className="text-xs">
-                                {tag}
-                              </Badge>
-                            ))
-                          ) : (
-                            <span className="text-sm text-muted-foreground">—</span>
-                          )}
-                          {source.tags.length > 3 && (
-                            <Badge variant="secondary" className="text-xs">
-                              +{source.tags.length - 3}
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>{getStatusBadge(source.status)}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => handleEditSource(source)}
-                            disabled={isAddingInline}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive"
-                            onClick={() => handleDeleteSource(source.id)}
-                            disabled={isAddingInline}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </>
+      {/* Table (visible only when there are sources OR adding inline) */}
+      {showTable && (
+        <div className="border rounded-lg overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/50">
+                <TableHead className="w-[130px]">Type</TableHead>
+                <TableHead className="w-[180px]">Name</TableHead>
+                <TableHead className="hidden md:table-cell w-[200px]">URL / File</TableHead>
+                <TableHead className="hidden lg:table-cell w-[150px]">Description</TableHead>
+                <TableHead className="hidden lg:table-cell">Tags</TableHead>
+                <TableHead className="w-[110px]">Status</TableHead>
+                <TableHead className="w-[90px] text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {/* Inline Add Row (at top) */}
+              {renderInlineEditRow()}
+              
+              {/* Existing Sources */}
+              {dataSources.map((source) => (
+                <TableRow key={source.id}>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      {getTypeIcon(source.type)}
+                      <span className="text-sm">{getTypeLabel(source.type)}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="font-medium">{source.name}</TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    {source.type === "url" && source.url ? (
+                      <span className="text-sm truncate max-w-[180px] block" title={source.url}>
+                        {source.url}
+                      </span>
+                    ) : source.type === "file" && source.fileName ? (
+                      <span className="text-sm">{source.fileName}</span>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell">
+                    <span className="text-sm text-muted-foreground">
+                      {source.description || "—"}
+                    </span>
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell">
+                    <div className="flex flex-wrap gap-1">
+                      {source.tags.length > 0 ? (
+                        source.tags.slice(0, 3).map((tag) => (
+                          <Badge key={tag} variant="secondary" className="text-xs">
+                            {tag}
+                          </Badge>
+                        ))
+                      ) : (
+                        <span className="text-sm text-muted-foreground">—</span>
+                      )}
+                      {source.tags.length > 3 && (
+                        <Badge variant="secondary" className="text-xs">
+                          +{source.tags.length - 3}
+                        </Badge>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>{getStatusBadge(source.status)}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => handleEditSource(source)}
+                        disabled={isAddingInline}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:text-destructive"
+                        onClick={() => handleDeleteSource(source.id)}
+                        disabled={isAddingInline}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       )}
     </div>
   );
