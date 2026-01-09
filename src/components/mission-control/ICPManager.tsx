@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -26,8 +27,8 @@ import {
   Users,
   X,
   Check,
-  Ban,
   Target,
+  Eye,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -37,12 +38,13 @@ type FitConfidence = "high" | "medium" | "low";
 interface ICP {
   id: string;
   primaryRegion: string;
-  secondarySubMarkets: string;
   industry: string[];
   companySize: string[];
   buyerRole: string[];
+  accountsOnWatchlist: string[];
   accountsToAvoid: string[];
   fitConfidence: FitConfidence;
+  additionalContext: string;
   status: "saved";
   createdAt: Date;
 }
@@ -103,12 +105,13 @@ const FIT_CONFIDENCE_OPTIONS: { value: FitConfidence; label: string }[] = [
 
 type InlineStep = 
   | "primaryRegion" 
-  | "secondarySubMarkets" 
   | "industry" 
   | "companySize" 
   | "buyerRole" 
+  | "accountsOnWatchlist"
   | "accountsToAvoid" 
-  | "fitConfidence";
+  | "fitConfidence"
+  | "additionalContext";
 
 const ICPManager: React.FC = () => {
   const { toast } = useToast();
@@ -118,14 +121,15 @@ const ICPManager: React.FC = () => {
   const [isAddingInline, setIsAddingInline] = useState(false);
   const [inlineStep, setInlineStep] = useState<InlineStep>("primaryRegion");
   const [primaryRegion, setPrimaryRegion] = useState("");
-  const [secondarySubMarkets, setSecondarySubMarkets] = useState("");
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
   const [customIndustry, setCustomIndustry] = useState("");
   const [selectedCompanySizes, setSelectedCompanySizes] = useState<string[]>([]);
   const [selectedBuyerRoles, setSelectedBuyerRoles] = useState<string[]>([]);
   const [customBuyerRole, setCustomBuyerRole] = useState("");
+  const [accountsOnWatchlist, setAccountsOnWatchlist] = useState("");
   const [accountsToAvoid, setAccountsToAvoid] = useState("");
   const [fitConfidence, setFitConfidence] = useState<FitConfidence | "">("");
+  const [additionalContext, setAdditionalContext] = useState("");
   
   // Edit state
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -136,23 +140,26 @@ const ICPManager: React.FC = () => {
   const [showBuyerRoleSuggestions, setShowBuyerRoleSuggestions] = useState(false);
   
   const primaryRegionRef = useRef<HTMLInputElement>(null);
-  const secondarySubMarketsRef = useRef<HTMLInputElement>(null);
   const industryRef = useRef<HTMLInputElement>(null);
   const buyerRoleRef = useRef<HTMLInputElement>(null);
+  const accountsOnWatchlistRef = useRef<HTMLInputElement>(null);
   const accountsToAvoidRef = useRef<HTMLInputElement>(null);
+  const additionalContextRef = useRef<HTMLTextAreaElement>(null);
 
   // Focus management
   useEffect(() => {
     if (inlineStep === "primaryRegion" && primaryRegionRef.current) {
       primaryRegionRef.current.focus();
-    } else if (inlineStep === "secondarySubMarkets" && secondarySubMarketsRef.current) {
-      secondarySubMarketsRef.current.focus();
     } else if (inlineStep === "industry" && industryRef.current) {
       industryRef.current.focus();
     } else if (inlineStep === "buyerRole" && buyerRoleRef.current) {
       buyerRoleRef.current.focus();
+    } else if (inlineStep === "accountsOnWatchlist" && accountsOnWatchlistRef.current) {
+      accountsOnWatchlistRef.current.focus();
     } else if (inlineStep === "accountsToAvoid" && accountsToAvoidRef.current) {
       accountsToAvoidRef.current.focus();
+    } else if (inlineStep === "additionalContext" && additionalContextRef.current) {
+      additionalContextRef.current.focus();
     }
   }, [inlineStep]);
 
@@ -160,14 +167,15 @@ const ICPManager: React.FC = () => {
     setIsAddingInline(false);
     setInlineStep("primaryRegion");
     setPrimaryRegion("");
-    setSecondarySubMarkets("");
     setSelectedIndustries([]);
     setCustomIndustry("");
     setSelectedCompanySizes([]);
     setSelectedBuyerRoles([]);
     setCustomBuyerRole("");
+    setAccountsOnWatchlist("");
     setAccountsToAvoid("");
     setFitConfidence("");
+    setAdditionalContext("");
     setEditingId(null);
     setShowRegionSuggestions(false);
     setShowIndustrySuggestions(false);
@@ -187,15 +195,6 @@ const ICPManager: React.FC = () => {
     if (e.key === "Enter" && primaryRegion.trim()) {
       e.preventDefault();
       setShowRegionSuggestions(false);
-      setInlineStep("secondarySubMarkets");
-    } else if (e.key === "Escape") {
-      handleCancelInline();
-    }
-  };
-
-  const handleSecondarySubMarketsKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
       setInlineStep("industry");
     } else if (e.key === "Escape") {
       handleCancelInline();
@@ -231,8 +230,17 @@ const ICPManager: React.FC = () => {
         setCustomBuyerRole("");
       } else if (selectedBuyerRoles.length > 0) {
         setShowBuyerRoleSuggestions(false);
-        setInlineStep("accountsToAvoid");
+        setInlineStep("accountsOnWatchlist");
       }
+    } else if (e.key === "Escape") {
+      handleCancelInline();
+    }
+  };
+
+  const handleAccountsOnWatchlistKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      setInlineStep("accountsToAvoid");
     } else if (e.key === "Escape") {
       handleCancelInline();
     }
@@ -249,6 +257,15 @@ const ICPManager: React.FC = () => {
 
   const handleFitConfidenceSelect = (value: FitConfidence) => {
     setFitConfidence(value);
+  };
+
+  const handleFitConfidenceKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && fitConfidence) {
+      e.preventDefault();
+      setInlineStep("additionalContext");
+    } else if (e.key === "Escape") {
+      handleCancelInline();
+    }
   };
 
   const handleIndustryToggle = (industry: string) => {
@@ -272,7 +289,7 @@ const ICPManager: React.FC = () => {
   const handleRegionSuggestionClick = (region: string) => {
     setPrimaryRegion(region);
     setShowRegionSuggestions(false);
-    setInlineStep("secondarySubMarkets");
+    setInlineStep("industry");
   };
 
   const handleSaveICP = () => {
@@ -324,12 +341,13 @@ const ICPManager: React.FC = () => {
     const newICP: ICP = {
       id: editingId || `icp-${Date.now()}`,
       primaryRegion: primaryRegion.trim(),
-      secondarySubMarkets: secondarySubMarkets.trim(),
       industry: selectedIndustries,
       companySize: selectedCompanySizes,
       buyerRole: selectedBuyerRoles,
+      accountsOnWatchlist: accountsOnWatchlist.trim() ? accountsOnWatchlist.split(",").map(a => a.trim()) : [],
       accountsToAvoid: accountsToAvoid.trim() ? accountsToAvoid.split(",").map(a => a.trim()) : [],
       fitConfidence: fitConfidence as FitConfidence,
+      additionalContext: additionalContext.trim(),
       status: "saved",
       createdAt: new Date(),
     };
@@ -354,13 +372,14 @@ const ICPManager: React.FC = () => {
   const handleEditICP = (icp: ICP) => {
     setEditingId(icp.id);
     setPrimaryRegion(icp.primaryRegion);
-    setSecondarySubMarkets(icp.secondarySubMarkets);
     setSelectedIndustries(icp.industry);
     setSelectedCompanySizes(icp.companySize);
     setSelectedBuyerRoles(icp.buyerRole);
+    setAccountsOnWatchlist(icp.accountsOnWatchlist.join(", "));
     setAccountsToAvoid(icp.accountsToAvoid.join(", "));
     setFitConfidence(icp.fitConfidence);
-    setInlineStep("fitConfidence");
+    setAdditionalContext(icp.additionalContext);
+    setInlineStep("additionalContext");
     setIsAddingInline(true);
   };
 
@@ -401,7 +420,7 @@ const ICPManager: React.FC = () => {
     selectedCompanySizes.length > 0 && 
     selectedBuyerRoles.length > 0 && 
     fitConfidence &&
-    inlineStep === "fitConfidence";
+    inlineStep === "additionalContext";
 
   const filteredRegionSuggestions = REGION_SUGGESTIONS.filter(r =>
     r.toLowerCase().includes(primaryRegion.toLowerCase())
@@ -472,29 +491,10 @@ const ICPManager: React.FC = () => {
                 <p className="text-xs text-muted-foreground">Press Enter to continue</p>
               )}
             </div>
-
-            {/* Secondary Sub-Markets */}
-            {(inlineStep !== "primaryRegion" || editingId) && (
-              <div className="space-y-1">
-                <label className="text-xs text-muted-foreground">Secondary Sub-Markets (Optional)</label>
-                <Input
-                  ref={secondarySubMarketsRef}
-                  placeholder="e.g., UK, Germany"
-                  value={secondarySubMarkets}
-                  onChange={(e) => setSecondarySubMarkets(e.target.value)}
-                  onKeyDown={handleSecondarySubMarketsKeyDown}
-                  className="h-9 text-sm"
-                  disabled={inlineStep !== "secondarySubMarkets" && !editingId}
-                />
-                {inlineStep === "secondarySubMarkets" && (
-                  <p className="text-xs text-muted-foreground">Press Enter to continue</p>
-                )}
-              </div>
-            )}
           </div>
 
           {/* Company Section */}
-          {(["industry", "companySize", "buyerRole", "accountsToAvoid", "fitConfidence"].includes(inlineStep) || editingId) && (
+          {(["industry", "companySize", "buyerRole", "accountsOnWatchlist", "accountsToAvoid", "fitConfidence", "additionalContext"].includes(inlineStep) || editingId) && (
             <div className="space-y-3">
               <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
                 <Building2 className="h-3.5 w-3.5" />
@@ -552,7 +552,7 @@ const ICPManager: React.FC = () => {
               </div>
 
               {/* Company Size */}
-              {(["companySize", "buyerRole", "accountsToAvoid", "fitConfidence"].includes(inlineStep) || editingId) && (
+              {(["companySize", "buyerRole", "accountsOnWatchlist", "accountsToAvoid", "fitConfidence", "additionalContext"].includes(inlineStep) || editingId) && (
                 <div className="space-y-1">
                   <label className="text-xs text-muted-foreground">Company Size</label>
                   <div className="flex flex-wrap gap-1.5">
@@ -587,7 +587,7 @@ const ICPManager: React.FC = () => {
           )}
 
           {/* Buyer & Fit Section */}
-          {(["buyerRole", "accountsToAvoid", "fitConfidence"].includes(inlineStep) || editingId) && (
+          {(["buyerRole", "accountsOnWatchlist", "accountsToAvoid", "fitConfidence", "additionalContext"].includes(inlineStep) || editingId) && (
             <div className="space-y-3">
               <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-2">
                 <Users className="h-3.5 w-3.5" />
@@ -644,8 +644,33 @@ const ICPManager: React.FC = () => {
                 )}
               </div>
 
+              {/* Accounts on Watchlist */}
+              {(["accountsOnWatchlist", "accountsToAvoid", "fitConfidence", "additionalContext"].includes(inlineStep) || editingId) && (
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground flex items-center gap-1.5">
+                    <Eye className="h-3 w-3" />
+                    Accounts on Watchlist (Optional)
+                  </label>
+                  <Input
+                    ref={accountsOnWatchlistRef}
+                    placeholder="e.g., CompanyA, CompanyB"
+                    value={accountsOnWatchlist}
+                    onChange={(e) => setAccountsOnWatchlist(e.target.value)}
+                    onKeyDown={handleAccountsOnWatchlistKeyDown}
+                    className="h-9 text-sm"
+                    disabled={inlineStep !== "accountsOnWatchlist" && !editingId}
+                  />
+                  <p className="text-xs text-muted-foreground/70">
+                    Companies you want to closely monitor or track for opportunities.
+                  </p>
+                  {inlineStep === "accountsOnWatchlist" && (
+                    <p className="text-xs text-muted-foreground">Press Enter to continue</p>
+                  )}
+                </div>
+              )}
+
               {/* Accounts to Avoid */}
-              {(["accountsToAvoid", "fitConfidence"].includes(inlineStep) || editingId) && (
+              {(["accountsToAvoid", "fitConfidence", "additionalContext"].includes(inlineStep) || editingId) && (
                 <div className="space-y-1">
                   <label className="text-xs text-muted-foreground">Accounts to Avoid (Optional)</label>
                   <Input
@@ -664,8 +689,8 @@ const ICPManager: React.FC = () => {
               )}
 
               {/* ICP Fit Confidence */}
-              {(inlineStep === "fitConfidence" || editingId) && (
-                <div className="space-y-1">
+              {(["fitConfidence", "additionalContext"].includes(inlineStep) || editingId) && (
+                <div className="space-y-1" onKeyDown={handleFitConfidenceKeyDown}>
                   <label className="text-xs text-muted-foreground">ICP Fit Confidence</label>
                   <Select
                     value={fitConfidence}
@@ -682,14 +707,32 @@ const ICPManager: React.FC = () => {
                       ))}
                     </SelectContent>
                   </Select>
+                  {inlineStep === "fitConfidence" && fitConfidence && (
+                    <p className="text-xs text-muted-foreground">Press Enter to continue</p>
+                  )}
                 </div>
               )}
             </div>
           )}
         </div>
 
+        {/* Additional Context - Full Width */}
+        {(inlineStep === "additionalContext" || editingId) && (
+          <div className="space-y-2 pt-2 border-t">
+            <label className="text-xs text-muted-foreground">Additional Context (Optional)</label>
+            <Textarea
+              ref={additionalContextRef}
+              placeholder="Add any additional details that could help the system better understand this ICP (e.g. buying behavior, maturity level, internal assumptions, exclusions, nuances)."
+              value={additionalContext}
+              onChange={(e) => setAdditionalContext(e.target.value)}
+              className="min-h-[80px] text-sm resize-none"
+              disabled={inlineStep !== "additionalContext" && !editingId}
+            />
+          </div>
+        )}
+
         {/* Save Button */}
-        {inlineStep === "fitConfidence" && (
+        {inlineStep === "additionalContext" && (
           <div className="flex justify-end gap-2 pt-2 border-t">
             <Button variant="outline" size="sm" onClick={handleCancelInline}>
               Cancel
@@ -764,14 +807,7 @@ const ICPManager: React.FC = () => {
               {icps.map((icp) => (
                 <TableRow key={icp.id}>
                   <TableCell>
-                    <div>
-                      <span className="font-medium">{icp.primaryRegion}</span>
-                      {icp.secondarySubMarkets && (
-                        <span className="text-sm text-muted-foreground block">
-                          {icp.secondarySubMarkets}
-                        </span>
-                      )}
-                    </div>
+                    <span className="font-medium">{icp.primaryRegion}</span>
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
