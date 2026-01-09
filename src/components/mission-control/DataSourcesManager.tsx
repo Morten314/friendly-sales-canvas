@@ -710,10 +710,10 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
                   <TableCell className="hidden lg:table-cell">
                     {source.tags.length > 0 ? (
                       <div 
-                        className="relative w-[180px] overflow-hidden"
+                        className="w-[180px] border rounded-md bg-muted/30 px-2 py-1.5 overflow-x-auto"
                         title={source.tags.length > 2 ? "Scroll to view all tags" : undefined}
                       >
-                        <div className="flex gap-1 overflow-x-auto scrollbar-hide whitespace-nowrap py-0.5">
+                        <div className="flex gap-1 whitespace-nowrap">
                           {source.tags.map((tag) => (
                             <Badge key={tag} variant="secondary" className="text-xs shrink-0">
                               {tag}
