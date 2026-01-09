@@ -707,23 +707,21 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
                       {source.description || "—"}
                     </span>
                   </TableCell>
-                  <TableCell className="hidden lg:table-cell">
-                    <div className="flex flex-wrap gap-1">
-                      {source.tags.length > 0 ? (
-                        source.tags.slice(0, 3).map((tag) => (
-                          <Badge key={tag} variant="secondary" className="text-xs">
+                  <TableCell className="hidden lg:table-cell max-w-[200px]">
+                    {source.tags.length > 0 ? (
+                      <div 
+                        className="flex gap-1 overflow-x-auto scrollbar-hide whitespace-nowrap py-0.5 group cursor-default"
+                        title={source.tags.length > 2 ? "Scroll to view all tags" : undefined}
+                      >
+                        {source.tags.map((tag) => (
+                          <Badge key={tag} variant="secondary" className="text-xs shrink-0">
                             {tag}
                           </Badge>
-                        ))
-                      ) : (
-                        <span className="text-sm text-muted-foreground">—</span>
-                      )}
-                      {source.tags.length > 3 && (
-                        <Badge variant="secondary" className="text-xs">
-                          +{source.tags.length - 3}
-                        </Badge>
-                      )}
-                    </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">—</span>
+                    )}
                   </TableCell>
                   <TableCell>{getStatusBadge(source.status)}</TableCell>
                   <TableCell className="text-right">
