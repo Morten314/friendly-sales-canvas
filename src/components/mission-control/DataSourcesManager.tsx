@@ -284,6 +284,9 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
         title: "Source added",
         description: `${sourceName} is being processed.`,
       });
+      
+      // Dispatch event to notify MissionControl that data source is added
+      window.dispatchEvent(new CustomEvent('dataSourceAdded'));
     }
 
     // Simulate processing -> active/failed status

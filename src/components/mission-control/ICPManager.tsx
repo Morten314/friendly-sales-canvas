@@ -366,6 +366,9 @@ const ICPManager: React.FC = () => {
       });
     }
 
+    // Dispatch event to notify MissionControl that customer profile is saved
+    window.dispatchEvent(new CustomEvent('customerProfileSaved'));
+
     resetInlineForm();
   };
 

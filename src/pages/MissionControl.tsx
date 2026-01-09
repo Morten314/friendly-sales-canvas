@@ -74,7 +74,8 @@ import {
   Slack,
   Link,
   X,
-  Info
+  Info,
+  Lock
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -374,8 +375,14 @@ const availableConnectors: Connector[] = [
 
 const MissionControl = () => {
   const [activeTab, setActiveTab] = useState("profile");
-  const [completeness, setCompleteness] = useState(65);
+  const [isCompanyProfileSaved, setIsCompanyProfileSaved] = useState(false);
+  const [isCustomerProfileSaved, setIsCustomerProfileSaved] = useState(false);
+  const [hasDataSources, setHasDataSources] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Tab locking logic
+  const isCustomerProfileLocked = !isCompanyProfileSaved;
+  const isDataSourcesLocked = !isCustomerProfileSaved;
   const [expandedSources, setExpandedSources] = useState<Set<string>>(new Set());
   const [expandedTableRows, setExpandedTableRows] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState("");
@@ -578,11 +585,8 @@ const MissionControl = () => {
         description: "Your company profile has been saved successfully and will be reflected in Scout.",
       });
 
-      // Update completeness based on filled fields
-      const filledFields = Object.values(companyProfile).filter(value => value !== "").length;
-      const totalFields = Object.keys(companyProfile).length;
-      const newCompleteness = Math.round((filledFields / totalFields) * 100);
-      setCompleteness(newCompleteness);
+      // Mark company profile as saved
+      setIsCompanyProfileSaved(true);
 
     } catch (error) {
       console.error("Error saving company profile:", error);
@@ -627,22 +631,10 @@ const MissionControl = () => {
             keyBuyerPersona: data.key_buyer_persona || data.keyBuyerPersona || "",
           });
 
-          // Update completeness
-          const filledFields = Object.values({
-            companyName: data.company_name || data.companyName || "",
-            headquarters: data.headquarters || "",
-            employeeSize: data.employee_size || data.employeeSize || "",
-            industry: data.industry || "",
-            revenue: data.revenue_band || data.revenue || "",
-            gtmModel: data.gtm_model || data.gtmModel || "",
-            regionFocus: data.region_focus || data.regionFocus || "",
-            dealSize: data.typical_deal_size || data.dealSize || "",
-            companyUrl: data.company_url || data.companyUrl || "",
-            keyBuyerPersona: data.key_buyer_persona || data.keyBuyerPersona || "",
-          }).filter(value => value !== "").length;
-          const totalFields = 10;
-          const newCompleteness = Math.round((filledFields / totalFields) * 100);
-          setCompleteness(newCompleteness);
+          // Check if company profile is saved (has at least company name)
+          if (data.company_name || data.companyName) {
+            setIsCompanyProfileSaved(true);
+          }
         }
       } catch (error) {
         console.error("Error loading company profile:", error);
@@ -2396,39 +2388,133 @@ const MissionControl = () => {
           ),
   };
 
+  // Calculate overall completeness based on completed sections
+  const calculateOverallCompleteness = () => {
+    // Check both local dataSources state and the hasDataSources flag
+    const hasLocalDataSources = dataSources.length > 0;
+    const hasAnyDataSources = hasLocalDataSources || hasDataSources;
+    
+    if (hasAnyDataSources && isCustomerProfileSaved && isCompanyProfileSaved) {
+      return 100;
+    } else if (isCustomerProfileSaved && isCompanyProfileSaved) {
+      return 55;
+    } else if (isCompanyProfileSaved) {
+      return 30;
+    }
+    return 0;
+  };
+
+  const overallCompleteness = calculateOverallCompleteness();
+
+  // Listen for customer profile save events from ICPManager
+  useEffect(() => {
+    const handleCustomerProfileSaved = () => {
+      setIsCustomerProfileSaved(true);
+    };
+
+    // Listen for custom event from ICPManager
+    window.addEventListener('customerProfileSaved', handleCustomerProfileSaved);
+    
+    return () => {
+      window.removeEventListener('customerProfileSaved', handleCustomerProfileSaved);
+    };
+  }, []);
+
+  // Check for existing customer profile data on mount
+  useEffect(() => {
+    // Check localStorage for saved ICPs
+    const savedICPs = localStorage.getItem('icps');
+    if (savedICPs) {
+      try {
+        const icps = JSON.parse(savedICPs);
+        if (icps && icps.length > 0) {
+          setIsCustomerProfileSaved(true);
+        }
+      } catch (e) {
+        // Ignore parse errors
+      }
+    }
+  }, []);
+
+  // Listen for data source added events from DataSourcesManager
+  useEffect(() => {
+    const handleDataSourceAdded = () => {
+      // Data source was added in DataSourcesManager
+      setHasDataSources(true);
+    };
+
+    window.addEventListener('dataSourceAdded', handleDataSourceAdded);
+    
+    return () => {
+      window.removeEventListener('dataSourceAdded', handleDataSourceAdded);
+    };
+  }, []);
+
+  // Also update hasDataSources when local dataSources state changes
+  useEffect(() => {
+    if (dataSources.length > 0) {
+      setHasDataSources(true);
+    }
+  }, [dataSources.length]);
+
   return (
     <Layout>
       <div className="space-y-6">
+        {/* Profile Completeness - Common to all tabs */}
+        <div className="flex items-center justify-end gap-2">
+          <span className="text-xs text-muted-foreground">Completeness:</span>
+          <Progress value={overallCompleteness} className="w-32 h-1.5" />
+          <span className="text-xs font-medium min-w-[2rem] text-right">{overallCompleteness}%</span>
+        </div>
+
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <Tabs value={activeTab} onValueChange={(value) => {
+          // Prevent switching to locked tabs
+          if (value === "customer-profile" && isCustomerProfileLocked) {
+            return;
+          }
+          if (value === "sources" && isDataSourcesLocked) {
+            return;
+          }
+          setActiveTab(value);
+        }} className="space-y-6">
           <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 gap-1 md:gap-0">
             <TabsTrigger value="profile" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm px-2 md:px-4">
               <Building2 className="h-3 w-3 md:h-4 md:w-4" />
               <span className="hidden sm:inline">Company Profile</span>
               <span className="sm:hidden">Profile</span>
             </TabsTrigger>
-            <TabsTrigger value="customer-profile" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm px-2 md:px-4">
+            <TabsTrigger 
+              value="customer-profile" 
+              disabled={isCustomerProfileLocked}
+              className="flex items-center gap-1 md:gap-2 text-xs md:text-sm px-2 md:px-4 disabled:opacity-50 disabled:cursor-not-allowed relative"
+            >
               <Users className="h-3 w-3 md:h-4 md:w-4" />
               <span className="hidden sm:inline">Customer Profile</span>
               <span className="sm:hidden">Customer</span>
+              {isCustomerProfileLocked && (
+                <span className="ml-1 text-[10px]">🔒</span>
+              )}
             </TabsTrigger>
-            <TabsTrigger value="sources" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm px-2 md:px-4">
+            <TabsTrigger 
+              value="sources" 
+              disabled={isDataSourcesLocked}
+              className="flex items-center gap-1 md:gap-2 text-xs md:text-sm px-2 md:px-4 disabled:opacity-50 disabled:cursor-not-allowed relative"
+            >
               <Database className="h-3 w-3 md:h-4 md:w-4" />
               <span className="hidden sm:inline">Data Sources</span>
               <span className="sm:hidden">Sources</span>
+              {isDataSourcesLocked && (
+                <span className="ml-1 text-[10px]">🔒</span>
+              )}
             </TabsTrigger>
           </TabsList>
 
           {/* Company Profile Tab */}
           <TabsContent value="profile">
             <Card>
-              <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
+              <CardHeader>
                 <CardTitle>Company Information</CardTitle>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs sm:text-sm text-muted-foreground">Completeness:</span>
-                  <Progress value={completeness} className="w-16 sm:w-20" />
-                  <span className="text-xs sm:text-sm font-medium">{completeness}%</span>
-                </div>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -2589,7 +2675,7 @@ const MissionControl = () => {
                             <Textarea id="compliance-reqs" placeholder="e.g., GDPR, HIPAA, SOC2..." />
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor="messaging-constraints">Messaging Constraints</Label>
+                            <Label htmlFor="messaging-constraints">General Instruction</Label>
                             <Textarea id="messaging-constraints" placeholder="e.g., Avoid certain terms, required disclaimers..." />
                           </div>
                         </CardContent>
