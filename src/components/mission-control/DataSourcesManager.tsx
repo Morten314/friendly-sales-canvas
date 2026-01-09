@@ -70,7 +70,11 @@ const SUGGESTED_TAGS = [
 
 type InlineStep = "type" | "name" | "url" | "file" | "description" | "tags";
 
-const DataSourcesManager: React.FC = () => {
+interface DataSourcesManagerProps {
+  onNavigateToCompanyProfile?: () => void;
+}
+
+const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCompanyProfile }) => {
   const { toast } = useToast();
   const { currentUser } = useAuth();
   const [dataSources, setDataSources] = useState<DataSource[]>([]);
@@ -615,13 +619,13 @@ const DataSourcesManager: React.FC = () => {
             </div>
           </div>
         </div>
-        <a 
-          href="/settings" 
+        <button 
+          onClick={onNavigateToCompanyProfile}
           className="text-xs text-primary hover:underline flex items-center gap-1"
         >
           Edit Company Profile
           <ExternalLink className="h-3 w-3" />
-        </a>
+        </button>
       </div>
 
       {/* Header */}

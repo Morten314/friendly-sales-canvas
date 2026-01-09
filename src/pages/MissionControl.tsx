@@ -2620,7 +2620,7 @@ const MissionControl = () => {
 
           {/* Data Sources Tab */}
           <TabsContent value="sources">
-            <DataSourcesManager />
+            <DataSourcesManager onNavigateToCompanyProfile={() => setActiveTab("profile")} />
           </TabsContent>
         </Tabs>
 
