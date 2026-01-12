@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +31,8 @@ import {
   Eye,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { setUserLocalStorage, getUserLocalStorage, removeUserLocalStorage } from "@/utils/cacheUtils";
 
 // Types
 type FitConfidence = "high" | "medium" | "low";
@@ -115,7 +117,10 @@ type InlineStep =
 
 const ICPManager: React.FC = () => {
   const { toast } = useToast();
+  const { currentUser } = useAuth();
   const [icps, setIcps] = useState<ICP[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   
   // Inline editing state
   const [isAddingInline, setIsAddingInline] = useState(false);
@@ -145,6 +150,207 @@ const ICPManager: React.FC = () => {
   const accountsOnWatchlistRef = useRef<HTMLInputElement>(null);
   const accountsToAvoidRef = useRef<HTMLInputElement>(null);
   const additionalContextRef = useRef<HTMLTextAreaElement>(null);
+
+  // Save customer profile (ICPs) to backend with retry logic
+  const saveCustomerProfileToBackend = async (icpsToSave: ICP[], retryCount = 0) => {
+    if (!currentUser?.uid) {
+      console.warn("Cannot save customer profile: User not authenticated");
+      // Save to localStorage as fallback
+      try {
+        localStorage.setItem(`customerProfile_${currentUser?.uid || 'anonymous'}`, JSON.stringify(icpsToSave));
+      } catch (e) {
+        console.error("Failed to save to localStorage:", e);
+      }
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      // Prepare payload with customer profile data
+      // Since API is open-ended, we'll include all ICP data
+      const payload = {
+        profile_type: "company",
+        customer_profile: {
+          icps: icpsToSave.map(icp => ({
+            id: icp.id,
+            primary_region: icp.primaryRegion,
+            industry: icp.industry,
+            company_size: icp.companySize,
+            buyer_role: icp.buyerRole,
+            accounts_on_watchlist: icp.accountsOnWatchlist,
+            accounts_to_avoid: icp.accountsToAvoid,
+            fit_confidence: icp.fitConfidence,
+            additional_context: icp.additionalContext,
+            status: icp.status,
+            created_at: icp.createdAt instanceof Date ? icp.createdAt.toISOString() : icp.createdAt,
+          })),
+        },
+      };
+
+      console.log("=== ICP MANAGER: Saving customer profile to backend ===");
+      console.log("Payload:", payload);
+
+      // Always save to localStorage first as backup
+      try {
+        setUserLocalStorage('customerProfile', JSON.stringify(icpsToSave), currentUser.uid);
+        setUserLocalStorage('customerProfile_pending', JSON.stringify(payload), currentUser.uid);
+      } catch (e) {
+        console.warn("Failed to save to localStorage:", e);
+      }
+
+      const apiUrl = `/api/profile/company?user_id=${currentUser.uid}`;
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("API Error:", response.status, errorText);
+        
+        // Retry for 500 errors (server/database issues) up to 2 times
+        if (response.status === 500 && retryCount < 2) {
+          console.log(`Retrying save (attempt ${retryCount + 1}/2)...`);
+          await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1))); // Exponential backoff
+          return saveCustomerProfileToBackend(icpsToSave, retryCount + 1);
+        }
+        
+        throw new Error(`Failed to save customer profile: ${response.status} - ${errorText}`);
+      }
+
+      const data = await response.json();
+      console.log("Customer profile saved successfully:", data);
+      
+      // Clear pending flag on success
+      try {
+        removeUserLocalStorage('customerProfile_pending', currentUser.uid);
+      } catch (e) {
+        console.warn("Failed to clear pending flag:", e);
+      }
+    } catch (error) {
+      console.error("Error saving customer profile:", error);
+      
+      // Determine error message based on error type
+      const isNetworkError = error instanceof TypeError && error.message.includes('fetch');
+      const isServerError = error instanceof Error && error.message.includes('500');
+      
+      if (isServerError || isNetworkError) {
+        toast({
+          title: "Backend temporarily unavailable",
+          description: "Your customer profile has been saved locally and will sync automatically when the backend is available.",
+          variant: "default",
+        });
+      } else {
+        toast({
+          title: "Save warning",
+          description: "Customer profile saved locally but failed to sync with backend. Please try again later.",
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Load customer profile (ICPs) from backend
+  const loadCustomerProfileFromBackend = async () => {
+    if (!currentUser?.uid) {
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const apiUrl = `/api/profile/company?user_id=${currentUser.uid}`;
+      const response = await fetch(apiUrl, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        console.log("No existing customer profile found in API");
+        return;
+      }
+
+      const data = await response.json();
+      
+      // Check if customer_profile exists in the response
+      if (data.customer_profile && data.customer_profile.icps && Array.isArray(data.customer_profile.icps)) {
+        const loadedICPs: ICP[] = data.customer_profile.icps.map((icp: any) => ({
+          id: icp.id || `icp-${Date.now()}-${Math.random()}`,
+          primaryRegion: icp.primary_region || icp.primaryRegion || "",
+          industry: Array.isArray(icp.industry) ? icp.industry : [],
+          companySize: Array.isArray(icp.company_size) ? icp.company_size : Array.isArray(icp.companySize) ? icp.companySize : [],
+          buyerRole: Array.isArray(icp.buyer_role) ? icp.buyer_role : Array.isArray(icp.buyerRole) ? icp.buyerRole : [],
+          accountsOnWatchlist: Array.isArray(icp.accounts_on_watchlist) ? icp.accounts_on_watchlist : Array.isArray(icp.accountsOnWatchlist) ? icp.accountsOnWatchlist : [],
+          accountsToAvoid: Array.isArray(icp.accounts_to_avoid) ? icp.accounts_to_avoid : Array.isArray(icp.accountsToAvoid) ? icp.accountsToAvoid : [],
+          fitConfidence: (icp.fit_confidence || icp.fitConfidence || "medium") as FitConfidence,
+          additionalContext: icp.additional_context || icp.additionalContext || "",
+          status: icp.status || "saved",
+          createdAt: icp.created_at ? new Date(icp.created_at) : (icp.createdAt ? new Date(icp.createdAt) : new Date()),
+        }));
+
+        setIcps(loadedICPs);
+        console.log("Customer profile loaded from backend:", loadedICPs);
+        
+        // Dispatch event to notify MissionControl that customer profile is loaded
+        if (loadedICPs.length > 0) {
+          window.dispatchEvent(new CustomEvent('customerProfileSaved'));
+        }
+      }
+    } catch (error) {
+      console.error("Error loading customer profile:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Load customer profile on mount
+  useEffect(() => {
+    if (currentUser?.uid) {
+      loadCustomerProfileFromBackend();
+      
+      // Check for pending saves and retry them
+      const retryPendingSave = async () => {
+        try {
+          const pendingData = getUserLocalStorage('customerProfile_pending', currentUser.uid);
+          if (pendingData) {
+            const pendingPayload = JSON.parse(pendingData);
+            console.log("Found pending customer profile save, retrying...");
+            // Extract ICPs from the pending payload to retry
+            const icpsFromPending = pendingPayload.customer_profile?.icps || [];
+            if (icpsFromPending.length > 0) {
+              // Convert back to ICP format
+              const icpsToRetry: ICP[] = icpsFromPending.map((icp: any) => ({
+                id: icp.id,
+                primaryRegion: icp.primary_region || icp.primaryRegion || "",
+                industry: Array.isArray(icp.industry) ? icp.industry : [],
+                companySize: Array.isArray(icp.company_size) ? icp.company_size : [],
+                buyerRole: Array.isArray(icp.buyer_role) ? icp.buyer_role : [],
+                accountsOnWatchlist: Array.isArray(icp.accounts_on_watchlist) ? icp.accounts_on_watchlist : [],
+                accountsToAvoid: Array.isArray(icp.accounts_to_avoid) ? icp.accounts_to_avoid : [],
+                fitConfidence: (icp.fit_confidence || icp.fitConfidence || "medium") as FitConfidence,
+                additionalContext: icp.additional_context || icp.additionalContext || "",
+                status: icp.status || "saved",
+                createdAt: icp.created_at ? new Date(icp.created_at) : new Date(),
+              }));
+              await saveCustomerProfileToBackend(icpsToRetry, 0);
+            }
+          }
+        } catch (error) {
+          console.error("Error retrying pending save:", error);
+        }
+      };
+      
+      // Retry after a short delay to allow backend to recover
+      const retryTimer = setTimeout(retryPendingSave, 5000);
+      return () => clearTimeout(retryTimer);
+    }
+  }, [currentUser?.uid]);
 
   // Focus management
   useEffect(() => {
@@ -292,7 +498,7 @@ const ICPManager: React.FC = () => {
     setInlineStep("industry");
   };
 
-  const handleSaveICP = () => {
+  const handleSaveICP = async () => {
     if (!primaryRegion.trim()) {
       toast({
         title: "Primary Region required",
@@ -352,19 +558,25 @@ const ICPManager: React.FC = () => {
       createdAt: new Date(),
     };
 
+    let updatedICPs: ICP[];
     if (editingId) {
-      setIcps(prev => prev.map(icp => (icp.id === editingId ? newICP : icp)));
+      updatedICPs = icps.map(icp => (icp.id === editingId ? newICP : icp));
+      setIcps(updatedICPs);
       toast({
         title: "ICP updated",
         description: "Your ICP has been updated successfully.",
       });
     } else {
-      setIcps(prev => [...prev, newICP]);
+      updatedICPs = [...icps, newICP];
+      setIcps(updatedICPs);
       toast({
         title: "ICP saved",
         description: "Your ICP hypothesis has been saved.",
       });
     }
+
+    // Save to backend
+    await saveCustomerProfileToBackend(updatedICPs);
 
     // Dispatch event to notify MissionControl that customer profile is saved
     window.dispatchEvent(new CustomEvent('customerProfileSaved'));
@@ -386,8 +598,13 @@ const ICPManager: React.FC = () => {
     setIsAddingInline(true);
   };
 
-  const handleDeleteICP = (id: string) => {
-    setIcps(prev => prev.filter(icp => icp.id !== id));
+  const handleDeleteICP = async (id: string) => {
+    const updatedICPs = icps.filter(icp => icp.id !== id);
+    setIcps(updatedICPs);
+    
+    // Save to backend
+    await saveCustomerProfileToBackend(updatedICPs);
+    
     toast({
       title: "ICP deleted",
       description: "The ICP has been removed.",

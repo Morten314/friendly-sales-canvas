@@ -31,31 +31,14 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     react(),
+    mode === 'development' &&
+    componentTagger(),
     VitePWA({
       registerType: 'autoUpdate',
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
-        // Lovable preview/dev builds can produce a large single JS bundle.
-        // Workbox defaults to a 2 MiB precache limit which can break builds.
-        maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
-      },
-      includeAssets: ['favicon.ico', 'robots.txt'],
-      manifest: {
-        name: 'Friendly Sales Canvas',
-        short_name: 'Sales Canvas',
-        description: 'Sales intelligence and market research platform',
-        theme_color: '#ffffff',
-        icons: [
-          {
-            src: 'favicon.ico',
-            sizes: '64x64 32x32 24x24 16x16',
-            type: 'image/x-icon'
-          }
-        ]
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}']
       }
     }),
-    mode === 'development' &&
-    componentTagger(),
   ].filter(Boolean),
   resolve: {
     alias: {
