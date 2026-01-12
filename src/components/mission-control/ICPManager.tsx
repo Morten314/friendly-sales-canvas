@@ -157,7 +157,7 @@ const ICPManager: React.FC = () => {
       console.warn("Cannot save customer profile: User not authenticated");
       // Save to localStorage as fallback
       try {
-        localStorage.setItem(`customerProfile_${currentUser?.uid || 'anonymous'}`, JSON.stringify(icpsToSave));
+        setUserLocalStorage('customerProfile', JSON.stringify(icpsToSave), currentUser?.uid);
       } catch (e) {
         console.error("Failed to save to localStorage:", e);
       }
@@ -166,10 +166,49 @@ const ICPManager: React.FC = () => {
 
     setIsSaving(true);
     try {
-      // Prepare payload with customer profile data
+      // First, fetch existing company profile data to preserve it
+      let existingCompanyData = {};
+      try {
+        const getResponse = await fetch(`/api/profile/company?user_id=${currentUser.uid}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+        
+        if (getResponse.ok) {
+          const existingData = await getResponse.json();
+          // Preserve all existing company profile fields
+          existingCompanyData = {
+            company_name: existingData.company_name,
+            headquarters: existingData.headquarters,
+            employee_size: existingData.employee_size,
+            industry: existingData.industry,
+            revenue_band: existingData.revenue_band,
+            gtm_model: existingData.gtm_model,
+            region_focus: existingData.region_focus,
+            typical_deal_size: existingData.typical_deal_size,
+            company_url: existingData.company_url,
+            key_buyer_persona: existingData.key_buyer_persona,
+            // Also preserve any other fields that might exist
+            ...Object.fromEntries(
+              Object.entries(existingData).filter(([key]) => 
+                !key.startsWith('customer_profile') && 
+                !['user_id', 'id', 'created_at', 'updated_at'].includes(key)
+              )
+            )
+          };
+          console.log("Preserving existing company profile data:", existingCompanyData);
+        }
+      } catch (fetchError) {
+        console.warn("Could not fetch existing company profile, proceeding with customer profile only:", fetchError);
+      }
+
+      // Prepare payload with customer profile data, preserving existing company profile fields
       // Since API is open-ended, we'll include all ICP data
       const payload = {
         profile_type: "company",
+        ...existingCompanyData, // Preserve existing company profile fields
         customer_profile: {
           icps: icpsToSave.map(icp => ({
             id: icp.id,
@@ -224,6 +263,14 @@ const ICPManager: React.FC = () => {
       const data = await response.json();
       console.log("Customer profile saved successfully:", data);
       
+      // Save to localStorage for offline access and refresh persistence
+      try {
+        setUserLocalStorage('customerProfile', JSON.stringify(icpsToSave), currentUser.uid);
+        console.log("ICPManager: Saved customer profile to localStorage");
+      } catch (e) {
+        console.warn("Failed to save to localStorage:", e);
+      }
+      
       // Clear pending flag on success
       try {
         removeUserLocalStorage('customerProfile_pending', currentUser.uid);
@@ -272,11 +319,26 @@ const ICPManager: React.FC = () => {
       });
 
       if (!response.ok) {
-        console.log("No existing customer profile found in API");
+        console.log("No existing customer profile found in API, trying localStorage fallback");
+        // Try loading from localStorage as fallback
+        try {
+          const localData = getUserLocalStorage('customerProfile', currentUser.uid);
+          if (localData) {
+            const localICPs = JSON.parse(localData);
+            if (Array.isArray(localICPs) && localICPs.length > 0) {
+              console.log("Loading customer profile from localStorage fallback");
+              setIcps(localICPs);
+              window.dispatchEvent(new CustomEvent('customerProfileSaved'));
+            }
+          }
+        } catch (e) {
+          console.error("Error loading from localStorage:", e);
+        }
         return;
       }
 
       const data = await response.json();
+      console.log("ICPManager: Full API response:", data);
       
       // Check if customer_profile exists in the response
       if (data.customer_profile && data.customer_profile.icps && Array.isArray(data.customer_profile.icps)) {
@@ -297,9 +359,32 @@ const ICPManager: React.FC = () => {
         setIcps(loadedICPs);
         console.log("Customer profile loaded from backend:", loadedICPs);
         
+        // Save to localStorage for offline access
+        try {
+          setUserLocalStorage('customerProfile', JSON.stringify(loadedICPs), currentUser.uid);
+        } catch (e) {
+          console.warn("Failed to save to localStorage:", e);
+        }
+        
         // Dispatch event to notify MissionControl that customer profile is loaded
         if (loadedICPs.length > 0) {
           window.dispatchEvent(new CustomEvent('customerProfileSaved'));
+        }
+      } else {
+        console.log("ICPManager: No customer_profile.icps found in API response, checking localStorage");
+        // Try loading from localStorage as fallback
+        try {
+          const localData = getUserLocalStorage('customerProfile', currentUser.uid);
+          if (localData) {
+            const localICPs = JSON.parse(localData);
+            if (Array.isArray(localICPs) && localICPs.length > 0) {
+              console.log("Loading customer profile from localStorage fallback");
+              setIcps(localICPs);
+              window.dispatchEvent(new CustomEvent('customerProfileSaved'));
+            }
+          }
+        } catch (e) {
+          console.error("Error loading from localStorage:", e);
         }
       }
     } catch (error) {

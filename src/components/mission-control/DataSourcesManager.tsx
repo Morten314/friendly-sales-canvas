@@ -34,7 +34,8 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/useAuth";
+import { setUserLocalStorage, getUserLocalStorage, removeUserLocalStorage } from "@/utils/cacheUtils";
 
 // Types
 type SourceType = "url" | "file" | "system";
@@ -79,6 +80,8 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
   const { currentUser } = useAuth();
   const [dataSources, setDataSources] = useState<DataSource[]>([]);
   const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Load company profile from localStorage
   useEffect(() => {
@@ -113,6 +116,227 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
     return () => {
       window.removeEventListener("companyProfileUpdated", handleProfileUpdate);
     };
+  }, [currentUser?.uid]);
+
+  // Save data sources to backend with retry logic
+  const saveDataSourcesToBackend = async (sourcesToSave: DataSource[], retryCount = 0) => {
+    if (!currentUser?.uid) {
+      console.warn("Cannot save data sources: User not authenticated");
+      // Save to localStorage as fallback
+      try {
+        setUserLocalStorage('dataSources', JSON.stringify(sourcesToSave), currentUser?.uid);
+      } catch (e) {
+        console.error("Failed to save to localStorage:", e);
+      }
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      // First, fetch existing company and customer profile data to preserve it
+      let existingCompanyData = {};
+      let existingCustomerProfile = {};
+      try {
+        const getResponse = await fetch(`/api/profile/company?user_id=${currentUser.uid}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+        
+        if (getResponse.ok) {
+          const existingData = await getResponse.json();
+          // Preserve all existing company profile fields
+          existingCompanyData = {
+            company_name: existingData.company_name,
+            headquarters: existingData.headquarters,
+            employee_size: existingData.employee_size,
+            industry: existingData.industry,
+            revenue_band: existingData.revenue_band,
+            gtm_model: existingData.gtm_model,
+            region_focus: existingData.region_focus,
+            typical_deal_size: existingData.typical_deal_size,
+            company_url: existingData.company_url,
+            key_buyer_persona: existingData.key_buyer_persona,
+            // Also preserve any other fields that might exist
+            ...Object.fromEntries(
+              Object.entries(existingData).filter(([key]) => 
+                !key.startsWith('customer_profile') && 
+                !key.startsWith('data_sources') &&
+                !['user_id', 'id', 'created_at', 'updated_at'].includes(key)
+              )
+            )
+          };
+          // Preserve customer profile if it exists
+          if (existingData.customer_profile) {
+            existingCustomerProfile = existingData.customer_profile;
+          }
+          console.log("Preserving existing company and customer profile data");
+        }
+      } catch (fetchError) {
+        console.warn("Could not fetch existing profile data, proceeding with data sources only:", fetchError);
+      }
+
+      // Always save to localStorage first as backup
+      try {
+        setUserLocalStorage('dataSources', JSON.stringify(sourcesToSave), currentUser.uid);
+        setUserLocalStorage('dataSources_pending', JSON.stringify(sourcesToSave), currentUser.uid);
+      } catch (e) {
+        console.warn("Failed to save to localStorage:", e);
+      }
+
+      // Prepare payload with data sources, preserving existing company and customer profile fields
+      const payload = {
+        profile_type: "company",
+        ...existingCompanyData, // Preserve existing company profile fields
+        ...(Object.keys(existingCustomerProfile).length > 0 && { customer_profile: existingCustomerProfile }), // Preserve customer profile if exists
+        data_sources: {
+          sources: sourcesToSave.map(source => ({
+            id: source.id,
+            type: source.type,
+            name: source.name,
+            url: source.url,
+            file_name: source.fileName,
+            description: source.description,
+            tags: source.tags,
+            status: source.status,
+            created_at: source.createdAt instanceof Date ? source.createdAt.toISOString() : source.createdAt,
+          })),
+        },
+      };
+
+      console.log("=== DATA SOURCES MANAGER: Saving data sources to backend ===");
+      console.log("Payload:", payload);
+
+      const apiUrl = `/api/profile/company?user_id=${currentUser.uid}`;
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("API Error:", response.status, errorText);
+        
+        // Retry for 500 errors (server/database issues) up to 2 times
+        if (response.status === 500 && retryCount < 2) {
+          console.log(`Retrying save (attempt ${retryCount + 1}/2)...`);
+          await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1))); // Exponential backoff
+          return saveDataSourcesToBackend(sourcesToSave, retryCount + 1);
+        }
+        
+        throw new Error(`Failed to save data sources: ${response.status} - ${errorText}`);
+      }
+
+      const data = await response.json();
+      console.log("Data sources saved successfully:", data);
+      
+      // Clear pending flag on success
+      try {
+        removeUserLocalStorage('dataSources_pending', currentUser.uid);
+      } catch (e) {
+        console.warn("Failed to clear pending flag:", e);
+      }
+    } catch (error) {
+      console.error("Error saving data sources:", error);
+      
+      // Determine error message based on error type
+      const isNetworkError = error instanceof TypeError && error.message.includes('fetch');
+      const isServerError = error instanceof Error && error.message.includes('500');
+      
+      if (isServerError || isNetworkError) {
+        toast({
+          title: "Backend temporarily unavailable",
+          description: "Your data sources have been saved locally and will sync automatically when the backend is available.",
+          variant: "default",
+        });
+      } else {
+        toast({
+          title: "Save warning",
+          description: "Data sources saved locally but failed to sync with backend. Please try again later.",
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Load data sources from backend
+  const loadDataSourcesFromBackend = async () => {
+    if (!currentUser?.uid) {
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const apiUrl = `/api/profile/company?user_id=${currentUser.uid}`;
+      const response = await fetch(apiUrl, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        console.log("No existing data sources found in API");
+        return;
+      }
+
+      const data = await response.json();
+      
+      // Check if data_sources exists in the response
+      if (data.data_sources && data.data_sources.sources && Array.isArray(data.data_sources.sources)) {
+        const loadedSources: DataSource[] = data.data_sources.sources.map((source: any) => ({
+          id: source.id || `source-${Date.now()}-${Math.random()}`,
+          type: (source.type || "url") as SourceType,
+          name: source.name || "",
+          url: source.url || source.url,
+          fileName: source.file_name || source.fileName,
+          description: source.description || "",
+          tags: Array.isArray(source.tags) ? source.tags : [],
+          status: (source.status || "active") as SourceStatus,
+          createdAt: source.created_at ? new Date(source.created_at) : (source.createdAt ? new Date(source.createdAt) : new Date()),
+        }));
+
+        setDataSources(loadedSources);
+        console.log("Data sources loaded from backend:", loadedSources);
+      }
+    } catch (error) {
+      console.error("Error loading data sources:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Load data sources on mount
+  useEffect(() => {
+    if (currentUser?.uid) {
+      loadDataSourcesFromBackend();
+      
+      // Check for pending saves and retry them
+      const retryPendingSave = async () => {
+        try {
+          const pendingData = getUserLocalStorage('dataSources_pending', currentUser.uid);
+          if (pendingData) {
+            const pendingSources = JSON.parse(pendingData);
+            console.log("Found pending data sources save, retrying...");
+            if (Array.isArray(pendingSources) && pendingSources.length > 0) {
+              await saveDataSourcesToBackend(pendingSources, 0);
+            }
+          }
+        } catch (error) {
+          console.error("Error retrying pending save:", error);
+        }
+      };
+      
+      // Retry after a short delay to allow backend to recover
+      const retryTimer = setTimeout(retryPendingSave, 5000);
+      return () => clearTimeout(retryTimer);
+    }
   }, [currentUser?.uid]);
   
   // Inline editing state
@@ -230,7 +454,7 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
     }
   };
 
-  const handleSaveSource = () => {
+  const handleSaveSource = async () => {
     if (!sourceName.trim()) {
       toast({
         title: "Name required",
@@ -270,16 +494,17 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
       createdAt: new Date(),
     };
 
+    let updatedSources: DataSource[];
     if (editingId) {
-      setDataSources((prev) =>
-        prev.map((s) => (s.id === editingId ? newSource : s))
-      );
+      updatedSources = dataSources.map((s) => (s.id === editingId ? newSource : s));
+      setDataSources(updatedSources);
       toast({
         title: "Source updated",
         description: `${sourceName} has been updated.`,
       });
     } else {
-      setDataSources((prev) => [...prev, newSource]);
+      updatedSources = [...dataSources, newSource];
+      setDataSources(updatedSources);
       toast({
         title: "Source added",
         description: `${sourceName} is being processed.`,
@@ -289,15 +514,21 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
       window.dispatchEvent(new CustomEvent('dataSourceAdded'));
     }
 
+    // Save to backend
+    await saveDataSourcesToBackend(updatedSources);
+
     // Simulate processing -> active/failed status
     setTimeout(() => {
-      setDataSources((prev) =>
-        prev.map((s) =>
+      setDataSources((prev) => {
+        const updated = prev.map((s) =>
           s.id === newSource.id
-            ? { ...s, status: Math.random() > 0.1 ? "active" : "failed" }
+            ? { ...s, status: Math.random() > 0.1 ? "active" : "failed" as SourceStatus }
             : s
-        )
-      );
+        );
+        // Save updated status to backend
+        saveDataSourcesToBackend(updated);
+        return updated;
+      });
     }, 2000);
 
     resetInlineForm();
@@ -314,8 +545,13 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
     setIsAddingInline(true);
   };
 
-  const handleDeleteSource = (id: string) => {
-    setDataSources((prev) => prev.filter((s) => s.id !== id));
+  const handleDeleteSource = async (id: string) => {
+    const updatedSources = dataSources.filter((s) => s.id !== id);
+    setDataSources(updatedSources);
+    
+    // Save to backend
+    await saveDataSourcesToBackend(updatedSources);
+    
     toast({
       title: "Source deleted",
       description: "The data source has been removed.",

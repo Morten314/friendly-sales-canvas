@@ -580,6 +580,29 @@ const MissionControl = () => {
       const data = await response.json();
       console.log("Company profile saved successfully:", data);
 
+      // Save to localStorage for offline access and refresh persistence
+      try {
+        const { setUserLocalStorage } = await import("@/utils/cacheUtils");
+        const dataToSave = {
+          ...data,
+          user_id: currentUser.uid,
+          company_name: payload.company_name,
+          headquarters: payload.headquarters,
+          employee_size: payload.employee_size,
+          industry: payload.industry,
+          revenue_band: payload.revenue_band,
+          gtm_model: payload.gtm_model,
+          region_focus: payload.region_focus,
+          typical_deal_size: payload.typical_deal_size,
+          company_url: payload.company_url,
+          key_buyer_persona: payload.key_buyer_persona,
+        };
+        setUserLocalStorage('companyProfile', JSON.stringify(dataToSave), currentUser.uid);
+        console.log("MissionControl: Saved company profile to localStorage");
+      } catch (e) {
+        console.warn("MissionControl: Failed to save to localStorage:", e);
+      }
+
       toast({
         title: "Profile saved",
         description: "Your company profile has been saved successfully and will be reflected in Scout.",
@@ -603,9 +626,13 @@ const MissionControl = () => {
   // Load existing profile data on mount
   useEffect(() => {
     const loadProfileData = async () => {
-      if (!currentUser?.uid) return;
+      if (!currentUser?.uid) {
+        console.log("MissionControl: No user ID, skipping profile load");
+        return;
+      }
 
       try {
+        console.log("MissionControl: Loading company profile for user:", currentUser.uid);
         const response = await fetch(`/api/profile/company?user_id=${currentUser.uid}`, {
           method: "GET",
           headers: {
@@ -615,10 +642,45 @@ const MissionControl = () => {
 
         if (response.ok) {
           const data = await response.json();
-          console.log("Loaded company profile data:", data);
+          console.log("MissionControl: Loaded company profile data:", data);
           
-          // Map API response to form state
-          setCompanyProfile({
+          // Verify user_id matches (multi-tenancy safety)
+          if (data.user_id && data.user_id !== currentUser.uid) {
+            console.warn("MissionControl: API returned profile for different user! Ignoring data.");
+            // Try loading from localStorage as fallback
+            try {
+              const { getUserLocalStorage } = await import("@/utils/cacheUtils");
+              const localData = getUserLocalStorage('companyProfile', currentUser.uid);
+              if (localData) {
+                const localProfile = JSON.parse(localData);
+                if (localProfile.user_id === currentUser.uid) {
+                  console.log("MissionControl: Loading from localStorage fallback");
+                  const profileData = {
+                    companyName: localProfile.company_name || localProfile.companyName || "",
+                    headquarters: localProfile.headquarters || "",
+                    employeeSize: localProfile.employee_size || localProfile.employeeSize || "",
+                    industry: localProfile.industry || "",
+                    revenue: localProfile.revenue_band || localProfile.revenue || "",
+                    gtmModel: localProfile.gtm_model || localProfile.gtmModel || "",
+                    regionFocus: localProfile.region_focus || localProfile.regionFocus || "",
+                    dealSize: localProfile.typical_deal_size || localProfile.dealSize || "",
+                    companyUrl: localProfile.company_url || localProfile.companyUrl || "",
+                    keyBuyerPersona: localProfile.key_buyer_persona || localProfile.keyBuyerPersona || "",
+                  };
+                  setCompanyProfile(profileData);
+                  if (localProfile.company_name || localProfile.companyName) {
+                    setIsCompanyProfileSaved(true);
+                  }
+                }
+              }
+            } catch (e) {
+              console.error("MissionControl: Error loading from localStorage:", e);
+            }
+            return;
+          }
+          
+          // Map API response to form state (handle both snake_case and camelCase)
+          const profileData = {
             companyName: data.company_name || data.companyName || "",
             headquarters: data.headquarters || "",
             employeeSize: data.employee_size || data.employeeSize || "",
@@ -629,15 +691,63 @@ const MissionControl = () => {
             dealSize: data.typical_deal_size || data.dealSize || "",
             companyUrl: data.company_url || data.companyUrl || "",
             keyBuyerPersona: data.key_buyer_persona || data.keyBuyerPersona || "",
-          });
+          };
+          
+          console.log("MissionControl: Setting company profile state:", profileData);
+          setCompanyProfile(profileData);
 
           // Check if company profile is saved (has at least company name)
           if (data.company_name || data.companyName) {
+            console.log("MissionControl: Company profile is saved, unlocking customer profile tab");
             setIsCompanyProfileSaved(true);
+          } else {
+            console.log("MissionControl: Company profile not yet saved");
+          }
+          
+          // Also save to localStorage for offline access
+          try {
+            const { setUserLocalStorage } = await import("@/utils/cacheUtils");
+            setUserLocalStorage('companyProfile', JSON.stringify(data), currentUser.uid);
+          } catch (e) {
+            console.warn("MissionControl: Failed to save to localStorage:", e);
+          }
+        } else {
+          console.log(`MissionControl: Profile load response not OK: ${response.status}`);
+          if (response.status === 404) {
+            console.log("MissionControl: No company profile found (404) - trying localStorage fallback");
+            // Try loading from localStorage as fallback
+            try {
+              const { getUserLocalStorage } = await import("@/utils/cacheUtils");
+              const localData = getUserLocalStorage('companyProfile', currentUser.uid);
+              if (localData) {
+                const localProfile = JSON.parse(localData);
+                if (localProfile.user_id === currentUser.uid) {
+                  console.log("MissionControl: Loading from localStorage fallback");
+                  const profileData = {
+                    companyName: localProfile.company_name || localProfile.companyName || "",
+                    headquarters: localProfile.headquarters || "",
+                    employeeSize: localProfile.employee_size || localProfile.employeeSize || "",
+                    industry: localProfile.industry || "",
+                    revenue: localProfile.revenue_band || localProfile.revenue || "",
+                    gtmModel: localProfile.gtm_model || localProfile.gtmModel || "",
+                    regionFocus: localProfile.region_focus || localProfile.regionFocus || "",
+                    dealSize: localProfile.typical_deal_size || localProfile.dealSize || "",
+                    companyUrl: localProfile.company_url || localProfile.companyUrl || "",
+                    keyBuyerPersona: localProfile.key_buyer_persona || localProfile.keyBuyerPersona || "",
+                  };
+                  setCompanyProfile(profileData);
+                  if (localProfile.company_name || localProfile.companyName) {
+                    setIsCompanyProfileSaved(true);
+                  }
+                }
+              }
+            } catch (e) {
+              console.error("MissionControl: Error loading from localStorage:", e);
+            }
           }
         }
       } catch (error) {
-        console.error("Error loading company profile:", error);
+        console.error("MissionControl: Error loading company profile:", error);
       }
     };
 
