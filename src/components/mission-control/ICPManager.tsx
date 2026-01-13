@@ -166,64 +166,21 @@ const ICPManager: React.FC = () => {
 
     setIsSaving(true);
     try {
-      // First, fetch existing company profile data to preserve it
-      let existingCompanyData = {};
-      try {
-        const getResponse = await fetch(`/api/profile/company?user_id=${currentUser.uid}`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-        
-        if (getResponse.ok) {
-          const existingData = await getResponse.json();
-          // Preserve all existing company profile fields
-          existingCompanyData = {
-            company_name: existingData.company_name,
-            headquarters: existingData.headquarters,
-            employee_size: existingData.employee_size,
-            industry: existingData.industry,
-            revenue_band: existingData.revenue_band,
-            gtm_model: existingData.gtm_model,
-            region_focus: existingData.region_focus,
-            typical_deal_size: existingData.typical_deal_size,
-            company_url: existingData.company_url,
-            key_buyer_persona: existingData.key_buyer_persona,
-            // Also preserve any other fields that might exist
-            ...Object.fromEntries(
-              Object.entries(existingData).filter(([key]) => 
-                !key.startsWith('customer_profile') && 
-                !['user_id', 'id', 'created_at', 'updated_at'].includes(key)
-              )
-            )
-          };
-          console.log("Preserving existing company profile data:", existingCompanyData);
-        }
-      } catch (fetchError) {
-        console.warn("Could not fetch existing company profile, proceeding with customer profile only:", fetchError);
-      }
-
-      // Prepare payload with customer profile data, preserving existing company profile fields
-      // Since API is open-ended, we'll include all ICP data
+      // Prepare payload with customer profile data
       const payload = {
-        profile_type: "company",
-        ...existingCompanyData, // Preserve existing company profile fields
-        customer_profile: {
-          icps: icpsToSave.map(icp => ({
-            id: icp.id,
-            primary_region: icp.primaryRegion,
-            industry: icp.industry,
-            company_size: icp.companySize,
-            buyer_role: icp.buyerRole,
-            accounts_on_watchlist: icp.accountsOnWatchlist,
-            accounts_to_avoid: icp.accountsToAvoid,
-            fit_confidence: icp.fitConfidence,
-            additional_context: icp.additionalContext,
-            status: icp.status,
-            created_at: icp.createdAt instanceof Date ? icp.createdAt.toISOString() : icp.createdAt,
-          })),
-        },
+        icps: icpsToSave.map(icp => ({
+          id: icp.id,
+          primary_region: icp.primaryRegion,
+          industry: icp.industry,
+          company_size: icp.companySize,
+          buyer_role: icp.buyerRole,
+          accounts_on_watchlist: icp.accountsOnWatchlist,
+          accounts_to_avoid: icp.accountsToAvoid,
+          fit_confidence: icp.fitConfidence,
+          additional_context: icp.additionalContext,
+          status: icp.status,
+          created_at: icp.createdAt instanceof Date ? icp.createdAt.toISOString() : icp.createdAt,
+        })),
       };
 
       console.log("=== ICP MANAGER: Saving customer profile to backend ===");
@@ -237,7 +194,7 @@ const ICPManager: React.FC = () => {
         console.warn("Failed to save to localStorage:", e);
       }
 
-      const apiUrl = `/api/profile/company?user_id=${currentUser.uid}`;
+      const apiUrl = `/api/customer_profile`;
       const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
@@ -310,7 +267,7 @@ const ICPManager: React.FC = () => {
 
     setIsLoading(true);
     try {
-      const apiUrl = `/api/profile/company?user_id=${currentUser.uid}`;
+      const apiUrl = `/api/customer_profile`;
       const response = await fetch(apiUrl, {
         method: "GET",
         headers: {
@@ -340,9 +297,11 @@ const ICPManager: React.FC = () => {
       const data = await response.json();
       console.log("ICPManager: Full API response:", data);
       
-      // Check if customer_profile exists in the response
-      if (data.customer_profile && data.customer_profile.icps && Array.isArray(data.customer_profile.icps)) {
-        const loadedICPs: ICP[] = data.customer_profile.icps.map((icp: any) => ({
+      // Check if icps exists in the response (direct array or nested)
+      const icpsData = data.icps || (data.customer_profile && data.customer_profile.icps) || [];
+      
+      if (Array.isArray(icpsData) && icpsData.length > 0) {
+        const loadedICPs: ICP[] = icpsData.map((icp: any) => ({
           id: icp.id || `icp-${Date.now()}-${Math.random()}`,
           primaryRegion: icp.primary_region || icp.primaryRegion || "",
           industry: Array.isArray(icp.industry) ? icp.industry : [],
@@ -371,7 +330,7 @@ const ICPManager: React.FC = () => {
           window.dispatchEvent(new CustomEvent('customerProfileSaved'));
         }
       } else {
-        console.log("ICPManager: No customer_profile.icps found in API response, checking localStorage");
+        console.log("ICPManager: No icps found in API response, checking localStorage");
         // Try loading from localStorage as fallback
         try {
           const localData = getUserLocalStorage('customerProfile', currentUser.uid);
@@ -389,6 +348,20 @@ const ICPManager: React.FC = () => {
       }
     } catch (error) {
       console.error("Error loading customer profile:", error);
+      // Try loading from localStorage as fallback on error
+      try {
+        const localData = getUserLocalStorage('customerProfile', currentUser.uid);
+        if (localData) {
+          const localICPs = JSON.parse(localData);
+          if (Array.isArray(localICPs) && localICPs.length > 0) {
+            console.log("Loading customer profile from localStorage fallback (error case)");
+            setIcps(localICPs);
+            window.dispatchEvent(new CustomEvent('customerProfileSaved'));
+          }
+        }
+      } catch (e) {
+        console.error("Error loading from localStorage:", e);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -406,8 +379,8 @@ const ICPManager: React.FC = () => {
           if (pendingData) {
             const pendingPayload = JSON.parse(pendingData);
             console.log("Found pending customer profile save, retrying...");
-            // Extract ICPs from the pending payload to retry
-            const icpsFromPending = pendingPayload.customer_profile?.icps || [];
+            // Extract ICPs from the pending payload to retry (handle both old and new structure)
+            const icpsFromPending = pendingPayload.icps || pendingPayload.customer_profile?.icps || [];
             if (icpsFromPending.length > 0) {
               // Convert back to ICP format
               const icpsToRetry: ICP[] = icpsFromPending.map((icp: any) => ({
