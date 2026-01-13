@@ -168,6 +168,7 @@ const ICPManager: React.FC = () => {
     try {
       // Prepare payload with customer profile data
       const payload = {
+        user_id: currentUser.uid,
         icps: icpsToSave.map(icp => ({
           id: icp.id,
           primary_region: icp.primaryRegion,
@@ -194,7 +195,7 @@ const ICPManager: React.FC = () => {
         console.warn("Failed to save to localStorage:", e);
       }
 
-      const apiUrl = `/api/customer_profile`;
+      const apiUrl = `/api/customer_profile?user_id=${currentUser.uid}`;
       const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
@@ -267,7 +268,7 @@ const ICPManager: React.FC = () => {
 
     setIsLoading(true);
     try {
-      const apiUrl = `/api/customer_profile`;
+      const apiUrl = `/api/customer_profile?user_id=${currentUser.uid}`;
       const response = await fetch(apiUrl, {
         method: "GET",
         headers: {
@@ -294,11 +295,99 @@ const ICPManager: React.FC = () => {
         return;
       }
 
-      const data = await response.json();
-      console.log("ICPManager: Full API response:", data);
+      const responseData = await response.json();
+      console.log("ICPManager: Full API response:", responseData);
+      console.log("ICPManager: Response structure:", {
+        'hasSuccess': 'success' in responseData,
+        'hasData': 'data' in responseData,
+        'responseDataKeys': Object.keys(responseData || {}),
+        'dataKeys': responseData?.data ? Object.keys(responseData.data) : [],
+        'data.icps': responseData?.data?.icps,
+        'data.customer_profiles': responseData?.data?.customer_profiles,
+        'data.customer_profiles.icps': responseData?.data?.customer_profiles?.icps,
+      });
       
-      // Check if icps exists in the response (direct array or nested)
-      const icpsData = data.icps || (data.customer_profile && data.customer_profile.icps) || [];
+      // Handle wrapped API response structure: {success: true, data: {...}}
+      const data = responseData.data || responseData;
+      
+      // Verify user_id matches (multi-tenancy safety)
+      const responseUserId = data.user_id || responseData.user_id;
+      if (responseUserId && responseUserId !== currentUser.uid) {
+        console.warn("ICPManager: API returned customer profile for different user! Ignoring data.", {
+          'apiUserId': responseUserId,
+          'currentUserId': currentUser.uid
+        });
+        // Try loading from localStorage as fallback
+        try {
+          const localData = getUserLocalStorage('customerProfile', currentUser.uid);
+          if (localData) {
+            const localICPs = JSON.parse(localData);
+            if (Array.isArray(localICPs) && localICPs.length > 0) {
+              console.log("ICPManager: Loading from localStorage fallback (user mismatch)");
+              setIcps(localICPs);
+              window.dispatchEvent(new CustomEvent('customerProfileSaved'));
+            }
+          }
+        } catch (e) {
+          console.error("Error loading from localStorage:", e);
+        }
+        return;
+      }
+      
+      // Check if icps exists in the response (handle multiple possible structures)
+      // Structure 1: {success: true, data: {icps: [...]}} - Wrapped response
+      // Structure 2: {success: true, data: {customer_profiles: {icps: [...]}}} - Nested in customer_profiles
+      // Structure 3: {icps: [...]} - Direct array
+      // Structure 4: {customer_profiles: {icps: [...]}} - Nested in customer_profiles
+      // Structure 5: {customer_profile: {icps: [...]}} - Alternative nesting
+      let icpsData = null;
+      
+      // Try all possible paths
+      if (responseData.data) {
+        // Wrapped response: {success: true, data: {...}}
+        if (Array.isArray(responseData.data.icps)) {
+          icpsData = responseData.data.icps;
+          console.log("ICPManager: Found icps in responseData.data.icps");
+        } else if (responseData.data.customer_profiles && Array.isArray(responseData.data.customer_profiles.icps)) {
+          icpsData = responseData.data.customer_profiles.icps;
+          console.log("ICPManager: Found icps in responseData.data.customer_profiles.icps");
+        } else if (responseData.data.customer_profile && Array.isArray(responseData.data.customer_profile.icps)) {
+          icpsData = responseData.data.customer_profile.icps;
+          console.log("ICPManager: Found icps in responseData.data.customer_profile.icps");
+        }
+      }
+      
+      // If not found in wrapped response, try direct data object
+      if (!icpsData) {
+        if (Array.isArray(data.icps)) {
+          icpsData = data.icps;
+          console.log("ICPManager: Found icps in data.icps");
+        } else if (data.customer_profiles && Array.isArray(data.customer_profiles.icps)) {
+          icpsData = data.customer_profiles.icps;
+          console.log("ICPManager: Found icps in data.customer_profiles.icps");
+        } else if (data.customer_profile && Array.isArray(data.customer_profile.icps)) {
+          icpsData = data.customer_profile.icps;
+          console.log("ICPManager: Found icps in data.customer_profile.icps");
+        }
+      }
+      
+      // Default to empty array if nothing found
+      if (!icpsData) {
+        icpsData = [];
+        console.warn("ICPManager: No icps found in any expected location in API response");
+      }
+      
+      console.log("ICPManager: Extracted icpsData:", {
+        'icpsData': icpsData,
+        'isArray': Array.isArray(icpsData),
+        'length': Array.isArray(icpsData) ? icpsData.length : 0,
+        'firstItem': Array.isArray(icpsData) && icpsData.length > 0 ? icpsData[0] : null,
+        'allItems': Array.isArray(icpsData) ? icpsData.map((icp: any) => ({
+          id: icp.id,
+          primary_region: icp.primary_region || icp.primaryRegion,
+          industry: icp.industry
+        })) : []
+      });
       
       if (Array.isArray(icpsData) && icpsData.length > 0) {
         const loadedICPs: ICP[] = icpsData.map((icp: any) => ({
@@ -336,10 +425,30 @@ const ICPManager: React.FC = () => {
           const localData = getUserLocalStorage('customerProfile', currentUser.uid);
           if (localData) {
             const localICPs = JSON.parse(localData);
+            // Verify localStorage data belongs to current user
             if (Array.isArray(localICPs) && localICPs.length > 0) {
-              console.log("Loading customer profile from localStorage fallback");
-              setIcps(localICPs);
-              window.dispatchEvent(new CustomEvent('customerProfileSaved'));
+              // Check if any ICP has a user_id that doesn't match
+              const hasMismatch = localICPs.some((icp: any) => 
+                icp.user_id && icp.user_id !== currentUser.uid
+              );
+              
+              if (hasMismatch) {
+                console.warn("⚠️ ICPManager: localStorage contains ICPs from different user! Clearing localStorage.");
+                // Clear localStorage for this user
+                try {
+                  const { removeUserLocalStorage } = await import("@/utils/cacheUtils");
+                  removeUserLocalStorage('customerProfile', currentUser.uid);
+                  console.log("✅ ICPManager: Cleared mismatched localStorage data");
+                } catch (e) {
+                  console.error("Error clearing localStorage:", e);
+                }
+                // Don't load mismatched data
+                setIcps([]);
+              } else {
+                console.log("Loading customer profile from localStorage fallback");
+                setIcps(localICPs);
+                window.dispatchEvent(new CustomEvent('customerProfileSaved'));
+              }
             }
           }
         } catch (e) {

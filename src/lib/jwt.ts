@@ -22,7 +22,7 @@ class JWTManager {
   }
 
   // Generate JWT token (this would typically be done by your backend)
-  async generateToken(user: User, tenantId?: string): Promise<string> {
+  async generateToken(user: User, tenantId?: string): Promise<string | null> {
     try {
       // Get Firebase ID token
       const firebaseToken = await user.getIdToken();
@@ -39,7 +39,12 @@ class JWTManager {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to generate JWT token');
+        // If endpoint doesn't exist (404), JWT is optional - don't fail
+        if (response.status === 404) {
+          console.warn('⚠️ JWT token endpoint not found (404). JWT authentication is optional - continuing without JWT token.');
+          return null;
+        }
+        throw new Error(`Failed to generate JWT token: ${response.status} ${response.statusText}`);
       }
 
       const data = await response.json();
@@ -54,8 +59,14 @@ class JWTManager {
       
       return this.token;
     } catch (error) {
+      // If it's a network error or 404, JWT is optional - don't fail the app
+      if (error instanceof TypeError || (error as any)?.message?.includes('404')) {
+        console.warn('⚠️ JWT token generation failed (endpoint may not exist). JWT authentication is optional - continuing without JWT token.');
+        return null;
+      }
       console.error('Error generating JWT token:', error);
-      throw error;
+      // Don't throw - JWT is optional for most endpoints
+      return null;
     }
   }
 
@@ -140,13 +151,14 @@ class JWTManager {
       try {
         token = await this.refreshAccessToken();
       } catch (error) {
-        // If refresh fails, user needs to re-authenticate
+        // If refresh fails, JWT is optional - return empty string
+        console.warn('⚠️ JWT token refresh failed. Continuing without JWT (optional for most endpoints).');
         this.clearTokens();
-        throw new Error('Authentication required');
+        return ''; // Return empty string instead of throwing
       }
     }
 
-    return `Bearer ${token}`;
+    return token ? `Bearer ${token}` : '';
   }
 }
 

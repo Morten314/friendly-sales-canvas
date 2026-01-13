@@ -546,6 +546,7 @@ const MissionControl = () => {
     try {
       // Prepare payload with profile_type as required by the API
       const payload = {
+        user_id: currentUser.uid,
         profile_type: "company",
         company_name: companyProfile.companyName,
         headquarters: companyProfile.headquarters,
@@ -563,6 +564,9 @@ const MissionControl = () => {
       console.log("Payload:", payload);
 
       const apiUrl = `/api/profile/company?user_id=${currentUser.uid}`;
+      console.log("MissionControl: POST request URL:", apiUrl);
+      console.log("MissionControl: POST request payload:", payload);
+      
       const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
@@ -571,14 +575,25 @@ const MissionControl = () => {
         body: JSON.stringify(payload),
       });
 
+      console.log("MissionControl: POST response status:", response.status);
+      console.log("MissionControl: POST response headers:", Object.fromEntries(response.headers.entries()));
+
       if (!response.ok) {
         const errorText = await response.text();
-        console.error("API Error:", response.status, errorText);
+        console.error("MissionControl: API Error:", response.status, errorText);
+        console.error("MissionControl: This could indicate database connection issues or backend problems");
         throw new Error(`Failed to save profile: ${response.status} - ${errorText}`);
       }
 
       const data = await response.json();
-      console.log("Company profile saved successfully:", data);
+      console.log("MissionControl: Company profile saved successfully:", data);
+      console.log("MissionControl: Saved data verification:", {
+        'saved_user_id': data?.user_id,
+        'expected_user_id': currentUser.uid,
+        'user_id_match': data?.user_id === currentUser.uid,
+        'saved_company_name': data?.company_name,
+        'has_data': data && Object.keys(data).length > 0
+      });
 
       // Save to localStorage for offline access and refresh persistence
       try {
@@ -610,6 +625,33 @@ const MissionControl = () => {
 
       // Mark company profile as saved
       setIsCompanyProfileSaved(true);
+      
+      // Verify data was actually saved by immediately fetching it back
+      console.log("MissionControl: Verifying data persistence by fetching saved profile...");
+      setTimeout(async () => {
+        try {
+          const verifyResponse = await fetch(`/api/profile/company?user_id=${currentUser.uid}`, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+          });
+          if (verifyResponse.ok) {
+            const verifyData = await verifyResponse.json();
+            const savedCompanyName = verifyData?.company_name || verifyData?.companyName || "";
+            if (savedCompanyName.trim() === payload.company_name.trim()) {
+              console.log("✅ MissionControl: Data persistence verified - company name matches");
+            } else {
+              console.error("❌ MissionControl: Data persistence FAILED - company name mismatch!");
+              console.error("   Expected:", payload.company_name);
+              console.error("   Got:", savedCompanyName);
+              console.error("   This indicates a database write/read issue!");
+            }
+          } else {
+            console.warn("⚠️ MissionControl: Could not verify data persistence - GET request failed");
+          }
+        } catch (verifyError) {
+          console.error("MissionControl: Error verifying data persistence:", verifyError);
+        }
+      }, 2000); // Wait 2 seconds for database to commit
 
     } catch (error) {
       console.error("Error saving company profile:", error);
@@ -623,6 +665,97 @@ const MissionControl = () => {
     }
   };
 
+  // Helper function to load profile from localStorage
+  const loadProfileFromLocalStorage = async (userId: string) => {
+    try {
+      const { getUserLocalStorage } = await import("@/utils/cacheUtils");
+      const localData = getUserLocalStorage('companyProfile', userId);
+      if (localData) {
+        const localProfile = JSON.parse(localData);
+        if (localProfile.user_id === userId) {
+          console.log("MissionControl: Loading from localStorage fallback");
+          const profileData = {
+            companyName: localProfile.company_name || localProfile.companyName || "",
+            headquarters: localProfile.headquarters || "",
+            employeeSize: localProfile.employee_size || localProfile.employeeSize || "",
+            industry: localProfile.industry || "",
+            revenue: localProfile.revenue_band || localProfile.revenue || "",
+            gtmModel: localProfile.gtm_model || localProfile.gtmModel || "",
+            regionFocus: localProfile.region_focus || localProfile.regionFocus || "",
+            dealSize: localProfile.typical_deal_size || localProfile.dealSize || "",
+            companyUrl: localProfile.company_url || localProfile.companyUrl || "",
+            keyBuyerPersona: localProfile.key_buyer_persona || localProfile.keyBuyerPersona || "",
+          };
+          setCompanyProfile(profileData);
+          if (localProfile.company_name || localProfile.companyName) {
+            setIsCompanyProfileSaved(true);
+          }
+          return true;
+        }
+      }
+    } catch (e) {
+      console.error("MissionControl: Error loading from localStorage:", e);
+    }
+    return false;
+  };
+
+  // Helper function to map API data to form state
+  const mapApiDataToFormState = (data: any, userId: string) => {
+    console.log("MissionControl: mapApiDataToFormState called with:", {
+      data,
+      dataType: typeof data,
+      isNull: data === null,
+      isUndefined: data === undefined,
+      keys: data ? Object.keys(data) : [],
+      userId
+    });
+    
+    // Check if data is empty or null
+    if (!data || (typeof data === 'object' && Object.keys(data).length === 0)) {
+      console.log("MissionControl: API returned empty data");
+      return null;
+    }
+
+    // Verify user_id matches (multi-tenancy safety)
+    if (data.user_id && data.user_id !== userId) {
+      console.warn("MissionControl: API returned profile for different user! Ignoring data.", {
+        apiUserId: data.user_id,
+        currentUserId: userId
+      });
+      return null;
+    }
+
+    // Map API response to form state (handle both snake_case and camelCase)
+    // Trim whitespace and handle empty strings properly
+    const profileData = {
+      companyName: (data.company_name || data.companyName || "").trim(),
+      headquarters: (data.headquarters || "").trim(),
+      employeeSize: (data.employee_size || data.employeeSize || "").trim(),
+      industry: (data.industry || "").trim(),
+      revenue: (data.revenue_band || data.revenue || "").trim(),
+      gtmModel: (data.gtm_model || data.gtmModel || "").trim(),
+      regionFocus: (data.region_focus || data.regionFocus || "").trim(),
+      dealSize: (data.typical_deal_size || data.dealSize || "").trim(),
+      companyUrl: (data.company_url || data.companyUrl || "").trim(),
+      keyBuyerPersona: (data.key_buyer_persona || data.keyBuyerPersona || "").trim(),
+    };
+
+    console.log("MissionControl: Mapped profile data result:", profileData);
+    console.log("MissionControl: Profile data values (showing empty strings):", {
+      companyName: `"${profileData.companyName}"`,
+      headquarters: `"${profileData.headquarters}"`,
+      employeeSize: `"${profileData.employeeSize}"`,
+      industry: `"${profileData.industry}"`,
+      revenue: `"${profileData.revenue}"`,
+      gtmModel: `"${profileData.gtmModel}"`,
+      regionFocus: `"${profileData.regionFocus}"`,
+      dealSize: `"${profileData.dealSize}"`,
+      companyUrl: `"${profileData.companyUrl}"`,
+      keyBuyerPersona: `"${profileData.keyBuyerPersona}"`,
+    });
+    return profileData;
+  };
+
   // Load existing profile data on mount
   useEffect(() => {
     const loadProfileData = async () => {
@@ -631,127 +764,230 @@ const MissionControl = () => {
         return;
       }
 
-      try {
-        console.log("MissionControl: Loading company profile for user:", currentUser.uid);
-        const response = await fetch(`/api/profile/company?user_id=${currentUser.uid}`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
+      const userId = currentUser.uid;
+      let retryCount = 0;
+      const maxRetries = 2;
+      const retryDelay = 1000; // 1 second
 
-        if (response.ok) {
-          const data = await response.json();
-          console.log("MissionControl: Loaded company profile data:", data);
+      while (retryCount <= maxRetries) {
+        try {
+          console.log(`MissionControl: Loading company profile for user: ${userId} (attempt ${retryCount + 1})`);
           
-          // Verify user_id matches (multi-tenancy safety)
-          if (data.user_id && data.user_id !== currentUser.uid) {
-            console.warn("MissionControl: API returned profile for different user! Ignoring data.");
-            // Try loading from localStorage as fallback
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+          const response = await fetch(`/api/profile/company?user_id=${userId}`, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            signal: controller.signal,
+          });
+
+          clearTimeout(timeoutId);
+
+          if (response.ok) {
+            const data = await response.json();
+            console.log("MissionControl: Loaded company profile data:", data);
+            console.log("MissionControl: Data keys:", Object.keys(data || {}));
+            console.log("MissionControl: company_name:", data?.company_name);
+            console.log("MissionControl: companyName:", data?.companyName);
+            console.log("MissionControl: Full data structure:", JSON.stringify(data, null, 2));
+            
+            // Database health check - verify if data exists but is empty
+            const hasAnyData = data && Object.keys(data).length > 0;
+            const hasNonEmptyFields = data && Object.values(data).some((val: any) => 
+              val !== null && val !== undefined && val !== "" && 
+              (typeof val !== 'object' || (Array.isArray(val) && val.length > 0) || Object.keys(val).length > 0)
+            );
+            
+            console.log("MissionControl: Database health check:", {
+              'hasAnyData': hasAnyData,
+              'hasNonEmptyFields': hasNonEmptyFields,
+              'dataKeysCount': data ? Object.keys(data).length : 0,
+              'user_id_in_response': data?.user_id,
+              'expected_user_id': userId,
+              'user_id_match': data?.user_id === userId,
+              'response_status': response.status,
+              'response_headers': Object.fromEntries(response.headers.entries())
+            });
+            
+            // Check if this is a newly created empty profile vs. data loss
+            if (hasAnyData && !hasNonEmptyFields) {
+              console.warn("⚠️ MissionControl: API returned profile structure but ALL fields are empty!");
+              console.warn("⚠️ This could indicate:");
+              console.warn("   1. Database was reset/cleared");
+              console.warn("   2. Data was deleted");
+              console.warn("   3. Backend service restarted and lost data");
+              console.warn("   4. Database connection issue");
+              console.warn("   5. Transaction rollback occurred");
+              
+              // Try to load from localStorage as backup
+              console.log("MissionControl: Attempting to load from localStorage as backup...");
+              const loaded = await loadProfileFromLocalStorage(userId);
+              if (loaded) {
+                console.log("✅ MissionControl: Successfully loaded from localStorage backup");
+                return; // Exit retry loop
+              } else {
+                console.warn("⚠️ MissionControl: No localStorage backup available");
+              }
+            }
+            
+            const profileData = mapApiDataToFormState(data, userId);
+            console.log("MissionControl: Mapped profile data:", profileData);
+            
+            if (profileData) {
+              console.log("MissionControl: Setting company profile state:", profileData);
+              console.log("MissionControl: Profile data values being set:", {
+                companyName: `"${profileData.companyName}"`,
+                headquarters: `"${profileData.headquarters}"`,
+                employeeSize: `"${profileData.employeeSize}"`,
+                industry: `"${profileData.industry}"`,
+                revenue: `"${profileData.revenue}"`,
+                gtmModel: `"${profileData.gtmModel}"`,
+                regionFocus: `"${profileData.regionFocus}"`,
+                dealSize: `"${profileData.dealSize}"`,
+                companyUrl: `"${profileData.companyUrl}"`,
+                keyBuyerPersona: `"${profileData.keyBuyerPersona}"`,
+              });
+
+              // CRITICAL: Actually set the state with the profile data
+              setCompanyProfile(profileData);
+              console.log("MissionControl: State has been updated with profileData");
+
+              // Check if company profile is saved (has at least company name)
+              // Check both raw data and mapped profileData, but treat empty strings as falsy
+              const companyName = (data.company_name || data.companyName || profileData.companyName || "").trim();
+              const hasCompanyName = companyName.length > 0;
+              
+              console.log("MissionControl: Has company name check:", {
+                'data.company_name': `"${data.company_name}"`,
+                'data.companyName': data.companyName,
+                'profileData.companyName': `"${profileData.companyName}"`,
+                'companyName (trimmed)': `"${companyName}"`,
+                'hasCompanyName': hasCompanyName
+              });
+              
+              if (hasCompanyName) {
+                console.log("MissionControl: Company profile is saved, unlocking customer profile tab");
+                setIsCompanyProfileSaved(true);
+              } else {
+                console.log("MissionControl: Company profile not yet saved - no company name found (empty string)");
+                // Even if company name is empty, if we have other data, we might want to mark as partially saved
+                // But for now, we require company name to be present
+              }
+              
+              // Also save to localStorage for offline access
+              try {
+                const { setUserLocalStorage } = await import("@/utils/cacheUtils");
+                setUserLocalStorage('companyProfile', JSON.stringify(data), userId);
+              } catch (e) {
+                console.warn("MissionControl: Failed to save to localStorage:", e);
+              }
+              return; // Success, exit retry loop
+            } else {
+              // Data validation failed, try localStorage
+              console.log("MissionControl: Data validation failed, trying localStorage fallback");
+              const loaded = await loadProfileFromLocalStorage(userId);
+              if (loaded) return;
+            }
+          } else {
+            // Try to get error message from response
+            let errorMessage = `HTTP ${response.status}`;
             try {
-              const { getUserLocalStorage } = await import("@/utils/cacheUtils");
-              const localData = getUserLocalStorage('companyProfile', currentUser.uid);
-              if (localData) {
-                const localProfile = JSON.parse(localData);
-                if (localProfile.user_id === currentUser.uid) {
-                  console.log("MissionControl: Loading from localStorage fallback");
-                  const profileData = {
-                    companyName: localProfile.company_name || localProfile.companyName || "",
-                    headquarters: localProfile.headquarters || "",
-                    employeeSize: localProfile.employee_size || localProfile.employeeSize || "",
-                    industry: localProfile.industry || "",
-                    revenue: localProfile.revenue_band || localProfile.revenue || "",
-                    gtmModel: localProfile.gtm_model || localProfile.gtmModel || "",
-                    regionFocus: localProfile.region_focus || localProfile.regionFocus || "",
-                    dealSize: localProfile.typical_deal_size || localProfile.dealSize || "",
-                    companyUrl: localProfile.company_url || localProfile.companyUrl || "",
-                    keyBuyerPersona: localProfile.key_buyer_persona || localProfile.keyBuyerPersona || "",
-                  };
-                  setCompanyProfile(profileData);
-                  if (localProfile.company_name || localProfile.companyName) {
-                    setIsCompanyProfileSaved(true);
-                  }
+              const errorData = await response.text();
+              if (errorData) {
+                try {
+                  const parsedError = JSON.parse(errorData);
+                  errorMessage = parsedError.message || parsedError.error || errorMessage;
+                } catch {
+                  errorMessage = errorData.substring(0, 200); // First 200 chars if not JSON
                 }
               }
             } catch (e) {
-              console.error("MissionControl: Error loading from localStorage:", e);
+              // Ignore errors reading response body
+            }
+            
+            console.error(`MissionControl: Profile load response not OK: ${response.status} - ${errorMessage}`);
+            
+            if (response.status === 404) {
+              console.log("MissionControl: No company profile found (404) - trying localStorage fallback");
+              const loaded = await loadProfileFromLocalStorage(userId);
+              if (loaded) return;
+            } else if (response.status >= 500 && retryCount < maxRetries) {
+              // Server error, retry
+              console.log(`MissionControl: Server error ${response.status}, will retry...`);
+              retryCount++;
+              await new Promise(resolve => setTimeout(resolve, retryDelay * retryCount));
+              continue;
+            } else {
+              // Other error status, try localStorage
+              console.log(`MissionControl: API error (${response.status}), trying localStorage fallback`);
+              const loaded = await loadProfileFromLocalStorage(userId);
+              if (loaded) return;
+            }
+          }
+        } catch (error: any) {
+          const errorDetails = {
+            name: error?.name,
+            message: error?.message,
+            stack: error?.stack?.substring(0, 500), // First 500 chars of stack
+            type: error?.constructor?.name,
+          };
+          console.error("MissionControl: Error loading company profile:", errorDetails);
+          console.error("MissionControl: Full error object:", error);
+          
+          // Handle abort (timeout)
+          if (error.name === 'AbortError') {
+            console.error("MissionControl: Request timeout after 10 seconds");
+            if (retryCount < maxRetries) {
+              retryCount++;
+              console.log(`MissionControl: Retrying after timeout (attempt ${retryCount + 1})...`);
+              await new Promise(resolve => setTimeout(resolve, retryDelay * retryCount));
+              continue;
+            }
+          }
+          
+          // Network error or other error, try localStorage if we haven't already
+          if (retryCount === 0) {
+            console.log("MissionControl: Network/connection error, trying localStorage fallback");
+            const loaded = await loadProfileFromLocalStorage(userId);
+            if (loaded) {
+              console.log("MissionControl: Successfully loaded from localStorage fallback");
+              return;
+            }
+          }
+          
+          // If we've exhausted retries, try localStorage one more time
+          if (retryCount >= maxRetries) {
+            console.log("MissionControl: All retries exhausted, trying localStorage as last resort");
+            const loaded = await loadProfileFromLocalStorage(userId);
+            if (loaded) {
+              console.log("MissionControl: Successfully loaded from localStorage as last resort");
+            } else {
+              console.warn("MissionControl: Failed to load from both API and localStorage");
             }
             return;
           }
           
-          // Map API response to form state (handle both snake_case and camelCase)
-          const profileData = {
-            companyName: data.company_name || data.companyName || "",
-            headquarters: data.headquarters || "",
-            employeeSize: data.employee_size || data.employeeSize || "",
-            industry: data.industry || "",
-            revenue: data.revenue_band || data.revenue || "",
-            gtmModel: data.gtm_model || data.gtmModel || "",
-            regionFocus: data.region_focus || data.regionFocus || "",
-            dealSize: data.typical_deal_size || data.dealSize || "",
-            companyUrl: data.company_url || data.companyUrl || "",
-            keyBuyerPersona: data.key_buyer_persona || data.keyBuyerPersona || "",
-          };
-          
-          console.log("MissionControl: Setting company profile state:", profileData);
-          setCompanyProfile(profileData);
-
-          // Check if company profile is saved (has at least company name)
-          if (data.company_name || data.companyName) {
-            console.log("MissionControl: Company profile is saved, unlocking customer profile tab");
-            setIsCompanyProfileSaved(true);
-          } else {
-            console.log("MissionControl: Company profile not yet saved");
-          }
-          
-          // Also save to localStorage for offline access
-          try {
-            const { setUserLocalStorage } = await import("@/utils/cacheUtils");
-            setUserLocalStorage('companyProfile', JSON.stringify(data), currentUser.uid);
-          } catch (e) {
-            console.warn("MissionControl: Failed to save to localStorage:", e);
-          }
-        } else {
-          console.log(`MissionControl: Profile load response not OK: ${response.status}`);
-          if (response.status === 404) {
-            console.log("MissionControl: No company profile found (404) - trying localStorage fallback");
-            // Try loading from localStorage as fallback
-            try {
-              const { getUserLocalStorage } = await import("@/utils/cacheUtils");
-              const localData = getUserLocalStorage('companyProfile', currentUser.uid);
-              if (localData) {
-                const localProfile = JSON.parse(localData);
-                if (localProfile.user_id === currentUser.uid) {
-                  console.log("MissionControl: Loading from localStorage fallback");
-                  const profileData = {
-                    companyName: localProfile.company_name || localProfile.companyName || "",
-                    headquarters: localProfile.headquarters || "",
-                    employeeSize: localProfile.employee_size || localProfile.employeeSize || "",
-                    industry: localProfile.industry || "",
-                    revenue: localProfile.revenue_band || localProfile.revenue || "",
-                    gtmModel: localProfile.gtm_model || localProfile.gtmModel || "",
-                    regionFocus: localProfile.region_focus || localProfile.regionFocus || "",
-                    dealSize: localProfile.typical_deal_size || localProfile.dealSize || "",
-                    companyUrl: localProfile.company_url || localProfile.companyUrl || "",
-                    keyBuyerPersona: localProfile.key_buyer_persona || localProfile.keyBuyerPersona || "",
-                  };
-                  setCompanyProfile(profileData);
-                  if (localProfile.company_name || localProfile.companyName) {
-                    setIsCompanyProfileSaved(true);
-                  }
-                }
-              }
-            } catch (e) {
-              console.error("MissionControl: Error loading from localStorage:", e);
-            }
+          retryCount++;
+          if (retryCount <= maxRetries) {
+            console.log(`MissionControl: Retrying... (attempt ${retryCount + 1})`);
+            await new Promise(resolve => setTimeout(resolve, retryDelay * retryCount));
           }
         }
-      } catch (error) {
-        console.error("MissionControl: Error loading company profile:", error);
       }
+      
+      // If we get here, all attempts failed
+      console.warn("MissionControl: Failed to load company profile after all retries");
     };
 
-    loadProfileData();
+    // Add a small delay to ensure user is fully initialized
+    const timeoutId = setTimeout(() => {
+      loadProfileData();
+    }, 100);
+
+    return () => clearTimeout(timeoutId);
   }, [currentUser?.uid]);
 
   const handleConnect = (sourceName: string) => {

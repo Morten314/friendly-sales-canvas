@@ -187,6 +187,7 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
 
       // Prepare payload with data sources, preserving existing company and customer profile fields
       const payload = {
+        user_id: currentUser.uid,
         profile_type: "company",
         ...existingCompanyData, // Preserve existing company profile fields
         ...(Object.keys(existingCustomerProfile).length > 0 && { customer_profile: existingCustomerProfile }), // Preserve customer profile if exists
