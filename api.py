@@ -3,6 +3,7 @@ import shutil
 import asyncio
 import datetime
 import urllib.parse
+import uuid
 from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Any
 
@@ -14,7 +15,8 @@ from pymongo import MongoClient
 from config import origins, STAGE_ORDER, STAGE_MAPPING
 from models import (
     ProspectData, Lead, Contact, SalesPipelineResponse, TimeframeResponse, StageStats,
-    CompanyProfile, UserProfile, ScoutProfile, MarketRequest, EditRequest
+    CompanyProfile, UserProfile, ScoutProfile, MarketRequest, EditRequest,
+    CustomerProfileRequest, CustomerProfileICP
 )
 from database import driver, graph, client, upsert_node
 from llm_config import chain, chain2
@@ -370,6 +372,7 @@ async def get_single_profile(
     """
     Flexible profile fetch endpoint that returns any JSON structure.
     Filters by user_id for multitenancy (except for company profiles which are shared).
+    For company profiles, also includes customer profiles from MongoDB.
     """
     try:
         with driver.session() as session:
@@ -414,6 +417,37 @@ async def get_single_profile(
                             profile_data[key] = json.loads(value)
                         except json.JSONDecodeError:
                             pass  # Keep as string if not valid JSON
+
+            # For company profiles, also fetch customer profiles from MongoDB
+            if profile_type == "company":
+                try:
+                    # MongoDB connection
+                    username = urllib.parse.quote_plus("techbrewra")
+                    password = urllib.parse.quote_plus("Brewra@Best09")
+                    mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
+                    mongo_client = MongoClient(mongo_uri)
+                    db = mongo_client["Profiler"]
+                    collection = db["Company_Profile"]
+                    
+                    # Find the company profile document with customer profiles
+                    filter_query = {"profile_type": "company"}
+                    document = collection.find_one(filter_query)
+                    
+                    mongo_client.close()
+                    
+                    if document:
+                        customer_profiles = document.get("customer_profiles", {})
+                        icps = customer_profiles.get("icps", [])
+                        # Remove MongoDB _id if present in ICPs
+                        for icp in icps:
+                            if "_id" in icp:
+                                del icp["_id"]
+                        profile_data["customer_profiles"] = {"icps": icps}
+                    else:
+                        profile_data["customer_profiles"] = {"icps": []}
+                except Exception as e:
+                    # If MongoDB fetch fails, just add empty customer profiles
+                    profile_data["customer_profiles"] = {"icps": []}
 
             return profile_data
 
@@ -945,3 +979,146 @@ def process_edit(request: EditRequest):
             return {"error": "Invalid edit_type. Must be 'comment' or 'modification'."}
     finally:
         client.close()
+
+@app.post("/customer_profile")
+async def create_or_update_customer_profile(request: CustomerProfileRequest):
+    """
+    Create or update customer profiles (ICPs) in MongoDB.
+    Customer profiles are stored within the company profile document.
+    """
+    try:
+        # MongoDB connection
+        username = urllib.parse.quote_plus("techbrewra")
+        password = urllib.parse.quote_plus("Brewra@Best09")
+        mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
+        mongo_client = MongoClient(mongo_uri)
+        db = mongo_client["Profiler"]
+        collection = db["Company_Profile"]
+        
+        # Get company profile from Neo4j to include in MongoDB document
+        company_profile_data = {}
+        with driver.session() as session:
+            result = session.run("MATCH (c:CompanyProfile) RETURN c LIMIT 1")
+            record = result.single()
+            if record:
+                company_profile_data = dict(record.values()[0])
+                # Parse JSON strings back to objects
+                for key, value in company_profile_data.items():
+                    if isinstance(value, str) and value.strip().startswith(('{', '[')):
+                        try:
+                            company_profile_data[key] = json.loads(value)
+                        except json.JSONDecodeError:
+                            pass
+        
+        # Prepare ICPs with IDs and timestamps
+        current_time = datetime.now(timezone.utc).isoformat()
+        processed_icps = []
+        
+        for icp in request.icps:
+            icp_dict = icp.model_dump(exclude_none=True)
+            
+            # Generate ID if not provided
+            if not icp_dict.get("id"):
+                icp_dict["id"] = str(uuid.uuid4())
+            
+            # Set created_at if not provided
+            if not icp_dict.get("created_at"):
+                icp_dict["created_at"] = current_time
+            
+            # Ensure status has default value
+            if not icp_dict.get("status"):
+                icp_dict["status"] = "saved"
+            
+            processed_icps.append(icp_dict)
+        
+        # Upsert the document - store company profile + customer profiles together
+        # Use a fixed identifier since there's only one company profile
+        filter_query = {"profile_type": "company"}
+        
+        update_doc = {
+            "$set": {
+                "profile_type": "company",
+                "company_profile": company_profile_data,
+                "customer_profiles": {
+                    "icps": processed_icps
+                },
+                "updated_at": current_time
+            }
+        }
+        
+        collection.update_one(filter_query, update_doc, upsert=True)
+        
+        mongo_client.close()
+        
+        return {
+            "success": True,
+            "message": "Customer profiles saved successfully",
+            "data": {
+                "icps": processed_icps
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/customer_profile")
+async def get_customer_profile():
+    """
+    Get customer profiles (ICPs) from MongoDB.
+    Returns both company profile and associated customer profiles from the same document.
+    """
+    try:
+        # MongoDB connection
+        username = urllib.parse.quote_plus("techbrewra")
+        password = urllib.parse.quote_plus("Brewra@Best09")
+        mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
+        mongo_client = MongoClient(mongo_uri)
+        db = mongo_client["Profiler"]
+        collection = db["Company_Profile"]
+        
+        # Find the company profile document
+        filter_query = {"profile_type": "company"}
+        document = collection.find_one(filter_query)
+        
+        mongo_client.close()
+        
+        if not document:
+            # If no MongoDB document exists, try to get from Neo4j and return empty customer profiles
+            with driver.session() as session:
+                result = session.run("MATCH (c:CompanyProfile) RETURN c LIMIT 1")
+                record = result.single()
+                if not record:
+                    raise HTTPException(
+                        status_code=404,
+                        detail="No company profile found"
+                    )
+            
+            return {
+                "success": True,
+                "data": {
+                    "icps": []
+                }
+            }
+        
+        # Extract customer profiles
+        customer_profiles = document.get("customer_profiles", {})
+        icps = customer_profiles.get("icps", [])
+        
+        # Remove MongoDB _id if present in ICPs
+        for icp in icps:
+            if "_id" in icp:
+                del icp["_id"]
+        
+        return {
+            "success": True,
+            "data": {
+                "icps": icps
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

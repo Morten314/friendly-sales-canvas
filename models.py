@@ -86,3 +86,22 @@ class EditRequest(BaseModel):
     original_json: Dict[str, Any]
     modified_json: Dict[str, Any]
     edit_type: str  # "comment" or "modification"
+
+# Customer Profile ICP model
+class CustomerProfileICP(BaseModel):
+    id: Optional[str] = None
+    primary_region: str = Field(..., min_length=1)
+    industry: List[str] = Field(..., min_items=1)
+    company_size: List[str] = Field(..., min_items=1)
+    buyer_role: List[str] = Field(..., min_items=1)
+    accounts_on_watchlist: Optional[List[str]] = None
+    accounts_to_avoid: Optional[List[str]] = None
+    fit_confidence: Literal["high", "medium", "low"]
+    additional_context: Optional[str] = None
+    status: str = "saved"
+    created_at: Optional[str] = None
+
+# Customer Profile Request model
+class CustomerProfileRequest(BaseModel):
+    profile_type: Literal["customer"] = "customer"
+    icps: List[CustomerProfileICP] = Field(..., min_items=1)
