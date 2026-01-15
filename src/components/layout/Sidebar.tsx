@@ -335,7 +335,9 @@ import {
   Activity,
   Command,
   Archive,
-  X
+  X,
+  Plus,
+  Minus
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -369,8 +371,8 @@ const navItems: NavItem[] = [
   { icon: Search, label: "Scout", href: "/market-research" },
   { icon: Users, label: "Profiler", href: "/customers" },
   { icon: FileText, label: "Strategist", href: "/deals" },
-  { icon: Calendar, label: "Activator", href: "/calendar" },
-  { icon: Presentation, label: "Presenter", href: "/reports" },
+  // { icon: Calendar, label: "Activator", href: "/calendar" }, // Commented out - not constructed yet
+  // { icon: Presentation, label: "Presenter", href: "/reports" }, // Commented out - not constructed yet
   { icon: BarChart, label: "Reports", href: "/insights" },
   { icon: Settings, label: "Settings", href: "/settings" },
 ];
@@ -512,21 +514,17 @@ export function Sidebar() {
               <div className="mx-2">
                 <div 
                   className={cn(
-                    "flex items-center px-4 py-3 text-gray-700 hover:bg-sales-gray hover:text-sales-blue rounded-lg transition-colors",
+                    "flex items-center px-4 py-3 text-gray-700 hover:bg-sales-gray hover:text-sales-blue rounded-lg transition-colors cursor-pointer",
                     (location.pathname === "/signals" || location.pathname === "/artifacts") && "bg-blue-50 text-sales-blue"
                   )}
+                  onClick={handleSignalsClick}
                 >
                   <Zap className="h-5 w-5" />
-                  <span 
-                    className="ml-3 flex-1 cursor-pointer"
-                    onClick={handleSignalsClick}
-                  >
-                    Signals
-                  </span>
+                  <span className="ml-3 flex-1">Signals</span>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleSignalsDropdownToggle();
+                      handleSignalsClick();
                     }}
                     className="p-1 hover:bg-gray-200 rounded transition-colors"
                   >
@@ -608,7 +606,7 @@ export function Sidebar() {
                 {aiTeamOpen && (
                   <div className="mt-1">
                     <ul className="space-y-1">
-                      {navItems.slice(0, 5).map((item) => (
+                      {navItems.slice(0, 3).map((item) => (
                         <li key={item.label}>
                           <Link
                             to={item.href}

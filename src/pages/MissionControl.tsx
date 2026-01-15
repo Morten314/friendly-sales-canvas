@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Layout } from "@/components/layout/Layout";
+import DataSourcesManager from "@/components/mission-control/DataSourcesManager";
+import ICPManager from "@/components/mission-control/ICPManager";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,6 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -68,7 +71,11 @@ import {
   Calendar,
   Zap,
   Github,
-  Slack
+  Slack,
+  Link,
+  X,
+  Info,
+  Lock
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -368,8 +375,14 @@ const availableConnectors: Connector[] = [
 
 const MissionControl = () => {
   const [activeTab, setActiveTab] = useState("profile");
-  const [completeness, setCompleteness] = useState(65);
+  const [isCompanyProfileSaved, setIsCompanyProfileSaved] = useState(false);
+  const [isCustomerProfileSaved, setIsCustomerProfileSaved] = useState(false);
+  const [hasDataSources, setHasDataSources] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Tab locking logic
+  const isCustomerProfileLocked = !isCompanyProfileSaved;
+  const isDataSourcesLocked = !isCustomerProfileSaved;
   const [expandedSources, setExpandedSources] = useState<Set<string>>(new Set());
   const [expandedTableRows, setExpandedTableRows] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState("");
@@ -381,9 +394,18 @@ const MissionControl = () => {
   const [connectorCategoryFilter, setConnectorCategoryFilter] = useState<string>("all");
   const [customResourceName, setCustomResourceName] = useState("");
   const [customResourceType, setCustomResourceType] = useState<'crm' | 'marketing' | 'social' | 'analytics' | 'communication' | 'file' | 'custom'>('custom');
+  // New Add Source state
+  const [addSourceMode, setAddSourceMode] = useState<'link' | 'file' | 'system'>('link');
+  const [activeSections, setActiveSections] = useState<{link: boolean, file: boolean, system: boolean}>({link: true, file: false, system: false});
+  const [sourceUrls, setSourceUrls] = useState<Array<{id: string, url: string, status: 'pending' | 'success' | 'error'}>>([{id: Date.now().toString(), url: '', status: 'pending'}]);
+  const [sourceFiles, setSourceFiles] = useState<Array<{id: string, file: File | null, status: 'pending' | 'success' | 'error'}>>([{id: Date.now().toString(), file: null, status: 'pending'}]);
+  const [isProcessing, setIsProcessing] = useState(false);
+  
+  // Legacy state (to be removed)
   const [customFileUploadName, setCustomFileUploadName] = useState("");
   const [customFileUploadFile, setCustomFileUploadFile] = useState<File | null>(null);
-  const [addResourceMode, setAddResourceMode] = useState<'quick' | 'custom' | 'file' | 'api'>('quick');
+  const [customFileUploadUrl, setCustomFileUploadUrl] = useState("");
+  const [addResourceMode, setAddResourceMode] = useState<'quick' | 'custom' | 'file' | 'api'>('file');
   // API Integration state
   const [apiResourceName, setApiResourceName] = useState("");
   const [apiEndpoint, setApiEndpoint] = useState("");
@@ -519,28 +541,43 @@ const MissionControl = () => {
       return;
     }
 
+    // Validate required fields before saving
+    const trimmedCompanyName = companyProfile.companyName.trim();
+    if (!trimmedCompanyName) {
+      toast({
+        title: "Validation failed",
+        description: "Please complete all required fields to proceed.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSaving(true);
     
     try {
       // Prepare payload with profile_type as required by the API
       const payload = {
+        user_id: currentUser.uid,
         profile_type: "company",
-        company_name: companyProfile.companyName,
-        headquarters: companyProfile.headquarters,
-        employee_size: companyProfile.employeeSize,
-        industry: companyProfile.industry,
-        revenue_band: companyProfile.revenue,
-        gtm_model: companyProfile.gtmModel,
-        region_focus: companyProfile.regionFocus,
-        typical_deal_size: companyProfile.dealSize,
-        company_url: companyProfile.companyUrl,
-        key_buyer_persona: companyProfile.keyBuyerPersona,
+        company_name: trimmedCompanyName,
+        headquarters: companyProfile.headquarters.trim(),
+        employee_size: companyProfile.employeeSize.trim(),
+        industry: companyProfile.industry.trim(),
+        revenue_band: companyProfile.revenue.trim(),
+        gtm_model: companyProfile.gtmModel.trim(),
+        region_focus: companyProfile.regionFocus.trim(),
+        typical_deal_size: companyProfile.dealSize.trim(),
+        company_url: companyProfile.companyUrl.trim(),
+        key_buyer_persona: companyProfile.keyBuyerPersona.trim(),
       };
 
       console.log("=== MISSION CONTROL: Saving company profile ===");
       console.log("Payload:", payload);
 
       const apiUrl = `/api/profile/company?user_id=${currentUser.uid}`;
+      console.log("MissionControl: POST request URL:", apiUrl);
+      console.log("MissionControl: POST request payload:", payload);
+      
       const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
@@ -549,25 +586,105 @@ const MissionControl = () => {
         body: JSON.stringify(payload),
       });
 
+      console.log("MissionControl: POST response status:", response.status);
+      console.log("MissionControl: POST response headers:", Object.fromEntries(response.headers.entries()));
+
       if (!response.ok) {
         const errorText = await response.text();
-        console.error("API Error:", response.status, errorText);
+        console.error("MissionControl: API Error:", response.status, errorText);
+        console.error("MissionControl: This could indicate database connection issues or backend problems");
         throw new Error(`Failed to save profile: ${response.status} - ${errorText}`);
       }
 
       const data = await response.json();
-      console.log("Company profile saved successfully:", data);
-
-      toast({
-        title: "profile saved",
-        description: "profile saved",
+      console.log("MissionControl: Company profile saved successfully:", data);
+      console.log("MissionControl: Saved data verification:", {
+        'saved_user_id': data?.user_id,
+        'expected_user_id': currentUser.uid,
+        'user_id_match': data?.user_id === currentUser.uid,
+        'saved_company_name': data?.company_name,
+        'payload_company_name': payload.company_name,
+        'has_data': data && Object.keys(data).length > 0
       });
 
-      // Update completeness based on filled fields
-      const filledFields = Object.values(companyProfile).filter(value => value !== "").length;
-      const totalFields = Object.keys(companyProfile).length;
-      const newCompleteness = Math.round((filledFields / totalFields) * 100);
-      setCompleteness(newCompleteness);
+      // Use the payload company_name since we already validated it before sending
+      // The API may not return the saved data in the response, so we trust what we sent
+      const savedCompanyName = (data?.company_name || data?.companyName || payload.company_name || "").trim();
+      
+      // Double-check: if somehow both response and payload are empty (shouldn't happen due to validation)
+      if (!savedCompanyName) {
+        console.error("MissionControl: Unexpected - company_name is empty in both response and payload!");
+        toast({
+          title: "Save failed",
+          description: "An unexpected error occurred. Please try again.",
+          variant: "destructive",
+        });
+        setIsSaving(false);
+        return;
+      }
+
+      // Save to localStorage for offline access and refresh persistence
+      try {
+        const { setUserLocalStorage } = await import("@/utils/cacheUtils");
+        const dataToSave = {
+          ...data,
+          user_id: currentUser.uid,
+          company_name: payload.company_name,
+          headquarters: payload.headquarters,
+          employee_size: payload.employee_size,
+          industry: payload.industry,
+          revenue_band: payload.revenue_band,
+          gtm_model: payload.gtm_model,
+          region_focus: payload.region_focus,
+          typical_deal_size: payload.typical_deal_size,
+          company_url: payload.company_url,
+          key_buyer_persona: payload.key_buyer_persona,
+        };
+        setUserLocalStorage('companyProfile', JSON.stringify(dataToSave), currentUser.uid);
+        console.log("MissionControl: Saved company profile to localStorage");
+      } catch (e) {
+        console.warn("MissionControl: Failed to save to localStorage:", e);
+      }
+
+      toast({
+        title: "Profile saved",
+        // description: "profile saved",
+      });
+
+      // Only mark company profile as saved if we have a valid company name
+      if (savedCompanyName) {
+        setIsCompanyProfileSaved(true);
+        console.log("MissionControl: Company profile saved and customer profile unlocked");
+      } else {
+        console.warn("MissionControl: Company profile saved but company name is empty - not unlocking customer profile");
+      }
+      
+      // Verify data was actually saved by immediately fetching it back
+      console.log("MissionControl: Verifying data persistence by fetching saved profile...");
+      setTimeout(async () => {
+        try {
+          const verifyResponse = await fetch(`/api/profile/company?user_id=${currentUser.uid}`, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+          });
+          if (verifyResponse.ok) {
+            const verifyData = await verifyResponse.json();
+            const savedCompanyName = verifyData?.company_name || verifyData?.companyName || "";
+            if (savedCompanyName.trim() === payload.company_name.trim()) {
+              console.log("✅ MissionControl: Data persistence verified - company name matches");
+            } else {
+              console.error("❌ MissionControl: Data persistence FAILED - company name mismatch!");
+              console.error("   Expected:", payload.company_name);
+              console.error("   Got:", savedCompanyName);
+              console.error("   This indicates a database write/read issue!");
+            }
+          } else {
+            console.warn("⚠️ MissionControl: Could not verify data persistence - GET request failed");
+          }
+        } catch (verifyError) {
+          console.error("MissionControl: Error verifying data persistence:", verifyError);
+        }
+      }, 2000); // Wait 2 seconds for database to commit
 
     } catch (error) {
       console.error("Error saving company profile:", error);
@@ -581,60 +698,360 @@ const MissionControl = () => {
     }
   };
 
+  // Helper function to load profile from localStorage
+  const loadProfileFromLocalStorage = async (userId: string) => {
+    try {
+      const { getUserLocalStorage } = await import("@/utils/cacheUtils");
+      const localData = getUserLocalStorage('companyProfile', userId);
+      if (localData) {
+        const localProfile = JSON.parse(localData);
+        if (localProfile.user_id === userId) {
+          console.log("MissionControl: Loading from localStorage fallback");
+          const profileData = {
+            companyName: localProfile.company_name || localProfile.companyName || "",
+            headquarters: localProfile.headquarters || "",
+            employeeSize: localProfile.employee_size || localProfile.employeeSize || "",
+            industry: localProfile.industry || "",
+            revenue: localProfile.revenue_band || localProfile.revenue || "",
+            gtmModel: localProfile.gtm_model || localProfile.gtmModel || "",
+            regionFocus: localProfile.region_focus || localProfile.regionFocus || "",
+            dealSize: localProfile.typical_deal_size || localProfile.dealSize || "",
+            companyUrl: localProfile.company_url || localProfile.companyUrl || "",
+            keyBuyerPersona: localProfile.key_buyer_persona || localProfile.keyBuyerPersona || "",
+          };
+          setCompanyProfile(profileData);
+          if (localProfile.company_name || localProfile.companyName) {
+            setIsCompanyProfileSaved(true);
+          }
+          return true;
+        }
+      }
+    } catch (e) {
+      console.error("MissionControl: Error loading from localStorage:", e);
+    }
+    return false;
+  };
+
+  // Helper function to map API data to form state
+  const mapApiDataToFormState = (data: any, userId: string) => {
+    console.log("MissionControl: mapApiDataToFormState called with:", {
+      data,
+      dataType: typeof data,
+      isNull: data === null,
+      isUndefined: data === undefined,
+      keys: data ? Object.keys(data) : [],
+      userId
+    });
+    
+    // Check if data is empty or null
+    if (!data || (typeof data === 'object' && Object.keys(data).length === 0)) {
+      console.log("MissionControl: API returned empty data");
+      return null;
+    }
+
+    // Verify user_id matches (multi-tenancy safety)
+    if (data.user_id && data.user_id !== userId) {
+      console.warn("MissionControl: API returned profile for different user! Ignoring data.", {
+        apiUserId: data.user_id,
+        currentUserId: userId
+      });
+      return null;
+    }
+
+    // Map API response to form state (handle both snake_case and camelCase)
+    // Trim whitespace and handle empty strings properly
+    const profileData = {
+      companyName: (data.company_name || data.companyName || "").trim(),
+      headquarters: (data.headquarters || "").trim(),
+      employeeSize: (data.employee_size || data.employeeSize || "").trim(),
+      industry: (data.industry || "").trim(),
+      revenue: (data.revenue_band || data.revenue || "").trim(),
+      gtmModel: (data.gtm_model || data.gtmModel || "").trim(),
+      regionFocus: (data.region_focus || data.regionFocus || "").trim(),
+      dealSize: (data.typical_deal_size || data.dealSize || "").trim(),
+      companyUrl: (data.company_url || data.companyUrl || "").trim(),
+      keyBuyerPersona: (data.key_buyer_persona || data.keyBuyerPersona || "").trim(),
+    };
+
+    console.log("MissionControl: Mapped profile data result:", profileData);
+    console.log("MissionControl: Profile data values (showing empty strings):", {
+      companyName: `"${profileData.companyName}"`,
+      headquarters: `"${profileData.headquarters}"`,
+      employeeSize: `"${profileData.employeeSize}"`,
+      industry: `"${profileData.industry}"`,
+      revenue: `"${profileData.revenue}"`,
+      gtmModel: `"${profileData.gtmModel}"`,
+      regionFocus: `"${profileData.regionFocus}"`,
+      dealSize: `"${profileData.dealSize}"`,
+      companyUrl: `"${profileData.companyUrl}"`,
+      keyBuyerPersona: `"${profileData.keyBuyerPersona}"`,
+    });
+    return profileData;
+  };
+
   // Load existing profile data on mount
   useEffect(() => {
     const loadProfileData = async () => {
-      if (!currentUser?.uid) return;
+      if (!currentUser?.uid) {
+        console.log("MissionControl: No user ID, skipping profile load");
+        return;
+      }
 
-      try {
-        const response = await fetch(`/api/profile/company?user_id=${currentUser.uid}`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
+      const userId = currentUser.uid;
+      let retryCount = 0;
+      const maxRetries = 2;
+      const retryDelay = 1000; // 1 second
 
-        if (response.ok) {
-          const data = await response.json();
-          console.log("Loaded company profile data:", data);
+      while (retryCount <= maxRetries) {
+        try {
+          console.log(`MissionControl: Loading company profile for user: ${userId} (attempt ${retryCount + 1})`);
           
-          // Map API response to form state
-          setCompanyProfile({
-            companyName: data.company_name || data.companyName || "",
-            headquarters: data.headquarters || "",
-            employeeSize: data.employee_size || data.employeeSize || "",
-            industry: data.industry || "",
-            revenue: data.revenue_band || data.revenue || "",
-            gtmModel: data.gtm_model || data.gtmModel || "",
-            regionFocus: data.region_focus || data.regionFocus || "",
-            dealSize: data.typical_deal_size || data.dealSize || "",
-            companyUrl: data.company_url || data.companyUrl || "",
-            keyBuyerPersona: data.key_buyer_persona || data.keyBuyerPersona || "",
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+          const response = await fetch(`/api/profile/company?user_id=${userId}`, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            signal: controller.signal,
           });
 
-          // Update completeness
-          const filledFields = Object.values({
-            companyName: data.company_name || data.companyName || "",
-            headquarters: data.headquarters || "",
-            employeeSize: data.employee_size || data.employeeSize || "",
-            industry: data.industry || "",
-            revenue: data.revenue_band || data.revenue || "",
-            gtmModel: data.gtm_model || data.gtmModel || "",
-            regionFocus: data.region_focus || data.regionFocus || "",
-            dealSize: data.typical_deal_size || data.dealSize || "",
-            companyUrl: data.company_url || data.companyUrl || "",
-            keyBuyerPersona: data.key_buyer_persona || data.keyBuyerPersona || "",
-          }).filter(value => value !== "").length;
-          const totalFields = 10;
-          const newCompleteness = Math.round((filledFields / totalFields) * 100);
-          setCompleteness(newCompleteness);
+          clearTimeout(timeoutId);
+
+          if (response.ok) {
+            const data = await response.json();
+            console.log("MissionControl: Loaded company profile data:", data);
+            console.log("MissionControl: Data keys:", Object.keys(data || {}));
+            console.log("MissionControl: company_name:", data?.company_name);
+            console.log("MissionControl: companyName:", data?.companyName);
+            console.log("MissionControl: Full data structure:", JSON.stringify(data, null, 2));
+            
+            // Database health check - verify if COMPANY PROFILE fields exist but are empty
+            // Check specifically for company profile fields, not customer_profiles or other nested data
+            const companyProfileFields = [
+              'company_name', 'companyName',
+              'headquarters',
+              'employee_size', 'employeeSize',
+              'industry',
+              'revenue_band', 'revenue',
+              'gtm_model', 'gtmModel',
+              'region_focus', 'regionFocus',
+              'typical_deal_size', 'dealSize',
+              'company_url', 'companyUrl',
+              'key_buyer_persona', 'keyBuyerPersona'
+            ];
+            
+            const hasAnyData = data && Object.keys(data).length > 0;
+            const hasCompanyProfileData = data && companyProfileFields.some(field => {
+              const value = data[field];
+              return value !== null && value !== undefined && value !== "" && 
+                     (typeof value !== 'object' || (Array.isArray(value) && value.length > 0));
+            });
+            
+            console.log("MissionControl: Database health check:", {
+              'hasAnyData': hasAnyData,
+              'hasCompanyProfileData': hasCompanyProfileData,
+              'company_name': `"${data?.company_name || ''}"`,
+              'companyName': `"${data?.companyName || ''}"`,
+              'dataKeysCount': data ? Object.keys(data).length : 0,
+              'user_id_in_response': data?.user_id,
+              'expected_user_id': userId,
+              'user_id_match': data?.user_id === userId,
+              'response_status': response.status,
+            });
+            
+            // Check if company profile fields are empty (even if customer_profiles exists)
+            if (hasAnyData && !hasCompanyProfileData) {
+              console.warn("⚠️ MissionControl: API returned profile structure but COMPANY PROFILE fields are empty!");
+              console.warn("⚠️ This could indicate:");
+              console.warn("   1. Database was reset/cleared");
+              console.warn("   2. Data was deleted");
+              console.warn("   3. Backend service restarted and lost data");
+              console.warn("   4. Database connection issue");
+              console.warn("   5. Transaction rollback occurred");
+              
+              // Try to load from localStorage as backup BEFORE processing empty API data
+              console.log("MissionControl: Attempting to load from localStorage as backup...");
+              const loaded = await loadProfileFromLocalStorage(userId);
+              if (loaded) {
+                console.log("✅ MissionControl: Successfully loaded from localStorage backup");
+                return; // Exit retry loop - don't process empty API data
+              } else {
+                console.warn("⚠️ MissionControl: No localStorage backup available, will proceed with empty data");
+              }
+            }
+            
+            const profileData = mapApiDataToFormState(data, userId);
+            console.log("MissionControl: Mapped profile data:", profileData);
+            
+            if (profileData) {
+              console.log("MissionControl: Setting company profile state:", profileData);
+              console.log("MissionControl: Profile data values being set:", {
+                companyName: `"${profileData.companyName}"`,
+                headquarters: `"${profileData.headquarters}"`,
+                employeeSize: `"${profileData.employeeSize}"`,
+                industry: `"${profileData.industry}"`,
+                revenue: `"${profileData.revenue}"`,
+                gtmModel: `"${profileData.gtmModel}"`,
+                regionFocus: `"${profileData.regionFocus}"`,
+                dealSize: `"${profileData.dealSize}"`,
+                companyUrl: `"${profileData.companyUrl}"`,
+                keyBuyerPersona: `"${profileData.keyBuyerPersona}"`,
+              });
+
+              // CRITICAL: Actually set the state with the profile data
+              setCompanyProfile(profileData);
+              console.log("MissionControl: State has been updated with profileData");
+
+              // Check if company profile is saved (has at least company name)
+              // Check both raw data and mapped profileData, but treat empty strings as falsy
+              const companyName = (data.company_name || data.companyName || profileData.companyName || "").trim();
+              const hasCompanyName = companyName.length > 0;
+              
+              console.log("MissionControl: Has company name check:", {
+                'data.company_name': `"${data.company_name}"`,
+                'data.companyName': data.companyName,
+                'profileData.companyName': `"${profileData.companyName}"`,
+                'companyName (trimmed)': `"${companyName}"`,
+                'hasCompanyName': hasCompanyName
+              });
+              
+              // Also save to localStorage for offline access
+              // Only save if we have actual company profile data (not just empty strings)
+              if (hasCompanyName || profileData.headquarters || profileData.industry || profileData.revenue) {
+                try {
+                  const { setUserLocalStorage } = await import("@/utils/cacheUtils");
+                  // Save both the API response and the mapped profile data for redundancy
+                  const dataToSave = {
+                    ...data,
+                    ...profileData,
+                    user_id: userId,
+                    // Ensure company_name is saved in both formats
+                    company_name: profileData.companyName || data.company_name || "",
+                    companyName: profileData.companyName || data.companyName || "",
+                  };
+                  setUserLocalStorage('companyProfile', JSON.stringify(dataToSave), userId);
+                  console.log("MissionControl: Saved company profile to localStorage");
+                } catch (e) {
+                  console.warn("MissionControl: Failed to save to localStorage:", e);
+                }
+              } else {
+                console.log("MissionControl: Skipping localStorage save - no meaningful company profile data");
+              }
+              
+              if (hasCompanyName) {
+                console.log("MissionControl: Company profile is saved, unlocking customer profile tab");
+                setIsCompanyProfileSaved(true);
+              } else {
+                console.log("MissionControl: Company profile not yet saved - no company name found (empty string)");
+                // Don't unlock customer profile if company name is empty
+                setIsCompanyProfileSaved(false);
+              }
+              return; // Success, exit retry loop
+            } else {
+              // Data validation failed, try localStorage
+              console.log("MissionControl: Data validation failed, trying localStorage fallback");
+              const loaded = await loadProfileFromLocalStorage(userId);
+              if (loaded) return;
+            }
+          } else {
+            // Try to get error message from response
+            let errorMessage = `HTTP ${response.status}`;
+            try {
+              const errorData = await response.text();
+              if (errorData) {
+                try {
+                  const parsedError = JSON.parse(errorData);
+                  errorMessage = parsedError.message || parsedError.error || errorMessage;
+                } catch {
+                  errorMessage = errorData.substring(0, 200); // First 200 chars if not JSON
+                }
+              }
+            } catch (e) {
+              // Ignore errors reading response body
+            }
+            
+            console.error(`MissionControl: Profile load response not OK: ${response.status} - ${errorMessage}`);
+            
+            if (response.status === 404) {
+              console.log("MissionControl: No company profile found (404) - trying localStorage fallback");
+              const loaded = await loadProfileFromLocalStorage(userId);
+              if (loaded) return;
+            } else if (response.status >= 500 && retryCount < maxRetries) {
+              // Server error, retry
+              console.log(`MissionControl: Server error ${response.status}, will retry...`);
+              retryCount++;
+              await new Promise(resolve => setTimeout(resolve, retryDelay * retryCount));
+              continue;
+            } else {
+              // Other error status, try localStorage
+              console.log(`MissionControl: API error (${response.status}), trying localStorage fallback`);
+              const loaded = await loadProfileFromLocalStorage(userId);
+              if (loaded) return;
+            }
+          }
+        } catch (error: any) {
+          const errorDetails = {
+            name: error?.name,
+            message: error?.message,
+            stack: error?.stack?.substring(0, 500), // First 500 chars of stack
+            type: error?.constructor?.name,
+          };
+          console.error("MissionControl: Error loading company profile:", errorDetails);
+          console.error("MissionControl: Full error object:", error);
+          
+          // Handle abort (timeout)
+          if (error.name === 'AbortError') {
+            console.error("MissionControl: Request timeout after 10 seconds");
+            if (retryCount < maxRetries) {
+              retryCount++;
+              console.log(`MissionControl: Retrying after timeout (attempt ${retryCount + 1})...`);
+              await new Promise(resolve => setTimeout(resolve, retryDelay * retryCount));
+              continue;
+            }
+          }
+          
+          // Network error or other error, try localStorage if we haven't already
+          if (retryCount === 0) {
+            console.log("MissionControl: Network/connection error, trying localStorage fallback");
+            const loaded = await loadProfileFromLocalStorage(userId);
+            if (loaded) {
+              console.log("MissionControl: Successfully loaded from localStorage fallback");
+              return;
+            }
+          }
+          
+          // If we've exhausted retries, try localStorage one more time
+          if (retryCount >= maxRetries) {
+            console.log("MissionControl: All retries exhausted, trying localStorage as last resort");
+            const loaded = await loadProfileFromLocalStorage(userId);
+            if (loaded) {
+              console.log("MissionControl: Successfully loaded from localStorage as last resort");
+            } else {
+              console.warn("MissionControl: Failed to load from both API and localStorage");
+            }
+            return;
+          }
+          
+          retryCount++;
+          if (retryCount <= maxRetries) {
+            console.log(`MissionControl: Retrying... (attempt ${retryCount + 1})`);
+            await new Promise(resolve => setTimeout(resolve, retryDelay * retryCount));
+          }
         }
-      } catch (error) {
-        console.error("Error loading company profile:", error);
       }
+      
+      // If we get here, all attempts failed
+      console.warn("MissionControl: Failed to load company profile after all retries");
     };
 
-    loadProfileData();
+    // Add a small delay to ensure user is fully initialized
+    const timeoutId = setTimeout(() => {
+      loadProfileData();
+    }, 100);
+
+    return () => clearTimeout(timeoutId);
   }, [currentUser?.uid]);
 
   const handleConnect = (sourceName: string) => {
@@ -1743,6 +2160,16 @@ const MissionControl = () => {
       return;
     }
 
+    // Check if either file or URL is provided
+    if (!customFileUploadFile && !customFileUploadUrl.trim()) {
+      toast({
+        title: "File or URL required",
+        description: "Please either upload a file or enter a file URL.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Check if source already exists
     const existingSource = dataSources.find(s => s.name === customFileUploadName.trim());
     if (existingSource) {
@@ -1756,6 +2183,14 @@ const MissionControl = () => {
 
     const uploadName = customFileUploadName.trim();
 
+    // Determine description based on what's provided
+    let description = 'Custom file upload';
+    if (customFileUploadFile) {
+      description = `File: ${customFileUploadFile.name}`;
+    } else if (customFileUploadUrl.trim()) {
+      description = `URL: ${customFileUploadUrl.trim()}`;
+    }
+
     // Create new file upload source
     const newSource: DataSource = {
       id: `file-custom-${Date.now()}`,
@@ -1763,7 +2198,7 @@ const MissionControl = () => {
       type: 'file',
       icon: FileText,
       platform: 'File Upload',
-      status: customFileUploadFile ? 'uploaded' : 'disconnected',
+      status: (customFileUploadFile || customFileUploadUrl.trim()) ? 'uploaded' : 'disconnected',
       syncFrequency: 'manual',
       totalRecords: 0,
       newRecordsThisWeek: 0,
@@ -1772,7 +2207,7 @@ const MissionControl = () => {
       objectsSynced: [],
       fieldsMapped: 0,
       filters: [],
-      description: customFileUploadFile ? `File: ${customFileUploadFile.name}` : 'Custom file upload'
+      description: description
     };
 
     // Add to data sources
@@ -1781,12 +2216,227 @@ const MissionControl = () => {
     // Reset form
     setCustomFileUploadName("");
     setCustomFileUploadFile(null);
+    setCustomFileUploadUrl("");
     setIsAddResourcePopoverOpen(false);
     
     toast({
       title: `${uploadName} added`,
-      description: customFileUploadFile ? "File uploaded successfully." : "Click 'Connect' to upload files.",
+      description: customFileUploadFile ? "File uploaded successfully." : customFileUploadUrl.trim() ? "File URL added successfully." : "Click 'Connect' to upload files.",
     });
+  };
+
+  // New handlers for Add Source
+  const handleAddUrl = () => {
+    setSourceUrls(prev => [...prev, {id: Date.now().toString(), url: '', status: 'pending'}]);
+  };
+
+  const handleRemoveUrl = (id: string) => {
+    setSourceUrls(prev => prev.filter(item => item.id !== id));
+  };
+
+  const handleUrlChange = (id: string, url: string) => {
+    setSourceUrls(prev => prev.map(item => 
+      item.id === id ? { ...item, url, status: 'pending' as const } : item
+    ));
+  };
+
+  const handleAddFile = () => {
+    setSourceFiles(prev => [...prev, {id: Date.now().toString(), file: null, status: 'pending'}]);
+  };
+
+  const handleRemoveFile = (id: string) => {
+    setSourceFiles(prev => prev.filter(item => item.id !== id));
+  };
+
+  const handleFileChange = (id: string, file: File | null) => {
+    setSourceFiles(prev => prev.map(item => 
+      item.id === id ? { ...item, file, status: 'pending' as const } : item
+    ));
+  };
+
+  const handleVerifyUrl = async (id: string, url: string) => {
+    if (!url.trim()) return;
+    
+    setSourceUrls(prev => prev.map(item => 
+      item.id === id ? { ...item, status: 'pending' as const } : item
+    ));
+    
+    setIsProcessing(true);
+    
+    try {
+      // Simulate verification - replace with actual API call
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Simple URL validation
+      const isValid = /^https?:\/\/.+/.test(url.trim());
+      
+      setSourceUrls(prev => prev.map(item => 
+        item.id === id ? { ...item, status: isValid ? 'success' : 'error' } : item
+      ));
+      
+      if (isValid) {
+        toast({
+          title: "URL verified",
+          description: "The URL has been successfully verified.",
+        });
+      } else {
+        toast({
+          title: "Invalid URL",
+          description: "Please enter a valid URL starting with http:// or https://",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      setSourceUrls(prev => prev.map(item => 
+        item.id === id ? { ...item, status: 'error' } : item
+      ));
+      toast({
+        title: "Verification failed",
+        description: "Failed to verify the URL. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleVerifyFile = async (id: string, file: File | null) => {
+    if (!file) return;
+    
+    setSourceFiles(prev => prev.map(item => 
+      item.id === id ? { ...item, status: 'pending' as const } : item
+    ));
+    
+    setIsProcessing(true);
+    
+    try {
+      // Simulate file verification - replace with actual API call
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Simple file validation (size check)
+      const isValid = file.size > 0 && file.size < 100 * 1024 * 1024; // 100MB limit
+      
+      setSourceFiles(prev => prev.map(item => 
+        item.id === id ? { ...item, status: isValid ? 'success' : 'error' } : item
+      ));
+      
+      if (isValid) {
+        toast({
+          title: "File verified",
+          description: "The file has been successfully verified.",
+        });
+      } else {
+        toast({
+          title: "Invalid file",
+          description: "File is empty or too large. Maximum size is 100MB.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      setSourceFiles(prev => prev.map(item => 
+        item.id === id ? { ...item, status: 'error' } : item
+      ));
+      toast({
+        title: "Verification failed",
+        description: "Failed to verify the file. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleSubmitSources = async () => {
+    const validUrls = activeSections.link ? sourceUrls.filter(item => item.url.trim() && item.status === 'success') : [];
+    const validFiles = activeSections.file ? sourceFiles.filter(item => item.file && item.status === 'success') : [];
+    
+    // Check if at least one valid source exists
+    if (validUrls.length === 0 && validFiles.length === 0) {
+      toast({
+        title: "No valid sources",
+        description: "Please add and verify at least one URL or file.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    let addedCount = 0;
+    
+    // Process URLs - create data sources
+    if (validUrls.length > 0) {
+      for (const urlItem of validUrls) {
+        const newSource: DataSource = {
+          id: `url-${Date.now()}-${Math.random()}`,
+          name: `URL Source ${new Date().toLocaleDateString()}`,
+          type: 'file',
+          icon: FileText,
+          platform: 'URL',
+          status: 'uploaded',
+          syncFrequency: 'manual',
+          totalRecords: 0,
+          newRecordsThisWeek: 0,
+          updatedRecords: 0,
+          dataQualityScore: 0,
+          objectsSynced: [],
+          fieldsMapped: 0,
+          filters: [],
+          description: urlItem.url
+        };
+        setDataSources(prev => [...prev, newSource]);
+        addedCount++;
+      }
+    }
+    
+    // Process files - create data sources
+    if (validFiles.length > 0) {
+      for (const fileItem of validFiles) {
+        if (fileItem.file) {
+          const newSource: DataSource = {
+            id: `file-${Date.now()}-${Math.random()}`,
+            name: fileItem.file.name,
+            type: 'file',
+            icon: FileText,
+            platform: 'File Upload',
+            status: 'uploaded',
+            syncFrequency: 'manual',
+            totalRecords: 0,
+            newRecordsThisWeek: 0,
+            updatedRecords: 0,
+            dataQualityScore: 0,
+            objectsSynced: [],
+            fieldsMapped: 0,
+            filters: [],
+            description: `File: ${fileItem.file.name}`
+          };
+          setDataSources(prev => [...prev, newSource]);
+          addedCount++;
+        }
+      }
+    }
+    
+    const sourcesAdded = [];
+    if (validUrls.length > 0) sourcesAdded.push(`${validUrls.length} URL(s)`);
+    if (validFiles.length > 0) sourcesAdded.push(`${validFiles.length} file(s)`);
+    
+    toast({
+      title: "Sources added",
+      description: `${sourcesAdded.join(' and ')} added successfully.`,
+    });
+    
+    // Reset only the sections that were submitted
+    if (validUrls.length > 0) {
+      setSourceUrls([{id: Date.now().toString(), url: '', status: 'pending'}]);
+    }
+    if (validFiles.length > 0) {
+      setSourceFiles([{id: Date.now().toString(), file: null, status: 'pending'}]);
+    }
+    
+    // Close form if all active sections are empty
+    const hasRemainingUrls = activeSections.link && sourceUrls.some(item => item.url.trim());
+    const hasRemainingFiles = activeSections.file && sourceFiles.some(item => item.file);
+    if (!hasRemainingUrls && !hasRemainingFiles) {
+      setIsAddResourcePopoverOpen(false);
+    }
   };
 
   const handleTestApiConnection = async () => {
@@ -2148,39 +2798,133 @@ const MissionControl = () => {
           ),
   };
 
+  // Calculate overall completeness based on completed sections
+  const calculateOverallCompleteness = () => {
+    // Check both local dataSources state and the hasDataSources flag
+    const hasLocalDataSources = dataSources.length > 0;
+    const hasAnyDataSources = hasLocalDataSources || hasDataSources;
+    
+    if (hasAnyDataSources && isCustomerProfileSaved && isCompanyProfileSaved) {
+      return 100;
+    } else if (isCustomerProfileSaved && isCompanyProfileSaved) {
+      return 55;
+    } else if (isCompanyProfileSaved) {
+      return 30;
+    }
+    return 0;
+  };
+
+  const overallCompleteness = calculateOverallCompleteness();
+
+  // Listen for customer profile save events from ICPManager
+  useEffect(() => {
+    const handleCustomerProfileSaved = () => {
+      setIsCustomerProfileSaved(true);
+    };
+
+    // Listen for custom event from ICPManager
+    window.addEventListener('customerProfileSaved', handleCustomerProfileSaved);
+    
+    return () => {
+      window.removeEventListener('customerProfileSaved', handleCustomerProfileSaved);
+    };
+  }, []);
+
+  // Check for existing customer profile data on mount
+  useEffect(() => {
+    // Check localStorage for saved ICPs
+    const savedICPs = localStorage.getItem('icps');
+    if (savedICPs) {
+      try {
+        const icps = JSON.parse(savedICPs);
+        if (icps && icps.length > 0) {
+          setIsCustomerProfileSaved(true);
+        }
+      } catch (e) {
+        // Ignore parse errors
+      }
+    }
+  }, []);
+
+  // Listen for data source added events from DataSourcesManager
+  useEffect(() => {
+    const handleDataSourceAdded = () => {
+      // Data source was added in DataSourcesManager
+      setHasDataSources(true);
+    };
+
+    window.addEventListener('dataSourceAdded', handleDataSourceAdded);
+    
+    return () => {
+      window.removeEventListener('dataSourceAdded', handleDataSourceAdded);
+    };
+  }, []);
+
+  // Also update hasDataSources when local dataSources state changes
+  useEffect(() => {
+    if (dataSources.length > 0) {
+      setHasDataSources(true);
+    }
+  }, [dataSources.length]);
+
   return (
     <Layout>
       <div className="space-y-6">
+        {/* Profile Completeness - Common to all tabs */}
+        <div className="flex items-center justify-end gap-2">
+          <span className="text-xs text-muted-foreground">Completeness:</span>
+          <Progress value={overallCompleteness} className="w-32 h-1.5" />
+          <span className="text-xs font-medium min-w-[2rem] text-right">{overallCompleteness}%</span>
+        </div>
+
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <Tabs value={activeTab} onValueChange={(value) => {
+          // Prevent switching to locked tabs
+          if (value === "customer-profile" && isCustomerProfileLocked) {
+            return;
+          }
+          if (value === "sources" && isDataSourcesLocked) {
+            return;
+          }
+          setActiveTab(value);
+        }} className="space-y-6">
           <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 gap-1 md:gap-0">
             <TabsTrigger value="profile" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm px-2 md:px-4">
               <Building2 className="h-3 w-3 md:h-4 md:w-4" />
               <span className="hidden sm:inline">Company Profile</span>
               <span className="sm:hidden">Profile</span>
             </TabsTrigger>
-            <TabsTrigger value="sources" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm px-2 md:px-4">
+            <TabsTrigger 
+              value="customer-profile" 
+              disabled={isCustomerProfileLocked}
+              className="flex items-center gap-1 md:gap-2 text-xs md:text-sm px-2 md:px-4 disabled:opacity-50 disabled:cursor-not-allowed relative"
+            >
+              <Users className="h-3 w-3 md:h-4 md:w-4" />
+              <span className="hidden sm:inline">Customer Profile</span>
+              <span className="sm:hidden">Customer</span>
+              {isCustomerProfileLocked && (
+                <span className="ml-1 text-[10px]">🔒</span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger 
+              value="sources" 
+              disabled={isDataSourcesLocked}
+              className="flex items-center gap-1 md:gap-2 text-xs md:text-sm px-2 md:px-4 disabled:opacity-50 disabled:cursor-not-allowed relative"
+            >
               <Database className="h-3 w-3 md:h-4 md:w-4" />
               <span className="hidden sm:inline">Data Sources</span>
               <span className="sm:hidden">Sources</span>
-            </TabsTrigger>
-            <TabsTrigger value="advanced" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm px-2 md:px-4">
-              <Settings className="h-3 w-3 md:h-4 md:w-4" />
-              <span className="hidden sm:inline">Advanced Inputs</span>
-              <span className="sm:hidden">Advanced</span>
+              {isDataSourcesLocked && (
+                <span className="ml-1 text-[10px]">🔒</span>
+              )}
             </TabsTrigger>
           </TabsList>
 
           {/* Company Profile Tab */}
           <TabsContent value="profile">
             <Card>
-              <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
+              <CardHeader>
                 <CardTitle>Company Information</CardTitle>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs sm:text-sm text-muted-foreground">Completeness:</span>
-                  <Progress value={completeness} className="w-16 sm:w-20" />
-                  <span className="text-xs sm:text-sm font-medium">{completeness}%</span>
-                </div>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -2191,6 +2935,16 @@ const MissionControl = () => {
                       placeholder="Enter company name"
                       value={companyProfile.companyName}
                       onChange={(e) => setCompanyProfile(prev => ({ ...prev, companyName: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="company-url">Company URL</Label>
+                    <Input 
+                      id="company-url" 
+                      type="url"
+                      placeholder="https://example.com"
+                      value={companyProfile.companyUrl}
+                      onChange={(e) => setCompanyProfile(prev => ({ ...prev, companyUrl: e.target.value }))}
                     />
                   </div>
                   <div className="space-y-2">
@@ -2274,55 +3028,71 @@ const MissionControl = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="company-url">Company URL</Label>
-                    <Input 
-                      id="company-url" 
-                      type="url"
-                      placeholder="https://example.com"
-                      value={companyProfile.companyUrl}
-                      onChange={(e) => setCompanyProfile(prev => ({ ...prev, companyUrl: e.target.value }))}
-                    />
-                  </div>
                 </div>
                 
-                <div className="space-y-4">
-                  <h3 className="font-medium">ICP Basics (Optional)</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="region-focus">Region Focus</Label>
-                      <Input 
-                        id="region-focus" 
-                        placeholder="e.g., North America, EMEA"
-                        value={companyProfile.regionFocus}
-                        onChange={(e) => setCompanyProfile(prev => ({ ...prev, regionFocus: e.target.value }))}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="deal-size">Typical Deal Size</Label>
-                      <Input 
-                        id="deal-size" 
-                        placeholder="e.g., $10K - $50K"
-                        value={companyProfile.dealSize}
-                        onChange={(e) => setCompanyProfile(prev => ({ ...prev, dealSize: e.target.value }))}
-                      />
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="space-y-4">
-                  <h3 className="font-medium">Buyer Information</h3>
-                  <div className="space-y-2">
-                    <Label htmlFor="key-buyer-persona">Key Buyer Persona</Label>
-                    <Textarea 
-                      id="key-buyer-persona" 
-                      placeholder="Describe your key buyer persona (e.g., VP of Sales at mid-market SaaS companies, CTO at fintech startups...)"
-                      value={companyProfile.keyBuyerPersona}
-                      onChange={(e) => setCompanyProfile(prev => ({ ...prev, keyBuyerPersona: e.target.value }))}
-                      rows={4}
-                    />
-                  </div>
-                </div>
+                <Accordion type="multiple" className="space-y-4 mt-6">
+                  <AccordionItem value="priorities">
+                    <AccordionTrigger className="text-lg font-medium">
+                      Goals
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <Card>
+                        <CardContent className="p-4 space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="business-goals">Primary Business Goals</Label>
+                            <Textarea id="business-goals" placeholder="Be as specific as possible - clearer goals help Brewra generate more accurate insights." />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="pain-points">Key Pain Points We Solve</Label>
+                            <Textarea id="pain-points" placeholder="Describe the key problems you're trying to solve. More detail leads to more relevant insights." />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </AccordionContent>
+                  </AccordionItem>
+
+                  <AccordionItem value="positioning">
+                    <AccordionTrigger className="text-lg font-medium">
+                      Market Positioning
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <Card>
+                        <CardContent className="p-4 space-y-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="target-segments">Target Segments (Include)</Label>
+                              <Textarea id="target-segments" placeholder="e.g., Mid-market SaaS companies, Financial services..." />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="exclude-segments">Exclude Segments</Label>
+                              <Textarea id="exclude-segments" placeholder="e.g., Startups under 50 employees, Government..." />
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </AccordionContent>
+                  </AccordionItem>
+
+                  <AccordionItem value="compliance">
+                    <AccordionTrigger className="text-lg font-medium">
+                      Compliance & Constraints
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <Card>
+                        <CardContent className="p-4 space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="compliance-reqs">Compliance Requirements</Label>
+                            <Textarea id="compliance-reqs" placeholder="e.g., GDPR, HIPAA, SOC2..." />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="messaging-constraints">General Instruction</Label>
+                            <Textarea id="messaging-constraints" placeholder="e.g., Avoid certain terms, required disclaimers..." />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
                 
                 <Button 
                   onClick={handleSave} 
@@ -2335,868 +3105,18 @@ const MissionControl = () => {
             </Card>
           </TabsContent>
 
-          {/* Data Sources Tab */}
-          <TabsContent value="sources">
-            <div className="space-y-6">
-              {/* Data Sources Table */}
-              <div className="space-y-6">
-                <div className="space-y-4">
-                  <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                    <div>
-                      <h2 className="text-xl font-semibold mb-1">Data Sources</h2>
-                      <p className="text-sm text-muted-foreground">Manage integrations and file uploads in one place</p>
-                    </div>
-                    <Button 
-                      variant="outline"
-                      onClick={() => setIsAddResourcePopoverOpen(!isAddResourcePopoverOpen)}
-                      className="w-full md:w-auto"
-                    >
-                      {isAddResourcePopoverOpen ? (
-                        <>
-                          <XCircle className="h-4 w-4 mr-2" />
-                          Cancel
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="h-4 w-4 mr-2" />
-                          Add Source
-                        </>
-                      )}
-                    </Button>
-                  </div>
-
-                  {/* Inline Add Resource Form */}
-                  {isAddResourcePopoverOpen && (
-                    <Card className="border-2 border-dashed">
-                      <CardContent className="p-6">
-                        <div className="space-y-4">
-                          <div>
-                            <h3 className="font-medium mb-2">Add New Resource</h3>
-                            <p className="text-sm text-muted-foreground mb-4">Choose how you want to add a resource</p>
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                              <Button
-                                variant={addResourceMode === 'quick' ? 'default' : 'outline'}
-                                size="sm"
-                                className="flex-1"
-                                onClick={() => setAddResourceMode('quick')}
-                              >
-                                Quick Add
-                              </Button>
-                              <Button
-                                variant={addResourceMode === 'custom' ? 'default' : 'outline'}
-                                size="sm"
-                                className="flex-1"
-                                onClick={() => setAddResourceMode('custom')}
-                              >
-                                Custom Resource
-                              </Button>
-                              <Button
-                                variant={addResourceMode === 'file' ? 'default' : 'outline'}
-                                size="sm"
-                                className="flex-1"
-                                onClick={() => setAddResourceMode('file')}
-                              >
-                                File Upload
-                              </Button>
-                              <Button
-                                variant={addResourceMode === 'api' ? 'default' : 'outline'}
-                                size="sm"
-                                className="flex-1"
-                                onClick={() => setAddResourceMode('api')}
-                              >
-                                API Integration
-                              </Button>
-                            </div>
-                          </div>
-
-                          {addResourceMode === 'quick' && (
-                            <div className="space-y-4 pt-2">
-                              <div className="space-y-2">
-                                <Label>Select from available connectors</Label>
-                                <Select onValueChange={(value) => {
-                                  const connector = availableConnectors.find(c => c.id === value);
-                                  if (connector) {
-                                    handleConnectSource(connector);
-                                    setIsAddResourcePopoverOpen(false);
-                                  }
-                                }}>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Choose a connector..." />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {availableConnectors
-                                      .filter(c => !dataSources.some(s => s.name === c.name && (s.status === 'connected' || s.status === 'uploaded')))
-                                      .map((connector) => (
-                                        <SelectItem key={connector.id} value={connector.id}>
-                                          {connector.name}
-                                        </SelectItem>
-                                      ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            </div>
-                          )}
-
-                          {addResourceMode === 'custom' && (
-                            <div className="space-y-4 pt-2">
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                  <Label htmlFor="custom-resource-name">Resource Name</Label>
-                                  <Input
-                                    id="custom-resource-name"
-                                    placeholder="Enter resource name"
-                                    value={customResourceName}
-                                    onChange={(e) => setCustomResourceName(e.target.value)}
-                                  />
-                                </div>
-                                <div className="space-y-2">
-                                  <Label htmlFor="custom-resource-type">Type</Label>
-                                  <Select value={customResourceType} onValueChange={(value: any) => setCustomResourceType(value)}>
-                                    <SelectTrigger id="custom-resource-type">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="custom">Custom</SelectItem>
-                                      <SelectItem value="crm">CRM</SelectItem>
-                                      <SelectItem value="marketing">Marketing</SelectItem>
-                                      <SelectItem value="social">Social</SelectItem>
-                                      <SelectItem value="analytics">Analytics</SelectItem>
-                                      <SelectItem value="communication">Communication</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                              </div>
-                              <div className="flex gap-2">
-                                <Button onClick={handleAddCustomResource} className="flex-1">
-                                  Add Resource
-                                </Button>
-                                <Button 
-                                  variant="outline" 
-                                  onClick={() => {
-                                    setCustomResourceName("");
-                                    setCustomResourceType('custom');
-                                  }}
-                                >
-                                  Clear
-                                </Button>
-                              </div>
-                            </div>
-                          )}
-
-                          {addResourceMode === 'file' && (
-                            <div className="space-y-4 pt-2">
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                  <Label htmlFor="custom-file-name">File Upload Name</Label>
-                                  <Input
-                                    id="custom-file-name"
-                                    placeholder="Enter name for this file upload"
-                                    value={customFileUploadName}
-                                    onChange={(e) => setCustomFileUploadName(e.target.value)}
-                                  />
-                                </div>
-                                <div className="space-y-2">
-                                  <Label htmlFor="custom-file-upload">Upload File (Optional)</Label>
-                                  <Input
-                                    id="custom-file-upload"
-                                    type="file"
-                                    onChange={(e) => {
-                                      const file = e.target.files?.[0];
-                                      if (file) {
-                                        setCustomFileUploadFile(file);
-                                      }
-                                    }}
-                                  />
-                                  {customFileUploadFile && (
-                                    <p className="text-xs text-muted-foreground">Selected: {customFileUploadFile.name}</p>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="flex gap-2">
-                                <Button onClick={handleAddCustomFileUpload} className="flex-1">
-                                  Add File Upload
-                                </Button>
-                                <Button 
-                                  variant="outline" 
-                                  onClick={() => {
-                                    setCustomFileUploadName("");
-                                    setCustomFileUploadFile(null);
-                                  }}
-                                >
-                                  Clear
-                                </Button>
-                              </div>
-                            </div>
-                          )}
-
-                          {addResourceMode === 'api' && (
-                            <div className="space-y-4 pt-2">
-                              <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-                                <p className="text-sm text-blue-900 dark:text-blue-100">
-                                  <strong>Add Source via API URL:</strong> Enter an API endpoint URL to connect an external data source. This will create a new source that can fetch data from the provided API.
-                                </p>
-                              </div>
-
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                  <Label htmlFor="api-resource-name">Source Name *</Label>
-                                  <Input
-                                    id="api-resource-name"
-                                    placeholder="e.g., My Custom API, External Data Source"
-                                    value={apiResourceName}
-                                    onChange={(e) => setApiResourceName(e.target.value)}
-                                  />
-                                </div>
-                                <div className="space-y-2">
-                                  <Label htmlFor="api-resource-type">Source Type</Label>
-                                  <Select value={apiResourceType} onValueChange={(value: any) => setApiResourceType(value)}>
-                                    <SelectTrigger id="api-resource-type">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="custom">Custom</SelectItem>
-                                      <SelectItem value="crm">CRM</SelectItem>
-                                      <SelectItem value="marketing">Marketing</SelectItem>
-                                      <SelectItem value="social">Social</SelectItem>
-                                      <SelectItem value="analytics">Analytics</SelectItem>
-                                      <SelectItem value="communication">Communication</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                              </div>
-                              
-                              <div className="space-y-2">
-                                <Label htmlFor="api-endpoint">API Endpoint URL *</Label>
-                                <Input
-                                  id="api-endpoint"
-                                  type="url"
-                                  placeholder="https://api.example.com/v1/data or https://jsonplaceholder.typicode.com/posts"
-                                  value={apiEndpoint}
-                                  onChange={(e) => setApiEndpoint(e.target.value)}
-                                />
-                                <p className="text-xs text-muted-foreground">Enter the full URL of the API endpoint you want to connect to</p>
-                              </div>
-
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                  <Label htmlFor="api-method">HTTP Method</Label>
-                                  <Select value={apiMethod} onValueChange={(value: any) => setApiMethod(value)}>
-                                    <SelectTrigger id="api-method">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="GET">GET</SelectItem>
-                                      <SelectItem value="POST">POST</SelectItem>
-                                      <SelectItem value="PUT">PUT</SelectItem>
-                                      <SelectItem value="PATCH">PATCH</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                                <div className="space-y-2">
-                                  <Label htmlFor="auth-type">Authentication Type</Label>
-                                  <Select value={authType} onValueChange={(value: any) => {
-                                    setAuthType(value);
-                                    // Reset credentials when changing auth type
-                                    if (value !== 'api_key' && value !== 'bearer') {
-                                      setApiKey("");
-                                    }
-                                    if (value !== 'oauth2') {
-                                      setClientId("");
-                                      setClientSecret("");
-                                      setOauthScopes([]);
-                                      setPermissionsApproved(false);
-                                    }
-                                  }}>
-                                    <SelectTrigger id="auth-type">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="none">None</SelectItem>
-                                      <SelectItem value="api_key">API Key</SelectItem>
-                                      <SelectItem value="bearer">Bearer Token</SelectItem>
-                                      <SelectItem value="oauth2">OAuth2</SelectItem>
-                                      <SelectItem value="basic">Basic Auth</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                              </div>
-
-                              {/* API Key / Bearer Token Field */}
-                              {(authType === 'api_key' || authType === 'bearer') && (
-                                <div className="space-y-2">
-                                  <Label htmlFor="api-key">
-                                    {authType === 'api_key' ? 'API Key' : 'Bearer Token'} *
-                                  </Label>
-                                  <Input
-                                    id="api-key"
-                                    type="password"
-                                    placeholder={authType === 'api_key' ? "Enter API key" : "Enter Bearer token"}
-                                    value={apiKey}
-                                    onChange={(e) => setApiKey(e.target.value)}
-                                  />
-                                </div>
-                              )}
-
-                              {/* OAuth2 Fields */}
-                              {authType === 'oauth2' && (
-                                <div className="space-y-4 border rounded-lg p-4 bg-muted/30">
-                                  <div className="flex items-center gap-2">
-                                    <Zap className="h-4 w-4 text-blue-600" />
-                                    <Label className="text-base font-semibold">OAuth2 Configuration</Label>
-                                  </div>
-                                  
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                      <Label htmlFor="client-id">Client ID *</Label>
-                                      <Input
-                                        id="client-id"
-                                        type="text"
-                                        placeholder="Enter OAuth2 Client ID"
-                                        value={clientId}
-                                        onChange={(e) => setClientId(e.target.value)}
-                                      />
-                                    </div>
-                                    <div className="space-y-2">
-                                      <Label htmlFor="client-secret">Client Secret *</Label>
-                                      <Input
-                                        id="client-secret"
-                                        type="password"
-                                        placeholder="Enter OAuth2 Client Secret"
-                                        value={clientSecret}
-                                        onChange={(e) => setClientSecret(e.target.value)}
-                                      />
-                                    </div>
-                                  </div>
-
-                                  <div className="space-y-2">
-                                    <Label>Requested Permissions (Scopes)</Label>
-                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                                      {availableScopes.map((scope) => (
-                                        <div key={scope} className="flex items-center space-x-2">
-                                          <Checkbox
-                                            id={`scope-${scope}`}
-                                            checked={oauthScopes.includes(scope)}
-                                            onCheckedChange={(checked) => {
-                                              if (checked) {
-                                                setOauthScopes([...oauthScopes, scope]);
-                                              } else {
-                                                setOauthScopes(oauthScopes.filter(s => s !== scope));
-                                              }
-                                            }}
-                                          />
-                                          <Label
-                                            htmlFor={`scope-${scope}`}
-                                            className="text-sm font-normal cursor-pointer"
-                                          >
-                                            {scope}
-                                          </Label>
-                                        </div>
-                                      ))}
-                                    </div>
-                                    <p className="text-xs text-muted-foreground">
-                                      Select the permissions your application needs to access the API
-                                    </p>
-                                  </div>
-
-                                  <div className="space-y-2">
-                                    <div className="flex items-start space-x-2">
-                                      <Checkbox
-                                        id="permissions-approval"
-                                        checked={permissionsApproved}
-                                        onCheckedChange={(checked) => setPermissionsApproved(checked === true)}
-                                      />
-                                      <div className="flex-1">
-                                        <Label
-                                          htmlFor="permissions-approval"
-                                          className="text-sm font-normal cursor-pointer"
-                                        >
-                                          I approve the requested permissions and authorize token exchange
-                                        </Label>
-                                        <p className="text-xs text-muted-foreground mt-1">
-                                          By checking this, you authorize the backend to exchange credentials for access tokens on your behalf.
-                                        </p>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
-
-                              <div className="space-y-2">
-                                <Label htmlFor="api-headers">Custom Headers (JSON, Optional)</Label>
-                                <Textarea
-                                  id="api-headers"
-                                  placeholder='{"X-API-Version": "1.0", "Accept": "application/json"}'
-                                  value={apiHeaders}
-                                  onChange={(e) => setApiHeaders(e.target.value)}
-                                  rows={2}
-                                />
-                                <p className="text-xs text-muted-foreground">Optional: Add custom headers as a JSON object</p>
-                              </div>
-
-                              {['POST', 'PUT', 'PATCH'].includes(apiMethod) && (
-                                <div className="space-y-2">
-                                  <Label htmlFor="api-body">Request Body (JSON, Optional)</Label>
-                                  <Textarea
-                                    id="api-body"
-                                    placeholder='{"key": "value", "filters": {}}'
-                                    value={apiBody}
-                                    onChange={(e) => setApiBody(e.target.value)}
-                                    rows={3}
-                                  />
-                                  <p className="text-xs text-muted-foreground">Optional: Request body as JSON (for POST, PUT, PATCH requests)</p>
-                                </div>
-                              )}
-
-                              <div className="flex gap-2">
-                                <Button 
-                                  onClick={handleTestApiConnection} 
-                                  variant="outline"
-                                  disabled={isTestingApi || !apiEndpoint.trim()}
-                                  className="flex-1"
-                                >
-                                  {isTestingApi ? (
-                                    <>
-                                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                                      Testing...
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Activity className="h-4 w-4 mr-2" />
-                                      Test Connection
-                                    </>
-                                  )}
-                                </Button>
-                                <Button 
-                                  onClick={handleAddApiResource} 
-                                  disabled={!apiResourceName.trim() || !apiEndpoint.trim() || isAddingApiResource}
-                                  className="flex-1"
-                                >
-                                  {isAddingApiResource ? (
-                                    <>
-                                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                                      Connecting...
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Plus className="h-4 w-4 mr-2" />
-                                      Add Source
-                                    </>
-                                  )}
-                                </Button>
-                                <Button 
-                                  variant="outline" 
-                                  onClick={() => {
-                                    setApiResourceName("");
-                                    setApiEndpoint("");
-                                    setApiMethod('GET');
-                                    setApiKey("");
-                                    setApiHeaders("");
-                                    setApiBody("");
-                                    setApiResourceType('custom');
-                                    setAuthType('api_key');
-                                    setClientId("");
-                                    setClientSecret("");
-                                    setOauthScopes([]);
-                                    setPermissionsApproved(false);
-                                  }}
-                                >
-                                  Clear
-                                </Button>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <Card>
-                    <CardContent className="p-4">
-                      <p className="text-sm text-muted-foreground">Total Sources</p>
-                      <p className="text-2xl font-bold">{summary.total}</p>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="p-4">
-                      <p className="text-sm text-muted-foreground">Connected</p>
-                      <div className="flex items-baseline gap-2">
-                        <p className="text-2xl font-bold">{summary.connected}</p>
-                        <Badge variant="outline" className="text-xs">{Math.round(summary.connected / (summary.total || 1) * 100)}%</Badge>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="p-4">
-                      <p className="text-sm text-muted-foreground">Total Records</p>
-                      <p className="text-2xl font-bold">{summary.totalRecords.toLocaleString()}</p>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="p-4">
-                      <p className="text-sm text-muted-foreground">Avg Quality</p>
-                      <p className="text-2xl font-bold">{summary.avgQuality}%</p>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                  <div className="flex flex-1 flex-col sm:flex-row gap-3">
-                    <Input
-                      placeholder="Search sources"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="sm:max-w-xs"
-                    />
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                      <SelectTrigger className="sm:max-w-[180px]">
-                        <SelectValue placeholder="Status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Statuses</SelectItem>
-                        <SelectItem value="connected">Connected</SelectItem>
-                        <SelectItem value="uploaded">Uploaded</SelectItem>
-                        <SelectItem value="syncing">Syncing</SelectItem>
-                        <SelectItem value="processing">Processing</SelectItem>
-                        <SelectItem value="warning">Warning</SelectItem>
-                        <SelectItem value="error">Error</SelectItem>
-                        <SelectItem value="disconnected">Disconnected</SelectItem>
-                        <SelectItem value="empty">Empty</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Select value={typeFilter} onValueChange={setTypeFilter}>
-                      <SelectTrigger className="sm:max-w-[180px]">
-                        <SelectValue placeholder="Type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Types</SelectItem>
-                        <SelectItem value="crm">CRM</SelectItem>
-                        <SelectItem value="marketing">Marketing</SelectItem>
-                        <SelectItem value="social">Social</SelectItem>
-                        <SelectItem value="analytics">Analytics</SelectItem>
-                        <SelectItem value="communication">Communication</SelectItem>
-                        <SelectItem value="file">File</SelectItem>
-                        <SelectItem value="custom">Custom</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {filteredSources.length === 0 ? (
-                  <Card>
-                    <CardContent className="p-8 text-center space-y-4">
-                      {dataSources.length === 0 ? (
-                        <>
-                          <Database className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
-                          <p className="text-lg font-medium">No data sources yet</p>
-                          <p className="text-sm text-muted-foreground">Get started by adding your first data source or file upload.</p>
-                        </>
-                      ) : (
-                        <>
-                          <p className="text-lg font-medium">No sources match these filters</p>
-                          <p className="text-sm text-muted-foreground">Try adjusting search or filters to see results.</p>
-                        </>
-                      )}
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <div className="space-y-4">
-                    {filteredSources.map((source) => {
-                      const SourceIcon = source.icon;
-                      const isExpanded = expandedSources.has(source.id);
-                      
-                      return (
-                        <Card key={source.id}>
-                          <CardContent className="p-6">
-                            <div className="flex items-start justify-between">
-                              <div className="flex items-start gap-4 flex-1">
-                                <div className="p-3 bg-muted rounded-lg">
-                                  <SourceIcon className="h-5 w-5 text-muted-foreground" />
-                                </div>
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-3 mb-2">
-                                    <h3 className="font-semibold text-lg">{source.name}</h3>
-                                    <Badge variant="outline" className="text-xs">{getTypeLabel(source.type)}</Badge>
-                                    {getStatusBadge(source.status)}
-                                    <Badge 
-                                      variant="secondary" 
-                                      className={`text-xs ${getStatusColor(source.status)}`}
-                                    >
-                                      {source.status === 'uploaded' ? 'Uploaded' :
-                                       source.status === 'processing' ? 'Processing' :
-                                       source.status === 'empty' ? 'Empty' :
-                                       source.status}
-                                    </Badge>
-                                  </div>
-                                  {source.description && (
-                                    <p className="text-sm text-muted-foreground mb-3">{source.description}</p>
-                                  )}
-                                  {(source.status === 'connected' || source.status === 'uploaded') && (
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                                      <div>
-                                        <p className="text-muted-foreground">Records</p>
-                                        <p className="font-medium">{source.totalRecords.toLocaleString()}</p>
-                                      </div>
-                                      <div>
-                                        <p className="text-muted-foreground">Last Sync</p>
-                                        <p className="font-medium">{source.lastSyncTime || 'Never'}</p>
-                                      </div>
-                                      <div>
-                                        <p className="text-muted-foreground">Data Quality</p>
-                                        <p className="font-medium">{source.dataQualityScore > 0 ? `${source.dataQualityScore}%` : '-'}</p>
-                                      </div>
-                                      <div>
-                                        <p className="text-muted-foreground">Sync Frequency</p>
-                                        <p className="font-medium capitalize">{source.syncFrequency}</p>
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2 ml-4">
-                                {source.type === 'file' ? (
-                                  <Button
-                                    size="sm"
-                                    variant={source.status === 'empty' ? 'default' : 'outline'}
-                                    onClick={() => handleUpload(source.name)}
-                                  >
-                                    <UploadIcon className="h-4 w-4 mr-2" />
-                                    {source.status === 'uploaded' ? 'Re-upload' : 'Upload'}
-                                  </Button>
-                                ) : (
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => {
-                                      if (source.status === 'connected' || source.status === 'uploaded') {
-                                        // Reconnect logic
-                                        setDataSources(prev => prev.map(s => 
-                                          s.id === source.id 
-                                            ? { ...s, status: 'syncing' as const, lastSyncTime: 'Syncing...' }
-                                            : s
-                                        ));
-                                        setTimeout(() => {
-                                          setDataSources(prev => prev.map(s => 
-                                            s.id === source.id 
-                                              ? { ...s, status: 'connected' as const, lastSyncTime: 'Just now', lastSyncStatus: 'success' as const }
-                                              : s
-                                          ));
-                                          toast({
-                                            title: `${source.name} reconnected`,
-                                            description: "Connection refreshed successfully.",
-                                          });
-                                        }, 1500);
-                                      } else {
-                                        handleConnect(source.name);
-                                      }
-                                    }}
-                                  >
-                                    {source.status === 'connected' ? 'Reconnect' : source.status === 'error' ? 'Retry' : 'Connect'}
-                                  </Button>
-                                )}
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                      <MoreVertical className="h-4 w-4" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuItem onClick={() => toggleExpand(source.id)}>
-                                      {isExpanded ? 'Collapse' : 'Expand'} Details
-                                    </DropdownMenuItem>
-                                    {(source.status === 'connected' || source.status === 'uploaded') && (
-                                      <>
-                                        {source.type !== 'file' && (
-                                          <DropdownMenuItem onClick={() => handleSyncNow(source.name)}>
-                                            <RefreshCw className="h-4 w-4 mr-2" />
-                                            Sync Now
-                                          </DropdownMenuItem>
-                                        )}
-                                        <DropdownMenuItem onClick={() => handleOpenConfigure(source)}>
-                                          <Settings className="h-4 w-4 mr-2" />
-                                          Configure
-                                        </DropdownMenuItem>
-                                      </>
-                                    )}
-                                    <DropdownMenuItem 
-                                      onClick={() => {
-                                        setSourceToDelete(source);
-                                        setDeleteDialogOpen(true);
-                                      }}
-                                      className="text-red-600"
-                                    >
-                                      <Trash2 className="h-4 w-4 mr-2" />
-                                      Delete
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </div>
-                            </div>
-                            
-                            {/* Expanded Details */}
-                            {isExpanded && (
-                              <div className="mt-4 pt-4 border-t space-y-4">
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                  {(source.status === 'connected' || source.status === 'uploaded') && (
-                                    <>
-                                      <div className="space-y-2">
-                                        <p className="text-sm font-semibold">{source.type === 'file' ? 'Upload Details' : 'Connection Details'}</p>
-                                        <div className="text-sm text-muted-foreground space-y-1">
-                                          {source.type !== 'file' && source.account && <p>Account: {source.account}</p>}
-                                          <p>{source.type === 'file' ? 'Uploaded' : 'Connected'}: {source.connectedDate ? new Date(source.connectedDate).toLocaleDateString() : source.lastSyncTime || 'N/A'}</p>
-                                          {source.type !== 'file' && <p>Sync Frequency: {source.syncFrequency}</p>}
-                                        </div>
-                                      </div>
-                                      <div className="space-y-2">
-                                        <p className="text-sm font-semibold">Data Metrics</p>
-                                        <div className="text-sm text-muted-foreground space-y-1">
-                                          <p>Total: {source.totalRecords.toLocaleString()}</p>
-                                          {source.type !== 'file' && (
-                                            <>
-                                              <p>New This Week: {source.newRecordsThisWeek}</p>
-                                              <p>Updated: {source.updatedRecords}</p>
-                                            </>
-                                          )}
-                                        </div>
-                                      </div>
-                                      <div className="space-y-2">
-                                        <p className="text-sm font-semibold">Configuration</p>
-                                        <div className="text-sm text-muted-foreground space-y-1">
-                                          {source.type === 'file' ? (
-                                            <>
-                                              <p>Files: {source.objectsSynced.length}</p>
-                                              <p>Fields: {source.fieldsMapped}</p>
-                                            </>
-                                          ) : (
-                                            <>
-                                              <p>Objects: {source.objectsSynced.length}</p>
-                                              <p>Fields: {source.fieldsMapped}</p>
-                                              <p>Filters: {source.filters.length}</p>
-                                            </>
-                                          )}
-                                        </div>
-                                      </div>
-                                    </>
-                                  )}
-                                  {source.status === 'error' && source.error && (
-                                    <div className="space-y-2">
-                                      <p className="text-sm font-semibold text-red-600">Error Details</p>
-                                      <div className="text-sm text-muted-foreground space-y-1">
-                                        <p>{source.error.message}</p>
-                                        <p>Code: {source.error.code}</p>
-                                        <p>Occurred: {source.error.occurredAt}</p>
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            )}
-                          </CardContent>
-                        </Card>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
+          {/* Customer Profile Tab */}
+          <TabsContent value="customer-profile">
+            <Card>
+              <CardContent className="pt-6">
+                <ICPManager />
+              </CardContent>
+            </Card>
           </TabsContent>
 
-          {/* Advanced Inputs Tab */}
-          <TabsContent value="advanced">
-            <Accordion type="multiple" className="space-y-4">
-              <AccordionItem value="buying-committee">
-                <AccordionTrigger className="text-lg font-medium">
-                  Buying Committee Mapping
-                </AccordionTrigger>
-                <AccordionContent>
-                  <Card>
-                    <CardContent className="p-4 space-y-4">
-                      <Label>Select typical roles in your buying process</Label>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                        {["Decision Maker", "Influencer", "Blocker", "Champion", "Budget Holder", "Technical Evaluator"].map((role) => (
-                          <Label key={role} className="flex items-center gap-2 cursor-pointer p-2 rounded border hover:bg-muted">
-                            <input type="checkbox" className="rounded" />
-                            {role}
-                          </Label>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="priorities">
-                <AccordionTrigger className="text-lg font-medium">
-                  Strategic Priorities
-                </AccordionTrigger>
-                <AccordionContent>
-                  <Card>
-                    <CardContent className="p-4 space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="business-goals">Primary Business Goals</Label>
-                        <Textarea id="business-goals" placeholder="e.g., Increase revenue by 40%, expand into new markets..." />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="pain-points">Key Pain Points We Solve</Label>
-                        <Textarea id="pain-points" placeholder="e.g., Manual processes, data silos, compliance challenges..." />
-                      </div>
-                    </CardContent>
-                  </Card>
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="positioning">
-                <AccordionTrigger className="text-lg font-medium">
-                  Market Positioning
-                </AccordionTrigger>
-                <AccordionContent>
-                  <Card>
-                    <CardContent className="p-4 space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="target-segments">Target Segments (Include)</Label>
-                          <Textarea id="target-segments" placeholder="e.g., Mid-market SaaS companies, Financial services..." />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="exclude-segments">Exclude Segments</Label>
-                          <Textarea id="exclude-segments" placeholder="e.g., Startups under 50 employees, Government..." />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="compliance">
-                <AccordionTrigger className="text-lg font-medium">
-                  Compliance & Constraints
-                </AccordionTrigger>
-                <AccordionContent>
-                  <Card>
-                    <CardContent className="p-4 space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="compliance-reqs">Compliance Requirements</Label>
-                        <Textarea id="compliance-reqs" placeholder="e.g., GDPR, HIPAA, SOC2..." />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="messaging-constraints">Messaging Constraints</Label>
-                        <Textarea id="messaging-constraints" placeholder="e.g., Avoid certain terms, required disclaimers..." />
-                      </div>
-                    </CardContent>
-                  </Card>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-
-            <div className="sticky bottom-0 bg-background border-t pt-4 pb-4">
-              <Button className="w-full md:w-auto" onClick={handleSave}>
-                Save & Apply Configuration
-              </Button>
-            </div>
+          {/* Data Sources Tab */}
+          <TabsContent value="sources">
+            <DataSourcesManager onNavigateToCompanyProfile={() => setActiveTab("profile")} />
           </TabsContent>
         </Tabs>
 
