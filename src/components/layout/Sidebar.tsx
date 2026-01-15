@@ -369,8 +369,8 @@ const navItems: NavItem[] = [
   { icon: Search, label: "Scout", href: "/market-research" },
   { icon: Users, label: "Profiler", href: "/customers" },
   { icon: FileText, label: "Strategist", href: "/deals" },
-  // { icon: Calendar, label: "Activator", href: "/calendar" }, // Commented out
-  // { icon: Presentation, label: "Presenter", href: "/reports" }, // Commented out
+  { icon: Calendar, label: "Activator", href: "/calendar" },
+  { icon: Presentation, label: "Presenter", href: "/reports" },
   { icon: BarChart, label: "Reports", href: "/insights" },
   { icon: Settings, label: "Settings", href: "/settings" },
 ];
@@ -386,6 +386,9 @@ export function Sidebar() {
   const [aiTeamOpen, setAiTeamOpen] = useState(() => {
     // Check if there's a session-based state (not persistent across page reloads)
     return sessionStorage.getItem('aiTeamDropdownOpen') === 'true';
+  });
+  const [signalsOpen, setSignalsOpen] = useState(() => {
+    return sessionStorage.getItem('signalsDropdownOpen') === 'true';
   });
   const location = useLocation();
 
@@ -411,16 +414,38 @@ export function Sidebar() {
     return name.substring(0, 2).toUpperCase();
   };
 
-  const handleAITeamTextClick = () => {
-    navigate("/agent-hub?view=ai-team");
-  };
-
-  const handleDropdownToggle = () => {
+  const handleAITeamClick = (e: React.MouseEvent) => {
+    // Prevent navigation, only toggle dropdown
+    e.preventDefault();
     const newState = !aiTeamOpen;
     setAiTeamOpen(newState);
     // Store in sessionStorage to persist during navigation but not across page reloads
     sessionStorage.setItem('aiTeamDropdownOpen', newState.toString());
   };
+
+  const handleSignalsDropdownToggle = () => {
+    const newState = !signalsOpen;
+    setSignalsOpen(newState);
+    sessionStorage.setItem('signalsDropdownOpen', newState.toString());
+  };
+
+  const handleSignalsClick = () => {
+    // Navigate to signals page and open dropdown
+    navigate("/signals");
+    if (!signalsOpen) {
+      setSignalsOpen(true);
+      sessionStorage.setItem('signalsDropdownOpen', 'true');
+    }
+    handleLinkClick();
+  };
+
+  // Auto-open Signals dropdown when on signals or artifacts page
+  useEffect(() => {
+    if (location.pathname === "/signals" || location.pathname === "/artifacts") {
+      setSignalsOpen(true);
+      sessionStorage.setItem('signalsDropdownOpen', 'true');
+    }
+  }, [location.pathname]);
 
   const handleLinkClick = () => {
     // Close mobile sidebar when a link is clicked
@@ -481,6 +506,62 @@ export function Sidebar() {
             </Link>
           </li>
           
+          {/* Signals Section - Manual Dropdown Control */}
+          {!isCollapsed && (
+            <li>
+              <div className="mx-2">
+                <div 
+                  className={cn(
+                    "flex items-center px-4 py-3 text-gray-700 hover:bg-sales-gray hover:text-sales-blue rounded-lg transition-colors",
+                    (location.pathname === "/signals" || location.pathname === "/artifacts") && "bg-blue-50 text-sales-blue"
+                  )}
+                >
+                  <Zap className="h-5 w-5" />
+                  <span 
+                    className="ml-3 flex-1 cursor-pointer"
+                    onClick={handleSignalsClick}
+                  >
+                    Signals
+                  </span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSignalsDropdownToggle();
+                    }}
+                    className="p-1 hover:bg-gray-200 rounded transition-colors"
+                  >
+                    {signalsOpen ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+                
+                {/* Signals Dropdown Content */}
+                {signalsOpen && (
+                  <div className="mt-1">
+                    <ul className="space-y-1">
+                      <li>
+                        <Link
+                          to="/artifacts"
+                          onClick={handleLinkClick}
+                          className={cn(
+                            "flex items-center px-4 py-2 text-sm text-gray-600 hover:bg-sales-gray hover:text-sales-blue rounded-lg transition-colors ml-9",
+                            location.pathname === "/artifacts" && "bg-blue-50 text-sales-blue"
+                          )}
+                        >
+                          <Archive className="h-4 w-4" />
+                          <span className="ml-3">Artefacts</span>
+                        </Link>
+                      </li>
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </li>
+          )}
+          
           {/* Dashboard link - Commented out for future use */}
           {/* <li>
             <Link 
@@ -501,19 +582,18 @@ export function Sidebar() {
               <div className="mx-2">
                 <div 
                   className={cn(
-                    "flex items-center px-4 py-3 text-gray-700 hover:bg-sales-gray hover:text-sales-blue rounded-lg transition-colors",
+                    "flex items-center px-4 py-3 text-gray-700 hover:bg-sales-gray hover:text-sales-blue rounded-lg transition-colors cursor-pointer",
                     location.search.includes("view=ai-team") && "bg-blue-50 text-sales-blue"
                   )}
+                  onClick={handleAITeamClick}
                 >
                   <Users className="h-5 w-5" />
-                  <span 
-                    className="ml-3 flex-1 cursor-pointer"
-                    onClick={handleAITeamTextClick}
-                  >
-                    Your AI Team
-                  </span>
+                  <span className="ml-3 flex-1">Your AI Team</span>
                   <button
-                    onClick={handleDropdownToggle}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAITeamClick(e);
+                    }}
                     className="p-1 hover:bg-gray-200 rounded transition-colors"
                   >
                     {aiTeamOpen ? (
@@ -528,7 +608,7 @@ export function Sidebar() {
                 {aiTeamOpen && (
                   <div className="mt-1">
                     <ul className="space-y-1">
-                      {navItems.slice(0, 3).map((item) => (
+                      {navItems.slice(0, 5).map((item) => (
                         <li key={item.label}>
                           <Link
                             to={item.href}
@@ -566,39 +646,39 @@ export function Sidebar() {
             </li>
           )}
 
-          {/* Show AI Team icon when collapsed */}
+          {/* Show Signals icon when collapsed */}
           {collapsed && !isMobile && (
             <li>
               <Link
-                to="/agent-hub?view=ai-team"
+                to="/signals"
                 onClick={handleLinkClick}
                 className={cn(
                   "flex items-center justify-center py-3 text-gray-700 hover:bg-sales-gray hover:text-sales-blue rounded-lg mx-2 transition-colors",
-                  location.search.includes("view=ai-team") && "bg-blue-50 text-sales-blue"
+                  (location.pathname === "/signals" || location.pathname === "/artifacts") && "bg-blue-50 text-sales-blue"
                 )}
               >
-                <Users className="h-5 w-5" />
+                <Zap className="h-5 w-5" />
               </Link>
             </li>
           )}
 
-          {/* Artefacts navigation item */}
-          <li key="artifacts">
-            <Link 
-              to="/artifacts" 
-              onClick={handleLinkClick}
-              className={cn(
-                "flex items-center px-4 py-3 text-gray-700 hover:bg-sales-gray hover:text-sales-blue rounded-lg mx-2 transition-colors",
-                location.pathname === "/artifacts" && "bg-blue-50 text-sales-blue"
-              )}
-            >
-              <Archive className="h-5 w-5" />
-              {!isCollapsed && <span className="ml-3">Artefacts</span>}
-            </Link>
-          </li>
+          {/* Show AI Team icon when collapsed */}
+          {collapsed && !isMobile && (
+            <li>
+              <div
+                onClick={handleAITeamClick}
+                className={cn(
+                  "flex items-center justify-center py-3 text-gray-700 hover:bg-sales-gray hover:text-sales-blue rounded-lg mx-2 transition-colors cursor-pointer",
+                  location.search.includes("view=ai-team") && "bg-blue-50 text-sales-blue"
+                )}
+              >
+                <Users className="h-5 w-5" />
+              </div>
+            </li>
+          )}
 
           {/* Reports moved outside AI Team */}
-          {/* <li key="reports">
+          <li key="reports">
             <Link 
               to="/insights" 
               onClick={handleLinkClick}
@@ -610,7 +690,7 @@ export function Sidebar() {
               <BarChart className="h-5 w-5" />
               {!isCollapsed && <span className="ml-3">Reports</span>}
             </Link>
-          </li> */}
+          </li>
 
 
           {/* Settings navigation item */}

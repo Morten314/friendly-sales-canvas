@@ -90,7 +90,7 @@ export function Header() {
     
     // Check if we're on the Mission Control page
     if (path === '/mission-control') {
-      return 'Configure your AI agents and data sources';
+      return 'Tell Brewra about your business so it can work smarter for you';
     }
     
     // Check if we're on the AI Team view
