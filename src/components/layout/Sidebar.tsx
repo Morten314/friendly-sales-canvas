@@ -373,7 +373,7 @@ const navItems: NavItem[] = [
   { icon: FileText, label: "Strategist", href: "/deals" },
   // { icon: Calendar, label: "Activator", href: "/calendar" }, // Commented out - not constructed yet
   // { icon: Presentation, label: "Presenter", href: "/reports" }, // Commented out - not constructed yet
-  { icon: BarChart, label: "Reports", href: "/insights" },
+  // { icon: BarChart, label: "Reports", href: "/insights" }, // Commented out - hidden from UI for now
   { icon: Settings, label: "Settings", href: "/settings" },
 ];
 
@@ -425,27 +425,28 @@ export function Sidebar() {
     sessionStorage.setItem('aiTeamDropdownOpen', newState.toString());
   };
 
-  const handleSignalsDropdownToggle = () => {
+  const handleSignalsDropdownToggle = (e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
     const newState = !signalsOpen;
     setSignalsOpen(newState);
     sessionStorage.setItem('signalsDropdownOpen', newState.toString());
   };
 
   const handleSignalsClick = () => {
-    // Navigate to signals page and open dropdown
+    // Navigate to signals page only (don't toggle dropdown)
     navigate("/signals");
-    if (!signalsOpen) {
-      setSignalsOpen(true);
-      sessionStorage.setItem('signalsDropdownOpen', 'true');
-    }
     handleLinkClick();
   };
 
   // Auto-open Signals dropdown when on signals or artifacts page
   useEffect(() => {
     if (location.pathname === "/signals" || location.pathname === "/artifacts") {
-      setSignalsOpen(true);
-      sessionStorage.setItem('signalsDropdownOpen', 'true');
+      if (!signalsOpen) {
+        setSignalsOpen(true);
+        sessionStorage.setItem('signalsDropdownOpen', 'true');
+      }
     }
   }, [location.pathname]);
 
@@ -522,10 +523,7 @@ export function Sidebar() {
                   <Zap className="h-5 w-5" />
                   <span className="ml-3 flex-1">Signals</span>
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleSignalsClick();
-                    }}
+                    onClick={handleSignalsDropdownToggle}
                     className="p-1 hover:bg-gray-200 rounded transition-colors"
                   >
                     {signalsOpen ? (
@@ -675,8 +673,8 @@ export function Sidebar() {
             </li>
           )}
 
-          {/* Reports moved outside AI Team */}
-          <li key="reports">
+          {/* Reports moved outside AI Team - Commented out for now */}
+          {/* <li key="reports">
             <Link 
               to="/insights" 
               onClick={handleLinkClick}
@@ -688,7 +686,7 @@ export function Sidebar() {
               <BarChart className="h-5 w-5" />
               {!isCollapsed && <span className="ml-3">Reports</span>}
             </Link>
-          </li>
+          </li> */}
 
 
           {/* Settings navigation item */}
