@@ -99,7 +99,7 @@ const PWAInstallPrompt = ({ variant = 'header' }: PWAInstallPromptProps) => {
       // Check if browser still considers it installable
       // If beforeinstallprompt doesn't fire within a short time, it's likely already installed
       setIsInstalled(true);
-      setShowInstallButton(true); // Always show button
+      setShowInstallButton(true); // Always show button in header
       
       // Still listen for beforeinstallprompt to detect if it's actually not installed
       const checkHandler = (e: Event) => {
@@ -157,7 +157,7 @@ const PWAInstallPrompt = ({ variant = 'header' }: PWAInstallPromptProps) => {
     // Listen for app installed event
     const installedHandler = () => {
       setIsInstalled(true);
-      setShowInstallButton(true); // Keep button visible
+      setShowInstallButton(true); // Keep button visible in header
       setDeferredPrompt(null);
       // Save installation status to localStorage
       localStorage.setItem('pwa-installed', 'true');

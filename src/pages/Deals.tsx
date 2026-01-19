@@ -57,9 +57,10 @@ const Deals = () => {
 
   return (
     <Layout>
-      <div className="animate-fade-in">
-        
-        {isChatOpen && (
+      <div className="animate-fade-in relative">
+        {/* Original Content */}
+        <div>
+          {isChatOpen && (
           <Card className="border-blue-200 bg-blue-50/40 mb-6">
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center gap-2">
@@ -282,6 +283,7 @@ const Deals = () => {
             </div>
           </CardContent>
         </Card>
+        </div>
       </div>
     </Layout>
   );

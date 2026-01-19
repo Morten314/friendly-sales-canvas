@@ -126,8 +126,8 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
       
       if (!currentUser?.uid) {
         console.error('User not authenticated');
-        setErrorData('User not authenticated');
-        setIsLoadingData(false);
+        setError('User not authenticated');
+        setIsLoading(false);
         return;
       }
       

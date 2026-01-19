@@ -1,0 +1,1001 @@
+import React, { useState, useRef, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Plus,
+  Link as LinkIcon,
+  Upload,
+  Database,
+  Trash2,
+  Edit,
+  Globe,
+  FileText,
+  Settings,
+  X,
+  Check,
+  Lock,
+  Building2,
+  ExternalLink,
+} from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { setUserLocalStorage, getUserLocalStorage, removeUserLocalStorage } from "@/utils/cacheUtils";
+
+// Types
+type SourceType = "url" | "file" | "system";
+type SourceStatus = "active" | "failed" | "processing";
+
+interface DataSource {
+  id: string;
+  type: SourceType;
+  name: string;
+  url?: string;
+  fileName?: string;
+  description?: string;
+  tags: string[];
+  status: SourceStatus;
+  createdAt: Date;
+}
+
+interface CompanyProfile {
+  companyName?: string;
+  companyUrl?: string;
+}
+
+// Suggested tags
+const SUGGESTED_TAGS = [
+  "Competitor",
+  "Product",
+  "Pricing",
+  "Messaging",
+  "Customer Proof",
+  "Sales Enablement",
+  "Market Research",
+];
+
+type InlineStep = "type" | "name" | "url" | "file" | "description" | "tags";
+
+interface DataSourcesManagerProps {
+  onNavigateToCompanyProfile?: () => void;
+}
+
+const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCompanyProfile }) => {
+  const { toast } = useToast();
+  const { currentUser } = useAuth();
+  const [dataSources, setDataSources] = useState<DataSource[]>([]);
+  const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Load company profile from localStorage
+  useEffect(() => {
+    const loadCompanyProfile = () => {
+      if (!currentUser?.uid) return;
+      
+      const storageKey = `company_profile_${currentUser.uid}`;
+      const stored = localStorage.getItem(storageKey);
+      
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          setCompanyProfile({
+            companyName: parsed.companyName || "",
+            companyUrl: parsed.companyUrl || "",
+          });
+        } catch (e) {
+          console.error("Failed to parse company profile:", e);
+          setCompanyProfile(null);
+        }
+      } else {
+        setCompanyProfile(null);
+      }
+    };
+
+    loadCompanyProfile();
+
+    // Listen for company profile updates
+    const handleProfileUpdate = () => loadCompanyProfile();
+    window.addEventListener("companyProfileUpdated", handleProfileUpdate);
+    
+    return () => {
+      window.removeEventListener("companyProfileUpdated", handleProfileUpdate);
+    };
+  }, [currentUser?.uid]);
+
+  // Save data sources to backend with retry logic
+  const saveDataSourcesToBackend = async (sourcesToSave: DataSource[], retryCount = 0) => {
+    if (!currentUser?.uid) {
+      console.warn("Cannot save data sources: User not authenticated");
+      // Save to localStorage as fallback
+      try {
+        setUserLocalStorage('dataSources', JSON.stringify(sourcesToSave), currentUser?.uid);
+      } catch (e) {
+        console.error("Failed to save to localStorage:", e);
+      }
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      // First, fetch existing company and customer profile data to preserve it
+      let existingCompanyData = {};
+      let existingCustomerProfile = {};
+      try {
+        const getResponse = await fetch(`/api/profile/company?user_id=${currentUser.uid}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+        
+        if (getResponse.ok) {
+          const existingData = await getResponse.json();
+          // Preserve all existing company profile fields
+          existingCompanyData = {
+            company_name: existingData.company_name,
+            headquarters: existingData.headquarters,
+            employee_size: existingData.employee_size,
+            industry: existingData.industry,
+            revenue_band: existingData.revenue_band,
+            gtm_model: existingData.gtm_model,
+            region_focus: existingData.region_focus,
+            typical_deal_size: existingData.typical_deal_size,
+            company_url: existingData.company_url,
+            key_buyer_persona: existingData.key_buyer_persona,
+            // Also preserve any other fields that might exist
+            ...Object.fromEntries(
+              Object.entries(existingData).filter(([key]) => 
+                !key.startsWith('customer_profile') && 
+                !key.startsWith('data_sources') &&
+                !['user_id', 'id', 'created_at', 'updated_at'].includes(key)
+              )
+            )
+          };
+          // Preserve customer profile if it exists
+          if (existingData.customer_profile) {
+            existingCustomerProfile = existingData.customer_profile;
+          }
+          console.log("Preserving existing company and customer profile data");
+        }
+      } catch (fetchError) {
+        console.warn("Could not fetch existing profile data, proceeding with data sources only:", fetchError);
+      }
+
+      // Always save to localStorage first as backup
+      try {
+        setUserLocalStorage('dataSources', JSON.stringify(sourcesToSave), currentUser.uid);
+        setUserLocalStorage('dataSources_pending', JSON.stringify(sourcesToSave), currentUser.uid);
+      } catch (e) {
+        console.warn("Failed to save to localStorage:", e);
+      }
+
+      // Prepare payload with data sources, preserving existing company and customer profile fields
+      const payload = {
+        user_id: currentUser.uid,
+        profile_type: "company",
+        ...existingCompanyData, // Preserve existing company profile fields
+        ...(Object.keys(existingCustomerProfile).length > 0 && { customer_profile: existingCustomerProfile }), // Preserve customer profile if exists
+        data_sources: {
+          sources: sourcesToSave.map(source => ({
+            id: source.id,
+            type: source.type,
+            name: source.name,
+            url: source.url,
+            file_name: source.fileName,
+            description: source.description,
+            tags: source.tags,
+            status: source.status,
+            created_at: source.createdAt instanceof Date ? source.createdAt.toISOString() : source.createdAt,
+          })),
+        },
+      };
+
+      console.log("=== DATA SOURCES MANAGER: Saving data sources to backend ===");
+      console.log("Payload:", payload);
+
+      const apiUrl = `/api/profile/company?user_id=${currentUser.uid}`;
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("API Error:", response.status, errorText);
+        
+        // Retry for 500 errors (server/database issues) up to 2 times
+        if (response.status === 500 && retryCount < 2) {
+          console.log(`Retrying save (attempt ${retryCount + 1}/2)...`);
+          await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1))); // Exponential backoff
+          return saveDataSourcesToBackend(sourcesToSave, retryCount + 1);
+        }
+        
+        throw new Error(`Failed to save data sources: ${response.status} - ${errorText}`);
+      }
+
+      const data = await response.json();
+      console.log("Data sources saved successfully:", data);
+      
+      // Clear pending flag on success
+      try {
+        removeUserLocalStorage('dataSources_pending', currentUser.uid);
+      } catch (e) {
+        console.warn("Failed to clear pending flag:", e);
+      }
+    } catch (error) {
+      console.error("Error saving data sources:", error);
+      
+      // Determine error message based on error type
+      const isNetworkError = error instanceof TypeError && error.message.includes('fetch');
+      const isServerError = error instanceof Error && error.message.includes('500');
+      
+      if (isServerError || isNetworkError) {
+        toast({
+          title: "Backend temporarily unavailable",
+          description: "Your data sources have been saved locally and will sync automatically when the backend is available.",
+          variant: "default",
+        });
+      } else {
+        toast({
+          title: "Save warning",
+          description: "Data sources saved locally but failed to sync with backend. Please try again later.",
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Load data sources from backend
+  const loadDataSourcesFromBackend = async () => {
+    if (!currentUser?.uid) {
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const apiUrl = `/api/profile/company?user_id=${currentUser.uid}`;
+      const response = await fetch(apiUrl, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        console.log("No existing data sources found in API");
+        return;
+      }
+
+      const data = await response.json();
+      
+      // Check if data_sources exists in the response
+      if (data.data_sources && data.data_sources.sources && Array.isArray(data.data_sources.sources)) {
+        const loadedSources: DataSource[] = data.data_sources.sources.map((source: any) => ({
+          id: source.id || `source-${Date.now()}-${Math.random()}`,
+          type: (source.type || "url") as SourceType,
+          name: source.name || "",
+          url: source.url || source.url,
+          fileName: source.file_name || source.fileName,
+          description: source.description || "",
+          tags: Array.isArray(source.tags) ? source.tags : [],
+          status: (source.status || "active") as SourceStatus,
+          createdAt: source.created_at ? new Date(source.created_at) : (source.createdAt ? new Date(source.createdAt) : new Date()),
+        }));
+
+        setDataSources(loadedSources);
+        console.log("Data sources loaded from backend:", loadedSources);
+      }
+    } catch (error) {
+      console.error("Error loading data sources:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Load data sources on mount
+  useEffect(() => {
+    if (currentUser?.uid) {
+      loadDataSourcesFromBackend();
+      
+      // Check for pending saves and retry them
+      const retryPendingSave = async () => {
+        try {
+          const pendingData = getUserLocalStorage('dataSources_pending', currentUser.uid);
+          if (pendingData) {
+            const pendingSources = JSON.parse(pendingData);
+            console.log("Found pending data sources save, retrying...");
+            if (Array.isArray(pendingSources) && pendingSources.length > 0) {
+              await saveDataSourcesToBackend(pendingSources, 0);
+            }
+          }
+        } catch (error) {
+          console.error("Error retrying pending save:", error);
+        }
+      };
+      
+      // Retry after a short delay to allow backend to recover
+      const retryTimer = setTimeout(retryPendingSave, 5000);
+      return () => clearTimeout(retryTimer);
+    }
+  }, [currentUser?.uid]);
+  
+  // Inline editing state
+  const [isAddingInline, setIsAddingInline] = useState(false);
+  const [inlineStep, setInlineStep] = useState<InlineStep>("type");
+  const [selectedType, setSelectedType] = useState<SourceType | "">("");
+  const [sourceName, setSourceName] = useState("");
+  const [sourceUrl, setSourceUrl] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [customTag, setCustomTag] = useState("");
+  const [sourceDescription, setSourceDescription] = useState("");
+  
+  // Edit state
+  const [editingId, setEditingId] = useState<string | null>(null);
+  
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  const urlInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Focus management
+  useEffect(() => {
+    if (inlineStep === "name" && nameInputRef.current) {
+      nameInputRef.current.focus();
+    } else if (inlineStep === "url" && urlInputRef.current) {
+      urlInputRef.current.focus();
+    }
+  }, [inlineStep]);
+
+  const resetInlineForm = () => {
+    setIsAddingInline(false);
+    setInlineStep("type");
+    setSelectedType("");
+    setSourceName("");
+    setSourceUrl("");
+    setSelectedFile(null);
+    setSelectedTags([]);
+    setCustomTag("");
+    setSourceDescription("");
+    setEditingId(null);
+  };
+
+  const handleStartAdd = () => {
+    resetInlineForm();
+    setIsAddingInline(true);
+  };
+
+  const handleCancelInline = () => {
+    resetInlineForm();
+  };
+
+  const handleTypeSelect = (type: SourceType) => {
+    setSelectedType(type);
+    if (type === "system") {
+      // System is disabled - show message but don't proceed
+    } else {
+      setInlineStep("name");
+    }
+  };
+
+  const handleNameKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && sourceName.trim()) {
+      e.preventDefault();
+      setInlineStep(selectedType === "url" ? "url" : "file");
+    } else if (e.key === "Escape") {
+      handleCancelInline();
+    }
+  };
+
+  const handleUrlKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && sourceUrl.trim()) {
+      e.preventDefault();
+      setInlineStep("description");
+    } else if (e.key === "Escape") {
+      handleCancelInline();
+    }
+  };
+
+  const handleDescriptionKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      setInlineStep("tags");
+    } else if (e.key === "Escape") {
+      handleCancelInline();
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      setInlineStep("description");
+    }
+  };
+
+  const handleTagToggle = (tag: string) => {
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
+  };
+
+  const handleAddCustomTag = () => {
+    if (customTag.trim() && !selectedTags.includes(customTag.trim())) {
+      setSelectedTags((prev) => [...prev, customTag.trim()]);
+      setCustomTag("");
+    }
+  };
+
+  const handleCustomTagKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleAddCustomTag();
+    } else if (e.key === "Escape") {
+      handleCancelInline();
+    }
+  };
+
+  const handleSaveSource = async () => {
+    if (!sourceName.trim()) {
+      toast({
+        title: "Name required",
+        description: "Please enter a source name.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (selectedType === "url" && !sourceUrl.trim()) {
+      toast({
+        title: "URL required",
+        description: "Please enter a website URL.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (selectedType === "file" && !selectedFile) {
+      toast({
+        title: "File required",
+        description: "Please upload a file.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const newSource: DataSource = {
+      id: editingId || `source-${Date.now()}`,
+      type: selectedType as SourceType,
+      name: sourceName.trim(),
+      url: selectedType === "url" ? sourceUrl.trim() : undefined,
+      fileName: selectedType === "file" ? selectedFile?.name : undefined,
+      description: sourceDescription.trim() || undefined,
+      tags: selectedTags,
+      status: "processing",
+      createdAt: new Date(),
+    };
+
+    let updatedSources: DataSource[];
+    if (editingId) {
+      updatedSources = dataSources.map((s) => (s.id === editingId ? newSource : s));
+      setDataSources(updatedSources);
+      toast({
+        title: "Source updated",
+        description: `${sourceName} has been updated.`,
+      });
+    } else {
+      updatedSources = [...dataSources, newSource];
+      setDataSources(updatedSources);
+      toast({
+        title: "Source added",
+        description: `${sourceName} is being processed.`,
+      });
+      
+      // Dispatch event to notify MissionControl that data source is added
+      window.dispatchEvent(new CustomEvent('dataSourceAdded'));
+    }
+
+    // Save to backend
+    await saveDataSourcesToBackend(updatedSources);
+
+    // Simulate processing -> active/failed status
+    setTimeout(() => {
+      setDataSources((prev) => {
+        const updated = prev.map((s) =>
+          s.id === newSource.id
+            ? { ...s, status: Math.random() > 0.1 ? "active" : "failed" as SourceStatus }
+            : s
+        );
+        // Save updated status to backend
+        saveDataSourcesToBackend(updated);
+        return updated;
+      });
+    }, 2000);
+
+    resetInlineForm();
+  };
+
+  const handleEditSource = (source: DataSource) => {
+    setEditingId(source.id);
+    setSelectedType(source.type);
+    setSourceName(source.name);
+    setSourceUrl(source.url || "");
+    setSourceDescription(source.description || "");
+    setSelectedTags(source.tags);
+    setInlineStep("tags");
+    setIsAddingInline(true);
+  };
+
+  const handleDeleteSource = async (id: string) => {
+    const updatedSources = dataSources.filter((s) => s.id !== id);
+    setDataSources(updatedSources);
+    
+    // Save to backend
+    await saveDataSourcesToBackend(updatedSources);
+    
+    toast({
+      title: "Source deleted",
+      description: "The data source has been removed.",
+    });
+  };
+
+  const getStatusBadge = (status: SourceStatus) => {
+    switch (status) {
+      case "active":
+        return (
+          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-400 dark:border-green-800">
+            🟢 Active
+          </Badge>
+        );
+      case "failed":
+        return (
+          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 dark:bg-red-950 dark:text-red-400 dark:border-red-800">
+            🔴 Failed
+          </Badge>
+        );
+      case "processing":
+        return (
+          <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-950 dark:text-yellow-400 dark:border-yellow-800">
+            🟡 Processing
+          </Badge>
+        );
+    }
+  };
+
+  const getTypeIcon = (type: SourceType) => {
+    switch (type) {
+      case "url":
+        return <Globe className="h-4 w-4 text-muted-foreground" />;
+      case "file":
+        return <FileText className="h-4 w-4 text-muted-foreground" />;
+      case "system":
+        return <Settings className="h-4 w-4 text-muted-foreground" />;
+    }
+  };
+
+  const getTypeLabel = (type: SourceType) => {
+    switch (type) {
+      case "url":
+        return "URL";
+      case "file":
+        return "File";
+      case "system":
+        return "System";
+    }
+  };
+
+  const canSave = 
+    selectedType && 
+    selectedType !== "system" && 
+    sourceName.trim() && 
+    (selectedType === "url" ? sourceUrl.trim() : selectedFile) &&
+    inlineStep === "tags";
+
+  // Render the inline editing row
+  const renderInlineEditRow = () => {
+    if (!isAddingInline) return null;
+
+    return (
+      <TableRow className="bg-muted/30 border-b-2 border-primary/20">
+        {/* Type Cell */}
+        <TableCell className="py-3">
+          <Select
+            value={selectedType}
+            onValueChange={(value) => handleTypeSelect(value as SourceType)}
+          >
+            <SelectTrigger className="w-[130px] h-9 text-sm">
+              <SelectValue placeholder="Select type" />
+            </SelectTrigger>
+            <SelectContent className="bg-popover z-50">
+              <SelectItem value="url">
+                <div className="flex items-center gap-2">
+                  <LinkIcon className="h-3.5 w-3.5" />
+                  <span>Add URL</span>
+                </div>
+              </SelectItem>
+              <SelectItem value="file">
+                <div className="flex items-center gap-2">
+                  <Upload className="h-3.5 w-3.5" />
+                  <span>Upload File</span>
+                </div>
+              </SelectItem>
+              <SelectItem value="system" disabled>
+                <div className="flex items-center gap-2 opacity-50">
+                  <Database className="h-3.5 w-3.5" />
+                  <span>Connect System</span>
+                </div>
+              </SelectItem>
+            </SelectContent>
+          </Select>
+          {selectedType === "system" && (
+            <p className="text-xs text-muted-foreground mt-1.5 max-w-[140px]">
+              Coming soon
+            </p>
+          )}
+        </TableCell>
+
+        {/* Name Cell */}
+        <TableCell className="py-3">
+          {inlineStep === "type" && selectedType && selectedType !== "system" ? (
+            <span className="text-sm text-muted-foreground italic">
+              Select type first...
+            </span>
+          ) : inlineStep !== "type" ? (
+            <div className="space-y-1">
+              <Input
+                ref={nameInputRef}
+                placeholder="e.g., Competitor Pricing Page"
+                value={sourceName}
+                onChange={(e) => setSourceName(e.target.value)}
+                onKeyDown={handleNameKeyDown}
+                className="h-9 text-sm"
+              />
+              {inlineStep === "name" && sourceName.trim() && (
+                <p className="text-xs text-muted-foreground">Press Enter to continue</p>
+              )}
+            </div>
+          ) : (
+            <span className="text-sm text-muted-foreground">—</span>
+          )}
+        </TableCell>
+
+        {/* URL Cell */}
+        <TableCell className="py-3 hidden md:table-cell">
+          {selectedType === "url" && inlineStep === "url" ? (
+            <div className="space-y-1">
+              <Input
+                ref={urlInputRef}
+                type="url"
+                placeholder="https://example.com"
+                value={sourceUrl}
+                onChange={(e) => setSourceUrl(e.target.value)}
+                onKeyDown={handleUrlKeyDown}
+                className="h-9 text-sm max-w-xs"
+              />
+              {sourceUrl.trim() && (
+                <p className="text-xs text-muted-foreground">Press Enter to continue</p>
+              )}
+            </div>
+          ) : selectedType === "url" && (inlineStep === "description" || inlineStep === "tags") ? (
+            <span className="text-sm truncate max-w-[200px] block">{sourceUrl || "—"}</span>
+          ) : selectedType === "file" && inlineStep === "file" ? (
+            <div className="flex items-center gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                onChange={handleFileChange}
+                className="hidden"
+                id="inline-file-upload"
+                accept=".pdf,.docx,.pptx,.csv,.xlsx"
+              />
+              <label
+                htmlFor="inline-file-upload"
+                className="inline-flex items-center gap-2 px-3 py-1.5 border border-dashed rounded-md cursor-pointer hover:bg-muted/50 transition-colors text-sm"
+              >
+                <Upload className="h-4 w-4 text-muted-foreground" />
+                {selectedFile ? (
+                  <span className="text-foreground">{selectedFile.name}</span>
+                ) : (
+                  <span className="text-muted-foreground">Browse files...</span>
+                )}
+              </label>
+              <span className="text-xs text-muted-foreground">PDF, DOCX, PPT, CSV</span>
+            </div>
+          ) : selectedType === "file" && (inlineStep === "description" || inlineStep === "tags") ? (
+            <span className="text-sm">{selectedFile?.name || "—"}</span>
+          ) : (
+            <span className="text-sm text-muted-foreground">—</span>
+          )}
+        </TableCell>
+
+        {/* Description Cell */}
+        <TableCell className="py-3 hidden lg:table-cell">
+          {inlineStep === "description" ? (
+            <div className="space-y-1">
+              <Input
+                placeholder="Brief description..."
+                value={sourceDescription}
+                onChange={(e) => setSourceDescription(e.target.value)}
+                onKeyDown={handleDescriptionKeyDown}
+                className="h-9 text-sm max-w-xs"
+                autoFocus
+              />
+              <p className="text-xs text-muted-foreground">Press Enter to continue</p>
+            </div>
+          ) : inlineStep === "tags" ? (
+            <span className="text-sm">{sourceDescription || "—"}</span>
+          ) : (
+            <span className="text-sm text-muted-foreground">—</span>
+          )}
+        </TableCell>
+
+        {/* Tags Cell */}
+        <TableCell className="py-3 hidden lg:table-cell">
+          {inlineStep === "tags" ? (
+            <div className="space-y-2">
+              <div className="flex flex-wrap gap-1.5">
+                {SUGGESTED_TAGS.map((tag) => (
+                  <Badge
+                    key={tag}
+                    variant={selectedTags.includes(tag) ? "default" : "outline"}
+                    className="cursor-pointer text-xs h-6"
+                    onClick={() => handleTagToggle(tag)}
+                  >
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+              <div className="flex items-center gap-2">
+                <Input
+                  placeholder="Custom tag..."
+                  value={customTag}
+                  onChange={(e) => setCustomTag(e.target.value)}
+                  onKeyDown={handleCustomTagKeyDown}
+                  className="h-8 text-sm w-32"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleAddCustomTag}
+                  disabled={!customTag.trim()}
+                  className="h-8 px-2"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+              {selectedTags.filter((t) => !SUGGESTED_TAGS.includes(t)).length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {selectedTags
+                    .filter((tag) => !SUGGESTED_TAGS.includes(tag))
+                    .map((tag) => (
+                      <Badge key={tag} variant="secondary" className="text-xs gap-1">
+                        {tag}
+                        <X
+                          className="h-3 w-3 cursor-pointer"
+                          onClick={() => handleTagToggle(tag)}
+                        />
+                      </Badge>
+                    ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <span className="text-sm text-muted-foreground">—</span>
+          )}
+        </TableCell>
+
+        {/* Status Cell */}
+        <TableCell className="py-3">
+          <span className="text-sm text-muted-foreground italic">Unsaved</span>
+        </TableCell>
+
+        {/* Actions Cell */}
+        <TableCell className="py-3 text-right">
+          <div className="flex items-center justify-end gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-950"
+              onClick={handleSaveSource}
+              disabled={!canSave}
+              title="Save"
+            >
+              <Check className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-muted-foreground hover:text-foreground"
+              onClick={handleCancelInline}
+              title="Cancel"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </TableCell>
+      </TableRow>
+    );
+  };
+
+  const showTable = dataSources.length > 0 || isAddingInline;
+
+  return (
+    <div className="space-y-6">
+      {/* Company Context Bar */}
+      <div className="flex items-center justify-between px-4 py-3 bg-muted/40 border rounded-lg">
+        <div className="flex items-center gap-3">
+          <Building2 className="h-5 w-5 text-muted-foreground" />
+          <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-wide">Company Context</p>
+            <div className="flex items-center gap-2 mt-0.5">
+              <span className="font-medium">
+                {companyProfile?.companyName || "Brewra"}
+              </span>
+              <span className="text-muted-foreground">•</span>
+              <span className="text-sm text-muted-foreground">
+                {companyProfile?.companyUrl || "www.brewra.com"}
+              </span>
+            </div>
+          </div>
+        </div>
+        <button 
+          onClick={onNavigateToCompanyProfile}
+          className="text-xs text-primary hover:underline flex items-center gap-1"
+        >
+          Edit Company Profile
+          <ExternalLink className="h-3 w-3" />
+        </button>
+      </div>
+
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-semibold">Data Sources</h2>
+          <p className="text-sm text-muted-foreground">
+            Manage sources that help agents understand your business context
+          </p>
+        </div>
+        {dataSources.length > 0 && !isAddingInline && (
+          <Button 
+            onClick={handleStartAdd} 
+            className="gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            Add Data Source
+          </Button>
+        )}
+      </div>
+
+      {/* Empty State */}
+      {!showTable && (
+        <div className="flex flex-col items-center justify-center py-16 px-4 border-2 border-dashed rounded-lg bg-muted/20">
+          <Database className="h-12 w-12 text-muted-foreground mb-4" />
+          <h3 className="text-lg font-medium mb-2">No data sources added yet</h3>
+          <p className="text-sm text-muted-foreground text-center max-w-md mb-6">
+            Add sources to help agents understand your business context.
+          </p>
+          <Button onClick={handleStartAdd} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Add Data Source
+          </Button>
+        </div>
+      )}
+
+      {/* Table (visible only when there are sources OR adding inline) */}
+      {showTable && (
+        <div className="border rounded-lg overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/50">
+                <TableHead className="w-[130px]">Type</TableHead>
+                <TableHead className="w-[180px]">Name</TableHead>
+                <TableHead className="hidden md:table-cell w-[200px]">URL / File</TableHead>
+                <TableHead className="hidden lg:table-cell w-[150px]">Description</TableHead>
+                <TableHead className="hidden lg:table-cell">Tags</TableHead>
+                <TableHead className="w-[110px]">Status</TableHead>
+                <TableHead className="w-[90px] text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {/* Inline Add Row (at top) */}
+              {renderInlineEditRow()}
+              
+              {/* Existing Sources */}
+              {dataSources.map((source) => (
+                <TableRow key={source.id}>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      {getTypeIcon(source.type)}
+                      <span className="text-sm">{getTypeLabel(source.type)}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="font-medium">{source.name}</TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    {source.type === "url" && source.url ? (
+                      <span className="text-sm truncate max-w-[180px] block" title={source.url}>
+                        {source.url}
+                      </span>
+                    ) : source.type === "file" && source.fileName ? (
+                      <span className="text-sm">{source.fileName}</span>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell">
+                    <span className="text-sm text-muted-foreground">
+                      {source.description || "—"}
+                    </span>
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell">
+                    {source.tags.length > 0 ? (
+                      <div 
+                        className="w-[180px] border rounded-md bg-muted/30 px-2 py-1.5 overflow-x-auto"
+                        title={source.tags.length > 2 ? "Scroll to view all tags" : undefined}
+                      >
+                        <div className="flex gap-1 whitespace-nowrap">
+                          {source.tags.map((tag) => (
+                            <Badge key={tag} variant="secondary" className="text-xs shrink-0">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell>{getStatusBadge(source.status)}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => handleEditSource(source)}
+                        disabled={isAddingInline}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:text-destructive"
+                        onClick={() => handleDeleteSource(source.id)}
+                        disabled={isAddingInline}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default DataSourcesManager;

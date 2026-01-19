@@ -19,9 +19,15 @@ export const useAuth = () => {
             firebaseAuth.currentUser, 
             selectedTenant.id
           );
-          setJwtToken(token);
+          // Token generation is optional - null is acceptable
+          if (token) {
+            setJwtToken(token);
+          } else {
+            console.log('JWT token generation skipped (endpoint not available). This is optional.');
+          }
         } catch (error) {
-          console.error('Failed to generate JWT token:', error);
+          // JWT is optional - don't log as error, just warn
+          console.warn('JWT token generation failed (optional):', error);
         } finally {
           setIsGeneratingToken(false);
         }

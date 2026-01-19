@@ -90,7 +90,7 @@ export function Header() {
     
     // Check if we're on the Mission Control page
     if (path === '/mission-control') {
-      return 'Configure your AI agents and data sources';
+      return 'Tell Brewra about your business so it can work smarter for you';
     }
     
     // Check if we're on the AI Team view
@@ -354,8 +354,8 @@ export function Header() {
           </>
         )}
 
-        {/* Strategist page buttons */}
-        {window.location.pathname === '/deals' && (
+        {/* Strategist page buttons - commented out */}
+        {/* {window.location.pathname === '/deals' && (
           <>
             {isMobile ? (
               <DropdownMenu>
@@ -401,7 +401,7 @@ export function Header() {
               </>
             )}
           </>
-        )}
+        )} */}
 
         {/* Presenter page buttons */}
         {window.location.pathname === '/reports' && (
@@ -484,13 +484,13 @@ export function Header() {
            </>
          )}
 
-         {/* Mission Control Chat with Agent button */}
-         {window.location.pathname === '/mission-control' && (
+         {/* Mission Control Chat with Agent button - commented out */}
+         {/* {window.location.pathname === '/mission-control' && (
            <Button variant="ghost" size="sm" className="flex items-center gap-2">
              <MessageSquare className="h-4 w-4" />
              Chat with Agent
            </Button>
-         )}
+         )} */}
 
          {/* Artifacts page search bar */}
          {window.location.pathname === '/artifacts' && (
