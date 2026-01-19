@@ -80,13 +80,13 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
     ];
   };
 
-  // Track when suggestedICPs state changes
+  // Track when suggestedICPs count changes (not individual field edits)
   useEffect(() => {
-    console.log("=== SUGGESTED ICPS STATE CHANGED ===");
+    console.log("=== SUGGESTED ICPS COUNT CHANGED ===");
     console.log("New suggestedICPs count:", suggestedICPs.length);
-    console.log("New suggestedICPs data:", suggestedICPs);
-    setRenderKey(prev => prev + 1); // Force re-render
-  }, [suggestedICPs]);
+    // Only update renderKey when the count changes, not on field edits
+    // This prevents remounting during edits which causes focus loss
+  }, [suggestedICPs.length]);
 
   // Fetch ICPs from backend
   const fetchICPs = async () => {
@@ -860,7 +860,7 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
       {!loading && !error && suggestedICPs.length > 0 && (
         <div className="relative px-16">
           <Carousel
-            key={`carousel-${renderKey}-${suggestedICPs.length}`} // Force re-render when data changes
+            key={`carousel-${suggestedICPs.length}`} // Re-render when count changes
             opts={{
               align: "start",
               loop: false,
@@ -869,7 +869,7 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
           >
             <CarouselContent className="-ml-4">
               {suggestedICPs.map((icp, index) => (
-              <CarouselItem key={`${icp.id}-${renderKey}-${index}`} className="pl-4 basis-[420px]">
+              <CarouselItem key={icp.id} className="pl-4 basis-[420px]">
                 <Card 
                   className={`h-full transition-all duration-200 hover:shadow-lg border ${
                     selectedICP === icp.id 
