@@ -2,7 +2,7 @@ from langchain_groq import ChatGroq
 from langchain_community.chat_models import ChatOpenAI
 from langchain_experimental.graph_transformers import LLMGraphTransformer
 from langchain_core.prompts import PromptTemplate
-from langchain_classic.chains import GraphCypherQAChain
+from langchain_neo4j import GraphCypherQAChain
 from langchain_classic.memory import ConversationBufferMemory
 from langchain_classic.agents import initialize_agent, Tool
 from langchain_classic.agents.agent_types import AgentType

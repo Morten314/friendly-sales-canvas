@@ -902,17 +902,43 @@ Do not include any additional reasoning, thoughts, or steps after that.
     template=template
     ).format(pre_data=pre_data)
 
-    # Step 3: Get LLM response
-    raw_response = agent_chain.invoke({'input': prompt})
-    response = raw_response["output"]
+    def _invoke_generator(pmt: str) -> dict:
+        raw_response = agent_chain.invoke({'input': pmt})
+        response = raw_response["output"]
+        try:
+            print("[ICP_generator] Raw LLM output (first 500 chars):", str(response)[:500])
+        except Exception:
+            pass
+        cleaned_str = response.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+        cleaned_str = re.sub(
+            r'\"description\": \"(.*?)\"',
+            lambda m: '"description": "' + m.group(1).replace('\n', '\\n').replace('\r', '\\r') + '"',
+            cleaned_str,
+            flags=re.DOTALL
+        )
+        return json.loads(cleaned_str)
 
-    # Clean and escape the JSON string
-    cleaned_str = response.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-    # Escape newline and other control characters within string values
-    cleaned_str = re.sub(r'\"description\": \"(.*?)\"', lambda m: '"description": "' + m.group(1).replace('\n', '\\n').replace('\r', '\\r') + '"', cleaned_str, flags=re.DOTALL)
+    # First attempt
+    parsed_json = _invoke_generator(prompt)
 
-    # Parse to JSON (Python dict)
-    parsed_json = json.loads(cleaned_str)
+    # If empty, retry with stricter requirement
+    if not parsed_json.get("suggestedICPs"):
+        retry_template = template + "\n\nYou must return at least 3 ICP entries in suggestedICPs. Do not return an empty list."
+        retry_prompt = PromptTemplate(
+            input_variables=["pre_data"],
+            template=retry_template
+        ).format(pre_data=pre_data)
+        parsed_json = _invoke_generator(retry_prompt)
+
+    # If still empty, fail fast to surface the issue
+    if not parsed_json.get("suggestedICPs"):
+        raise ValueError("LLM returned empty suggestedICPs after retry.")
+
+    try:
+        if isinstance(parsed_json, dict) and "suggestedICPs" in parsed_json:
+            print("[ICP_generator] Parsed suggestedICPs count:", len(parsed_json.get("suggestedICPs", [])))
+    except Exception:
+        pass
 
     # ✅ Return the Python dict
     return parsed_json
