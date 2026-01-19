@@ -877,8 +877,7 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
                       : editingICP === icp.id
                       ? 'border-green-500 bg-green-50/20 shadow-md'
                       : 'border-gray-200 hover:border-blue-300'
-                  } ${editingICP !== icp.id ? 'hover:-translate-y-1 cursor-pointer' : ''}`}
-                  onClick={() => handleCardClick(icp)}
+                  } ${editingICP !== icp.id ? 'hover:-translate-y-1' : ''}`}
                 >
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
@@ -1056,7 +1055,10 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
                         variant="outline" 
                         size="sm" 
                         className="w-full mt-4 text-blue-600 border-blue-200 hover:bg-blue-50"
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCardClick(icp);
+                        }}
                       >
                         View ICP Details
                       </Button>
