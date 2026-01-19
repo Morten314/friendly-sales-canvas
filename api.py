@@ -4,6 +4,7 @@ import asyncio
 import datetime
 import urllib.parse
 import uuid
+import logging
 from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Any
 
@@ -25,6 +26,13 @@ from services import (
     ICP_FUNCTIONS, COMPONENT_FUNCTIONS, ICP_generator, SIGNALS_FUNCTIONS,
     search_signals_scout, search_signals_profiler
 )
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 # Create FastAPI app
 app = FastAPI()
@@ -578,6 +586,7 @@ async def market_research(request: MarketRequest):
 
 @app.get("/icp")
 async def get_or_create_icp_config(user_id: str = Query(...), refresh: bool = Query(False)):
+    print(f"[ICP] Request - user_id: {user_id}, refresh: {refresh}")
     try:
         # MongoDB connection setup
         username = urllib.parse.quote_plus("techbrewra")
@@ -590,10 +599,24 @@ async def get_or_create_icp_config(user_id: str = Query(...), refresh: bool = Qu
 
         # Filter by user_id only for multitenancy
         existing_icp = collection.find_one({"user_id": user_id})
+        
+        if existing_icp:
+            print(f"[ICP] Found existing ICP for user_id: {user_id}")
+            if existing_icp.get("icps"):
+                icps_data = existing_icp.get("icps")
+                if isinstance(icps_data, dict) and "suggestedICPs" in icps_data:
+                    print(f"[ICP] Existing ICP count: {len(icps_data.get('suggestedICPs', []))}")
+                elif isinstance(icps_data, list):
+                    print(f"[ICP] Existing ICP count (list): {len(icps_data)}")
+        else:
+            print(f"[ICP] No existing ICP found for user_id: {user_id}")
 
         if existing_icp and not refresh:
+            print(f"[ICP] Returning cached ICP for user_id: {user_id}")
             client.close()
             return existing_icp.get("icps", {"icps": []})
+
+        print(f"[ICP] Generating new ICPs for user_id: {user_id}")
 
         # Generate new ICPs from Neo4j company profile - get shared company profile
         with driver.session() as session:
@@ -601,11 +624,14 @@ async def get_or_create_icp_config(user_id: str = Query(...), refresh: bool = Qu
                 "MATCH (c:CompanyProfile) RETURN c LIMIT 1"
             )
             record = result.single()
+            
             if not record:
+                print(f"[ICP] ERROR: No company profile in Neo4j")
                 client.close()
                 raise HTTPException(status_code=404, detail="No company profile found in Neo4j")
 
             company_profile = dict(record.values()[0])
+            print(f"[ICP] Company profile retrieved from Neo4j")
 
             # Convert JSON string if needed
             if "socialMediaUrls" in company_profile and isinstance(company_profile["socialMediaUrls"], str):
@@ -615,20 +641,41 @@ async def get_or_create_icp_config(user_id: str = Query(...), refresh: bool = Qu
                     pass
 
             # Generate ICPs
-            icp_result = ICP_generator(company_profile)
+            print(f"[ICP] Calling ICP_generator() for user_id: {user_id}")
+            try:
+                icp_result = ICP_generator(company_profile)
+                if isinstance(icp_result, dict) and "suggestedICPs" in icp_result:
+                    print(f"[ICP] Generated {len(icp_result.get('suggestedICPs', []))} ICPs for user_id: {user_id}")
+                else:
+                    print(f"[ICP] ICP_generator returned: {type(icp_result)}")
+            except Exception as gen_error:
+                print(f"[ICP] ERROR in ICP_generator: {str(gen_error)}")
+                client.close()
+                raise HTTPException(status_code=500, detail=f"ICP generation failed: {str(gen_error)}")
 
             # Upsert the result in MongoDB - filter by user_id only
-            collection.update_one(
-                {"user_id": user_id},
-                {"$set": {"user_id": user_id, "icps": icp_result}},
-                upsert=True
-            )
+            print(f"[ICP] Saving to MongoDB for user_id: {user_id}")
+            try:
+                update_result = collection.update_one(
+                    {"user_id": user_id},
+                    {"$set": {"user_id": user_id, "icps": icp_result}},
+                    upsert=True
+                )
+                print(f"[ICP] Saved to MongoDB - matched: {update_result.matched_count}, modified: {update_result.modified_count}")
+            except Exception as save_error:
+                print(f"[ICP] ERROR saving to MongoDB: {str(save_error)}")
+                client.close()
+                raise HTTPException(status_code=500, detail=f"Failed to save ICP: {str(save_error)}")
 
             client.close()
+            print(f"[ICP] Successfully returned ICPs for user_id: {user_id}")
             return icp_result
 
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"[ICP] ERROR: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
 @app.post("/icp-research")
 async def icp_research(request: MarketRequest):
