@@ -379,6 +379,9 @@ const MissionControl = () => {
   const [isCustomerProfileSaved, setIsCustomerProfileSaved] = useState(false);
   const [hasDataSources, setHasDataSources] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isCustomCompanyName, setIsCustomCompanyName] = useState(false);
+  const [isCustomIndustryPopoverOpen, setIsCustomIndustryPopoverOpen] = useState(false);
+  const [customIndustryInput, setCustomIndustryInput] = useState("");
 
   // Tab locking logic
   const isCustomerProfileLocked = !isCompanyProfileSaved;
@@ -537,6 +540,13 @@ const MissionControl = () => {
     messagingConstraints: "",
   });
 
+  // Initialize custom company name state based on existing value
+  useEffect(() => {
+    if (companyProfile.companyName && companyProfile.companyName.trim() !== "") {
+      setIsCustomCompanyName(true);
+    }
+  }, [companyProfile.companyName]);
+
   const handleSave = async () => {
     if (!currentUser?.uid) {
       toast({
@@ -651,12 +661,6 @@ const MissionControl = () => {
           typical_deal_size: payload.typical_deal_size,
           company_url: payload.company_url,
           key_buyer_persona: payload.key_buyer_persona,
-          business_goals: payload.business_goals,
-          pain_points: payload.pain_points,
-          target_segments: payload.target_segments,
-          exclude_segments: payload.exclude_segments,
-          compliance_reqs: payload.compliance_reqs,
-          messaging_constraints: payload.messaging_constraints,
         };
         setUserLocalStorage('companyProfile', JSON.stringify(dataToSave), currentUser.uid);
         console.log("MissionControl: Saved company profile to localStorage");
@@ -869,13 +873,7 @@ const MissionControl = () => {
               'region_focus', 'regionFocus',
               'typical_deal_size', 'dealSize',
               'company_url', 'companyUrl',
-              'key_buyer_persona', 'keyBuyerPersona',
-              'business_goals', 'businessGoals',
-              'pain_points', 'painPoints',
-              'target_segments', 'targetSegments',
-              'exclude_segments', 'excludeSegments',
-              'compliance_reqs', 'complianceReqs',
-              'messaging_constraints', 'messagingConstraints'
+              'key_buyer_persona', 'keyBuyerPersona'
             ];
             
             const hasAnyData = data && Object.keys(data).length > 0;
@@ -3014,27 +3012,88 @@ const MissionControl = () => {
                   <div className="space-y-2">
                     <Label htmlFor="industry">Industry</Label>
                     <Select 
-                      value={companyProfile.industry && ["SaaS", "FinTech", "Healthcare", "E-commerce", "Enterprise Software"].includes(companyProfile.industry) ? companyProfile.industry : ""}
-                      onValueChange={(value) => setCompanyProfile(prev => ({ ...prev, industry: value }))}
+                      value={companyProfile.industry || ""}
+                      onValueChange={(value) => {
+                        if (value === "__custom__") {
+                          setCustomIndustryInput(companyProfile.industry || "");
+                          setIsCustomIndustryPopoverOpen(true);
+                        } else {
+                          setCompanyProfile(prev => ({ ...prev, industry: value }));
+                        }
+                      }}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select industry" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="SaaS">SaaS</SelectItem>
-                        <SelectItem value="FinTech">FinTech</SelectItem>
-                        <SelectItem value="Healthcare">Healthcare</SelectItem>
-                        <SelectItem value="E-commerce">E-commerce</SelectItem>
-                        <SelectItem value="Enterprise Software">Enterprise Software</SelectItem>
+                        <SelectItem value="saas">SaaS</SelectItem>
+                        <SelectItem value="fintech">FinTech</SelectItem>
+                        <SelectItem value="healthcare">Healthcare</SelectItem>
+                        <SelectItem value="ecommerce">E-commerce</SelectItem>
+                        <SelectItem value="enterprise">Enterprise Software</SelectItem>
+                        {companyProfile.industry && 
+                         companyProfile.industry.trim() !== "" && 
+                         !["saas", "fintech", "healthcare", "ecommerce", "enterprise"].includes(companyProfile.industry.toLowerCase()) && (
+                          <SelectItem value={companyProfile.industry}>
+                            {companyProfile.industry}
+                          </SelectItem>
+                        )}
+                        <SelectItem value="__custom__" className="text-muted-foreground italic border-t mt-1 pt-1">
+                          Enter custom industry...
+                        </SelectItem>
                       </SelectContent>
                     </Select>
-                    <Input
-                      id="industry-custom"
-                      placeholder="Or enter custom industry"
-                      value={companyProfile.industry}
-                      onChange={(e) => setCompanyProfile(prev => ({ ...prev, industry: e.target.value }))}
-                      className="mt-2"
-                    />
+                    <Dialog open={isCustomIndustryPopoverOpen} onOpenChange={setIsCustomIndustryPopoverOpen}>
+                      <DialogContent className="sm:max-w-[425px]">
+                        <DialogHeader>
+                          <DialogTitle>Enter Custom Industry</DialogTitle>
+                          <DialogDescription>
+                            Enter a custom industry name for your company.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="custom-industry-input">Industry</Label>
+                            <Input
+                              id="custom-industry-input"
+                              placeholder="Enter custom industry"
+                              value={customIndustryInput}
+                              onChange={(e) => setCustomIndustryInput(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" && customIndustryInput.trim()) {
+                                  setCompanyProfile(prev => ({ ...prev, industry: customIndustryInput.trim() }));
+                                  setIsCustomIndustryPopoverOpen(false);
+                                  setCustomIndustryInput("");
+                                }
+                              }}
+                              autoFocus
+                            />
+                          </div>
+                        </div>
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              setIsCustomIndustryPopoverOpen(false);
+                              setCustomIndustryInput("");
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            onClick={() => {
+                              if (customIndustryInput.trim()) {
+                                setCompanyProfile(prev => ({ ...prev, industry: customIndustryInput.trim() }));
+                                setIsCustomIndustryPopoverOpen(false);
+                                setCustomIndustryInput("");
+                              }
+                            }}
+                          >
+                            Save
+                          </Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="revenue">Revenue Band</Label>
@@ -3085,18 +3144,18 @@ const MissionControl = () => {
                             <Label htmlFor="business-goals">Primary Business Goals</Label>
                             <Textarea 
                               id="business-goals" 
+                              placeholder="Be as specific as possible - clearer goals help Brewra generate more accurate insights."
                               value={companyProfile.businessGoals}
-                              onChange={(e) => setCompanyProfile({...companyProfile, businessGoals: e.target.value})}
-                              placeholder="Be as specific as possible - clearer goals help Brewra generate more accurate insights." 
+                              onChange={(e) => setCompanyProfile(prev => ({ ...prev, businessGoals: e.target.value }))}
                             />
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="pain-points">Key Pain Points We Solve</Label>
                             <Textarea 
                               id="pain-points" 
+                              placeholder="Describe the key problems you're trying to solve. More detail leads to more relevant insights."
                               value={companyProfile.painPoints}
-                              onChange={(e) => setCompanyProfile({...companyProfile, painPoints: e.target.value})}
-                              placeholder="Describe the key problems you're trying to solve. More detail leads to more relevant insights." 
+                              onChange={(e) => setCompanyProfile(prev => ({ ...prev, painPoints: e.target.value }))}
                             />
                           </div>
                         </CardContent>
@@ -3116,18 +3175,18 @@ const MissionControl = () => {
                               <Label htmlFor="target-segments">Target Segments (Include)</Label>
                               <Textarea 
                                 id="target-segments" 
+                                placeholder="e.g., Mid-market SaaS companies, Financial services..."
                                 value={companyProfile.targetSegments}
-                                onChange={(e) => setCompanyProfile({...companyProfile, targetSegments: e.target.value})}
-                                placeholder="e.g., Mid-market SaaS companies, Financial services..." 
+                                onChange={(e) => setCompanyProfile(prev => ({ ...prev, targetSegments: e.target.value }))}
                               />
                             </div>
                             <div className="space-y-2">
                               <Label htmlFor="exclude-segments">Exclude Segments</Label>
                               <Textarea 
                                 id="exclude-segments" 
+                                placeholder="e.g., Startups under 50 employees, Government..."
                                 value={companyProfile.excludeSegments}
-                                onChange={(e) => setCompanyProfile({...companyProfile, excludeSegments: e.target.value})}
-                                placeholder="e.g., Startups under 50 employees, Government..." 
+                                onChange={(e) => setCompanyProfile(prev => ({ ...prev, excludeSegments: e.target.value }))}
                               />
                             </div>
                           </div>
@@ -3147,18 +3206,18 @@ const MissionControl = () => {
                             <Label htmlFor="compliance-reqs">Compliance Requirements</Label>
                             <Textarea 
                               id="compliance-reqs" 
+                              placeholder="e.g., GDPR, HIPAA, SOC2..."
                               value={companyProfile.complianceReqs}
-                              onChange={(e) => setCompanyProfile({...companyProfile, complianceReqs: e.target.value})}
-                              placeholder="e.g., GDPR, HIPAA, SOC2..." 
+                              onChange={(e) => setCompanyProfile(prev => ({ ...prev, complianceReqs: e.target.value }))}
                             />
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="messaging-constraints">General Instruction</Label>
                             <Textarea 
                               id="messaging-constraints" 
+                              placeholder="e.g., Avoid certain terms, required disclaimers..."
                               value={companyProfile.messagingConstraints}
-                              onChange={(e) => setCompanyProfile({...companyProfile, messagingConstraints: e.target.value})}
-                              placeholder="e.g., Avoid certain terms, required disclaimers..." 
+                              onChange={(e) => setCompanyProfile(prev => ({ ...prev, messagingConstraints: e.target.value }))}
                             />
                           </div>
                         </CardContent>

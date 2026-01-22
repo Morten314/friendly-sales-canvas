@@ -542,6 +542,14 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
         console.log("Component name:", componentName);
 
         console.log("Selected ICP:", selectedICP);
+        
+        // CRITICAL DEBUG: Verify the selectedICP has the correct companySize
+        console.log("🔍 SELECTED ICP VERIFICATION:");
+        console.log("  - selectedICP.companySize:", selectedICP?.companySize);
+        console.log("  - selectedICP.id:", selectedICP?.id);
+        console.log("  - selectedICP.industry:", selectedICP?.industry);
+        console.log("  - selectedICP.segment:", selectedICP?.segment);
+        console.log("  - Full selectedICP object:", JSON.stringify(selectedICP, null, 2));
 
         
 
@@ -569,17 +577,37 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
         // Based on working market-research API: data should contain the ICP directly
 
+        // CRITICAL: Ensure the backend uses the provided selectedICP data, not the saved company profile
+        // The data field should contain the complete ICP object with companySize, industry, etc.
+        console.log("🔍 VERIFYING SELECTED ICP DATA BEFORE API CALL:");
+        console.log("  - selectedICP.companySize:", selectedICP?.companySize);
+        console.log("  - selectedICP.id:", selectedICP?.id);
+        console.log("  - selectedICP.industry:", selectedICP?.industry);
+        console.log("  - selectedICP.segment:", selectedICP?.segment);
+        
+        // According to Swagger spec, the payload must include: user_id, org_id, component_name, data, refresh
+        // CRITICAL: The data field should contain the selected ICP with companySize, industry, etc.
+        // Backend MUST use this data field, not fetch from saved company profile
+        
         const apiPayload = {
-
           user_id: currentUser?.uid || "",
-
+          org_id: currentUser?.uid || "", // Using user_id as org_id (common for single-org users)
           component_name: componentName,
-
           refresh: true,
-
+          // CRITICAL: This data field contains the selected ICP card data
+          // Backend should use this instead of fetching saved company profile
           data: selectedICP
-
         };
+        
+        console.log("🔍 FINAL PAYLOAD STRUCTURE (per Swagger spec):");
+        console.log("  - user_id:", apiPayload.user_id);
+        console.log("  - org_id:", apiPayload.org_id);
+        console.log("  - component_name:", apiPayload.component_name);
+        console.log("  - refresh:", apiPayload.refresh);
+        console.log("  - data.companySize:", apiPayload.data?.companySize);
+        console.log("  - data.industry:", apiPayload.data?.industry);
+        console.log("  - data.segment:", apiPayload.data?.segment);
+        console.log("  - Full data object keys:", Object.keys(apiPayload.data || {}));
 
 
 
@@ -776,6 +804,56 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
             console.log('🔍 response.data.currentData.title:', response?.data?.currentData?.title);
 
             console.log('🔍 response.data.currentData.blurb:', response?.data?.currentData?.blurb);
+            
+            // CRITICAL: Verify the response matches the selected ICP
+            const responseTitle = response?.data?.currentData?.title || '';
+            const responseCompanySize = responseTitle.match(/\(([^)]+)\)/)?.[1] || '';
+            const selectedCompanySize = selectedICP?.companySize || '';
+            
+            console.log('🔍🔍🔍 COMPANY SIZE VALIDATION:');
+            console.log('  - Selected ICP companySize:', selectedCompanySize);
+            console.log('  - Response title:', responseTitle);
+            console.log('  - Response companySize (extracted):', responseCompanySize);
+            console.log('  - Full response data:', JSON.stringify(response?.data?.currentData, null, 2));
+            
+            // Compare all key fields
+            const selectedIndustry = selectedICP?.industry || '';
+            const responseIndustry = response?.data?.currentData?.blurb?.match(/\b(\w+)\s+companies/)?.[1] || '';
+            const selectedSegment = selectedICP?.segment || '';
+            
+            console.log('🔍🔍🔍 FULL ICP COMPARISON:');
+            console.log('  SENT - companySize:', selectedCompanySize, '| industry:', selectedIndustry, '| segment:', selectedSegment);
+            console.log('  RECEIVED - companySize:', responseCompanySize, '| title:', responseTitle);
+            
+            if (selectedCompanySize && responseCompanySize && 
+                !responseCompanySize.includes(selectedCompanySize.split('-')[0]?.trim()) &&
+                !selectedCompanySize.includes(responseCompanySize.split('-')[0]?.trim())) {
+              console.error('❌❌❌ CRITICAL MISMATCH DETECTED:');
+              console.error('  - PAYLOAD SENT companySize:', selectedCompanySize);
+              console.error('  - RESPONSE RECEIVED companySize:', responseCompanySize);
+              console.error('  - PAYLOAD SENT industry:', selectedIndustry);
+              console.error('  - PAYLOAD SENT segment:', selectedSegment);
+              console.error('  - RESPONSE RECEIVED title:', responseTitle);
+              console.error('  - RESPONSE RECEIVED blurb:', response?.data?.currentData?.blurb);
+              console.error('');
+              console.error('  ⚠️ BACKEND ISSUE: The backend is ignoring the data field in the payload!');
+              console.error('  ⚠️ The backend is using the saved company profile instead of the provided selectedICP data.');
+              console.error('  ⚠️ Backend must be updated to use: payload.data.companySize instead of fetching from database.');
+              console.error('');
+              console.error('  📋 PAYLOAD THAT WAS SENT:');
+              console.error(JSON.stringify({
+                user_id: apiPayload.user_id,
+                org_id: apiPayload.org_id,
+                component_name: apiPayload.component_name,
+                refresh: apiPayload.refresh,
+                data: {
+                  companySize: selectedICP?.companySize,
+                  industry: selectedICP?.industry,
+                  segment: selectedICP?.segment,
+                  id: selectedICP?.id
+                }
+              }, null, 2));
+            }
 
             
 
@@ -1593,7 +1671,11 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
             useCache: true,
 
-            componentName: "Buyer Map"
+            componentName: "Buyer Map",
+
+            user_id: currentUser?.uid || "",
+
+            org_id: currentUser?.uid || ""
 
           }
 
@@ -2157,7 +2239,11 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
              useCache: true,
 
-             componentName: "Competitive Overlap"
+             componentName: "Competitive Overlap",
+
+             user_id: currentUser?.uid || "",
+
+             org_id: currentUser?.uid || ""
 
            }
 
@@ -2727,55 +2813,16 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
 
 
-         // Create the API payload according to backend schema
-
-         const apiPayload = {
-
-           user_id: currentUser?.uid || "",
-
-           component_name: "regulatory, compliance & recommended icp",
-
-           refresh: true,
-
-           data: selectedICP
-
-         };
-
-
-
-         console.log("🔄 Regulatory Compliance API Call Timestamp:", new Date().toISOString());
-
-         console.log("🎯 REGULATORY COMPLIANCE PAYLOAD STRUCTURE:");
-
-         console.log("- user_id:", apiPayload.user_id);
-
-         console.log("- component_name:", apiPayload.component_name); 
-
-         console.log("- refresh:", apiPayload.refresh);
-
-         console.log("- data type:", typeof apiPayload.data);
-
-         console.log("- data keys:", Object.keys(apiPayload.data || {}));
-
-         console.log("Regulatory Compliance API Request Payload:", apiPayload);
-
-         console.log("Regulatory Compliance API Request Payload (stringified):", JSON.stringify(apiPayload, null, 2));
-
+         // Note: We use callICPresearch which handles payload creation with org_id
+         // No need to create apiPayload here as it's not used
          
-
-         // Validate payload structure before sending
-
-         console.log("🔍 REGULATORY COMPLIANCE PAYLOAD VALIDATION:");
-
-         console.log("   - Has user_id:", !!apiPayload.user_id);
-
-         console.log("   - Has component_name:", !!apiPayload.component_name);
-
-         console.log("   - Has refresh:", typeof apiPayload.refresh === 'boolean');
-
-         console.log("   - Has data:", !!apiPayload.data);
-
-         console.log("   - Data is object:", typeof apiPayload.data === 'object');
+         console.log("🔄 Regulatory Compliance API Call Timestamp:", new Date().toISOString());
+         
+         console.log("🔍 VERIFYING SELECTED ICP DATA BEFORE API CALL:");
+         console.log("  - selectedICP.companySize:", selectedICP?.companySize);
+         console.log("  - selectedICP.id:", selectedICP?.id);
+         console.log("  - selectedICP.industry:", selectedICP?.industry);
+         console.log("  - selectedICP.segment:", selectedICP?.segment);
 
 
 
@@ -2803,7 +2850,11 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
             useCache: true,
 
-            componentName: "Regulatory Compliance"
+            componentName: "Regulatory Compliance",
+
+            user_id: currentUser?.uid || "",
+
+            org_id: currentUser?.uid || ""
 
           }
 
@@ -2887,7 +2938,16 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
           console.log("✅ Enhanced API call successful");
 
+          // apiResponse.data contains the full backend response: { status: "success", data: {...} }
+          // We need to extract the actual data object
           response = apiResponse.data;
+
+          console.log("🔍 API Response structure:", {
+            hasStatus: !!response?.status,
+            hasData: !!response?.data,
+            hasCurrentData: !!response?.data?.currentData,
+            responseKeys: response ? Object.keys(response) : []
+          });
 
         }
 
@@ -3027,13 +3087,21 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
            console.log("🔍 Transformed regulatory compliance data structure:", transformedData);
 
-         } else if (response && response.data) {
+         } else if (response && (response.data || response.currentData)) {
 
-           // Handle case where response might have data instead of regulatoryCompliance
-
-           // Check if data is nested under currentData (new API response format)
-
-           const sourceData = response.data.currentData || response.data;
+           // Handle backend response structure:
+           // Backend returns: { status: "success", data: { currentData: {...}, user_id: "...", ... } }
+           // apiResponse.data = { status: "success", data: { currentData: {...}, ... } }
+           // So we need: response.data.currentData (if response has .data) or response.currentData (if already extracted)
+           
+           const sourceData = response.data?.currentData || response.currentData || response.data;
+           
+           console.log("🔍 Extracting regulatory compliance data:");
+           console.log("  - response.status:", response.status);
+           console.log("  - response.data exists:", !!response.data);
+           console.log("  - response.data.currentData exists:", !!response.data?.currentData);
+           console.log("  - response.currentData exists:", !!response.currentData);
+           console.log("  - sourceData:", sourceData);
 
            
 
