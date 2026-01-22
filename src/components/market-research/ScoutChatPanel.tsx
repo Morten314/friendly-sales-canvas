@@ -36,6 +36,67 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
   const [chatResponse, setChatResponse] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
 
+  // Function to clean up response content - removes special characters and formats properly
+  const cleanResponseContent = (content: string): string => {
+    if (!content) return '';
+    
+    return content
+      // FIRST: Remove markdown-style separators (--, ---, etc.) - do this early to catch all patterns
+      // Handle bullets (both • and -) followed by dashes
+      .replace(/[•\-\u2022\u25E6\u25AA\u25AB\u25A0\u25A1\u2B24\u25CB]\s*[-]{2,}\s*/g, '') // Remove any bullet followed by dashes (e.g., "• --")
+      // Remove multiple dashes (3 or more) anywhere - do this before handling double dashes
+      .replace(/[-]{3,}/g, '')
+      // Remove standalone dash separators on their own lines
+      .replace(/\n\s*[-]{2,}\s*\n/g, '\n\n')
+      // Remove dashes at end of lines
+      .replace(/\s+[-]{2,}\s*\n/g, '\n')
+      // Remove dashes at start of lines
+      .replace(/\n\s*[-]{2,}\s*/g, '\n')
+      // Replace " -- " (double dash with spaces) with double newline for section separation
+      .replace(/\s+[-]{2}\s+/g, '\n\n')
+      // Remove trailing double dashes
+      .replace(/\s+[-]{2}$/gm, '')
+      // Remove leading double dashes
+      .replace(/^[-]{2}\s+/gm, '')
+      // Remove markdown formatting symbols
+      .replace(/\*\*/g, '')
+      .replace(/\*/g, '')
+      .replace(/#{1,6}\s/g, '')
+      .replace(/`{1,3}/g, '')
+      .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1') // Remove markdown links but keep text
+      // Normalize bullet points to standard bullet
+      .replace(/[•◦▪▫■□●○]/g, '•')
+      .replace(/[\u2022\u25E6\u25AA\u25AB\u25A0\u25A1\u2B24\u25CB]/g, '•')
+      // Normalize arrows
+      .replace(/[→←↑↓]/g, '→')
+      // Normalize dashes (em dash, en dash to regular dash)
+      .replace(/[—–]/g, '-')
+      // Normalize quotes
+      .replace(/[""]/g, '"')
+      .replace(/['']/g, "'")
+      // Clean up excessive whitespace but preserve intentional line breaks
+      .replace(/[ \t]+/g, ' ') // Multiple spaces/tabs to single space
+      .replace(/\n{3,}/g, '\n\n') // More than 2 newlines to 2 newlines
+      // Format lists properly - ensure consistent bullet formatting
+      .replace(/\n\s*[-•]\s*/g, '\n• ')
+      .replace(/\n\s*\d+\.\s*/g, '\n• ')
+      // Remove empty lines with only whitespace or dashes
+      .replace(/\n\s*[-•\s]*\n/g, '\n\n')
+      // Ensure proper spacing around punctuation
+      .replace(/\s+([.,!?;:])/g, '$1')
+      .replace(/([.,!?;:])\s*([A-Z])/g, '$1 $2')
+      // Remove problematic special characters but keep common punctuation and symbols
+      .replace(/[^\w\s•\-\n\r.,!?;:()'"→$%&@#+=<>]/g, ' ')
+      // Clean up any double spaces that might have been created
+      .replace(/  +/g, ' ')
+      // Remove leading/trailing whitespace from each line but preserve line breaks
+      .split('\n')
+      .map(line => line.trim())
+      .join('\n')
+      // Remove leading/trailing whitespace but preserve internal structure
+      .trim();
+  };
+
   // Helper functions for API integration
   const handleQuestionClick = async (question: string) => {
     await callChatAPI(question);
@@ -126,7 +187,9 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
         }
         
         console.log('Final answer:', answer);
-        setChatResponse(answer);
+        // Clean and format the response before setting it
+        const cleanedAnswer = cleanResponseContent(answer);
+        setChatResponse(cleanedAnswer);
       } else {
         setChatResponse('Sorry, I\'m having trouble connecting right now. Please try again later.');
         console.error('Failed to get response from Scout API');
