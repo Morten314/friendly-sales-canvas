@@ -428,7 +428,6 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
         const apiPayload = {
           user_id: currentUser?.uid || "",
-          org_id: currentUser?.uid || "",
           component_name: componentName,
           refresh: true,
           data: selectedICP
@@ -682,9 +681,9 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
         }
 
-        // Handle the API response structure: {status: 'success', data: {currentData: {...}}}
-
-        const reportData = response?.data?.currentData || response?.data || response?.currentData || response;
+        // Handle the API response structure: {status: 'success', data: {icp_card: {...}}}
+        // The backend returns the ICP data in response.data.icp_card
+        const reportData = response?.data?.icp_card || response?.data?.currentData || response?.data || response?.currentData || response;
 
         
 

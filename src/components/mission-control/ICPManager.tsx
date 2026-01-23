@@ -203,7 +203,9 @@ const ICPManager: React.FC = () => {
       };
 
       console.log("=== ICP MANAGER: Saving customer profile to backend ===");
-      console.log("Payload:", payload);
+      console.log("User ID:", currentUser.uid);
+      console.log("ICPs to save:", icpsToSave);
+      console.log("Payload:", JSON.stringify(payload, null, 2));
 
       // Always save to localStorage first as backup
       try {
@@ -237,7 +239,8 @@ const ICPManager: React.FC = () => {
       }
 
       const data = await response.json();
-      console.log("Customer profile saved successfully:", data);
+      console.log("✅ Customer profile saved successfully to backend");
+      console.log("Response data:", JSON.stringify(data, null, 2));
       
       // Save to localStorage for offline access and refresh persistence
       try {
@@ -281,18 +284,24 @@ const ICPManager: React.FC = () => {
   // Load customer profile (ICPs) from backend
   const loadCustomerProfileFromBackend = async () => {
     if (!currentUser?.uid) {
+      console.warn("ICPManager: Cannot load customer profile - user not authenticated");
       return;
     }
 
+    console.log("ICPManager: Starting to load customer profile from backend");
+    console.log("User ID:", currentUser.uid);
     setIsLoading(true);
     try {
       const apiUrl = `/api/customer_profile?user_id=${currentUser.uid}`;
+      console.log("ICPManager: Fetching from API:", apiUrl);
       const response = await fetch(apiUrl, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
         },
       });
+      
+      console.log("ICPManager: API response status:", response.status, response.statusText);
 
       if (!response.ok) {
         console.log("No existing customer profile found in API, trying localStorage fallback");
@@ -314,7 +323,7 @@ const ICPManager: React.FC = () => {
       }
 
       const responseData = await response.json();
-      console.log("ICPManager: Full API response:", responseData);
+      console.log("ICPManager: Full API response:", JSON.stringify(responseData, null, 2));
       console.log("ICPManager: Response structure:", {
         'hasSuccess': 'success' in responseData,
         'hasData': 'data' in responseData,
@@ -323,6 +332,7 @@ const ICPManager: React.FC = () => {
         'data.icps': responseData?.data?.icps,
         'data.customer_profiles': responseData?.data?.customer_profiles,
         'data.customer_profiles.icps': responseData?.data?.customer_profiles?.icps,
+        'directIcps': responseData?.icps,
       });
       
       // Handle wrapped API response structure: {success: true, data: {...}}
@@ -423,7 +433,9 @@ const ICPManager: React.FC = () => {
         }));
 
         setIcps(loadedICPs);
-        console.log("Customer profile loaded from backend:", loadedICPs);
+        console.log("✅ Customer profile loaded from backend successfully");
+        console.log("Loaded ICPs count:", loadedICPs.length);
+        console.log("Loaded ICPs data:", JSON.stringify(loadedICPs, null, 2));
         
         // Save to localStorage for offline access
         try {
@@ -497,6 +509,7 @@ const ICPManager: React.FC = () => {
   // Load customer profile on mount
   useEffect(() => {
     if (currentUser?.uid) {
+      console.log("ICPManager: useEffect triggered, loading customer profile for user:", currentUser.uid);
       loadCustomerProfileFromBackend();
       
       // Check for pending saves and retry them
@@ -976,12 +989,27 @@ const ICPManager: React.FC = () => {
                       setCustomBuyerRole(e.target.value);
                       setShowBuyerRoleSuggestions(true);
                     }}
-                    onFocus={() => setShowBuyerRoleSuggestions(true)}
+                    onFocus={() => {
+                      // Only open if not already open
+                      if (!showBuyerRoleSuggestions) {
+                        setShowBuyerRoleSuggestions(true);
+                      }
+                    }}
+                    onClick={(e) => {
+                      // Toggle dropdown when clicking on the field
+                      if (showBuyerRoleSuggestions && filteredBuyerRoleSuggestions.length > 0) {
+                        setShowBuyerRoleSuggestions(false);
+                      } else if (filteredBuyerRoleSuggestions.length > 0) {
+                        setShowBuyerRoleSuggestions(true);
+                      }
+                    }}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && customBuyerRole.trim() && !selectedBuyerRoles.includes(customBuyerRole.trim())) {
                         e.preventDefault();
                         setSelectedBuyerRoles(prev => [...prev, customBuyerRole.trim()]);
                         setCustomBuyerRole("");
+                      } else if (e.key === "Escape") {
+                        setShowBuyerRoleSuggestions(false);
                       }
                     }}
                     className="h-9 text-sm"
