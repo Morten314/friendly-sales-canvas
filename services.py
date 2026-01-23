@@ -1050,48 +1050,51 @@ Do not include any additional reasoning, thoughts, or steps after that.
 
 def icp_research_2(pre_data: str) -> dict:
     # Construct prompt by embedding the entire JSON string
-    template = """Task: Research and compile an updated overview of icp  in the exact format given at end, based on the data below based on this ( follow this strictly and do research based on what all provided here - {pre_data}.
+    # The pre_data contains both company_profile and icp_card (flexible data structure)
+    template = """Task: Research and compile a detailed "Buyer Map & Roles, Pain Points, Triggers" analysis based on the provided company profile and ICP data.
 
-Return your findings in the following exact JSON format --  use this data to do the research - {pre_data}
+IMPORTANT: Use ALL the information provided in the context data below. Extract relevant details about industries, company sizes, buyer roles, regions, and any other relevant ICP information from the data provided.
 
+Company Profile and ICP Data Context:
+{pre_data}
+
+Based on the information provided in the context data above, research and identify:
+1. Core buyer personas (decision makers) specific to the industries and roles mentioned
+2. Key pain points these buyer personas face in the specified industries
+3. Buying triggers that would cause these specific ICP segments to purchase
+
+Return your findings in the following exact JSON format:
 
 {{
   "currentData": {{
     "title": "Buyer Map & Roles, Pain Points, Triggers",
-    "blurb": "Primary decision makers include CTOs focused on infrastructure modernization and Heads of Digital driving customer experience improvements. Key pain points center around legacy system constraints and regulatory compliance complexity, with funding rounds and competitive pressures serving as primary buying triggers.",
+    "blurb": "[2-3 sentence summary focusing on the specific buyer roles, pain points, and triggers based on the ICP data provided]",
     "_metadata": {{
-      "dataSource": "ui"
+      "dataSource": "api"
     }},
-    "coreBuyerPersonas": 2,
-    "topPainPoint": "High digital marketing spend",
-    "buyingTriggersIdentified": 2,
+    "coreBuyerPersonas": [number of distinct buyer personas],
+    "topPainPoint": "[Most critical pain point for the ICP]",
+    "buyingTriggersIdentified": [number of triggers],
     "buyingTriggers": [
       {{
-        "trigger": "E-commerce Modernization",
-        "description": "E-commerce companies upgrading direct-to-consumer brands to address high digital marketing spend."
+        "trigger": "[Specific trigger name]",
+        "description": "[Detailed description of why this trigger matters for the ICP]"
       }},
       {{
-        "trigger": "High digital marketing spend",
-        "description": "New e-commerce regulations requiring high digital marketing spend improvements in DACH."
+        "trigger": "[Another specific trigger]",
+        "description": "[Detailed description]"
       }}
     ]
   }}
 }}
 
-
 ⚠️ Notes:
-
-Use USD for monetary values in billions (B) or millions (M).
-
-If numeric growth values aren't available for projections, provide a normalized trend (e.g., index from 1.0 to 2.5).
-
-Pie chart data under marketSizeBySegment must sum to ~100%.
-
-Keep bullet point recommendations short and actionable.
-
-give atleast 5-6 buyer signals which are accurate
-
-give only json , nothing else , nothing at all
+- Extract and use buyer roles/decision makers from the provided data
+- Research pain points specific to the industries mentioned in the data
+- Identify buying triggers relevant to the company sizes and regions specified
+- Provide at least 5-6 accurate buying triggers
+- Use real research data, not generic examples
+- Give only JSON, nothing else
 
 When you have reached the final answer, respond only with:
 Final Answer: <your answer here>
@@ -1099,96 +1102,118 @@ Do not include any additional reasoning, thoughts, or steps after that.
 """
 
     prompt = PromptTemplate(
-    input_variables=["pre_data"],
-    template=template
+        input_variables=["pre_data"],
+        template=template
     ).format(pre_data=pre_data)
 
-    # Step 3: Get LLM response
-    raw_response = agent_chain.invoke({'input': prompt})
-    response = raw_response["output"]
+    # Step 3: Get LLM response with retries
+    max_retries = 3
+    for attempt in range(1, max_retries + 1):
+        try:
+            raw_response = agent_chain.invoke({'input': prompt})
+            response = raw_response["output"]
+            
+            # Extract JSON from response
+            if "Final Answer:" in response:
+                response = response.split("Final Answer:")[-1].strip()
+            
+            # Clean and escape the JSON string
+            cleaned_str = response.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+            # Remove any leading/trailing text before first { or after last }
+            if "{" in cleaned_str:
+                cleaned_str = cleaned_str[cleaned_str.index("{"):]
+            if "}" in cleaned_str:
+                cleaned_str = cleaned_str[:cleaned_str.rindex("}") + 1]
+            
+            # Escape newline and other control characters within string values
+            cleaned_str = re.sub(r'\"description\": \"(.*?)\"', lambda m: '"description": "' + m.group(1).replace('\n', '\\n').replace('\r', '\\r') + '"', cleaned_str, flags=re.DOTALL)
+            cleaned_str = re.sub(r'\"blurb\": \"(.*?)\"', lambda m: '"blurb": "' + m.group(1).replace('\n', '\\n').replace('\r', '\\r') + '"', cleaned_str, flags=re.DOTALL)
 
-    # Clean and escape the JSON string
-    cleaned_str = response.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-    # Escape newline and other control characters within string values
-    cleaned_str = re.sub(r'\"description\": \"(.*?)\"', lambda m: '"description": "' + m.group(1).replace('\n', '\\n').replace('\r', '\\r') + '"', cleaned_str, flags=re.DOTALL)
-
-    # Parse to JSON (Python dict)
-    parsed_json = json.loads(cleaned_str)
-
-    # ✅ Return the Python dict
-    return parsed_json
+            # Parse to JSON (Python dict)
+            parsed_json = json.loads(cleaned_str)
+            
+            # Validate structure
+            if "currentData" not in parsed_json:
+                raise ValueError("Missing 'currentData' key in response")
+            
+            return parsed_json
+            
+        except json.JSONDecodeError as e:
+            if attempt == max_retries:
+                raise ValueError(f"Failed to parse JSON after {max_retries} attempts: {str(e)}. Response: {response[:500]}")
+            continue
+        except Exception as e:
+            if attempt == max_retries:
+                raise ValueError(f"Error in icp_research_2 after {max_retries} attempts: {str(e)}")
+            continue
 
 def icp_research_3(pre_data: str) -> dict:
     # Construct prompt by embedding the entire JSON string
-    template = """Task: Research and compile an updated overview of icp  in the exact format given at end, based on the data below based on this ( follow this strictly and do research based on what all provided here - {pre_data}.
+    # The pre_data contains both company_profile and icp_card (flexible data structure)
+    template = """Task: Research and compile a detailed "Competitive Overlap & Buying Signals" analysis based on the provided company profile and ICP data.
 
-Return your findings in the following exact JSON format --  use this data to do the research - {pre_data}
+IMPORTANT: Use ALL the information provided in the context data below. Extract relevant details about industries, company sizes, regions, accounts, competitors, and any other relevant ICP information from the data provided.
 
+Company Profile and ICP Data Context:
+{pre_data}
+
+Based on the information provided in the context data above, research and identify:
+1. Real competitors operating in the industries and regions mentioned
+2. Actual buying signals relevant to these ICP segments (funding rounds, hiring, product launches, regulatory changes)
+3. Competitive landscape specific to the industries and company sizes mentioned
+
+Return your findings in the following exact JSON format:
 
 {{
   "currentData": {{
     "title": "Competitive Overlap & Buying Signals",
-    "blurb": "Key competitors include E-commerce Leader A and E-commerce Leader B dominating the established market, while cloud-native solutions gain traction. Recent market signals show increased funding activity and regulatory-driven technology investments creating new opportunities.",
+    "blurb": "[2-3 sentence summary of competitive landscape and buying signals based on the ICP data provided]",
     "_metadata": {{
-      "dataSource": "ui"
+      "dataSource": "api"
     }},
-    "numberOfMainCompetitors": 7,
-    "recentWinLossChange": "+11%",
-    "activeBuyingSignals": 3,
+    "numberOfMainCompetitors": [actual number],
+    "recentWinLossChange": "[percentage change, e.g., +11% or -5%]",
+    "activeBuyingSignals": [number of signals],
     "competitiveMap": [
       {{
-        "competitor": "E-commerce Incumbent A",
-        "segment": "Direct-to-Consumer Brands",
-        "share": "24%",
-        "winsLosses": "Strong in DACH, high digital marketing spend focus",
-        "differentiators": "Legacy e-commerce presence, high digital marketing spend approach"
+        "competitor": "[Real competitor name]",
+        "segment": "[Specific segment they target]",
+        "share": "[Market share percentage]",
+        "winsLosses": "[Win/loss pattern description]",
+        "differentiators": "[Key differentiators]"
       }}
     ],
     "competitiveNewsAndEvents": [
       {{
-        "headline": "E-commerce Leader announces direct-to-consumer brands expansion",
-        "source": "E-commerce Leader A",
-        "date": "2024-12-15"
+        "headline": "[Recent news headline]",
+        "source": "[Source name]",
+        "date": "[YYYY-MM-DD format]"
       }}
     ],
     "buyingSignals": [
       {{
-        "signalType": "High digital marketing spend",
-        "description": "Increased high digital marketing spend spending in e-commerce",
-        "source": "Industry Reports",
-        "recency": "2 weeks ago"
+        "signalType": "[Signal type: Funding Round, Hiring, Product Launch, Regulatory, etc.]",
+        "description": "[Detailed description relevant to the ICP industries and company sizes]",
+        "source": "[Source name]",
+        "recency": "[How recent, e.g., '2 weeks ago']"
       }},
       {{
-        "signalType": "Funding Round",
-        "description": "Major e-commerce player raises Series C funding to accelerate digital transformation",
-        "source": "Press Release",
-        "recency": "1 month ago"
-      }},
-      {{
-        "signalType": "Regulatory Compliance",
-        "description": "New DACH regulations pushing higher investment in marketing and compliance systems",
-        "source": "Government Bulletin",
-        "recency": "3 weeks ago"
+        "signalType": "[Another signal type]",
+        "description": "[Detailed description]",
+        "source": "[Source name]",
+        "recency": "[How recent]"
       }}
     ]
   }}
 }}
 
-
-
 ⚠️ Notes:
-
-Use USD for monetary values in billions (B) or millions (M).
-
-If numeric growth values aren't available for projections, provide a normalized trend (e.g., index from 1.0 to 2.5).
-
-Pie chart data under marketSizeBySegment must sum to ~100%.
-
-Keep bullet point recommendations short and actionable.
-
-give atleast 3-4 buyingsignals
-
-give only json , nothing else , nothing at all
+- Research REAL competitors in the industries and regions mentioned in the data
+- Identify ACTUAL buying signals (funding, hiring, product launches) relevant to the ICP
+- Use any accounts_on_watchlist or accounts_to_avoid information if provided in the data
+- Provide at least 3-4 buying signals with real data
+- Use real research data, not generic examples
+- Give only JSON, nothing else
 
 When you have reached the final answer, respond only with:
 Final Answer: <your answer here>
@@ -1196,82 +1221,114 @@ Do not include any additional reasoning, thoughts, or steps after that.
 """
 
     prompt = PromptTemplate(
-    input_variables=["pre_data"],
-    template=template
+        input_variables=["pre_data"],
+        template=template
     ).format(pre_data=pre_data)
 
-    # Step 3: Get LLM response
-    raw_response = agent_chain.invoke({'input': prompt})
-    response = raw_response["output"]
+    # Step 3: Get LLM response with retries
+    max_retries = 3
+    for attempt in range(1, max_retries + 1):
+        try:
+            raw_response = agent_chain.invoke({'input': prompt})
+            response = raw_response["output"]
+            
+            # Extract JSON from response
+            if "Final Answer:" in response:
+                response = response.split("Final Answer:")[-1].strip()
+            
+            # Clean and escape the JSON string
+            cleaned_str = response.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+            # Remove any leading/trailing text before first { or after last }
+            if "{" in cleaned_str:
+                cleaned_str = cleaned_str[cleaned_str.index("{"):]
+            if "}" in cleaned_str:
+                cleaned_str = cleaned_str[:cleaned_str.rindex("}") + 1]
+            
+            # Escape newline and other control characters within string values
+            cleaned_str = re.sub(r'\"description\": \"(.*?)\"', lambda m: '"description": "' + m.group(1).replace('\n', '\\n').replace('\r', '\\r') + '"', cleaned_str, flags=re.DOTALL)
+            cleaned_str = re.sub(r'\"blurb\": \"(.*?)\"', lambda m: '"blurb": "' + m.group(1).replace('\n', '\\n').replace('\r', '\\r') + '"', cleaned_str, flags=re.DOTALL)
+            cleaned_str = re.sub(r'\"headline\": \"(.*?)\"', lambda m: '"headline": "' + m.group(1).replace('\n', '\\n').replace('\r', '\\r') + '"', cleaned_str, flags=re.DOTALL)
 
-    # Clean and escape the JSON string
-    cleaned_str = response.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-    # Escape newline and other control characters within string values
-    cleaned_str = re.sub(r'\"description\": \"(.*?)\"', lambda m: '"description": "' + m.group(1).replace('\n', '\\n').replace('\r', '\\r') + '"', cleaned_str, flags=re.DOTALL)
-
-    # Parse to JSON (Python dict)
-    parsed_json = json.loads(cleaned_str)
-
-    # ✅ Return the Python dict
-    return parsed_json
+            # Parse to JSON (Python dict)
+            parsed_json = json.loads(cleaned_str)
+            
+            # Validate structure
+            if "currentData" not in parsed_json:
+                raise ValueError("Missing 'currentData' key in response")
+            if "buyingSignals" not in parsed_json.get("currentData", {}):
+                raise ValueError("Missing 'buyingSignals' key in currentData")
+            
+            return parsed_json
+            
+        except json.JSONDecodeError as e:
+            if attempt == max_retries:
+                raise ValueError(f"Failed to parse JSON after {max_retries} attempts: {str(e)}. Response: {response[:500]}")
+            continue
+        except Exception as e:
+            if attempt == max_retries:
+                raise ValueError(f"Error in icp_research_3 after {max_retries} attempts: {str(e)}")
+            continue
 
 def icp_research_4(pre_data: str) -> dict:
     # Construct prompt by embedding the entire JSON string
-    template = """Task: Research and compile an updated overview of icp  in the exact format given at end, based on the data below based on this ( follow this strictly and do research based on what all provided here - {pre_data}.
+    # The pre_data contains both company_profile and icp_card (flexible data structure)
+    template = """Task: Research and compile a detailed "Regulatory, Compliance & Recommended ICP" analysis based on the provided company profile and ICP data.
 
-Return your findings in the following exact JSON format --  use this data to do the research - {pre_data}
+IMPORTANT: This is DIFFERENT from the Buyer Map component. This component focuses on:
+1. Regulatory and compliance frameworks relevant to the industries and regions mentioned in the data
+2. Upcoming mandates and regulatory changes affecting these industries
+3. ICP fit score and confidence assessment
+4. Specific recommendations for refining the ICP based on regulatory and compliance requirements
 
+Company Profile and ICP Data Context:
+{pre_data}
+
+Based on the information provided in the context data above, research regulatory and compliance requirements and provide ICP refinement recommendations.
+
+Return your findings in the following exact JSON format:
 
 {{
   "currentData": {{
     "title": "Regulatory, Compliance & Recommended ICP",
-    "blurb": "Companies in this segment face increasing compliance requirements, especially around cloud-hosted data and regulatory frameworks. This section recommends refining your ICP to reflect these regulatory triggers and market dynamics.",
+    "blurb": "[2-3 sentence summary of regulatory landscape and ICP refinement recommendations based on the ICP data provided]",
     "_metadata": {{
-      "dataSource": "ui"
+      "dataSource": "api"
     }},
     "keyComplianceFrameworks": [
-      "GDPR",
-      "Industry Standards"
+      "[Framework name relevant to the industries mentioned]",
+      "[Another framework]"
     ],
-    "upcomingMandates": "Q4 2025 Updates",
-    "icpFitScore": "92% match",
-    "recommendationConfidence": "High",
+    "upcomingMandates": "[Specific upcoming mandate with timeline, e.g., 'Q4 2025 GDPR Updates' or '2025 Industry Standard Changes']",
+    "icpFitScore": "[Percentage match, e.g., '85% match' or '92% match']",
+    "recommendationConfidence": "[High/Medium/Low]",
     "icpRefinementRecommendations": [
       {{
-        "title": "Target High-Compliance Organizations",
-        "description": "Focus on companies that have already invested in compliance infrastructure and understand regulatory complexity"
+        "title": "[Specific recommendation title]",
+        "description": "[Detailed description of how to refine the ICP based on regulatory/compliance insights]"
       }},
       {{
-        "title": "Prioritize Multi-Jurisdiction Players",
-        "description": "Companies operating across multiple regions face the highest compliance burden and need comprehensive solutions"
+        "title": "[Another specific recommendation]",
+        "description": "[Detailed description]"
       }},
       {{
-        "title": "Focus on Cloud-First Organizations",
-        "description": "Target companies already committed to cloud infrastructure who need compliance-ready solutions"
+        "title": "[Third recommendation]",
+        "description": "[Detailed description]"
       }},
       {{
-        "title": "Emphasize Audit-Ready Capabilities",
-        "description": "Position solutions that provide built-in audit trails and compliance reporting features"
+        "title": "[Fourth recommendation]",
+        "description": "[Detailed description]"
       }}
     ]
   }}
 }}
 
-
-
 ⚠️ Notes:
-
-Use USD for monetary values in billions (B) or millions (M).
-
-If numeric growth values aren't available for projections, provide a normalized trend (e.g., index from 1.0 to 2.5).
-
-Pie chart data under marketSizeBySegment must sum to ~100%.
-
-Keep bullet point recommendations short and actionable.
-
-give accurate values by internet research
-
-give only json , nothing else , nothing at all
+- Research ACTUAL compliance frameworks relevant to the industries mentioned in the data (e.g., GDPR for EU, HIPAA for healthcare, etc.)
+- Identify REAL upcoming mandates and regulatory changes for these industries
+- Calculate ICP fit score based on how well the ICP data aligns with regulatory requirements
+- Provide specific, actionable recommendations for refining the ICP
+- Use real research data, not generic examples
+- Give only JSON, nothing else
 
 When you have reached the final answer, respond only with:
 Final Answer: <your answer here>
@@ -1279,24 +1336,52 @@ Do not include any additional reasoning, thoughts, or steps after that.
 """
 
     prompt = PromptTemplate(
-    input_variables=["pre_data"],
-    template=template
+        input_variables=["pre_data"],
+        template=template
     ).format(pre_data=pre_data)
 
-    # Step 3: Get LLM response
-    raw_response = agent_chain.invoke({'input': prompt})
-    response = raw_response["output"]
+    # Step 3: Get LLM response with retries
+    max_retries = 3
+    for attempt in range(1, max_retries + 1):
+        try:
+            raw_response = agent_chain.invoke({'input': prompt})
+            response = raw_response["output"]
+            
+            # Extract JSON from response
+            if "Final Answer:" in response:
+                response = response.split("Final Answer:")[-1].strip()
+            
+            # Clean and escape the JSON string
+            cleaned_str = response.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+            # Remove any leading/trailing text before first { or after last }
+            if "{" in cleaned_str:
+                cleaned_str = cleaned_str[cleaned_str.index("{"):]
+            if "}" in cleaned_str:
+                cleaned_str = cleaned_str[:cleaned_str.rindex("}") + 1]
+            
+            # Escape newline and other control characters within string values
+            cleaned_str = re.sub(r'\"description\": \"(.*?)\"', lambda m: '"description": "' + m.group(1).replace('\n', '\\n').replace('\r', '\\r') + '"', cleaned_str, flags=re.DOTALL)
+            cleaned_str = re.sub(r'\"blurb\": \"(.*?)\"', lambda m: '"blurb": "' + m.group(1).replace('\n', '\\n').replace('\r', '\\r') + '"', cleaned_str, flags=re.DOTALL)
 
-    # Clean and escape the JSON string
-    cleaned_str = response.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-    # Escape newline and other control characters within string values
-    cleaned_str = re.sub(r'\"description\": \"(.*?)\"', lambda m: '"description": "' + m.group(1).replace('\n', '\\n').replace('\r', '\\r') + '"', cleaned_str, flags=re.DOTALL)
-
-    # Parse to JSON (Python dict)
-    parsed_json = json.loads(cleaned_str)
-
-    # ✅ Return the Python dict
-    return parsed_json
+            # Parse to JSON (Python dict)
+            parsed_json = json.loads(cleaned_str)
+            
+            # Validate structure
+            if "currentData" not in parsed_json:
+                raise ValueError("Missing 'currentData' key in response")
+            if "icpRefinementRecommendations" not in parsed_json.get("currentData", {}):
+                raise ValueError("Missing 'icpRefinementRecommendations' key in currentData")
+            
+            return parsed_json
+            
+        except json.JSONDecodeError as e:
+            if attempt == max_retries:
+                raise ValueError(f"Failed to parse JSON after {max_retries} attempts: {str(e)}. Response: {response[:500]}")
+            continue
+        except Exception as e:
+            if attempt == max_retries:
+                raise ValueError(f"Error in icp_research_4 after {max_retries} attempts: {str(e)}")
+            continue
 
 # Function mappings
 ICP_FUNCTIONS = {
