@@ -734,11 +734,25 @@ async def icp_research(request: MarketRequest):
             except json.JSONDecodeError:
                 pass
 
+        # --- Get ICP card/data from request body (flexible data field) ---
+        # Prepare combined context data with company profile and ICP card from request
+        context_data = {
+            "company_profile": company_profile
+        }
+        
+        # Add ICP card data from request body if available
+        if request.data:
+            # The request.data is flexible and should contain ICP card data
+            context_data["icp_card"] = request.data
+        
+        # Convert to JSON string for the research function
+        context_json = json.dumps(context_data)
+
         # --- Run research with retries (max 2 attempts) ---
         max_retries = 2
         for attempt in range(1, max_retries + 1):
             try:
-                research_result = await asyncio.to_thread(research_function, company_profile)
+                research_result = await asyncio.to_thread(research_function, context_json)
                 break
             except Exception as e:
                 if attempt == max_retries:
