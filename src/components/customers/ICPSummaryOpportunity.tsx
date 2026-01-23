@@ -269,37 +269,6 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
 
 
-  console.log("=== ICPSummaryOpportunity RENDER ===");
-
-  console.log("selectedICP:", selectedICP);
-
-  console.log("🔍 REFRESH TRIGGER:", refreshTrigger);
-
-  console.log("🔍 DATA SOURCE:", dataSource);
-
-  console.log("🔍 API REPORT DATA:", apiReportData);
-
-  console.log("🔍 IS LOADING REPORT:", isLoadingReport);
-
-  console.log("🔍 REPORT ERROR:", reportError);
-
-  console.log("🔍 BUYER MAP API DATA:", buyerMapApiData);
-
-  console.log("🔍 IS LOADING BUYER MAP:", isLoadingBuyerMap);
-
-  console.log("🔍 BUYER MAP ERROR:", buyerMapError);
-
-  console.log("🔍 COMPETITIVE OVERLAP API DATA:", competitiveOverlapApiData);
-
-  console.log("🔍 IS LOADING COMPETITIVE OVERLAP:", isLoadingCompetitiveOverlap);
-
-  console.log("🔍 COMPETITIVE OVERLAP ERROR:", competitiveOverlapError);
-
-  console.log("🔍 REGULATORY COMPLIANCE API DATA:", regulatoryComplianceApiData);
-
-  console.log("🔍 IS LOADING REGULATORY COMPLIANCE:", isLoadingRegulatoryCompliance);
-
-  console.log("🔍 REGULATORY COMPLIANCE ERROR:", regulatoryComplianceError);
 
 
 
@@ -307,29 +276,7 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
   useEffect(() => {
 
-    if (apiReportData) {
-
-      console.log("🔄 apiReportData changed:", apiReportData);
-
-      console.log("🔄 apiReportData keys:", Object.keys(apiReportData));
-
-      console.log("🔄 apiReportData.title:", apiReportData.title);
-
-      console.log("🔄 apiReportData.blurb:", apiReportData.blurb);
-
-      console.log("🔄 apiReportData.marketSize:", apiReportData.marketSize);
-
-      console.log("🔄 apiReportData.growth:", apiReportData.growth);
-
-      console.log("🔄 apiReportData.urgency:", apiReportData.urgency);
-
-      console.log("🔄 apiReportData.timeToClose:", apiReportData.timeToClose);
-
-    } else {
-
-      console.log("🔄 apiReportData is null/undefined");
-
-    }
+    // Monitoring effect - no logging needed
 
   }, [apiReportData]);
 
@@ -339,15 +286,7 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
   useEffect(() => {
 
-    console.log("🔄 ICPSummaryOpportunity component re-rendered");
-
-    console.log("🔄 Current apiReportData:", apiReportData);
-
-    console.log("🔄 Current selectedICP:", selectedICP);
-
-    console.log("🔄 Current buyerMapApiData:", buyerMapApiData);
-
-    console.log("🔄 Current buyerMapData (computed):", buyerMapApiData || selectedICP);
+    // Monitoring effect - no logging needed
 
   });
 
@@ -357,31 +296,7 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
   useEffect(() => {
 
-    console.log("🔄 buyerMapApiData useEffect triggered");
-
-    if (buyerMapApiData) {
-
-      console.log("🔄 buyerMapApiData changed:", buyerMapApiData);
-
-      console.log("🔄 buyerMapApiData keys:", Object.keys(buyerMapApiData));
-
-      console.log("🔄 buyerMapApiData.summary:", buyerMapApiData.summary);
-
-      console.log("🔄 buyerMapApiData.corePersonas:", buyerMapApiData.corePersonas);
-
-      console.log("🔄 buyerMapApiData.topPainPoint:", buyerMapApiData.topPainPoint);
-
-      console.log("🔄 buyerMapApiData.buyingTriggers:", buyerMapApiData.buyingTriggers);
-
-      console.log("🔄 buyerMapApiData.buyingTriggersArray:", buyerMapApiData.buyingTriggersArray);
-
-      console.log("🔄 buyerMapApiData._metadata.dataSource:", buyerMapApiData._metadata?.dataSource);
-
-    } else {
-
-      console.log("🔄 buyerMapApiData is null/undefined");
-
-    }
+    // Monitoring effect - no logging needed
 
   }, [buyerMapApiData]);
 
@@ -391,33 +306,7 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
   useEffect(() => {
 
-    console.log("🔄 competitiveOverlapApiData useEffect triggered");
-
-    if (competitiveOverlapApiData) {
-
-      console.log("🔄 competitiveOverlapApiData changed:", competitiveOverlapApiData);
-
-      console.log("🔄 competitiveOverlapApiData keys:", Object.keys(competitiveOverlapApiData));
-
-      console.log("🔍 competitiveOverlapApiData.summary:", competitiveOverlapApiData.summary);
-
-      console.log("🔍 competitiveOverlapApiData.competitors:", competitiveOverlapApiData.competitors);
-
-      console.log("🔍 competitiveOverlapApiData.winLossChange:", competitiveOverlapApiData.winLossChange);
-
-      console.log("🔍 competitiveOverlapApiData.activeBuyingSignals:", competitiveOverlapApiData.activeBuyingSignals);
-
-      console.log("🔍 competitiveOverlapApiData.competitiveMap:", competitiveOverlapApiData.competitiveMap);
-
-      console.log("🔍 competitiveOverlapApiData.buyingSignalsData:", competitiveOverlapApiData.buyingSignalsData);
-
-      console.log("🔍 competitiveOverlapApiData._metadata.dataSource:", competitiveOverlapApiData._metadata?.dataSource);
-
-    } else {
-
-      console.log("🔄 competitiveOverlapApiData is null/undefined");
-
-    }
+    // Monitoring effect - no logging needed
 
   }, [competitiveOverlapApiData]);
 
@@ -426,8 +315,6 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
   // Early return if no ICP is selected
 
   if (!selectedICP) {
-
-    console.log("No selectedICP, showing placeholder");
 
     return (
 
@@ -521,35 +408,13 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
             );
 
-            console.log('🧹 Browser cache cleared');
-
           } catch (cacheError) {
 
-            console.warn('⚠️ Could not clear browser cache:', cacheError);
+            // Silent fail
 
           }
 
         }
-
-        
-
-        console.log("=== GENERATING REPORT VIA API ===");
-
-        console.log("🔄 API Call Timestamp:", new Date().toISOString());
-
-        console.log("🔧 Code Version: v8-WITH-DATA-WRAPPER-FIX");
-
-        console.log("Component name:", componentName);
-
-        console.log("Selected ICP:", selectedICP);
-        
-        // CRITICAL DEBUG: Verify the selectedICP has the correct companySize
-        console.log("🔍 SELECTED ICP VERIFICATION:");
-        console.log("  - selectedICP.companySize:", selectedICP?.companySize);
-        console.log("  - selectedICP.id:", selectedICP?.id);
-        console.log("  - selectedICP.industry:", selectedICP?.industry);
-        console.log("  - selectedICP.segment:", selectedICP?.segment);
-        console.log("  - Full selectedICP object:", JSON.stringify(selectedICP, null, 2));
 
         
 
@@ -559,93 +424,18 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
         }
 
-
-
-        console.log("=== API FIX ATTEMPT - 2025-08-20-07:30:00 ===");
-
-        console.log("🔧 FINAL FIX: Using correct component name and data field");
-
-        console.log("🔍 COMPONENT NAME: icp summary & market opportunity");
-
-        console.log("✅ PAYLOAD STRUCTURE: data field with ICP object directly");
-
-        console.log("🔧 REMOVED: Unnecessary health checks");
-
-        
-
         // Create the API payload according to backend schema
 
-        // Based on working market-research API: data should contain the ICP directly
-
-        // CRITICAL: Ensure the backend uses the provided selectedICP data, not the saved company profile
-        // The data field should contain the complete ICP object with companySize, industry, etc.
-        console.log("🔍 VERIFYING SELECTED ICP DATA BEFORE API CALL:");
-        console.log("  - selectedICP.companySize:", selectedICP?.companySize);
-        console.log("  - selectedICP.id:", selectedICP?.id);
-        console.log("  - selectedICP.industry:", selectedICP?.industry);
-        console.log("  - selectedICP.segment:", selectedICP?.segment);
-        
-        // According to Swagger spec, the payload must include: user_id, org_id, component_name, data, refresh
-        // CRITICAL: The data field should contain the selected ICP with companySize, industry, etc.
-        // Backend MUST use this data field, not fetch from saved company profile
-        
         const apiPayload = {
           user_id: currentUser?.uid || "",
-          org_id: currentUser?.uid || "", // Using user_id as org_id (common for single-org users)
+          org_id: currentUser?.uid || "",
           component_name: componentName,
           refresh: true,
-          // CRITICAL: This data field contains the selected ICP card data
-          // Backend should use this instead of fetching saved company profile
           data: selectedICP
         };
         
-        console.log("🔍 FINAL PAYLOAD STRUCTURE (per Swagger spec):");
-        console.log("  - user_id:", apiPayload.user_id);
-        console.log("  - org_id:", apiPayload.org_id);
-        console.log("  - component_name:", apiPayload.component_name);
-        console.log("  - refresh:", apiPayload.refresh);
-        console.log("  - data.companySize:", apiPayload.data?.companySize);
-        console.log("  - data.industry:", apiPayload.data?.industry);
-        console.log("  - data.segment:", apiPayload.data?.segment);
-        console.log("  - Full data object keys:", Object.keys(apiPayload.data || {}));
-
-
-
-        console.log("🔄 API Call Timestamp:", new Date().toISOString());
-
-        console.log("🎯 CORRECT APPROACH: Using data field with ICP directly");
-
-        console.log("🔧 FINAL PAYLOAD STRUCTURE (v17-FINAL-FIX):");
-
-        console.log("- user_id:", apiPayload.user_id);
-
-        console.log("- component_name:", apiPayload.component_name); 
-
-        console.log("- refresh:", apiPayload.refresh);
-
-        console.log("- data type:", typeof apiPayload.data);
-
-        console.log("- data keys:", Object.keys(apiPayload.data || {}));
-
-        console.log("API Request Payload:", apiPayload);
-
-        console.log("API Request Payload (stringified):", JSON.stringify(apiPayload, null, 2));
-
-        
-
-        // Validate payload structure before sending
-
-        console.log("🔍 PAYLOAD VALIDATION:");
-
-        console.log("   - Has user_id:", !!apiPayload.user_id);
-
-        console.log("   - Has component_name:", !!apiPayload.component_name);
-
-        console.log("   - Has refresh:", typeof apiPayload.refresh === 'boolean');
-
-        console.log("   - Has data:", !!apiPayload.data);
-
-        console.log("   - Data is object:", typeof apiPayload.data === 'object');
+        // Log request body
+        console.log(`[${componentName}] REQUEST BODY:`, JSON.stringify(apiPayload, null, 2));
 
 
 
@@ -673,24 +463,6 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
           try {
 
-            console.log(`🔄 Attempting ICP Research API call (attempt ${retryCount + 1}/${maxRetries + 1})`);
-
-            console.log(`🔍 Current timestamp: ${new Date().toISOString()}`);
-
-            
-
-            // Try the actual endpoint first with cache busting
-
-            console.log(`🌐 Making request to: ${endpoint}`);
-
-            console.log(`📤 About to send payload:`, apiPayload);
-
-            
-
-            // Try direct backend call first (bypass proxy)
-
-            console.log("🔧 Attempting direct backend call...");
-
             let directResponse;
 
             
@@ -717,15 +489,7 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
               });
 
-              console.log("✅ Direct backend call successful");
-
             } catch (directError) {
-
-              console.log("⚠️ Direct backend call failed, trying proxy...");
-
-              console.log("Direct error:", directError);
-
-              
 
               // Fallback to proxy
 
@@ -749,23 +513,13 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
               });
 
-              console.log("✅ Proxy call successful");
-
             }
-
-            
-
-            console.log(`🌐 Direct fetch response status: ${directResponse.status}`);
-
-            console.log(`🌐 Direct fetch response status text: ${directResponse.statusText}`);
 
             
 
             if (!directResponse.ok) {
 
               const errorText = await directResponse.text();
-
-              console.error(`❌ Direct fetch error: ${directResponse.status} - ${errorText}`);
 
               throw new Error(`HTTP error! status: ${directResponse.status} - ${errorText}`);
 
@@ -774,88 +528,9 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
             
 
             response = await directResponse.json();
-
             
-
-            console.log('✅ ICP Research API call successful');
-
-            console.log('📊 Response received at:', new Date().toISOString());
-
-            console.log('🔍 Response headers should indicate no caching');
-
-            console.log('📥 Response data:', response);
-
-            console.log('📥 Response type:', typeof response);
-
-            console.log('📥 Response keys:', Object.keys(response || {}));
-
-            
-
-            // ADD SPECIFIC RESPONSE VALIDATION
-
-            console.log('🔍🔍🔍 RESPONSE VALIDATION:');
-
-            console.log('🔍 response.status:', response?.status);
-
-            console.log('🔍 response.data exists:', !!response?.data);
-
-            console.log('🔍 response.data.currentData exists:', !!response?.data?.currentData);
-
-            console.log('🔍 response.data.currentData.title:', response?.data?.currentData?.title);
-
-            console.log('🔍 response.data.currentData.blurb:', response?.data?.currentData?.blurb);
-            
-            // CRITICAL: Verify the response matches the selected ICP
-            const responseTitle = response?.data?.currentData?.title || '';
-            const responseCompanySize = responseTitle.match(/\(([^)]+)\)/)?.[1] || '';
-            const selectedCompanySize = selectedICP?.companySize || '';
-            
-            console.log('🔍🔍🔍 COMPANY SIZE VALIDATION:');
-            console.log('  - Selected ICP companySize:', selectedCompanySize);
-            console.log('  - Response title:', responseTitle);
-            console.log('  - Response companySize (extracted):', responseCompanySize);
-            console.log('  - Full response data:', JSON.stringify(response?.data?.currentData, null, 2));
-            
-            // Compare all key fields
-            const selectedIndustry = selectedICP?.industry || '';
-            const responseIndustry = response?.data?.currentData?.blurb?.match(/\b(\w+)\s+companies/)?.[1] || '';
-            const selectedSegment = selectedICP?.segment || '';
-            
-            console.log('🔍🔍🔍 FULL ICP COMPARISON:');
-            console.log('  SENT - companySize:', selectedCompanySize, '| industry:', selectedIndustry, '| segment:', selectedSegment);
-            console.log('  RECEIVED - companySize:', responseCompanySize, '| title:', responseTitle);
-            
-            if (selectedCompanySize && responseCompanySize && 
-                !responseCompanySize.includes(selectedCompanySize.split('-')[0]?.trim()) &&
-                !selectedCompanySize.includes(responseCompanySize.split('-')[0]?.trim())) {
-              console.error('❌❌❌ CRITICAL MISMATCH DETECTED:');
-              console.error('  - PAYLOAD SENT companySize:', selectedCompanySize);
-              console.error('  - RESPONSE RECEIVED companySize:', responseCompanySize);
-              console.error('  - PAYLOAD SENT industry:', selectedIndustry);
-              console.error('  - PAYLOAD SENT segment:', selectedSegment);
-              console.error('  - RESPONSE RECEIVED title:', responseTitle);
-              console.error('  - RESPONSE RECEIVED blurb:', response?.data?.currentData?.blurb);
-              console.error('');
-              console.error('  ⚠️ BACKEND ISSUE: The backend is ignoring the data field in the payload!');
-              console.error('  ⚠️ The backend is using the saved company profile instead of the provided selectedICP data.');
-              console.error('  ⚠️ Backend must be updated to use: payload.data.companySize instead of fetching from database.');
-              console.error('');
-              console.error('  📋 PAYLOAD THAT WAS SENT:');
-              console.error(JSON.stringify({
-                user_id: apiPayload.user_id,
-                org_id: apiPayload.org_id,
-                component_name: apiPayload.component_name,
-                refresh: apiPayload.refresh,
-                data: {
-                  companySize: selectedICP?.companySize,
-                  industry: selectedICP?.industry,
-                  segment: selectedICP?.segment,
-                  id: selectedICP?.id
-                }
-              }, null, 2));
-            }
-
-            
+            // Log response body
+            console.log(`[${componentName}] RESPONSE BODY:`, JSON.stringify(response, null, 2));
 
             break; // Success, exit retry loop
 
@@ -865,113 +540,11 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
             retryCount++;
 
-            console.error(`❌ ICP Research API call failed (attempt ${retryCount}/${maxRetries + 1}):`, error);
-
-            
-
-            // Log detailed error information
-
-            if (error instanceof Error) {
-
-              console.error(`🔍 Error message: ${error.message}`);
-
-              console.error(`🔍 Error name: ${error.name}`);
-
-              console.error(`🔍 Error stack: ${error.stack}`);
-
-              
-
-              // Check if it's a network error
-
-              if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-
-                console.error(`🌐 NETWORK ERROR DETECTED: This might be a CORS or connectivity issue`);
-
-              }
-
-              
-
-              // Check if it's a 422 error and extract the detailed error
-
-              if (error.message.includes('422')) {
-
-                console.error(`🔍 422 ERROR DETECTED: Backend validation failed`);
-
-                console.error(`🔍 This suggests the payload structure is still incorrect`);
-
-                
-
-                // Try to extract the detailed error message from the response
-
-                try {
-
-                  const errorMatch = error.message.match(/\{.*\}/);
-
-                  if (errorMatch) {
-
-                    const errorDetails = JSON.parse(errorMatch[0]);
-
-                    console.error(`🔍 DETAILED 422 ERROR:`, errorDetails);
-
-                    console.error(`🔍 ERROR DETAIL:`, errorDetails.detail);
-
-                  }
-
-                } catch (parseError) {
-
-                  console.error(`🔍 Could not parse error details:`, parseError);
-
-                }
-
-              }
-
-            }
-
-            
-
-            // Log the exact payload that was sent
-
-            console.error(`📤 Sent payload:`, apiPayload);
-
-            console.error(`📤 Sent payload (stringified):`, JSON.stringify(apiPayload, null, 2));
-
-            
-
-            // Log additional debugging info
-
-            console.error(`🔍 Request URL: ${endpoint}`);
-
-            console.error(`🔍 Request method: POST`);
-
-            console.error(`🔍 Request headers:`, {
-
-              'Content-Type': 'application/json',
-
-              'Cache-Control': 'no-cache, no-store, must-revalidate',
-
-              'Pragma': 'no-cache',
-
-              'Expires': '0'
-
-            });
-
-            
-
             if (retryCount > maxRetries) {
-
-              // If all retries failed, fall back to mock response
-
-              console.log("API endpoint not available after retries, using mock response...");
 
               break;
 
             }
-
-            
-
-            // Wait before retrying
-
-            console.log(`⏳ Waiting 2 seconds before retry...`);
 
             await new Promise(resolve => setTimeout(resolve, 2000));
 
@@ -981,11 +554,9 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
         
 
-                // If API call failed after all retries, use mock response
+        // If API call failed after all retries, use mock response
 
         if (!response) {
-
-          console.log("API endpoint not available after retries, using mock response...");
 
           // Mock response until backend endpoint is implemented
 
@@ -999,7 +570,7 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
               _metadata: {
 
-                dataSource: "mock"
+                dataSource: "fallback"
 
               },
 
@@ -1111,119 +682,9 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
         }
 
-
-
-        console.log("API Response:", response);
-
-        console.log("API Response type:", typeof response);
-
-        console.log("API Response keys:", response ? Object.keys(response) : 'null');
-
-        
-
-        // ADD SPECIFIC API RESPONSE STRUCTURE DEBUGGING
-
-        console.log("🔍🔍🔍 API RESPONSE STRUCTURE ANALYSIS:");
-
-        console.log("🔍 response.status:", response?.status);
-
-        console.log("🔍 response.data exists:", !!response?.data);
-
-        console.log("🔍 response.data type:", typeof response?.data);
-
-        console.log("🔍 response.data keys:", response?.data ? Object.keys(response?.data) : 'null');
-
-        console.log("🔍 response.data.currentData exists:", !!response?.data?.currentData);
-
-        console.log("🔍 response.data.currentData type:", typeof response?.data?.currentData);
-
-        console.log("🔍 response.data.currentData keys:", response?.data?.currentData ? Object.keys(response?.data?.currentData) : 'null');
-
-        
-
-        // ADD COMPREHENSIVE DEBUGGING
-
-        console.log("🔍🔍🔍 COMPREHENSIVE API RESPONSE DEBUGGING:");
-
-        console.log("🔍 Full response object:", JSON.stringify(response, null, 2));
-
-        console.log("🔍 Response.status:", response?.status);
-
-        console.log("🔍 Response.message:", response?.message);
-
-        console.log("🔍 Response.data exists:", !!response?.data);
-
-        console.log("🔍 Response.data type:", typeof response?.data);
-
-        console.log("🔍 Response.data keys:", response?.data ? Object.keys(response?.data) : 'null');
-
-        
-
-        // Check if response.data contains the expected fields
-
-        if (response?.data) {
-
-          console.log("🔍 response.data.currentData exists:", !!response.data.currentData);
-
-          console.log("🔍 response.data.currentData keys:", response.data.currentData ? Object.keys(response.data.currentData) : 'null');
-
-          
-
-          if (response.data.currentData) {
-
-            console.log("🔍 response.data.currentData.title:", response.data.currentData.title);
-
-            console.log("🔍 response.data.currentData.blurb:", response.data.currentData.blurb);
-
-            console.log("🔍 response.data.currentData.marketSize:", response.data.currentData.marketSize);
-
-            console.log("🔍 response.data.currentData.growth:", response.data.currentData.growth);
-
-            console.log("🔍 response.data.currentData.urgency:", response.data.currentData.urgency);
-
-            console.log("🔍 response.data.currentData.timeToClose:", response.data.currentData.timeToClose);
-
-          }
-
-        }
-
-        
-
-        // Summary of the fix applied
-
-        console.log("🎯 FINAL FIX SUMMARY:");
-
-        console.log("   - COMPONENT NAME: icp summary & market opportunity");
-
-        console.log("   - PAYLOAD STRUCTURE: data field with ICP object directly");
-
-        console.log("   - REMOVED: Unnecessary health check endpoints");
-
-        console.log("   - RESULT: Clean API call with correct structure");
-
-
-
         // Handle the API response structure: {status: 'success', data: {currentData: {...}}}
 
-        // The API returns {status: 'success', data: {currentData: {...}}}, so we need to extract from response.data.currentData
-
         const reportData = response?.data?.currentData || response?.data || response?.currentData || response;
-
-        
-
-        console.log("🔍🔍🔍 DATA EXTRACTION DEBUGGING:");
-
-        console.log("🔍 response?.data?.currentData:", response?.data?.currentData);
-
-        console.log("🔍 response?.data:", response?.data);
-
-        console.log("🔍 response?.currentData:", response?.currentData);
-
-        console.log("🔍 response:", response);
-
-        console.log("🔍 FINAL EXTRACTED reportData:", reportData);
-
-        console.log("🔍 reportData keys:", reportData ? Object.keys(reportData) : 'null');
 
         
 
@@ -1327,7 +788,7 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
               ...reportData._metadata,
 
-              dataSource: 'api'
+              dataSource: reportData._metadata?.dataSource || 'api'
 
             }
 
@@ -1336,42 +797,9 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
           
 
           setApiReportData(transformedData);
-
-          console.log("✅ Report data updated from API/Mock with transformation");
-
-          console.log("🔍 Transformed data structure:", transformedData);
-
           
-
-          // ADD STATE UPDATE DEBUGGING
-
-          console.log("🔍🔍🔍 STATE UPDATE DEBUGGING:");
-
-          console.log("🔍 About to call setApiReportData with:", transformedData);
-
-          console.log("🔍 transformedData.title:", transformedData.title);
-
-          console.log("🔍 transformedData.blurb:", transformedData.blurb);
-
-          console.log("🔍 transformedData.marketSize:", transformedData.marketSize);
-
-          console.log("🔍 transformedData.growth:", transformedData.growth);
-
-          console.log("🔍 transformedData.urgency:", transformedData.urgency);
-
-          console.log("🔍 transformedData.timeToClose:", transformedData.timeToClose);
-
-          
-
-          // Force a re-render check
-
-          setTimeout(() => {
-
-            console.log("🔍🔍🔍 STATE UPDATE VERIFICATION (after 100ms):");
-
-            console.log("🔍 apiReportData should now contain:", transformedData);
-
-          }, 100);
+          // Log data source
+          console.log(`[${componentName}] DATA SOURCE:`, transformedData._metadata?.dataSource || 'api');
 
         } else if (response && response.data) {
 
@@ -1467,7 +895,7 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
               ...response.data._metadata,
 
-              dataSource: 'api'
+              dataSource: response.data._metadata?.dataSource || 'api'
 
             }
 
@@ -1476,46 +904,11 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
           
 
           setApiReportData(transformedData);
-
-          console.log("✅ Report data updated from API (data field) with transformation");
-
-          console.log("🔍 Transformed data structure:", transformedData);
-
           
-
-          // ADD STATE UPDATE DEBUGGING FOR SECOND PATH
-
-          console.log("🔍🔍🔍 STATE UPDATE DEBUGGING (SECOND PATH):");
-
-          console.log("🔍 About to call setApiReportData with:", transformedData);
-
-          console.log("🔍 transformedData.title:", transformedData.title);
-
-          console.log("🔍 transformedData.blurb:", transformedData.blurb);
-
-          console.log("🔍 transformedData.marketSize:", transformedData.marketSize);
-
-          console.log("🔍 transformedData.growth:", transformedData.growth);
-
-          console.log("🔍 transformedData.urgency:", transformedData.urgency);
-
-          console.log("🔍 transformedData.timeToClose:", transformedData.timeToClose);
-
-          
-
-          // Force a re-render check
-
-          setTimeout(() => {
-
-            console.log("🔍🔍🔍 STATE UPDATE VERIFICATION (SECOND PATH, after 100ms):");
-
-            console.log("🔍 apiReportData should now contain:", transformedData);
-
-          }, 100);
+          // Log data source
+          console.log(`[${componentName}] DATA SOURCE:`, transformedData._metadata?.dataSource || 'api');
 
         } else {
-
-          console.error("❌ Invalid response format:", response);
 
           throw new Error("Invalid response format from API");
 
@@ -1524,8 +917,6 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
 
       } catch (error) {
-
-        console.error("=== ERROR GENERATING REPORT VIA API ===", error);
 
         setReportError(error instanceof Error ? error.message : "Failed to generate report");
 
@@ -1565,25 +956,13 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
             );
 
-            console.log('🧹 Browser cache cleared for buyer map');
-
           } catch (cacheError) {
 
-            console.warn('⚠️ Could not clear browser cache:', cacheError);
+            // Silent fail
 
           }
 
         }
-
-        
-
-        console.log("=== GENERATING BUYER MAP REPORT VIA API ===");
-
-        console.log("🔄 API Call Timestamp:", new Date().toISOString());
-
-        console.log("Component name: buyer map & roles, pain points, triggers");
-
-        console.log("Selected ICP:", selectedICP);
 
         
 
@@ -1593,7 +972,7 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
         }
 
-
+        const componentName = "buyer map & roles, pain points, triggers";
 
         // Create the API payload according to backend schema
 
@@ -1601,7 +980,7 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
           user_id: currentUser?.uid || "",
 
-          component_name: "buyer map & roles, pain points, triggers",
+          component_name: componentName,
 
           refresh: true,
 
@@ -1609,61 +988,14 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
         };
 
-
-
-        console.log("🔄 Buyer Map API Call Timestamp:", new Date().toISOString());
-
-        console.log("🎯 BUYER MAP PAYLOAD STRUCTURE:");
-
-        console.log("- user_id:", apiPayload.user_id);
-
-        console.log("- component_name:", apiPayload.component_name); 
-
-        console.log("- refresh:", apiPayload.refresh);
-
-        console.log("- data type:", typeof apiPayload.data);
-
-        console.log("- data keys:", Object.keys(apiPayload.data || {}));
-
-        console.log("Buyer Map API Request Payload:", apiPayload);
-
-        console.log("Buyer Map API Request Payload (stringified):", JSON.stringify(apiPayload, null, 2));
-
-        
-
-        // Validate payload structure before sending
-
-        console.log("🔍 BUYER MAP PAYLOAD VALIDATION:");
-
-        console.log("   - Has user_id:", !!apiPayload.user_id);
-
-        console.log("   - Has component_name:", !!apiPayload.component_name);
-
-        console.log("   - Has refresh:", typeof apiPayload.refresh === 'boolean');
-
-        console.log("   - Has data:", !!apiPayload.data);
-
-        console.log("   - Data is object:", typeof apiPayload.data === 'object');
-
-
-
-        // Use enhanced API with rate limiting
-
-        console.log("🚀 Using enhanced API with rate limiting for Buyer Map");
-
-        console.log("🔍 About to call callICPresearch with:");
-
-        console.log("  - componentName: buyer map & roles, pain points, triggers");
-
-        console.log("  - selectedICP:", selectedICP);
-
-        console.log("  - options:", { useCache: true, componentName: "Buyer Map" });
+        // Log request body
+        console.log(`[${componentName}] REQUEST BODY:`, JSON.stringify(apiPayload, null, 2));
 
         
 
         const apiResponse = await callICPresearch(
 
-          "buyer map & roles, pain points, triggers",
+          componentName,
 
           selectedICP,
 
@@ -1683,61 +1015,21 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
         
 
-        console.log("📊 Enhanced API Response:", apiResponse);
-
-        
-
-        // ADD ENHANCED API RESPONSE DEBUGGING
-
-        console.log("🔍🔍🔍 ENHANCED API RESPONSE STRUCTURE:");
-
-        console.log("🔍 apiResponse.success:", apiResponse.success);
-
-        console.log("🔍 apiResponse.error:", apiResponse.error);
-
-        console.log("🔍 apiResponse.statusCode:", apiResponse.statusCode);
-
-        console.log("🔍 apiResponse.data exists:", !!apiResponse.data);
-
-        console.log("🔍 apiResponse.data type:", typeof apiResponse.data);
-
-        console.log("🔍 apiResponse.data keys:", apiResponse.data ? Object.keys(apiResponse.data) : 'null');
-
-        
-
         let response;
 
         if (!apiResponse.success) {
-
-          console.error("❌ Enhanced API call failed:", apiResponse.error);
-
-          console.log("🔍🔍🔍 ENHANCED API FAILURE ANALYSIS:");
-
-          console.log("🔍 apiResponse.statusCode:", apiResponse.statusCode);
-
-          console.log("🔍 apiResponse.error:", apiResponse.error);
-
-          console.log("🔍 apiResponse.rateLimitInfo:", apiResponse.rateLimitInfo);
-
-          
 
           // Check if it's a rate limit error
 
           if (apiResponse.error?.includes('rate limit') || apiResponse.statusCode === 429) {
 
-            console.log("🚫 Rate limit detected, using mock data as fallback");
-
             setBuyerMapError("Rate limit reached. Using cached/mock data.");
 
           } else if (apiResponse.statusCode === 408) {
 
-            console.log("⏰ Request timeout detected, using mock data as fallback");
-
             setBuyerMapError("Request timed out. Using cached/mock data.");
 
           } else if (apiResponse.statusCode === 500) {
-
-            console.log("🏥 Backend server error detected, using mock data as fallback");
 
             setBuyerMapError("Backend server error. Using cached/mock data.");
 
@@ -1785,7 +1077,7 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
               _metadata: {
 
-                dataSource: "mock"
+                dataSource: "fallback"
 
               }
 
@@ -1797,27 +1089,16 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
           response = apiResponse.data;
 
-          console.log("✅ Enhanced API call successful");
-
-          console.log("🔍🔍🔍 RESPONSE ASSIGNMENT DEBUGGING:");
-
-          console.log("🔍 apiResponse.data:", apiResponse.data);
-
-          console.log("🔍 response assigned:", response);
-
-          console.log("🔍 response type:", typeof response);
-
-          console.log("🔍 response keys:", response ? Object.keys(response) : 'null');
-
         }
+        
+        // Log response body
+        console.log(`[${componentName}] RESPONSE BODY:`, JSON.stringify(response, null, 2));
 
         
 
         // If API call failed after all retries, use mock response
 
         if (!response) {
-
-          console.log("Buyer Map API endpoint not available after retries, using mock response...");
 
           // Mock response until backend endpoint is implemented
 
@@ -1855,7 +1136,7 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
               _metadata: {
 
-                dataSource: "mock"
+                dataSource: "fallback"
 
               }
 
@@ -1865,109 +1146,9 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
         }
 
-
-
-        console.log("Buyer Map API Response:", response);
-
-        console.log("Buyer Map API Response type:", typeof response);
-
-        console.log("Buyer Map API Response keys:", response ? Object.keys(response) : 'null');
-
-        console.log("Buyer Map API Response.data:", response?.data);
-
-        console.log("Buyer Map API Response.data keys:", response?.data ? Object.keys(response.data) : 'null');
-
-        
-
-        // ADD COMPREHENSIVE DEBUGGING
-
-        console.log("🔍🔍🔍 COMPREHENSIVE API RESPONSE DEBUGGING:");
-
-        console.log("🔍 Full response object:", JSON.stringify(response, null, 2));
-
-        console.log("🔍 Response.status:", response?.status);
-
-        console.log("🔍 Response.message:", response?.message);
-
-        console.log("🔍 Response.data exists:", !!response?.data);
-
-        console.log("🔍 Response.data type:", typeof response?.data);
-
-        console.log("🔍 Response.data keys:", response?.data ? Object.keys(response.data) : 'null');
-
-        
-
-        // ADD SPECIFIC BUYER MAP API RESPONSE STRUCTURE DEBUGGING
-
-        console.log("🔍🔍🔍 BUYER MAP API RESPONSE STRUCTURE ANALYSIS:");
-
-        console.log("🔍 response.status:", response?.status);
-
-        console.log("🔍 response.data exists:", !!response?.data);
-
-        console.log("🔍 response.data type:", typeof response?.data);
-
-        console.log("🔍 response.data keys:", response?.data ? Object.keys(response?.data) : 'null');
-
-        
-
-        // Check if response.data contains the expected fields for buyer map
-
-        if (response?.data) {
-
-          console.log("🔍 response.data.corePersonas:", response.data.corePersonas);
-
-          console.log("🔍 response.data.topPainPoint:", response.data.topPainPoint);
-
-          console.log("🔍 response.data.buyingTriggers:", response.data.buyingTriggers);
-
-          console.log("🔍 response.data.buyingTriggersArray:", response.data.buyingTriggersArray);
-
-          console.log("🔍 response.data.blurb:", response.data.blurb);
-
-          console.log("🔍 response.data.title:", response.data.title);
-
-          console.log("🔍 response.data.industry:", response.data.industry);
-
-          console.log("🔍 response.data.segment:", response.data.segment);
-
-        }
-
-        
-
-        // Summary of the fix applied
-
-        console.log("🎯 BUYER MAP FINAL FIX SUMMARY:");
-
-        console.log("   - COMPONENT NAME: buyer map & roles, pain points, triggers");
-
-        console.log("   - PAYLOAD STRUCTURE: data field with ICP object directly");
-
-        console.log("   - REMOVED: Unnecessary health check endpoints");
-
-        console.log("   - RESULT: Clean API call with correct structure");
-
-
-
         // Handle the API response structure: {status: 'success', data: {currentData: {...}}}
 
-        // For buyer map, the API returns data nested under response.data.currentData (same as first component)
-
         const buyerMapResponse = response?.data?.currentData || response?.data || response?.buyerMap || response;
-
-        
-
-        console.log("🔍🔍🔍 BUYER MAP DATA EXTRACTION DEBUGGING:");
-
-        console.log("🔍 response?.data:", response?.data);
-
-        console.log("🔍 response?.buyerMap:", response?.buyerMap);
-
-        console.log("🔍 response:", response);
-
-        console.log("🔍 FINAL EXTRACTED buyerMapResponse:", buyerMapResponse);
-
-        console.log("🔍 buyerMapResponse keys:", buyerMapResponse ? Object.keys(buyerMapResponse) : 'null');
 
         
 
@@ -1999,7 +1180,7 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
             _metadata: {
 
-              dataSource: 'api'
+              dataSource: buyerMapResponse._metadata?.dataSource || 'api'
 
             }
 
@@ -2007,91 +1188,10 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
           
 
-          console.log("🔍🔍🔍 BEFORE STATE UPDATE:");
-
-          console.log("🔍 Current buyerMapApiData:", buyerMapApiData);
-
-          console.log("🔍 About to set buyerMapApiData to:", transformedData);
-
-          
-
           setBuyerMapApiData(transformedData);
-
           
-
-          console.log("✅ Buyer Map report data updated from API/Mock with transformation");
-
-          console.log("🔍 Transformed buyer map data structure:", transformedData);
-
-          console.log("🔍 buyingTriggersArray:", transformedData.buyingTriggersArray);
-
-          
-
-          // ADD FIELD MAPPING DEBUGGING
-
-          console.log("🔍🔍🔍 FIELD MAPPING DEBUGGING:");
-
-          console.log("🔍 Original coreBuyerPersonas:", buyerMapResponse.coreBuyerPersonas);
-
-          console.log("🔍 Mapped to corePersonas:", transformedData.corePersonas);
-
-          console.log("🔍 Original buyingTriggersIdentified:", buyerMapResponse.buyingTriggersIdentified);
-
-          console.log("🔍 Mapped to buyingTriggers:", transformedData.buyingTriggers);
-
-          console.log("🔍 Original buyingTriggers array:", buyerMapResponse.buyingTriggers);
-
-          console.log("🔍 Mapped to buyingTriggersArray:", transformedData.buyingTriggersArray);
-
-          
-
-          // ADD BUYER MAP STATE UPDATE DEBUGGING
-
-          console.log("🔍🔍🔍 BUYER MAP STATE UPDATE DEBUGGING:");
-
-          console.log("🔍 About to call setBuyerMapApiData with:", transformedData);
-
-          console.log("🔍 transformedData.summary:", transformedData.summary);
-
-          console.log("🔍 transformedData.corePersonas:", transformedData.corePersonas);
-
-          console.log("🔍 transformedData.topPainPoint:", transformedData.topPainPoint);
-
-          console.log("🔍 transformedData.buyingTriggers:", transformedData.buyingTriggers);
-
-          console.log("🔍 transformedData.buyingTriggersArray length:", transformedData.buyingTriggersArray?.length);
-
-          
-
-          // ADD STATE UPDATE DEBUGGING
-
-          console.log("🔍🔍🔍 STATE UPDATE DEBUGGING:");
-
-          console.log("🔍 About to call setBuyerMapApiData with:", transformedData);
-
-          console.log("🔍 transformedData.corePersonas:", transformedData.corePersonas);
-
-          console.log("🔍 transformedData.topPainPoint:", transformedData.topPainPoint);
-
-          console.log("🔍 transformedData.buyingTriggers:", transformedData.buyingTriggers);
-
-          console.log("🔍 transformedData.buyingTriggersArray length:", transformedData.buyingTriggersArray?.length);
-
-          console.log("🔍 transformedData.summary:", transformedData.summary);
-
-          
-
-          // Force a re-render check
-
-          setTimeout(() => {
-
-            console.log("🔍🔍🔍 STATE UPDATE VERIFICATION (after 100ms):");
-
-            console.log("🔍 buyerMapApiData should now contain:", transformedData);
-
-            console.log("🔍 Current buyerMapApiData state:", buyerMapApiData);
-
-          }, 100);
+          // Log data source
+          console.log(`[${componentName}] DATA SOURCE:`, transformedData._metadata?.dataSource || 'api');
 
         } else if (response && response.data) {
 
@@ -2121,7 +1221,7 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
             _metadata: {
 
-              dataSource: 'api'
+              dataSource: response.data._metadata?.dataSource || 'api'
 
             }
 
@@ -2130,46 +1230,11 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
           
 
           setBuyerMapApiData(transformedData);
-
-          console.log("✅ Buyer Map report data updated from API/Mock with transformation (data field)");
-
-          console.log("🔍 Transformed buyer map data structure:", transformedData);
-
           
-
-          // ADD STATE UPDATE DEBUGGING FOR SECOND PATH
-
-          console.log("🔍🔍🔍 STATE UPDATE DEBUGGING (SECOND PATH):");
-
-          console.log("🔍 About to call setBuyerMapApiData with:", transformedData);
-
-          console.log("🔍 transformedData.corePersonas:", transformedData.corePersonas);
-
-          console.log("🔍 transformedData.topPainPoint:", transformedData.topPainPoint);
-
-          console.log("🔍 transformedData.buyingTriggers:", transformedData.buyingTriggers);
-
-          console.log("🔍 transformedData.buyingTriggersArray length:", transformedData.buyingTriggersArray?.length);
-
-          console.log("🔍 transformedData.summary:", transformedData.summary);
-
-          
-
-          // Force a re-render check
-
-          setTimeout(() => {
-
-            console.log("🔍🔍🔍 STATE UPDATE VERIFICATION (SECOND PATH, after 100ms):");
-
-            console.log("🔍 buyerMapApiData should now contain:", transformedData);
-
-          }, 100);
+          // Log data source
+          console.log(`[${componentName}] DATA SOURCE:`, transformedData._metadata?.dataSource || 'api');
 
         } else {
-
-          console.warn("❌ Unexpected buyer map API response structure");
-
-          console.warn("Response:", response);
 
           setBuyerMapError("Unexpected API response structure");
 
@@ -2178,8 +1243,6 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
         
 
       } catch (error) {
-
-        console.error("=== ERROR GENERATING BUYER MAP REPORT VIA API ===", error);
 
         setBuyerMapError(error instanceof Error ? error.message : "Failed to generate buyer map report");
 
@@ -2205,33 +1268,26 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
          
 
-         console.log("=== GENERATING COMPETITIVE OVERLAP REPORT VIA API ===");
-
-         console.log("🔄 API Call Timestamp:", new Date().toISOString());
-
-         console.log("Component name: competitive overlap & buying signals");
-
-         console.log("Selected ICP:", selectedICP);
-
-         
-
          if (!selectedICP) {
 
            throw new Error("No ICP selected for competitive overlap report generation");
 
          }
 
+         const componentName = "competitive overlap & buying signals";
 
-
-         // Use enhanced API with rate limiting
-
-         console.log("🚀 Using enhanced API with rate limiting for Competitive Overlap");
-
-         
+         // Log request body (payload is created inside callICPresearch, so we log the component name and ICP)
+         const requestPayload = {
+           user_id: currentUser?.uid || "",
+           component_name: componentName,
+           refresh: true,
+           data: selectedICP
+         };
+         console.log(`[${componentName}] REQUEST BODY:`, JSON.stringify(requestPayload, null, 2));
 
          const apiResponse = await callICPresearch(
 
-           "competitive overlap & buying signals",
+           componentName,
 
            selectedICP,
 
@@ -2251,37 +1307,21 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
          
 
-         console.log("📊 Enhanced API Response:", apiResponse);
-
-         
-
          let response;
 
          if (!apiResponse.success) {
-
-           console.error("❌ Enhanced API call failed:", apiResponse.error);
-
-           console.error("❌ Status Code:", apiResponse.statusCode);
-
-           
 
            // Check if it's a rate limit error
 
            if (apiResponse.error?.includes('rate limit') || apiResponse.statusCode === 429) {
 
-             console.log("🚫 Rate limit detected, using mock data as fallback");
-
              setCompetitiveOverlapError("Rate limit reached. Using cached/mock data.");
 
            } else if (apiResponse.statusCode === 408) {
 
-             console.log("⏰ Request timeout detected, using mock data as fallback");
-
              setCompetitiveOverlapError("Request timed out. Using cached/mock data.");
 
            } else if (apiResponse.statusCode === 500) {
-
-             console.log("🏥 Backend server error (500), using mock data as fallback");
 
              setCompetitiveOverlapError("Backend server error. Using cached/mock data.");
 
@@ -2293,7 +1333,7 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
            
 
-           // Use mock response as fallback - Updated to match manufacturing ICP
+           // Use mock response as fallback
 
            response = {
 
@@ -2385,7 +1425,7 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
                  _metadata: {
 
-                   dataSource: "mock"
+                   dataSource: "fallback"
 
                  }
 
@@ -2399,97 +1439,16 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
            response = apiResponse.data;
 
-           console.log("✅ Enhanced API call successful");
-
          }
-
-
-
-         console.log("Competitive Overlap API Response:", response);
-
-         console.log("Competitive Overlap API Response type:", typeof response);
-
-         console.log("Competitive Overlap API Response keys:", response ? Object.keys(response) : 'null');
-
          
-
-         // ADD COMPREHENSIVE COMPETITIVE OVERLAP API RESPONSE DEBUGGING
-
-         console.log("🔍🔍🔍 COMPETITIVE OVERLAP API RESPONSE STRUCTURE ANALYSIS:");
-
-         console.log("🔍 response.status:", response?.status);
-
-         console.log("🔍 response.data exists:", !!response?.data);
-
-         console.log("🔍 response.data type:", typeof response?.data);
-
-         console.log("🔍 response.data keys:", response?.data ? Object.keys(response?.data) : 'null');
-
-         console.log("🔍 response.data.currentData exists:", !!response?.data?.currentData);
-
-         console.log("🔍 response.data.currentData type:", typeof response?.data?.currentData);
-
-         console.log("🔍 response.data.currentData keys:", response?.data?.currentData ? Object.keys(response?.data?.currentData) : 'null');
-
-         
-
-         // Check if response.data.currentData contains the expected fields for competitive overlap
-
-         if (response?.data?.currentData) {
-
-           console.log("🔍 response.data.currentData.numberOfMainCompetitors:", response.data.currentData.numberOfMainCompetitors);
-
-           console.log("🔍 response.data.currentData.recentWinLossChange:", response.data.currentData.recentWinLossChange);
-
-           console.log("🔍 response.data.currentData.activeBuyingSignals:", response.data.currentData.activeBuyingSignals);
-
-           console.log("🔍 response.data.currentData.competitiveMap:", response.data.currentData.competitiveMap);
-
-           console.log("🔍 response.data.currentData.buyingSignals:", response.data.currentData.buyingSignals);
-
-           console.log("🔍 response.data.currentData.blurb:", response.data.currentData.blurb);
-
-           console.log("🔍 response.data.currentData.title:", response.data.currentData.title);
-
-         }
-
-         
-
-         // Summary of the fix applied
-
-         console.log("🎯 COMPETITIVE OVERLAP FINAL FIX SUMMARY:");
-
-         console.log("   - COMPONENT NAME: competitive overlap & buying signals");
-
-         console.log("   - PAYLOAD STRUCTURE: data field with ICP object directly");
-
-         console.log("   - REMOVED: Unnecessary health check endpoints");
-
-         console.log("   - RESULT: Clean API call with correct structure");
+         // Log response body
+         console.log(`[${componentName}] RESPONSE BODY:`, JSON.stringify(response, null, 2));
 
 
 
          // Handle the API response structure: {status: 'success', data: {currentData: {...}}}
 
-         // For competitive overlap, the API returns data nested under response.data.currentData
-
          const competitiveOverlapData = response?.data?.currentData || response?.competitiveOverlap || response?.data || response;
-
-         
-
-         console.log("🔍🔍🔍 COMPETITIVE OVERLAP DATA EXTRACTION DEBUGGING:");
-
-         console.log("🔍 response?.data?.currentData:", response?.data?.currentData);
-
-         console.log("🔍 response?.competitiveOverlap:", response?.competitiveOverlap);
-
-         console.log("🔍 response?.data:", response?.data);
-
-         console.log("🔍 response:", response);
-
-         console.log("🔍 FINAL EXTRACTED competitiveOverlapData:", competitiveOverlapData);
-
-         console.log("🔍 competitiveOverlapData keys:", competitiveOverlapData ? Object.keys(competitiveOverlapData) : 'null');
 
          
 
@@ -2541,69 +1500,16 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
            
 
-           // ADD TRANSFORMATION DEBUGGING
-
-           console.log("🔍🔍🔍 TRANSFORMATION DEBUGGING (competitiveOverlap path):");
-
-           console.log("🔍 competitiveOverlapData.competitiveMap:", competitiveOverlapData.competitiveMap);
-
-           console.log("🔍 competitiveOverlapData.competitiveData?.competitiveMap:", competitiveOverlapData.competitiveData?.competitiveMap);
-
-           console.log("🔍 Final competitiveMap (transformed):", transformedData.competitiveMap);
-
-           console.log("🔍 Final competitiveMap length:", transformedData.competitiveMap?.length);
-
-           
-
            setCompetitiveOverlapApiData(transformedData);
-
-           console.log("✅ Competitive Overlap report data updated from API/Mock with transformation");
-
-           console.log("🔍 Transformed competitive overlap data structure:", transformedData);
-
-           // ADD STATE UPDATE DEBUGGING
-
-           console.log("🔍🔍🔍 COMPETITIVE OVERLAP STATE UPDATE DEBUGGING:");
-
-           console.log("🔍 About to call setCompetitiveOverlapApiData with:", transformedData);
-
-           console.log("🔍 transformedData.summary:", transformedData.summary);
-
-           console.log("🔍 transformedData.competitors:", transformedData.competitors);
-
-           console.log("🔍 transformedData.winLossChange:", transformedData.winLossChange);
-
-           console.log("🔍 transformedData.activeBuyingSignals:", transformedData.activeBuyingSignals);
-
-           console.log("🔍 transformedData.competitiveMap:", transformedData.competitiveMap);
-
-           console.log("🔍 transformedData.competitiveMap type:", typeof transformedData.competitiveMap);
-
-           console.log("🔍 transformedData.competitiveMap isArray:", Array.isArray(transformedData.competitiveMap));
-
-           console.log("🔍 transformedData.competitiveMap length:", transformedData.competitiveMap?.length);
-
-           console.log("🔍 transformedData.competitiveNewsAndEvents length:", transformedData.competitiveNewsAndEvents?.length);
-
-           console.log("🔍 transformedData.buyingSignalsData length:", transformedData.buyingSignalsData?.length);
-
-           setTimeout(() => {
-
-             console.log("🔍🔍🔍 COMPETITIVE OVERLAP STATE UPDATE VERIFICATION (after 100ms):");
-
-             console.log("🔍 competitiveOverlapApiData should now contain:", transformedData);
-
-           }, 100);
+           
+           // Log data source
+           console.log(`[${componentName}] DATA SOURCE:`, transformedData._metadata?.dataSource || 'api');
 
          } else if (response && response.data) {
 
            // Handle case where response might have data instead of competitiveOverlap
 
            // This is a fallback for different API response structures
-
-           console.log("🔍🔍🔍 FALLBACK DATA PATH - response.data structure detected");
-
-           
 
            const transformedData = {
 
@@ -2651,33 +1557,7 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
            };
 
-           
-
-           // ADD TRANSFORMATION DEBUGGING FOR FALLBACK PATH
-
-           console.log("🔍🔍🔍 TRANSFORMATION DEBUGGING (FALLBACK response.data path):");
-
-           console.log("🔍 response.data.competitiveMap:", response.data.competitiveMap);
-
-           console.log("🔍 response.data.competitiveData?.competitiveMap:", response.data.competitiveData?.competitiveMap);
-
-           console.log("🔍 Final competitiveMap (transformed):", transformedData.competitiveMap);
-
-           console.log("🔍 Final competitiveMap length:", transformedData.competitiveMap?.length);
-
-           
-
-           // IMPORTANT: Don't call setCompetitiveOverlapApiData here to avoid overriding the main path
-
-           console.log("⚠️ FALLBACK PATH: Not calling setCompetitiveOverlapApiData to avoid data override");
-
-           console.log("🔍 Fallback transformedData:", transformedData);
-
          } else {
-
-           console.warn("❌ Unexpected competitive overlap API response structure");
-
-           console.warn("Response:", response);
 
            setCompetitiveOverlapError("Unexpected API response structure");
 
@@ -2686,8 +1566,6 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
          
 
        } catch (error) {
-
-         console.error("=== ERROR GENERATING COMPETITIVE OVERLAP REPORT VIA API ===", error);
 
          setCompetitiveOverlapError(error instanceof Error ? error.message : "Failed to generate competitive overlap report");
 
@@ -2707,8 +1585,6 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
        try {
 
-         console.log('🏥 Testing backend health...');
-
          const response = await fetch('/api/health', {
 
            method: 'GET',
@@ -2723,31 +1599,19 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
          
 
-         console.log('🏥 Health check response status:', response.status);
-
-         console.log('🏥 Health check response ok:', response.ok);
-
-         
-
          if (response.ok) {
 
-           const healthData = await response.json();
-
-           console.log('🏥 Backend health check successful:', healthData);
+           await response.json();
 
            return true;
 
          } else {
-
-           console.error('🏥 Backend health check failed:', response.status, response.statusText);
 
            return false;
 
          }
 
        } catch (error) {
-
-         console.error('🏥 Backend health check error:', error);
 
          return false;
 
@@ -2783,25 +1647,15 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
              );
 
-             console.log('🧹 Browser cache cleared for regulatory compliance');
+             // Cache cleared
 
            } catch (cacheError) {
 
-             console.warn('⚠️ Could not clear browser cache:', cacheError);
+             // Silent fail
 
            }
 
          }
-
-         
-
-         console.log("=== GENERATING REGULATORY COMPLIANCE REPORT VIA API ===");
-
-         console.log("🔄 API Call Timestamp:", new Date().toISOString());
-
-         console.log("Component name: regulatory, compliance & recommended icp");
-
-         console.log("Selected ICP:", selectedICP);
 
          
 
@@ -2811,38 +1665,20 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
          }
 
+         const componentName = "regulatory, compliance & recommended icp";
 
-
-         // Note: We use callICPresearch which handles payload creation with org_id
-         // No need to create apiPayload here as it's not used
-         
-         console.log("🔄 Regulatory Compliance API Call Timestamp:", new Date().toISOString());
-         
-         console.log("🔍 VERIFYING SELECTED ICP DATA BEFORE API CALL:");
-         console.log("  - selectedICP.companySize:", selectedICP?.companySize);
-         console.log("  - selectedICP.id:", selectedICP?.id);
-         console.log("  - selectedICP.industry:", selectedICP?.industry);
-         console.log("  - selectedICP.segment:", selectedICP?.segment);
-
-
-
-        // Use enhanced API with rate limiting (like working components)
-
-        console.log("🚀 Using enhanced API with rate limiting for Regulatory Compliance");
-
-        console.log("🔍 About to call callICPresearch with:");
-
-        console.log("  - componentName: regulatory, compliance & recommended icp");
-
-        console.log("  - selectedICP:", selectedICP);
-
-        console.log("  - options:", { useCache: true, componentName: "Regulatory Compliance" });
-
-        
+         // Log request body
+         const requestPayload = {
+           user_id: currentUser?.uid || "",
+           component_name: componentName,
+           refresh: true,
+           data: selectedICP
+         };
+         console.log(`[${componentName}] REQUEST BODY:`, JSON.stringify(requestPayload, null, 2));
 
         const apiResponse = await callICPresearch(
 
-          "regulatory, compliance & recommended icp",
+          componentName,
 
           selectedICP,
 
@@ -2862,67 +1698,25 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
         
 
-        console.log("📊 Enhanced API Response:", apiResponse);
-
-        
-
-        // ADD ENHANCED API RESPONSE DEBUGGING
-
-        console.log("🔍🔍🔍 ENHANCED API RESPONSE STRUCTURE:");
-
-        console.log("🔍 apiResponse.success:", apiResponse.success);
-
-        console.log("🔍 apiResponse.error:", apiResponse.error);
-
-        console.log("🔍 apiResponse.statusCode:", apiResponse.statusCode);
-
-        console.log("🔍 apiResponse.data exists:", !!apiResponse.data);
-
-        console.log("🔍 apiResponse.data type:", typeof apiResponse.data);
-
-        console.log("🔍 apiResponse.data keys:", apiResponse.data ? Object.keys(apiResponse.data) : 'null');
-
-        
-
         let response;
 
         if (!apiResponse.success) {
-
-          console.error("❌ Enhanced API call failed:", apiResponse.error);
-
-          console.log("🔍🔍🔍 ENHANCED API FAILURE ANALYSIS:");
-
-          console.log("🔍 apiResponse.statusCode:", apiResponse.statusCode);
-
-          console.log("🔍 apiResponse.error:", apiResponse.error);
-
-          console.log("🔍 apiResponse.rateLimitInfo:", apiResponse.rateLimitInfo);
-
-          
 
           // Check if it's a rate limit error
 
           if (apiResponse.error?.includes('rate limit') || apiResponse.statusCode === 429) {
 
-            console.log("🚫 Rate limit detected, using mock data as fallback");
-
             setRegulatoryComplianceError("Rate limit reached. Using cached/mock data.");
 
           } else if (apiResponse.statusCode === 408) {
-
-            console.log("⏰ Request timeout detected, using mock data as fallback");
 
             setRegulatoryComplianceError("Request timed out. Using cached/mock data.");
 
           } else if (apiResponse.statusCode === 500) {
 
-            console.log("🏥 Backend server error detected, using mock data as fallback");
-
             setRegulatoryComplianceError("Backend server error. Using cached/mock data.");
 
           } else {
-
-            console.log("❌ Other API error detected, using mock data as fallback");
 
             setRegulatoryComplianceError(`API error: ${apiResponse.error}. Using cached/mock data.`);
 
@@ -2936,19 +1730,13 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
         } else {
 
-          console.log("✅ Enhanced API call successful");
-
-          // apiResponse.data contains the full backend response: { status: "success", data: {...} }
-          // We need to extract the actual data object
           response = apiResponse.data;
 
-          console.log("🔍 API Response structure:", {
-            hasStatus: !!response?.status,
-            hasData: !!response?.data,
-            hasCurrentData: !!response?.data?.currentData,
-            responseKeys: response ? Object.keys(response) : []
-          });
-
+        }
+        
+        // Log response body
+        if (response) {
+          console.log(`[${componentName}] RESPONSE BODY:`, JSON.stringify(response, null, 2));
         }
 
          
@@ -2956,8 +1744,6 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
          // If API call failed after all retries, use mock response
 
          if (!response) {
-
-           console.log("Regulatory Compliance API endpoint not available after retries, using mock response...");
 
            // Mock response until backend endpoint is implemented
 
@@ -3013,37 +1799,18 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
                _metadata: {
 
-                 dataSource: "mock"
+                 dataSource: "fallback"
 
                }
 
              }
 
            };
+           
+           // Log response body for fallback
+           console.log(`[${componentName}] RESPONSE BODY:`, JSON.stringify(response, null, 2));
 
          }
-
-
-
-         console.log("Regulatory Compliance API Response:", response);
-
-         console.log("Regulatory Compliance API Response type:", typeof response);
-
-         console.log("Regulatory Compliance API Response keys:", response ? Object.keys(response) : 'null');
-
-         
-
-         // Summary of the fix applied
-
-         console.log("🎯 REGULATORY COMPLIANCE FINAL FIX SUMMARY:");
-
-         console.log("   - COMPONENT NAME: regulatory, compliance & recommended icp");
-
-         console.log("   - PAYLOAD STRUCTURE: data field with ICP object directly");
-
-         console.log("   - REMOVED: Unnecessary health check endpoints");
-
-         console.log("   - RESULT: Clean API call with correct structure");
 
 
 
@@ -3082,10 +1849,9 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
            
 
            setRegulatoryComplianceApiData(transformedData);
-
-           console.log("✅ Regulatory Compliance report data updated from API/Mock with transformation");
-
-           console.log("🔍 Transformed regulatory compliance data structure:", transformedData);
+           
+           // Log data source
+           console.log(`[${componentName}] DATA SOURCE:`, transformedData._metadata?.dataSource || 'api');
 
          } else if (response && (response.data || response.currentData)) {
 
@@ -3094,16 +1860,9 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
            // apiResponse.data = { status: "success", data: { currentData: {...}, ... } }
            // So we need: response.data.currentData (if response has .data) or response.currentData (if already extracted)
            
-           const sourceData = response.data?.currentData || response.currentData || response.data;
-           
-           console.log("🔍 Extracting regulatory compliance data:");
-           console.log("  - response.status:", response.status);
-           console.log("  - response.data exists:", !!response.data);
-           console.log("  - response.data.currentData exists:", !!response.data?.currentData);
-           console.log("  - response.currentData exists:", !!response.currentData);
-           console.log("  - sourceData:", sourceData);
+          const sourceData = response.data?.currentData || response.currentData || response.data;
 
-           
+          
 
            const transformedData = {
 
@@ -3136,18 +1895,11 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
            
 
            setRegulatoryComplianceApiData(transformedData);
-
-           console.log("✅ Regulatory Compliance report data updated from API/Mock with transformation (data field)");
-
-           console.log("🔍 Source data structure:", sourceData);
-
-           console.log("🔍 Transformed regulatory compliance data structure:", transformedData);
+           
+           // Log data source
+           console.log(`[${componentName}] DATA SOURCE:`, transformedData._metadata?.dataSource || 'api');
 
          } else {
-
-           console.warn("❌ Unexpected regulatory compliance API response structure");
-
-           console.warn("Response:", response);
 
            setRegulatoryComplianceError("Unexpected API response structure");
 
@@ -3156,8 +1908,6 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
          
 
        } catch (error) {
-
-         console.error("=== ERROR GENERATING REGULATORY COMPLIANCE REPORT VIA API ===", error);
 
          setRegulatoryComplianceError(error instanceof Error ? error.message : "Failed to generate regulatory compliance report");
 
@@ -3177,8 +1927,6 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
       if (selectedICP) {
 
-        console.log("=== ICP SELECTED - GENERATING REPORT VIA API ===");
-
         generateReportViaAPI("icp summary & market opportunity");
 
       }
@@ -3192,8 +1940,6 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
      useEffect(() => {
 
        if (selectedICP) {
-
-         console.log("=== ICP SELECTED - GENERATING BUYER MAP REPORT VIA API ===");
 
          generateBuyerMapReportViaAPI();
 
@@ -3211,7 +1957,6 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
          setReportGenerating(true);
 
-         console.log(`=== GENERATING ${reportType.toUpperCase()} REPORT ===`);
 
          
 
@@ -3257,7 +2002,6 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
 
 
-         console.log("Report payload:", reportPayload);
 
 
 
@@ -3287,7 +2031,6 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
          const result = await response.json();
 
-         console.log("Report generation result:", result);
 
 
 
@@ -3315,7 +2058,6 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
        } catch (err) {
 
-         console.error("=== ERROR GENERATING REPORT ===", err);
 
          alert(`Failed to generate ${reportType} report. Please try again.`);
 
@@ -3335,7 +2077,6 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
     try {
 
-      console.log("=== FETCHING ICP DATA ===");
 
       setDataSource('api'); // Set data source to API
 
@@ -3363,13 +2104,6 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
 
 
-      console.log("=== ICP API CALL DETAILS ===");
-
-      console.log("URL:", apiUrl);
-
-      console.log("Response Status:", response.status);
-
-      console.log("Response OK:", response.ok);
 
       
 
@@ -3383,9 +2117,6 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
       const data = await response.json();
 
-      console.log("=== RAW BACKEND RESPONSE ===");
-
-      console.log("Full response:", data);
 
       console.log("Response type:", typeof data);
 
