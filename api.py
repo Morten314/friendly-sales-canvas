@@ -17,9 +17,9 @@ from pinecone import Pinecone
 from langchain_pinecone import PineconeVectorStore
 from langchain_community.document_loaders import PyPDFLoader, TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_openai import OpenAIEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 
-from config import origins, STAGE_ORDER, STAGE_MAPPING, s3_bucket, aws_region, aws_access_key, aws_secret_key, pinecone_api_key, together_api_key
+from config import origins, STAGE_ORDER, STAGE_MAPPING, s3_bucket, aws_region, aws_access_key, aws_secret_key, pinecone_api_key
 from models import (
     ProspectData, Lead, Contact, SalesPipelineResponse, TimeframeResponse, StageStats,
     CompanyProfile, UserProfile, ScoutProfile, MarketRequest, EditRequest,
@@ -1222,12 +1222,10 @@ async def process_file_to_embeddings(file_key: str, user_id: str, file_name: str
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
         chunks = text_splitter.split_documents(documents)
         
-        # Initialize embeddings (using TogetherAI embeddings via OpenAI-compatible API)
-        # TogetherAI supports OpenAI-compatible embedding API
-        embeddings = OpenAIEmbeddings(
-            openai_api_key=together_api_key,
-            openai_api_base="https://api.together.xyz/v1",
-            model="togethercomputer/m2-bert-80M-8k-retrieval"  # TogetherAI embedding model (768 dimensions)
+        # Initialize embeddings (using HuggingFace embeddings - free, no API key needed)
+        # Using a lightweight, fast embedding model
+        embeddings = HuggingFaceEmbeddings(
+            model_name="sentence-transformers/all-MiniLM-L6-v2"
         )
         
         # Create or get Pinecone index
@@ -1235,7 +1233,7 @@ async def process_file_to_embeddings(file_key: str, user_id: str, file_name: str
         try:
             pc.create_index(
                 name=index_name,
-                dimension=768,  # TogetherAI m2-bert embedding dimension (768)
+                dimension=384,  # all-MiniLM-L6-v2 embedding dimension (384)
                 metric="cosine"
             )
         except Exception:
