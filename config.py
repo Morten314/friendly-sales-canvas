@@ -29,6 +29,15 @@ tavily_api_key = "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"
 # RapidAPI Key for LinkedIn
 rapidapi_key = "21e118e355mshbc19a8a36c9651ap150506jsn12f7ce6866aa"
 
+# AWS S3 Configuration
+s3_bucket = os.getenv("S3_BUCKET") or "brewra-data-sources"
+aws_region = os.getenv("AWS_REGION") or "eu-north-1"
+aws_access_key = os.getenv("AWS_ACCESS_KEY") or ""
+aws_secret_key = os.getenv("AWS_SECRET_KEY") or ""
+
+# Pinecone Configuration
+pinecone_api_key = os.getenv("PINECONE_API_KEY") or ""
+
 # Predefined questions for prospect scoring
 PREDEFINED_QUESTIONS = [
   "Is there a budget planned for the next four quarters?",

@@ -19,7 +19,7 @@ from langchain_community.document_loaders import PyPDFLoader, TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 
-from config import origins, STAGE_ORDER, STAGE_MAPPING
+from config import origins, STAGE_ORDER, STAGE_MAPPING, s3_bucket, aws_region, aws_access_key, aws_secret_key, pinecone_api_key
 from models import (
     ProspectData, Lead, Contact, SalesPipelineResponse, TimeframeResponse, StageStats,
     CompanyProfile, UserProfile, ScoutProfile, MarketRequest, EditRequest,
@@ -1190,30 +1190,23 @@ async def get_customer_profile():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# S3 and Pinecone configuration
-S3_BUCKET = "brewra-data-sources"
-AWS_REGION = "eu-north-1"
-AWS_ACCESS_KEY = "AKIAWSX4DVX7DHHENUWS"
-AWS_SECRET_KEY = "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"
-PINECONE_API_KEY = "pcsk_3Hv4td_HrXCeQPwZYJZT1Zf6nwtLjAC64E8WcJA1fQ6w18dGUnxsPLpoUrovVb7JCP862w"
-
 # Initialize S3 client
 s3_client = boto3.client(
     's3',
-    aws_access_key_id=AWS_ACCESS_KEY,
-    aws_secret_access_key=AWS_SECRET_KEY,
-    region_name=AWS_REGION
+    aws_access_key_id=aws_access_key,
+    aws_secret_access_key=aws_secret_key,
+    region_name=aws_region
 )
 
 # Initialize Pinecone
-pc = Pinecone(api_key=PINECONE_API_KEY)
+pc = Pinecone(api_key=pinecone_api_key)
 
 async def process_file_to_embeddings(file_key: str, user_id: str, file_name: str):
     """Background task to convert file to embeddings and store in Pinecone"""
     try:
         # Download file from S3
         local_file_path = f"/tmp/{file_name}"
-        s3_client.download_file(S3_BUCKET, file_key, local_file_path)
+        s3_client.download_file(s3_bucket, file_key, local_file_path)
         
         # Load document based on file type
         if file_name.endswith('.pdf'):
@@ -1249,7 +1242,7 @@ async def process_file_to_embeddings(file_key: str, user_id: str, file_name: str
             chunks,
             embeddings,
             index_name=index_name,
-            pinecone_api_key=PINECONE_API_KEY
+            pinecone_api_key=pinecone_api_key
         )
         
         # Update status in MongoDB (optional - for tracking)
@@ -1330,7 +1323,7 @@ async def upload_document(
         try:
             file_content = await file.read()
             s3_client.put_object(
-                Bucket=S3_BUCKET,
+                Bucket=s3_bucket,
                 Key=file_key,
                 Body=file_content,
                 ContentType=file.content_type or 'application/octet-stream'
@@ -1360,7 +1353,7 @@ async def upload_document(
                 "file_name": file.filename,
                 "status": "processing",
                 "uploaded_at": datetime.utcnow(),
-                "s3_url": f"s3://{S3_BUCKET}/{file_key}"
+                "s3_url": f"s3://{s3_bucket}/{file_key}"
             })
             mongo_client.close()
         except Exception as e:
