@@ -22,5 +22,3 @@ openai
 boto3
 pinecone-client
 langchain-pinecone
-langchain-huggingface
-sentence-transformers
