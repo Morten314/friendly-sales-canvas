@@ -8,10 +8,16 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Any
 
-from fastapi import FastAPI, UploadFile, File, Form, Query, HTTPException, Body, APIRouter
+from fastapi import FastAPI, UploadFile, File, Form, Query, HTTPException, Body, APIRouter, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pymongo import MongoClient
+import boto3
+from pinecone import Pinecone
+from langchain_pinecone import PineconeVectorStore
+from langchain_community.document_loaders import PyPDFLoader, TextLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_openai import OpenAIEmbeddings
 
 from config import origins, STAGE_ORDER, STAGE_MAPPING
 from models import (
@@ -1181,5 +1187,269 @@ async def get_customer_profile():
         
     except HTTPException:
         raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# S3 and Pinecone configuration
+S3_BUCKET = "brewra-data-sources"
+AWS_REGION = "eu-north-1"
+AWS_ACCESS_KEY = "AKIAWSX4DVX7DHHENUWS"
+AWS_SECRET_KEY = "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"
+PINECONE_API_KEY = "pcsk_3Hv4td_HrXCeQPwZYJZT1Zf6nwtLjAC64E8WcJA1fQ6w18dGUnxsPLpoUrovVb7JCP862w"
+
+# Initialize S3 client
+s3_client = boto3.client(
+    's3',
+    aws_access_key_id=AWS_ACCESS_KEY,
+    aws_secret_access_key=AWS_SECRET_KEY,
+    region_name=AWS_REGION
+)
+
+# Initialize Pinecone
+pc = Pinecone(api_key=PINECONE_API_KEY)
+
+async def process_file_to_embeddings(file_key: str, user_id: str, file_name: str):
+    """Background task to convert file to embeddings and store in Pinecone"""
+    try:
+        # Download file from S3
+        local_file_path = f"/tmp/{file_name}"
+        s3_client.download_file(S3_BUCKET, file_key, local_file_path)
+        
+        # Load document based on file type
+        if file_name.endswith('.pdf'):
+            loader = PyPDFLoader(local_file_path)
+        elif file_name.endswith('.txt'):
+            loader = TextLoader(local_file_path)
+        else:
+            raise ValueError(f"Unsupported file type: {file_name}")
+        
+        documents = loader.load()
+        
+        # Split documents into chunks
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+        chunks = text_splitter.split_documents(documents)
+        
+        # Initialize embeddings (using OpenAI embeddings)
+        embeddings = OpenAIEmbeddings()
+        
+        # Create or get Pinecone index
+        index_name = "brewra-documents"
+        try:
+            pc.create_index(
+                name=index_name,
+                dimension=1536,  # OpenAI embedding dimension
+                metric="cosine"
+            )
+        except Exception:
+            # Index already exists
+            pass
+        
+        # Store embeddings in Pinecone
+        vectorstore = PineconeVectorStore.from_documents(
+            chunks,
+            embeddings,
+            index_name=index_name,
+            pinecone_api_key=PINECONE_API_KEY
+        )
+        
+        # Update status in MongoDB (optional - for tracking)
+        username = urllib.parse.quote_plus("techbrewra")
+        password = urllib.parse.quote_plus("Brewra@Best09")
+        mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
+        mongo_client = MongoClient(mongo_uri)
+        db = mongo_client["File_Processing"]
+        collection = db["file_status"]
+        
+        collection.update_one(
+            {"file_key": file_key},
+            {"$set": {
+                "status": "completed",
+                "completed_at": datetime.utcnow(),
+                "chunks_count": len(chunks)
+            }},
+            upsert=True
+        )
+        mongo_client.close()
+        
+        # Clean up local file
+        import os
+        if os.path.exists(local_file_path):
+            os.remove(local_file_path)
+            
+    except Exception as e:
+        # Update status with error
+        try:
+            username = urllib.parse.quote_plus("techbrewra")
+            password = urllib.parse.quote_plus("Brewra@Best09")
+            mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
+            mongo_client = MongoClient(mongo_uri)
+            db = mongo_client["File_Processing"]
+            collection = db["file_status"]
+            
+            collection.update_one(
+                {"file_key": file_key},
+                {"$set": {
+                    "status": "failed",
+                    "error": str(e),
+                    "failed_at": datetime.utcnow()
+                }},
+                upsert=True
+            )
+            mongo_client.close()
+        except:
+            pass
+        logger.error(f"Error processing file {file_key}: {str(e)}")
+
+@app.post("/upload-document")
+async def upload_document(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    user_id: str = Form(...)
+):
+    """
+    Upload a PDF or TXT file to S3 and start background task to convert to embeddings.
+    Returns immediately with upload status.
+    """
+    try:
+        # Validate file type
+        if not (file.filename.endswith('.pdf') or file.filename.endswith('.txt')):
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "status": "error",
+                    "error": "upload_failed",
+                    "message": "Only PDF and TXT files are supported"
+                }
+            )
+        
+        # Generate unique file key for S3
+        file_id = str(uuid.uuid4())
+        file_key = f"{user_id}/{file_id}_{file.filename}"
+        
+        # Upload to S3
+        try:
+            file_content = await file.read()
+            s3_client.put_object(
+                Bucket=S3_BUCKET,
+                Key=file_key,
+                Body=file_content,
+                ContentType=file.content_type or 'application/octet-stream'
+            )
+        except Exception as e:
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "status": "error",
+                    "error": "upload_failed",
+                    "message": f"Failed to upload file to S3: {str(e)}"
+                }
+            )
+        
+        # Store initial status in MongoDB
+        try:
+            username = urllib.parse.quote_plus("techbrewra")
+            password = urllib.parse.quote_plus("Brewra@Best09")
+            mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
+            mongo_client = MongoClient(mongo_uri)
+            db = mongo_client["File_Processing"]
+            collection = db["file_status"]
+            
+            collection.insert_one({
+                "file_key": file_key,
+                "user_id": user_id,
+                "file_name": file.filename,
+                "status": "processing",
+                "uploaded_at": datetime.utcnow(),
+                "s3_url": f"s3://{S3_BUCKET}/{file_key}"
+            })
+            mongo_client.close()
+        except Exception as e:
+            logger.warning(f"Failed to store status in MongoDB: {str(e)}")
+        
+        # Start background task
+        background_tasks.add_task(process_file_to_embeddings, file_key, user_id, file.filename)
+        
+        return {
+            "status": "success",
+            "message": "File uploaded successfully. Processing embeddings in background.",
+            "file_key": file_key,
+            "file_name": file.filename
+        }
+        
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={
+                "status": "error",
+                "error": "upload_failed",
+                "message": f"Unexpected error: {str(e)}"
+            }
+        )
+
+@app.get("/document-status/{file_key:path}")
+async def get_document_status(file_key: str):
+    """
+    Get the processing status of a document.
+    Returns status: processing, completed, or failed
+    """
+    try:
+        username = urllib.parse.quote_plus("techbrewra")
+        password = urllib.parse.quote_plus("Brewra@Best09")
+        mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
+        mongo_client = MongoClient(mongo_uri)
+        db = mongo_client["File_Processing"]
+        collection = db["file_status"]
+        
+        status_doc = collection.find_one({"file_key": file_key})
+        mongo_client.close()
+        
+        if not status_doc:
+            raise HTTPException(status_code=404, detail="File not found")
+        
+        status_doc.pop("_id", None)
+        return {
+            "status": "success",
+            "data": status_doc
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/user-documents")
+async def get_user_documents(user_id: str = Query(...)):
+    """
+    Get all files uploaded by a user.
+    Returns list of files with file_name and file_id (file_key)
+    """
+    try:
+        username = urllib.parse.quote_plus("techbrewra")
+        password = urllib.parse.quote_plus("Brewra@Best09")
+        mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
+        mongo_client = MongoClient(mongo_uri)
+        db = mongo_client["File_Processing"]
+        collection = db["file_status"]
+        
+        # Find all files for this user
+        files = collection.find({"user_id": user_id}).sort("uploaded_at", -1)
+        
+        file_list = []
+        for file_doc in files:
+            file_list.append({
+                "file_id": file_doc.get("file_key"),
+                "file_name": file_doc.get("file_name"),
+                "status": file_doc.get("status", "unknown"),
+                "uploaded_at": file_doc.get("uploaded_at")
+            })
+        
+        mongo_client.close()
+        
+        return {
+            "status": "success",
+            "count": len(file_list),
+            "files": file_list
+        }
+        
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

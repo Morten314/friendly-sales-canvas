@@ -19,3 +19,6 @@ pymongo
 tavily-python
 together
 openai
+boto3
+pinecone-client
+langchain-pinecone
