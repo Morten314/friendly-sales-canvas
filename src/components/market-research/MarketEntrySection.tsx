@@ -532,7 +532,6 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
         <div className="flex items-center gap-3">
           <EditDropdownMenu
             onModify={handleModify}
-            onComment={() => onScoutIconClick('market-entry', hasEdits)}
             className="text-purple-800 hover:text-purple-900"
           />
           {hasEdits && (

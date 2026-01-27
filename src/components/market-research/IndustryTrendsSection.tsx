@@ -215,10 +215,6 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
     onIndustryTrendsToggleEdit();
   };
 
-  const handleComment = () => {
-    onScoutIconClick('industry-trends');
-  };
-
   // Fetch Industry Trends data from API
   const fetchIndustryTrendsData = async (refresh = true) => {
     try {
@@ -670,7 +666,6 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
         <div className="flex items-center gap-3">
           <EditDropdownMenu
             onModify={handleModify}
-            onComment={handleComment}
             className="text-purple-800 hover:text-purple-900"
           />
           {!isSplitView && (

@@ -857,7 +857,6 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
             {/* Edit Dropdown */}
             <EditDropdownMenu
               onModify={handleModify}
-              onComment={() => onScoutIconClick('regulatory-compliance', hasEdits)}
               className="h-8 w-8"
             />
 

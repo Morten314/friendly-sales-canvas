@@ -145,10 +145,6 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
     onToggleEdit();
   };
 
-  const handleComment = () => {
-    onScoutIconClick('market-size', hasEdits, 'I have a comment about this section');
-  };
-
   // Reset local values when editing starts
   useEffect(() => {
     if (isEditing) {
@@ -588,7 +584,6 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
         <div className="flex items-center gap-3">
           <EditDropdownMenu
             onModify={handleModify}
-            onComment={handleComment}
             className="text-blue-800 hover:text-blue-900"
           />
           {!isSplitView && (

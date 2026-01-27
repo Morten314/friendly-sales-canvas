@@ -603,7 +603,6 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
             
             <EditDropdownMenu
               onModify={onCompetitorLandscapeToggleEdit}
-              onComment={() => onScoutIconClick('competitor-landscape', competitorLandscapeHasEdits)}
               className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
             />
 
