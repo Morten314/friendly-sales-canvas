@@ -111,6 +111,8 @@ export const AIPromptingInterface = ({
       .replace(/`{1,3}/g, '')
       .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1') // Remove markdown links but keep text
       // Normalize bullet points to standard bullet
+      // FIRST: Replace literal "u2022" text with actual bullet character
+      .replace(/u2022/gi, '•')
       .replace(/[•◦▪▫■□●○]/g, '•')
       .replace(/[\u2022\u25E6\u25AA\u25AB\u25A0\u25A1\u2B24\u25CB]/g, '•')
       // Normalize arrows

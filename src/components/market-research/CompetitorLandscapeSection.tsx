@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { BarChart3, Bot, Edit, X, FileText, Save, Share, Clock, ChevronDown, ChevronUp, Zap, ArrowUp, ArrowDown, Loader2 } from 'lucide-react';
-import { EditDropdownMenu } from './EditDropdownMenu';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -450,6 +449,15 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
     }
   }, [executiveSummary, topPlayerShare, emergingPlayers]);
 
+  // Check if we have any data to show (competitorData, local state, or props)
+  // This needs to be defined early so it's available for both error handling and rendering
+  const hasDataToDisplay = competitorData || 
+                           localExecutiveSummary || 
+                           executiveSummary || 
+                           topPlayerShare || 
+                           emergingPlayers || 
+                           fundingNews?.length > 0;
+
   // Show loading state when no API data is available yet
   if (isLoading) {
     return (
@@ -466,7 +474,8 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
     );
   }
 
-  if (displayError) {
+  // Only show full error screen if there's an error AND no data to display
+  if (displayError && !hasDataToDisplay) {
     return (
       <div className={`${isSplitView ? 'flex gap-6' : ''}`}>
         <div className={`bg-white rounded-lg border border-gray-200 p-6 ${isSplitView ? 'flex-1' : ''}`}>
@@ -574,11 +583,10 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         </div>
       )} 
       
-      {/* API Error indicator */}
-      {error && (
-        <div className="mb-4 p-2 bg-red-100 border border-red-300 rounded text-sm">
-          ❌ API Error: {error} | 
-          {error.includes('500') ? 'Backend server issue - check server status' : 'Check network connection'}
+      {/* API Error indicator - Show warning if there's an error but we have data to display */}
+      {displayError && hasDataToDisplay && (
+        <div className="mb-4 p-2 bg-yellow-100 border border-yellow-300 rounded text-sm">
+          ⚠️ Warning: {displayError} - Showing cached/fallback data. Some features may be limited.
         </div>
       )}
       <div className={`bg-white rounded-lg border border-gray-200 p-6 ${isSplitView ? 'flex-1' : ''}`}>
@@ -601,10 +609,14 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
               </Badge>
             )}
             
-            <EditDropdownMenu
-              onModify={onCompetitorLandscapeToggleEdit}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onCompetitorLandscapeToggleEdit}
               className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-            />
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
 
             <Tooltip>
               <TooltipTrigger asChild>

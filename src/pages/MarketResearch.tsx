@@ -6961,6 +6961,13 @@ const MarketResearch = React.memo(() => {
           console.log('  - apiData.dataLocalization:', apiData.dataLocalization);
 
           console.log('  - apiData.keyUpdates:', apiData.keyUpdates);
+          console.log('  - apiData.keyUpdates type:', typeof apiData.keyUpdates);
+          console.log('  - apiData.keyUpdates isArray:', Array.isArray(apiData.keyUpdates));
+          console.log('  - apiData.keyUpdates length:', apiData.keyUpdates?.length);
+          if (apiData.keyUpdates && Array.isArray(apiData.keyUpdates) && apiData.keyUpdates.length > 0) {
+            console.log('  - apiData.keyUpdates[0]:', JSON.stringify(apiData.keyUpdates[0], null, 2));
+            console.log('  - apiData.keyUpdates[0] keys:', Object.keys(apiData.keyUpdates[0]));
+          }
 
           console.log('  - apiData.visualDataCards:', apiData.visualDataCards);
 
@@ -7061,8 +7068,16 @@ const MarketResearch = React.memo(() => {
 
             // Only update if API has actual data (non-empty arrays/objects)
             keyUpdates: (apiData.keyUpdates !== undefined && Array.isArray(apiData.keyUpdates) && apiData.keyUpdates.length > 0)
-              ? apiData.keyUpdates
-              : (regulatoryData.keyUpdates || []),
+              ? (() => {
+                  console.log('✅ Using apiData.keyUpdates:', apiData.keyUpdates);
+                  console.log('✅ apiData.keyUpdates length:', apiData.keyUpdates.length);
+                  return apiData.keyUpdates;
+                })()
+              : (() => {
+                  console.log('⚠️ Falling back to regulatoryData.keyUpdates or empty array');
+                  console.log('  - regulatoryData.keyUpdates:', regulatoryData.keyUpdates);
+                  return (regulatoryData.keyUpdates || []);
+                })(),
 
 
 

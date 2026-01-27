@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { MapPin, Bot, Edit, Target, Clock, AlertTriangle, X, FileText, Save, Share, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
-import { EditDropdownMenu } from './EditDropdownMenu';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -530,10 +529,14 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
           Market Entry & Growth Strategy
         </h2>
         <div className="flex items-center gap-3">
-          <EditDropdownMenu
-            onModify={handleModify}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleModify}
             className="text-purple-800 hover:text-purple-900"
-          />
+          >
+            <Edit className="h-4 w-4" />
+          </Button>
           {hasEdits && (
             <Button variant="ghost" size="sm" onClick={onEditHistoryOpen} className="text-gray-600 hover:text-gray-700">
               <Clock className="h-4 w-4" />

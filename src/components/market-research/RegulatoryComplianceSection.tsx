@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { getUserLocalStorage, setUserLocalStorage } from '@/utils/cacheUtils';
-import { EditDropdownMenu } from './EditDropdownMenu';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { 
@@ -125,6 +124,26 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [regulatoryExpanded, setRegulatoryExpanded] = useState(true);
+
+  // Normalize deletedSections to ensure it's always a Set
+  const normalizedDeletedSections = React.useMemo(() => {
+    if (!deletedSections) {
+      return new Set<string>();
+    }
+    if (deletedSections instanceof Set) {
+      return deletedSections;
+    }
+    // If it's an array, convert to Set
+    if (Array.isArray(deletedSections)) {
+      return new Set(deletedSections);
+    }
+    // If it's an object, convert keys to Set
+    if (typeof deletedSections === 'object') {
+      return new Set(Object.keys(deletedSections));
+    }
+    // Fallback to empty Set
+    return new Set<string>();
+  }, [deletedSections]);
 
   // Local state for editing - prioritize API data over localStorage for fresh updates (user-specific)
   const [localExecutiveSummary, setLocalExecutiveSummary] = useState(() => {
@@ -285,12 +304,29 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
 
   // Initialize dynamic key data values after keyDataPoints is available
   useEffect(() => {
-    if (!isEditing && regulatoryData?.keyUpdates) {
+    if (!isEditing && regulatoryData?.keyUpdates && Array.isArray(regulatoryData.keyUpdates)) {
       const initialValues: Record<string, string> = {};
-      regulatoryData.keyUpdates.forEach((update: any) => {
-        if (update.title) {
-          const id = update.title.toLowerCase().replace(/\s+/g, '-');
-          initialValues[id] = update.description || '';
+      regulatoryData.keyUpdates.forEach((update: any, index: number) => {
+        if (update) {
+          // Parse if update is a JSON string
+          let parsedUpdate = update;
+          if (typeof update === 'string') {
+            try {
+              parsedUpdate = JSON.parse(update);
+            } catch (e) {
+              console.warn(`⚠️ Failed to parse update[${index}] as JSON in useEffect:`, e);
+              parsedUpdate = update;
+            }
+          }
+          
+          // Try multiple possible field names for title and value/description
+          const title = parsedUpdate.title || parsedUpdate.name || parsedUpdate.label || parsedUpdate.heading || `Update ${index + 1}`;
+          const value = parsedUpdate.description || parsedUpdate.value || parsedUpdate.content || parsedUpdate.text || parsedUpdate.details || '';
+          
+          if (title && title !== `Update ${index + 1}`) {
+            const id = title.toLowerCase().replace(/\s+/g, '-');
+            initialValues[id] = value;
+          }
         }
       });
       setLocalKeyDataValues(initialValues);
@@ -307,11 +343,30 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     setLocalDataLocalization(regulatoryData?.dataLocalization || dataLocalization || '');
     
     // Initialize dynamic key data values
-    if (regulatoryData?.keyUpdates) {
+    if (regulatoryData?.keyUpdates && Array.isArray(regulatoryData.keyUpdates)) {
       const initialValues: Record<string, string> = {};
-      regulatoryData.keyUpdates.forEach((update: any) => {
-        const id = update.title.toLowerCase().replace(/\s+/g, '-');
-        initialValues[id] = update.description || '';
+      regulatoryData.keyUpdates.forEach((update: any, index: number) => {
+        if (update) {
+          // Parse if update is a JSON string
+          let parsedUpdate = update;
+          if (typeof update === 'string') {
+            try {
+              parsedUpdate = JSON.parse(update);
+            } catch (e) {
+              console.warn(`⚠️ Failed to parse update[${index}] as JSON in handleModify:`, e);
+              parsedUpdate = update;
+            }
+          }
+          
+          // Try multiple possible field names for title and value/description
+          const title = parsedUpdate.title || parsedUpdate.name || parsedUpdate.label || parsedUpdate.heading || `Update ${index + 1}`;
+          const value = parsedUpdate.description || parsedUpdate.value || parsedUpdate.content || parsedUpdate.text || parsedUpdate.details || '';
+          
+          if (title && title !== `Update ${index + 1}`) {
+            const id = title.toLowerCase().replace(/\s+/g, '-');
+            initialValues[id] = value;
+          }
+        }
       });
       setLocalKeyDataValues(initialValues);
     }
@@ -612,7 +667,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   console.log('  - regulatoryData content:', regulatoryData);
   console.log('  - regulatoryExpanded:', regulatoryExpanded);
 
-  if (deletedSections.has('regulatory-compliance')) {
+  if (normalizedDeletedSections.has('regulatory-compliance')) {
     return null;
   }
 
@@ -697,28 +752,60 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   // Debug logging for keyDataPoints
   console.log('🔍 RegulatoryComplianceSection - regulatoryData:', regulatoryData);
   console.log('🔍 RegulatoryComplianceSection - regulatoryData?.keyUpdates:', regulatoryData?.keyUpdates);
-  if (regulatoryData?.keyUpdates) {
+  console.log('🔍 RegulatoryComplianceSection - regulatoryData?.keyUpdates type:', typeof regulatoryData?.keyUpdates);
+  console.log('🔍 RegulatoryComplianceSection - regulatoryData?.keyUpdates isArray:', Array.isArray(regulatoryData?.keyUpdates));
+  console.log('🔍 RegulatoryComplianceSection - regulatoryData?.keyUpdates length:', regulatoryData?.keyUpdates?.length);
+  
+  if (regulatoryData?.keyUpdates && Array.isArray(regulatoryData.keyUpdates)) {
     console.log('🔍 RegulatoryComplianceSection - keyUpdates details:');
     regulatoryData.keyUpdates.forEach((update: any, index: number) => {
-      console.log(`  [${index}] Full update object:`, update);
-      console.log(`  [${index}] title: "${update.title}", description: "${update.description}", tag: "${update.tag}"`);
-      console.log(`  [${index}] All keys:`, Object.keys(update));
+      if (update) {
+        console.log(`  [${index}] Full update object:`, JSON.stringify(update, null, 2));
+        console.log(`  [${index}] title: "${update.title}", description: "${update.description}", tag: "${update.tag}"`);
+        console.log(`  [${index}] Alternative fields - name: "${update.name}", label: "${update.label}", value: "${update.value}", content: "${update.content}"`);
+        console.log(`  [${index}] All keys:`, Object.keys(update));
+        console.log(`  [${index}] Type of update:`, typeof update);
+        console.log(`  [${index}] Is update truthy:`, !!update);
+      } else {
+        console.log(`  [${index}] Update is falsy/null/undefined`);
+      }
     });
+  } else {
+    console.log('⚠️ RegulatoryComplianceSection - keyUpdates is not an array or does not exist');
+    console.log('  - regulatoryData?.keyUpdates:', regulatoryData?.keyUpdates);
+    console.log('  - Type:', typeof regulatoryData?.keyUpdates);
   }
   console.log('🔍 RegulatoryComplianceSection - euAiActDeadline:', euAiActDeadline);
   console.log('🔍 RegulatoryComplianceSection - gdprCompliance:', gdprCompliance);
   console.log('🔍 RegulatoryComplianceSection - potentialFines:', potentialFines);
   console.log('🔍 RegulatoryComplianceSection - dataLocalization:', dataLocalization);
 
-  const keyDataPoints = regulatoryData?.keyUpdates ? regulatoryData.keyUpdates.map((update: any, index: number) => ({
-    id: update.title?.toLowerCase().replace(/\s+/g, '-') || `update-${index}`,
-    icon: getIconByName(update.icon || 'scale'),
-    title: update.title || `Update ${index + 1}`,
-    value: update.description || '',
-    badge: update.tag || 'Update',
-    badgeColor: getBadgeColor(update.tag),
-    tooltip: update.description || ''
-  })) : [
+  const keyDataPoints = (regulatoryData?.keyUpdates && Array.isArray(regulatoryData.keyUpdates)) ? regulatoryData.keyUpdates.filter((update: any) => update).map((update: any, index: number) => {
+    // Parse if update is a JSON string
+    let parsedUpdate = update;
+    if (typeof update === 'string') {
+      try {
+        parsedUpdate = JSON.parse(update);
+      } catch (e) {
+        console.warn(`⚠️ Failed to parse update[${index}] as JSON:`, e);
+        parsedUpdate = update;
+      }
+    }
+    
+    // Try multiple possible field names for title and value/description
+    const title = parsedUpdate.title || parsedUpdate.name || parsedUpdate.label || parsedUpdate.heading || `Update ${index + 1}`;
+    const value = parsedUpdate.description || parsedUpdate.value || parsedUpdate.content || parsedUpdate.text || parsedUpdate.details || '';
+    
+    return {
+      id: title?.toLowerCase().replace(/\s+/g, '-') || `update-${index}`,
+      icon: getIconByName(parsedUpdate.icon || 'scale'),
+      title: title,
+      value: value,
+      badge: parsedUpdate.tag || parsedUpdate.badge || parsedUpdate.category || 'Update',
+      badgeColor: getBadgeColor(parsedUpdate.tag || parsedUpdate.badge || parsedUpdate.category),
+      tooltip: value || title
+    };
+  }) : [
     {
       id: 'eu-ai-act',
       icon: Scale,
@@ -854,11 +941,22 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
           
           <div className="flex items-center space-x-2">
             
-            {/* Edit Dropdown */}
-            <EditDropdownMenu
-              onModify={handleModify}
-              className="h-8 w-8"
-            />
+            {/* Edit Button - Always visible */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleModify}
+                  className="h-8 w-8 text-blue-800 hover:text-blue-900 pointer-events-auto"
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Edit</p>
+              </TooltipContent>
+            </Tooltip>
 
             {/* Scout Chat Icon */}
             <Tooltip>
@@ -887,7 +985,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
           /* Full Editable Report Mode */
           <div className="space-y-8">
             {/* Executive Summary */}
-            {!deletedSections.has('executive-summary') && (
+            {!normalizedDeletedSections.has('executive-summary') && (
               <div className="relative group border border-gray-200 rounded-lg p-4">
                 <button
                   onClick={() => {
@@ -913,7 +1011,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
             )}
 
             {/* Key Regulatory Updates */}
-            {!deletedSections.has('key-updates') && (
+            {!normalizedDeletedSections.has('key-updates') && (
               <div className="relative group border border-gray-200 rounded-lg p-4">
                 <button
                   onClick={() => {
@@ -998,7 +1096,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
             )}
 
             {/* Compliance Analytics */}
-            {!deletedSections.has('compliance-analytics') && (
+            {!normalizedDeletedSections.has('compliance-analytics') && (
               <div className="relative group border border-gray-200 rounded-lg p-4">
                 <button
                   onClick={() => {
@@ -1019,23 +1117,35 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                         Compliance Adoption Rates
                       </h5>
                       <div className="space-y-3">
-                        {visualDataCards[0]?.data && visualDataCards[0].data.length > 0 ? visualDataCards[0].data.map((item, index) => (
-                        <div key={index} className="flex items-center justify-between">
-                          <span className="text-sm text-gray-600">{item.name}</span>
-                          <div className="flex items-center space-x-2">
-                            <div className="w-16 h-2 bg-gray-200 rounded-full">
-                              <div 
-                                className="h-2 rounded-full" 
-                                style={{ 
-                                  width: `${item.value}%`, 
-                                  backgroundColor: item.color 
-                                }}
-                              />
-                            </div>
-                            <span className="text-sm font-medium text-gray-900">{item.value}%</span>
-                          </div>
-                        </div>
-                      )) : <p className="text-gray-500 text-sm">No compliance adoption data available</p>}
+                        {visualDataCards[0]?.data && visualDataCards[0].data.length > 0 ? (() => {
+                          // Find max value to normalize progress bars
+                          const maxValue = Math.max(...visualDataCards[0].data.map((item: any) => Number(item.value) || 0));
+                          const normalizeValue = (val: number) => maxValue > 100 ? Math.min((val / maxValue) * 100, 100) : Math.min(val, 100);
+                          
+                          return visualDataCards[0].data.map((item, index) => {
+                            const numericValue = Number(item.value) || 0;
+                            const normalizedWidth = normalizeValue(numericValue);
+                            
+                            return (
+                              <div key={index} className="flex items-center justify-between">
+                                <span className="text-sm text-gray-600">{item.name}</span>
+                                <div className="flex items-center space-x-2">
+                                  <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                    <div 
+                                      className="h-2 rounded-full" 
+                                      style={{ 
+                                        width: `${normalizedWidth}%`, 
+                                        backgroundColor: item.color,
+                                        maxWidth: '100%'
+                                      }}
+                                    />
+                                  </div>
+                                  <span className="text-sm font-medium text-gray-900">{item.value}%</span>
+                                </div>
+                              </div>
+                            );
+                          });
+                        })() : <p className="text-gray-500 text-sm">No compliance adoption data available</p>}
                     </div>
                   </div>
 
@@ -1088,7 +1198,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
             )}
 
             {/* Regional Breakdown */}
-            {!deletedSections.has('regional-breakdown') && (
+            {!normalizedDeletedSections.has('regional-breakdown') && (
               <div className="relative group border border-gray-200 rounded-lg p-4">
                 <button
                   onClick={() => {
@@ -1146,7 +1256,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
             )}
 
             {/* Strategic Recommendations */}
-            {!deletedSections.has('strategic-recommendations') && (
+            {!normalizedDeletedSections.has('strategic-recommendations') && (
               <div className="relative group border border-gray-200 rounded-lg p-4">
                 <button
                   onClick={() => {
@@ -1265,9 +1375,9 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                     onDataLocalizationChange(localDataLocalization);
                     
                     // Update key data points if regulatoryData exists
-                    if (regulatoryData?.keyUpdates) {
+                    if (regulatoryData?.keyUpdates && Array.isArray(regulatoryData.keyUpdates)) {
                       // For key updates, we need to update the regulatoryData directly since there's no individual change handlers
-                      const updatedKeyUpdates = regulatoryData.keyUpdates.map((update: any) => {
+                      const updatedKeyUpdates = regulatoryData.keyUpdates.filter((update: any) => update && update.title).map((update: any) => {
                         const id = update.title.toLowerCase().replace(/\s+/g, '-');
                         const localValue = localKeyDataValues[id];
                         if (localValue !== undefined) {
@@ -1416,23 +1526,35 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                           />
                         ) : card.type === 'bar-chart' ? (
                           <div className="space-y-3">
-                            {card.data.map((item: any, index: number) => (
-                              <div key={index} className="flex items-center justify-between">
-                                <span className="text-sm text-gray-600">{item.label || item.name}</span>
-                                <div className="flex items-center space-x-2">
-                                  <div className="w-16 h-2 bg-gray-200 rounded-full">
-                                    <div 
-                                      className="h-2 rounded-full" 
-                                      style={{ 
-                                        width: `${item.value}%`, 
-                                        backgroundColor: `hsl(${index * 60}, 70%, 50%)`
-                                      }}
-                                    />
+                            {(() => {
+                              // Find max value to normalize progress bars
+                              const maxValue = Math.max(...card.data.map((item: any) => Number(item.value) || 0));
+                              const normalizeValue = (val: number) => maxValue > 100 ? Math.min((val / maxValue) * 100, 100) : Math.min(val, 100);
+                              
+                              return card.data.map((item: any, index: number) => {
+                                const numericValue = Number(item.value) || 0;
+                                const normalizedWidth = normalizeValue(numericValue);
+                                
+                                return (
+                                  <div key={index} className="flex items-center justify-between">
+                                    <span className="text-sm text-gray-600">{item.label || item.name}</span>
+                                    <div className="flex items-center space-x-2">
+                                      <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                        <div 
+                                          className="h-2 rounded-full" 
+                                          style={{ 
+                                            width: `${normalizedWidth}%`, 
+                                            backgroundColor: `hsl(${index * 60}, 70%, 50%)`,
+                                            maxWidth: '100%'
+                                          }}
+                                        />
+                                      </div>
+                                      <span className="text-sm font-medium text-gray-900">{item.value}{card.title.includes('Growth') ? 'B' : '%'}</span>
+                                    </div>
                                   </div>
-                                  <span className="text-sm font-medium text-gray-900">{item.value}{card.title.includes('Growth') ? 'B' : '%'}</span>
-                                </div>
-                              </div>
-                            ))}
+                                );
+                              });
+                            })()}
                           </div>
                         ) : (
                           /* Fallback for unknown types or old format */

@@ -9,7 +9,6 @@ import { useToast } from '@/hooks/use-toast';
 import MiniPieChart from '@/components/ui/MiniPieChart';
 import MiniLineChart from '@/components/ui/MiniLineChart';
 import { EditRecord } from './types';
-import { EditDropdownMenu } from './EditDropdownMenu';
 import { executeWithRateLimit } from '@/lib/rateLimitManager';
 import { apiFetchJson } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
@@ -582,10 +581,14 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
           Market Size & Opportunity
         </h2>
         <div className="flex items-center gap-3">
-          <EditDropdownMenu
-            onModify={handleModify}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleModify}
             className="text-blue-800 hover:text-blue-900"
-          />
+          >
+            <Edit className="h-4 w-4" />
+          </Button>
           {!isSplitView && (
             <Tooltip>
               <TooltipTrigger asChild>

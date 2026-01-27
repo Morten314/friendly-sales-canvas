@@ -10,7 +10,6 @@ import { useToast } from '@/hooks/use-toast';
 import MiniPieChart from '@/components/ui/MiniPieChart';
 import MiniLineChart from '@/components/ui/MiniLineChart';
 import { toUTCTimestamp, isTimestampNewer, getCurrentUTCTimestamp, logTimestampComparison } from '@/lib/timestampUtils';
-import { EditDropdownMenu } from './EditDropdownMenu';
 import { executeWithRateLimit } from '@/lib/rateLimitManager';
 import { apiFetchJson } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
@@ -154,6 +153,26 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
   const [error, setError] = useState<string | null>(null);
   
   const { toast } = useToast();
+
+  // Normalize industryTrendsDeletedSections to ensure it's always a Set
+  const normalizedDeletedSections = React.useMemo(() => {
+    if (!industryTrendsDeletedSections) {
+      return new Set<string>();
+    }
+    if (industryTrendsDeletedSections instanceof Set) {
+      return industryTrendsDeletedSections;
+    }
+    // If it's an array, convert to Set
+    if (Array.isArray(industryTrendsDeletedSections)) {
+      return new Set(industryTrendsDeletedSections);
+    }
+    // If it's an object, convert keys to Set
+    if (typeof industryTrendsDeletedSections === 'object') {
+      return new Set(Object.keys(industryTrendsDeletedSections));
+    }
+    // Fallback to empty Set
+    return new Set<string>();
+  }, [industryTrendsDeletedSections]);
 
   // Local editing state
   const [editExecutiveSummary, setEditExecutiveSummary] = useState('');
@@ -664,10 +683,14 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
           Industry Trends
         </h2>
         <div className="flex items-center gap-3">
-          <EditDropdownMenu
-            onModify={handleModify}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleModify}
             className="text-purple-800 hover:text-purple-900"
-          />
+          >
+            <Edit className="h-4 w-4" />
+          </Button>
           {!isSplitView && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -687,7 +710,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
       {isIndustryTrendsEditing ? (
         <div className="space-y-8">
           {/* Executive Summary Edit */}
-          {!industryTrendsDeletedSections.has('executive-summary') && (
+          {!normalizedDeletedSections.has('executive-summary') && (
             <div className="relative group">
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -715,7 +738,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
           )}
 
           {/* Key Metrics Edit */}
-          {!industryTrendsDeletedSections.has('key-metrics') && (
+          {!normalizedDeletedSections.has('key-metrics') && (
             <div className="relative group">
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -772,7 +795,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
           )}
 
           {/* Trend Snapshots Edit */}
-          {!industryTrendsDeletedSections.has('trend-snapshots') && (
+          {!normalizedDeletedSections.has('trend-snapshots') && (
             <div className="relative group">
               <Tooltip>
                 <TooltipTrigger asChild>

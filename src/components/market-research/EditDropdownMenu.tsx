@@ -20,7 +20,12 @@ export const EditDropdownMenu: React.FC<EditDropdownMenuProps> = ({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className={`text-blue-800 hover:text-blue-900 ${className}`}>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className={`text-blue-800 hover:text-blue-900 pointer-events-auto ${className}`}
+          disabled={false}
+        >
           <Edit className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
