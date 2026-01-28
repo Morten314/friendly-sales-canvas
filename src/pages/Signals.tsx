@@ -1,4 +1,4 @@
-import { Filter, Check, X, Bookmark, MessageCircle, Info, Share2, Download, Bot, Send, RefreshCw } from 'lucide-react';
+import { Filter, Check, X, Bookmark, MessageCircle, Info, Share2, Download, Bot, Send, RefreshCw, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
@@ -402,24 +402,52 @@ const Index = () => {
                         <h3 className="text-lg font-semibold text-gray-900">
                           {signal.headline}
                         </h3>
-                         <div className="flex items-center gap-3">
-                           <button 
-                             className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
-                             onClick={() => toast({
-                               title: "Added",
-                               description: "This insight will be included in your weekly digest and sent to your registered email.",
-                               duration: 3000,
-                             })}
-                           >
-                             ➕ Add to my Weekly Digest
-                           </button>
-                           <button 
-                             className="text-sm bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-md text-gray-700 flex items-center gap-1"
-                             onClick={() => handleAction(signal.id, 'ask')}
-                           >
-                             💬 Discuss with Agent
-                           </button>
-                         </div>
+                        <div className="flex items-center gap-2">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8 w-8 p-0 bg-green-50 border-green-200 text-green-700 hover:bg-green-100 hover:border-green-300"
+                                onClick={() => {
+                                  handleAction(signal.id, 'accept');
+                                  toast({
+                                    title: "Signal Accepted",
+                                    description: "This signal has been accepted and saved.",
+                                    duration: 3000,
+                                  });
+                                }}
+                              >
+                                <ThumbsUp className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Accept Signal</p>
+                            </TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8 w-8 p-0 bg-red-50 border-red-200 text-red-700 hover:bg-red-100 hover:border-red-300"
+                                onClick={() => {
+                                  handleAction(signal.id, 'dismiss');
+                                  toast({
+                                    title: "Signal Rejected",
+                                    description: "This signal has been dismissed.",
+                                    duration: 3000,
+                                  });
+                                }}
+                              >
+                                <ThumbsDown className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Reject Signal</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
                       </div>
                       <p className="text-gray-600 text-sm leading-relaxed mb-2">
                         {signal.snippet}

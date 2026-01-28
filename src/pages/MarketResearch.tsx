@@ -14113,8 +14113,6 @@ const MarketResearch = React.memo(() => {
 
             
 
-
-
             {/* Historical data indicator */}
 
 
@@ -14451,9 +14449,6 @@ const MarketResearch = React.memo(() => {
 
             
             
-
-
-
             <Tabs value={activeTab} onValueChange={handleTabChange} className="mb-6">
 
 
