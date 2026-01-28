@@ -663,59 +663,111 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         <div className="mb-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Key Metrics</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Top Player Market Share */}
-            <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  {isCompetitorLandscapeEditing ? (
-                    <div className="space-y-2">
-                      <Input
-                        value={localTopPlayerShare}
-                        onChange={(e) => setLocalTopPlayerShare(e.target.value)}
-                        className="text-lg font-bold text-blue-600 bg-white"
-                        placeholder="Top Player Market Share"
-                      />
-                      <div className="text-sm text-gray-700">Top Player Market Share</div>
+            {(() => {
+              // Normalize uiComponents - parse any stringified components
+              const normalizeUiComponents = (components: any[]): any[] => {
+                if (!Array.isArray(components)) return [];
+                return components.map((comp: any) => {
+                  if (typeof comp === 'string') {
+                    try {
+                      return JSON.parse(comp);
+                    } catch (e) {
+                      console.warn('⚠️ Failed to parse stringified component:', e);
+                      return null;
+                    }
+                  }
+                  return comp;
+                }).filter((comp: any) => comp !== null);
+              };
+              
+              const normalizedComponents = competitorData?.uiComponents 
+                ? normalizeUiComponents(competitorData.uiComponents)
+                : [];
+              
+              // Try to get metrics from API's section component first
+              const sectionComponent = normalizedComponents.find((comp: any) => comp?.type === 'section');
+              const apiMetrics = sectionComponent?.metrics;
+              
+              // If we have API metrics, use them; otherwise fall back to props
+              if (apiMetrics && Array.isArray(apiMetrics) && apiMetrics.length > 0) {
+                return apiMetrics.slice(0, 2).map((metric: any, index: number) => (
+                  <div key={index} className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="text-lg font-bold text-blue-600">{metric.value || 'N/A'}</div>
+                        <div className="text-sm text-gray-700">{metric.label || 'Metric'}</div>
+                      </div>
+                      <div className="text-green-500">
+                        {metric.trend === 'up' ? (
+                          <ChevronUp className="h-5 w-5" />
+                        ) : metric.trend === 'down' ? (
+                          <ChevronDown className="h-5 w-5" />
+                        ) : null}
+                      </div>
                     </div>
-                  ) : (
-                    <>
-                      <div className="text-lg font-bold text-blue-600">{displayTopPlayerShare}</div>
-                      <div className="text-sm text-gray-700">Top Player Market Share</div>
-                    </>
-                  )}
-                </div>
-                <div className="text-green-500">
-                  <ChevronUp className="h-5 w-5" />
-                </div>
-              </div>
-            </div>
-            
-            {/* Emerging Players */}
-            <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  {isCompetitorLandscapeEditing ? (
-                    <div className="space-y-2">
-                      <Input
-                        value={localEmergingPlayers}
-                        onChange={(e) => setLocalEmergingPlayers(e.target.value)}
-                        className="text-lg font-bold text-blue-600 bg-white"
-                        placeholder="Emerging Players Added"
-                      />
-                      <div className="text-sm text-gray-700">Emerging Players Added</div>
+                  </div>
+                ));
+              }
+              
+              // Fallback to original props-based display
+              return (
+                <>
+                  {/* Top Player Market Share */}
+                  <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        {isCompetitorLandscapeEditing ? (
+                          <div className="space-y-2">
+                            <Input
+                              value={localTopPlayerShare}
+                              onChange={(e) => setLocalTopPlayerShare(e.target.value)}
+                              className="text-lg font-bold text-blue-600 bg-white"
+                              placeholder="Top Player Market Share"
+                            />
+                            <div className="text-sm text-gray-700">Top Player Market Share</div>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="text-lg font-bold text-blue-600">{displayTopPlayerShare}</div>
+                            <div className="text-sm text-gray-700">Top Player Market Share</div>
+                          </>
+                        )}
+                      </div>
+                      <div className="text-green-500">
+                        <ChevronUp className="h-5 w-5" />
+                      </div>
                     </div>
-                  ) : (
-                    <>
-                      <div className="text-lg font-bold text-blue-600">{displayEmergingPlayers}</div>
-                      <div className="text-sm text-gray-700">Emerging Players Added</div>
-                    </>
-                  )}
-                </div>
-                <div className="text-green-500">
-                  <ChevronUp className="h-5 w-5" />
-                </div>
-              </div>
-            </div>
+                  </div>
+                  
+                  {/* Emerging Players */}
+                  <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        {isCompetitorLandscapeEditing ? (
+                          <div className="space-y-2">
+                            <Input
+                              value={localEmergingPlayers}
+                              onChange={(e) => setLocalEmergingPlayers(e.target.value)}
+                              className="text-lg font-bold text-blue-600 bg-white"
+                              placeholder="Emerging Players Added"
+                            />
+                            <div className="text-sm text-gray-700">Emerging Players Added</div>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="text-lg font-bold text-blue-600">{displayEmergingPlayers}</div>
+                            <div className="text-sm text-gray-700">Emerging Players Added</div>
+                          </>
+                        )}
+                      </div>
+                      <div className="text-green-500">
+                        <ChevronUp className="h-5 w-5" />
+                      </div>
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </div>
 
@@ -934,21 +986,114 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
 
             {/* M&A Insights */}
             {(() => {
-              const mnaComponent = competitorData?.uiComponents?.find(comp => comp.type === 'mnaInsights');
-              const insights = mnaComponent?.insights;
+              // Normalize uiComponents - parse any stringified components
+              const normalizeUiComponents = (components: any[]): any[] => {
+                if (!Array.isArray(components)) return [];
+                return components.map((comp: any) => {
+                  if (typeof comp === 'string') {
+                    try {
+                      return JSON.parse(comp);
+                    } catch (e) {
+                      console.warn('⚠️ Failed to parse stringified component:', e);
+                      return null;
+                    }
+                  }
+                  return comp;
+                }).filter((comp: any) => comp !== null);
+              };
               
-              if (!insights || insights.length === 0) return null;
+              const normalizedComponents = competitorData?.uiComponents 
+                ? normalizeUiComponents(competitorData.uiComponents)
+                : [];
+              
+              // Debug logging for M&A Insights
+              console.log('🔍 M&A Insights Debug:', {
+                hasCompetitorData: !!competitorData,
+                hasUiComponents: !!competitorData?.uiComponents,
+                uiComponentsLength: competitorData?.uiComponents?.length || 0,
+                normalizedComponentsLength: normalizedComponents.length,
+                uiComponentsTypes: normalizedComponents.map((c: any) => c?.type) || [],
+                allUiComponents: competitorData?.uiComponents
+              });
+              
+              const mnaComponent = normalizedComponents.find((comp: any) => comp?.type === 'mnaInsights');
+              
+              console.log('🔍 M&A Component Found:', {
+                found: !!mnaComponent,
+                component: mnaComponent,
+                hasInsights: !!mnaComponent?.insights,
+                insightsLength: mnaComponent?.insights?.length || 0
+              });
+              
+              let insights = mnaComponent?.insights;
+              
+              // Handle case where insights might be stringified
+              if (typeof insights === 'string') {
+                try {
+                  insights = JSON.parse(insights);
+                } catch (e) {
+                  console.warn('⚠️ Failed to parse stringified insights:', e);
+                  insights = null;
+                }
+              }
+              
+              if (!insights || !Array.isArray(insights) || insights.length === 0) {
+                console.log('⚠️ M&A Insights: No insights found or empty array', {
+                  insights,
+                  isArray: Array.isArray(insights),
+                  length: insights?.length
+                });
+                return null;
+              }
+              
+              console.log('✅ M&A Insights: Rendering', insights.length, 'insights');
+              console.log('🔍 M&A Insights Data:', JSON.stringify(insights, null, 2));
+              
+              // Ensure insights is an array and filter out any invalid entries
+              // Also handle case where individual insights might be stringified
+              const validInsights = insights
+                .map((insight: any) => {
+                  if (typeof insight === 'string') {
+                    try {
+                      return JSON.parse(insight);
+                    } catch (e) {
+                      console.warn('⚠️ Failed to parse stringified insight:', e);
+                      return null;
+                    }
+                  }
+                  return insight;
+                })
+                .filter((insight: any) => insight && (insight.label || insight.description));
+              
+              if (validInsights.length === 0) {
+                console.log('⚠️ M&A Insights: No valid insights after filtering');
+                return null;
+              }
+              
+              console.log('✅ M&A Insights: Valid insights count:', validInsights.length);
               
               return (
                 <div className="mb-8">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">M&A Insights</h3>
                   <div className="grid grid-cols-1 gap-4">
-                    {insights.map((insight, index) => (
-                      <div key={index} className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                        <h4 className="font-medium text-yellow-800 mb-2">{insight.label}</h4>
-                        <p className="text-yellow-700">{insight.description}</p>
-                      </div>
-                    ))}
+                    {validInsights.map((insight: any, index: number) => {
+                      console.log(`🔍 Rendering insight ${index}:`, {
+                        label: insight?.label,
+                        description: insight?.description,
+                        fullObject: insight
+                      });
+                      
+                      return (
+                        <div key={index} className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                          <h4 className="font-medium text-yellow-800 mb-2">
+                            {insight?.label || 'No label available'}
+                          </h4>
+                          <p className="text-yellow-700">
+                            {insight?.description || 'No description available'}
+                          </p>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               );
