@@ -137,6 +137,33 @@ const Index = () => {
     };
   }, []);
 
+  // Helper function to deduplicate signals by ID and content
+  const deduplicateSignals = (signals: SignalCard[]): SignalCard[] => {
+    const seenIds = new Set<string>();
+    const seenContent = new Set<string>();
+    const unique: SignalCard[] = [];
+
+    for (const signal of signals) {
+      // First check by ID (most reliable)
+      if (signal.id && !seenIds.has(signal.id)) {
+        seenIds.add(signal.id);
+        unique.push(signal);
+      } 
+      // Fallback: check by content (headline + snippet) if ID is missing or duplicate
+      else if (!signal.id || seenIds.has(signal.id)) {
+        const contentKey = `${signal.headline}|${signal.snippet}`;
+        if (!seenContent.has(contentKey)) {
+          seenContent.add(contentKey);
+          unique.push(signal);
+        } else {
+          console.warn('Duplicate signal detected and filtered:', signal.headline);
+        }
+      }
+    }
+
+    return unique;
+  };
+
   const loadSignals = async () => {
     if (!currentUser?.uid) {
       console.error('User not authenticated');
@@ -145,7 +172,15 @@ const Index = () => {
     setIsLoading(true);
     try {
       const data = await fetchSignals(currentUser.uid);
-      setSignals(data.signals || []);
+      const rawSignals = data.signals || [];
+      // Deduplicate signals before setting state
+      const uniqueSignals = deduplicateSignals(rawSignals);
+      
+      if (rawSignals.length !== uniqueSignals.length) {
+        console.warn(`Filtered ${rawSignals.length - uniqueSignals.length} duplicate signal(s)`);
+      }
+      
+      setSignals(uniqueSignals);
     } catch (error) {
       console.error('Error loading signals:', error);
       
