@@ -1108,89 +1108,99 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                   <X className="h-4 w-4 text-red-600" />
                 </button>
                 <h4 className="text-sm font-medium text-gray-700 mb-4">Compliance Analytics</h4>
-                {visualDataCards && visualDataCards.length >= 3 ? (
+                {visualDataCards && visualDataCards.length > 0 ? (
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Compliance Adoption Rates - Bar Chart */}
-                    <div className="bg-white border border-gray-200 rounded-lg p-4">
-                      <h5 className="font-medium text-gray-900 mb-3 flex items-center">
-                        <Users className="h-4 w-4 mr-2 text-blue-600" />
-                        Compliance Adoption Rates
-                      </h5>
-                      <div className="space-y-3">
-                        {visualDataCards[0]?.data && visualDataCards[0].data.length > 0 ? (() => {
-                          // Find max value to normalize progress bars
-                          const maxValue = Math.max(...visualDataCards[0].data.map((item: any) => Number(item.value) || 0));
-                          const normalizeValue = (val: number) => maxValue > 100 ? Math.min((val / maxValue) * 100, 100) : Math.min(val, 100);
-                          
-                          return visualDataCards[0].data.map((item, index) => {
-                            const numericValue = Number(item.value) || 0;
-                            const normalizedWidth = normalizeValue(numericValue);
-                            
-                            return (
-                              <div key={index} className="flex items-center justify-between">
-                                <span className="text-sm text-gray-600">{item.name}</span>
-                                <div className="flex items-center space-x-2">
-                                  <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
-                                    <div 
-                                      className="h-2 rounded-full" 
-                                      style={{ 
-                                        width: `${normalizedWidth}%`, 
-                                        backgroundColor: item.color,
-                                        maxWidth: '100%'
-                                      }}
-                                    />
+                    {visualDataCards.map((card: any, cardIndex: number) => {
+                      // Find card by type dynamically
+                      if (card.type === 'bar-chart') {
+                        return (
+                          <div key={cardIndex} className="bg-white border border-gray-200 rounded-lg p-4">
+                            <h5 className="font-medium text-gray-900 mb-3 flex items-center">
+                              <BarChart3 className="h-4 w-4 mr-2 text-blue-600" />
+                              {card.title || 'Compliance Adoption Rates'}
+                            </h5>
+                            <div className="space-y-3">
+                              {card.data && card.data.length > 0 ? (() => {
+                                // Find max value to normalize progress bars
+                                const maxValue = Math.max(...card.data.map((item: any) => Number(item.value) || Number(item.name?.value) || 0));
+                                const normalizeValue = (val: number) => maxValue > 100 ? Math.min((val / maxValue) * 100, 100) : Math.min(val, 100);
+                                
+                                return card.data.map((item: any, index: number) => {
+                                  const numericValue = Number(item.value) || 0;
+                                  const normalizedWidth = normalizeValue(numericValue);
+                                  const itemName = item.name || item.label || '';
+                                  
+                                  return (
+                                    <div key={index} className="flex items-center justify-between">
+                                      <span className="text-sm text-gray-600">{itemName}</span>
+                                      <div className="flex items-center space-x-2">
+                                        <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                          <div 
+                                            className="h-2 rounded-full" 
+                                            style={{ 
+                                              width: `${normalizedWidth}%`, 
+                                              backgroundColor: item.color || `hsl(${index * 60}, 70%, 50%)`,
+                                              maxWidth: '100%'
+                                            }}
+                                          />
+                                        </div>
+                                        <span className="text-sm font-medium text-gray-900">{item.value}{card.title?.includes('Growth') ? 'B' : ''}</span>
+                                      </div>
+                                    </div>
+                                  );
+                                });
+                              })() : <p className="text-gray-500 text-sm">No data available</p>}
+                            </div>
+                          </div>
+                        );
+                      } else if (card.type === 'timeline') {
+                        return (
+                          <div key={cardIndex} className="bg-white border border-gray-200 rounded-lg p-4">
+                            <h5 className="font-medium text-gray-900 mb-3 flex items-center">
+                              <Clock className="h-4 w-4 mr-2 text-orange-600" />
+                              {card.title || 'Regulatory Timeline'}
+                            </h5>
+                            <div className="space-y-3">
+                              {card.data && card.data.length > 0 ? card.data.map((item: any, index: number) => (
+                                <div key={index} className="flex items-start space-x-3">
+                                  <div className={`w-2 h-2 rounded-full mt-2 ${
+                                    item.status === 'critical' ? 'bg-red-500' : 'bg-blue-500'
+                                  }`} />
+                                  <div className="flex-1">
+                                    <p className="text-sm font-medium text-gray-900">{item.event || item.label}</p>
+                                    <p className="text-xs text-gray-500">{item.date || item.time}</p>
                                   </div>
-                                  <span className="text-sm font-medium text-gray-900">{item.value}%</span>
                                 </div>
-                              </div>
-                            );
-                          });
-                        })() : <p className="text-gray-500 text-sm">No compliance adoption data available</p>}
-                    </div>
-                  </div>
-
-                  {/* Regulatory Timeline */}
-                  <div className="bg-white border border-gray-200 rounded-lg p-4">
-                    <h5 className="font-medium text-gray-900 mb-3 flex items-center">
-                      <Clock className="h-4 w-4 mr-2 text-orange-600" />
-                      Regulatory Timeline
-                    </h5>
-                    <div className="space-y-3">
-                      {visualDataCards[1]?.data && visualDataCards[1].data.length > 0 ? visualDataCards[1].data.map((item, index) => (
-                        <div key={index} className="flex items-start space-x-3">
-                          <div className={`w-2 h-2 rounded-full mt-2 ${
-                            item.status === 'critical' ? 'bg-red-500' : 'bg-blue-500'
-                          }`} />
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-900">{item.event}</p>
-                            <p className="text-xs text-gray-500">{item.date}</p>
+                              )) : <p className="text-gray-500 text-sm">No timeline data available</p>}
+                            </div>
                           </div>
-                        </div>
-                      )) : <p className="text-gray-500 text-sm">No regulatory timeline data available</p>}
-                    </div>
-                  </div>
-
-                  {/* Risk Indicators */}
-                  <div className="bg-white border border-gray-200 rounded-lg p-4">
-                    <h5 className="font-medium text-gray-900 mb-3 flex items-center">
-                      <AlertTriangle className="h-4 w-4 mr-2 text-red-600" />
-                      Risk Indicators
-                    </h5>
-                    <div className="space-y-3">
-                      {visualDataCards[2]?.data && visualDataCards[2].data.length > 0 ? visualDataCards[2].data.map((item, index) => (
-                        <div key={index} className="flex items-center justify-between">
-                          <span className="text-sm text-gray-600">{item.metric}</span>
-                          <div className="flex items-center space-x-2">
-                            <span className="text-sm font-medium text-gray-900">{item.value}%</span>
-                            <TrendingUp className={`h-3 w-3 ${
-                              item.trend === 'up' ? 'text-green-600' : 'text-red-600'
-                            } ${item.trend === 'down' ? 'rotate-180' : ''}`} />
+                        );
+                      } else if (card.type === 'percentage') {
+                        return (
+                          <div key={cardIndex} className="bg-white border border-gray-200 rounded-lg p-4">
+                            <h5 className="font-medium text-gray-900 mb-3 flex items-center">
+                              <TrendingUp className="h-4 w-4 mr-2 text-green-600" />
+                              {card.title || 'GTM Model Effectiveness'}
+                            </h5>
+                            <div className="space-y-3">
+                              {card.data && card.data.length > 0 ? card.data.map((item: any, index: number) => (
+                                <div key={index} className="flex items-center justify-between">
+                                  <span className="text-sm text-gray-600">{item.metric || item.label}</span>
+                                  <div className="flex items-center space-x-2">
+                                    <span className="text-sm font-medium text-gray-900">{item.value}%</span>
+                                    <TrendingUp className={`h-3 w-3 ${
+                                      item.trend === 'up' ? 'text-green-600' : 'text-red-600'
+                                    } ${item.trend === 'down' ? 'rotate-180' : ''}`} />
+                                  </div>
+                                </div>
+                              )) : <p className="text-gray-500 text-sm">No percentage data available</p>}
+                            </div>
                           </div>
-                        </div>
-                      )) : <p className="text-gray-500 text-sm">No risk indicators data available</p>}
-                    </div>
+                        );
+                      }
+                      return null;
+                    })}
                   </div>
-                </div>
                 ) : (
                   <p className="text-gray-500 text-sm">No compliance analytics data available</p>
                 )}
@@ -1544,17 +1554,45 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                                           className="h-2 rounded-full" 
                                           style={{ 
                                             width: `${normalizedWidth}%`, 
-                                            backgroundColor: `hsl(${index * 60}, 70%, 50%)`,
+                                            backgroundColor: item.color || `hsl(${index * 60}, 70%, 50%)`,
                                             maxWidth: '100%'
                                           }}
                                         />
                                       </div>
-                                      <span className="text-sm font-medium text-gray-900">{item.value}{card.title.includes('Growth') ? 'B' : '%'}</span>
+                                      <span className="text-sm font-medium text-gray-900">{item.value}{card.title?.includes('Growth') ? 'B' : ''}</span>
                                     </div>
                                   </div>
                                 );
                               });
                             })()}
+                          </div>
+                        ) : card.type === 'timeline' ? (
+                          <div className="space-y-3">
+                            {card.data.map((item: any, index: number) => (
+                              <div key={index} className="flex items-start space-x-3">
+                                <div className={`w-2 h-2 rounded-full mt-2 ${
+                                  item.status === 'critical' ? 'bg-red-500' : 'bg-blue-500'
+                                }`} />
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium text-gray-900">{item.event || item.label}</p>
+                                  <p className="text-xs text-gray-500">{item.date || item.time}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : card.type === 'percentage' ? (
+                          <div className="space-y-3">
+                            {card.data.map((item: any, index: number) => (
+                              <div key={index} className="flex items-center justify-between">
+                                <span className="text-sm text-gray-600">{item.metric || item.label}</span>
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-sm font-medium text-gray-900">{item.value}%</span>
+                                  <TrendingUp className={`h-3 w-3 ${
+                                    item.trend === 'up' ? 'text-green-600' : 'text-red-600'
+                                  } ${item.trend === 'down' ? 'rotate-180' : ''}`} />
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         ) : (
                           /* Fallback for unknown types or old format */
