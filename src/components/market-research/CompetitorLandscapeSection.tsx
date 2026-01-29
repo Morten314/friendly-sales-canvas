@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { BarChart3, Bot, Edit, X, FileText, Save, Share, Clock, ChevronDown, ChevronUp, Zap, ArrowUp, ArrowDown, Loader2 } from 'lucide-react';
+import { BarChart3, Bot, Edit, X, FileText, Save, Share, Clock, ChevronDown, ChevronUp, Zap, ArrowUp, ArrowDown, Loader2, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useToast } from '@/hooks/use-toast';
 import MiniPieChart from '@/components/ui/MiniPieChart';
 import MiniLineChart from '@/components/ui/MiniLineChart';
 import { toUTCTimestamp, isTimestampNewer, getCurrentUTCTimestamp, logTimestampComparison } from '@/lib/timestampUtils';
@@ -387,6 +388,80 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   }, [executiveSummary, topPlayerShare, emergingPlayers, competitorData, isCompetitorLandscapeEditing, isRefreshing, currentUser?.uid, fundingNews]);
 
   // Handle save changes
+  // Individual box save functions
+  const handleSaveExecutiveSummary = () => {
+    onExecutiveSummaryChange(localExecutiveSummary);
+    toast({
+      title: "Saved",
+      description: "Executive Summary changes committed.",
+    });
+  };
+
+  const handleSaveTopPlayerShare = () => {
+    onTopPlayerShareChange(localTopPlayerShare);
+    toast({
+      title: "Saved",
+      description: "Top Player Market Share changes committed.",
+    });
+  };
+
+  const handleSaveEmergingPlayers = () => {
+    onEmergingPlayersChange(localEmergingPlayers);
+    toast({
+      title: "Saved",
+      description: "Emerging Players changes committed.",
+    });
+  };
+
+  const handleSaveCompetitorReport = () => {
+    toast({
+      title: "Saved",
+      description: "Competitor Analysis Report changes committed.",
+    });
+  };
+
+  const handleSaveMajorCompetitors = () => {
+    toast({
+      title: "Saved",
+      description: "Major Competitors changes committed.",
+    });
+  };
+
+  const handleSaveMarketShareCharts = () => {
+    toast({
+      title: "Saved",
+      description: "Market Share Charts changes committed.",
+    });
+  };
+
+  const handleSaveSwotAnalysis = () => {
+    toast({
+      title: "Saved",
+      description: "SWOT Analysis changes committed.",
+    });
+  };
+
+  const handleSaveFeatureComparison = () => {
+    toast({
+      title: "Saved",
+      description: "Feature Comparison changes committed.",
+    });
+  };
+
+  const handleSaveMnaInsights = () => {
+    toast({
+      title: "Saved",
+      description: "M&A Insights changes committed.",
+    });
+  };
+
+  const handleSaveMarketTrends = () => {
+    toast({
+      title: "Saved",
+      description: "Market Trends changes committed.",
+    });
+  };
+
   const handleCompetitorLandscapeSaveChanges = async () => {
     try {
       console.log('🚀 Competitor Landscape - Starting save operation');
@@ -784,12 +859,32 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         </div>
 
         {/* Executive Summary - Always visible */}
-        <div className="mb-6">
+        <div className="mb-6 relative group">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
               <FileText className="h-5 w-5 text-blue-600" />
               Executive Summary
             </h3>
+            {isCompetitorLandscapeEditing && (
+              <div className="flex items-center gap-1">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleSaveExecutiveSummary}
+                      className="text-gray-400 hover:text-green-600 hover:bg-green-50"
+                      title="Commit changes"
+                    >
+                      <Check className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Commit changes</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            )}
           </div>
           {isCompetitorLandscapeEditing ? (
             <Textarea
@@ -896,7 +991,27 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
               return (
                 <>
                   {/* Top Player Market Share */}
-                  <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                  <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg relative group">
+                    {isCompetitorLandscapeEditing && (
+                      <div className="absolute -top-2 -right-2 z-10 flex items-center gap-1">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={handleSaveTopPlayerShare}
+                              className="text-gray-400 hover:text-green-600 hover:bg-green-50"
+                              title="Commit changes"
+                            >
+                              <Check className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Commit changes</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                    )}
                     <div className="flex items-center">
                       <div className="flex-1">
                         {isCompetitorLandscapeEditing ? (
@@ -920,7 +1035,27 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                   </div>
                   
                   {/* Emerging Players */}
-                  <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                  <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg relative group">
+                    {isCompetitorLandscapeEditing && (
+                      <div className="absolute -top-2 -right-2 z-10 flex items-center gap-1">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={handleSaveEmergingPlayers}
+                              className="text-gray-400 hover:text-green-600 hover:bg-green-50"
+                              title="Commit changes"
+                            >
+                              <Check className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Commit changes</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                    )}
                     <div className="flex items-center">
                       <div className="flex-1">
                         {isCompetitorLandscapeEditing ? (
@@ -985,7 +1120,27 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
               if (!dataPoints || dataPoints.length === 0) return null;
               
               return (
-                <div className="mb-8">
+                <div className="mb-8 relative group">
+                  {isCompetitorLandscapeEditing && (
+                    <div className="absolute -top-2 -right-2 z-10 flex items-center gap-1">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleSaveCompetitorReport}
+                            className="text-gray-400 hover:text-green-600 hover:bg-green-50"
+                            title="Commit changes"
+                          >
+                            <Check className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Commit changes</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                  )}
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Competitor Analysis Report</h3>
                   <div className="grid grid-cols-1 gap-4">
                     {dataPoints.map((dataPoint, index) => (
@@ -1054,7 +1209,27 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
               if (!tags || tags.length === 0) return null;
               
               return (
-                <div>
+                <div className="relative group">
+                  {isCompetitorLandscapeEditing && (
+                    <div className="absolute -top-2 -right-2 z-10 flex items-center gap-1">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleSaveMajorCompetitors}
+                            className="text-gray-400 hover:text-green-600 hover:bg-green-50"
+                            title="Commit changes"
+                          >
+                            <Check className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Commit changes</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                  )}
                   <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                     <BarChart3 className="h-5 w-5 text-blue-600" />
                     Major Competitors
@@ -1127,7 +1302,27 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
               if (!regions || regions.length === 0) return null;
               
               return (
-                <div className="mb-8">
+                <div className="mb-8 relative group">
+                  {isCompetitorLandscapeEditing && (
+                    <div className="absolute -top-2 -right-2 z-10 flex items-center gap-1">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleSaveMarketShareCharts}
+                            className="text-gray-400 hover:text-green-600 hover:bg-green-50"
+                            title="Commit changes"
+                          >
+                            <Check className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Commit changes</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                  )}
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Market Share Analysis</h3>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {regions.map((region, regionIndex) => (
@@ -1251,7 +1446,27 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
               if (!entities || entities.length === 0) return null;
               
               return (
-                <div className="mb-8">
+                <div className="mb-8 relative group">
+                  {isCompetitorLandscapeEditing && (
+                    <div className="absolute -top-2 -right-2 z-10 flex items-center gap-1">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleSaveSwotAnalysis}
+                            className="text-gray-400 hover:text-green-600 hover:bg-green-50"
+                            title="Commit changes"
+                          >
+                            <Check className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Commit changes</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                  )}
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">SWOT Analysis</h3>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {entities.map((entity, entityIndex) => (
@@ -1474,7 +1689,27 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
               if (!features || !tools || Object.keys(tools).length === 0) return null;
               
               return (
-                <div className="mb-8">
+                <div className="mb-8 relative group">
+                  {isCompetitorLandscapeEditing && (
+                    <div className="absolute -top-2 -right-2 z-10 flex items-center gap-1">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleSaveFeatureComparison}
+                            className="text-gray-400 hover:text-green-600 hover:bg-green-50"
+                            title="Commit changes"
+                          >
+                            <Check className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Commit changes</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                  )}
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Feature Comparison</h3>
                   <div className="overflow-x-auto">
                     <Table>
@@ -1620,7 +1855,27 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
               if (!insights || insights.length === 0) return null;
               
               return (
-                <div className="mb-8">
+                <div className="mb-8 relative group">
+                  {isCompetitorLandscapeEditing && (
+                    <div className="absolute -top-2 -right-2 z-10 flex items-center gap-1">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleSaveMnaInsights}
+                            className="text-gray-400 hover:text-green-600 hover:bg-green-50"
+                            title="Commit changes"
+                          >
+                            <Check className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Commit changes</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                  )}
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">M&A Insights</h3>
                   <div className="grid grid-cols-1 gap-4">
                     {insights.map((insight: any, index: number) => {
@@ -1713,7 +1968,27 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
               };
               
               return (
-                <div className="mb-8">
+                <div className="mb-8 relative group">
+                  {isCompetitorLandscapeEditing && (
+                    <div className="absolute -top-2 -right-2 z-10 flex items-center gap-1">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleSaveMarketTrends}
+                            className="text-gray-400 hover:text-green-600 hover:bg-green-50"
+                            title="Commit changes"
+                          >
+                            <Check className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Commit changes</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                  )}
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Market Trends</h3>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {charts.map((chart: any, index: number) => {

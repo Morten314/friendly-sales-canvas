@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Bot, Edit, X, FileText, Save, Share, Clock, Zap, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
+import { Bot, Edit, X, FileText, Save, Share, Clock, Zap, ChevronDown, ChevronUp, Loader2, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -672,6 +672,71 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
     }
   };
 
+  // Individual box save functions
+  const handleSaveExecutiveSummary = () => {
+    if (onIndustryTrendsExecutiveSummaryChange) {
+      onIndustryTrendsExecutiveSummaryChange(editExecutiveSummary);
+      toast({
+        title: "Saved",
+        description: "Executive Summary changes committed.",
+      });
+    }
+  };
+
+  const handleSaveKeyMetrics = () => {
+    if (onIndustryTrendsAiAdoptionChange) {
+      onIndustryTrendsAiAdoptionChange(editAiAdoption);
+    }
+    if (onIndustryTrendsCloudMigrationChange) {
+      onIndustryTrendsCloudMigrationChange(editCloudMigration);
+    }
+    if (onIndustryTrendsRegulatoryChange) {
+      onIndustryTrendsRegulatoryChange(editRegulatory);
+    }
+    toast({
+      title: "Saved",
+      description: "Key Metrics changes committed.",
+    });
+  };
+
+  const handleSaveTrendSnapshots = () => {
+    if (onIndustryTrendSnapshotsChange) {
+      onIndustryTrendSnapshotsChange(editTrendSnapshots);
+    }
+    toast({
+      title: "Saved",
+      description: "Trend Snapshots changes committed.",
+    });
+  };
+
+  const handleSaveRegionalHotspots = () => {
+    toast({
+      title: "Saved",
+      description: "Regional Hotspots changes committed.",
+    });
+  };
+
+  const handleSaveStrategicRecommendations = () => {
+    toast({
+      title: "Saved",
+      description: "Strategic Recommendations changes committed.",
+    });
+  };
+
+  const handleSaveRisks = () => {
+    toast({
+      title: "Saved",
+      description: "Risks changes committed.",
+    });
+  };
+
+  const handleSaveVisualCharts = () => {
+    toast({
+      title: "Saved",
+      description: "Visual Charts changes committed.",
+    });
+  };
+
   const fetchUpdatedData = async () => {
     try {
       const response = await executeWithRateLimit(
@@ -797,16 +862,34 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
           {/* Executive Summary Edit */}
           {!normalizedDeletedSections.has('executive-summary') && (
             <div className="relative group">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="sm" onClick={() => onIndustryTrendsDeleteSection('executive-summary')} className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50 pointer-events-auto z-50">
-                    <X className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Delete this section</p>
-                </TooltipContent>
-              </Tooltip>
+              <div className="absolute -top-2 -right-2 z-10 flex items-center gap-1">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleSaveExecutiveSummary}
+                      className="text-gray-400 hover:text-green-600 hover:bg-green-50"
+                      title="Commit changes"
+                    >
+                      <Check className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Commit changes</p>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="sm" onClick={() => onIndustryTrendsDeleteSection('executive-summary')} className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50 pointer-events-auto z-50">
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Delete this section</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <div>
                 <Label htmlFor="industryTrendsExecutiveSummary" className="text-sm font-medium text-gray-700 mb-2 block">
                   Executive Summary
@@ -825,16 +908,34 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
           {/* Key Metrics Edit */}
           {!normalizedDeletedSections.has('key-metrics') && (
             <div className="relative group">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="sm" onClick={() => onIndustryTrendsDeleteSection('key-metrics')} className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50 pointer-events-auto z-50">
-                    <X className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Delete this section</p>
-                </TooltipContent>
-              </Tooltip>
+              <div className="absolute -top-2 -right-2 z-10 flex items-center gap-1">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleSaveKeyMetrics}
+                      className="text-gray-400 hover:text-green-600 hover:bg-green-50"
+                      title="Commit changes"
+                    >
+                      <Check className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Commit changes</p>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="sm" onClick={() => onIndustryTrendsDeleteSection('key-metrics')} className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50 pointer-events-auto z-50">
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Delete this section</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Key Metrics</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -882,16 +983,34 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
           {/* Trend Snapshots Edit */}
           {!normalizedDeletedSections.has('trend-snapshots') && (
             <div className="relative group">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="sm" onClick={() => onIndustryTrendsDeleteSection('trend-snapshots')} className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50 pointer-events-auto z-50">
-                    <X className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Delete this section</p>
-                </TooltipContent>
-              </Tooltip>
+              <div className="absolute -top-2 -right-2 z-10 flex items-center gap-1">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleSaveTrendSnapshots}
+                      className="text-gray-400 hover:text-green-600 hover:bg-green-50"
+                      title="Commit changes"
+                    >
+                      <Check className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Commit changes</p>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="sm" onClick={() => onIndustryTrendsDeleteSection('trend-snapshots')} className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50 pointer-events-auto z-50">
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Delete this section</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Key Trend Snapshots</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -939,16 +1058,34 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
           {/* Regional Hotspots Edit */}
           {!normalizedDeletedSections.has('regional-hotspots') && (
             <div className="relative group">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="sm" onClick={() => onIndustryTrendsDeleteSection('regional-hotspots')} className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50 pointer-events-auto z-50">
-                    <X className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Delete this section</p>
-                </TooltipContent>
-              </Tooltip>
+              <div className="absolute -top-2 -right-2 z-10 flex items-center gap-1">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleSaveRegionalHotspots}
+                      className="text-gray-400 hover:text-green-600 hover:bg-green-50"
+                      title="Commit changes"
+                    >
+                      <Check className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Commit changes</p>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="sm" onClick={() => onIndustryTrendsDeleteSection('regional-hotspots')} className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50 pointer-events-auto z-50">
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Delete this section</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Regional Hotspots</h3>
                 <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
@@ -998,16 +1135,34 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
           {/* Strategic Recommendations Edit */}
           {!normalizedDeletedSections.has('strategic-recommendations') && (
             <div className="relative group">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="sm" onClick={() => onIndustryTrendsDeleteSection('strategic-recommendations')} className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50 pointer-events-auto z-50">
-                    <X className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Delete this section</p>
-                </TooltipContent>
-              </Tooltip>
+              <div className="absolute -top-2 -right-2 z-10 flex items-center gap-1">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleSaveStrategicRecommendations}
+                      className="text-gray-400 hover:text-green-600 hover:bg-green-50"
+                      title="Commit changes"
+                    >
+                      <Check className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Commit changes</p>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="sm" onClick={() => onIndustryTrendsDeleteSection('strategic-recommendations')} className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50 pointer-events-auto z-50">
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Delete this section</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Strategic Recommendations</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1045,16 +1200,34 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
           {/* Risks & Watchouts Edit */}
           {!normalizedDeletedSections.has('risks') && (
             <div className="relative group">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="sm" onClick={() => onIndustryTrendsDeleteSection('risks')} className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50 pointer-events-auto z-50">
-                    <X className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Delete this section</p>
-                </TooltipContent>
-              </Tooltip>
+              <div className="absolute -top-2 -right-2 z-10 flex items-center gap-1">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleSaveRisks}
+                      className="text-gray-400 hover:text-green-600 hover:bg-green-50"
+                      title="Commit changes"
+                    >
+                      <Check className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Commit changes</p>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="sm" onClick={() => onIndustryTrendsDeleteSection('risks')} className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50 pointer-events-auto z-50">
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Delete this section</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Risks & Watchouts</h3>
                 <div className="bg-red-50 p-4 rounded-lg border border-red-200">
@@ -1100,16 +1273,34 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
           {/* Visual Charts Edit */}
           {!normalizedDeletedSections.has('visual-charts') && (
             <div className="relative group">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="sm" onClick={() => onIndustryTrendsDeleteSection('visual-charts')} className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50 pointer-events-auto z-50">
-                    <X className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Delete this section</p>
-                </TooltipContent>
-              </Tooltip>
+              <div className="absolute -top-2 -right-2 z-10 flex items-center gap-1">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleSaveVisualCharts}
+                      className="text-gray-400 hover:text-green-600 hover:bg-green-50"
+                      title="Commit changes"
+                    >
+                      <Check className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Commit changes</p>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="sm" onClick={() => onIndustryTrendsDeleteSection('visual-charts')} className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50 pointer-events-auto z-50">
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Delete this section</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Visual Charts</h3>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

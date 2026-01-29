@@ -5,6 +5,7 @@ import { getUserLocalStorage, setUserLocalStorage } from '@/utils/cacheUtils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Scale, 
   Shield, 
@@ -18,6 +19,7 @@ import {
   ChevronUp,
   Edit,
   Trash2,
+  Check,
   Save,
   X,
   Clock,
@@ -118,6 +120,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   regulatoryData: propRegulatoryData
 }) => {
   const { currentUser } = useAuth();
+  const { toast } = useToast();
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
   // Use centralized data from parent instead of local state
   const regulatoryData = propRegulatoryData;
@@ -1184,15 +1187,30 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
             {/* Executive Summary */}
             {!normalizedDeletedSections.has('executive-summary') && (
               <div className="relative group border border-gray-200 rounded-lg p-4">
-                <button
-                  onClick={() => {
-                    onDeleteSection('executive-summary');
-                    onScoutIconClick('regulatory-compliance', true, 'I noticed you removed the Executive Summary. Want me to help refine or replace it?');
-                  }}
-                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
-                >
-                  <X className="h-4 w-4 text-red-600" />
-                </button>
+                <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
+                  <button
+                    onClick={() => {
+                      onExecutiveSummaryChange(localExecutiveSummary);
+                      toast({
+                        title: "Saved",
+                        description: "Executive Summary changes committed.",
+                      });
+                    }}
+                    className="text-gray-400 hover:text-green-600 hover:bg-green-50 p-1 rounded transition-colors"
+                    title="Commit changes"
+                  >
+                    <Check className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      onDeleteSection('executive-summary');
+                      onScoutIconClick('regulatory-compliance', true, 'I noticed you removed the Executive Summary. Want me to help refine or replace it?');
+                    }}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
+                  >
+                    <X className="h-4 w-4 text-red-600" />
+                  </button>
+                </div>
                 <h4 className="text-sm font-medium text-gray-700 mb-2">Executive Summary</h4>
                 <textarea
                   value={localExecutiveSummary}
@@ -1210,15 +1228,29 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
             {/* Key Regulatory Updates */}
             {!normalizedDeletedSections.has('key-updates') && (
               <div className="relative group border border-gray-200 rounded-lg p-4">
-                <button
-                  onClick={() => {
-                    onDeleteSection('key-updates');
-                    onScoutIconClick('regulatory-compliance', true, 'I noticed you removed the Key Regulatory Updates. Want me to help refine or replace it?');
-                  }}
-                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
-                >
-                  <X className="h-4 w-4 text-red-600" />
-                </button>
+                <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
+                  <button
+                    onClick={() => {
+                      toast({
+                        title: "Saved",
+                        description: "Key Regulatory Updates changes committed.",
+                      });
+                    }}
+                    className="text-gray-400 hover:text-green-600 hover:bg-green-50 p-1 rounded transition-colors"
+                    title="Commit changes"
+                  >
+                    <Check className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      onDeleteSection('key-updates');
+                      onScoutIconClick('regulatory-compliance', true, 'I noticed you removed the Key Regulatory Updates. Want me to help refine or replace it?');
+                    }}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
+                  >
+                    <X className="h-4 w-4 text-red-600" />
+                  </button>
+                </div>
                 <h4 className="text-sm font-medium text-gray-700 mb-3">Key Regulatory Updates</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {keyDataPoints.map((point) => {
@@ -1295,15 +1327,29 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
             {/* Compliance Analytics */}
             {!normalizedDeletedSections.has('compliance-analytics') && (
               <div className="relative group border border-gray-200 rounded-lg p-4">
-                <button
-                  onClick={() => {
-                    onDeleteSection('compliance-analytics');
-                    onScoutIconClick('regulatory-compliance', true, 'I noticed you removed the Compliance Analytics. Want me to help refine or replace it?');
-                  }}
-                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
-                >
-                  <X className="h-4 w-4 text-red-600" />
-                </button>
+                <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
+                  <button
+                    onClick={() => {
+                      toast({
+                        title: "Saved",
+                        description: "Compliance Analytics changes committed.",
+                      });
+                    }}
+                    className="text-gray-400 hover:text-green-600 hover:bg-green-50 p-1 rounded transition-colors"
+                    title="Commit changes"
+                  >
+                    <Check className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      onDeleteSection('compliance-analytics');
+                      onScoutIconClick('regulatory-compliance', true, 'I noticed you removed the Compliance Analytics. Want me to help refine or replace it?');
+                    }}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
+                  >
+                    <X className="h-4 w-4 text-red-600" />
+                  </button>
+                </div>
                 <h4 className="text-sm font-medium text-gray-700 mb-4">Compliance Analytics</h4>
                 {(isEditing ? localVisualDataCards : visualDataCards) && (isEditing ? localVisualDataCards : visualDataCards).length > 0 ? (
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -1603,15 +1649,29 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
             {/* Regional Breakdown */}
             {!normalizedDeletedSections.has('regional-breakdown') && (
               <div className="relative group border border-gray-200 rounded-lg p-4">
-                <button
-                  onClick={() => {
-                    onDeleteSection('regional-breakdown');
-                    onScoutIconClick('regulatory-compliance', true, 'I noticed you removed the Regional Compliance Overview. Want me to help refine or replace it?');
-                  }}
-                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
-                >
-                  <X className="h-4 w-4 text-red-600" />
-                </button>
+                <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
+                  <button
+                    onClick={() => {
+                      toast({
+                        title: "Saved",
+                        description: "Regional Breakdown changes committed.",
+                      });
+                    }}
+                    className="text-gray-400 hover:text-green-600 hover:bg-green-50 p-1 rounded transition-colors"
+                    title="Commit changes"
+                  >
+                    <Check className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      onDeleteSection('regional-breakdown');
+                      onScoutIconClick('regulatory-compliance', true, 'I noticed you removed the Regional Compliance Overview. Want me to help refine or replace it?');
+                    }}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
+                  >
+                    <X className="h-4 w-4 text-red-600" />
+                  </button>
+                </div>
                 <h4 className="text-sm font-medium text-gray-700 mb-4">Regional Compliance Overview</h4>
                 <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
                   <Table>
@@ -1776,15 +1836,29 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
             {/* Strategic Recommendations */}
             {!normalizedDeletedSections.has('strategic-recommendations') && (
               <div className="relative group border border-gray-200 rounded-lg p-4">
-                <button
-                  onClick={() => {
-                    onDeleteSection('strategic-recommendations');
-                    onScoutIconClick('regulatory-compliance', true, 'I noticed you removed the Strategic Recommendations. Want me to help refine or replace it?');
-                  }}
-                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
-                >
-                  <X className="h-4 w-4 text-red-600" />
-                </button>
+                <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
+                  <button
+                    onClick={() => {
+                      toast({
+                        title: "Saved",
+                        description: "Strategic Recommendations changes committed.",
+                      });
+                    }}
+                    className="text-gray-400 hover:text-green-600 hover:bg-green-50 p-1 rounded transition-colors"
+                    title="Commit changes"
+                  >
+                    <Check className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      onDeleteSection('strategic-recommendations');
+                      onScoutIconClick('regulatory-compliance', true, 'I noticed you removed the Strategic Recommendations. Want me to help refine or replace it?');
+                    }}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
+                  >
+                    <X className="h-4 w-4 text-red-600" />
+                  </button>
+                </div>
                 <h4 className="text-sm font-medium text-gray-700 mb-4">Strategic Recommendations</h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">

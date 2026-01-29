@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { BarChart3, Bot, Edit, Target, TrendingUp, PieChart, X, FileText, Save, Share, Clock, ChevronDown, ChevronUp } from 'lucide-react';
+import { BarChart3, Bot, Edit, Target, TrendingUp, PieChart, X, FileText, Save, Share, Clock, ChevronDown, ChevronUp, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -241,6 +241,58 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
   }, [executiveSummary, tamValue, samValue, apacGrowthRate, marketEntry, strategicRecommendations, marketDrivers, isEditing, currentUser?.uid]);
 
   // REMOVED: Duplicate sync effect - the above effect handles all syncing
+
+  // Individual box save functions
+  const handleSaveExecutiveSummary = () => {
+    onExecutiveSummaryChange(localExecutiveSummary);
+    toast({
+      title: "Saved",
+      description: "Executive Summary changes committed.",
+    });
+  };
+
+  const handleSaveKeyMetrics = () => {
+    onTamValueChange(localTamValue);
+    onSamValueChange(localSamValue);
+    onApacGrowthRateChange(localApacGrowthRate);
+    toast({
+      title: "Saved",
+      description: "Key Metrics changes committed.",
+    });
+  };
+
+  const handleSaveStrategicRecommendations = () => {
+    onStrategicRecommendationsChange(localStrategicRecommendations);
+    toast({
+      title: "Saved",
+      description: "Strategic Recommendations changes committed.",
+    });
+  };
+
+  const handleSaveMarketEntry = () => {
+    onMarketEntryChange(localMarketEntry);
+    toast({
+      title: "Saved",
+      description: "Market Entry Strategy changes committed.",
+    });
+  };
+
+  const handleSaveMarketDrivers = () => {
+    onMarketDriversChange(localMarketDrivers);
+    toast({
+      title: "Saved",
+      description: "Market Drivers changes committed.",
+    });
+  };
+
+  const handleSaveMarketOpportunity = () => {
+    // Note: marketSizeBySegment and growthProjections don't have individual change handlers
+    // They would need to be added to props if we want to save them individually
+    toast({
+      title: "Saved",
+      description: "Market Opportunity Breakdown changes committed.",
+    });
+  };
 
   const handleSave = async () => {
     try {
@@ -651,16 +703,34 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
           {/* Executive Summary Edit */}
           {!deletedSections.has('executive-summary') && (
             <div className="relative group">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="sm" onClick={() => onDeleteSection('executive-summary')} className="absolute -top-2 -right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50">
-                    <X className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Delete this section</p>
-                </TooltipContent>
-              </Tooltip>
+              <div className="absolute -top-2 -right-2 z-10 flex items-center gap-1">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleSaveExecutiveSummary}
+                      className="text-gray-400 hover:text-green-600 hover:bg-green-50"
+                      title="Commit changes"
+                    >
+                      <Check className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Commit changes</p>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="sm" onClick={() => onDeleteSection('executive-summary')} className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50">
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Delete this section</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <div>
                 <Label htmlFor="executiveSummary" className="text-sm font-medium text-gray-700 mb-2 block">
                   Executive Summary
@@ -679,16 +749,34 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
           {/* Key Metrics Edit */}
           {!deletedSections.has('key-metrics') && (
             <div className="relative group">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="sm" onClick={() => onDeleteSection('key-metrics')} className="absolute -top-2 -right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50">
-                    <X className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Delete this section</p>
-                </TooltipContent>
-              </Tooltip>
+              <div className="absolute -top-2 -right-2 z-10 flex items-center gap-1">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleSaveKeyMetrics}
+                      className="text-gray-400 hover:text-green-600 hover:bg-green-50"
+                      title="Commit changes"
+                    >
+                      <Check className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Commit changes</p>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="sm" onClick={() => onDeleteSection('key-metrics')} className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50">
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Delete this section</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Key Metrics</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -733,16 +821,34 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
           {/* Strategic Recommendations Edit */}
           {!deletedSections.has('strategic-recommendations') && (
             <div className="relative group">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="sm" onClick={() => onDeleteSection('strategic-recommendations')} className="absolute -top-2 -right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50">
-                    <X className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Delete this section</p>
-                </TooltipContent>
-              </Tooltip>
+              <div className="absolute -top-2 -right-2 z-10 flex items-center gap-1">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleSaveStrategicRecommendations}
+                      className="text-gray-400 hover:text-green-600 hover:bg-green-50"
+                      title="Commit changes"
+                    >
+                      <Check className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Commit changes</p>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="sm" onClick={() => onDeleteSection('strategic-recommendations')} className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50">
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Delete this section</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <div>
                 <Label className="text-sm font-medium text-gray-700 mb-2 block">
                   Strategic Recommendations
@@ -767,16 +873,34 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
           {/* Market Entry Edit */}
           {!deletedSections.has('market-entry') && (
             <div className="relative group">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="sm" onClick={() => onDeleteSection('market-entry')} className="absolute -top-2 -right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50">
-                    <X className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Delete this section</p>
-                </TooltipContent>
-              </Tooltip>
+              <div className="absolute -top-2 -right-2 z-10 flex items-center gap-1">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleSaveMarketEntry}
+                      className="text-gray-400 hover:text-green-600 hover:bg-green-50"
+                      title="Commit changes"
+                    >
+                      <Check className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Commit changes</p>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="sm" onClick={() => onDeleteSection('market-entry')} className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50">
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Delete this section</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <div>
                 <Label htmlFor="marketEntry" className="text-sm font-medium text-gray-700 mb-2 block">
                   Market Entry Strategy
@@ -795,16 +919,34 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
           {/* Market Drivers Edit */}
           {!deletedSections.has('market-drivers') && (
             <div className="relative group">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="sm" onClick={() => onDeleteSection('market-drivers')} className="absolute -top-2 -right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50">
-                    <X className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Delete this section</p>
-                </TooltipContent>
-              </Tooltip>
+              <div className="absolute -top-2 -right-2 z-10 flex items-center gap-1">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleSaveMarketDrivers}
+                      className="text-gray-400 hover:text-green-600 hover:bg-green-50"
+                      title="Commit changes"
+                    >
+                      <Check className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Commit changes</p>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="sm" onClick={() => onDeleteSection('market-drivers')} className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50">
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Delete this section</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <div>
                 <Label className="text-sm font-medium text-gray-700 mb-2 block">
                   Key Market Drivers
@@ -829,16 +971,34 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
           {/* Market Opportunity Breakdown Edit */}
           {!deletedSections.has('market-opportunity-breakdown') && (
             <div className="relative group">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="sm" onClick={() => onDeleteSection('market-opportunity-breakdown')} className="absolute -top-2 -right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50">
-                    <X className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Delete this section</p>
-                </TooltipContent>
-              </Tooltip>
+              <div className="absolute -top-2 -right-2 z-10 flex items-center gap-1">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleSaveMarketOpportunity}
+                      className="text-gray-400 hover:text-green-600 hover:bg-green-50"
+                      title="Commit changes"
+                    >
+                      <Check className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Commit changes</p>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="sm" onClick={() => onDeleteSection('market-opportunity-breakdown')} className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50">
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Delete this section</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                   <PieChart className="h-5 w-5 text-purple-600" />

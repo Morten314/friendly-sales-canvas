@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { MapPin, Bot, Edit, Target, Clock, AlertTriangle, X, FileText, Save, Share, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
+import { MapPin, Bot, Edit, Target, Clock, AlertTriangle, X, FileText, Save, Share, TrendingUp, ChevronDown, ChevronUp, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useToast } from '@/hooks/use-toast';
 import { EditRecord } from './types';
 import { toUTCTimestamp, isTimestampNewer } from '@/lib/timestampUtils';
 import { executeWithRateLimit } from '@/lib/rateLimitManager';
@@ -87,6 +88,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
   companyProfile
 }) => {
   const { currentUser } = useAuth();
+  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [marketEntryData, setMarketEntryData] = useState<any>(null);
@@ -800,15 +802,30 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
       {isEditing && (
         <div className="space-y-6">
           <div className="relative group border border-gray-200 rounded-lg p-4">
-            <button
-              onClick={() => {
-                onDeleteSection('executive-summary');
-                onScoutIconClick('market-entry', true, 'I noticed you removed the Executive Summary. Want me to help refine or replace it?');
-              }}
-              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
-            >
-              <X className="h-4 w-4 text-red-600" />
-            </button>
+            <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
+              <button
+                onClick={() => {
+                  onExecutiveSummaryChange(editExecutiveSummary);
+                  toast({
+                    title: "Saved",
+                    description: "Executive Summary changes committed.",
+                  });
+                }}
+                className="text-gray-400 hover:text-green-600 hover:bg-green-50 p-1 rounded transition-colors"
+                title="Commit changes"
+              >
+                <Check className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => {
+                  onDeleteSection('executive-summary');
+                  onScoutIconClick('market-entry', true, 'I noticed you removed the Executive Summary. Want me to help refine or replace it?');
+                }}
+                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
+              >
+                <X className="h-4 w-4 text-red-600" />
+              </button>
+            </div>
             <div className="space-y-4">
               <Label htmlFor="market-entry-executive-summary" className="text-sm font-medium text-gray-700">
                 Executive Summary
@@ -825,15 +842,32 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
           </div>
 
           <div className="relative group border border-gray-200 rounded-lg p-4">
-            <button
-              onClick={() => {
-                onDeleteSection('key-metrics');
-                onScoutIconClick('market-entry', true, 'I noticed you removed the Key Metrics section. Want me to help refine or replace it?');
-              }}
-              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
-            >
-              <X className="h-4 w-4 text-red-600" />
-            </button>
+            <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
+              <button
+                onClick={() => {
+                  onRecommendedChannelChange(editRecommendedChannel);
+                  onTimeToMarketChange(editTimeToMarket);
+                  onTopBarrierChange(editTopBarrier);
+                  toast({
+                    title: "Saved",
+                    description: "Key Metrics changes committed.",
+                  });
+                }}
+                className="text-gray-400 hover:text-green-600 hover:bg-green-50 p-1 rounded transition-colors"
+                title="Commit changes"
+              >
+                <Check className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => {
+                  onDeleteSection('key-metrics');
+                  onScoutIconClick('market-entry', true, 'I noticed you removed the Key Metrics section. Want me to help refine or replace it?');
+                }}
+                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
+              >
+                <X className="h-4 w-4 text-red-600" />
+              </button>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="recommended-channel" className="text-sm font-medium text-gray-700">
@@ -872,15 +906,30 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
           </div>
 
           <div className="relative group border border-gray-200 rounded-lg p-4">
-            <button
-              onClick={() => {
-                onDeleteSection('entry-barriers');
-                onScoutIconClick('market-entry', true, 'I noticed you removed the Entry Barriers section. Want me to help refine or replace it?');
-              }}
-              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
-            >
-              <X className="h-4 w-4 text-red-600" />
-            </button>
+            <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
+              <button
+                onClick={() => {
+                  onEntryBarriersChange(editEntryBarriers);
+                  toast({
+                    title: "Saved",
+                    description: "Entry Barriers changes committed.",
+                  });
+                }}
+                className="text-gray-400 hover:text-green-600 hover:bg-green-50 p-1 rounded transition-colors"
+                title="Commit changes"
+              >
+                <Check className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => {
+                  onDeleteSection('entry-barriers');
+                  onScoutIconClick('market-entry', true, 'I noticed you removed the Entry Barriers section. Want me to help refine or replace it?');
+                }}
+                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
+              >
+                <X className="h-4 w-4 text-red-600" />
+              </button>
+            </div>
             <div className="space-y-4">
               <Label className="text-sm font-medium text-gray-700">Entry Barriers</Label>
               {editEntryBarriers.map((barrier, index) => (
@@ -919,15 +968,29 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
           {/* SWOT Analysis Edit */}
           {!deletedSections.has('swot-analysis') && (
             <div className="relative group border border-gray-200 rounded-lg p-4">
-              <button
-                onClick={() => {
-                  onDeleteSection('swot-analysis');
-                  onScoutIconClick('market-entry', true, 'I noticed you removed the SWOT Analysis section. Want me to help refine or replace it?');
-                }}
-                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
-              >
-                <X className="h-4 w-4 text-red-600" />
-              </button>
+              <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
+                <button
+                  onClick={() => {
+                    toast({
+                      title: "Saved",
+                      description: "SWOT Analysis changes committed.",
+                    });
+                  }}
+                  className="text-gray-400 hover:text-green-600 hover:bg-green-50 p-1 rounded transition-colors"
+                  title="Commit changes"
+                >
+                  <Check className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => {
+                    onDeleteSection('swot-analysis');
+                    onScoutIconClick('market-entry', true, 'I noticed you removed the SWOT Analysis section. Want me to help refine or replace it?');
+                  }}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
+                >
+                  <X className="h-4 w-4 text-red-600" />
+                </button>
+              </div>
               <div className="space-y-4">
                 <Label className="text-sm font-medium text-gray-700">SWOT Analysis</Label>
                 <div className="grid grid-cols-2 gap-4">
@@ -1094,15 +1157,30 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
           {/* Competitive Differentiation Edit */}
           {!deletedSections.has('competitive-differentiation') && (
             <div className="relative group border border-gray-200 rounded-lg p-4">
-              <button
-                onClick={() => {
-                  onDeleteSection('competitive-differentiation');
-                  onScoutIconClick('market-entry', true, 'I noticed you removed the Competitive Differentiation section. Want me to help refine or replace it?');
-                }}
-                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
-              >
-                <X className="h-4 w-4 text-red-600" />
-              </button>
+              <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
+                <button
+                  onClick={() => {
+                    onCompetitiveDifferentiationChange(editCompetitiveDifferentiation);
+                    toast({
+                      title: "Saved",
+                      description: "Competitive Differentiation changes committed.",
+                    });
+                  }}
+                  className="text-gray-400 hover:text-green-600 hover:bg-green-50 p-1 rounded transition-colors"
+                  title="Commit changes"
+                >
+                  <Check className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => {
+                    onDeleteSection('competitive-differentiation');
+                    onScoutIconClick('market-entry', true, 'I noticed you removed the Competitive Differentiation section. Want me to help refine or replace it?');
+                  }}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
+                >
+                  <X className="h-4 w-4 text-red-600" />
+                </button>
+              </div>
               <div className="space-y-4">
                 <Label className="text-sm font-medium text-gray-700">Competitive Differentiation</Label>
                 {editCompetitiveDifferentiation.map((diff, index) => (
@@ -1142,15 +1220,30 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
           {/* Strategic Recommendations Edit */}
           {!deletedSections.has('strategic-recommendations') && (
             <div className="relative group border border-gray-200 rounded-lg p-4">
-              <button
-                onClick={() => {
-                  onDeleteSection('strategic-recommendations');
-                  onScoutIconClick('market-entry', true, 'I noticed you removed the Strategic Recommendations section. Want me to help refine or replace it?');
-                }}
-                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
-              >
-                <X className="h-4 w-4 text-red-600" />
-              </button>
+              <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
+                <button
+                  onClick={() => {
+                    onStrategicRecommendationsChange(editStrategicRecommendations);
+                    toast({
+                      title: "Saved",
+                      description: "Strategic Recommendations changes committed.",
+                    });
+                  }}
+                  className="text-gray-400 hover:text-green-600 hover:bg-green-50 p-1 rounded transition-colors"
+                  title="Commit changes"
+                >
+                  <Check className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => {
+                    onDeleteSection('strategic-recommendations');
+                    onScoutIconClick('market-entry', true, 'I noticed you removed the Strategic Recommendations section. Want me to help refine or replace it?');
+                  }}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
+                >
+                  <X className="h-4 w-4 text-red-600" />
+                </button>
+              </div>
               <div className="space-y-4">
                 <Label className="text-sm font-medium text-gray-700">Strategic Recommendations</Label>
                 {editStrategicRecommendations.map((recommendation, index) => (
@@ -1192,15 +1285,30 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
           {/* Risk Assessment Edit */}
           {!deletedSections.has('risk-assessment') && (
             <div className="relative group border border-gray-200 rounded-lg p-4">
-              <button
-                onClick={() => {
-                  onDeleteSection('risk-assessment');
-                  onScoutIconClick('market-entry', true, 'I noticed you removed the Risk Assessment section. Want me to help refine or replace it?');
-                }}
-                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
-              >
-                <X className="h-4 w-4 text-red-600" />
-              </button>
+              <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
+                <button
+                  onClick={() => {
+                    onRiskAssessmentChange(editRiskAssessment);
+                    toast({
+                      title: "Saved",
+                      description: "Risk Assessment changes committed.",
+                    });
+                  }}
+                  className="text-gray-400 hover:text-green-600 hover:bg-green-50 p-1 rounded transition-colors"
+                  title="Commit changes"
+                >
+                  <Check className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => {
+                    onDeleteSection('risk-assessment');
+                    onScoutIconClick('market-entry', true, 'I noticed you removed the Risk Assessment section. Want me to help refine or replace it?');
+                  }}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
+                >
+                  <X className="h-4 w-4 text-red-600" />
+                </button>
+              </div>
               <div className="space-y-4">
                 <Label className="text-sm font-medium text-gray-700">Risk Assessment</Label>
                 {editRiskAssessment.map((risk, index) => (
