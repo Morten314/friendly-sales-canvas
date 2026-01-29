@@ -466,10 +466,10 @@ export function Header() {
          {/* Signals page controls */}
          {window.location.pathname === '/signals' && !isMobile && (
            <>
-             <Button variant="outline" size="sm" className="flex items-center gap-2">
+             {/* <Button variant="outline" size="sm" className="flex items-center gap-2">
                <Bookmark className="h-4 w-4" />
                Saved Insights (0)
-             </Button>
+             </Button> */}
              
              <Select defaultValue="today">
                <SelectTrigger className="w-32">
@@ -522,7 +522,7 @@ export function Header() {
         )}
 
          {/* Notification Bell */}
-        <DropdownMenu>
+        {/* <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="icon" className="relative">
               <Bell className="h-5 w-5" />
@@ -555,7 +555,7 @@ export function Header() {
               View all notifications
             </DropdownMenuItem>
           </DropdownMenuContent>
-        </DropdownMenu>
+        </DropdownMenu> */}
       </div>
     </header>
   );
