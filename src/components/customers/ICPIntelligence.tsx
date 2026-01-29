@@ -1,20 +1,20 @@
-
-
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Edit, TrendingUp, Clock, Target, DollarSign } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Edit, TrendingUp, Clock, Target, DollarSign, Sparkles, Users } from "lucide-react";
 import MiniLineChart from "@/components/MiniLineChart";
 import MiniPieChart from "@/components/MiniPieChart";
 import { ICPSummaryOpportunity } from "./ICPSummaryOpportunity"; // Re-enabled with null handling
 import { SuggestedICPsGallery } from "./SuggestedICPsGallery";
+import { SuggestedICPCards } from "./SuggestedICPCards";
 import { ICPBuilder } from "./ICPBuilder";
 import { ICPInsights } from "./ICPInsights";
 import { ICPProfilesList } from "./ICPProfilesList";
 import { profilerCache } from "@/lib/profilerCache";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 interface SuggestedICP {
   id: string;
@@ -101,7 +101,9 @@ export const ICPIntelligence = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [renderError, setRenderError] = useState<string | null>(null);
   const [hasCachedData, setHasCachedData] = useState(false);
-
+  const [activeView, setActiveView] = useState<'suggested' | 'gallery'>('suggested');
+  const [acceptedICPs, setAcceptedICPs] = useState<SuggestedICP[]>([]);
+  const { toast } = useToast();
   // Initialize cache status on component mount
   useEffect(() => {
     const checkCacheStatus = () => {
@@ -215,6 +217,17 @@ export const ICPIntelligence = () => {
     console.log("=== REFRESH COMPLETED ===");
     setIsRefreshing(false);
     // Update cache status after refresh
+  };
+
+  const handleICPAccepted = (icp: any) => {
+    console.log("=== ICP ACCEPTED ===", icp);
+    setAcceptedICPs(prev => [...prev, icp]);
+    // Emit event for customer profile integration
+    window.dispatchEvent(new CustomEvent('icpAccepted', { detail: icp }));
+  };
+
+  const handleICPRejected = (icp: any) => {
+    console.log("=== ICP REJECTED ===", icp);
     const cacheStatus = profilerCache.getCacheStatus();
     setHasCachedData(cacheStatus.hasCache);
   };
@@ -238,25 +251,52 @@ export const ICPIntelligence = () => {
   return (
     <div className="space-y-6">
       
-      {/* Debug Info */}
-      {/* <div className="text-xs text-gray-500 p-2 bg-gray-50 rounded">
-        Debug: selectedICP = {selectedICP ? selectedICP.segment : 'null'} | refreshTrigger = {refreshTrigger} | isRefreshing = {isRefreshing.toString()}
-      </div> */}
-
-      {/* Page Header */}
-      <div className="space-y-2">
-        
-        
+      {/* View Toggle */}
+      <div className="flex items-center gap-4 border-b pb-4">
+        <Button
+          variant={activeView === 'suggested' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setActiveView('suggested')}
+          className="flex items-center gap-2"
+        >
+          <Sparkles className="h-4 w-4" />
+          Suggested ICPs
+          {acceptedICPs.length > 0 && (
+            <Badge variant="secondary" className="ml-1 text-xs">
+              {acceptedICPs.length} accepted
+            </Badge>
+          )}
+        </Button>
+        <Button
+          variant={activeView === 'gallery' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setActiveView('gallery')}
+          className="flex items-center gap-2"
+        >
+          <Users className="h-4 w-4" />
+          ICP Gallery
+        </Button>
       </div>
 
-      {/* Suggested ICPs Gallery */}
-      <SuggestedICPsGallery 
-        onICPSelect={handleICPSelect} 
-        onProfilerChatOpen={handleProfilerChatOpen}
-        refreshTrigger={refreshTrigger}
-        isRefreshing={isRefreshing}
-        onRefreshComplete={handleRefreshComplete}
-      />
+      {/* Suggested ICP Cards - New Component */}
+      {activeView === 'suggested' && (
+        <SuggestedICPCards
+          onICPAccepted={handleICPAccepted}
+          onICPRejected={handleICPRejected}
+          refreshTrigger={refreshTrigger}
+        />
+      )}
+
+      {/* Original Suggested ICPs Gallery */}
+      {activeView === 'gallery' && (
+        <SuggestedICPsGallery 
+          onICPSelect={handleICPSelect} 
+          onProfilerChatOpen={handleProfilerChatOpen}
+          refreshTrigger={refreshTrigger}
+          isRefreshing={isRefreshing}
+          onRefreshComplete={handleRefreshComplete}
+        />
+      )}
 
       {/* ICP Details Section */}
       <div id="icp-details-section" className="space-y-6">
@@ -269,8 +309,6 @@ export const ICPIntelligence = () => {
             />
           </div>
         )}
-
-        
       </div>
 
       {/* Profiler Chat Panel */}
