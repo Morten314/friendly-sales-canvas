@@ -118,6 +118,8 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
   const [localMarketEntry, setLocalMarketEntry] = useState(marketEntry || '');
   const [localStrategicRecommendations, setLocalStrategicRecommendations] = useState<string[]>(strategicRecommendations || []);
   const [localMarketDrivers, setLocalMarketDrivers] = useState<string[]>(marketDrivers || []);
+  const [localMarketSizeBySegment, setLocalMarketSizeBySegment] = useState<Record<string, string>>(marketSizeBySegment || {});
+  const [localGrowthProjections, setLocalGrowthProjections] = useState<Record<string, string>>(growthProjections || {});
   const [localError, setLocalError] = useState<string | null>(null);
 
   // Debug logging for state changes
@@ -154,7 +156,9 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
         apacGrowthRate,
         marketEntry,
         strategicRecommendations,
-        marketDrivers
+        marketDrivers,
+        marketSizeBySegment,
+        growthProjections
       });
       
       setLocalExecutiveSummary(executiveSummary || '');
@@ -164,6 +168,8 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
       setLocalMarketEntry(marketEntry || '');
       setLocalStrategicRecommendations(strategicRecommendations || []);
       setLocalMarketDrivers(marketDrivers || []);
+      setLocalMarketSizeBySegment(marketSizeBySegment || {});
+      setLocalGrowthProjections(growthProjections || {});
     }
   }, [isEditing]);
 
@@ -246,7 +252,9 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
         apacGrowthRate,
         marketEntry,
         strategicRecommendations,
-        marketDrivers
+        marketDrivers,
+        marketSizeBySegment: marketSizeBySegment || {},
+        growthProjections: growthProjections || {}
       };
 
       const modifiedData = {
@@ -256,7 +264,9 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
         apacGrowthRate: localApacGrowthRate,
         marketEntry: localMarketEntry,
         strategicRecommendations: localStrategicRecommendations,
-        marketDrivers: localMarketDrivers
+        marketDrivers: localMarketDrivers,
+        marketSizeBySegment: localMarketSizeBySegment,
+        growthProjections: localGrowthProjections
       };
 
       const editData = {
@@ -816,6 +826,158 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
             </div>
           )}
 
+          {/* Market Opportunity Breakdown Edit */}
+          {!deletedSections.has('market-opportunity-breakdown') && (
+            <div className="relative group">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="sm" onClick={() => onDeleteSection('market-opportunity-breakdown')} className="absolute -top-2 -right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50">
+                    <X className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Delete this section</p>
+                </TooltipContent>
+              </Tooltip>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <PieChart className="h-5 w-5 text-purple-600" />
+                  Market Opportunity Breakdown
+                </h3>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                  {/* Market Size by Segment */}
+                  <div className="bg-white border border-gray-200 rounded-lg p-4">
+                    <Label className="text-sm font-medium text-gray-900 mb-3 block">
+                      Market Size by Segment
+                    </Label>
+                    <div className="space-y-3">
+                      {Object.entries(localMarketSizeBySegment).map(([segment, value], index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <Input
+                            value={segment}
+                            onChange={e => {
+                              const updated = { ...localMarketSizeBySegment };
+                              const oldKey = segment;
+                              const newKey = e.target.value;
+                              if (newKey !== oldKey) {
+                                delete updated[oldKey];
+                                updated[newKey] = value;
+                              }
+                              setLocalMarketSizeBySegment(updated);
+                            }}
+                            className="flex-1 text-sm"
+                            placeholder="Segment name"
+                          />
+                          <Input
+                            type="text"
+                            value={value}
+                            onChange={e => {
+                              const updated = { ...localMarketSizeBySegment };
+                              updated[segment] = e.target.value;
+                              setLocalMarketSizeBySegment(updated);
+                            }}
+                            className="w-24 text-sm"
+                            placeholder="Value"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              const updated = { ...localMarketSizeBySegment };
+                              delete updated[segment];
+                              setLocalMarketSizeBySegment(updated);
+                            }}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setLocalMarketSizeBySegment({
+                            ...localMarketSizeBySegment,
+                            ['New Segment']: ''
+                          });
+                        }}
+                        className="mt-2"
+                      >
+                        Add Segment
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Growth Projections */}
+                  <div className="bg-white border border-gray-200 rounded-lg p-4">
+                    <Label className="text-sm font-medium text-gray-900 mb-3 block">
+                      Growth Projections
+                    </Label>
+                    <div className="space-y-3">
+                      {Object.entries(localGrowthProjections).map(([year, value], index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <Input
+                            value={year}
+                            onChange={e => {
+                              const updated = { ...localGrowthProjections };
+                              const oldKey = year;
+                              const newKey = e.target.value;
+                              if (newKey !== oldKey) {
+                                delete updated[oldKey];
+                                updated[newKey] = value;
+                              }
+                              setLocalGrowthProjections(updated);
+                            }}
+                            className="flex-1 text-sm"
+                            placeholder="Year"
+                          />
+                          <Input
+                            type="text"
+                            value={value}
+                            onChange={e => {
+                              const updated = { ...localGrowthProjections };
+                              updated[year] = e.target.value;
+                              setLocalGrowthProjections(updated);
+                            }}
+                            className="w-24 text-sm"
+                            placeholder="Value"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              const updated = { ...localGrowthProjections };
+                              delete updated[year];
+                              setLocalGrowthProjections(updated);
+                            }}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setLocalGrowthProjections({
+                            ...localGrowthProjections,
+                            ['2024']: ''
+                          });
+                        }}
+                        className="mt-2"
+                      >
+                        Add Year
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Save/Cancel Buttons */}
           <div className="flex items-center gap-3 pt-6 border-t">
             <Button onClick={handleSave}>Save Changes</Button>
@@ -989,7 +1151,8 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                        })()}
                        <MiniPieChart 
                          data={(() => {
-                           if (!marketSizeBySegment) {
+                           const segmentsToUse = Object.keys(localMarketSizeBySegment).length > 0 ? localMarketSizeBySegment : marketSizeBySegment;
+                           if (!segmentsToUse || Object.keys(segmentsToUse).length === 0) {
                              return [
                                { name: "Enterprise", value: 45, color: "#3B82F6" },
                                { name: "Mid-Market", value: 35, color: "#10B981" },
@@ -998,10 +1161,10 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                            }
                            
                            // If marketSizeBySegment is a string, try to parse it as JSON first
-                           if (typeof marketSizeBySegment === 'string') {
-                             console.log('🔧 marketSizeBySegment is string, attempting to parse:', marketSizeBySegment);
+                           if (typeof segmentsToUse === 'string') {
+                             console.log('🔧 marketSizeBySegment is string, attempting to parse:', segmentsToUse);
                              try {
-                               const parsedSegments = JSON.parse(marketSizeBySegment);
+                               const parsedSegments = JSON.parse(segmentsToUse);
                                if (parsedSegments && typeof parsedSegments === 'object') {
                                  console.log('✅ Successfully parsed marketSizeBySegment from string to object');
                                  return Object.entries(parsedSegments).map(([name, value], index) => ({
@@ -1024,7 +1187,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                            }
                            
                            // If it's an object, use it directly
-                           return Object.entries(marketSizeBySegment).map(([name, value], index) => ({
+                           return Object.entries(segmentsToUse).map(([name, value], index) => ({
                              name,
                              value: parseInt(value.toString().replace('%', '')),
                              color: ["#3B82F6", "#10B981", "#8B5CF6", "#F59E0B"][index % 4]
@@ -1046,7 +1209,8 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                        })()}
                         <MiniLineChart 
                           data={(() => {
-                            if (!growthProjections) {
+                            const projectionsToUse = Object.keys(localGrowthProjections).length > 0 ? localGrowthProjections : growthProjections;
+                            if (!projectionsToUse || Object.keys(projectionsToUse).length === 0) {
                               return [
                                 { name: "2023", value: 100 },
                                 { name: "2024", value: 115 },
@@ -1056,10 +1220,10 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                             }
                             
                             // If growthProjections is a string, try to parse it as JSON first
-                            if (typeof growthProjections === 'string') {
-                              console.log('🔧 growthProjections is string, attempting to parse:', growthProjections);
+                            if (typeof projectionsToUse === 'string') {
+                              console.log('🔧 growthProjections is string, attempting to parse:', projectionsToUse);
                               try {
-                                const parsedProjections = JSON.parse(growthProjections);
+                                const parsedProjections = JSON.parse(projectionsToUse);
                                 if (parsedProjections && typeof parsedProjections === 'object') {
                                   console.log('✅ Successfully parsed growthProjections from string to object');
                                   return Object.entries(parsedProjections).map(([year, value]) => {
@@ -1086,7 +1250,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                             }
                             
                             // If it's an object, transform it safely
-                            return Object.entries(growthProjections).map(([year, value]) => {
+                            return Object.entries(projectionsToUse).map(([year, value]) => {
                               const numericValue = parseFloat(value.toString());
                               console.log(`🔧 Converting ${year}: ${value} -> ${numericValue}`);
                               return {

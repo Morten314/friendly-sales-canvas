@@ -1,4 +1,4 @@
-import { Filter, Check, X, Bookmark, MessageCircle, Info, Share2, Download, Bot, Send, RefreshCw, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { Filter, Check, X, Bookmark, MessageCircle, Info, Share2, Download, Bot, Send, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
@@ -137,33 +137,6 @@ const Index = () => {
     };
   }, []);
 
-  // Helper function to deduplicate signals by ID and content
-  const deduplicateSignals = (signals: SignalCard[]): SignalCard[] => {
-    const seenIds = new Set<string>();
-    const seenContent = new Set<string>();
-    const unique: SignalCard[] = [];
-
-    for (const signal of signals) {
-      // First check by ID (most reliable)
-      if (signal.id && !seenIds.has(signal.id)) {
-        seenIds.add(signal.id);
-        unique.push(signal);
-      } 
-      // Fallback: check by content (headline + snippet) if ID is missing or duplicate
-      else if (!signal.id || seenIds.has(signal.id)) {
-        const contentKey = `${signal.headline}|${signal.snippet}`;
-        if (!seenContent.has(contentKey)) {
-          seenContent.add(contentKey);
-          unique.push(signal);
-        } else {
-          console.warn('Duplicate signal detected and filtered:', signal.headline);
-        }
-      }
-    }
-
-    return unique;
-  };
-
   const loadSignals = async () => {
     if (!currentUser?.uid) {
       console.error('User not authenticated');
@@ -172,15 +145,7 @@ const Index = () => {
     setIsLoading(true);
     try {
       const data = await fetchSignals(currentUser.uid);
-      const rawSignals = data.signals || [];
-      // Deduplicate signals before setting state
-      const uniqueSignals = deduplicateSignals(rawSignals);
-      
-      if (rawSignals.length !== uniqueSignals.length) {
-        console.warn(`Filtered ${rawSignals.length - uniqueSignals.length} duplicate signal(s)`);
-      }
-      
-      setSignals(uniqueSignals);
+      setSignals(data.signals || []);
     } catch (error) {
       console.error('Error loading signals:', error);
       
@@ -437,52 +402,24 @@ const Index = () => {
                         <h3 className="text-lg font-semibold text-gray-900">
                           {signal.headline}
                         </h3>
-                        <div className="flex items-center gap-2">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-8 w-8 p-0 bg-green-50 border-green-200 text-green-700 hover:bg-green-100 hover:border-green-300"
-                                onClick={() => {
-                                  handleAction(signal.id, 'accept');
-                                  toast({
-                                    title: "Signal Accepted",
-                                    description: "This signal has been accepted and saved.",
-                                    duration: 3000,
-                                  });
-                                }}
-                              >
-                                <ThumbsUp className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Accept Signal</p>
-                            </TooltipContent>
-                          </Tooltip>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-8 w-8 p-0 bg-red-50 border-red-200 text-red-700 hover:bg-red-100 hover:border-red-300"
-                                onClick={() => {
-                                  handleAction(signal.id, 'dismiss');
-                                  toast({
-                                    title: "Signal Rejected",
-                                    description: "This signal has been dismissed.",
-                                    duration: 3000,
-                                  });
-                                }}
-                              >
-                                <ThumbsDown className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Reject Signal</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </div>
+                         {/* <div className="flex items-center gap-3">
+                           <button 
+                             className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
+                             onClick={() => toast({
+                               title: "Added",
+                               description: "This insight will be included in your weekly digest and sent to your registered email.",
+                               duration: 3000,
+                             })}
+                           >
+                             ➕ Add to my Weekly Digest
+                           </button>
+                           <button 
+                             className="text-sm bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-md text-gray-700 flex items-center gap-1"
+                             onClick={() => handleAction(signal.id, 'ask')}
+                           >
+                             💬 Discuss with Agent
+                           </button>
+                         </div> */}
                       </div>
                       <p className="text-gray-600 text-sm leading-relaxed mb-2">
                         {signal.snippet}

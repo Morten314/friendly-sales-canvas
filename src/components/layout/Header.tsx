@@ -19,8 +19,6 @@ import { cn } from "@/lib/utils";
 // import { AskBrewra } from "@/components/agent-hub/AskBrewra"; // Commented out - removed Ask button
 // import { ViewToggle } from "@/components/market-research/ViewToggle"; // Commented out - removed User/AI toggle
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
-import { getUserLocalStorage } from "@/utils/cacheUtils";
 
 // Define our deployment data type
 export interface DeploymentData {
@@ -37,12 +35,10 @@ export function Header() {
   // const [openAsk, setOpenAsk] = useState(false); // Commented out - removed Ask button
   // const [isAIViewActive, setIsAIViewActive] = useState(false); // Commented out - removed User/AI toggle
   const [isSignalsRefreshing, setIsSignalsRefreshing] = useState(false);
-  const [companyProfile, setCompanyProfile] = useState<any>(null);
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { setMobileOpen } = useSidebar();
   const { selectedTenant } = useTenant();
-  const { currentUser } = useAuth();
 
   // Listen for signals refresh state changes
   useEffect(() => {
@@ -62,39 +58,6 @@ export function Header() {
       window.removeEventListener('signalsRefreshEnd', handleSignalsRefreshEnd);
     };
   }, []);
-
-  // Load company profile data for context strip
-  useEffect(() => {
-    const loadCompanyProfile = () => {
-      if (currentUser?.uid) {
-        try {
-          const profileData = getUserLocalStorage('companyProfile', currentUser.uid);
-          if (profileData) {
-            const profile = JSON.parse(profileData);
-            // Verify this profile belongs to the current user
-            if (profile.user_id === currentUser.uid) {
-              setCompanyProfile(profile);
-            }
-          }
-        } catch (error) {
-          console.warn('Could not load company profile in Header:', error);
-        }
-      }
-    };
-
-    loadCompanyProfile();
-
-    // Listen for company profile updates
-    const handleCompanyProfileUpdate = () => {
-      loadCompanyProfile();
-    };
-
-    window.addEventListener('companyProfileUpdated', handleCompanyProfileUpdate);
-    
-    return () => {
-      window.removeEventListener('companyProfileUpdated', handleCompanyProfileUpdate);
-    };
-  }, [currentUser?.uid]);
 
   const getPageTitle = () => {
     const path = window.location.pathname;
@@ -236,18 +199,6 @@ export function Header() {
           {isMarketResearchPage && !getPageSubtitle() && (
             <span className="text-sm md:text-base italic font-normal text-gray-600 truncate">Find your best markets before your competitors do</span>
           )}
-          
-          {/* Context Strip - Company Profile Information (only for Scout pages) */}
-          {(isMarketResearchPage || window.location.pathname.startsWith('/your-ai-team/scout')) && companyProfile && (
-            <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 mt-2 max-w-4xl">
-              <p className="text-xs text-gray-500 flex items-center gap-1.5">
-                <Info className="h-3 w-3 text-gray-400 flex-shrink-0" />
-                <span className="truncate">
-                  Reports are generated according to fields such as company name, industry, etc. from your <span className="font-medium text-gray-600">Company Profile</span> in Mission Control.
-                </span>
-              </p>
-            </div>
-          )}
         </div>
       </div>
 
@@ -388,7 +339,7 @@ export function Header() {
                   <Download className="h-4 w-4" />
                   Export Data
                 </Button>
-                <Button 
+                {/* <Button 
                   size="sm"
                   className="bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2"
                   onClick={() => {
@@ -397,7 +348,7 @@ export function Header() {
                 >
                   <UserPlus className="h-4 w-4" />
                   Create New ICP
-                </Button>
+                </Button> */}
               </>
             )}
           </>

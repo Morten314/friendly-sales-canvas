@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getUserLocalStorage, setUserLocalStorage } from '@/utils/cacheUtils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { 
   Scale, 
   Shield, 
@@ -204,6 +205,19 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   // Dynamic local state for all key data points
   const [localKeyDataValues, setLocalKeyDataValues] = useState<Record<string, string>>({});
 
+  // Local state for regional data (table)
+  const [localRegionalData, setLocalRegionalData] = useState<any[]>([]);
+
+  // Local state for visual data cards
+  const [localVisualDataCards, setLocalVisualDataCards] = useState<any[]>([]);
+
+  // Local state for strategic recommendations
+  const [localStrategicRecommendations, setLocalStrategicRecommendations] = useState<any>({
+    mitigateRegulatoryRisks: [],
+    competitivePositioning: [],
+    goToMarketStrategy: []
+  });
+
   // Save local state to localStorage whenever it changes
   useEffect(() => {
     if (localExecutiveSummary) {
@@ -369,6 +383,108 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
         }
       });
       setLocalKeyDataValues(initialValues);
+    }
+    
+    // Initialize regional data
+    const defaultRegionalData = [
+      {
+        region: 'European Union',
+        framework: 'GDPR + AI Act',
+        deadline: 'Q1 2026',
+        impact: 'High',
+        status: 'Active',
+        requirements: 'Data protection, AI governance'
+      },
+      {
+        region: 'United States',
+        framework: 'CCPA + State Laws',
+        deadline: 'Ongoing',
+        impact: 'Medium',
+        status: 'Evolving',
+        requirements: 'Privacy rights, data handling'
+      },
+      {
+        region: 'China',
+        framework: 'PIPL + Cybersecurity Law',
+        deadline: 'Active',
+        impact: 'High',
+        status: 'Mandatory',
+        requirements: 'Data localization, security'
+      },
+      {
+        region: 'United Kingdom',
+        framework: 'UK GDPR + DPA',
+        deadline: 'Active',
+        impact: 'Medium',
+        status: 'Active',
+        requirements: 'Data protection, transfers'
+      }
+    ];
+    const regionalDataToUse = regulatoryData?.regionalData || defaultRegionalData;
+    setLocalRegionalData(regionalDataToUse && regionalDataToUse.length > 0 ? [...regionalDataToUse] : [...defaultRegionalData]);
+    
+    // Initialize visual data cards
+    const defaultVisualDataCards = [
+      {
+        title: 'Compliance Adoption Rates',
+        type: 'bar-chart',
+        data: [
+          { name: 'GDPR', value: 68, color: '#10b981' },
+          { name: 'CCPA', value: 45, color: '#3b82f6' },
+          { name: 'SOC 2', value: 72, color: '#8b5cf6' },
+          { name: 'ISO 27001', value: 38, color: '#f59e0b' }
+        ]
+      },
+      {
+        title: 'Regulatory Timeline',
+        type: 'timeline',
+        data: [
+          { date: 'Q1 2025', event: 'EU AI Act Phase 1', status: 'upcoming' },
+          { date: 'Q3 2025', event: 'GDPR Updates', status: 'upcoming' },
+          { date: 'Q1 2026', event: 'EU AI Act Full Enforcement', status: 'critical' }
+        ]
+      },
+      {
+        title: 'Risk Indicators',
+        type: 'percentage',
+        data: [
+          { metric: 'Data Breach Risk', value: 23, trend: 'down' },
+          { metric: 'Non-compliance Penalties', value: 15, trend: 'up' },
+          { metric: 'Audit Readiness', value: 67, trend: 'up' }
+        ]
+      }
+    ];
+    const visualDataCardsToUse = regulatoryData?.visualDataCards || defaultVisualDataCards;
+    setLocalVisualDataCards(visualDataCardsToUse && visualDataCardsToUse.length > 0 ? [...visualDataCardsToUse] : [...defaultVisualDataCards]);
+    
+    // Initialize strategic recommendations
+    if (regulatoryData?.strategicRecommendations) {
+      setLocalStrategicRecommendations({
+        mitigateRegulatoryRisks: regulatoryData.strategicRecommendations.mitigateRegulatoryRisks || [],
+        competitivePositioning: regulatoryData.strategicRecommendations.competitivePositioning || [],
+        goToMarketStrategy: regulatoryData.strategicRecommendations.goToMarketStrategy || []
+      });
+    } else {
+      setLocalStrategicRecommendations({
+        mitigateRegulatoryRisks: [
+          'Implement privacy by design principles',
+          'Establish automated compliance monitoring',
+          'Regular risk assessments and audits',
+          'Cross-functional compliance team'
+        ],
+        competitivePositioning: [
+          'Market compliance as differentiator',
+          'Showcase security certifications',
+          'Transparent data handling practices',
+          'Industry-leading privacy standards'
+        ],
+        goToMarketStrategy: [
+          'Regional deployment capabilities',
+          'Compliance-ready product offerings',
+          'Legal-friendly contract templates',
+          'Enterprise-grade data residency'
+        ]
+      });
     }
     
     onToggleEdit();
@@ -919,6 +1035,87 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     }
   ];
 
+  // Initialize local state for regional data and visual data cards when not editing
+  useEffect(() => {
+    if (!isEditing) {
+      const defaultRegionalData = [
+        {
+          region: 'European Union',
+          framework: 'GDPR + AI Act',
+          deadline: 'Q1 2026',
+          impact: 'High',
+          status: 'Active',
+          requirements: 'Data protection, AI governance'
+        },
+        {
+          region: 'United States',
+          framework: 'CCPA + State Laws',
+          deadline: 'Ongoing',
+          impact: 'Medium',
+          status: 'Evolving',
+          requirements: 'Privacy rights, data handling'
+        },
+        {
+          region: 'China',
+          framework: 'PIPL + Cybersecurity Law',
+          deadline: 'Active',
+          impact: 'High',
+          status: 'Mandatory',
+          requirements: 'Data localization, security'
+        },
+        {
+          region: 'United Kingdom',
+          framework: 'UK GDPR + DPA',
+          deadline: 'Active',
+          impact: 'Medium',
+          status: 'Active',
+          requirements: 'Data protection, transfers'
+        }
+      ];
+      
+      const defaultVisualDataCards = [
+        {
+          title: 'Compliance Adoption Rates',
+          type: 'bar-chart',
+          data: [
+            { name: 'GDPR', value: 68, color: '#10b981' },
+            { name: 'CCPA', value: 45, color: '#3b82f6' },
+            { name: 'SOC 2', value: 72, color: '#8b5cf6' },
+            { name: 'ISO 27001', value: 38, color: '#f59e0b' }
+          ]
+        },
+        {
+          title: 'Regulatory Timeline',
+          type: 'timeline',
+          data: [
+            { date: 'Q1 2025', event: 'EU AI Act Phase 1', status: 'upcoming' },
+            { date: 'Q3 2025', event: 'GDPR Updates', status: 'upcoming' },
+            { date: 'Q1 2026', event: 'EU AI Act Full Enforcement', status: 'critical' }
+          ]
+        },
+        {
+          title: 'Risk Indicators',
+          type: 'percentage',
+          data: [
+            { metric: 'Data Breach Risk', value: 23, trend: 'down' },
+            { metric: 'Non-compliance Penalties', value: 15, trend: 'up' },
+            { metric: 'Audit Readiness', value: 67, trend: 'up' }
+          ]
+        }
+      ];
+      
+      const regionalDataToUse = regulatoryData?.regionalData || defaultRegionalData;
+      if (regionalDataToUse && regionalDataToUse.length > 0) {
+        setLocalRegionalData([...regionalDataToUse]);
+      }
+      
+      const visualDataCardsToUse = regulatoryData?.visualDataCards || defaultVisualDataCards;
+      if (visualDataCardsToUse && visualDataCardsToUse.length > 0) {
+        setLocalVisualDataCards([...visualDataCardsToUse]);
+      }
+    }
+  }, [regulatoryData, isEditing]);
+
   const currentExecutiveSummary = localExecutiveSummary || regulatoryData?.executiveSummary || executiveSummary;
 
   return (
@@ -1108,17 +1305,29 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                   <X className="h-4 w-4 text-red-600" />
                 </button>
                 <h4 className="text-sm font-medium text-gray-700 mb-4">Compliance Analytics</h4>
-                {visualDataCards && visualDataCards.length > 0 ? (
+                {(isEditing ? localVisualDataCards : visualDataCards) && (isEditing ? localVisualDataCards : visualDataCards).length > 0 ? (
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {visualDataCards.map((card: any, cardIndex: number) => {
+                    {(isEditing ? localVisualDataCards : visualDataCards).map((card: any, cardIndex: number) => {
                       // Find card by type dynamically
                       if (card.type === 'bar-chart') {
                         return (
                           <div key={cardIndex} className="bg-white border border-gray-200 rounded-lg p-4">
-                            <h5 className="font-medium text-gray-900 mb-3 flex items-center">
-                              <BarChart3 className="h-4 w-4 mr-2 text-blue-600" />
-                              {card.title || 'Compliance Adoption Rates'}
-                            </h5>
+                            {isEditing ? (
+                              <Input
+                                value={card.title || 'Compliance Adoption Rates'}
+                                onChange={(e) => {
+                                  const updated = [...localVisualDataCards];
+                                  updated[cardIndex] = { ...updated[cardIndex], title: e.target.value };
+                                  setLocalVisualDataCards(updated);
+                                }}
+                                className="font-medium text-gray-900 mb-3"
+                              />
+                            ) : (
+                              <h5 className="font-medium text-gray-900 mb-3 flex items-center">
+                                <BarChart3 className="h-4 w-4 mr-2 text-blue-600" />
+                                {card.title || 'Compliance Adoption Rates'}
+                              </h5>
+                            )}
                             <div className="space-y-3">
                               {card.data && card.data.length > 0 ? (() => {
                                 // Find max value to normalize progress bars
@@ -1131,69 +1340,253 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                                   const itemName = item.name || item.label || '';
                                   
                                   return (
-                                    <div key={index} className="flex items-center justify-between">
-                                      <span className="text-sm text-gray-600">{itemName}</span>
-                                      <div className="flex items-center space-x-2">
-                                        <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
-                                          <div 
-                                            className="h-2 rounded-full" 
-                                            style={{ 
-                                              width: `${normalizedWidth}%`, 
-                                              backgroundColor: item.color || `hsl(${index * 60}, 70%, 50%)`,
-                                              maxWidth: '100%'
+                                    <div key={index} className="flex items-center justify-between gap-2">
+                                      {isEditing ? (
+                                        <>
+                                          <Input
+                                            value={itemName}
+                                            onChange={(e) => {
+                                              const updated = [...localVisualDataCards];
+                                              updated[cardIndex].data[index] = { ...updated[cardIndex].data[index], name: e.target.value, label: e.target.value };
+                                              setLocalVisualDataCards(updated);
                                             }}
+                                            className="flex-1 text-sm"
+                                            placeholder="Name"
                                           />
-                                        </div>
-                                        <span className="text-sm font-medium text-gray-900">{item.value}{card.title?.includes('Growth') ? 'B' : ''}</span>
-                                      </div>
+                                          <Input
+                                            type="number"
+                                            value={item.value || ''}
+                                            onChange={(e) => {
+                                              const updated = [...localVisualDataCards];
+                                              updated[cardIndex].data[index] = { ...updated[cardIndex].data[index], value: Number(e.target.value) || 0 };
+                                              setLocalVisualDataCards(updated);
+                                            }}
+                                            className="w-20 text-sm"
+                                            placeholder="Value"
+                                          />
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => {
+                                              const updated = [...localVisualDataCards];
+                                              updated[cardIndex].data = updated[cardIndex].data.filter((_: any, i: number) => i !== index);
+                                              setLocalVisualDataCards(updated);
+                                            }}
+                                            className="text-red-600 hover:text-red-700"
+                                          >
+                                            <X className="h-4 w-4" />
+                                          </Button>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <span className="text-sm text-gray-600">{itemName}</span>
+                                          <div className="flex items-center space-x-2">
+                                            <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                              <div 
+                                                className="h-2 rounded-full" 
+                                                style={{ 
+                                                  width: `${normalizedWidth}%`, 
+                                                  backgroundColor: item.color || `hsl(${index * 60}, 70%, 50%)`,
+                                                  maxWidth: '100%'
+                                                }}
+                                              />
+                                            </div>
+                                            <span className="text-sm font-medium text-gray-900">{item.value}{card.title?.includes('Growth') ? 'B' : ''}</span>
+                                          </div>
+                                        </>
+                                      )}
                                     </div>
                                   );
                                 });
                               })() : <p className="text-gray-500 text-sm">No data available</p>}
+                              {isEditing && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    const updated = [...localVisualDataCards];
+                                    updated[cardIndex].data = [...(updated[cardIndex].data || []), { name: '', value: 0, color: '#3b82f6' }];
+                                    setLocalVisualDataCards(updated);
+                                  }}
+                                >
+                                  Add Item
+                                </Button>
+                              )}
                             </div>
                           </div>
                         );
                       } else if (card.type === 'timeline') {
                         return (
                           <div key={cardIndex} className="bg-white border border-gray-200 rounded-lg p-4">
-                            <h5 className="font-medium text-gray-900 mb-3 flex items-center">
-                              <Clock className="h-4 w-4 mr-2 text-orange-600" />
-                              {card.title || 'Regulatory Timeline'}
-                            </h5>
+                            {isEditing ? (
+                              <Input
+                                value={card.title || 'Regulatory Timeline'}
+                                onChange={(e) => {
+                                  const updated = [...localVisualDataCards];
+                                  updated[cardIndex] = { ...updated[cardIndex], title: e.target.value };
+                                  setLocalVisualDataCards(updated);
+                                }}
+                                className="font-medium text-gray-900 mb-3"
+                              />
+                            ) : (
+                              <h5 className="font-medium text-gray-900 mb-3 flex items-center">
+                                <Clock className="h-4 w-4 mr-2 text-orange-600" />
+                                {card.title || 'Regulatory Timeline'}
+                              </h5>
+                            )}
                             <div className="space-y-3">
                               {card.data && card.data.length > 0 ? card.data.map((item: any, index: number) => (
                                 <div key={index} className="flex items-start space-x-3">
-                                  <div className={`w-2 h-2 rounded-full mt-2 ${
-                                    item.status === 'critical' ? 'bg-red-500' : 'bg-blue-500'
-                                  }`} />
-                                  <div className="flex-1">
-                                    <p className="text-sm font-medium text-gray-900">{item.event || item.label}</p>
-                                    <p className="text-xs text-gray-500">{item.date || item.time}</p>
+                                  {!isEditing && (
+                                    <div className={`w-2 h-2 rounded-full mt-2 ${
+                                      item.status === 'critical' ? 'bg-red-500' : 'bg-blue-500'
+                                    }`} />
+                                  )}
+                                  <div className="flex-1 space-y-2">
+                                    {isEditing ? (
+                                      <>
+                                        <Input
+                                          value={item.event || item.label || ''}
+                                          onChange={(e) => {
+                                            const updated = [...localVisualDataCards];
+                                            updated[cardIndex].data[index] = { ...updated[cardIndex].data[index], event: e.target.value, label: e.target.value };
+                                            setLocalVisualDataCards(updated);
+                                          }}
+                                          className="text-sm"
+                                          placeholder="Event"
+                                        />
+                                        <Input
+                                          value={item.date || item.time || ''}
+                                          onChange={(e) => {
+                                            const updated = [...localVisualDataCards];
+                                            updated[cardIndex].data[index] = { ...updated[cardIndex].data[index], date: e.target.value, time: e.target.value };
+                                            setLocalVisualDataCards(updated);
+                                          }}
+                                          className="text-xs"
+                                          placeholder="Date"
+                                        />
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => {
+                                            const updated = [...localVisualDataCards];
+                                            updated[cardIndex].data = updated[cardIndex].data.filter((_: any, i: number) => i !== index);
+                                            setLocalVisualDataCards(updated);
+                                          }}
+                                          className="text-red-600 hover:text-red-700"
+                                        >
+                                          <X className="h-4 w-4" />
+                                        </Button>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <p className="text-sm font-medium text-gray-900">{item.event || item.label}</p>
+                                        <p className="text-xs text-gray-500">{item.date || item.time}</p>
+                                      </>
+                                    )}
                                   </div>
                                 </div>
                               )) : <p className="text-gray-500 text-sm">No timeline data available</p>}
+                              {isEditing && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    const updated = [...localVisualDataCards];
+                                    updated[cardIndex].data = [...(updated[cardIndex].data || []), { event: '', date: '', status: 'upcoming' }];
+                                    setLocalVisualDataCards(updated);
+                                  }}
+                                >
+                                  Add Timeline Item
+                                </Button>
+                              )}
                             </div>
                           </div>
                         );
                       } else if (card.type === 'percentage') {
                         return (
                           <div key={cardIndex} className="bg-white border border-gray-200 rounded-lg p-4">
-                            <h5 className="font-medium text-gray-900 mb-3 flex items-center">
-                              <TrendingUp className="h-4 w-4 mr-2 text-green-600" />
-                              {card.title || 'GTM Model Effectiveness'}
-                            </h5>
+                            {isEditing ? (
+                              <Input
+                                value={card.title || 'GTM Model Effectiveness'}
+                                onChange={(e) => {
+                                  const updated = [...localVisualDataCards];
+                                  updated[cardIndex] = { ...updated[cardIndex], title: e.target.value };
+                                  setLocalVisualDataCards(updated);
+                                }}
+                                className="font-medium text-gray-900 mb-3"
+                              />
+                            ) : (
+                              <h5 className="font-medium text-gray-900 mb-3 flex items-center">
+                                <TrendingUp className="h-4 w-4 mr-2 text-green-600" />
+                                {card.title || 'GTM Model Effectiveness'}
+                              </h5>
+                            )}
                             <div className="space-y-3">
                               {card.data && card.data.length > 0 ? card.data.map((item: any, index: number) => (
-                                <div key={index} className="flex items-center justify-between">
-                                  <span className="text-sm text-gray-600">{item.metric || item.label}</span>
-                                  <div className="flex items-center space-x-2">
-                                    <span className="text-sm font-medium text-gray-900">{item.value}%</span>
-                                    <TrendingUp className={`h-3 w-3 ${
-                                      item.trend === 'up' ? 'text-green-600' : 'text-red-600'
-                                    } ${item.trend === 'down' ? 'rotate-180' : ''}`} />
-                                  </div>
+                                <div key={index} className="flex items-center justify-between gap-2">
+                                  {isEditing ? (
+                                    <>
+                                      <Input
+                                        value={item.metric || item.label || ''}
+                                        onChange={(e) => {
+                                          const updated = [...localVisualDataCards];
+                                          updated[cardIndex].data[index] = { ...updated[cardIndex].data[index], metric: e.target.value, label: e.target.value };
+                                          setLocalVisualDataCards(updated);
+                                        }}
+                                        className="flex-1 text-sm"
+                                        placeholder="Metric"
+                                      />
+                                      <Input
+                                        type="number"
+                                        value={item.value || ''}
+                                        onChange={(e) => {
+                                          const updated = [...localVisualDataCards];
+                                          updated[cardIndex].data[index] = { ...updated[cardIndex].data[index], value: Number(e.target.value) || 0 };
+                                          setLocalVisualDataCards(updated);
+                                        }}
+                                        className="w-20 text-sm"
+                                        placeholder="Value"
+                                      />
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => {
+                                          const updated = [...localVisualDataCards];
+                                          updated[cardIndex].data = updated[cardIndex].data.filter((_: any, i: number) => i !== index);
+                                          setLocalVisualDataCards(updated);
+                                        }}
+                                        className="text-red-600 hover:text-red-700"
+                                      >
+                                        <X className="h-4 w-4" />
+                                      </Button>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <span className="text-sm text-gray-600">{item.metric || item.label}</span>
+                                      <div className="flex items-center space-x-2">
+                                        <span className="text-sm font-medium text-gray-900">{item.value}%</span>
+                                        <TrendingUp className={`h-3 w-3 ${
+                                          item.trend === 'up' ? 'text-green-600' : 'text-red-600'
+                                        } ${item.trend === 'down' ? 'rotate-180' : ''}`} />
+                                      </div>
+                                    </>
+                                  )}
                                 </div>
                               )) : <p className="text-gray-500 text-sm">No percentage data available</p>}
+                              {isEditing && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    const updated = [...localVisualDataCards];
+                                    updated[cardIndex].data = [...(updated[cardIndex].data || []), { metric: '', value: 0, trend: 'up' }];
+                                    setLocalVisualDataCards(updated);
+                                  }}
+                                >
+                                  Add Metric
+                                </Button>
+                              )}
                             </div>
                           </div>
                         );
@@ -1230,37 +1623,152 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                         <TableHead className="font-medium">Impact</TableHead>
                         <TableHead className="font-medium">Status</TableHead>
                         <TableHead className="font-medium">Key Requirements</TableHead>
+                        {isEditing && <TableHead className="font-medium">Actions</TableHead>}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {regionalData.map((region, index) => (
+                      {(isEditing ? localRegionalData : regionalData).map((region, index) => (
                         <TableRow key={index}>
-                          <TableCell className="font-medium">{region.region}</TableCell>
-                          <TableCell>{region.framework}</TableCell>
-                          <TableCell>{region.deadline}</TableCell>
-                          <TableCell>
-                            <Badge className={`${
-                              region.impact === 'High' ? 'bg-red-100 text-red-800' :
-                              region.impact === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-green-100 text-green-800'
-                            }`}>
-                              {region.impact}
-                            </Badge>
+                          <TableCell className="font-medium">
+                            {isEditing ? (
+                              <Input
+                                value={region.region || ''}
+                                onChange={(e) => {
+                                  const updated = [...localRegionalData];
+                                  updated[index] = { ...updated[index], region: e.target.value };
+                                  setLocalRegionalData(updated);
+                                }}
+                                className="w-full text-sm"
+                              />
+                            ) : (
+                              region.region
+                            )}
                           </TableCell>
                           <TableCell>
-                            <Badge className={`${
-                              region.status === 'Active' || region.status === 'Mandatory' 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-blue-100 text-blue-800'
-                            }`}>
-                              {region.status}
-                            </Badge>
+                            {isEditing ? (
+                              <Input
+                                value={region.framework || ''}
+                                onChange={(e) => {
+                                  const updated = [...localRegionalData];
+                                  updated[index] = { ...updated[index], framework: e.target.value };
+                                  setLocalRegionalData(updated);
+                                }}
+                                className="w-full text-sm"
+                              />
+                            ) : (
+                              region.framework
+                            )}
                           </TableCell>
-                          <TableCell className="text-sm text-gray-600">{region.requirements}</TableCell>
+                          <TableCell>
+                            {isEditing ? (
+                              <Input
+                                value={region.deadline || ''}
+                                onChange={(e) => {
+                                  const updated = [...localRegionalData];
+                                  updated[index] = { ...updated[index], deadline: e.target.value };
+                                  setLocalRegionalData(updated);
+                                }}
+                                className="w-full text-sm"
+                              />
+                            ) : (
+                              region.deadline
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {isEditing ? (
+                              <Input
+                                value={region.impact || ''}
+                                onChange={(e) => {
+                                  const updated = [...localRegionalData];
+                                  updated[index] = { ...updated[index], impact: e.target.value };
+                                  setLocalRegionalData(updated);
+                                }}
+                                className="w-full text-sm"
+                              />
+                            ) : (
+                              <Badge className={`${
+                                region.impact === 'High' ? 'bg-red-100 text-red-800' :
+                                region.impact === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-green-100 text-green-800'
+                              }`}>
+                                {region.impact}
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {isEditing ? (
+                              <Input
+                                value={region.status || ''}
+                                onChange={(e) => {
+                                  const updated = [...localRegionalData];
+                                  updated[index] = { ...updated[index], status: e.target.value };
+                                  setLocalRegionalData(updated);
+                                }}
+                                className="w-full text-sm"
+                              />
+                            ) : (
+                              <Badge className={`${
+                                region.status === 'Active' || region.status === 'Mandatory' 
+                                  ? 'bg-green-100 text-green-800' 
+                                  : 'bg-blue-100 text-blue-800'
+                              }`}>
+                                {region.status}
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-sm text-gray-600">
+                            {isEditing ? (
+                              <Input
+                                value={region.requirements || ''}
+                                onChange={(e) => {
+                                  const updated = [...localRegionalData];
+                                  updated[index] = { ...updated[index], requirements: e.target.value };
+                                  setLocalRegionalData(updated);
+                                }}
+                                className="w-full text-sm"
+                              />
+                            ) : (
+                              region.requirements
+                            )}
+                          </TableCell>
+                          {isEditing && (
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setLocalRegionalData(localRegionalData.filter((_, i) => i !== index));
+                                }}
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          )}
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
+                  {isEditing && (
+                    <div className="p-4 border-t">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setLocalRegionalData([...localRegionalData, {
+                            region: '',
+                            framework: '',
+                            deadline: '',
+                            impact: 'Medium',
+                            status: 'Active',
+                            requirements: ''
+                          }]);
+                        }}
+                      >
+                        Add Region
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -1282,14 +1790,67 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                   <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                     <div className="flex items-start space-x-3">
                       <Shield className="h-5 w-5 text-blue-600 mt-0.5" />
-                      <div>
-                        <h5 className="font-medium text-blue-900 mb-2">Mitigate Regulatory Risks</h5>
-                        <ul className="text-sm text-blue-700 space-y-1">
-                          <li>• Implement privacy by design principles</li>
-                          <li>• Establish automated compliance monitoring</li>
-                          <li>• Regular risk assessments and audits</li>
-                          <li>• Cross-functional compliance team</li>
-                        </ul>
+                      <div className="flex-1">
+                        {isEditing ? (
+                          <Input
+                            value="Mitigate Regulatory Risks"
+                            className="font-medium text-blue-900 mb-2"
+                            readOnly
+                          />
+                        ) : (
+                          <h5 className="font-medium text-blue-900 mb-2">Mitigate Regulatory Risks</h5>
+                        )}
+                        <div className="space-y-2">
+                          {(isEditing ? localStrategicRecommendations.mitigateRegulatoryRisks : [
+                            'Implement privacy by design principles',
+                            'Establish automated compliance monitoring',
+                            'Regular risk assessments and audits',
+                            'Cross-functional compliance team'
+                          ]).map((item: string, idx: number) => (
+                            <div key={idx} className="flex items-center gap-2">
+                              {isEditing ? (
+                                <>
+                                  <Input
+                                    value={item}
+                                    onChange={(e) => {
+                                      const updated = [...localStrategicRecommendations.mitigateRegulatoryRisks];
+                                      updated[idx] = e.target.value;
+                                      setLocalStrategicRecommendations({ ...localStrategicRecommendations, mitigateRegulatoryRisks: updated });
+                                    }}
+                                    className="flex-1 text-sm text-blue-700"
+                                  />
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      const updated = localStrategicRecommendations.mitigateRegulatoryRisks.filter((_: string, i: number) => i !== idx);
+                                      setLocalStrategicRecommendations({ ...localStrategicRecommendations, mitigateRegulatoryRisks: updated });
+                                    }}
+                                    className="text-red-600 hover:text-red-700"
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </>
+                              ) : (
+                                <li className="text-sm text-blue-700">• {item}</li>
+                              )}
+                            </div>
+                          ))}
+                          {isEditing && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setLocalStrategicRecommendations({
+                                  ...localStrategicRecommendations,
+                                  mitigateRegulatoryRisks: [...localStrategicRecommendations.mitigateRegulatoryRisks, '']
+                                });
+                              }}
+                            >
+                              Add Item
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1297,14 +1858,67 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                   <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
                     <div className="flex items-start space-x-3">
                       <Target className="h-5 w-5 text-green-600 mt-0.5" />
-                      <div>
-                        <h5 className="font-medium text-green-900 mb-2">Competitive Positioning</h5>
-                        <ul className="text-sm text-green-700 space-y-1">
-                          <li>• Market compliance as differentiator</li>
-                          <li>• Showcase security certifications</li>
-                          <li>• Transparent data handling practices</li>
-                          <li>• Industry-leading privacy standards</li>
-                        </ul>
+                      <div className="flex-1">
+                        {isEditing ? (
+                          <Input
+                            value="Competitive Positioning"
+                            className="font-medium text-green-900 mb-2"
+                            readOnly
+                          />
+                        ) : (
+                          <h5 className="font-medium text-green-900 mb-2">Competitive Positioning</h5>
+                        )}
+                        <div className="space-y-2">
+                          {(isEditing ? localStrategicRecommendations.competitivePositioning : [
+                            'Market compliance as differentiator',
+                            'Showcase security certifications',
+                            'Transparent data handling practices',
+                            'Industry-leading privacy standards'
+                          ]).map((item: string, idx: number) => (
+                            <div key={idx} className="flex items-center gap-2">
+                              {isEditing ? (
+                                <>
+                                  <Input
+                                    value={item}
+                                    onChange={(e) => {
+                                      const updated = [...localStrategicRecommendations.competitivePositioning];
+                                      updated[idx] = e.target.value;
+                                      setLocalStrategicRecommendations({ ...localStrategicRecommendations, competitivePositioning: updated });
+                                    }}
+                                    className="flex-1 text-sm text-green-700"
+                                  />
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      const updated = localStrategicRecommendations.competitivePositioning.filter((_: string, i: number) => i !== idx);
+                                      setLocalStrategicRecommendations({ ...localStrategicRecommendations, competitivePositioning: updated });
+                                    }}
+                                    className="text-red-600 hover:text-red-700"
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </>
+                              ) : (
+                                <li className="text-sm text-green-700">• {item}</li>
+                              )}
+                            </div>
+                          ))}
+                          {isEditing && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setLocalStrategicRecommendations({
+                                  ...localStrategicRecommendations,
+                                  competitivePositioning: [...localStrategicRecommendations.competitivePositioning, '']
+                                });
+                              }}
+                            >
+                              Add Item
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1312,14 +1926,67 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                   <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
                     <div className="flex items-start space-x-3">
                       <Building className="h-5 w-5 text-purple-600 mt-0.5" />
-                      <div>
-                        <h5 className="font-medium text-purple-900 mb-2">Go-to-Market Strategy</h5>
-                        <ul className="text-sm text-purple-700 space-y-1">
-                          <li>• Regional deployment capabilities</li>
-                          <li>• Compliance-ready product offerings</li>
-                          <li>• Legal-friendly contract templates</li>
-                          <li>• Enterprise-grade data residency</li>
-                        </ul>
+                      <div className="flex-1">
+                        {isEditing ? (
+                          <Input
+                            value="Go-to-Market Strategy"
+                            className="font-medium text-purple-900 mb-2"
+                            readOnly
+                          />
+                        ) : (
+                          <h5 className="font-medium text-purple-900 mb-2">Go-to-Market Strategy</h5>
+                        )}
+                        <div className="space-y-2">
+                          {(isEditing ? localStrategicRecommendations.goToMarketStrategy : [
+                            'Regional deployment capabilities',
+                            'Compliance-ready product offerings',
+                            'Legal-friendly contract templates',
+                            'Enterprise-grade data residency'
+                          ]).map((item: string, idx: number) => (
+                            <div key={idx} className="flex items-center gap-2">
+                              {isEditing ? (
+                                <>
+                                  <Input
+                                    value={item}
+                                    onChange={(e) => {
+                                      const updated = [...localStrategicRecommendations.goToMarketStrategy];
+                                      updated[idx] = e.target.value;
+                                      setLocalStrategicRecommendations({ ...localStrategicRecommendations, goToMarketStrategy: updated });
+                                    }}
+                                    className="flex-1 text-sm text-purple-700"
+                                  />
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      const updated = localStrategicRecommendations.goToMarketStrategy.filter((_: string, i: number) => i !== idx);
+                                      setLocalStrategicRecommendations({ ...localStrategicRecommendations, goToMarketStrategy: updated });
+                                    }}
+                                    className="text-red-600 hover:text-red-700"
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </>
+                              ) : (
+                                <li className="text-sm text-purple-700">• {item}</li>
+                              )}
+                            </div>
+                          ))}
+                          {isEditing && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setLocalStrategicRecommendations({
+                                  ...localStrategicRecommendations,
+                                  goToMarketStrategy: [...localStrategicRecommendations.goToMarketStrategy, '']
+                                });
+                              }}
+                            >
+                              Add Item
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>

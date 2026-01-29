@@ -180,6 +180,35 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
   const [editCloudMigration, setEditCloudMigration] = useState('');
   const [editRegulatory, setEditRegulatory] = useState('');
   const [editTrendSnapshots, setEditTrendSnapshots] = useState<TrendSnapshot[]>([]);
+  const [editRegionalHotspots, setEditRegionalHotspots] = useState<{
+    APAC: string;
+    Europe: string;
+    "North America": string;
+  }>({
+    APAC: '',
+    Europe: '',
+    "North America": ''
+  });
+  const [editStrategicRecommendations, setEditStrategicRecommendations] = useState<IndustryTrendsRecommendations>({
+    primaryFocus: '',
+    marketEntry: ''
+  });
+  const [editRisks, setEditRisks] = useState<string[]>([]);
+  const [editVisualCharts, setEditVisualCharts] = useState<{
+    aiAdoptionTrends: string[];
+    technologyBudgetAllocation: {
+      "AI/ML": string;
+      Cloud: string;
+      Security: string;
+    };
+  }>({
+    aiAdoptionTrends: [],
+    technologyBudgetAllocation: {
+      "AI/ML": '',
+      Cloud: '',
+      Security: ''
+    }
+  });
 
   // Debug logging for state changes
   useEffect(() => {
@@ -230,6 +259,35 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
     setEditCloudMigration(propCloudMigration || industryTrendsData?.cloudMigration || '');
     setEditRegulatory(propRegulatory || industryTrendsData?.regulatory || '');
     setEditTrendSnapshots(propTrendSnapshots || industryTrendsData?.trendSnapshots || []);
+    
+    // Initialize regional hotspots
+    const regionalHotspotsToUse = propRegionalHotspots || industryTrendsData?.regionalHotspots || {
+      APAC: '',
+      Europe: '',
+      "North America": ''
+    };
+    setEditRegionalHotspots(regionalHotspotsToUse);
+    
+    // Initialize strategic recommendations
+    const recommendationsToUse = propRecommendations || industryTrendsData?.strategicRecommendations || industryTrendsData?.recommendations || {
+      primaryFocus: '',
+      marketEntry: ''
+    };
+    setEditStrategicRecommendations(recommendationsToUse);
+    
+    // Initialize risks
+    setEditRisks(propRisks || industryTrendsData?.risks || []);
+    
+    // Initialize visual charts
+    const visualChartsToUse = propVisualCharts || industryTrendsData?.visualCharts || {
+      aiAdoptionTrends: [],
+      technologyBudgetAllocation: {
+        "AI/ML": '',
+        Cloud: '',
+        Security: ''
+      }
+    };
+    setEditVisualCharts(visualChartsToUse);
     
     onIndustryTrendsToggleEdit();
   };
@@ -513,7 +571,25 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
         aiAdoption: industryTrendsData?.aiAdoption || '',
         cloudMigration: industryTrendsData?.cloudMigration || '',
         regulatory: industryTrendsData?.regulatory || '',
-        trendSnapshots: industryTrendsData?.trendSnapshots || []
+        trendSnapshots: industryTrendsData?.trendSnapshots || [],
+        regionalHotspots: industryTrendsData?.regionalHotspots || propRegionalHotspots || {
+          APAC: '',
+          Europe: '',
+          "North America": ''
+        },
+        strategicRecommendations: industryTrendsData?.strategicRecommendations || industryTrendsData?.recommendations || propRecommendations || {
+          primaryFocus: '',
+          marketEntry: ''
+        },
+        risks: industryTrendsData?.risks || propRisks || [],
+        visualCharts: industryTrendsData?.visualCharts || propVisualCharts || {
+          aiAdoptionTrends: [],
+          technologyBudgetAllocation: {
+            "AI/ML": '',
+            Cloud: '',
+            Security: ''
+          }
+        }
       };
 
       // Prepare modified data
@@ -522,7 +598,11 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
         aiAdoption: editAiAdoption,
         cloudMigration: editCloudMigration,
         regulatory: editRegulatory,
-        trendSnapshots: editTrendSnapshots
+        trendSnapshots: editTrendSnapshots,
+        regionalHotspots: editRegionalHotspots,
+        strategicRecommendations: editStrategicRecommendations,
+        risks: editRisks,
+        visualCharts: editVisualCharts
       };
 
       // Prepare data for API according to schema
@@ -552,6 +632,11 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
           cloudMigration: editCloudMigration,
           regulatory: editRegulatory,
           trendSnapshots: editTrendSnapshots,
+          regionalHotspots: editRegionalHotspots,
+          strategicRecommendations: editStrategicRecommendations,
+          recommendations: editStrategicRecommendations,
+          risks: editRisks,
+          visualCharts: editVisualCharts,
           timestamp: String(Date.now()) // Force update with new timestamp
         };
       });
@@ -846,6 +931,289 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                       </div>
                     </div>
                   ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Regional Hotspots Edit */}
+          {!normalizedDeletedSections.has('regional-hotspots') && (
+            <div className="relative group">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="sm" onClick={() => onIndustryTrendsDeleteSection('regional-hotspots')} className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50 pointer-events-auto z-50">
+                    <X className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Delete this section</p>
+                </TooltipContent>
+              </Tooltip>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Regional Hotspots</h3>
+                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="text-center">
+                      <Label htmlFor="regionalHotspotAPAC" className="text-sm font-medium text-gray-700 mb-2 block">
+                        APAC
+                      </Label>
+                      <Input 
+                        id="regionalHotspotAPAC"
+                        value={editRegionalHotspots.APAC}
+                        onChange={e => setEditRegionalHotspots({ ...editRegionalHotspots, APAC: e.target.value })}
+                        className="text-2xl font-bold text-blue-600 border-blue-200 focus:border-blue-400 text-center"
+                        placeholder="e.g., 60%"
+                      />
+                    </div>
+                    <div className="text-center">
+                      <Label htmlFor="regionalHotspotEurope" className="text-sm font-medium text-gray-700 mb-2 block">
+                        Europe
+                      </Label>
+                      <Input 
+                        id="regionalHotspotEurope"
+                        value={editRegionalHotspots.Europe}
+                        onChange={e => setEditRegionalHotspots({ ...editRegionalHotspots, Europe: e.target.value })}
+                        className="text-2xl font-bold text-blue-600 border-blue-200 focus:border-blue-400 text-center"
+                        placeholder="e.g., 45%"
+                      />
+                    </div>
+                    <div className="text-center">
+                      <Label htmlFor="regionalHotspotNorthAmerica" className="text-sm font-medium text-gray-700 mb-2 block">
+                        North America
+                      </Label>
+                      <Input 
+                        id="regionalHotspotNorthAmerica"
+                        value={editRegionalHotspots["North America"]}
+                        onChange={e => setEditRegionalHotspots({ ...editRegionalHotspots, "North America": e.target.value })}
+                        className="text-2xl font-bold text-blue-600 border-blue-200 focus:border-blue-400 text-center"
+                        placeholder="e.g., 55%"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Strategic Recommendations Edit */}
+          {!normalizedDeletedSections.has('strategic-recommendations') && (
+            <div className="relative group">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="sm" onClick={() => onIndustryTrendsDeleteSection('strategic-recommendations')} className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50 pointer-events-auto z-50">
+                    <X className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Delete this section</p>
+                </TooltipContent>
+              </Tooltip>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Strategic Recommendations</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                    <Label htmlFor="primaryFocus" className="text-sm font-medium text-green-900 mb-2 block">
+                      Primary Focus
+                    </Label>
+                    <Textarea 
+                      id="primaryFocus"
+                      value={editStrategicRecommendations.primaryFocus}
+                      onChange={e => setEditStrategicRecommendations({ ...editStrategicRecommendations, primaryFocus: e.target.value })}
+                      className="text-green-700 text-sm border-green-200 focus:border-green-400"
+                      placeholder="Enter primary focus recommendation..."
+                      rows={4}
+                    />
+                  </div>
+                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <Label htmlFor="marketEntry" className="text-sm font-medium text-blue-900 mb-2 block">
+                      Market Entry
+                    </Label>
+                    <Textarea 
+                      id="marketEntry"
+                      value={editStrategicRecommendations.marketEntry}
+                      onChange={e => setEditStrategicRecommendations({ ...editStrategicRecommendations, marketEntry: e.target.value })}
+                      className="text-blue-700 text-sm border-blue-200 focus:border-blue-400"
+                      placeholder="Enter market entry recommendation..."
+                      rows={4}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Risks & Watchouts Edit */}
+          {!normalizedDeletedSections.has('risks') && (
+            <div className="relative group">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="sm" onClick={() => onIndustryTrendsDeleteSection('risks')} className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50 pointer-events-auto z-50">
+                    <X className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Delete this section</p>
+                </TooltipContent>
+              </Tooltip>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Risks & Watchouts</h3>
+                <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+                  <div className="space-y-2">
+                    {editRisks.map((risk, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <Input 
+                          value={risk}
+                          onChange={e => {
+                            const updated = [...editRisks];
+                            updated[index] = e.target.value;
+                            setEditRisks(updated);
+                          }}
+                          className="flex-1 text-red-700 text-sm border-red-200 focus:border-red-400"
+                          placeholder="Enter risk..."
+                        />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setEditRisks(editRisks.filter((_, i) => i !== index));
+                          }}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setEditRisks([...editRisks, ''])}
+                      className="mt-2"
+                    >
+                      Add Risk
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Visual Charts Edit */}
+          {!normalizedDeletedSections.has('visual-charts') && (
+            <div className="relative group">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="sm" onClick={() => onIndustryTrendsDeleteSection('visual-charts')} className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50 pointer-events-auto z-50">
+                    <X className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Delete this section</p>
+                </TooltipContent>
+              </Tooltip>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Visual Charts</h3>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="bg-white border border-gray-200 rounded-lg p-4">
+                    <Label htmlFor="aiAdoptionTrends" className="text-sm font-medium text-gray-900 mb-3 block">
+                      AI Adoption Trends
+                    </Label>
+                    <div className="space-y-2">
+                      {editVisualCharts.aiAdoptionTrends.map((trend, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <Input 
+                            value={trend}
+                            onChange={e => {
+                              const updated = [...editVisualCharts.aiAdoptionTrends];
+                              updated[index] = e.target.value;
+                              setEditVisualCharts({ ...editVisualCharts, aiAdoptionTrends: updated });
+                            }}
+                            className="flex-1 text-sm"
+                            placeholder="Enter trend (e.g., Q1 2024)"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              const updated = editVisualCharts.aiAdoptionTrends.filter((_, i) => i !== index);
+                              setEditVisualCharts({ ...editVisualCharts, aiAdoptionTrends: updated });
+                            }}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setEditVisualCharts({ ...editVisualCharts, aiAdoptionTrends: [...editVisualCharts.aiAdoptionTrends, ''] })}
+                        className="mt-2"
+                      >
+                        Add Trend
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="bg-white border border-gray-200 rounded-lg p-4">
+                    <Label className="text-sm font-medium text-gray-900 mb-3 block">
+                      Technology Budget Allocation
+                    </Label>
+                    <div className="space-y-3">
+                      <div>
+                        <Label htmlFor="budgetAIML" className="text-sm font-medium text-gray-700 mb-1 block">
+                          AI/ML (%)
+                        </Label>
+                        <Input 
+                          id="budgetAIML"
+                          value={editVisualCharts.technologyBudgetAllocation["AI/ML"]}
+                          onChange={e => setEditVisualCharts({
+                            ...editVisualCharts,
+                            technologyBudgetAllocation: {
+                              ...editVisualCharts.technologyBudgetAllocation,
+                              "AI/ML": e.target.value
+                            }
+                          })}
+                          className="text-sm"
+                          placeholder="e.g., 30"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="budgetCloud" className="text-sm font-medium text-gray-700 mb-1 block">
+                          Cloud (%)
+                        </Label>
+                        <Input 
+                          id="budgetCloud"
+                          value={editVisualCharts.technologyBudgetAllocation.Cloud}
+                          onChange={e => setEditVisualCharts({
+                            ...editVisualCharts,
+                            technologyBudgetAllocation: {
+                              ...editVisualCharts.technologyBudgetAllocation,
+                              Cloud: e.target.value
+                            }
+                          })}
+                          className="text-sm"
+                          placeholder="e.g., 25"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="budgetSecurity" className="text-sm font-medium text-gray-700 mb-1 block">
+                          Security (%)
+                        </Label>
+                        <Input 
+                          id="budgetSecurity"
+                          value={editVisualCharts.technologyBudgetAllocation.Security}
+                          onChange={e => setEditVisualCharts({
+                            ...editVisualCharts,
+                            technologyBudgetAllocation: {
+                              ...editVisualCharts.technologyBudgetAllocation,
+                              Security: e.target.value
+                            }
+                          })}
+                          className="text-sm"
+                          placeholder="e.g., 20"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
