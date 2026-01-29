@@ -199,6 +199,12 @@ export function Header() {
           {isMarketResearchPage && !getPageSubtitle() && (
             <span className="text-sm md:text-base italic font-normal text-gray-600 truncate">Find your best markets before your competitors do</span>
           )}
+          {/* Scout page info text */}
+          {(isMarketResearchPage || window.location.pathname.startsWith('/your-ai-team/scout')) && (
+            <span className="text-xs md:text-sm font-normal text-gray-400 mt-0.5 truncate">
+              Reports are generated according to fields such as company name, industry, etc. from your Company profile of Mission Control
+            </span>
+          )}
         </div>
       </div>
 
