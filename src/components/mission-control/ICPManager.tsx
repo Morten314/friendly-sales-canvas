@@ -57,6 +57,7 @@ type FitConfidence = "high" | "medium" | "low";
 interface ICP {
   id: string;
   primaryRegion: string;
+  location: string[];
   industry: string[];
   companySize: string[];
   buyerRole: string[];
@@ -68,18 +69,13 @@ interface ICP {
   createdAt: Date;
 }
 
-// Suggested values
-const REGION_SUGGESTIONS = [
-  "North America",
-  "EMEA",
-  "APAC",
-  "Latin America",
-  "UK & Ireland",
-  "DACH",
-  "Nordics",
-  "ANZ",
-  "Southeast Asia",
-  "Middle East",
+// Region options (single select)
+const REGIONS_OPTIONS = [
+  { value: "Europe", label: "Europe" },
+  { value: "MEA", label: "MEA (Middle East & Africa)" },
+  { value: "APAC", label: "APAC (Asia & Pacific)" },
+  { value: "NA", label: "NA (North America)" },
+  { value: "LATAM", label: "LATAM (Latin America)" },
 ];
 
 const INDUSTRY_SUGGESTIONS = [
@@ -101,7 +97,8 @@ const COMPANY_SIZE_OPTIONS = [
   "11–50",
   "51–200",
   "201–500",
-  "500+",
+  "501–1000",
+  "1000+",
 ];
 
 const BUYER_ROLE_SUGGESTIONS = [
@@ -144,23 +141,35 @@ const ICPManager: React.FC = () => {
   const [isAddingInline, setIsAddingInline] = useState(false);
   const [inlineStep, setInlineStep] = useState<InlineStep>("primaryRegion");
   const [primaryRegion, setPrimaryRegion] = useState("");
+  const [locations, setLocations] = useState<string[]>([]);
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
+  const [industryInput, setIndustryInput] = useState("");
+  const [isIndustryPopoverOpen, setIsIndustryPopoverOpen] = useState(false);
   const [selectedCompanySizes, setSelectedCompanySizes] = useState<string[]>([]);
+  const [isCompanySizePopoverOpen, setIsCompanySizePopoverOpen] = useState(false);
   const [selectedBuyerRoles, setSelectedBuyerRoles] = useState<string[]>([]);
+  const [isBuyerRolePopoverOpen, setIsBuyerRolePopoverOpen] = useState(false);
   const [accountsOnWatchlist, setAccountsOnWatchlist] = useState("");
   const [accountsToAvoid, setAccountsToAvoid] = useState("");
   const [fitConfidence, setFitConfidence] = useState<FitConfidence | "">("");
   const [additionalContext, setAdditionalContext] = useState("");
   
+  // Validation errors
+  const [validationErrors, setValidationErrors] = useState<{
+    primaryRegion?: string;
+    industry?: string;
+    companySize?: string;
+    buyerRole?: string;
+    fitConfidence?: string;
+  }>({});
+  
   // Edit state
   const [editingId, setEditingId] = useState<string | null>(null);
   
-  const primaryRegionRef = useRef<HTMLButtonElement>(null);
   const industryRef = useRef<HTMLButtonElement>(null);
   const buyerRoleRef = useRef<HTMLButtonElement>(null);
   const accountsOnWatchlistRef = useRef<HTMLInputElement>(null);
   const accountsToAvoidRef = useRef<HTMLInputElement>(null);
-  const additionalContextRef = useRef<HTMLTextAreaElement>(null);
 
   // Save customer profile (ICPs) to backend with retry logic
   const saveCustomerProfileToBackend = async (icpsToSave: ICP[], retryCount = 0) => {
@@ -183,6 +192,7 @@ const ICPManager: React.FC = () => {
         icps: icpsToSave.map(icp => ({
           id: icp.id,
           primary_region: icp.primaryRegion,
+          location: icp.location,
           industry: icp.industry,
           company_size: icp.companySize,
           buyer_role: icp.buyerRole,
@@ -414,6 +424,7 @@ const ICPManager: React.FC = () => {
         const loadedICPs: ICP[] = icpsData.map((icp: any) => ({
           id: icp.id || `icp-${Date.now()}-${Math.random()}`,
           primaryRegion: icp.primary_region || icp.primaryRegion || "",
+          location: Array.isArray(icp.location) ? icp.location : [],
           industry: Array.isArray(icp.industry) ? icp.industry : [],
           companySize: Array.isArray(icp.company_size) ? icp.company_size : Array.isArray(icp.companySize) ? icp.companySize : [],
           buyerRole: Array.isArray(icp.buyer_role) ? icp.buyer_role : Array.isArray(icp.buyerRole) ? icp.buyerRole : [],
@@ -519,6 +530,7 @@ const ICPManager: React.FC = () => {
               const icpsToRetry: ICP[] = icpsFromPending.map((icp: any) => ({
                 id: icp.id,
                 primaryRegion: icp.primary_region || icp.primaryRegion || "",
+                location: Array.isArray(icp.location) ? icp.location : [],
                 industry: Array.isArray(icp.industry) ? icp.industry : [],
                 companySize: Array.isArray(icp.company_size) ? icp.company_size : [],
                 buyerRole: Array.isArray(icp.buyer_role) ? icp.buyer_role : [],
@@ -548,9 +560,15 @@ const ICPManager: React.FC = () => {
   const resetInlineForm = () => {
     setIsAddingInline(false);
     setPrimaryRegion("");
+    setLocations([]);
     setSelectedIndustries([]);
+    setIndustryInput("");
+    setIsIndustryPopoverOpen(false);
     setSelectedCompanySizes([]);
+    setIsCompanySizePopoverOpen(false);
     setSelectedBuyerRoles([]);
+    setIsBuyerRolePopoverOpen(false);
+    setValidationErrors({});
     setAccountsOnWatchlist("");
     setAccountsToAvoid("");
     setFitConfidence("");
@@ -575,77 +593,133 @@ const ICPManager: React.FC = () => {
 
   const handleFitConfidenceSelect = (value: FitConfidence) => {
     setFitConfidence(value);
+    if (validationErrors.fitConfidence) {
+      setValidationErrors(prev => ({ ...prev, fitConfidence: undefined }));
+    }
   };
 
 
   const handleIndustryToggle = (industry: string) => {
-    setSelectedIndustries(prev =>
-      prev.includes(industry) ? prev.filter(i => i !== industry) : [...prev, industry]
-    );
+    if (!selectedIndustries.includes(industry)) {
+      setSelectedIndustries(prev => {
+        const updated = [...prev, industry];
+        if (validationErrors.industry && updated.length > 0) {
+          setValidationErrors(prev => ({ ...prev, industry: undefined }));
+        }
+        return updated;
+      });
+    }
+    setIndustryInput("");
+    setIsIndustryPopoverOpen(false);
+  };
+
+  const handleIndustryInputKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && industryInput.trim()) {
+      e.preventDefault();
+      const trimmedInput = industryInput.trim();
+      if (!selectedIndustries.includes(trimmedInput)) {
+        setSelectedIndustries(prev => {
+          const updated = [...prev, trimmedInput];
+          if (validationErrors.industry && updated.length > 0) {
+            setValidationErrors(prev => ({ ...prev, industry: undefined }));
+          }
+          return updated;
+        });
+      }
+      setIndustryInput("");
+      setIsIndustryPopoverOpen(false);
+    }
   };
 
   const handleCompanySizeToggle = (size: string) => {
-    setSelectedCompanySizes(prev =>
-      prev.includes(size) ? prev.filter(s => s !== size) : [...prev, size]
-    );
+    if (!selectedCompanySizes.includes(size)) {
+      setSelectedCompanySizes(prev => {
+        const updated = [...prev, size];
+        if (validationErrors.companySize && updated.length > 0) {
+          setValidationErrors(prev => ({ ...prev, companySize: undefined }));
+        }
+        return updated;
+      });
+    }
+    setIsCompanySizePopoverOpen(false);
   };
 
   const handleBuyerRoleToggle = (role: string) => {
-    setSelectedBuyerRoles(prev =>
-      prev.includes(role) ? prev.filter(r => r !== role) : [...prev, role]
-    );
+    if (!selectedBuyerRoles.includes(role)) {
+      setSelectedBuyerRoles(prev => {
+        const updated = [...prev, role];
+        if (validationErrors.buyerRole && updated.length > 0) {
+          setValidationErrors(prev => ({ ...prev, buyerRole: undefined }));
+        }
+        return updated;
+      });
+    }
+    setIsBuyerRolePopoverOpen(false);
+  };
+
+  const handleAddLocation = () => {
+    setLocations(prev => [...prev, ""]);
+  };
+
+  const handleLocationChange = (index: number, value: string) => {
+    setLocations(prev => {
+      const updated = [...prev];
+      updated[index] = value;
+      return updated;
+    });
+  };
+
+  const handleRemoveLocation = (index: number) => {
+    setLocations(prev => prev.filter((_, i) => i !== index));
   };
 
 
   const handleSaveICP = async () => {
+    const errors: typeof validationErrors = {};
+    let hasErrors = false;
+
     if (!primaryRegion.trim()) {
-      toast({
-        title: "Primary Region required",
-        description: "Please enter a primary region.",
-        variant: "destructive",
-      });
-      return;
+      errors.primaryRegion = "Please select a region";
+      hasErrors = true;
     }
 
     if (selectedIndustries.length === 0) {
-      toast({
-        title: "Industry required",
-        description: "Please select at least one industry.",
-        variant: "destructive",
-      });
-      return;
+      errors.industry = "Please select at least one industry";
+      hasErrors = true;
     }
 
     if (selectedCompanySizes.length === 0) {
-      toast({
-        title: "Company Size required",
-        description: "Please select at least one company size.",
-        variant: "destructive",
-      });
-      return;
+      errors.companySize = "Please select at least one company size";
+      hasErrors = true;
     }
 
     if (selectedBuyerRoles.length === 0) {
+      errors.buyerRole = "Please select at least one job title";
+      hasErrors = true;
+    }
+
+    if (!fitConfidence) {
+      errors.fitConfidence = "Please select an ICP fit level";
+      hasErrors = true;
+    }
+
+    if (hasErrors) {
+      setValidationErrors(errors);
       toast({
-        title: "Buyer Role required",
-        description: "Please select at least one buyer role.",
+        title: "Validation Error",
+        description: "Please fill in all required fields.",
         variant: "destructive",
       });
       return;
     }
 
-    if (!fitConfidence) {
-      toast({
-        title: "Fit Confidence required",
-        description: "Please select a fit confidence level.",
-        variant: "destructive",
-      });
-      return;
-    }
+    // Clear errors if validation passes
+    setValidationErrors({});
 
     const newICP: ICP = {
       id: editingId || `icp-${Date.now()}`,
       primaryRegion: primaryRegion.trim(),
+      location: locations.filter(loc => loc.trim() !== ""),
       industry: selectedIndustries,
       companySize: selectedCompanySizes,
       buyerRole: selectedBuyerRoles,
@@ -686,6 +760,7 @@ const ICPManager: React.FC = () => {
   const handleEditICP = (icp: ICP) => {
     setEditingId(icp.id);
     setPrimaryRegion(icp.primaryRegion);
+    setLocations(icp.location || []);
     setSelectedIndustries(icp.industry);
     setSelectedCompanySizes(icp.companySize);
     setSelectedBuyerRoles(icp.buyerRole);
@@ -757,61 +832,107 @@ const ICPManager: React.FC = () => {
 
         {/* Compact Form Layout - No Category Headers */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Primary Region - Combobox */}
+          {/* Regions - Single Select Dropdown */}
           <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-foreground">Primary Region</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  ref={primaryRegionRef}
-                  variant="outline"
-                  role="combobox"
-                  className="w-full justify-between h-9 text-sm font-normal"
-                >
-                  {primaryRegion || "Select region..."}
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 z-[100]" align="start">
-                <Command>
-                  <CommandInput placeholder="Search region..." />
-                  <CommandList>
-                    <CommandEmpty>No region found.</CommandEmpty>
-                    <CommandGroup>
-                      {REGION_SUGGESTIONS.map((region) => (
-                        <CommandItem
-                          key={region}
-                          value={region}
-                          onSelect={() => {
-                            setPrimaryRegion(region);
-                          }}
-                        >
-                          <Check
-                            className={cn(
-                              "mr-2 h-4 w-4",
-                              primaryRegion === region ? "opacity-100" : "opacity-0"
-                            )}
-                          />
-                          {region}
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
+            <Label className="text-xs font-medium text-foreground">Regions</Label>
+            <Select 
+              value={primaryRegion} 
+              onValueChange={(value) => {
+                setPrimaryRegion(value);
+                if (validationErrors.primaryRegion) {
+                  setValidationErrors(prev => ({ ...prev, primaryRegion: undefined }));
+                }
+              }}
+            >
+              <SelectTrigger className={cn("h-9 text-sm font-normal", validationErrors.primaryRegion && "border-destructive")}>
+                <SelectValue placeholder="Select region..." />
+              </SelectTrigger>
+              <SelectContent>
+                {REGIONS_OPTIONS.map((region) => (
+                  <SelectItem key={region.value} value={region.value}>
+                    {region.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {validationErrors.primaryRegion && (
+              <p className="text-xs text-destructive">{validationErrors.primaryRegion}</p>
+            )}
           </div>
 
-          {/* Industry - Combobox (Multi-select) */}
+          {/* Location - Text Boxes with Add Button */}
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium text-foreground">Location</Label>
+            <div className="space-y-2">
+              {locations.length === 0 ? (
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Enter location..."
+                    value=""
+                    onChange={() => {}}
+                    className="h-9 text-sm w-32"
+                    onFocus={() => {
+                      if (locations.length === 0) {
+                        setLocations([""]);
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleAddLocation}
+                    className="h-9 px-3"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                locations.map((location, index) => (
+                  <div key={index} className="flex gap-2">
+                    <Input
+                      placeholder="Enter location..."
+                      value={location}
+                      onChange={(e) => handleLocationChange(index, e.target.value)}
+                      className="h-9 text-sm w-32"
+                    />
+                    {index === locations.length - 1 ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleAddLocation}
+                        className="h-9 px-3"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleRemoveLocation(index)}
+                        className="h-9 px-3 text-destructive hover:text-destructive"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
           <div className="space-y-1.5">
             <Label className="text-xs font-medium text-foreground">Industry</Label>
-            <Popover>
+            <Popover open={isIndustryPopoverOpen} onOpenChange={setIsIndustryPopoverOpen}>
               <PopoverTrigger asChild>
                 <Button
                   ref={industryRef}
                   variant="outline"
                   role="combobox"
-                  className="w-full justify-between h-9 text-sm font-normal"
+                  className={cn("w-full justify-between h-9 text-sm font-normal", validationErrors.industry && "border-destructive")}
+                  onClick={() => setIsIndustryPopoverOpen(!isIndustryPopoverOpen)}
                 >
                   {selectedIndustries.length > 0 
                     ? `${selectedIndustries.length} selected`
@@ -821,11 +942,27 @@ const ICPManager: React.FC = () => {
               </PopoverTrigger>
               <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 z-[100]" align="start">
                 <Command>
-                  <CommandInput placeholder="Search industry..." />
+                  <CommandInput 
+                    placeholder={industryInput ? "Press Enter..." : "Search industry..."}
+                    value={industryInput}
+                    onValueChange={setIndustryInput}
+                    onKeyDown={handleIndustryInputKeyDown}
+                  />
                   <CommandList>
-                    <CommandEmpty>No industry found.</CommandEmpty>
+                    <CommandEmpty>
+                      {industryInput.trim() ? (
+                        <div className="py-2 text-sm text-muted-foreground">
+                          Press Enter to add "{industryInput.trim()}"
+                        </div>
+                      ) : (
+                        "No industry found."
+                      )}
+                    </CommandEmpty>
                     <CommandGroup>
-                      {INDUSTRY_SUGGESTIONS.map((industry) => (
+                      {INDUSTRY_SUGGESTIONS.filter(industry => 
+                        !selectedIndustries.includes(industry) &&
+                        industry.toLowerCase().includes(industryInput.toLowerCase())
+                      ).map((industry) => (
                         <CommandItem
                           key={industry}
                           value={industry}
@@ -835,8 +972,7 @@ const ICPManager: React.FC = () => {
                         >
                           <Check
                             className={cn(
-                              "mr-2 h-4 w-4",
-                              selectedIndustries.includes(industry) ? "opacity-100" : "opacity-0"
+                              "mr-2 h-4 w-4 opacity-0"
                             )}
                           />
                           {industry}
@@ -854,39 +990,126 @@ const ICPManager: React.FC = () => {
                     key={ind} 
                     variant="default" 
                     className="text-xs cursor-pointer"
-                    onClick={() => handleIndustryToggle(ind)}
+                    onClick={() => {
+                      setSelectedIndustries(prev => {
+                        const updated = prev.filter(i => i !== ind);
+                        if (updated.length === 0 && !validationErrors.industry) {
+                          setValidationErrors(prev => ({ ...prev, industry: "Please select at least one industry" }));
+                        }
+                        return updated;
+                      });
+                    }}
                   >
                     {ind} ×
                   </Badge>
                 ))}
               </div>
             )}
+            {validationErrors.industry && (
+              <p className="text-xs text-destructive">{validationErrors.industry}</p>
+            )}
           </div>
 
-          {/* Buyer Role - Combobox (Multi-select) */}
+          {/* Company Size - Multiselect Dropdown */}
           <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-foreground">Buyer Role</Label>
-            <Popover>
+            <Label className="text-xs font-medium text-foreground">Company Size</Label>
+            <Popover open={isCompanySizePopoverOpen} onOpenChange={setIsCompanySizePopoverOpen}>
               <PopoverTrigger asChild>
                 <Button
-                  ref={buyerRoleRef}
                   variant="outline"
                   role="combobox"
-                  className="w-full justify-between h-9 text-sm font-normal"
+                  className={cn("w-full justify-between h-9 text-sm font-normal", validationErrors.companySize && "border-destructive")}
+                  onClick={() => setIsCompanySizePopoverOpen(!isCompanySizePopoverOpen)}
                 >
-                  {selectedBuyerRoles.length > 0 
-                    ? `${selectedBuyerRoles.length} selected`
-                    : "Select role..."}
+                  {selectedCompanySizes.length > 0 
+                    ? `${selectedCompanySizes.length} selected`
+                    : "Select company size..."}
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 z-[100]" align="start">
                 <Command>
-                  <CommandInput placeholder="Search role..." />
+                  <CommandInput placeholder="Search company size..." />
                   <CommandList>
-                    <CommandEmpty>No role found.</CommandEmpty>
+                    <CommandEmpty>No company size found.</CommandEmpty>
                     <CommandGroup>
-                      {BUYER_ROLE_SUGGESTIONS.map((role) => (
+                      {COMPANY_SIZE_OPTIONS.filter(size => 
+                        !selectedCompanySizes.includes(size)
+                      ).map((size) => (
+                        <CommandItem
+                          key={size}
+                          value={size}
+                          onSelect={() => {
+                            handleCompanySizeToggle(size);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4 opacity-0"
+                            )}
+                          />
+                          {size}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+            {selectedCompanySizes.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-1">
+                {selectedCompanySizes.map(size => (
+                  <Badge 
+                    key={size} 
+                    variant="default" 
+                    className="text-xs cursor-pointer"
+                    onClick={() => {
+                      setSelectedCompanySizes(prev => {
+                        const updated = prev.filter(s => s !== size);
+                        if (updated.length === 0 && !validationErrors.companySize) {
+                          setValidationErrors(prev => ({ ...prev, companySize: "Please select at least one company size" }));
+                        }
+                        return updated;
+                      });
+                    }}
+                  >
+                    {size} ×
+                  </Badge>
+                ))}
+              </div>
+            )}
+            {validationErrors.companySize && (
+              <p className="text-xs text-destructive">{validationErrors.companySize}</p>
+            )}
+          </div>
+
+          {/* Job Title - Multiselect Dropdown */}
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium text-foreground">Job Title</Label>
+            <Popover open={isBuyerRolePopoverOpen} onOpenChange={setIsBuyerRolePopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  ref={buyerRoleRef}
+                  variant="outline"
+                  role="combobox"
+                  className={cn("w-full justify-between h-9 text-sm font-normal", validationErrors.buyerRole && "border-destructive")}
+                  onClick={() => setIsBuyerRolePopoverOpen(!isBuyerRolePopoverOpen)}
+                >
+                  {selectedBuyerRoles.length > 0 
+                    ? `${selectedBuyerRoles.length} selected`
+                    : "Select job title..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 z-[100]" align="start">
+                <Command>
+                  <CommandInput placeholder="Search job title..." />
+                  <CommandList>
+                    <CommandEmpty>No job title found.</CommandEmpty>
+                    <CommandGroup>
+                      {BUYER_ROLE_SUGGESTIONS.filter(role => 
+                        !selectedBuyerRoles.includes(role)
+                      ).map((role) => (
                         <CommandItem
                           key={role}
                           value={role}
@@ -896,8 +1119,7 @@ const ICPManager: React.FC = () => {
                         >
                           <Check
                             className={cn(
-                              "mr-2 h-4 w-4",
-                              selectedBuyerRoles.includes(role) ? "opacity-100" : "opacity-0"
+                              "mr-2 h-4 w-4 opacity-0"
                             )}
                           />
                           {role}
@@ -915,85 +1137,53 @@ const ICPManager: React.FC = () => {
                     key={role} 
                     variant="default" 
                     className="text-xs cursor-pointer"
-                    onClick={() => handleBuyerRoleToggle(role)}
+                    onClick={() => {
+                      setSelectedBuyerRoles(prev => {
+                        const updated = prev.filter(r => r !== role);
+                        if (updated.length === 0 && !validationErrors.buyerRole) {
+                          setValidationErrors(prev => ({ ...prev, buyerRole: "Please select at least one job title" }));
+                        }
+                        return updated;
+                      });
+                    }}
                   >
                     {role} ×
                   </Badge>
                 ))}
               </div>
             )}
+            {validationErrors.buyerRole && (
+              <p className="text-xs text-destructive">{validationErrors.buyerRole}</p>
+            )}
           </div>
 
-          {/* Confidence Level - Combobox */}
+          {/* ICP Fit - Simple Dropdown */}
           <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-foreground">Confidence Level</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  className="w-full justify-between h-9 text-sm font-normal"
-                >
-                  {fitConfidence 
-                    ? FIT_CONFIDENCE_OPTIONS.find(opt => opt.value === fitConfidence)?.label || fitConfidence
-                    : "Select level..."}
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 z-[100]" align="start">
-                <Command>
-                  <CommandInput placeholder="Search level..." />
-                  <CommandList>
-                    <CommandEmpty>No level found.</CommandEmpty>
-                    <CommandGroup>
-                      {FIT_CONFIDENCE_OPTIONS.map((option) => (
-                        <CommandItem
-                          key={option.value}
-                          value={option.value}
-                          onSelect={() => {
-                            handleFitConfidenceSelect(option.value);
-                          }}
-                        >
-                          <Check
-                            className={cn(
-                              "mr-2 h-4 w-4",
-                              fitConfidence === option.value ? "opacity-100" : "opacity-0"
-                            )}
-                          />
-                          {option.label}
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
+            <Label className="text-xs font-medium text-foreground">ICP Fit</Label>
+            <Select value={fitConfidence} onValueChange={(value) => handleFitConfidenceSelect(value as FitConfidence)}>
+              <SelectTrigger className={cn("h-9 text-sm font-normal", validationErrors.fitConfidence && "border-destructive")}>
+                <SelectValue placeholder="Select ICP fit..." />
+              </SelectTrigger>
+              <SelectContent>
+                {FIT_CONFIDENCE_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {validationErrors.fitConfidence && (
+              <p className="text-xs text-destructive">{validationErrors.fitConfidence}</p>
+            )}
           </div>
         </div>
 
-        {/* Company Size - Full Width Below */}
-        <div className="space-y-1.5 pt-2">
-          <Label className="text-xs font-medium text-foreground">Company Size</Label>
-          <div className="flex flex-wrap gap-1.5">
-            {COMPANY_SIZE_OPTIONS.map(size => (
-              <Badge
-                key={size}
-                variant={selectedCompanySizes.includes(size) ? "default" : "outline"}
-                className="cursor-pointer text-xs"
-                onClick={() => handleCompanySizeToggle(size)}
-              >
-                {size}
-              </Badge>
-            ))}
-          </div>
-        </div>
-
-        {/* Accounts on Watchlist and Accounts to Avoid - Side by Side */}
+        {/* Companies on Watchlist and Companies to Exclude - Side by Side */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
           <div className="space-y-1.5">
             <Label className="text-xs font-medium text-foreground flex items-center gap-1.5">
               <Eye className="h-3 w-3" />
-              Accounts on Watchlist (Optional)
+              Companies on Watchlist (Optional)
             </Label>
             <Input
               ref={accountsOnWatchlistRef}
@@ -1008,7 +1198,7 @@ const ICPManager: React.FC = () => {
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-foreground">Accounts to Avoid (Optional)</Label>
+            <Label className="text-xs font-medium text-foreground">Companies to Exclude (Optional)</Label>
             <Input
               ref={accountsToAvoidRef}
               placeholder="e.g., CompanyA, CompanyB"
@@ -1019,15 +1209,14 @@ const ICPManager: React.FC = () => {
           </div>
         </div>
 
-        {/* Additional Context - Full Width */}
+        {/* Additional Criteria - Full Width */}
         <div className="space-y-2 pt-2 border-t">
-          <Label className="text-sm font-semibold text-foreground">Additional Context (Optional)</Label>
-          <Textarea
-            ref={additionalContextRef}
-            placeholder="Add any additional details that could help the system better understand this ICP (e.g. buying behavior, maturity level, internal assumptions, exclusions, nuances)."
+          <Label className="text-sm font-semibold text-foreground">Additional Criteria</Label>
+          <Input
+            placeholder="ANY ADDITIONAL CRITERIA OR SPECIFIC REQUIREMENTS FOR UR ICP..."
             value={additionalContext}
             onChange={(e) => setAdditionalContext(e.target.value)}
-            className="min-h-[80px] text-sm resize-none"
+            className="h-9 text-sm"
           />
         </div>
 
@@ -1039,7 +1228,6 @@ const ICPManager: React.FC = () => {
           <Button 
             size="sm" 
             onClick={handleSaveICP}
-            disabled={!canSave}
             className="gap-1"
           >
             <Check className="h-4 w-4" />
@@ -1093,9 +1281,10 @@ const ICPManager: React.FC = () => {
             <TableHeader>
               <TableRow className="bg-muted/50">
                 <TableHead className="font-semibold">Geography</TableHead>
+                <TableHead className="font-semibold">Location</TableHead>
                 <TableHead className="font-semibold">Industry</TableHead>
                 <TableHead className="font-semibold">Company Size</TableHead>
-                <TableHead className="font-semibold">Buyer Role</TableHead>
+                <TableHead className="font-semibold">Job Title</TableHead>
                 <TableHead className="font-semibold">Fit Confidence</TableHead>
                 <TableHead className="font-semibold">Status</TableHead>
                 <TableHead className="font-semibold text-right">Actions</TableHead>
@@ -1106,6 +1295,19 @@ const ICPManager: React.FC = () => {
                 <TableRow key={icp.id}>
                   <TableCell>
                     <span className="font-medium">{icp.primaryRegion}</span>
+                  </TableCell>
+                  <TableCell>
+                    {icp.location && icp.location.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {icp.location.map((loc, idx) => (
+                          <Badge key={idx} variant="outline" className="text-xs">
+                            {loc}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground text-xs">-</span>
+                    )}
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
