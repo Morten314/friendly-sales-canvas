@@ -145,10 +145,8 @@ const ICPManager: React.FC = () => {
   const [inlineStep, setInlineStep] = useState<InlineStep>("primaryRegion");
   const [primaryRegion, setPrimaryRegion] = useState("");
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
-  const [customIndustry, setCustomIndustry] = useState("");
   const [selectedCompanySizes, setSelectedCompanySizes] = useState<string[]>([]);
   const [selectedBuyerRoles, setSelectedBuyerRoles] = useState<string[]>([]);
-  const [customBuyerRole, setCustomBuyerRole] = useState("");
   const [accountsOnWatchlist, setAccountsOnWatchlist] = useState("");
   const [accountsToAvoid, setAccountsToAvoid] = useState("");
   const [fitConfidence, setFitConfidence] = useState<FitConfidence | "">("");
@@ -157,14 +155,9 @@ const ICPManager: React.FC = () => {
   // Edit state
   const [editingId, setEditingId] = useState<string | null>(null);
   
-  // Suggestions state
-  const [showRegionSuggestions, setShowRegionSuggestions] = useState(false);
-  const [showIndustrySuggestions, setShowIndustrySuggestions] = useState(false);
-  const [showBuyerRoleSuggestions, setShowBuyerRoleSuggestions] = useState(false);
-  
-  const primaryRegionRef = useRef<HTMLInputElement>(null);
-  const industryRef = useRef<HTMLInputElement>(null);
-  const buyerRoleRef = useRef<HTMLInputElement>(null);
+  const primaryRegionRef = useRef<HTMLButtonElement>(null);
+  const industryRef = useRef<HTMLButtonElement>(null);
+  const buyerRoleRef = useRef<HTMLButtonElement>(null);
   const accountsOnWatchlistRef = useRef<HTMLInputElement>(null);
   const accountsToAvoidRef = useRef<HTMLInputElement>(null);
   const additionalContextRef = useRef<HTMLTextAreaElement>(null);
@@ -556,18 +549,13 @@ const ICPManager: React.FC = () => {
     setIsAddingInline(false);
     setPrimaryRegion("");
     setSelectedIndustries([]);
-    setCustomIndustry("");
     setSelectedCompanySizes([]);
     setSelectedBuyerRoles([]);
-    setCustomBuyerRole("");
     setAccountsOnWatchlist("");
     setAccountsToAvoid("");
     setFitConfidence("");
     setAdditionalContext("");
     setEditingId(null);
-    setShowRegionSuggestions(false);
-    setShowIndustrySuggestions(false);
-    setShowBuyerRoleSuggestions(false);
   };
 
   const handleStartAdd = () => {
@@ -608,10 +596,6 @@ const ICPManager: React.FC = () => {
     );
   };
 
-  const handleRegionSuggestionClick = (region: string) => {
-    setPrimaryRegion(region);
-    setShowRegionSuggestions(false);
-  };
 
   const handleSaveICP = async () => {
     if (!primaryRegion.trim()) {
@@ -755,17 +739,6 @@ const ICPManager: React.FC = () => {
     selectedBuyerRoles.length > 0 && 
     fitConfidence;
 
-  const filteredRegionSuggestions = REGION_SUGGESTIONS.filter(r =>
-    r.toLowerCase().includes(primaryRegion.toLowerCase())
-  );
-
-  const filteredIndustrySuggestions = INDUSTRY_SUGGESTIONS.filter(i =>
-    i.toLowerCase().includes(customIndustry.toLowerCase()) && !selectedIndustries.includes(i)
-  );
-
-  const filteredBuyerRoleSuggestions = BUYER_ROLE_SUGGESTIONS.filter(r =>
-    r.toLowerCase().includes(customBuyerRole.toLowerCase()) && !selectedBuyerRoles.includes(r)
-  );
 
   // Render the inline editing row
   const renderInlineEditRow = () => {
@@ -782,78 +755,100 @@ const ICPManager: React.FC = () => {
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Geography Section */}
-          <div className="space-y-3">
-            <h5 className="text-sm font-semibold text-foreground uppercase tracking-wide flex items-center gap-2">
-              <Globe className="h-3.5 w-3.5" />
-              Geography
-            </h5>
-            
-            {/* Primary Region */}
-            <div className="space-y-1 relative">
-              <Label className="text-sm font-semibold text-foreground">Primary Region</Label>
-              <Input
-                ref={primaryRegionRef}
-                placeholder="Type or select region..."
-                value={primaryRegion}
-                onChange={(e) => {
-                  setPrimaryRegion(e.target.value);
-                  setShowRegionSuggestions(true);
-                }}
-                onFocus={() => {
-                  // Only open if not already open
-                  if (!showRegionSuggestions) {
-                    setShowRegionSuggestions(true);
-                  }
-                }}
-                onClick={(e) => {
-                  // Toggle dropdown when clicking on the field
-                  if (showRegionSuggestions && filteredRegionSuggestions.length > 0) {
-                    setShowRegionSuggestions(false);
-                  } else if (filteredRegionSuggestions.length > 0) {
-                    setShowRegionSuggestions(true);
-                  }
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && primaryRegion.trim()) {
-                    // Allow Enter to submit custom region
-                    e.preventDefault();
-                    setShowRegionSuggestions(false);
-                  } else if (e.key === "Escape") {
-                    setShowRegionSuggestions(false);
-                  }
-                }}
-                className="h-9 text-sm"
-              />
-              {showRegionSuggestions && filteredRegionSuggestions.length > 0 && (
-                <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg max-h-48 overflow-auto">
-                  {filteredRegionSuggestions.map(region => (
-                    <button
-                      key={region}
-                      type="button"
-                      className="w-full px-3 py-2 text-left text-sm hover:bg-muted transition-colors"
-                      onClick={() => handleRegionSuggestionClick(region)}
-                    >
-                      {region}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+        {/* Compact Form Layout - No Category Headers */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Primary Region - Combobox */}
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium text-foreground">Primary Region</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  ref={primaryRegionRef}
+                  variant="outline"
+                  role="combobox"
+                  className="w-full justify-between h-9 text-sm font-normal"
+                >
+                  {primaryRegion || "Select region..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 z-[100]" align="start">
+                <Command>
+                  <CommandInput placeholder="Search region..." />
+                  <CommandList>
+                    <CommandEmpty>No region found.</CommandEmpty>
+                    <CommandGroup>
+                      {REGION_SUGGESTIONS.map((region) => (
+                        <CommandItem
+                          key={region}
+                          value={region}
+                          onSelect={() => {
+                            setPrimaryRegion(region);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              primaryRegion === region ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {region}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
 
-          {/* Company Section */}
-          <div className="space-y-3">
-            <h5 className="text-sm font-semibold text-foreground uppercase tracking-wide flex items-center gap-2">
-              <Building2 className="h-3.5 w-3.5" />
-              Company
-            </h5>
-
-            {/* Industry */}
-            <div className="space-y-1 relative">
-              <Label className="text-sm font-semibold text-foreground">Industry</Label>
-              <div className="flex flex-wrap gap-1.5 mb-2">
+          {/* Industry - Combobox (Multi-select) */}
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium text-foreground">Industry</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  ref={industryRef}
+                  variant="outline"
+                  role="combobox"
+                  className="w-full justify-between h-9 text-sm font-normal"
+                >
+                  {selectedIndustries.length > 0 
+                    ? `${selectedIndustries.length} selected`
+                    : "Select industry..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 z-[100]" align="start">
+                <Command>
+                  <CommandInput placeholder="Search industry..." />
+                  <CommandList>
+                    <CommandEmpty>No industry found.</CommandEmpty>
+                    <CommandGroup>
+                      {INDUSTRY_SUGGESTIONS.map((industry) => (
+                        <CommandItem
+                          key={industry}
+                          value={industry}
+                          onSelect={() => {
+                            handleIndustryToggle(industry);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              selectedIndustries.includes(industry) ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {industry}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+            {selectedIndustries.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-1">
                 {selectedIndustries.map(ind => (
                   <Badge 
                     key={ind} 
@@ -865,109 +860,56 @@ const ICPManager: React.FC = () => {
                   </Badge>
                 ))}
               </div>
-              <div className="flex gap-2">
-                <div className="flex-1 relative">
-                  <Input
-                    ref={industryRef}
-                    placeholder="Type or select..."
-                    value={customIndustry}
-                    onChange={(e) => {
-                      setCustomIndustry(e.target.value);
-                      setShowIndustrySuggestions(true);
-                    }}
-                    onFocus={() => {
-                      // Only open if not already open
-                      if (!showIndustrySuggestions) {
-                        setShowIndustrySuggestions(true);
-                      }
-                    }}
-                    onClick={(e) => {
-                      // Toggle dropdown when clicking on the field
-                      if (showIndustrySuggestions && filteredIndustrySuggestions.length > 0) {
-                        setShowIndustrySuggestions(false);
-                      } else if (filteredIndustrySuggestions.length > 0) {
-                        setShowIndustrySuggestions(true);
-                      }
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && customIndustry.trim() && !selectedIndustries.includes(customIndustry.trim())) {
-                        e.preventDefault();
-                        setSelectedIndustries(prev => [...prev, customIndustry.trim()]);
-                        setCustomIndustry("");
-                      } else if (e.key === "Escape") {
-                        setShowIndustrySuggestions(false);
-                      }
-                    }}
-                    className="h-9 text-sm"
-                  />
-                  {showIndustrySuggestions && filteredIndustrySuggestions.length > 0 && (
-                    <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg max-h-48 overflow-auto">
-                      {filteredIndustrySuggestions.map(ind => (
-                        <button
-                          key={ind}
-                          type="button"
-                          className="w-full px-3 py-2 text-left text-sm hover:bg-muted transition-colors"
-                          onClick={() => {
-                            handleIndustryToggle(ind);
-                            setCustomIndustry("");
-                          }}
-                        >
-                          {ind}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                {selectedIndustries.length > 0 && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setShowIndustrySuggestions(false);
-                      // Focus on the first company size badge or buyer role field
-                      setTimeout(() => {
-                        buyerRoleRef.current?.focus();
-                      }, 100);
-                    }}
-                    className="h-9 px-3 shrink-0"
-                    title="Continue to next field"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-            </div>
-
-            {/* Company Size */}
-            <div className="space-y-1">
-              <Label className="text-sm font-semibold text-foreground">Company Size</Label>
-              <div className="flex flex-wrap gap-1.5">
-                {COMPANY_SIZE_OPTIONS.map(size => (
-                  <Badge
-                    key={size}
-                    variant={selectedCompanySizes.includes(size) ? "default" : "outline"}
-                    className="cursor-pointer text-xs"
-                    onClick={() => handleCompanySizeToggle(size)}
-                  >
-                    {size}
-                  </Badge>
-                ))}
-              </div>
-            </div>
+            )}
           </div>
 
-          {/* Buyer & Fit Section */}
-          <div className="space-y-3">
-            <h5 className="text-sm font-semibold text-foreground uppercase tracking-wide flex items-center gap-2">
-              <Users className="h-3.5 w-3.5" />
-              Buyer & Fit
-            </h5>
-
-            {/* Buyer Role */}
-            <div className="space-y-1 relative">
-              <Label className="text-sm font-semibold text-foreground">Buyer Role</Label>
-              <div className="flex flex-wrap gap-1.5 mb-2">
+          {/* Buyer Role - Combobox (Multi-select) */}
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium text-foreground">Buyer Role</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  ref={buyerRoleRef}
+                  variant="outline"
+                  role="combobox"
+                  className="w-full justify-between h-9 text-sm font-normal"
+                >
+                  {selectedBuyerRoles.length > 0 
+                    ? `${selectedBuyerRoles.length} selected`
+                    : "Select role..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 z-[100]" align="start">
+                <Command>
+                  <CommandInput placeholder="Search role..." />
+                  <CommandList>
+                    <CommandEmpty>No role found.</CommandEmpty>
+                    <CommandGroup>
+                      {BUYER_ROLE_SUGGESTIONS.map((role) => (
+                        <CommandItem
+                          key={role}
+                          value={role}
+                          onSelect={() => {
+                            handleBuyerRoleToggle(role);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              selectedBuyerRoles.includes(role) ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {role}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+            {selectedBuyerRoles.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-1">
                 {selectedBuyerRoles.map(role => (
                   <Badge 
                     key={role} 
@@ -979,129 +921,101 @@ const ICPManager: React.FC = () => {
                   </Badge>
                 ))}
               </div>
-              <div className="flex gap-2">
-                <div className="flex-1 relative">
-                  <Input
-                    ref={buyerRoleRef}
-                    placeholder="Type or select..."
-                    value={customBuyerRole}
-                    onChange={(e) => {
-                      setCustomBuyerRole(e.target.value);
-                      setShowBuyerRoleSuggestions(true);
-                    }}
-                    onFocus={() => {
-                      // Only open if not already open
-                      if (!showBuyerRoleSuggestions) {
-                        setShowBuyerRoleSuggestions(true);
-                      }
-                    }}
-                    onClick={(e) => {
-                      // Toggle dropdown when clicking on the field
-                      if (showBuyerRoleSuggestions && filteredBuyerRoleSuggestions.length > 0) {
-                        setShowBuyerRoleSuggestions(false);
-                      } else if (filteredBuyerRoleSuggestions.length > 0) {
-                        setShowBuyerRoleSuggestions(true);
-                      }
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && customBuyerRole.trim() && !selectedBuyerRoles.includes(customBuyerRole.trim())) {
-                        e.preventDefault();
-                        setSelectedBuyerRoles(prev => [...prev, customBuyerRole.trim()]);
-                        setCustomBuyerRole("");
-                      } else if (e.key === "Escape") {
-                        setShowBuyerRoleSuggestions(false);
-                      }
-                    }}
-                    className="h-9 text-sm"
-                  />
-                  {showBuyerRoleSuggestions && filteredBuyerRoleSuggestions.length > 0 && (
-                    <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg max-h-32 overflow-auto">
-                      {filteredBuyerRoleSuggestions.slice(0, 5).map(role => (
-                        <button
-                          key={role}
-                          type="button"
-                          className="w-full px-3 py-2 text-left text-sm hover:bg-muted transition-colors"
-                          onClick={() => {
-                            handleBuyerRoleToggle(role);
-                            setCustomBuyerRole("");
+            )}
+          </div>
+
+          {/* Confidence Level - Combobox */}
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium text-foreground">Confidence Level</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  className="w-full justify-between h-9 text-sm font-normal"
+                >
+                  {fitConfidence 
+                    ? FIT_CONFIDENCE_OPTIONS.find(opt => opt.value === fitConfidence)?.label || fitConfidence
+                    : "Select level..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 z-[100]" align="start">
+                <Command>
+                  <CommandInput placeholder="Search level..." />
+                  <CommandList>
+                    <CommandEmpty>No level found.</CommandEmpty>
+                    <CommandGroup>
+                      {FIT_CONFIDENCE_OPTIONS.map((option) => (
+                        <CommandItem
+                          key={option.value}
+                          value={option.value}
+                          onSelect={() => {
+                            handleFitConfidenceSelect(option.value);
                           }}
                         >
-                          {role}
-                        </button>
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              fitConfidence === option.value ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {option.label}
+                        </CommandItem>
                       ))}
-                    </div>
-                  )}
-                </div>
-                {selectedBuyerRoles.length > 0 && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setShowBuyerRoleSuggestions(false);
-                      // Focus on the next field (Accounts on Watchlist)
-                      setTimeout(() => {
-                        accountsOnWatchlistRef.current?.focus();
-                      }, 100);
-                    }}
-                    className="h-9 px-3 shrink-0"
-                    title="Continue to next field"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-            </div>
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
+        </div>
 
-            {/* Accounts on Watchlist */}
-            <div className="space-y-1">
-              <Label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-                <Eye className="h-3 w-3" />
-                Accounts on Watchlist (Optional)
-              </Label>
-              <Input
-                ref={accountsOnWatchlistRef}
-                placeholder="e.g., CompanyA, CompanyB"
-                value={accountsOnWatchlist}
-                onChange={(e) => setAccountsOnWatchlist(e.target.value)}
-                className="h-9 text-sm"
-              />
-              <p className="text-xs text-muted-foreground/70">
-                Companies you want to closely monitor or track for opportunities.
-              </p>
-            </div>
-
-            {/* Accounts to Avoid */}
-            <div className="space-y-1">
-              <Label className="text-sm font-semibold text-foreground">Accounts to Avoid (Optional)</Label>
-              <Input
-                ref={accountsToAvoidRef}
-                placeholder="e.g., CompanyA, CompanyB"
-                value={accountsToAvoid}
-                onChange={(e) => setAccountsToAvoid(e.target.value)}
-                className="h-9 text-sm"
-              />
-            </div>
-
-            {/* ICP Fit Confidence */}
-            <div className="space-y-1">
-              <Label className="text-sm font-semibold text-foreground">ICP Fit Confidence</Label>
-              <Select
-                value={fitConfidence}
-                onValueChange={(value) => handleFitConfidenceSelect(value as FitConfidence)}
+        {/* Company Size - Full Width Below */}
+        <div className="space-y-1.5 pt-2">
+          <Label className="text-xs font-medium text-foreground">Company Size</Label>
+          <div className="flex flex-wrap gap-1.5">
+            {COMPANY_SIZE_OPTIONS.map(size => (
+              <Badge
+                key={size}
+                variant={selectedCompanySizes.includes(size) ? "default" : "outline"}
+                className="cursor-pointer text-xs"
+                onClick={() => handleCompanySizeToggle(size)}
               >
-                <SelectTrigger className="h-9 text-sm">
-                  <SelectValue placeholder="Select confidence level" />
-                </SelectTrigger>
-                <SelectContent className="bg-popover z-50">
-                  {FIT_CONFIDENCE_OPTIONS.map(option => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                {size}
+              </Badge>
+            ))}
+          </div>
+        </div>
+
+        {/* Accounts on Watchlist and Accounts to Avoid - Side by Side */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium text-foreground flex items-center gap-1.5">
+              <Eye className="h-3 w-3" />
+              Accounts on Watchlist (Optional)
+            </Label>
+            <Input
+              ref={accountsOnWatchlistRef}
+              placeholder="e.g., CompanyA, CompanyB"
+              value={accountsOnWatchlist}
+              onChange={(e) => setAccountsOnWatchlist(e.target.value)}
+              className="h-9 text-sm"
+            />
+            <p className="text-xs text-muted-foreground/70">
+              Companies you want to closely monitor or track for opportunities.
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium text-foreground">Accounts to Avoid (Optional)</Label>
+            <Input
+              ref={accountsToAvoidRef}
+              placeholder="e.g., CompanyA, CompanyB"
+              value={accountsToAvoid}
+              onChange={(e) => setAccountsToAvoid(e.target.value)}
+              className="h-9 text-sm"
+            />
           </div>
         </div>
 
