@@ -1213,7 +1213,7 @@ const ICPManager: React.FC = () => {
         <div className="space-y-2 pt-2 border-t">
           <Label className="text-sm font-semibold text-foreground">Additional Criteria</Label>
           <Input
-            placeholder="ANY ADDITIONAL CRITERIA OR SPECIFIC REQUIREMENTS FOR UR ICP..."
+            placeholder="Any additional criteria or specific requirements for your ICP..."
             value={additionalContext}
             onChange={(e) => setAdditionalContext(e.target.value)}
             className="h-9 text-sm"
