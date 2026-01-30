@@ -244,14 +244,14 @@ export function Header() {
                     <RefreshCw className="h-4 w-4 mr-2" />
                     Refresh
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('scoutHistory'))}>
+                  {/* <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('scoutHistory'))}>
                     <History className="h-4 w-4 mr-2" />
                     History
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('scoutSettings'))}>
                     <Settings className="h-4 w-4 mr-2" />
                     Settings
-                  </DropdownMenuItem>
+                  </DropdownMenuItem> */}
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
@@ -268,7 +268,7 @@ export function Header() {
                   Refresh
                 </Button>
 
-                <Button
+                {/* <Button
                   variant="outline"
                   size="sm"
                   onClick={() => {
@@ -290,7 +290,7 @@ export function Header() {
                 >
                   <Settings className="h-4 w-4" />
                   Settings
-                </Button>
+                </Button> */}
               </>
             )}
           </>

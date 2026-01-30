@@ -142,6 +142,7 @@ const ICPManager: React.FC = () => {
   const [inlineStep, setInlineStep] = useState<InlineStep>("primaryRegion");
   const [primaryRegion, setPrimaryRegion] = useState("");
   const [locations, setLocations] = useState<string[]>([]);
+  const [locationInput, setLocationInput] = useState("");
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
   const [industryInput, setIndustryInput] = useState("");
   const [isIndustryPopoverOpen, setIsIndustryPopoverOpen] = useState(false);
@@ -561,6 +562,7 @@ const ICPManager: React.FC = () => {
     setIsAddingInline(false);
     setPrimaryRegion("");
     setLocations([]);
+    setLocationInput("");
     setSelectedIndustries([]);
     setIndustryInput("");
     setIsIndustryPopoverOpen(false);
@@ -658,19 +660,24 @@ const ICPManager: React.FC = () => {
   };
 
   const handleAddLocation = () => {
-    setLocations(prev => [...prev, ""]);
+    if (locationInput.trim()) {
+      const trimmedLocation = locationInput.trim();
+      if (!locations.includes(trimmedLocation)) {
+        setLocations(prev => [...prev, trimmedLocation]);
+      }
+      setLocationInput("");
+    }
   };
 
-  const handleLocationChange = (index: number, value: string) => {
-    setLocations(prev => {
-      const updated = [...prev];
-      updated[index] = value;
-      return updated;
-    });
+  const handleLocationInputKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && locationInput.trim()) {
+      e.preventDefault();
+      handleAddLocation();
+    }
   };
 
-  const handleRemoveLocation = (index: number) => {
-    setLocations(prev => prev.filter((_, i) => i !== index));
+  const handleRemoveLocation = (locationToRemove: string) => {
+    setLocations(prev => prev.filter(loc => loc !== locationToRemove));
   };
 
 
@@ -761,6 +768,7 @@ const ICPManager: React.FC = () => {
     setEditingId(icp.id);
     setPrimaryRegion(icp.primaryRegion);
     setLocations(icp.location || []);
+    setLocationInput("");
     setSelectedIndustries(icp.industry);
     setSelectedCompanySizes(icp.companySize);
     setSelectedBuyerRoles(icp.buyerRole);
@@ -860,67 +868,42 @@ const ICPManager: React.FC = () => {
             )}
           </div>
 
-          {/* Location - Text Boxes with Add Button */}
+          {/* Location - Input with Tags */}
           <div className="space-y-1.5">
             <Label className="text-xs font-medium text-foreground">Location</Label>
-            <div className="space-y-2">
-              {locations.length === 0 ? (
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Enter location..."
-                    value=""
-                    onChange={() => {}}
-                    className="h-9 text-sm w-32"
-                    onFocus={() => {
-                      if (locations.length === 0) {
-                        setLocations([""]);
-                      }
-                    }}
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleAddLocation}
-                    className="h-9 px-3"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-              ) : (
-                locations.map((location, index) => (
-                  <div key={index} className="flex gap-2">
-                    <Input
-                      placeholder="Enter location..."
-                      value={location}
-                      onChange={(e) => handleLocationChange(index, e.target.value)}
-                      className="h-9 text-sm w-32"
-                    />
-                    {index === locations.length - 1 ? (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={handleAddLocation}
-                        className="h-9 px-3"
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    ) : (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleRemoveLocation(index)}
-                        className="h-9 px-3 text-destructive hover:text-destructive"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                ))
-              )}
+            <div className="flex gap-2">
+              <Input
+                placeholder="Enter location..."
+                value={locationInput}
+                onChange={(e) => setLocationInput(e.target.value)}
+                onKeyDown={handleLocationInputKeyDown}
+                className="h-9 text-sm w-32"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleAddLocation}
+                disabled={!locationInput.trim()}
+                className="h-9 px-3"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
             </div>
+            {locations.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-1">
+                {locations.map(location => (
+                  <Badge 
+                    key={location} 
+                    variant="default" 
+                    className="text-xs cursor-pointer"
+                    onClick={() => handleRemoveLocation(location)}
+                  >
+                    {location} ×
+                  </Badge>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="space-y-1.5">
