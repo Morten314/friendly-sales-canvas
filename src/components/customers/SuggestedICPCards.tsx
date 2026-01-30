@@ -106,7 +106,7 @@ export const SuggestedICPCards = ({
       const defaultICPs: ExistingICP[] = [
         {
           id: "existing-1",
-          name: "Mid-Market SaaS Buyers",
+          name: "ICP 1",
           geography: "North America",
           industry: "Software & Technology",
           companySize: "100-500 employees",
@@ -118,7 +118,7 @@ export const SuggestedICPCards = ({
         },
         {
           id: "existing-2",
-          name: "Healthcare Digital Leaders",
+          name: "ICP 2",
           geography: "US, UK",
           industry: "Healthcare",
           companySize: "200-1000 employees",
@@ -344,21 +344,7 @@ export const SuggestedICPCards = ({
 
   return (
     <div className="space-y-4">
-      {/* Section Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-primary" />
-            Suggested ICP Cards
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            AI-generated ICP suggestions based on your company profile
-          </p>
-        </div>
-        <Badge variant="outline" className="text-xs">
-          {suggestedICPs.filter(icp => cardStatuses[icp.id]?.status === 'suggested').length} pending
-        </Badge>
-      </div>
+      {/* ICP Cards - Grouped by Existing ICP */}
 
       {/* ICP Cards - Grouped by Existing ICP */}
       <div className="space-y-6">
