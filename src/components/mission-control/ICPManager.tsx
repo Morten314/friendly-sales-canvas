@@ -151,8 +151,10 @@ const ICPManager: React.FC = () => {
   const [selectedBuyerRoles, setSelectedBuyerRoles] = useState<string[]>([]);
   const [buyerRoleInput, setBuyerRoleInput] = useState("");
   const [isBuyerRolePopoverOpen, setIsBuyerRolePopoverOpen] = useState(false);
-  const [accountsOnWatchlist, setAccountsOnWatchlist] = useState("");
-  const [accountsToAvoid, setAccountsToAvoid] = useState("");
+  const [accountsOnWatchlist, setAccountsOnWatchlist] = useState<string[]>([]);
+  const [watchlistInput, setWatchlistInput] = useState("");
+  const [accountsToAvoid, setAccountsToAvoid] = useState<string[]>([]);
+  const [avoidInput, setAvoidInput] = useState("");
   const [fitConfidence, setFitConfidence] = useState<FitConfidence | "">("");
   const [additionalContext, setAdditionalContext] = useState("");
   
@@ -170,8 +172,6 @@ const ICPManager: React.FC = () => {
   
   const industryRef = useRef<HTMLInputElement>(null);
   const buyerRoleRef = useRef<HTMLInputElement>(null);
-  const accountsOnWatchlistRef = useRef<HTMLInputElement>(null);
-  const accountsToAvoidRef = useRef<HTMLInputElement>(null);
 
   // Save customer profile (ICPs) to backend with retry logic
   const saveCustomerProfileToBackend = async (icpsToSave: ICP[], retryCount = 0) => {
@@ -577,8 +577,10 @@ const ICPManager: React.FC = () => {
     setBuyerRoleInput("");
     setIsBuyerRolePopoverOpen(false);
     setValidationErrors({});
-    setAccountsOnWatchlist("");
-    setAccountsToAvoid("");
+    setAccountsOnWatchlist([]);
+    setWatchlistInput("");
+    setAccountsToAvoid([]);
+    setAvoidInput("");
     setFitConfidence("");
     setAdditionalContext("");
     setEditingId(null);
@@ -705,6 +707,48 @@ const ICPManager: React.FC = () => {
     setLocations(prev => prev.filter(loc => loc !== locationToRemove));
   };
 
+  const handleAddWatchlist = () => {
+    if (watchlistInput.trim()) {
+      const trimmedCompany = watchlistInput.trim();
+      if (!accountsOnWatchlist.includes(trimmedCompany)) {
+        setAccountsOnWatchlist(prev => [...prev, trimmedCompany]);
+      }
+      setWatchlistInput("");
+    }
+  };
+
+  const handleWatchlistInputKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && watchlistInput.trim()) {
+      e.preventDefault();
+      handleAddWatchlist();
+    }
+  };
+
+  const handleRemoveWatchlist = (companyToRemove: string) => {
+    setAccountsOnWatchlist(prev => prev.filter(company => company !== companyToRemove));
+  };
+
+  const handleAddAvoid = () => {
+    if (avoidInput.trim()) {
+      const trimmedCompany = avoidInput.trim();
+      if (!accountsToAvoid.includes(trimmedCompany)) {
+        setAccountsToAvoid(prev => [...prev, trimmedCompany]);
+      }
+      setAvoidInput("");
+    }
+  };
+
+  const handleAvoidInputKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && avoidInput.trim()) {
+      e.preventDefault();
+      handleAddAvoid();
+    }
+  };
+
+  const handleRemoveAvoid = (companyToRemove: string) => {
+    setAccountsToAvoid(prev => prev.filter(company => company !== companyToRemove));
+  };
+
 
   const handleSaveICP = async () => {
     const errors: typeof validationErrors = {};
@@ -755,8 +799,8 @@ const ICPManager: React.FC = () => {
       industry: selectedIndustries,
       companySize: selectedCompanySizes,
       buyerRole: selectedBuyerRoles,
-      accountsOnWatchlist: accountsOnWatchlist.trim() ? accountsOnWatchlist.split(",").map(a => a.trim()) : [],
-      accountsToAvoid: accountsToAvoid.trim() ? accountsToAvoid.split(",").map(a => a.trim()) : [],
+      accountsOnWatchlist: accountsOnWatchlist,
+      accountsToAvoid: accountsToAvoid,
       fitConfidence: fitConfidence as FitConfidence,
       additionalContext: additionalContext.trim(),
       status: "saved",
@@ -798,8 +842,10 @@ const ICPManager: React.FC = () => {
     setSelectedCompanySizes(icp.companySize);
     setSelectedBuyerRoles(icp.buyerRole);
     setBuyerRoleInput("");
-    setAccountsOnWatchlist(icp.accountsOnWatchlist.join(", "));
-    setAccountsToAvoid(icp.accountsToAvoid.join(", "));
+    setAccountsOnWatchlist(icp.accountsOnWatchlist || []);
+    setWatchlistInput("");
+    setAccountsToAvoid(icp.accountsToAvoid || []);
+    setAvoidInput("");
     setFitConfidence(icp.fitConfidence);
     setAdditionalContext(icp.additionalContext);
     setIsAddingInline(true);
@@ -1276,13 +1322,39 @@ const ICPManager: React.FC = () => {
               <Eye className="h-3 w-3" />
               Companies on Watchlist (Optional)
             </Label>
-            <Input
-              ref={accountsOnWatchlistRef}
-              placeholder="e.g., CompanyA, CompanyB"
-              value={accountsOnWatchlist}
-              onChange={(e) => setAccountsOnWatchlist(e.target.value)}
-              className="h-9 text-sm"
-            />
+            <div className="flex gap-2">
+              <Input
+                placeholder="Enter company name..."
+                value={watchlistInput}
+                onChange={(e) => setWatchlistInput(e.target.value)}
+                onKeyDown={handleWatchlistInputKeyDown}
+                className="h-9 text-sm flex-1"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleAddWatchlist}
+                disabled={!watchlistInput.trim()}
+                className="h-9 px-3"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+            {accountsOnWatchlist.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-1">
+                {accountsOnWatchlist.map(company => (
+                  <Badge 
+                    key={company} 
+                    variant="default" 
+                    className="text-xs cursor-pointer"
+                    onClick={() => handleRemoveWatchlist(company)}
+                  >
+                    {company} ×
+                  </Badge>
+                ))}
+              </div>
+            )}
             <p className="text-xs text-muted-foreground/70">
               Companies you want to closely monitor or track for opportunities.
             </p>
@@ -1290,13 +1362,39 @@ const ICPManager: React.FC = () => {
 
           <div className="space-y-1.5">
             <Label>Companies to Exclude (Optional)</Label>
-            <Input
-              ref={accountsToAvoidRef}
-              placeholder="e.g., CompanyA, CompanyB"
-              value={accountsToAvoid}
-              onChange={(e) => setAccountsToAvoid(e.target.value)}
-              className="h-9 text-sm"
-            />
+            <div className="flex gap-2">
+              <Input
+                placeholder="Enter company name..."
+                value={avoidInput}
+                onChange={(e) => setAvoidInput(e.target.value)}
+                onKeyDown={handleAvoidInputKeyDown}
+                className="h-9 text-sm flex-1"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleAddAvoid}
+                disabled={!avoidInput.trim()}
+                className="h-9 px-3"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+            {accountsToAvoid.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-1">
+                {accountsToAvoid.map(company => (
+                  <Badge 
+                    key={company} 
+                    variant="default" 
+                    className="text-xs cursor-pointer"
+                    onClick={() => handleRemoveAvoid(company)}
+                  >
+                    {company} ×
+                  </Badge>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
