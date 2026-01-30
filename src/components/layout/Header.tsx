@@ -202,7 +202,7 @@ export function Header() {
           {/* Scout page info text */}
           {(isMarketResearchPage || window.location.pathname.startsWith('/your-ai-team/scout')) && (
             <span className="text-xs md:text-sm font-normal text-gray-400 mt-0.5 truncate">
-              Reports are generated according to fields such as company name, industry, etc. from your Company profile of Mission Control
+              Reports are generated according to fields such as company name, industry, etc. from your Company profile on Mission Control
             </span>
           )}
         </div>

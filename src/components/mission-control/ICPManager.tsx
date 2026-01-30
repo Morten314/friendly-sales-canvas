@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, useLayoutEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -149,6 +149,7 @@ const ICPManager: React.FC = () => {
   const [selectedCompanySizes, setSelectedCompanySizes] = useState<string[]>([]);
   const [isCompanySizePopoverOpen, setIsCompanySizePopoverOpen] = useState(false);
   const [selectedBuyerRoles, setSelectedBuyerRoles] = useState<string[]>([]);
+  const [buyerRoleInput, setBuyerRoleInput] = useState("");
   const [isBuyerRolePopoverOpen, setIsBuyerRolePopoverOpen] = useState(false);
   const [accountsOnWatchlist, setAccountsOnWatchlist] = useState("");
   const [accountsToAvoid, setAccountsToAvoid] = useState("");
@@ -167,8 +168,8 @@ const ICPManager: React.FC = () => {
   // Edit state
   const [editingId, setEditingId] = useState<string | null>(null);
   
-  const industryRef = useRef<HTMLButtonElement>(null);
-  const buyerRoleRef = useRef<HTMLButtonElement>(null);
+  const industryRef = useRef<HTMLInputElement>(null);
+  const buyerRoleRef = useRef<HTMLInputElement>(null);
   const accountsOnWatchlistRef = useRef<HTMLInputElement>(null);
   const accountsToAvoidRef = useRef<HTMLInputElement>(null);
 
@@ -193,15 +194,15 @@ const ICPManager: React.FC = () => {
         icps: icpsToSave.map(icp => ({
           id: icp.id,
           primary_region: icp.primaryRegion,
-          location: icp.location,
-          industry: icp.industry,
-          company_size: icp.companySize,
-          buyer_role: icp.buyerRole,
-          accounts_on_watchlist: icp.accountsOnWatchlist,
-          accounts_to_avoid: icp.accountsToAvoid,
-          fit_confidence: icp.fitConfidence,
-          additional_context: icp.additionalContext,
-          status: icp.status,
+          location: Array.isArray(icp.location) ? icp.location : [],
+          industry: Array.isArray(icp.industry) ? icp.industry : [],
+          company_size: Array.isArray(icp.companySize) ? icp.companySize : [],
+          buyer_role: Array.isArray(icp.buyerRole) ? icp.buyerRole : [],
+          accounts_on_watchlist: Array.isArray(icp.accountsOnWatchlist) ? icp.accountsOnWatchlist : [],
+          accounts_to_avoid: Array.isArray(icp.accountsToAvoid) ? icp.accountsToAvoid : [],
+          fit_confidence: icp.fitConfidence || "medium",
+          additional_context: icp.additionalContext || "",
+          status: icp.status || "saved",
           created_at: icp.createdAt instanceof Date ? icp.createdAt.toISOString() : icp.createdAt,
         })),
       };
@@ -210,6 +211,10 @@ const ICPManager: React.FC = () => {
       console.log("User ID:", currentUser.uid);
       console.log("ICPs to save:", icpsToSave);
       console.log("Payload:", JSON.stringify(payload, null, 2));
+      // Debug: Check location field specifically
+      payload.icps.forEach((icp, index) => {
+        console.log(`ICP ${index} location field:`, icp.location, "Type:", typeof icp.location, "IsArray:", Array.isArray(icp.location));
+      });
 
       // Always save to localStorage first as backup
       try {
@@ -569,6 +574,7 @@ const ICPManager: React.FC = () => {
     setSelectedCompanySizes([]);
     setIsCompanySizePopoverOpen(false);
     setSelectedBuyerRoles([]);
+    setBuyerRoleInput("");
     setIsBuyerRolePopoverOpen(false);
     setValidationErrors({});
     setAccountsOnWatchlist("");
@@ -656,7 +662,26 @@ const ICPManager: React.FC = () => {
         return updated;
       });
     }
+    setBuyerRoleInput("");
     setIsBuyerRolePopoverOpen(false);
+  };
+
+  const handleBuyerRoleInputKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && buyerRoleInput.trim()) {
+      e.preventDefault();
+      const trimmedInput = buyerRoleInput.trim();
+      if (!selectedBuyerRoles.includes(trimmedInput)) {
+        setSelectedBuyerRoles(prev => {
+          const updated = [...prev, trimmedInput];
+          if (validationErrors.buyerRole && updated.length > 0) {
+            setValidationErrors(prev => ({ ...prev, buyerRole: undefined }));
+          }
+          return updated;
+        });
+      }
+      setBuyerRoleInput("");
+      setIsBuyerRolePopoverOpen(false);
+    }
   };
 
   const handleAddLocation = () => {
@@ -772,6 +797,7 @@ const ICPManager: React.FC = () => {
     setSelectedIndustries(icp.industry);
     setSelectedCompanySizes(icp.companySize);
     setSelectedBuyerRoles(icp.buyerRole);
+    setBuyerRoleInput("");
     setAccountsOnWatchlist(icp.accountsOnWatchlist.join(", "));
     setAccountsToAvoid(icp.accountsToAvoid.join(", "));
     setFitConfidence(icp.fitConfidence);
@@ -828,7 +854,7 @@ const ICPManager: React.FC = () => {
     if (!isAddingInline) return null;
 
     return (
-      <div className="bg-muted/30 border-2 border-primary/20 rounded-lg p-4 mb-4 space-y-4">
+      <div className="bg-white border border-black rounded-lg p-4 mb-4 space-y-4">
         <div className="flex items-center justify-between">
           <h4 className="text-base font-semibold text-foreground">
             {editingId ? "Edit ICP" : "Add New ICP"}
@@ -842,7 +868,7 @@ const ICPManager: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Regions - Single Select Dropdown */}
           <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-foreground">Regions</Label>
+            <Label>Regions</Label>
             <Select 
               value={primaryRegion} 
               onValueChange={(value) => {
@@ -870,7 +896,7 @@ const ICPManager: React.FC = () => {
 
           {/* Location - Input with Tags */}
           <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-foreground">Location</Label>
+            <Label>Location</Label>
             <div className="flex gap-2">
               <Input
                 placeholder="Enter location..."
@@ -907,30 +933,61 @@ const ICPManager: React.FC = () => {
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-foreground">Industry</Label>
-            <Popover open={isIndustryPopoverOpen} onOpenChange={setIsIndustryPopoverOpen}>
-              <PopoverTrigger asChild>
-                <Button
+            <Label>Industry</Label>
+            <Popover open={isIndustryPopoverOpen} onOpenChange={setIsIndustryPopoverOpen} modal={false}>
+              <div className="relative">
+                <Input
                   ref={industryRef}
-                  variant="outline"
-                  role="combobox"
-                  className={cn("w-full justify-between h-9 text-sm font-normal", validationErrors.industry && "border-destructive")}
-                  onClick={() => setIsIndustryPopoverOpen(!isIndustryPopoverOpen)}
-                >
-                  {selectedIndustries.length > 0 
-                    ? `${selectedIndustries.length} selected`
-                    : "Select industry..."}
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 z-[100]" align="start">
-                <Command>
-                  <CommandInput 
-                    placeholder={industryInput ? "Press Enter..." : "Search industry..."}
-                    value={industryInput}
-                    onValueChange={setIndustryInput}
-                    onKeyDown={handleIndustryInputKeyDown}
+                  placeholder="Type or Select"
+                  value={industryInput}
+                  onChange={(e) => {
+                    setIndustryInput(e.target.value);
+                    setIsIndustryPopoverOpen(true);
+                  }}
+                  onClick={() => {
+                    setIsIndustryPopoverOpen(true);
+                  }}
+                  onBlur={(e) => {
+                    // Delay to allow click events in popover
+                    setTimeout(() => {
+                      const activeElement = document.activeElement;
+                      const popoverContent = document.querySelector('[role="dialog"]');
+                      if (!popoverContent?.contains(activeElement) && activeElement !== industryRef.current) {
+                        setIsIndustryPopoverOpen(false);
+                      }
+                    }, 200);
+                  }}
+                  onKeyDown={handleIndustryInputKeyDown}
+                  className={cn("h-9 text-sm pr-8", validationErrors.industry && "border-destructive")}
+                />
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="absolute inset-0 h-9 w-full opacity-0"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setIsIndustryPopoverOpen(true);
+                      industryRef.current?.focus();
+                    }}
+                    type="button"
+                    tabIndex={-1}
                   />
+                </PopoverTrigger>
+                <ChevronsUpDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 shrink-0 opacity-50 pointer-events-none z-10" />
+              </div>
+              <PopoverContent 
+                className="w-[var(--radix-popover-trigger-width)] p-0 z-[100]" 
+                side="bottom" 
+                align="start"
+                sideOffset={4}
+                avoidCollisions={false}
+                onOpenAutoFocus={(e) => e.preventDefault()}
+                onCloseAutoFocus={(e) => {
+                  e.preventDefault();
+                  industryRef.current?.focus();
+                }}
+              >
+                <Command shouldFilter={false}>
                   <CommandList>
                     <CommandEmpty>
                       {industryInput.trim() ? (
@@ -949,8 +1006,9 @@ const ICPManager: React.FC = () => {
                         <CommandItem
                           key={industry}
                           value={industry}
-                          onSelect={() => {
-                            handleIndustryToggle(industry);
+                          onSelect={(currentValue) => {
+                            handleIndustryToggle(currentValue);
+                            setIsIndustryPopoverOpen(false);
                           }}
                         >
                           <Check
@@ -995,7 +1053,7 @@ const ICPManager: React.FC = () => {
 
           {/* Company Size - Multiselect Dropdown */}
           <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-foreground">Company Size</Label>
+            <Label>Company Size</Label>
             <Popover open={isCompanySizePopoverOpen} onOpenChange={setIsCompanySizePopoverOpen}>
               <PopoverTrigger asChild>
                 <Button
@@ -1010,9 +1068,13 @@ const ICPManager: React.FC = () => {
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 z-[100]" align="start">
+              <PopoverContent 
+                className="w-[var(--radix-popover-trigger-width)] p-0 z-[100]" 
+                side="bottom" 
+                align="start"
+                sideOffset={4}
+              >
                 <Command>
-                  <CommandInput placeholder="Search company size..." />
                   <CommandList>
                     <CommandEmpty>No company size found.</CommandEmpty>
                     <CommandGroup>
@@ -1066,38 +1128,84 @@ const ICPManager: React.FC = () => {
             )}
           </div>
 
-          {/* Job Title - Multiselect Dropdown */}
+          {/* Job Title - Input with Tags */}
           <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-foreground">Job Title</Label>
-            <Popover open={isBuyerRolePopoverOpen} onOpenChange={setIsBuyerRolePopoverOpen}>
-              <PopoverTrigger asChild>
-                <Button
+            <Label>Job Title</Label>
+            <Popover open={isBuyerRolePopoverOpen} onOpenChange={setIsBuyerRolePopoverOpen} modal={false}>
+              <div className="relative">
+                <Input
                   ref={buyerRoleRef}
-                  variant="outline"
-                  role="combobox"
-                  className={cn("w-full justify-between h-9 text-sm font-normal", validationErrors.buyerRole && "border-destructive")}
-                  onClick={() => setIsBuyerRolePopoverOpen(!isBuyerRolePopoverOpen)}
-                >
-                  {selectedBuyerRoles.length > 0 
-                    ? `${selectedBuyerRoles.length} selected`
-                    : "Select job title..."}
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 z-[100]" align="start">
-                <Command>
-                  <CommandInput placeholder="Search job title..." />
+                  placeholder="Type or Select"
+                  value={buyerRoleInput}
+                  onChange={(e) => {
+                    setBuyerRoleInput(e.target.value);
+                    setIsBuyerRolePopoverOpen(true);
+                  }}
+                  onClick={() => {
+                    setIsBuyerRolePopoverOpen(true);
+                  }}
+                  onBlur={(e) => {
+                    // Delay to allow click events in popover
+                    setTimeout(() => {
+                      const activeElement = document.activeElement;
+                      const popoverContent = document.querySelector('[role="dialog"]');
+                      if (!popoverContent?.contains(activeElement) && activeElement !== buyerRoleRef.current) {
+                        setIsBuyerRolePopoverOpen(false);
+                      }
+                    }, 200);
+                  }}
+                  onKeyDown={handleBuyerRoleInputKeyDown}
+                  className={cn("h-9 text-sm pr-8", validationErrors.buyerRole && "border-destructive")}
+                />
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="absolute inset-0 h-9 w-full opacity-0"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setIsBuyerRolePopoverOpen(true);
+                      buyerRoleRef.current?.focus();
+                    }}
+                    type="button"
+                    tabIndex={-1}
+                  />
+                </PopoverTrigger>
+                <ChevronsUpDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 shrink-0 opacity-50 pointer-events-none z-10" />
+              </div>
+              <PopoverContent 
+                className="w-[var(--radix-popover-trigger-width)] p-0 z-[100]" 
+                side="bottom" 
+                align="start"
+                sideOffset={4}
+                avoidCollisions={false}
+                onOpenAutoFocus={(e) => e.preventDefault()}
+                onCloseAutoFocus={(e) => {
+                  e.preventDefault();
+                  buyerRoleRef.current?.focus();
+                }}
+              >
+                <Command shouldFilter={false}>
                   <CommandList>
-                    <CommandEmpty>No job title found.</CommandEmpty>
+                    <CommandEmpty>
+                      {buyerRoleInput.trim() ? (
+                        <div className="py-2 text-sm text-muted-foreground">
+                          Press Enter to add "{buyerRoleInput.trim()}"
+                        </div>
+                      ) : (
+                        "No job title found."
+                      )}
+                    </CommandEmpty>
                     <CommandGroup>
                       {BUYER_ROLE_SUGGESTIONS.filter(role => 
-                        !selectedBuyerRoles.includes(role)
+                        !selectedBuyerRoles.includes(role) &&
+                        role.toLowerCase().includes(buyerRoleInput.toLowerCase())
                       ).map((role) => (
                         <CommandItem
                           key={role}
                           value={role}
-                          onSelect={() => {
-                            handleBuyerRoleToggle(role);
+                          onSelect={(currentValue) => {
+                            handleBuyerRoleToggle(currentValue);
+                            setIsBuyerRolePopoverOpen(false);
                           }}
                         >
                           <Check
@@ -1142,7 +1250,7 @@ const ICPManager: React.FC = () => {
 
           {/* ICP Fit - Simple Dropdown */}
           <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-foreground">ICP Fit</Label>
+            <Label>ICP Fit</Label>
             <Select value={fitConfidence} onValueChange={(value) => handleFitConfidenceSelect(value as FitConfidence)}>
               <SelectTrigger className={cn("h-9 text-sm font-normal", validationErrors.fitConfidence && "border-destructive")}>
                 <SelectValue placeholder="Select ICP fit..." />
@@ -1164,7 +1272,7 @@ const ICPManager: React.FC = () => {
         {/* Companies on Watchlist and Companies to Exclude - Side by Side */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
           <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-foreground flex items-center gap-1.5">
+            <Label className="flex items-center gap-1.5">
               <Eye className="h-3 w-3" />
               Companies on Watchlist (Optional)
             </Label>
@@ -1181,7 +1289,7 @@ const ICPManager: React.FC = () => {
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-foreground">Companies to Exclude (Optional)</Label>
+            <Label>Companies to Exclude (Optional)</Label>
             <Input
               ref={accountsToAvoidRef}
               placeholder="e.g., CompanyA, CompanyB"
@@ -1194,7 +1302,7 @@ const ICPManager: React.FC = () => {
 
         {/* Additional Criteria - Full Width */}
         <div className="space-y-2 pt-2 border-t">
-          <Label className="text-sm font-semibold text-foreground">Additional Criteria</Label>
+          <Label className="font-semibold">Additional Criteria</Label>
           <Input
             placeholder="Any additional criteria or specific requirements for your ICP..."
             value={additionalContext}
