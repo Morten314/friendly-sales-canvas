@@ -16,6 +16,7 @@ class Contact(BaseModel):
 
 # Lead model
 class Lead(BaseModel):
+    lead_id: Optional[str] = None
     company: str
     industry: str
     size: str
@@ -24,6 +25,20 @@ class Lead(BaseModel):
     techStack: List[str]
     contact: Contact
     status: str
+    user_id: Optional[str] = None
+    org_id: Optional[str] = None
+
+# Lead Create Request (flexible key-value pairs)
+class LeadCreateRequest(BaseModel):
+    user_id: str
+    org_id: str
+    data: Dict[str, Any]  # Flexible key-value pairs for lead properties
+
+# Lead Update Request
+class LeadUpdateRequest(BaseModel):
+    user_id: str
+    org_id: str
+    data: Dict[str, Any]  # Flexible key-value pairs for lead properties
 
 # Sales Pipeline Models
 class StageStats(BaseModel):

@@ -23,7 +23,7 @@ from config import origins, STAGE_ORDER, STAGE_MAPPING, s3_bucket, aws_region, a
 from models import (
     ProspectData, Lead, Contact, SalesPipelineResponse, TimeframeResponse, StageStats,
     CompanyProfile, UserProfile, ScoutProfile, MarketRequest, EditRequest,
-    CustomerProfileRequest, CustomerProfileICP
+    CustomerProfileRequest, CustomerProfileICP, LeadCreateRequest, LeadUpdateRequest, LeadDeleteRequest
 )
 from database import driver, graph, client, upsert_node
 from llm_config import chain, chain2
@@ -168,49 +168,49 @@ async def upload_prospect_list(file: UploadFile = File(...)):
     result = process_prospect_list(file_path)
     return result
 
-@app.get("/leads/{user_id}", response_model=List[Lead])
-def get_all_leads(user_id: str, org_id: str = Query(None)):
+@app.get("/leads", response_model=List[Lead])
+def get_all_leads(user_id: str = Query(...), org_id: str = Query(...)):
     """
-    Get leads filtered by org_id. 
-    If org_id is 'brewra', returns leads for all users in that org.
-    Otherwise, filters by the specific org_id.
+    Get all leads filtered by user_id and org_id (multitenant).
+    Returns leads with company, contact, and tech stack information.
     Uses parameterized queries for security.
     """
-    # If no org_id provided, return empty to enforce org_id requirement
-    if not org_id:
-        return []
-    
-    # Use parameterized query for security
+    # Use parameterized query for security with multitenancy
     query_string = """
-    MATCH (l:Lead)<-[:Has_Lead]-(c:Company)
-    WHERE c.org_id = $org_id
+    MATCH (l:Lead)
+    WHERE l.user_id = $user_id AND l.org_id = $org_id
+    OPTIONAL MATCH (c:Company)-[:Has_Lead]->(l)
     OPTIONAL MATCH (c)-[:Uses_Tech]->(t:Tech)
     OPTIONAL MATCH (c)-[:Has_Contact]->(contact:Contact)-[:Is_POC_For]->(l)
     RETURN 
-        c.name AS company,
-        c.industry AS industry,
-        toString(c.size) AS size,
-        c.region AS region,
-        c.location AS location,
+        COALESCE(l.lead_id, toString(id(l))) AS lead_id,
+        COALESCE(c.name, '') AS company,
+        COALESCE(c.industry, '') AS industry,
+        COALESCE(toString(c.size), '') AS size,
+        COALESCE(c.region, '') AS region,
+        COALESCE(c.location, '') AS location,
         collect(DISTINCT t.name) AS techStack,
         COALESCE(contact.first_name, '') + ' ' + COALESCE(contact.last_name, '') AS contact_name,
         contact.designation AS title,
         contact.department AS department,
         contact.email AS email,
-        l.stage AS status
+        COALESCE(l.stage, '') AS status,
+        l.user_id AS user_id,
+        l.org_id AS org_id
     """
     
     # Execute query with parameters
     with driver.session() as session:
-        results = session.run(query_string, org_id=org_id)
+        results = session.run(query_string, user_id=user_id, org_id=org_id)
         leads = []
         for record in results:
             lead = Lead(
-                company=record["company"],
-                industry=record["industry"],
-                size=record["size"],  # Already a string from the query
-                region=record["region"],
-                location=record["location"],
+                lead_id=str(record["lead_id"]),
+                company=record.get("company", ""),
+                industry=record.get("industry", ""),
+                size=record.get("size", ""),
+                region=record.get("region", ""),
+                location=record.get("location", ""),
                 techStack=record.get("techStack", []),
                 contact=Contact(
                     name=record.get("contact_name"),
@@ -218,11 +218,528 @@ def get_all_leads(user_id: str, org_id: str = Query(None)):
                     department=record.get("department"),
                     email=record.get("email")
                 ),
-                status=record["status"]
+                status=record.get("status", ""),
+                user_id=record.get("user_id"),
+                org_id=record.get("org_id")
             )
             leads.append(lead)
 
     return leads
+
+@app.post("/leads", response_model=Dict[str, Any])
+async def add_lead(request: LeadCreateRequest):
+    """
+    Add a single lead manually with flexible key-value pairs.
+    Automatically maps and stores in Neo4j with user_id and org_id for multitenancy.
+    Creates Company, Contact, and Tech nodes as needed.
+    """
+    try:
+        import uuid
+        from datetime import datetime
+        
+        # Generate unique lead ID
+        lead_id = str(uuid.uuid4())
+        
+        # Prepare lead data with multitenancy fields
+        lead_data = request.data.copy()
+        lead_data["user_id"] = request.user_id
+        lead_data["org_id"] = request.org_id
+        lead_data["lead_id"] = lead_id
+        lead_data["created_at"] = datetime.utcnow().isoformat()
+        
+        # Extract company information (flexible mapping)
+        company_name = lead_data.pop("company", lead_data.pop("company_name", lead_data.pop("Company", "")))
+        if not company_name:
+            raise HTTPException(status_code=400, detail="Company name is required")
+        
+        # Extract contact information (flexible mapping)
+        contact_data = {}
+        contact_fields = {
+            "first_name": ["first_name", "firstName", "firstname", "contact_first_name"],
+            "last_name": ["last_name", "lastName", "lastname", "contact_last_name"],
+            "designation": ["designation", "title", "job_title", "role"],
+            "department": ["department", "dept"],
+            "email": ["email", "contact_email", "email_address"]
+        }
+        
+        for neo4j_field, possible_keys in contact_fields.items():
+            for key in possible_keys:
+                if key in lead_data:
+                    contact_data[neo4j_field] = lead_data.pop(key)
+                    break
+        
+        # Extract tech stack (flexible mapping)
+        tech_stack = []
+        tech_keys = ["techStack", "tech_stack", "technologies", "tech", "tools"]
+        for key in tech_keys:
+            if key in lead_data:
+                tech_value = lead_data.pop(key)
+                if isinstance(tech_value, list):
+                    tech_stack = tech_value
+                elif isinstance(tech_value, str):
+                    tech_stack = [t.strip() for t in tech_value.split(",")]
+                break
+        
+        # Extract stage/status
+        stage = lead_data.pop("stage", lead_data.pop("status", lead_data.pop("Status", "Initial Outreach")))
+        lead_data["stage"] = stage
+        
+        with driver.session() as session:
+            # Create or update Company node
+            company_data = {
+                "name": company_name,
+                "industry": lead_data.pop("industry", lead_data.pop("Industry", "")),
+                "size": lead_data.pop("size", lead_data.pop("Size", "")),
+                "region": lead_data.pop("region", lead_data.pop("Region", "")),
+                "location": lead_data.pop("location", lead_data.pop("Location", "")),
+                "org_id": request.org_id
+            }
+            session.execute_write(
+                upsert_node,
+                "Company",
+                "name",
+                company_name,
+                company_data
+            )
+            
+            # Create Lead node with all remaining flexible fields
+            session.execute_write(
+                upsert_node,
+                "Lead",
+                "lead_id",
+                lead_id,
+                lead_data
+            )
+            
+            # Create relationship: Company -> Lead
+            session.run("""
+                MATCH (c:Company {name: $company_name})
+                MATCH (l:Lead {lead_id: $lead_id})
+                MERGE (c)-[:Has_Lead]->(l)
+            """, company_name=company_name, lead_id=lead_id)
+            
+            # Create Contact node if contact data exists
+            if contact_data and (contact_data.get("first_name") or contact_data.get("last_name") or contact_data.get("email")):
+                contact_id = str(uuid.uuid4())
+                contact_data["contact_id"] = contact_id
+                contact_data["org_id"] = request.org_id
+                
+                session.execute_write(
+                    upsert_node,
+                    "Contact",
+                    "contact_id",
+                    contact_id,
+                    contact_data
+                )
+                
+                # Create relationships: Company -> Contact, Contact -> Lead
+                session.run("""
+                    MATCH (c:Company {name: $company_name})
+                    MATCH (contact:Contact {contact_id: $contact_id})
+                    MATCH (l:Lead {lead_id: $lead_id})
+                    MERGE (c)-[:Has_Contact]->(contact)
+                    MERGE (contact)-[:Is_POC_For]->(l)
+                """, company_name=company_name, contact_id=contact_id, lead_id=lead_id)
+            
+            # Create Tech nodes and relationships
+            for tech_name in tech_stack:
+                if tech_name:
+                    session.run("""
+                        MATCH (c:Company {name: $company_name})
+                        MERGE (t:Tech {name: $tech_name})
+                        MERGE (c)-[:Uses_Tech]->(t)
+                    """, company_name=company_name, tech_name=tech_name)
+        
+        return {
+            "status": "success",
+            "message": "Lead created successfully",
+            "lead_id": lead_id
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating lead: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to create lead: {str(e)}")
+
+@app.put("/leads/{lead_id}", response_model=Dict[str, Any])
+async def update_lead(lead_id: str, request: LeadUpdateRequest):
+    """
+    Modify a single lead with flexible key-value pairs.
+    Updates lead properties while maintaining multitenancy (user_id and org_id).
+    """
+    try:
+        from datetime import datetime
+        
+        with driver.session() as session:
+            # Verify lead exists and belongs to user/org
+            verify_query = """
+                MATCH (l:Lead {lead_id: $lead_id})
+                WHERE l.user_id = $user_id AND l.org_id = $org_id
+                RETURN l
+            """
+            result = session.run(verify_query, lead_id=lead_id, user_id=request.user_id, org_id=request.org_id)
+            if not result.single():
+                raise HTTPException(status_code=404, detail="Lead not found or access denied")
+            
+            # Prepare update data
+            update_data = request.data.copy()
+            update_data["updated_at"] = datetime.utcnow().isoformat()
+            
+            # Handle company updates
+            company_name = update_data.pop("company", update_data.pop("company_name", None))
+            if company_name:
+                company_data = {}
+                if "industry" in update_data:
+                    company_data["industry"] = update_data.pop("industry")
+                if "size" in update_data:
+                    company_data["size"] = update_data.pop("size")
+                if "region" in update_data:
+                    company_data["region"] = update_data.pop("region")
+                if "location" in update_data:
+                    company_data["location"] = update_data.pop("location")
+                
+                if company_data:
+                    session.execute_write(
+                        upsert_node,
+                        "Company",
+                        "name",
+                        company_name,
+                        company_data
+                    )
+            
+            # Handle contact updates
+            contact_updates = {}
+            contact_mapping = {
+                "first_name": ["first_name", "firstName", "firstname"],
+                "last_name": ["last_name", "lastName", "lastname"],
+                "designation": ["designation", "title", "job_title"],
+                "department": ["department", "dept"],
+                "email": ["email", "contact_email"]
+            }
+            
+            for neo4j_field, possible_keys in contact_mapping.items():
+                for key in possible_keys:
+                    if key in update_data:
+                        contact_updates[neo4j_field] = update_data.pop(key)
+                        break
+            
+            # Handle tech stack updates
+            tech_stack = None
+            for key in ["techStack", "tech_stack", "technologies", "tech"]:
+                if key in update_data:
+                    tech_value = update_data.pop(key)
+                    if isinstance(tech_value, list):
+                        tech_stack = tech_value
+                    elif isinstance(tech_value, str):
+                        tech_stack = [t.strip() for t in tech_value.split(",")]
+                    break
+            
+            # Update lead node with remaining fields
+            if update_data:
+                session.execute_write(
+                    upsert_node,
+                    "Lead",
+                    "lead_id",
+                    lead_id,
+                    update_data
+                )
+            
+            # Update contact if provided
+            if contact_updates:
+                # Find existing contact for this lead
+                contact_query = """
+                    MATCH (contact:Contact)-[:Is_POC_For]->(l:Lead {lead_id: $lead_id})
+                    RETURN contact.contact_id AS contact_id
+                    LIMIT 1
+                """
+                contact_result = session.run(contact_query, lead_id=lead_id)
+                contact_record = contact_result.single()
+                
+                if contact_record:
+                    contact_id = contact_record["contact_id"]
+                    session.execute_write(
+                        upsert_node,
+                        "Contact",
+                        "contact_id",
+                        contact_id,
+                        contact_updates
+                    )
+            
+            # Update tech stack if provided
+            if tech_stack is not None:
+                # Get company name from lead
+                company_query = """
+                    MATCH (c:Company)-[:Has_Lead]->(l:Lead {lead_id: $lead_id})
+                    RETURN c.name AS company_name
+                    LIMIT 1
+                """
+                company_result = session.run(company_query, lead_id=lead_id)
+                company_record = company_result.single()
+                
+                if company_record:
+                    company_name = company_record["company_name"]
+                    # Remove old tech relationships
+                    session.run("""
+                        MATCH (c:Company {name: $company_name})-[r:Uses_Tech]->(t:Tech)
+                        DELETE r
+                    """, company_name=company_name)
+                    
+                    # Add new tech relationships
+                    for tech_name in tech_stack:
+                        if tech_name:
+                            session.run("""
+                                MATCH (c:Company {name: $company_name})
+                                MERGE (t:Tech {name: $tech_name})
+                                MERGE (c)-[:Uses_Tech]->(t)
+                            """, company_name=company_name, tech_name=tech_name)
+        
+        return {
+            "status": "success",
+            "message": "Lead updated successfully",
+            "lead_id": lead_id
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating lead: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to update lead: {str(e)}")
+
+@app.delete("/leads/{lead_id}", response_model=Dict[str, Any])
+async def delete_lead(lead_id: str, user_id: str = Query(...), org_id: str = Query(...)):
+    """
+    Delete a single lead.
+    Verifies multitenancy (user_id and org_id) before deletion.
+    """
+    try:
+        with driver.session() as session:
+            # Verify lead exists and belongs to user/org
+            verify_query = """
+                MATCH (l:Lead {lead_id: $lead_id})
+                WHERE l.user_id = $user_id AND l.org_id = $org_id
+                RETURN l
+            """
+            result = session.run(verify_query, lead_id=lead_id, user_id=user_id, org_id=org_id)
+            if not result.single():
+                raise HTTPException(status_code=404, detail="Lead not found or access denied")
+            
+            # Delete lead and its relationships
+            # Note: We keep Company, Contact, and Tech nodes but remove relationships
+            delete_query = """
+                MATCH (l:Lead {lead_id: $lead_id})
+                OPTIONAL MATCH (c:Company)-[r1:Has_Lead]->(l)
+                OPTIONAL MATCH (contact:Contact)-[r2:Is_POC_For]->(l)
+                OPTIONAL MATCH (l)-[r3]->()
+                DELETE r1, r2, r3, l
+            """
+            session.run(delete_query, lead_id=lead_id)
+        
+        return {
+            "status": "success",
+            "message": "Lead deleted successfully",
+            "lead_id": lead_id
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting lead: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete lead: {str(e)}")
+
+@app.post("/leads/batch-upload", response_model=Dict[str, Any])
+async def batch_upload_leads(
+    file: UploadFile = File(...),
+    user_id: str = Form(...),
+    org_id: str = Form(...)
+):
+    """
+    Batch upload leads from CSV file.
+    Column headings become keys and row values become values.
+    Each row creates a new lead with multitenancy (user_id and org_id).
+    """
+    try:
+        import pandas as pd
+        import uuid
+        from datetime import datetime
+        import tempfile
+        import os
+        
+        # Validate file type
+        if not file.filename.endswith('.csv'):
+            raise HTTPException(status_code=400, detail="Only CSV files are supported")
+        
+        # Save uploaded file temporarily
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.csv') as tmp_file:
+            shutil.copyfileobj(file.file, tmp_file)
+            tmp_path = tmp_file.name
+        
+        try:
+            # Read CSV file
+            df = pd.read_csv(tmp_path)
+            
+            if df.empty:
+                raise HTTPException(status_code=400, detail="CSV file is empty")
+            
+            # Convert column names to lowercase for consistency (optional)
+            df.columns = df.columns.str.strip()
+            
+            # Process each row
+            created_count = 0
+            error_count = 0
+            errors = []
+            
+            for index, row in df.iterrows():
+                try:
+                    # Convert row to dictionary (column headings become keys)
+                    lead_data = row.to_dict()
+                    
+                    # Remove NaN values
+                    lead_data = {k: v for k, v in lead_data.items() if pd.notna(v)}
+                    
+                    # Generate unique lead ID
+                    lead_id = str(uuid.uuid4())
+                    
+                    # Add multitenancy fields
+                    lead_data["user_id"] = user_id
+                    lead_data["org_id"] = org_id
+                    lead_data["lead_id"] = lead_id
+                    lead_data["created_at"] = datetime.utcnow().isoformat()
+                    
+                    # Extract company information (flexible mapping)
+                    company_name = lead_data.pop("company", lead_data.pop("company_name", lead_data.pop("Company", "")))
+                    if not company_name:
+                        error_count += 1
+                        errors.append(f"Row {index + 1}: Missing company name")
+                        continue
+                    
+                    # Extract contact information (flexible mapping)
+                    contact_data = {}
+                    contact_fields = {
+                        "first_name": ["first_name", "firstName", "firstname", "contact_first_name", "First Name"],
+                        "last_name": ["last_name", "lastName", "lastname", "contact_last_name", "Last Name"],
+                        "designation": ["designation", "title", "job_title", "role", "Title", "Job Title"],
+                        "department": ["department", "dept", "Department"],
+                        "email": ["email", "contact_email", "email_address", "Email"]
+                    }
+                    
+                    for neo4j_field, possible_keys in contact_fields.items():
+                        for key in possible_keys:
+                            if key in lead_data:
+                                contact_data[neo4j_field] = str(lead_data.pop(key))
+                                break
+                    
+                    # Extract tech stack (flexible mapping)
+                    tech_stack = []
+                    tech_keys = ["techStack", "tech_stack", "technologies", "tech", "tools", "Tech Stack"]
+                    for key in tech_keys:
+                        if key in lead_data:
+                            tech_value = lead_data.pop(key)
+                            if isinstance(tech_value, list):
+                                tech_stack = [str(t) for t in tech_value]
+                            elif isinstance(tech_value, str):
+                                tech_stack = [t.strip() for t in str(tech_value).split(",") if t.strip()]
+                            break
+                    
+                    # Extract stage/status
+                    stage = lead_data.pop("stage", lead_data.pop("status", lead_data.pop("Status", "Initial Outreach")))
+                    lead_data["stage"] = str(stage)
+                    
+                    # Convert all values to strings for Neo4j compatibility
+                    lead_data = {k: str(v) if not isinstance(v, (dict, list)) else v for k, v in lead_data.items()}
+                    
+                    with driver.session() as session:
+                        # Create or update Company node
+                        company_data = {
+                            "name": str(company_name),
+                            "industry": str(lead_data.pop("industry", lead_data.pop("Industry", ""))),
+                            "size": str(lead_data.pop("size", lead_data.pop("Size", ""))),
+                            "region": str(lead_data.pop("region", lead_data.pop("Region", ""))),
+                            "location": str(lead_data.pop("location", lead_data.pop("Location", ""))),
+                            "org_id": org_id
+                        }
+                        session.execute_write(
+                            upsert_node,
+                            "Company",
+                            "name",
+                            str(company_name),
+                            company_data
+                        )
+                        
+                        # Create Lead node with all remaining flexible fields
+                        session.execute_write(
+                            upsert_node,
+                            "Lead",
+                            "lead_id",
+                            lead_id,
+                            lead_data
+                        )
+                        
+                        # Create relationship: Company -> Lead
+                        session.run("""
+                            MATCH (c:Company {name: $company_name})
+                            MATCH (l:Lead {lead_id: $lead_id})
+                            MERGE (c)-[:Has_Lead]->(l)
+                        """, company_name=str(company_name), lead_id=lead_id)
+                        
+                        # Create Contact node if contact data exists
+                        if contact_data and (contact_data.get("first_name") or contact_data.get("last_name") or contact_data.get("email")):
+                            contact_id = str(uuid.uuid4())
+                            contact_data["contact_id"] = contact_id
+                            contact_data["org_id"] = org_id
+                            
+                            session.execute_write(
+                                upsert_node,
+                                "Contact",
+                                "contact_id",
+                                contact_id,
+                                contact_data
+                            )
+                            
+                            # Create relationships: Company -> Contact, Contact -> Lead
+                            session.run("""
+                                MATCH (c:Company {name: $company_name})
+                                MATCH (contact:Contact {contact_id: $contact_id})
+                                MATCH (l:Lead {lead_id: $lead_id})
+                                MERGE (c)-[:Has_Contact]->(contact)
+                                MERGE (contact)-[:Is_POC_For]->(l)
+                            """, company_name=str(company_name), contact_id=contact_id, lead_id=lead_id)
+                        
+                        # Create Tech nodes and relationships
+                        for tech_name in tech_stack:
+                            if tech_name:
+                                session.run("""
+                                    MATCH (c:Company {name: $company_name})
+                                    MERGE (t:Tech {name: $tech_name})
+                                    MERGE (c)-[:Uses_Tech]->(t)
+                                """, company_name=str(company_name), tech_name=str(tech_name))
+                    
+                    created_count += 1
+                    
+                except Exception as e:
+                    error_count += 1
+                    errors.append(f"Row {index + 1}: {str(e)}")
+                    logger.error(f"Error processing row {index + 1}: {str(e)}")
+                    continue
+            
+            return {
+                "status": "success",
+                "message": f"Batch upload completed. {created_count} leads created, {error_count} errors.",
+                "created_count": created_count,
+                "error_count": error_count,
+                "errors": errors[:10] if errors else []  # Limit errors to first 10
+            }
+            
+        finally:
+            # Clean up temporary file
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in batch upload: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to process CSV file: {str(e)}")
 
 @app.get("/Sales_Pipeline")
 def get_sales_pipeline(user_id: str = Query(...), timeframe: int = Query(...)):
