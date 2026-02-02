@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { 
   Check, 
   X, 
@@ -18,11 +18,13 @@ import {
   Download,
   Minimize2,
   AlertCircle,
-  Sparkles
+  Sparkles,
+  RefreshCw,
+  Plus,
+  Globe
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { profilerCache } from "@/lib/profilerCache";
 
 interface ExistingICP {
   id: string;
@@ -31,15 +33,16 @@ interface ExistingICP {
   industry?: string;
   companySize?: string;
   buyerRole?: string;
-  accountsOnWatchlist?: number;
-  accountsToAvoid?: number;
   fitConfidence?: string;
-  additionalContext?: string;
+  status?: 'active' | 'inactive';
 }
 
 interface SuggestedICP {
   id: string;
   name: string;
+  type: 'refined' | 'new';
+  sourceICPId?: string;
+  sourceICPName?: string;
   industry: string;
   segment: string;
   companySize: string;
@@ -47,18 +50,16 @@ interface SuggestedICP {
   regions: string[];
   keyAttributes: string[];
   growthIndicator?: string;
-  // Suggestion-specific fields
-  whySuggested?: string[];
-  differenceFromCurrent?: string[];
-  confidenceScore?: 'High' | 'Medium' | 'Low';
-  // Report data
+  whySuggested: string[];
+  whatChanged?: string[];
+  opportunityUnlocked?: string;
+  confidenceScore: 'High' | 'Medium' | 'Low';
+  tag?: string;
   marketSize?: string;
   growth?: string;
   topPainPoint?: string;
   buyingTriggers?: string[];
   competitors?: string[];
-  // Link to existing ICP
-  existingICPId?: string;
 }
 
 interface ICPCardStatus {
@@ -78,160 +79,154 @@ export const SuggestedICPCards = ({
   onICPRejected, 
   refreshTrigger = 0 
 }: SuggestedICPCardsProps) => {
-  const { currentUser } = useAuth();
   const { toast } = useToast();
   
   const [existingICPs, setExistingICPs] = useState<ExistingICP[]>([]);
-  const [suggestedICPs, setSuggestedICPs] = useState<SuggestedICP[]>([]);
+  const [refinedICPs, setRefinedICPs] = useState<SuggestedICP[]>([]);
+  const [newICPs, setNewICPs] = useState<SuggestedICP[]>([]);
   const [cardStatuses, setCardStatuses] = useState<Record<string, ICPCardStatus>>({});
   const [expandedReportId, setExpandedReportId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [visibleCount, setVisibleCount] = useState(5);
 
-  // Load existing ICPs from customer profile (localStorage or API)
+  // Load existing ICPs and generate suggestions
   useEffect(() => {
-    const loadExistingICPs = () => {
+    const loadData = async () => {
+      setLoading(true);
+      
+      // Load existing ICPs from localStorage (Customer Profile)
+      let icps: ExistingICP[] = [];
       try {
-        const stored = localStorage.getItem('customerICPs');
+        const stored = localStorage.getItem('customerICPs') || localStorage.getItem('missionControlICPs');
         if (stored) {
-          const parsed = JSON.parse(stored);
-          setExistingICPs(parsed);
-          return parsed;
+          icps = JSON.parse(stored);
         }
       } catch (error) {
         console.error('Error loading existing ICPs:', error);
       }
       
-      // Default sample existing ICPs if none in storage
-      const defaultICPs: ExistingICP[] = [
-        {
-          id: "existing-1",
-          name: "ICP 1",
-          geography: "North America",
-          industry: "Software & Technology",
-          companySize: "100-500 employees",
-          buyerRole: "CTO / VP Engineering",
-          accountsOnWatchlist: 45,
-          accountsToAvoid: 12,
-          fitConfidence: "High",
-          additionalContext: "Focus on companies with active cloud migration initiatives"
-        },
-        {
-          id: "existing-2",
-          name: "ICP 2",
-          geography: "US, UK",
-          industry: "Healthcare",
-          companySize: "200-1000 employees",
-          buyerRole: "CIO / Chief Digital Officer",
-          accountsOnWatchlist: 28,
-          accountsToAvoid: 5,
-          fitConfidence: "Medium",
-          additionalContext: "Prioritize organizations with HIPAA compliance needs"
-        }
-      ];
-      setExistingICPs(defaultICPs);
-      return defaultICPs;
-    };
-
-    const existingData = loadExistingICPs();
-    
-    // Generate suggested ICPs based on existing ones
-    const generateSuggestedICPs = async () => {
-      setLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 600));
+      // Default ICPs if none exist
+      if (icps.length === 0) {
+        icps = [
+          {
+            id: "existing-1",
+            name: "ICP 1",
+            geography: "North America",
+            industry: "Software & Technology",
+            companySize: "100-500 employees",
+            buyerRole: "CTO / VP Engineering",
+            fitConfidence: "High",
+            status: 'active'
+          },
+          {
+            id: "existing-2",
+            name: "ICP 2",
+            geography: "US, UK",
+            industry: "Healthcare",
+            companySize: "200-1000 employees",
+            buyerRole: "CIO / Chief Digital Officer",
+            fitConfidence: "Medium",
+            status: 'active'
+          }
+        ];
+      }
       
-      // Map suggestions to existing ICPs
-      const sampleICPs: SuggestedICP[] = [
+      setExistingICPs(icps);
+      
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Generate Refined ICPs (improvements to existing)
+      const refined: SuggestedICP[] = [
         {
-          id: "suggested-1",
-          existingICPId: "existing-1",
-          name: "Enterprise SaaS Decision Makers",
+          id: "refined-1",
+          name: "Mid-Market SaaS – RevOps Teams",
+          type: 'refined',
+          sourceICPId: icps[0]?.id,
+          sourceICPName: icps[0]?.name || "ICP 1",
           industry: "Software & Technology",
-          segment: "Enterprise B2B SaaS",
-          companySize: "500-2000 employees",
-          decisionMakers: ["CTO", "VP of Engineering", "Chief Digital Officer"],
-          regions: ["North America", "Western Europe"],
-          keyAttributes: ["Cloud-first strategy", "API-driven architecture", "DevOps culture"],
-          growthIndicator: "High",
+          segment: "RevOps Focus",
+          companySize: "100-500 employees",
+          regions: ["North America", "UK"],
+          decisionMakers: ["VP of RevOps", "Head of Sales Operations", "CRO"],
+          keyAttributes: ["High growth stage", "Using Salesforce or HubSpot", "Series B+"],
           whySuggested: [
-            "Expands your Mid-Market SaaS Buyers to enterprise tier",
-            "Same buyer personas with larger deal sizes",
-            "Natural upsell path from existing ICP"
+            "RevOps roles show 3x higher engagement with your content",
+            "Faster sales cycles when RevOps is involved early",
+            "Higher average deal size in this segment"
           ],
-          differenceFromCurrent: [
-            "Larger company size (500-2000 vs 100-500)",
-            "Added DevOps culture as key attribute",
-            "Western Europe added as target region"
+          whatChanged: [
+            "Added RevOps focus to buyer roles",
+            "Included UK in target regions",
+            "Added tech stack qualification criteria"
           ],
-          confidenceScore: "High",
+          confidenceScore: 'High',
           marketSize: "$45B",
           growth: "+18% YoY",
-          topPainPoint: "Legacy system modernization",
-          buyingTriggers: ["Digital transformation initiative", "Cloud migration project", "New CTO hire"],
-          competitors: ["Salesforce", "HubSpot", "Microsoft Dynamics"]
-        },
-        {
-          id: "suggested-2",
-          existingICPId: "existing-2",
-          name: "Healthcare Tech Innovators",
-          industry: "Healthcare Technology",
-          segment: "Digital Health Platforms",
-          companySize: "100-500 employees",
-          decisionMakers: ["Chief Medical Officer", "VP of Product", "Head of Compliance"],
-          regions: ["US", "UK", "Germany"],
-          keyAttributes: ["HIPAA Compliance", "Interoperability focus", "Patient-centric design"],
-          growthIndicator: "High",
-          whySuggested: [
-            "Builds on your Healthcare Digital Leaders profile",
-            "Targets faster-moving healthtech segment",
-            "Higher growth potential in digital health"
-          ],
-          differenceFromCurrent: [
-            "Focus on healthtech startups vs traditional healthcare",
-            "Germany added as expansion market",
-            "VP of Product added as key decision maker"
-          ],
-          confidenceScore: "Medium",
-          marketSize: "$32B",
-          growth: "+22% YoY",
-          topPainPoint: "Data interoperability challenges",
-          buyingTriggers: ["EHR integration needs", "Telehealth expansion", "Value-based care transition"],
-          competitors: ["Epic", "Cerner", "Veeva"]
-        },
-        {
-          id: "suggested-3",
-          existingICPId: "existing-1",
-          name: "Fintech Scale-ups",
-          industry: "Financial Services",
-          segment: "Payment & Banking Tech",
-          companySize: "50-200 employees",
-          decisionMakers: ["CTO", "Head of Compliance", "VP of Product"],
-          regions: ["US", "UK", "Singapore"],
-          keyAttributes: ["API-first architecture", "Real-time processing", "Regulatory compliance"],
-          growthIndicator: "High",
-          whySuggested: [
-            "Adjacent vertical to your SaaS focus",
-            "Similar technical buyer profile",
-            "High willingness to pay for quality"
-          ],
-          differenceFromCurrent: [
-            "New industry vertical (fintech)",
-            "Smaller, faster-moving companies",
-            "Singapore as emerging market"
-          ],
-          confidenceScore: "High",
-          marketSize: "$28B",
-          growth: "+25% YoY",
-          topPainPoint: "Scaling infrastructure",
-          buyingTriggers: ["Series B+ funding", "New market expansion", "Regulatory changes"],
-          competitors: ["Stripe", "Plaid", "Marqeta"]
+          topPainPoint: "Sales & marketing alignment",
+          buyingTriggers: ["New CRO hire", "Revenue target increase", "Tech stack consolidation"],
+          competitors: ["Clari", "Gong", "Outreach"]
         }
       ];
       
-      setSuggestedICPs(sampleICPs);
+      // Generate New ICPs (brand new suggestions)
+      const newSuggestions: SuggestedICP[] = [
+        {
+          id: "new-1",
+          name: "Enterprise FinTech Decision Makers",
+          type: 'new',
+          tag: "New ICP",
+          industry: "Financial Services",
+          segment: "FinTech",
+          companySize: "500-2000 employees",
+          regions: ["US", "EU"],
+          decisionMakers: ["Chief Digital Officer", "VP of Innovation", "Head of Partnerships"],
+          keyAttributes: ["Digital transformation focus", "API-first strategy", "Regulatory compliance needs"],
+          whySuggested: [
+            "High overlap with your current product capabilities",
+            "Growing market with 24% YoY expansion",
+            "Lower competition in this segment"
+          ],
+          opportunityUnlocked: "Access to $2.4B addressable market with strong product-market fit signals",
+          confidenceScore: 'Medium',
+          marketSize: "$28B",
+          growth: "+24% YoY",
+          topPainPoint: "Legacy system modernization",
+          buyingTriggers: ["Regulatory changes", "Digital transformation initiative", "Competitor pressure"],
+          competitors: ["Stripe", "Plaid", "Marqeta"]
+        },
+        {
+          id: "new-2",
+          name: "Growth-Stage E-commerce Leaders",
+          type: 'new',
+          sourceICPName: icps[0]?.name || "ICP 1",
+          tag: `Lookalike of ${icps[0]?.name || "ICP 1"}`,
+          industry: "E-commerce & Retail",
+          segment: "D2C Brands",
+          companySize: "50-200 employees",
+          regions: ["North America"],
+          decisionMakers: ["Head of Growth", "VP of Marketing", "COO"],
+          keyAttributes: ["Shopify Plus users", "High ad spend", "Scaling operations"],
+          whySuggested: [
+            "Similar buying patterns to your best customers",
+            "Strong intent signals detected in this segment",
+            "Complementary to existing ICP focus"
+          ],
+          opportunityUnlocked: "Expand into adjacent market with proven playbook from ICP 1",
+          confidenceScore: 'High',
+          marketSize: "$18B",
+          growth: "+22% YoY",
+          topPainPoint: "Scaling customer acquisition",
+          buyingTriggers: ["Series A+ funding", "New market expansion", "Holiday season prep"],
+          competitors: ["Shopify", "Klaviyo", "Attentive"]
+        }
+      ];
       
+      setRefinedICPs(refined);
+      setNewICPs(newSuggestions);
+      
+      // Initialize card statuses
       const initialStatuses: Record<string, ICPCardStatus> = {};
-      sampleICPs.forEach(icp => {
+      [...refined, ...newSuggestions].forEach(icp => {
         initialStatuses[icp.id] = { status: 'suggested' };
       });
       setCardStatuses(initialStatuses);
@@ -239,7 +234,7 @@ export const SuggestedICPCards = ({
       setLoading(false);
     };
     
-    generateSuggestedICPs();
+    loadData();
   }, [refreshTrigger]);
 
   const handleAcceptICP = (icp: SuggestedICP) => {
@@ -248,7 +243,6 @@ export const SuggestedICPCards = ({
       [icp.id]: { status: 'accepted', acceptedAt: new Date() }
     }));
     
-    // Add to customer profile (emit event for parent to handle)
     onICPAccepted?.(icp);
     
     toast({
@@ -276,293 +270,274 @@ export const SuggestedICPCards = ({
     setExpandedReportId(expandedReportId === icpId ? null : icpId);
   };
 
-  const getConfidenceBadgeColor = (confidence?: 'High' | 'Medium' | 'Low') => {
+  const getConfidenceBadgeVariant = (confidence: string): "default" | "secondary" | "outline" => {
     switch (confidence) {
-      case 'High':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'Medium':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'Low':
-        return 'bg-orange-100 text-orange-800 border-orange-200';
-      default:
-        return 'bg-muted text-muted-foreground';
+      case 'High': return 'default';
+      case 'Medium': return 'secondary';
+      case 'Low': return 'outline';
+      default: return 'outline';
     }
   };
 
-  const getStatusBadge = (status: ICPCardStatus) => {
-    switch (status.status) {
-      case 'accepted':
-        return (
-          <Badge className="bg-green-100 text-green-800 border-green-200">
-            <Check className="h-3 w-3 mr-1" />
-            Accepted
-          </Badge>
-        );
-      case 'rejected':
-        return (
-          <Badge variant="outline" className="bg-muted/50 text-muted-foreground">
-            <X className="h-3 w-3 mr-1" />
-            Rejected
-          </Badge>
-        );
-      default:
-        return (
-          <Badge className="bg-primary/10 text-primary border-primary/20">
-            <Sparkles className="h-3 w-3 mr-1" />
-            Suggested
-          </Badge>
-        );
-    }
+  const pendingRefinedCount = refinedICPs.filter(icp => cardStatuses[icp.id]?.status === 'suggested').length;
+  const pendingNewCount = newICPs.filter(icp => cardStatuses[icp.id]?.status === 'suggested').length;
+
+  // Render a suggestion card (used for both refined and new ICPs)
+  const renderSuggestionCard = (icp: SuggestedICP) => {
+    const status = cardStatuses[icp.id] || { status: 'suggested' };
+    const isExpanded = expandedReportId === icp.id;
+    const isRejected = status.status === 'rejected';
+    const isAccepted = status.status === 'accepted';
+    
+    return (
+      <Card 
+        key={icp.id} 
+        className={`min-w-[340px] max-w-[360px] flex-shrink-0 transition-all duration-300 ${
+          isAccepted ? 'border-green-200 bg-green-50/30' :
+          isRejected ? 'opacity-50 border-muted' : ''
+        }`}
+      >
+        <CardHeader className="pb-2">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1 min-w-0">
+              <CardTitle className="text-base font-semibold truncate">{icp.name}</CardTitle>
+              {icp.type === 'refined' && icp.sourceICPName && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Refined from: {icp.sourceICPName}
+                </p>
+              )}
+              {icp.tag && (
+                <Badge variant="outline" className="mt-1 text-xs">
+                  {icp.tag}
+                </Badge>
+              )}
+            </div>
+            <div className="flex flex-col items-end gap-1">
+              <Badge variant={getConfidenceBadgeVariant(icp.confidenceScore)} className="text-xs">
+                {icp.confidenceScore}
+              </Badge>
+              {isAccepted && (
+                <Badge className="bg-green-600 text-xs">Accepted</Badge>
+              )}
+              {isRejected && (
+                <Badge variant="secondary" className="text-xs">Rejected</Badge>
+              )}
+            </div>
+          </div>
+        </CardHeader>
+        
+        <CardContent className="space-y-3 pb-3">
+          {/* Why Suggested */}
+          <div>
+            <p className="text-xs font-medium text-muted-foreground mb-1">Why Suggested</p>
+            <ul className="space-y-1">
+              {icp.whySuggested.slice(0, 3).map((reason, idx) => (
+                <li key={idx} className="text-xs flex items-start gap-1.5">
+                  <Check className="h-3 w-3 text-green-600 mt-0.5 flex-shrink-0" />
+                  <span>{reason}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          
+          {/* What Changed (for refined) or Opportunity (for new) */}
+          {icp.type === 'refined' && icp.whatChanged && (
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-1">What Changed</p>
+              <ul className="space-y-1">
+                {icp.whatChanged.slice(0, 2).map((change, idx) => (
+                  <li key={idx} className="text-xs flex items-start gap-1.5">
+                    <RefreshCw className="h-3 w-3 text-amber-500 mt-0.5 flex-shrink-0" />
+                    <span>{change}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          
+          {icp.type === 'new' && icp.opportunityUnlocked && (
+            <div className="bg-primary/5 rounded-md p-2">
+              <p className="text-xs font-medium text-primary mb-0.5">Opportunity Unlocked</p>
+              <p className="text-xs">{icp.opportunityUnlocked}</p>
+            </div>
+          )}
+
+          {/* Status Message for Accepted */}
+          {isAccepted && (
+            <div className="flex items-center gap-2 text-xs text-green-700 bg-green-100 rounded-md p-2">
+              <Check className="h-3 w-3" />
+              <span>Added to Customer Profile</span>
+            </div>
+          )}
+        </CardContent>
+
+        <CardFooter className="pt-3 border-t flex flex-col gap-2">
+          {/* Actions for Suggested */}
+          {status.status === 'suggested' && (
+            <div className="flex items-center gap-2 w-full">
+              <Button
+                size="sm"
+                onClick={() => handleAcceptICP(icp)}
+                className="flex-1"
+              >
+                <Check className="h-3 w-3 mr-1" />
+                Accept
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleRejectICP(icp)}
+                className="flex-1"
+              >
+                <X className="h-3 w-3 mr-1" />
+                Reject
+              </Button>
+            </div>
+          )}
+          
+          {/* Post-Accept: View ICP Details (only shown after acceptance) */}
+          {isAccepted && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleViewDetails(icp.id)}
+              className="w-full"
+            >
+              <Eye className="h-3 w-3 mr-1" />
+              View ICP Details
+              {isExpanded ? (
+                <ChevronUp className="h-3 w-3 ml-auto" />
+              ) : (
+                <ChevronDown className="h-3 w-3 ml-auto" />
+              )}
+            </Button>
+          )}
+        </CardFooter>
+        
+        {/* Expanded Report */}
+        {isAccepted && isExpanded && (
+          <div className="border-t bg-muted/20">
+            <ICPReportPanel 
+              icp={icp} 
+              onClose={() => setExpandedReportId(null)}
+            />
+          </div>
+        )}
+      </Card>
+    );
   };
-
-  const getExistingICP = (existingICPId?: string): ExistingICP | undefined => {
-    if (!existingICPId) return undefined;
-    return existingICPs.find(icp => icp.id === existingICPId);
-  };
-
-  // Group suggested ICPs by their existing ICP
-  const groupedByExistingICP = existingICPs.map(existing => ({
-    existing,
-    suggestions: suggestedICPs.filter(s => s.existingICPId === existing.id)
-  }));
-
-  const visibleICPs = suggestedICPs.slice(0, visibleCount);
-  const hasMore = suggestedICPs.length > visibleCount;
 
   if (loading) {
     return (
-      <Card className="border-dashed">
-        <CardContent className="py-12">
-          <div className="flex flex-col items-center justify-center gap-4">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            <p className="text-sm text-muted-foreground">Loading suggested ICPs...</p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="space-y-6 animate-pulse">
+        <div className="h-20 bg-muted rounded-lg" />
+        <div className="h-48 bg-muted rounded-lg" />
+      </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      {/* ICP Cards - Grouped by Existing ICP */}
-
-      {/* ICP Cards - Grouped by Existing ICP */}
-      <div className="space-y-6">
-        {groupedByExistingICP.map(({ existing, suggestions }) => (
-          <div key={existing.id} className="space-y-3">
-            {/* Existing ICP Header Card */}
-            <Card className="border-2 border-primary/20 bg-primary/5">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Badge className="bg-primary text-primary-foreground">
-                        <Target className="h-3 w-3 mr-1" />
-                        Existing ICP
-                      </Badge>
-                      {existing.fitConfidence && (
-                        <Badge variant="outline" className={getConfidenceBadgeColor(existing.fitConfidence as 'High' | 'Medium' | 'Low')}>
-                          {existing.fitConfidence} Fit
-                        </Badge>
-                      )}
-                    </div>
-                    <CardTitle className="text-lg">{existing.name}</CardTitle>
-                    <CardDescription className="flex items-center gap-2 mt-1">
-                      <Building className="h-3 w-3" />
-                      {existing.industry} • {existing.companySize}
-                    </CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="pb-4">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                  <div className="p-2 bg-background rounded-md">
-                    <p className="text-xs text-muted-foreground">Geography</p>
-                    <p className="font-medium">{existing.geography || 'Global'}</p>
-                  </div>
-                  <div className="p-2 bg-background rounded-md">
-                    <p className="text-xs text-muted-foreground">Buyer Role</p>
-                    <p className="font-medium">{existing.buyerRole || 'Various'}</p>
-                  </div>
-                  <div className="p-2 bg-background rounded-md">
-                    <p className="text-xs text-muted-foreground">Watchlist</p>
-                    <p className="font-medium">{existing.accountsOnWatchlist || 0} accounts</p>
-                  </div>
-                  <div className="p-2 bg-background rounded-md">
-                    <p className="text-xs text-muted-foreground">To Avoid</p>
-                    <p className="font-medium">{existing.accountsToAvoid || 0} accounts</p>
-                  </div>
-                </div>
-                {existing.additionalContext && (
-                  <p className="text-xs text-muted-foreground mt-3 italic">
-                    "{existing.additionalContext}"
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Suggested ICPs for this Existing ICP */}
-            {suggestions.length > 0 && (
-              <div className="pl-4 border-l-2 border-primary/20 space-y-3">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-2">
-                  <Sparkles className="h-3 w-3 text-primary" />
-                  Suggested Extensions ({suggestions.length})
-                </p>
-                
-                {suggestions.map((icp) => {
-                  const status = cardStatuses[icp.id] || { status: 'suggested' };
-                  const isExpanded = expandedReportId === icp.id;
-                  const isRejected = status.status === 'rejected';
-                  
-                  return (
-                    <Card 
-                      key={icp.id} 
-                      className={`transition-all duration-300 ${
-                        isRejected ? 'opacity-50 bg-muted/30' : ''
-                      } ${status.status === 'accepted' ? 'border-green-200 bg-green-50/30' : ''}`}
-                    >
-                      <CardHeader className="pb-3">
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              {getStatusBadge(status)}
-                              <Badge variant="outline" className={getConfidenceBadgeColor(icp.confidenceScore)}>
-                                {icp.confidenceScore || 'Medium'} Match
-                              </Badge>
-                            </div>
-                            <CardTitle className="text-lg truncate">{icp.name}</CardTitle>
-                            <CardDescription className="flex items-center gap-2 mt-1">
-                              <Building className="h-3 w-3" />
-                              {icp.industry} • {icp.segment}
-                            </CardDescription>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <TrendingUp className={`h-4 w-4 ${
-                              icp.growthIndicator === 'High' ? 'text-green-600' : 'text-yellow-600'
-                            }`} />
-                            <span className="text-sm font-medium">{icp.growth}</span>
-                          </div>
-                        </div>
-                      </CardHeader>
-
-                      <CardContent className="pb-3 space-y-4">
-                        {/* Why Suggested */}
-                        {icp.whySuggested && icp.whySuggested.length > 0 && (
-                          <div>
-                            <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">
-                              Why This ICP is Suggested
-                            </p>
-                            <ul className="space-y-1">
-                              {icp.whySuggested.map((reason, idx) => (
-                                <li key={idx} className="text-sm flex items-start gap-2">
-                                  <Check className="h-4 w-4 text-green-600 shrink-0 mt-0.5" />
-                                  <span>{reason}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-
-                        {/* What's Different */}
-                        {icp.differenceFromCurrent && icp.differenceFromCurrent.length > 0 && (
-                          <div>
-                            <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">
-                              What's Different from Current ICP
-                            </p>
-                            <ul className="space-y-1">
-                              {icp.differenceFromCurrent.map((diff, idx) => (
-                                <li key={idx} className="text-sm flex items-start gap-2">
-                                  <AlertCircle className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                                  <span className="text-muted-foreground">{diff}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-
-                        {/* Quick Stats */}
-                        <div className="grid grid-cols-3 gap-3 pt-2">
-                          <div className="text-center p-2 bg-muted/50 rounded-lg">
-                            <p className="text-xs text-muted-foreground">Market Size</p>
-                            <p className="text-sm font-semibold">{icp.marketSize || 'N/A'}</p>
-                          </div>
-                          <div className="text-center p-2 bg-muted/50 rounded-lg">
-                            <p className="text-xs text-muted-foreground">Growth</p>
-                            <p className="text-sm font-semibold text-green-600">{icp.growth || 'N/A'}</p>
-                          </div>
-                          <div className="text-center p-2 bg-muted/50 rounded-lg">
-                            <p className="text-xs text-muted-foreground">Company Size</p>
-                            <p className="text-sm font-semibold">{icp.companySize}</p>
-                          </div>
-                        </div>
-
-                        {/* Status Message for Accepted */}
-                        {status.status === 'accepted' && (
-                          <div className="flex items-center gap-2 text-sm text-green-700 bg-green-100 rounded-md p-2">
-                            <Check className="h-4 w-4" />
-                            <span>Added to Customer Profile</span>
-                          </div>
-                        )}
-                      </CardContent>
-
-                      <CardFooter className="pt-3 border-t flex flex-wrap gap-2">
-                        {status.status === 'suggested' && (
-                          <>
-                            <Button 
-                              size="sm" 
-                              onClick={() => handleAcceptICP(icp)}
-                              className="flex-1 min-w-[100px]"
-                            >
-                              <Check className="h-4 w-4 mr-1" />
-                              Accept ICP
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => handleRejectICP(icp)}
-                              className="flex-1 min-w-[100px]"
-                            >
-                              <X className="h-4 w-4 mr-1" />
-                              Reject ICP
-                            </Button>
-                          </>
-                        )}
-                        
-                        {(status.status === 'accepted' || status.status === 'rejected') && (
-                          <Button 
-                            size="sm" 
-                            variant={status.status === 'accepted' ? 'default' : 'outline'}
-                            onClick={() => handleViewDetails(icp.id)}
-                            className="flex-1"
-                          >
-                            <Eye className="h-4 w-4 mr-1" />
-                            View ICP Details
-                            {isExpanded ? (
-                              <ChevronUp className="h-4 w-4 ml-1" />
-                            ) : (
-                              <ChevronDown className="h-4 w-4 ml-1" />
-                            )}
-                          </Button>
-                        )}
-                      </CardFooter>
-
-                      {/* Expanded Report View */}
-                      {isExpanded && (
-                        <div className="border-t bg-muted/20">
-                          <ICPReportPanel 
-                            icp={icp} 
-                            status={status}
-                            onClose={() => setExpandedReportId(null)}
-                          />
-                        </div>
-                      )}
-                    </Card>
-                  );
-                })}
+    <div className="space-y-8">
+      {/* Section 1: Current ICPs from Customer Profile */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+          Current ICPs
+        </h3>
+        <div className="flex flex-wrap gap-3">
+          {existingICPs.map((icp) => (
+            <Card key={icp.id} className="inline-flex items-center gap-3 px-4 py-3 bg-card">
+              <div className="flex items-center gap-2">
+                <Target className="h-4 w-4 text-primary" />
+                <span className="font-medium">{icp.name}</span>
               </div>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span>{icp.industry}</span>
+                <span>·</span>
+                <span>{icp.companySize}</span>
+                <span>·</span>
+                <span>{icp.geography}</span>
+              </div>
+              <Badge variant="default" className="bg-green-600 text-xs">
+                Active
+              </Badge>
+            </Card>
+          ))}
+        </div>
+      </div>
+
+      {/* Section 2: Profiler Suggestions */}
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-primary" />
+            Profiler Suggestions
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Based on your existing ICPs and available signals
+          </p>
+        </div>
+
+        {/* 2A: Refined ICPs */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <RefreshCw className="h-4 w-4 text-amber-500" />
+            <h4 className="text-sm font-medium">Refined ICPs</h4>
+            {pendingRefinedCount > 0 && (
+              <Badge variant="outline" className="text-xs">
+                {pendingRefinedCount} pending
+              </Badge>
             )}
           </div>
-        ))}
+          
+          {refinedICPs.length === 0 ? (
+            <Card className="bg-muted/30 border-dashed">
+              <CardContent className="py-8 text-center">
+                <Check className="h-8 w-8 text-green-500 mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">
+                  Your current ICPs are well-aligned. No refinements suggested.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <ScrollArea className="w-full">
+              <div className="flex gap-4 pb-4">
+                {refinedICPs.map(renderSuggestionCard)}
+              </div>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
+          )}
+        </div>
+
+        {/* 2B: New ICPs */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Plus className="h-4 w-4 text-primary" />
+            <h4 className="text-sm font-medium">New ICPs</h4>
+            {pendingNewCount > 0 && (
+              <Badge variant="outline" className="text-xs">
+                {pendingNewCount} pending
+              </Badge>
+            )}
+          </div>
+          
+          {newICPs.length === 0 ? (
+            <Card className="bg-muted/30 border-dashed">
+              <CardContent className="py-8 text-center">
+                <Target className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">
+                  No new ICP suggestions at this time.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <ScrollArea className="w-full">
+              <div className="flex gap-4 pb-4">
+                {newICPs.map(renderSuggestionCard)}
+              </div>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
+          )}
+        </div>
       </div>
 
       {/* Design Note */}
@@ -577,28 +552,20 @@ export const SuggestedICPCards = ({
 // ICP Report Panel Component
 interface ICPReportPanelProps {
   icp: SuggestedICP;
-  status: ICPCardStatus;
   onClose: () => void;
 }
 
-const ICPReportPanel = ({ icp, status, onClose }: ICPReportPanelProps) => {
+const ICPReportPanel = ({ icp, onClose }: ICPReportPanelProps) => {
   const [isEditing, setIsEditing] = useState(false);
-  
-  const isAccepted = status.status === 'accepted';
   
   return (
     <div className="p-6 space-y-6">
       {/* Report Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h4 className="text-lg font-semibold">
-            {isAccepted ? 'Accepted ICP Report' : 'Existing ICP Report'}
-          </h4>
+          <h4 className="text-lg font-semibold">ICP Report: {icp.name}</h4>
           <p className="text-sm text-muted-foreground">
-            {isAccepted 
-              ? 'Full report generated using newly accepted ICP context'
-              : 'Report based on last accepted ICP configuration'
-            }
+            Full report generated using accepted ICP context
           </p>
         </div>
         <div className="flex items-center gap-2">
