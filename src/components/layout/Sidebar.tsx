@@ -359,6 +359,8 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { ProfileDialog } from "./ProfileDialog";
+import { PopoverTrigger } from "@/components/ui/popover";
 
 type NavItem = {
   icon: React.ElementType;
@@ -371,8 +373,8 @@ const navItems: NavItem[] = [
   { icon: Search, label: "Scout", href: "/market-research" },
   { icon: Users, label: "Profiler", href: "/customers" },
   { icon: FileText, label: "Strategist", href: "/deals" },
-  { icon: Calendar, label: "Activator", href: "/calendar" },
-  { icon: Presentation, label: "Presenter", href: "/reports" },
+  // { icon: Calendar, label: "Activator", href: "/calendar" }, // Commented out - not constructed yet
+  // { icon: Presentation, label: "Presenter", href: "/reports" }, // Commented out - not constructed yet
   // { icon: BarChart, label: "Reports", href: "/insights" }, // Commented out - hidden from UI for now
   { icon: Settings, label: "Settings", href: "/settings" },
 ];
@@ -392,6 +394,7 @@ export function Sidebar() {
   const [signalsOpen, setSignalsOpen] = useState(() => {
     return sessionStorage.getItem('signalsDropdownOpen') === 'true';
   });
+  const [profileDialogOpen, setProfileDialogOpen] = useState(false);
   const location = useLocation();
 
   // Get user's full name from localStorage
@@ -456,6 +459,7 @@ export function Sidebar() {
       setMobileOpen(false);
     }
   };
+
 
   // On mobile, always show full sidebar (not collapsed)
   const isCollapsed = isMobile ? false : collapsed;
@@ -604,7 +608,7 @@ export function Sidebar() {
                 {aiTeamOpen && (
                   <div className="mt-1">
                     <ul className="space-y-1">
-                      {navItems.filter(item => item.label !== "Settings").map((item) => (
+                      {navItems.slice(0, 3).map((item) => (
                         <li key={item.label}>
                           <Link
                             to={item.href}
@@ -673,8 +677,8 @@ export function Sidebar() {
             </li>
           )}
 
-          {/* Reports moved outside AI Team */}
-          <li key="reports">
+          {/* Reports moved outside AI Team - Commented out for now */}
+          {/* <li key="reports">
             <Link 
               to="/insights" 
               onClick={handleLinkClick}
@@ -686,7 +690,7 @@ export function Sidebar() {
               <BarChart className="h-5 w-5" />
               {!isCollapsed && <span className="ml-3">Reports</span>}
             </Link>
-          </li>
+          </li> */}
 
 
           {/* Settings navigation item */}
@@ -707,57 +711,78 @@ export function Sidebar() {
       </nav>
 
       {/* User Section */}
-      <div className={cn(
-        "border-t border-gray-200 p-4",
-        isCollapsed ? "flex justify-center" : "flex items-center"
-      )}>
-        {!isCollapsed ? (
-          <>
-            <div className="w-10 h-10 rounded-full bg-sales-blue text-white flex items-center justify-center font-medium">
-              {getInitials(fullName)}
+      <ProfileDialog
+        open={profileDialogOpen}
+        onOpenChange={setProfileDialogOpen}
+        fullName={fullName}
+      >
+        <div className={cn(
+          "border-t border-gray-200 p-4",
+          isCollapsed ? "flex justify-center" : "flex items-center"
+        )}>
+          {!isCollapsed ? (
+            <>
+              <PopoverTrigger asChild>
+                <div 
+                  className="w-10 h-10 rounded-full bg-sales-blue text-white flex items-center justify-center font-medium cursor-pointer hover:opacity-80 transition-opacity"
+                  title="View profile"
+                >
+                  {getInitials(fullName)}
+                </div>
+              </PopoverTrigger>
+              <PopoverTrigger asChild>
+                <div 
+                  className="ml-3 flex-1 cursor-pointer hover:opacity-80 transition-opacity"
+                  title="View profile"
+                >
+                  <div className="font-medium text-sm">{fullName || 'User'}</div>
+                </div>
+              </PopoverTrigger>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                className="ml-auto flex items-center gap-2 text-gray-600 hover:text-gray-900"
+                onClick={async () => {
+                  // Clear all user-specific cache before logout
+                  clearUserCache(currentUser?.uid);
+                  clearTenant();
+                  await logout();
+                  navigate('/login');
+                }}
+              >
+                <LogOut className="h-4 w-4" />
+                <span>Logout</span>
+              </Button>
+            </>
+          ) : (
+            <div className="flex flex-col items-center gap-2">
+              <PopoverTrigger asChild>
+                <div 
+                  className="w-10 h-10 rounded-full bg-sales-blue text-white flex items-center justify-center font-medium cursor-pointer hover:opacity-80 transition-opacity"
+                  title="View profile"
+                >
+                  {getInitials(fullName)}
+                </div>
+              </PopoverTrigger>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-8 w-8"
+                onClick={async () => {
+                  // Clear all user-specific cache before logout
+                  clearUserCache(currentUser?.uid);
+                  clearTenant();
+                  await logout();
+                  navigate('/login');
+                }}
+                title="Log out"
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
             </div>
-            <div className="ml-3">
-              <div className="font-medium text-sm">{fullName || 'User'}</div>
-            </div>
-            <Button 
-              variant="ghost" 
-              size="sm"
-              className="ml-auto flex items-center gap-2 text-gray-600 hover:text-gray-900"
-              onClick={async () => {
-                // Clear all user-specific cache before logout
-                clearUserCache(currentUser?.uid);
-                clearTenant();
-                await logout();
-                navigate('/login');
-              }}
-            >
-              <LogOut className="h-4 w-4" />
-              <span>Logout</span>
-            </Button>
-          </>
-        ) : (
-          <div className="flex flex-col items-center gap-2">
-            <div className="w-10 h-10 rounded-full bg-sales-blue text-white flex items-center justify-center font-medium">
-              {getInitials(fullName)}
-            </div>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-8 w-8"
-              onClick={async () => {
-                // Clear all user-specific cache before logout
-                clearUserCache(currentUser?.uid);
-                clearTenant();
-                await logout();
-                navigate('/login');
-              }}
-              title="Log out"
-            >
-              <LogOut className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      </ProfileDialog>
     </>
   );
 
@@ -776,11 +801,13 @@ export function Sidebar() {
 
   // Desktop: Render as fixed sidebar
   return (
-    <div className={cn(
-      "bg-white border-r border-gray-200 h-screen flex flex-col transition-all duration-300",
-      collapsed ? "w-16" : "w-64"
-    )}>
-      {sidebarContent}
-    </div>
+    <>
+      <div className={cn(
+        "bg-white border-r border-gray-200 h-screen flex flex-col transition-all duration-300",
+        collapsed ? "w-16" : "w-64"
+      )}>
+        {sidebarContent}
+      </div>
+    </>
   );
 }
