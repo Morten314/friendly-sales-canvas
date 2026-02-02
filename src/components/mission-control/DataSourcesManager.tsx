@@ -585,68 +585,73 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
           <CardTitle>{editingId ? "Edit Data Source" : "Add Data Source"}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Type Selection */}
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="source-type">Source Type *</Label>
-              <Select
-                value={selectedType}
-                onValueChange={(value) => handleTypeSelect(value as SourceType)}
-              >
-                <SelectTrigger id="source-type">
-                  <SelectValue placeholder="Select source type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="url">
-                    <div className="flex items-center gap-2">
-                      <LinkIcon className="h-4 w-4" />
-                      <span>Add URL</span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="file">
-                    <div className="flex items-center gap-2">
-                      <Upload className="h-4 w-4" />
-                      <span>Upload File</span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="system" disabled>
-                    <div className="flex items-center gap-2 opacity-50">
-                      <Database className="h-4 w-4" />
-                      <span>Connect System (Coming soon)</span>
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+          <div className="space-y-6">
+            {/* Row 1: Source Type and Name side by side */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Type Selection - smaller, takes 1/3 width */}
+              <div className="space-y-2">
+                <Label htmlFor="source-type">Source Type *</Label>
+                <Select
+                  value={selectedType}
+                  onValueChange={(value) => handleTypeSelect(value as SourceType)}
+                >
+                  <SelectTrigger id="source-type">
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="url">
+                      <div className="flex items-center gap-2">
+                        <LinkIcon className="h-4 w-4" />
+                        <span>Add URL</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="file">
+                      <div className="flex items-center gap-2">
+                        <Upload className="h-4 w-4" />
+                        <span>Upload File</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="system" disabled>
+                      <div className="flex items-center gap-2 opacity-50">
+                        <Database className="h-4 w-4" />
+                        <span>Connect System (Coming soon)</span>
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Name - takes 2/3 width */}
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="source-name">Name *</Label>
+                <Input
+                  id="source-name"
+                  placeholder="e.g., Competitor Pricing Page"
+                  value={sourceName}
+                  onChange={(e) => setSourceName(e.target.value)}
+                />
+              </div>
             </div>
 
-            {/* Name */}
-            <div className="space-y-2">
-              <Label htmlFor="source-name">Name *</Label>
-              <Input
-                id="source-name"
-                placeholder="e.g., Competitor Pricing Page"
-                value={sourceName}
-                onChange={(e) => setSourceName(e.target.value)}
-              />
-            </div>
-
-            {/* URL or File - shown based on selected type */}
+            {/* Row 2: URL or File - full width, more prominent */}
             {selectedType === "url" && (
               <div className="space-y-2">
-                <Label htmlFor="source-url">URL *</Label>
+                <Label htmlFor="source-url" className="text-base font-medium">Website URL *</Label>
                 <Input
                   id="source-url"
                   type="url"
                   placeholder="https://example.com"
                   value={sourceUrl}
                   onChange={(e) => setSourceUrl(e.target.value)}
+                  className="text-base"
                 />
+                <p className="text-xs text-muted-foreground">Enter the full URL of the website you want to add as a data source</p>
               </div>
             )}
 
             {selectedType === "file" && (
               <div className="space-y-2">
-                <Label htmlFor="source-file">File *</Label>
+                <Label htmlFor="source-file" className="text-base font-medium">Upload File *</Label>
                 <div className="flex items-center gap-2">
                   <input
                     ref={fileInputRef}
@@ -658,22 +663,22 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
                   />
                   <label
                     htmlFor="source-file"
-                    className="flex-1 inline-flex items-center gap-2 px-3 py-2 border border-dashed rounded-md cursor-pointer hover:bg-muted/50 transition-colors"
+                    className="flex-1 inline-flex items-center gap-3 px-4 py-3 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors bg-muted/20"
                   >
-                    <Upload className="h-4 w-4 text-muted-foreground" />
+                    <Upload className="h-5 w-5 text-muted-foreground" />
                     {selectedFile ? (
-                      <span className="text-foreground">{selectedFile.name}</span>
+                      <span className="text-foreground font-medium">{selectedFile.name}</span>
                     ) : (
-                      <span className="text-muted-foreground">Browse files...</span>
+                      <span className="text-muted-foreground">Click to browse or drag and drop files here</span>
                     )}
                   </label>
                 </div>
-                <p className="text-xs text-muted-foreground">Supported: PDF, DOCX, PPTX, CSV, XLSX</p>
+                <p className="text-xs text-muted-foreground">Supported formats: PDF, DOCX, PPTX, CSV, XLSX</p>
               </div>
             )}
 
             {/* Description */}
-            <div className="space-y-2 md:col-span-2">
+            <div className="space-y-2">
               <Label htmlFor="source-description">Description</Label>
               <Textarea
                 id="source-description"
@@ -685,7 +690,7 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
             </div>
 
             {/* Tags */}
-            <div className="space-y-2 md:col-span-2">
+            <div className="space-y-2">
               <Label>Tags</Label>
               <div className="space-y-3">
                 <div className="flex flex-wrap gap-2">

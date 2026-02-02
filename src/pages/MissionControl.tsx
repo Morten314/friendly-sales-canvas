@@ -904,6 +904,12 @@ const MissionControl = () => {
               setCompanyProfile(profileData);
               console.log("MissionControl: State has been updated with profileData");
 
+              // Check for data sources in the API response
+              if (data.data_sources && data.data_sources.sources && Array.isArray(data.data_sources.sources) && data.data_sources.sources.length > 0) {
+                console.log("MissionControl: Found data sources in API response:", data.data_sources.sources.length);
+                setHasDataSources(true);
+              }
+
               // Check if company profile is saved (has at least company name)
               // Check both raw data and mapped profileData, but treat empty strings as falsy
               const companyName = (data.company_name || data.companyName || profileData.companyName || "").trim();
@@ -2804,7 +2810,8 @@ const MissionControl = () => {
     const hasLocalDataSources = dataSources.length > 0;
     const hasAnyDataSources = hasLocalDataSources || hasDataSources;
     
-    if (hasAnyDataSources && isCustomerProfileSaved && isCompanyProfileSaved) {
+    // If data sources are added, show 100% completion (highest priority)
+    if (hasAnyDataSources) {
       return 100;
     } else if (isCustomerProfileSaved && isCompanyProfileSaved) {
       return 55;
