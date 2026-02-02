@@ -23,7 +23,7 @@ from config import origins, STAGE_ORDER, STAGE_MAPPING, s3_bucket, aws_region, a
 from models import (
     ProspectData, Lead, Contact, SalesPipelineResponse, TimeframeResponse, StageStats,
     CompanyProfile, UserProfile, ScoutProfile, MarketRequest, EditRequest,
-    CustomerProfileRequest, CustomerProfileICP, LeadCreateRequest, LeadUpdateRequest, LeadDeleteRequest
+    CustomerProfileRequest, CustomerProfileICP, LeadCreateRequest, LeadUpdateRequest
 )
 from database import driver, graph, client, upsert_node
 from llm_config import chain, chain2
