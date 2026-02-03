@@ -31,12 +31,24 @@ def results_to_string(results):
     ]
     return "\n".join(result_strings)
 
+# Helper function to escape Neo4j property names
+def escape_property_name(key: str) -> str:
+    """
+    Escape Neo4j property names that contain spaces or special characters.
+    Wraps property names in backticks if they contain spaces, dots, or other special chars.
+    """
+    # Check if property name needs escaping (contains spaces, dots, or special chars)
+    if any(char in key for char in [' ', '.', '-', ':', '/', '\\', '@', '#', '$', '%', '^', '&', '*', '(', ')', '+', '=', '[', ']', '{', '}', '|', ';', "'", '"', '<', '>', ',', '?', '!']):
+        return f"`{key}`"
+    return key
+
 # Helper function for upsert operations - handles flexible data types
 def upsert_node(tx, label, match_field, match_value, data: dict):
     """
     Upsert a node with flexible data types.
     Handles strings, numbers, booleans, lists, and dicts.
     Converts complex types to JSON strings for Neo4j compatibility.
+    Escapes property names with spaces or special characters.
     """
     import json
     
@@ -61,20 +73,26 @@ def upsert_node(tx, label, match_field, match_value, data: dict):
     params = {"match_value": match_value}
     
     for key, value in neo4j_data.items():
-        param_name = f"param_{key.replace('.', '_').replace('-', '_')}"
-        set_clauses.append(f"n.{key} = ${param_name}")
+        # Escape property name for Neo4j (handles spaces and special chars)
+        escaped_key = escape_property_name(key)
+        # Create safe parameter name (replace spaces and special chars with underscores)
+        param_name = f"param_{key.replace(' ', '_').replace('.', '_').replace('-', '_').replace(':', '_').replace('/', '_').replace('\\', '_').replace('@', '_').replace('#', '_').replace('$', '_').replace('%', '_').replace('^', '_').replace('&', '_').replace('*', '_').replace('(', '_').replace(')', '_').replace('+', '_').replace('=', '_').replace('[', '_').replace(']', '_').replace('{', '_').replace('}', '_').replace('|', '_').replace(';', '_').replace("'", '_').replace('"', '_').replace('<', '_').replace('>', '_').replace(',', '_').replace('?', '_').replace('!', '_')}"
+        set_clauses.append(f"n.{escaped_key} = ${param_name}")
         params[param_name] = value
     
     if set_clauses:
         set_clause = ", ".join(set_clauses)
+        # Also escape match_field if needed
+        escaped_match_field = escape_property_name(match_field)
         query = f"""
-        MERGE (n:{label} {{ {match_field}: $match_value }})
+        MERGE (n:{label} {{ {escaped_match_field}: $match_value }})
         SET {set_clause}
         """
         tx.run(query, **params)
     else:
         # If no data to set, just merge the node
+        escaped_match_field = escape_property_name(match_field)
         query = f"""
-        MERGE (n:{label} {{ {match_field}: $match_value }})
+        MERGE (n:{label} {{ {escaped_match_field}: $match_value }})
         """
         tx.run(query, match_value=match_value)
