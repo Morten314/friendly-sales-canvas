@@ -425,15 +425,6 @@ export const SuggestedICPCards = ({
           )}
         </CardFooter>
         
-        {/* Expanded Report */}
-        {isAccepted && isExpanded && (
-          <div className="border-t bg-muted/20">
-            <ICPReportPanel 
-              icp={icp} 
-              onClose={() => setExpandedReportId(null)}
-            />
-          </div>
-        )}
       </Card>
     );
   };
@@ -508,6 +499,24 @@ export const SuggestedICPCards = ({
           </ScrollArea>
         )}
       </div>
+
+      {/* Full-Width ICP Report Panel */}
+      {expandedReportId && (() => {
+        const allICPs = [...refinedICPs, ...newICPs];
+        const expandedICP = allICPs.find(icp => icp.id === expandedReportId);
+        const isAccepted = cardStatuses[expandedReportId]?.status === 'accepted';
+        
+        if (!expandedICP || !isAccepted) return null;
+        
+        return (
+          <Card className="w-full border-primary/20 shadow-lg">
+            <ICPReportPanel 
+              icp={expandedICP} 
+              onClose={() => setExpandedReportId(null)}
+            />
+          </Card>
+        );
+      })()}
 
       {/* Design Note */}
       <div className="text-xs text-muted-foreground text-center p-3 bg-muted/30 rounded-lg border border-dashed">
