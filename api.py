@@ -279,6 +279,8 @@ async def update_lead(lead_id: str, request: LeadUpdateRequest):
     """
     Modify a single lead with flexible key-value pairs.
     Updates lead properties while maintaining multitenancy (user_id and org_id).
+    Stores all data directly on Lead node - no mapping or extraction.
+    Works exactly like company profile endpoint - completely flexible.
     """
     try:
         from datetime import datetime
@@ -294,117 +296,18 @@ async def update_lead(lead_id: str, request: LeadUpdateRequest):
             if not result.single():
                 raise HTTPException(status_code=404, detail="Lead not found or access denied")
             
-            # Prepare update data
+            # Prepare update data - store everything as-is
             update_data = request.data.copy()
             update_data["updated_at"] = datetime.utcnow().isoformat()
             
-            # Handle company updates
-            company_name = update_data.pop("company", update_data.pop("company_name", None))
-            if company_name:
-                company_data = {}
-                if "industry" in update_data:
-                    company_data["industry"] = update_data.pop("industry")
-                if "size" in update_data:
-                    company_data["size"] = update_data.pop("size")
-                if "region" in update_data:
-                    company_data["region"] = update_data.pop("region")
-                if "location" in update_data:
-                    company_data["location"] = update_data.pop("location")
-                
-                if company_data:
-                    session.execute_write(
-                        upsert_node,
-                        "Company",
-                        "name",
-                        company_name,
-                        company_data
-                    )
-            
-            # Handle contact updates
-            contact_updates = {}
-            contact_mapping = {
-                "first_name": ["first_name", "firstName", "firstname"],
-                "last_name": ["last_name", "lastName", "lastname"],
-                "designation": ["designation", "title", "job_title"],
-                "department": ["department", "dept"],
-                "email": ["email", "contact_email"]
-            }
-            
-            for neo4j_field, possible_keys in contact_mapping.items():
-                for key in possible_keys:
-                    if key in update_data:
-                        contact_updates[neo4j_field] = update_data.pop(key)
-                        break
-            
-            # Handle tech stack updates
-            tech_stack = None
-            for key in ["techStack", "tech_stack", "technologies", "tech"]:
-                if key in update_data:
-                    tech_value = update_data.pop(key)
-                    if isinstance(tech_value, list):
-                        tech_stack = tech_value
-                    elif isinstance(tech_value, str):
-                        tech_stack = [t.strip() for t in tech_value.split(",")]
-                    break
-            
-            # Update lead node with remaining fields
-            if update_data:
-                session.execute_write(
-                    upsert_node,
-                    "Lead",
-                    "lead_id",
-                    lead_id,
-                    update_data
-                )
-            
-            # Update contact if provided
-            if contact_updates:
-                # Find existing contact for this lead
-                contact_query = """
-                    MATCH (contact:Contact)-[:Is_POC_For]->(l:Lead {lead_id: $lead_id})
-                    RETURN contact.contact_id AS contact_id
-                    LIMIT 1
-                """
-                contact_result = session.run(contact_query, lead_id=lead_id)
-                contact_record = contact_result.single()
-                
-                if contact_record:
-                    contact_id = contact_record["contact_id"]
-                    session.execute_write(
-                        upsert_node,
-                        "Contact",
-                        "contact_id",
-                        contact_id,
-                        contact_updates
-                    )
-            
-            # Update tech stack if provided
-            if tech_stack is not None:
-                # Get company name from lead
-                company_query = """
-                    MATCH (c:Company)-[:Has_Lead]->(l:Lead {lead_id: $lead_id})
-                    RETURN c.name AS company_name
-                    LIMIT 1
-                """
-                company_result = session.run(company_query, lead_id=lead_id)
-                company_record = company_result.single()
-                
-                if company_record:
-                    company_name = company_record["company_name"]
-                    # Remove old tech relationships
-                    session.run("""
-                        MATCH (c:Company {name: $company_name})-[r:Uses_Tech]->(t:Tech)
-                        DELETE r
-                    """, company_name=company_name)
-                    
-                    # Add new tech relationships
-                    for tech_name in tech_stack:
-                        if tech_name:
-                            session.run("""
-                                MATCH (c:Company {name: $company_name})
-                                MERGE (t:Tech {name: $tech_name})
-                                MERGE (c)-[:Uses_Tech]->(t)
-                            """, company_name=company_name, tech_name=tech_name)
+            # Update Lead node with all data directly (no extraction, no mapping)
+            session.execute_write(
+                upsert_node,
+                "Lead",
+                "lead_id",
+                lead_id,
+                update_data
+            )
         
         return {
             "status": "success",
