@@ -231,8 +231,8 @@ async def add_lead(request: LeadCreateRequest):
     """
     Add a single lead manually with flexible key-value pairs.
     NO REQUIRED FIELDS - all fields are optional.
-    Automatically maps and stores in Neo4j with user_id and org_id for multitenancy.
-    Creates Company, Contact, and Tech nodes only if relevant data is provided.
+    Stores all data directly on Lead node - no mapping or extraction.
+    Works exactly like company profile endpoint - completely flexible.
     """
     try:
         import uuid
@@ -241,68 +241,19 @@ async def add_lead(request: LeadCreateRequest):
         # Generate unique lead ID
         lead_id = str(uuid.uuid4())
         
-        # Prepare lead data with multitenancy fields
+        # Prepare lead data - store everything as-is, just add multitenancy fields
         lead_data = request.data.copy()
         lead_data["user_id"] = request.user_id
         lead_data["org_id"] = request.org_id
         lead_data["lead_id"] = lead_id
         lead_data["created_at"] = datetime.utcnow().isoformat()
         
-        # Extract company information (flexible mapping) - OPTIONAL
-        company_name = lead_data.pop("company", lead_data.pop("company_name", lead_data.pop("Company", "")))
+        # Set default stage if not provided
+        if "stage" not in lead_data and "status" not in lead_data and "Status" not in lead_data:
+            lead_data["stage"] = "Initial Outreach"
         
-        # Extract contact information (flexible mapping) - OPTIONAL
-        contact_data = {}
-        contact_fields = {
-            "first_name": ["first_name", "firstName", "firstname", "contact_first_name"],
-            "last_name": ["last_name", "lastName", "lastname", "contact_last_name"],
-            "designation": ["designation", "title", "job_title", "role"],
-            "department": ["department", "dept"],
-            "email": ["email", "contact_email", "email_address"]
-        }
-        
-        for neo4j_field, possible_keys in contact_fields.items():
-            for key in possible_keys:
-                if key in lead_data:
-                    contact_data[neo4j_field] = lead_data.pop(key)
-                    break
-        
-        # Extract tech stack (flexible mapping) - OPTIONAL
-        tech_stack = []
-        tech_keys = ["techStack", "tech_stack", "technologies", "tech", "tools"]
-        for key in tech_keys:
-            if key in lead_data:
-                tech_value = lead_data.pop(key)
-                if isinstance(tech_value, list):
-                    tech_stack = tech_value
-                elif isinstance(tech_value, str):
-                    tech_stack = [t.strip() for t in tech_value.split(",")]
-                break
-        
-        # Extract stage/status - OPTIONAL, defaults to "Initial Outreach"
-        stage = lead_data.pop("stage", lead_data.pop("status", lead_data.pop("Status", "Initial Outreach")))
-        lead_data["stage"] = stage
-        
+        # Create Lead node with all data as-is (no extraction, no mapping)
         with driver.session() as session:
-            # Create or update Company node ONLY if company_name is provided
-            if company_name:
-                company_data = {
-                    "name": company_name,
-                    "industry": lead_data.pop("industry", lead_data.pop("Industry", "")),
-                    "size": lead_data.pop("size", lead_data.pop("Size", "")),
-                    "region": lead_data.pop("region", lead_data.pop("Region", "")),
-                    "location": lead_data.pop("location", lead_data.pop("Location", "")),
-                    "org_id": request.org_id
-                }
-                session.execute_write(
-                    upsert_node,
-                    "Company",
-                    "name",
-                    company_name,
-                    company_data
-                )
-            
-            # Create Lead node with all remaining flexible fields (always created)
             session.execute_write(
                 upsert_node,
                 "Lead",
@@ -310,53 +261,6 @@ async def add_lead(request: LeadCreateRequest):
                 lead_id,
                 lead_data
             )
-            
-            # Create relationship: Company -> Lead (only if company exists)
-            if company_name:
-                session.run("""
-                    MATCH (c:Company {name: $company_name})
-                    MATCH (l:Lead {lead_id: $lead_id})
-                    MERGE (c)-[:Has_Lead]->(l)
-                """, company_name=company_name, lead_id=lead_id)
-            
-            # Create Contact node if contact data exists
-            if contact_data and (contact_data.get("first_name") or contact_data.get("last_name") or contact_data.get("email")):
-                contact_id = str(uuid.uuid4())
-                contact_data["contact_id"] = contact_id
-                contact_data["org_id"] = request.org_id
-                
-                session.execute_write(
-                    upsert_node,
-                    "Contact",
-                    "contact_id",
-                    contact_id,
-                    contact_data
-                )
-                
-                # Create relationships: Contact -> Lead (always)
-                session.run("""
-                    MATCH (contact:Contact {contact_id: $contact_id})
-                    MATCH (l:Lead {lead_id: $lead_id})
-                    MERGE (contact)-[:Is_POC_For]->(l)
-                """, contact_id=contact_id, lead_id=lead_id)
-                
-                # Create relationship: Company -> Contact (only if company exists)
-                if company_name:
-                    session.run("""
-                        MATCH (c:Company {name: $company_name})
-                        MATCH (contact:Contact {contact_id: $contact_id})
-                        MERGE (c)-[:Has_Contact]->(contact)
-                    """, company_name=company_name, contact_id=contact_id)
-            
-            # Create Tech nodes and relationships (only if company exists)
-            if company_name:
-                for tech_name in tech_stack:
-                    if tech_name:
-                        session.run("""
-                            MATCH (c:Company {name: $company_name})
-                            MERGE (t:Tech {name: $tech_name})
-                            MERGE (c)-[:Uses_Tech]->(t)
-                        """, company_name=company_name, tech_name=tech_name)
         
         return {
             "status": "success",
@@ -565,8 +469,8 @@ async def batch_upload_leads(
     Batch upload leads from CSV file.
     Column headings become keys and row values become values.
     NO REQUIRED FIELDS - all fields are optional.
-    Each row creates a new lead with multitenancy (user_id and org_id).
-    Creates Company, Contact, and Tech nodes only if relevant data is provided.
+    Stores all data directly on Lead node - no mapping or extraction.
+    Works exactly like company profile endpoint - completely flexible.
     """
     try:
         import pandas as pd
@@ -616,64 +520,15 @@ async def batch_upload_leads(
                     lead_data["lead_id"] = lead_id
                     lead_data["created_at"] = datetime.utcnow().isoformat()
                     
-                    # Extract company information (flexible mapping) - OPTIONAL
-                    company_name = lead_data.pop("company", lead_data.pop("company_name", lead_data.pop("Company", "")))
+                    # Set default stage if not provided
+                    if "stage" not in lead_data and "status" not in lead_data and "Status" not in lead_data:
+                        lead_data["stage"] = "Initial Outreach"
                     
-                    # Extract contact information (flexible mapping)
-                    contact_data = {}
-                    contact_fields = {
-                        "first_name": ["first_name", "firstName", "firstname", "contact_first_name", "First Name"],
-                        "last_name": ["last_name", "lastName", "lastname", "contact_last_name", "Last Name"],
-                        "designation": ["designation", "title", "job_title", "role", "Title", "Job Title"],
-                        "department": ["department", "dept", "Department"],
-                        "email": ["email", "contact_email", "email_address", "Email"]
-                    }
-                    
-                    for neo4j_field, possible_keys in contact_fields.items():
-                        for key in possible_keys:
-                            if key in lead_data:
-                                contact_data[neo4j_field] = str(lead_data.pop(key))
-                                break
-                    
-                    # Extract tech stack (flexible mapping)
-                    tech_stack = []
-                    tech_keys = ["techStack", "tech_stack", "technologies", "tech", "tools", "Tech Stack"]
-                    for key in tech_keys:
-                        if key in lead_data:
-                            tech_value = lead_data.pop(key)
-                            if isinstance(tech_value, list):
-                                tech_stack = [str(t) for t in tech_value]
-                            elif isinstance(tech_value, str):
-                                tech_stack = [t.strip() for t in str(tech_value).split(",") if t.strip()]
-                            break
-                    
-                    # Extract stage/status
-                    stage = lead_data.pop("stage", lead_data.pop("status", lead_data.pop("Status", "Initial Outreach")))
-                    lead_data["stage"] = str(stage)
-                    
-                    # Convert all values to strings for Neo4j compatibility
+                    # Convert all values to strings for Neo4j compatibility (except dict/list)
                     lead_data = {k: str(v) if not isinstance(v, (dict, list)) else v for k, v in lead_data.items()}
                     
+                    # Create Lead node with all data as-is (no extraction, no mapping)
                     with driver.session() as session:
-                        # Create or update Company node ONLY if company_name is provided
-                        if company_name:
-                            company_data = {
-                                "name": str(company_name),
-                                "industry": str(lead_data.pop("industry", lead_data.pop("Industry", ""))),
-                                "size": str(lead_data.pop("size", lead_data.pop("Size", ""))),
-                                "region": str(lead_data.pop("region", lead_data.pop("Region", ""))),
-                                "location": str(lead_data.pop("location", lead_data.pop("Location", ""))),
-                                "org_id": org_id
-                            }
-                            session.execute_write(
-                                upsert_node,
-                                "Company",
-                                "name",
-                                str(company_name),
-                                company_data
-                            )
-                        
-                        # Create Lead node with all remaining flexible fields (always created)
                         session.execute_write(
                             upsert_node,
                             "Lead",
@@ -681,53 +536,6 @@ async def batch_upload_leads(
                             lead_id,
                             lead_data
                         )
-                        
-                        # Create relationship: Company -> Lead (only if company exists)
-                        if company_name:
-                            session.run("""
-                                MATCH (c:Company {name: $company_name})
-                                MATCH (l:Lead {lead_id: $lead_id})
-                                MERGE (c)-[:Has_Lead]->(l)
-                            """, company_name=str(company_name), lead_id=lead_id)
-                        
-                        # Create Contact node if contact data exists
-                        if contact_data and (contact_data.get("first_name") or contact_data.get("last_name") or contact_data.get("email")):
-                            contact_id = str(uuid.uuid4())
-                            contact_data["contact_id"] = contact_id
-                            contact_data["org_id"] = org_id
-                            
-                            session.execute_write(
-                                upsert_node,
-                                "Contact",
-                                "contact_id",
-                                contact_id,
-                                contact_data
-                            )
-                            
-                            # Create relationships: Contact -> Lead (always)
-                            session.run("""
-                                MATCH (contact:Contact {contact_id: $contact_id})
-                                MATCH (l:Lead {lead_id: $lead_id})
-                                MERGE (contact)-[:Is_POC_For]->(l)
-                            """, contact_id=contact_id, lead_id=lead_id)
-                            
-                            # Create relationship: Company -> Contact (only if company exists)
-                            if company_name:
-                                session.run("""
-                                    MATCH (c:Company {name: $company_name})
-                                    MATCH (contact:Contact {contact_id: $contact_id})
-                                    MERGE (c)-[:Has_Contact]->(contact)
-                                """, company_name=str(company_name), contact_id=contact_id)
-                        
-                        # Create Tech nodes and relationships (only if company exists)
-                        if company_name:
-                            for tech_name in tech_stack:
-                                if tech_name:
-                                    session.run("""
-                                        MATCH (c:Company {name: $company_name})
-                                        MERGE (t:Tech {name: $tech_name})
-                                        MERGE (c)-[:Uses_Tech]->(t)
-                                    """, company_name=str(company_name), tech_name=str(tech_name))
                     
                     created_count += 1
                     
