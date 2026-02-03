@@ -524,8 +524,121 @@ interface ICPReportPanelProps {
   onClose: () => void;
 }
 
+// Editable section with commit/delete controls
+interface EditableSectionProps {
+  title: string;
+  icon?: React.ReactNode;
+  isEditing: boolean;
+  onCommit: () => void;
+  onDelete: () => void;
+  children: React.ReactNode;
+}
+
+const EditableSection = ({ title, icon, isEditing, onCommit, onDelete, children }: EditableSectionProps) => {
+  const { toast } = useToast();
+  
+  const handleCommit = () => {
+    onCommit();
+    toast({
+      title: "Changes Saved",
+      description: `"${title}" section has been updated.`,
+    });
+  };
+  
+  const handleDelete = () => {
+    onDelete();
+    toast({
+      title: "Section Removed",
+      description: `"${title}" section has been deleted.`,
+      variant: "destructive",
+    });
+  };
+  
+  return (
+    <Card className={`transition-all ${isEditing ? 'ring-2 ring-primary/20' : ''}`}>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base flex items-center gap-2">
+            {icon}
+            {title}
+          </CardTitle>
+          {isEditing && (
+            <div className="flex items-center gap-1">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-7 w-7 text-green-600 hover:text-green-700 hover:bg-green-50"
+                onClick={handleCommit}
+                title="Commit changes"
+              >
+                <Check className="h-4 w-4" />
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={handleDelete}
+                title="Delete section"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent className={isEditing ? 'bg-muted/20' : ''}>
+        {children}
+      </CardContent>
+    </Card>
+  );
+};
+
 const ICPReportPanel = ({ icp, onClose }: ICPReportPanelProps) => {
+  const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
+  
+  // Track visible sections (for delete functionality)
+  const [visibleSections, setVisibleSections] = useState({
+    profileOverview: true,
+    decisionMakers: true,
+    painPoints: true,
+    competitive: true,
+    recommendations: true,
+  });
+  
+  // Editable content state
+  const [editableContent, setEditableContent] = useState({
+    industry: icp.industry,
+    segment: icp.segment,
+    companySize: icp.companySize,
+    marketSize: icp.marketSize || 'N/A',
+    keyAttributes: [...icp.keyAttributes],
+    regions: [...icp.regions],
+    decisionMakers: [...icp.decisionMakers],
+    topPainPoint: icp.topPainPoint || 'Not specified',
+    buyingTriggers: [...(icp.buyingTriggers || [])],
+    competitors: [...(icp.competitors || [])],
+  });
+  
+  const handleSectionCommit = (sectionName: string) => {
+    // In a real app, this would persist changes
+    console.log(`Committing changes for section: ${sectionName}`, editableContent);
+  };
+  
+  const handleSectionDelete = (sectionKey: keyof typeof visibleSections) => {
+    setVisibleSections(prev => ({ ...prev, [sectionKey]: false }));
+  };
+  
+  const handleToggleEdit = () => {
+    if (isEditing) {
+      // Exiting edit mode - could auto-save here
+      toast({
+        title: "Edit Mode Disabled",
+        description: "Click Edit to make changes to sections.",
+      });
+    }
+    setIsEditing(!isEditing);
+  };
   
   return (
     <div className="p-6 space-y-6">
@@ -534,13 +647,21 @@ const ICPReportPanel = ({ icp, onClose }: ICPReportPanelProps) => {
         <div>
           <h4 className="text-lg font-semibold">ICP Report: {icp.name}</h4>
           <p className="text-sm text-muted-foreground">
-            Full report generated using accepted ICP context
+            {isEditing 
+              ? "Click ✔️ to commit changes or ✖️ to delete a section"
+              : "Full report generated using accepted ICP context"
+            }
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={() => setIsEditing(!isEditing)}>
+          <Button 
+            variant={isEditing ? "default" : "ghost"} 
+            size="sm" 
+            onClick={handleToggleEdit}
+            className={isEditing ? "bg-primary" : ""}
+          >
             <Edit className="h-4 w-4 mr-1" />
-            Edit
+            {isEditing ? "Done Editing" : "Edit"}
           </Button>
           <Button variant="ghost" size="sm">
             <Save className="h-4 w-4 mr-1" />
@@ -556,161 +677,319 @@ const ICPReportPanel = ({ icp, onClose }: ICPReportPanelProps) => {
         </div>
       </div>
 
+      {/* Editing indicator */}
+      {isEditing && (
+        <div className="flex items-center gap-2 p-3 bg-primary/10 rounded-lg border border-primary/20">
+          <Edit className="h-4 w-4 text-primary" />
+          <span className="text-sm text-primary font-medium">
+            Edit Mode: Use ✔️ to save section changes or ✖️ to remove sections
+          </span>
+        </div>
+      )}
+
       {/* Report Content */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Profile Overview */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Profile Overview</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div>
-                <p className="text-muted-foreground">Industry</p>
-                <p className="font-medium">{icp.industry}</p>
+        {visibleSections.profileOverview && (
+          <EditableSection
+            title="Profile Overview"
+            isEditing={isEditing}
+            onCommit={() => handleSectionCommit('profileOverview')}
+            onDelete={() => handleSectionDelete('profileOverview')}
+          >
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-muted-foreground">Industry</p>
+                  {isEditing ? (
+                    <input 
+                      type="text"
+                      value={editableContent.industry}
+                      onChange={(e) => setEditableContent(prev => ({ ...prev, industry: e.target.value }))}
+                      className="w-full font-medium bg-background border rounded px-2 py-1 text-sm"
+                    />
+                  ) : (
+                    <p className="font-medium">{editableContent.industry}</p>
+                  )}
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Segment</p>
+                  {isEditing ? (
+                    <input 
+                      type="text"
+                      value={editableContent.segment}
+                      onChange={(e) => setEditableContent(prev => ({ ...prev, segment: e.target.value }))}
+                      className="w-full font-medium bg-background border rounded px-2 py-1 text-sm"
+                    />
+                  ) : (
+                    <p className="font-medium">{editableContent.segment}</p>
+                  )}
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Company Size</p>
+                  {isEditing ? (
+                    <input 
+                      type="text"
+                      value={editableContent.companySize}
+                      onChange={(e) => setEditableContent(prev => ({ ...prev, companySize: e.target.value }))}
+                      className="w-full font-medium bg-background border rounded px-2 py-1 text-sm"
+                    />
+                  ) : (
+                    <p className="font-medium">{editableContent.companySize}</p>
+                  )}
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Market Size</p>
+                  {isEditing ? (
+                    <input 
+                      type="text"
+                      value={editableContent.marketSize}
+                      onChange={(e) => setEditableContent(prev => ({ ...prev, marketSize: e.target.value }))}
+                      className="w-full font-medium bg-background border rounded px-2 py-1 text-sm"
+                    />
+                  ) : (
+                    <p className="font-medium">{editableContent.marketSize}</p>
+                  )}
+                </div>
               </div>
+              
               <div>
-                <p className="text-muted-foreground">Segment</p>
-                <p className="font-medium">{icp.segment}</p>
+                <p className="text-sm text-muted-foreground mb-1">Key Attributes</p>
+                <div className="flex flex-wrap gap-1">
+                  {editableContent.keyAttributes.map((attr, idx) => (
+                    <Badge key={idx} variant="secondary" className="text-xs">
+                      {attr}
+                      {isEditing && (
+                        <button
+                          onClick={() => setEditableContent(prev => ({
+                            ...prev,
+                            keyAttributes: prev.keyAttributes.filter((_, i) => i !== idx)
+                          }))}
+                          className="ml-1 hover:text-destructive"
+                        >
+                          <X className="h-2.5 w-2.5" />
+                        </button>
+                      )}
+                    </Badge>
+                  ))}
+                </div>
               </div>
+              
               <div>
-                <p className="text-muted-foreground">Company Size</p>
-                <p className="font-medium">{icp.companySize}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Market Size</p>
-                <p className="font-medium">{icp.marketSize || 'N/A'}</p>
+                <p className="text-sm text-muted-foreground mb-1">Regions</p>
+                <div className="flex flex-wrap gap-1">
+                  {editableContent.regions.map((region, idx) => (
+                    <Badge key={idx} variant="outline" className="text-xs">
+                      {region}
+                      {isEditing && (
+                        <button
+                          onClick={() => setEditableContent(prev => ({
+                            ...prev,
+                            regions: prev.regions.filter((_, i) => i !== idx)
+                          }))}
+                          className="ml-1 hover:text-destructive"
+                        >
+                          <X className="h-2.5 w-2.5" />
+                        </button>
+                      )}
+                    </Badge>
+                  ))}
+                </div>
               </div>
             </div>
-            
-            <div>
-              <p className="text-sm text-muted-foreground mb-1">Key Attributes</p>
-              <div className="flex flex-wrap gap-1">
-                {icp.keyAttributes.map((attr, idx) => (
-                  <Badge key={idx} variant="secondary" className="text-xs">
-                    {attr}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-            
-            <div>
-              <p className="text-sm text-muted-foreground mb-1">Regions</p>
-              <div className="flex flex-wrap gap-1">
-                {icp.regions.map((region, idx) => (
-                  <Badge key={idx} variant="outline" className="text-xs">
-                    {region}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+          </EditableSection>
+        )}
 
         {/* Decision Makers */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Key Decision Makers
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+        {visibleSections.decisionMakers && (
+          <EditableSection
+            title="Key Decision Makers"
+            icon={<Users className="h-4 w-4" />}
+            isEditing={isEditing}
+            onCommit={() => handleSectionCommit('decisionMakers')}
+            onDelete={() => handleSectionDelete('decisionMakers')}
+          >
             <div className="space-y-2">
-              {icp.decisionMakers.map((dm, idx) => (
+              {editableContent.decisionMakers.map((dm, idx) => (
                 <div key={idx} className="flex items-center gap-2 p-2 bg-muted/50 rounded-md">
                   <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
                     <Users className="h-4 w-4 text-primary" />
                   </div>
-                  <span className="text-sm font-medium">{dm}</span>
+                  {isEditing ? (
+                    <input 
+                      type="text"
+                      value={dm}
+                      onChange={(e) => setEditableContent(prev => ({
+                        ...prev,
+                        decisionMakers: prev.decisionMakers.map((d, i) => i === idx ? e.target.value : d)
+                      }))}
+                      className="flex-1 font-medium bg-background border rounded px-2 py-1 text-sm"
+                    />
+                  ) : (
+                    <span className="text-sm font-medium">{dm}</span>
+                  )}
+                  {isEditing && (
+                    <button
+                      onClick={() => setEditableContent(prev => ({
+                        ...prev,
+                        decisionMakers: prev.decisionMakers.filter((_, i) => i !== idx)
+                      }))}
+                      className="text-destructive hover:text-destructive/80"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
-          </CardContent>
-        </Card>
+          </EditableSection>
+        )}
 
         {/* Pain Points & Triggers */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Target className="h-4 w-4" />
-              Pain Points & Buying Triggers
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <p className="text-sm text-muted-foreground mb-2">Top Pain Point</p>
-              <p className="text-sm font-medium bg-red-50 text-red-700 p-2 rounded-md">
-                {icp.topPainPoint || 'Not specified'}
-              </p>
-            </div>
-            
-            {icp.buyingTriggers && icp.buyingTriggers.length > 0 && (
+        {visibleSections.painPoints && (
+          <EditableSection
+            title="Pain Points & Buying Triggers"
+            icon={<Target className="h-4 w-4" />}
+            isEditing={isEditing}
+            onCommit={() => handleSectionCommit('painPoints')}
+            onDelete={() => handleSectionDelete('painPoints')}
+          >
+            <div className="space-y-4">
               <div>
-                <p className="text-sm text-muted-foreground mb-2">Buying Triggers</p>
-                <ul className="space-y-1">
-                  {icp.buyingTriggers.map((trigger, idx) => (
-                    <li key={idx} className="text-sm flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
-                      {trigger}
-                    </li>
-                  ))}
-                </ul>
+                <p className="text-sm text-muted-foreground mb-2">Top Pain Point</p>
+                {isEditing ? (
+                  <input 
+                    type="text"
+                    value={editableContent.topPainPoint}
+                    onChange={(e) => setEditableContent(prev => ({ ...prev, topPainPoint: e.target.value }))}
+                    className="w-full font-medium bg-red-50 text-red-700 border border-red-200 rounded px-2 py-2 text-sm"
+                  />
+                ) : (
+                  <p className="text-sm font-medium bg-red-50 text-red-700 p-2 rounded-md">
+                    {editableContent.topPainPoint}
+                  </p>
+                )}
               </div>
-            )}
-          </CardContent>
-        </Card>
+              
+              {editableContent.buyingTriggers.length > 0 && (
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2">Buying Triggers</p>
+                  <ul className="space-y-1">
+                    {editableContent.buyingTriggers.map((trigger, idx) => (
+                      <li key={idx} className="text-sm flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
+                        {isEditing ? (
+                          <>
+                            <input 
+                              type="text"
+                              value={trigger}
+                              onChange={(e) => setEditableContent(prev => ({
+                                ...prev,
+                                buyingTriggers: prev.buyingTriggers.map((t, i) => i === idx ? e.target.value : t)
+                              }))}
+                              className="flex-1 bg-background border rounded px-2 py-1 text-sm"
+                            />
+                            <button
+                              onClick={() => setEditableContent(prev => ({
+                                ...prev,
+                                buyingTriggers: prev.buyingTriggers.filter((_, i) => i !== idx)
+                              }))}
+                              className="text-destructive hover:text-destructive/80"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </>
+                        ) : (
+                          trigger
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </EditableSection>
+        )}
 
         {/* Competitive Landscape */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Competitive Landscape</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {icp.competitors && icp.competitors.length > 0 ? (
+        {visibleSections.competitive && (
+          <EditableSection
+            title="Competitive Landscape"
+            isEditing={isEditing}
+            onCommit={() => handleSectionCommit('competitive')}
+            onDelete={() => handleSectionDelete('competitive')}
+          >
+            {editableContent.competitors.length > 0 ? (
               <div className="space-y-2">
-                {icp.competitors.map((competitor, idx) => (
+                {editableContent.competitors.map((competitor, idx) => (
                   <div key={idx} className="flex items-center justify-between p-2 bg-muted/50 rounded-md">
-                    <span className="text-sm font-medium">{competitor}</span>
-                    <Badge variant="outline" className="text-xs">Competitor</Badge>
+                    {isEditing ? (
+                      <input 
+                        type="text"
+                        value={competitor}
+                        onChange={(e) => setEditableContent(prev => ({
+                          ...prev,
+                          competitors: prev.competitors.map((c, i) => i === idx ? e.target.value : c)
+                        }))}
+                        className="flex-1 font-medium bg-background border rounded px-2 py-1 text-sm mr-2"
+                      />
+                    ) : (
+                      <span className="text-sm font-medium">{competitor}</span>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-xs">Competitor</Badge>
+                      {isEditing && (
+                        <button
+                          onClick={() => setEditableContent(prev => ({
+                            ...prev,
+                            competitors: prev.competitors.filter((_, i) => i !== idx)
+                          }))}
+                          className="text-destructive hover:text-destructive/80"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">No competitor data available</p>
             )}
-          </CardContent>
-        </Card>
+          </EditableSection>
+        )}
       </div>
 
       {/* Recommended Actions */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Recommended Actions</CardTitle>
-        </CardHeader>
-        <CardContent>
+      {visibleSections.recommendations && (
+        <EditableSection
+          title="Recommended Actions"
+          isEditing={isEditing}
+          onCommit={() => handleSectionCommit('recommendations')}
+          onDelete={() => handleSectionDelete('recommendations')}
+        >
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div className="p-3 bg-blue-50 rounded-lg border border-blue-100">
               <p className="text-sm font-medium text-blue-800">Prioritize Outreach</p>
               <p className="text-xs text-blue-600 mt-1">
-                Focus on {icp.decisionMakers[0] || 'key decision makers'} in target companies
+                Focus on {editableContent.decisionMakers[0] || 'key decision makers'} in target companies
               </p>
             </div>
             <div className="p-3 bg-green-50 rounded-lg border border-green-100">
               <p className="text-sm font-medium text-green-800">Content Strategy</p>
               <p className="text-xs text-green-600 mt-1">
-                Create content addressing "{icp.topPainPoint || 'key pain points'}"
+                Create content addressing "{editableContent.topPainPoint}"
               </p>
             </div>
             <div className="p-3 bg-purple-50 rounded-lg border border-purple-100">
               <p className="text-sm font-medium text-purple-800">Monitor Signals</p>
               <p className="text-xs text-purple-600 mt-1">
-                Track buying triggers in {icp.regions[0] || 'target regions'}
+                Track buying triggers in {editableContent.regions[0] || 'target regions'}
               </p>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </EditableSection>
+      )}
     </div>
   );
 };
