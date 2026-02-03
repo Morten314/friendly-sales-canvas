@@ -564,7 +564,9 @@ async def batch_upload_leads(
     """
     Batch upload leads from CSV file.
     Column headings become keys and row values become values.
+    NO REQUIRED FIELDS - all fields are optional.
     Each row creates a new lead with multitenancy (user_id and org_id).
+    Creates Company, Contact, and Tech nodes only if relevant data is provided.
     """
     try:
         import pandas as pd
@@ -614,12 +616,8 @@ async def batch_upload_leads(
                     lead_data["lead_id"] = lead_id
                     lead_data["created_at"] = datetime.utcnow().isoformat()
                     
-                    # Extract company information (flexible mapping)
+                    # Extract company information (flexible mapping) - OPTIONAL
                     company_name = lead_data.pop("company", lead_data.pop("company_name", lead_data.pop("Company", "")))
-                    if not company_name:
-                        error_count += 1
-                        errors.append(f"Row {index + 1}: Missing company name")
-                        continue
                     
                     # Extract contact information (flexible mapping)
                     contact_data = {}
@@ -657,24 +655,25 @@ async def batch_upload_leads(
                     lead_data = {k: str(v) if not isinstance(v, (dict, list)) else v for k, v in lead_data.items()}
                     
                     with driver.session() as session:
-                        # Create or update Company node
-                        company_data = {
-                            "name": str(company_name),
-                            "industry": str(lead_data.pop("industry", lead_data.pop("Industry", ""))),
-                            "size": str(lead_data.pop("size", lead_data.pop("Size", ""))),
-                            "region": str(lead_data.pop("region", lead_data.pop("Region", ""))),
-                            "location": str(lead_data.pop("location", lead_data.pop("Location", ""))),
-                            "org_id": org_id
-                        }
-                        session.execute_write(
-                            upsert_node,
-                            "Company",
-                            "name",
-                            str(company_name),
-                            company_data
-                        )
+                        # Create or update Company node ONLY if company_name is provided
+                        if company_name:
+                            company_data = {
+                                "name": str(company_name),
+                                "industry": str(lead_data.pop("industry", lead_data.pop("Industry", ""))),
+                                "size": str(lead_data.pop("size", lead_data.pop("Size", ""))),
+                                "region": str(lead_data.pop("region", lead_data.pop("Region", ""))),
+                                "location": str(lead_data.pop("location", lead_data.pop("Location", ""))),
+                                "org_id": org_id
+                            }
+                            session.execute_write(
+                                upsert_node,
+                                "Company",
+                                "name",
+                                str(company_name),
+                                company_data
+                            )
                         
-                        # Create Lead node with all remaining flexible fields
+                        # Create Lead node with all remaining flexible fields (always created)
                         session.execute_write(
                             upsert_node,
                             "Lead",
@@ -683,12 +682,13 @@ async def batch_upload_leads(
                             lead_data
                         )
                         
-                        # Create relationship: Company -> Lead
-                        session.run("""
-                            MATCH (c:Company {name: $company_name})
-                            MATCH (l:Lead {lead_id: $lead_id})
-                            MERGE (c)-[:Has_Lead]->(l)
-                        """, company_name=str(company_name), lead_id=lead_id)
+                        # Create relationship: Company -> Lead (only if company exists)
+                        if company_name:
+                            session.run("""
+                                MATCH (c:Company {name: $company_name})
+                                MATCH (l:Lead {lead_id: $lead_id})
+                                MERGE (c)-[:Has_Lead]->(l)
+                            """, company_name=str(company_name), lead_id=lead_id)
                         
                         # Create Contact node if contact data exists
                         if contact_data and (contact_data.get("first_name") or contact_data.get("last_name") or contact_data.get("email")):
@@ -704,23 +704,30 @@ async def batch_upload_leads(
                                 contact_data
                             )
                             
-                            # Create relationships: Company -> Contact, Contact -> Lead
+                            # Create relationships: Contact -> Lead (always)
                             session.run("""
-                                MATCH (c:Company {name: $company_name})
                                 MATCH (contact:Contact {contact_id: $contact_id})
                                 MATCH (l:Lead {lead_id: $lead_id})
-                                MERGE (c)-[:Has_Contact]->(contact)
                                 MERGE (contact)-[:Is_POC_For]->(l)
-                            """, company_name=str(company_name), contact_id=contact_id, lead_id=lead_id)
-                        
-                        # Create Tech nodes and relationships
-                        for tech_name in tech_stack:
-                            if tech_name:
+                            """, contact_id=contact_id, lead_id=lead_id)
+                            
+                            # Create relationship: Company -> Contact (only if company exists)
+                            if company_name:
                                 session.run("""
                                     MATCH (c:Company {name: $company_name})
-                                    MERGE (t:Tech {name: $tech_name})
-                                    MERGE (c)-[:Uses_Tech]->(t)
-                                """, company_name=str(company_name), tech_name=str(tech_name))
+                                    MATCH (contact:Contact {contact_id: $contact_id})
+                                    MERGE (c)-[:Has_Contact]->(contact)
+                                """, company_name=str(company_name), contact_id=contact_id)
+                        
+                        # Create Tech nodes and relationships (only if company exists)
+                        if company_name:
+                            for tech_name in tech_stack:
+                                if tech_name:
+                                    session.run("""
+                                        MATCH (c:Company {name: $company_name})
+                                        MERGE (t:Tech {name: $tech_name})
+                                        MERGE (c)-[:Uses_Tech]->(t)
+                                    """, company_name=str(company_name), tech_name=str(tech_name))
                     
                     created_count += 1
                     
