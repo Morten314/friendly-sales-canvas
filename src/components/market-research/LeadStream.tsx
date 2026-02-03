@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Upload, Users, X, Check, Edit, Trash2, Loader2 } from "lucide-react";
+import { Upload, Users, X, Check, Edit, Trash2, Loader2, FileText, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useTenant } from "@/contexts/TenantContext";
@@ -41,12 +42,12 @@ interface LeadStreamProps {
   onFiltersChange?: (filters: { selectedIndustry: string; selectedSize: string; selectedRegion: string }) => void;
 }
 
-const LeadStream: React.FC<LeadStreamProps> = ({
+const LeadStream = ({
   selectedIndustry,
   selectedSize,
   selectedRegion,
   onFiltersChange,
-}) => {
+}: LeadStreamProps) => {
   const { toast } = useToast();
   const { currentUser } = useAuth();
   const { selectedTenant } = useTenant();
@@ -70,8 +71,9 @@ const LeadStream: React.FC<LeadStreamProps> = ({
   const [showEditForm, setShowEditForm] = useState(false);
 
   // Get user_id and org_id
+  // For leads API, org_id should match user_id (backend requirement)
   const userId = currentUser?.uid || "";
-  const orgId = selectedTenant?.id || userId || "";
+  const orgId = userId || ""; // Use user_id as org_id to ensure they match
 
   // API Functions
   const fetchLeads = async () => {
@@ -90,6 +92,10 @@ const LeadStream: React.FC<LeadStreamProps> = ({
         userId,
         orgId,
         hasAuth: !!authHeader,
+        userIdType: typeof userId,
+        orgIdType: typeof orgId,
+        userIdLength: userId?.length,
+        orgIdLength: orgId?.length,
       });
 
       const response = await fetch(url, {
@@ -114,9 +120,75 @@ const LeadStream: React.FC<LeadStreamProps> = ({
 
       const data = await response.json();
       console.log("✅ LeadStream - Fetched data:", data);
+      console.log("✅ LeadStream - Data type:", Array.isArray(data) ? "Array" : typeof data);
+      console.log("✅ LeadStream - Data keys:", Array.isArray(data) ? `Array length: ${data.length}` : Object.keys(data));
+      
       // Handle both array and object with leads property
-      const leadsArray = Array.isArray(data) ? data : (data.leads || []);
-      setLeads(leadsArray);
+      let leadsArray: any[] = [];
+      if (Array.isArray(data)) {
+        leadsArray = data;
+      } else if (data && typeof data === 'object') {
+        // Try multiple possible response structures
+        leadsArray = data.leads || data.data || data.results || data.items || [];
+        // If still empty, check if data itself contains lead-like properties
+        if (leadsArray.length === 0 && Object.keys(data).length > 0) {
+          // Check if the object itself might be a single lead or contains nested data
+          console.log("⚠️ LeadStream - Response is object but no leads array found. Object keys:", Object.keys(data));
+          console.log("⚠️ LeadStream - Full response object:", JSON.stringify(data, null, 2));
+        }
+      }
+      
+      console.log("✅ LeadStream - Processed leads array length:", leadsArray.length);
+      if (leadsArray.length > 0) {
+        console.log("✅ LeadStream - First lead sample:", leadsArray[0]);
+        console.log("✅ LeadStream - First lead keys:", Object.keys(leadsArray[0]));
+        console.log("✅ LeadStream - First lead full object:", JSON.stringify(leadsArray[0], null, 2));
+      }
+      
+      // Transform backend data structure to match frontend expectations
+      // Backend returns: {lead_id, company, contact: {name, email, ...}, ...}
+      // Frontend expects: {lead_id, fullName, email, mobile, companyName, companyWebsite, linkedInProfile, actions, ...}
+      const transformedLeads = leadsArray.map((lead: any) => {
+        // Helper function to clean and get value
+        const getValue = (...values: any[]): string => {
+          for (const val of values) {
+            if (val !== null && val !== undefined && val !== "") {
+              const trimmed = String(val).trim();
+              if (trimmed !== "") return trimmed;
+            }
+          }
+          return "";
+        };
+        
+        // Map backend structure to frontend structure
+        return {
+          ...lead,
+          // Map contact.name to fullName (handle whitespace)
+          fullName: getValue(lead.fullName, lead.full_name, lead.contact?.name, lead.name),
+          // Map contact.email to email (top level)
+          email: getValue(lead.email, lead.contact?.email),
+          // Map mobile/phone fields
+          mobile: getValue(lead.mobile, lead.phone, lead.contact?.mobile, lead.contact?.phone),
+          // Map company fields
+          companyName: getValue(lead.companyName, lead.company_name, lead.company),
+          companyWebsite: getValue(lead.companyWebsite, lead.company_website, lead.website, lead.company?.website),
+          // Map LinkedIn fields
+          linkedInProfile: getValue(lead.linkedInProfile, lead.linkedin_profile, lead.linkedIn, lead.contact?.linkedIn, lead.contact?.linkedin),
+          // Map actions/notes
+          actions: getValue(lead.actions, lead.notes, lead.action),
+          // Preserve contact object for backward compatibility
+          contact: lead.contact || {},
+          // Preserve company object for backward compatibility
+          company: lead.company || {},
+        };
+      });
+      
+      console.log("✅ LeadStream - Transformed leads count:", transformedLeads.length);
+      if (transformedLeads.length > 0) {
+        console.log("✅ LeadStream - First transformed lead:", transformedLeads[0]);
+      }
+      
+      setLeads(transformedLeads);
     } catch (error) {
       console.error("Error fetching leads:", error);
       toast({
@@ -179,14 +251,28 @@ const LeadStream: React.FC<LeadStreamProps> = ({
       throw new Error("User ID and Org ID are required");
     }
 
+    if (!leadId) {
+      throw new Error("Lead ID is required");
+    }
+
     const authHeader = await jwtManager.getAuthHeader();
     const url = buildApiUrl(`leads/${leadId}`);
     
+    // API spec: Request body should have user_id, org_id, and data (flexible key-value updates)
     const payload = {
       user_id: userId,
       org_id: orgId,
       data: leadData,
     };
+
+    console.log("🚀 LeadStream - Updating lead:", {
+      url,
+      leadId,
+      userId,
+      orgId,
+      payload,
+      hasAuth: !!authHeader,
+    });
 
     const response = await fetch(url, {
       method: "PUT",
@@ -197,12 +283,25 @@ const LeadStream: React.FC<LeadStreamProps> = ({
       body: JSON.stringify(payload),
     });
 
+    console.log("📨 LeadStream - Update response:", {
+      status: response.status,
+      statusText: response.statusText,
+      url: response.url,
+      ok: response.ok,
+    });
+
     if (!response.ok) {
       const errorText = await response.text();
+      console.error("❌ LeadStream - Update error:", {
+        status: response.status,
+        errorText,
+        leadId,
+      });
       throw new Error(`Failed to update lead: ${response.status} - ${errorText}`);
     }
 
     const result = await response.json();
+    console.log("✅ LeadStream - Update success:", result);
     return result;
   };
 
@@ -211,9 +310,22 @@ const LeadStream: React.FC<LeadStreamProps> = ({
       throw new Error("User ID and Org ID are required");
     }
 
+    if (!leadId) {
+      throw new Error("Lead ID is required");
+    }
+
     const authHeader = await jwtManager.getAuthHeader();
+    // API spec: DELETE /leads/{lead_id} with user_id and org_id as query parameters
     const url = buildApiUrl(`leads/${leadId}?user_id=${userId}&org_id=${orgId}`);
     
+    console.log("🚀 LeadStream - Deleting lead:", {
+      url,
+      leadId,
+      userId,
+      orgId,
+      hasAuth: !!authHeader,
+    });
+
     const response = await fetch(url, {
       method: "DELETE",
       headers: {
@@ -222,12 +334,306 @@ const LeadStream: React.FC<LeadStreamProps> = ({
       },
     });
 
+    console.log("📨 LeadStream - Delete response:", {
+      status: response.status,
+      statusText: response.statusText,
+      url: response.url,
+      ok: response.ok,
+    });
+
     if (!response.ok) {
       const errorText = await response.text();
+      console.error("❌ LeadStream - Delete error:", {
+        status: response.status,
+        errorText,
+        leadId,
+      });
       throw new Error(`Failed to delete lead: ${response.status} - ${errorText}`);
     }
 
-    return true;
+    const result = await response.json().catch(() => ({})); // Some APIs return empty body on success
+    console.log("✅ LeadStream - Delete success:", result);
+    return result;
+  };
+
+  // Detect CSV delimiter (comma, semicolon, or tab)
+  const detectDelimiter = (text: string): string => {
+    const firstLine = text.split('\n')[0];
+    const delimiters = [',', ';', '\t'];
+    let maxCount = 0;
+    let detectedDelimiter = ',';
+    
+    for (const delimiter of delimiters) {
+      const count = (firstLine.match(new RegExp(`\\${delimiter}`, 'g')) || []).length;
+      if (count > maxCount) {
+        maxCount = count;
+        detectedDelimiter = delimiter;
+      }
+    }
+    
+    return detectedDelimiter;
+  };
+
+  // Normalize a single column name to match backend expectations
+  const normalizeSingleColumnName = (columnName: string): string => {
+    const trimmed = columnName.trim();
+    
+    // Map common column name variations to backend-expected names
+    // Backend expects camelCase (e.g., "companyName" not "company name")
+    const columnMapping: Record<string, string> = {
+      'fullname': 'fullName',
+      'full_name': 'fullName',
+      'FullName': 'fullName',
+      'Full Name': 'fullName',
+      'full name': 'fullName',
+      'name': 'fullName',
+      'Name': 'fullName',
+      
+      'email': 'email',
+      'Email': 'email',
+      
+      'mobile': 'mobile',
+      'Mobile': 'mobile',
+      'phone': 'mobile',
+      'Phone': 'mobile',
+      'phone_number': 'mobile',
+      'Phone Number': 'mobile',
+      'phone number': 'mobile',
+      
+      'companyname': 'companyName',
+      'company_name': 'companyName',
+      'CompanyName': 'companyName',
+      'Company Name': 'companyName',
+      'company name': 'companyName',
+      'company': 'companyName',
+      'Company': 'companyName',
+      
+      'companywebsite': 'companyWebsite',
+      'company_website': 'companyWebsite',
+      'CompanyWebsite': 'companyWebsite',
+      'Company Website': 'companyWebsite',
+      'company website': 'companyWebsite',
+      'website': 'companyWebsite',
+      'Website': 'companyWebsite',
+      
+      'linkedinprofile': 'linkedInProfile',
+      'linkedin_profile': 'linkedInProfile',
+      'LinkedInProfile': 'linkedInProfile',
+      'LinkedIn Profile': 'linkedInProfile',
+      'linkedin profile': 'linkedInProfile',
+      'linkedin': 'linkedInProfile',
+      'LinkedIn': 'linkedInProfile',
+      
+      'actions': 'actions',
+      'Actions': 'actions',
+      'notes': 'actions',
+      'Notes': 'actions',
+    };
+
+    const lowerKey = trimmed.toLowerCase().replace(/\s+/g, ''); // Remove spaces and lowercase
+    const lowerWithSpaces = trimmed.toLowerCase(); // Lowercase with spaces
+    
+    // Try multiple matching strategies
+    if (columnMapping[trimmed]) {
+      return columnMapping[trimmed];
+    } else if (columnMapping[lowerKey]) {
+      return columnMapping[lowerKey];
+    } else if (columnMapping[lowerWithSpaces]) {
+      return columnMapping[lowerWithSpaces];
+    } else if (columnMapping[trimmed.toLowerCase()]) {
+      return columnMapping[trimmed.toLowerCase()];
+    }
+    
+    // Return original if no mapping found (backend might accept it)
+    return trimmed;
+  };
+
+  // Normalize CSV column names to match backend expectations
+  const normalizeColumnNames = (headerLine: string): string => {
+    console.log("🔍 LeadStream - Normalizing column names from:", headerLine);
+    
+    // Map common column name variations to backend-expected names
+    // Backend expects camelCase (e.g., "companyName" not "company name")
+    const columnMapping: Record<string, string> = {
+      'fullname': 'fullName',
+      'full_name': 'fullName',
+      'FullName': 'fullName',
+      'Full Name': 'fullName',
+      'full name': 'fullName',
+      'name': 'fullName',
+      'Name': 'fullName',
+      
+      'email': 'email',
+      'Email': 'email',
+      
+      'mobile': 'mobile',
+      'Mobile': 'mobile',
+      'phone': 'mobile',
+      'Phone': 'mobile',
+      'phone_number': 'mobile',
+      'Phone Number': 'mobile',
+      'phone number': 'mobile',
+      
+      'companyname': 'companyName',
+      'company_name': 'companyName',
+      'CompanyName': 'companyName',
+      'Company Name': 'companyName',
+      'company name': 'companyName',
+      'company': 'companyName',
+      'Company': 'companyName',
+      
+      'companywebsite': 'companyWebsite',
+      'company_website': 'companyWebsite',
+      'CompanyWebsite': 'companyWebsite',
+      'Company Website': 'companyWebsite',
+      'company website': 'companyWebsite',
+      'website': 'companyWebsite',
+      'Website': 'companyWebsite',
+      
+      'linkedinprofile': 'linkedInProfile',
+      'linkedin_profile': 'linkedInProfile',
+      'LinkedInProfile': 'linkedInProfile',
+      'LinkedIn Profile': 'linkedInProfile',
+      'linkedin profile': 'linkedInProfile',
+      'linkedin': 'linkedInProfile',
+      'LinkedIn': 'linkedInProfile',
+      
+      'actions': 'actions',
+      'Actions': 'actions',
+      'notes': 'actions',
+      'Notes': 'actions',
+    };
+
+    // Parse header line and normalize column names
+    // Handle CSV parsing with proper quote handling
+    const fields: string[] = [];
+    let currentField = '';
+    let inQuotes = false;
+    
+    for (let i = 0; i < headerLine.length; i++) {
+      const char = headerLine[i];
+      const nextChar = headerLine[i + 1];
+      
+      if (char === '"') {
+        if (inQuotes && nextChar === '"') {
+          currentField += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === ',' && !inQuotes) {
+        fields.push(currentField);
+        currentField = '';
+      } else {
+        currentField += char;
+      }
+    }
+    fields.push(currentField); // Add last field
+    
+    const normalizedFields = fields.map(field => {
+      const trimmed = field.trim().replace(/^"|"$/g, ''); // Remove quotes
+      const lowerKey = trimmed.toLowerCase().replace(/\s+/g, ''); // Remove spaces and lowercase
+      const lowerWithSpaces = trimmed.toLowerCase(); // Lowercase with spaces
+      
+      // Try multiple matching strategies
+      if (columnMapping[trimmed]) {
+        console.log(`  ✓ Mapping "${trimmed}" → "${columnMapping[trimmed]}"`);
+        return columnMapping[trimmed];
+      } else if (columnMapping[lowerKey]) {
+        console.log(`  ✓ Mapping "${trimmed}" (lowercase no spaces) → "${columnMapping[lowerKey]}"`);
+        return columnMapping[lowerKey];
+      } else if (columnMapping[lowerWithSpaces]) {
+        console.log(`  ✓ Mapping "${trimmed}" (lowercase) → "${columnMapping[lowerWithSpaces]}"`);
+        return columnMapping[lowerWithSpaces];
+      } else if (columnMapping[trimmed.toLowerCase()]) {
+        console.log(`  ✓ Mapping "${trimmed}" (toLowerCase) → "${columnMapping[trimmed.toLowerCase()]}"`);
+        return columnMapping[trimmed.toLowerCase()];
+      }
+      
+      // Return original if no mapping found (backend might accept it)
+      console.log(`  ⚠ No mapping found for "${trimmed}", keeping original`);
+      return trimmed;
+    });
+    
+    const result = normalizedFields.join(',');
+    console.log("✅ LeadStream - Normalized column names to:", result);
+    return result;
+  };
+
+  // Normalize CSV: convert to comma-delimited, ensure proper formatting
+  const normalizeCsv = (text: string): string => {
+    // Normalize line endings
+    text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    
+    // Detect delimiter first (before any modifications)
+    const delimiter = detectDelimiter(text);
+    
+    // Split into lines
+    let lines = text.split('\n').filter(line => line.trim().length > 0);
+    if (lines.length === 0) return text;
+    
+    // If not comma, convert to comma
+    if (delimiter !== ',') {
+      // Simple conversion - split by detected delimiter and join with comma
+      // Handle quoted fields properly
+      const lines = text.split('\n');
+      const normalizedLines = lines.map(line => {
+        if (line.trim() === '') return line;
+        
+        // Check if line has quotes (indicating proper CSV format)
+        if (line.includes('"')) {
+          // Parse quoted CSV properly
+          const fields: string[] = [];
+          let currentField = '';
+          let inQuotes = false;
+          
+          for (let i = 0; i < line.length; i++) {
+            const char = line[i];
+            const nextChar = line[i + 1];
+            
+            if (char === '"') {
+              if (inQuotes && nextChar === '"') {
+                // Escaped quote
+                currentField += '"';
+                i++; // Skip next quote
+              } else {
+                // Toggle quote state
+                inQuotes = !inQuotes;
+              }
+            } else if ((char === delimiter || char === ',') && !inQuotes) {
+              // Field separator
+              fields.push(currentField);
+              currentField = '';
+            } else {
+              currentField += char;
+            }
+          }
+          fields.push(currentField); // Add last field
+          
+          // Join with commas, quote fields that contain commas or quotes
+          return fields.map(field => {
+            if (field.includes(',') || field.includes('"') || field.includes('\n')) {
+              return `"${field.replace(/"/g, '""')}"`;
+            }
+            return field;
+          }).join(',');
+        } else {
+          // Simple split and join
+          return line.split(delimiter).join(',');
+        }
+      });
+      
+      text = normalizedLines.join('\n');
+    }
+    
+    // Normalize header column names (after delimiter conversion)
+    const finalLines = text.split('\n').filter(line => line.trim().length > 0);
+    if (finalLines.length > 0) {
+      finalLines[0] = normalizeColumnNames(finalLines[0]);
+      text = finalLines.join('\n');
+    }
+    
+    return text;
   };
 
   const uploadCsvBatch = async (file: File) => {
@@ -235,13 +641,85 @@ const LeadStream: React.FC<LeadStreamProps> = ({
       throw new Error("User ID and Org ID are required");
     }
 
+    // Convert file to UTF-8 encoding to avoid encoding errors
+    // This handles files encoded in Windows-1252, ISO-8859-1, or other encodings
+    const convertToUtf8 = (file: File): Promise<File> => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        
+        reader.onload = (e) => {
+          try {
+            const arrayBuffer = e.target?.result as ArrayBuffer;
+            
+            // Try different encodings in order of likelihood
+            // Windows-1252 is common for Excel exports (byte 0x87 suggests this)
+            const encodings = ['windows-1252', 'iso-8859-1', 'utf-8'];
+            let text = '';
+            let decoded = false;
+            
+            for (const encoding of encodings) {
+              try {
+                const decoder = new TextDecoder(encoding, { fatal: false });
+                text = decoder.decode(arrayBuffer);
+                decoded = true;
+                break;
+              } catch {
+                continue;
+              }
+            }
+            
+            if (!decoded || !text) {
+              // Last resort: try UTF-8 with error handling
+              text = new TextDecoder('utf-8', { fatal: false }).decode(arrayBuffer);
+            }
+            
+            // Normalize CSV format (convert delimiters, ensure proper formatting)
+            // This handles WPS Office/Excel exports that may use semicolons or tabs
+            text = normalizeCsv(text);
+            
+            // Create a new UTF-8 encoded file with normalized CSV
+            const utf8Blob = new Blob([text], { type: 'text/csv;charset=utf-8' });
+            const utf8File = new File([utf8Blob], file.name, {
+              type: 'text/csv',
+              lastModified: file.lastModified,
+            });
+            
+            resolve(utf8File);
+          } catch (error) {
+            reject(new Error(`Failed to convert file encoding: ${error instanceof Error ? error.message : 'Unknown error'}`));
+          }
+        };
+        
+        reader.onerror = () => reject(new Error('Failed to read file'));
+        reader.readAsArrayBuffer(file);
+      });
+    };
+
+    let utf8File: File;
+    try {
+      utf8File = await convertToUtf8(file);
+    } catch (error) {
+      throw new Error(`Failed to process CSV file encoding: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+
     const authHeader = await jwtManager.getAuthHeader();
     const url = buildApiUrl("leads/batch-upload");
     
+    // Backend expects FormData with file, user_id, and org_id
+    // The CSV file has already been normalized (column names, encoding, delimiters)
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("file", utf8File);
     formData.append("user_id", userId);
     formData.append("org_id", orgId);
+
+    console.log("🚀 LeadStream - Batch Upload Starting:", {
+      url,
+      userId,
+      orgId,
+      fileName: utf8File.name,
+      fileSize: utf8File.size,
+      hasAuth: !!authHeader,
+    });
 
     const response = await fetch(url, {
       method: "POST",
@@ -251,12 +729,30 @@ const LeadStream: React.FC<LeadStreamProps> = ({
       body: formData,
     });
 
+    console.log("📨 LeadStream - Batch Upload Response:", {
+      status: response.status,
+      statusText: response.statusText,
+      url: response.url,
+      ok: response.ok,
+    });
+
     if (!response.ok) {
       const errorText = await response.text();
+      console.error("❌ LeadStream - Batch Upload Error:", {
+        status: response.status,
+        errorText,
+      });
       throw new Error(`Failed to upload CSV: ${response.status} - ${errorText}`);
     }
 
     const result = await response.json();
+    console.log("✅ LeadStream - Batch Upload Success:", {
+      result,
+      created_count: result.created_count,
+      error_count: result.error_count,
+      errors: result.errors,
+    });
+    
     return result;
   };
 
@@ -306,6 +802,72 @@ const LeadStream: React.FC<LeadStreamProps> = ({
     }
   };
 
+  // Basic CSV validation - lenient since backend is flexible
+  const validateCsvFormat = async (file: File): Promise<{ valid: boolean; error?: string }> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      
+      reader.onload = (e) => {
+        try {
+          const text = e.target?.result as string;
+          
+          // Just check if file is not empty
+          if (!text || text.trim().length === 0) {
+            resolve({ valid: false, error: "CSV file is empty" });
+            return;
+          }
+          
+          // Basic check: file should have at least one line
+          const lines = text.split(/\r?\n/).filter(line => line.trim().length > 0);
+          if (lines.length === 0) {
+            resolve({ valid: false, error: "CSV file appears to be empty" });
+            return;
+          }
+          
+          // Since backend is flexible, we just do basic validation
+          // The normalization will happen during upload
+          resolve({ valid: true });
+        } catch (error) {
+          resolve({ 
+            valid: false, 
+            error: `Failed to read CSV file: ${error instanceof Error ? error.message : 'Unknown error'}` 
+          });
+        }
+      };
+      
+      reader.onerror = () => {
+        resolve({ valid: false, error: "Failed to read file" });
+      };
+      
+      reader.readAsText(file, 'UTF-8');
+    });
+  };
+
+  // Parse backend error message to provide helpful feedback
+  const parseErrorMessage = (errorMessage: string): string => {
+    // Check for CSV parsing errors
+    if (errorMessage.includes('Expected') && errorMessage.includes('fields')) {
+      const match = errorMessage.match(/Expected (\d+) fields in line (\d+), saw (\d+)/);
+      if (match) {
+        const [, expected, lineNum, actual] = match;
+        return `CSV format error on line ${lineNum}: Expected ${expected} column(s), but found ${actual}. Please ensure all rows have the same number of columns and that fields containing commas are enclosed in quotes.`;
+      }
+    }
+    
+    // Check for tokenizing errors
+    if (errorMessage.includes('tokenizing data')) {
+      return `CSV parsing error: ${errorMessage}. Please check that your CSV file uses commas as delimiters and that fields with commas or special characters are enclosed in double quotes.`;
+    }
+    
+    // Check for encoding errors
+    if (errorMessage.includes('codec') || errorMessage.includes('decode')) {
+      return `File encoding error: ${errorMessage}. The file has been converted to UTF-8, but please try saving your CSV file as UTF-8 format before uploading.`;
+    }
+    
+    // Return original message if no specific pattern matches
+    return errorMessage;
+  };
+
   const handleUploadCsv = async () => {
     if (!selectedFile) {
       toast({
@@ -316,25 +878,101 @@ const LeadStream: React.FC<LeadStreamProps> = ({
       return;
     }
 
+    // Validate CSV format before uploading
     setIsUploading(true);
+    try {
+      const validation = await validateCsvFormat(selectedFile);
+      if (!validation.valid) {
+        toast({
+          title: "CSV validation failed",
+          description: validation.error || "Invalid CSV format",
+          variant: "destructive",
+        });
+        setIsUploading(false);
+        return;
+      }
+    } catch (validationError) {
+      toast({
+        title: "Validation error",
+        description: "Failed to validate CSV file. Please check the file format.",
+        variant: "destructive",
+      });
+      setIsUploading(false);
+      return;
+    }
+
     try {
       const result = await uploadCsvBatch(selectedFile);
       
-      toast({
-        title: "CSV uploaded successfully",
-        description: `Created ${result.created_count || 0} leads. ${result.error_count || 0} errors.`,
+      const createdCount = result.created_count || 0;
+      const errorCount = result.error_count || 0;
+      const errors = result.errors || [];
+      
+      console.log("📊 LeadStream - Upload Result Summary:", {
+        created_count: createdCount,
+        error_count: errorCount,
+        errors: errors,
+        fullResult: result,
       });
+      
+      // Show detailed success/error message
+      if (errorCount > 0 && errors.length > 0) {
+        // Log full error details for debugging
+        console.warn("⚠️ LeadStream - Upload Errors:", errors);
+        errors.forEach((error: any, index: number) => {
+          console.error(`❌ LeadStream - Error ${index + 1}:`, error);
+          if (typeof error === 'string') {
+            // Try to parse if it's a stringified object
+            try {
+              const parsed = JSON.parse(error);
+              console.error(`   Parsed error:`, parsed);
+            } catch {
+              console.error(`   Error message:`, error);
+            }
+          }
+        });
+        
+        toast({
+          title: "CSV uploaded with some errors",
+          description: `Created ${createdCount} leads. ${errorCount} errors occurred. Check console for details.`,
+          variant: "default",
+        });
+      } else if (createdCount > 0) {
+        toast({
+          title: "CSV uploaded successfully",
+          description: `Successfully created ${createdCount} lead(s).`,
+        });
+      } else {
+        toast({
+          title: "Upload completed",
+          description: "No leads were created. Please check your CSV file format.",
+          variant: "default",
+        });
+      }
       
       // Reset state
       setSelectedFile(null);
       setShowCsvUpload(false);
       
-      // Refresh leads list
-      await fetchLeads();
+      // Always refresh leads list after upload, even if there were errors
+      // Some leads might have been created despite errors
+      console.log("🔄 LeadStream - Refreshing leads list after upload...");
+      try {
+        // Use a small delay to allow backend processing, then refresh
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        await fetchLeads();
+        console.log("✅ LeadStream - Leads list refreshed after upload");
+      } catch (refreshError) {
+        console.error("❌ LeadStream - Failed to refresh leads after upload:", refreshError);
+        // Don't show error toast here as upload might have succeeded
+      }
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to upload CSV file. Please try again.";
+      const parsedMessage = parseErrorMessage(errorMessage);
+      
       toast({
         title: "Upload failed",
-        description: error instanceof Error ? error.message : "Failed to upload CSV file. Please try again.",
+        description: parsedMessage,
         variant: "destructive",
       });
     } finally {
@@ -378,26 +1016,7 @@ const LeadStream: React.FC<LeadStreamProps> = ({
     }
 
     try {
-      // Prepare lead data object
-      const leadData: Record<string, any> = {};
-      if (fullName.trim()) leadData.fullName = fullName.trim();
-      if (email.trim()) leadData.email = email.trim();
-      if (mobile.trim()) leadData.mobile = mobile.trim();
-      if (companyName.trim()) leadData.companyName = companyName.trim();
-      if (companyWebsite.trim()) leadData.companyWebsite = companyWebsite.trim();
-      if (linkedInProfile.trim()) leadData.linkedInProfile = linkedInProfile.trim();
-      if (actions.trim()) leadData.actions = actions.trim();
-
-      if (editingLeadId) {
-        // Update existing lead
-        await updateLead(editingLeadId, leadData);
-        toast({
-          title: "Lead updated",
-          description: `${fullName} has been updated.`,
-        });
-        setEditingLeadId(null);
-      } else {
-        // This should not happen since we removed manual add, but keep for safety
+      if (!editingLeadId) {
         toast({
           title: "Error",
           description: "Please use CSV upload to add new leads.",
@@ -406,51 +1025,110 @@ const LeadStream: React.FC<LeadStreamProps> = ({
         return;
       }
 
-      // Refresh leads list
+      // Prepare lead data object with flexible key-value updates
+      // API spec: data field accepts flexible key-value pairs
+      const leadData: Record<string, any> = {};
+      
+      // Only include fields that have values (backend handles flexible updates)
+      if (fullName.trim()) leadData.fullName = fullName.trim();
+      if (email.trim()) leadData.email = email.trim();
+      if (mobile.trim()) leadData.mobile = mobile.trim();
+      if (companyName.trim()) leadData.companyName = companyName.trim();
+      if (companyWebsite.trim()) leadData.companyWebsite = companyWebsite.trim();
+      if (linkedInProfile.trim()) leadData.linkedInProfile = linkedInProfile.trim();
+      if (actions.trim()) leadData.actions = actions.trim();
+
+      console.log("💾 LeadStream - Saving lead update:", {
+        leadId: editingLeadId,
+        leadData,
+      });
+
+      // Update existing lead
+      const result = await updateLead(editingLeadId, leadData);
+      
+      toast({
+        title: "Lead updated",
+        description: `${fullName} has been updated successfully.`,
+      });
+      
+      setEditingLeadId(null);
+
+      // Refresh leads list to show updated data
       await fetchLeads();
 
       // Reset form and close
       handleCancelEditForm();
     } catch (error) {
+      console.error("❌ LeadStream - Save lead error:", error);
       toast({
-        title: editingLeadId ? "Update failed" : "Add failed",
-        description: error instanceof Error ? error.message : "An error occurred. Please try again.",
+        title: "Update failed",
+        description: error instanceof Error ? error.message : "An error occurred while updating the lead. Please try again.",
         variant: "destructive",
       });
     }
   };
 
   const handleEditLead = (lead: Lead) => {
-    const leadId = lead.lead_id || lead.id || "";
+    // Extract lead ID - try multiple possible ID fields
+    const leadId = lead.lead_id || lead.id || lead._id || "";
+    
+    if (!leadId) {
+      toast({
+        title: "Error",
+        description: "Cannot edit lead: Lead ID is missing.",
+        variant: "destructive",
+      });
+      console.error("❌ LeadStream - Cannot edit lead without ID:", lead);
+      return;
+    }
+
+    console.log("✏️ LeadStream - Editing lead:", {
+      leadId,
+      lead,
+    });
+
     setEditingLeadId(leadId);
     
-    // Populate form with lead data
-    setFullName(lead.fullName || lead.contact?.name || "");
+    // Populate form with lead data (handle multiple property name variations)
+    setFullName(lead.fullName || lead.full_name || lead.contact?.name || lead.name || "");
     setEmail(lead.email || lead.contact?.email || "");
-    setMobile(lead.mobile || lead.contact?.mobile || "");
-    setCompanyName(lead.companyName || lead.company?.name || "");
-    setCompanyWebsite(lead.companyWebsite || lead.company?.website || "");
-    setLinkedInProfile(lead.linkedInProfile || lead.contact?.linkedIn || "");
-    setActions(lead.actions || "");
+    setMobile(lead.mobile || lead.phone || lead.contact?.mobile || lead.contact?.phone || "");
+    setCompanyName(lead.companyName || lead.company_name || lead.company || lead.company?.name || "");
+    setCompanyWebsite(lead.companyWebsite || lead.company_website || lead.website || lead.company?.website || "");
+    setLinkedInProfile(lead.linkedInProfile || lead.linkedin_profile || lead.linkedIn || lead.contact?.linkedIn || lead.contact?.linkedin || "");
+    setActions(lead.actions || lead.notes || lead.action || "");
     
     setShowEditForm(true);
   };
 
   const handleDeleteLead = async (leadId: string) => {
-    if (!confirm("Are you sure you want to delete this lead?")) {
+    if (!leadId) {
+      toast({
+        title: "Error",
+        description: "Lead ID is missing. Cannot delete lead.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Confirm deletion
+    if (!confirm("Are you sure you want to delete this lead? This action cannot be undone.")) {
       return;
     }
 
     try {
+      console.log("🗑️ LeadStream - Deleting lead:", leadId);
       await deleteLead(leadId);
+      
       toast({
         title: "Lead deleted",
-        description: "The lead has been removed.",
+        description: "The lead has been successfully removed.",
       });
       
-      // Refresh leads list
+      // Refresh leads list to reflect deletion
       await fetchLeads();
     } catch (error) {
+      console.error("❌ LeadStream - Delete lead error:", error);
       toast({
         title: "Delete failed",
         description: error instanceof Error ? error.message : "Failed to delete lead. Please try again.",
@@ -471,7 +1149,7 @@ const LeadStream: React.FC<LeadStreamProps> = ({
   return (
     <div className="space-y-6">
       {/* Header with Add Button */}
-      {!isLoading && (hasLeads || showEditForm || showCsvUpload) && (
+      {!isLoading && (
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-xl font-semibold">Your Lead Stream</h2>
@@ -479,13 +1157,25 @@ const LeadStream: React.FC<LeadStreamProps> = ({
               Manage and track your leads
             </p>
           </div>
-          <Button 
-            className="gap-2"
-            onClick={() => setShowCsvUpload(true)}
-          >
-            <Upload className="h-4 w-4" />
-            Upload CSV
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={() => fetchLeads()}
+              disabled={isLoading}
+            >
+              <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+            <Button 
+              className="gap-2"
+              onClick={() => setShowCsvUpload(true)}
+            >
+              <Upload className="h-4 w-4" />
+              Upload CSV
+            </Button>
+          </div>
         </div>
       )}
 
@@ -657,6 +1347,18 @@ const LeadStream: React.FC<LeadStreamProps> = ({
                   <p className="text-xs text-muted-foreground">
                     Supported format: CSV files only
                   </p>
+                  <div className="mt-4 p-3 bg-muted/50 rounded-md text-left text-xs">
+                    <p className="font-medium mb-1">CSV Format Requirements:</p>
+                    <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                      <li>All rows must have the same number of columns</li>
+                      <li>Fields containing commas must be enclosed in double quotes</li>
+                      <li>Use commas (,) as column separators (semicolons will be auto-converted)</li>
+                      <li>Recommended columns: Full Name, Email, Mobile, Company Name, Company Website, LinkedIn Profile, Actions</li>
+                    </ul>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      <strong>Note:</strong> Files from WPS Office, Excel, or Google Sheets are automatically converted to the correct format.
+                    </p>
+                  </div>
                 </label>
               </div>
 
@@ -754,15 +1456,16 @@ const LeadStream: React.FC<LeadStreamProps> = ({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {leads.map((lead) => {
-                    const leadId = lead.lead_id || lead.id || "";
-                    const displayName = lead.fullName || lead.contact?.name || "—";
+                  {leads.map((lead, index) => {
+                    const leadId = lead.lead_id || lead.id || lead._id || `lead-${index}`;
+                    // Try multiple property name variations to handle different backend formats
+                    const displayName = lead.fullName || lead.full_name || lead.name || lead.contact?.name || lead.contact?.fullName || "—";
                     const displayEmail = lead.email || lead.contact?.email || "—";
-                    const displayMobile = lead.mobile || lead.contact?.mobile || "—";
-                    const displayCompany = lead.companyName || lead.company?.name || "—";
-                    const displayWebsite = lead.companyWebsite || lead.company?.website || "—";
-                    const displayLinkedIn = lead.linkedInProfile || lead.contact?.linkedIn || "—";
-                    const displayActions = lead.actions || "—";
+                    const displayMobile = lead.mobile || lead.phone || lead.contact?.mobile || lead.contact?.phone || "—";
+                    const displayCompany = lead.companyName || lead.company_name || lead.company?.name || "—";
+                    const displayWebsite = lead.companyWebsite || lead.company_website || lead.website || lead.company?.website || "—";
+                    const displayLinkedIn = lead.linkedInProfile || lead.linkedin_profile || lead.linkedIn || lead.contact?.linkedIn || lead.contact?.linkedin || "—";
+                    const displayActions = lead.actions || lead.notes || lead.action || "—";
                     
                     return (
                       <TableRow key={leadId}>
@@ -823,4 +1526,3 @@ const LeadStream: React.FC<LeadStreamProps> = ({
 };
 
 export default LeadStream;
-
