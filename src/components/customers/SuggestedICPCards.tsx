@@ -300,13 +300,24 @@ export const SuggestedICPCards = ({
         <CardHeader className="pb-2">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
+              {/* Category label inside the card */}
+              <Badge 
+                variant={icp.type === 'refined' ? 'secondary' : 'default'} 
+                className={`text-xs mb-2 ${icp.type === 'refined' ? 'bg-amber-100 text-amber-800' : 'bg-primary/10 text-primary'}`}
+              >
+                {icp.type === 'refined' ? (
+                  <><RefreshCw className="h-3 w-3 mr-1" />Refined ICP</>
+                ) : (
+                  <><Plus className="h-3 w-3 mr-1" />New ICP</>
+                )}
+              </Badge>
               <CardTitle className="text-base font-semibold truncate">{icp.name}</CardTitle>
               {icp.type === 'refined' && icp.sourceICPName && (
                 <p className="text-xs text-muted-foreground mt-1">
                   Refined from: {icp.sourceICPName}
                 </p>
               )}
-              {icp.tag && (
+              {icp.tag && icp.type === 'new' && (
                 <Badge variant="outline" className="mt-1 text-xs">
                   {icp.tag}
                 </Badge>
@@ -477,67 +488,25 @@ export const SuggestedICPCards = ({
           </p>
         </div>
 
-        {/* 2A: Refined ICPs */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <RefreshCw className="h-4 w-4 text-amber-500" />
-            <h4 className="text-sm font-medium">Refined ICPs</h4>
-            {pendingRefinedCount > 0 && (
-              <Badge variant="outline" className="text-xs">
-                {pendingRefinedCount} pending
-              </Badge>
-            )}
-          </div>
-          
-          {refinedICPs.length === 0 ? (
-            <Card className="bg-muted/30 border-dashed">
-              <CardContent className="py-8 text-center">
-                <Check className="h-8 w-8 text-green-500 mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">
-                  Your current ICPs are well-aligned. No refinements suggested.
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <ScrollArea className="w-full">
-              <div className="flex gap-4 pb-4">
-                {refinedICPs.map(renderSuggestionCard)}
-              </div>
-              <ScrollBar orientation="horizontal" />
-            </ScrollArea>
-          )}
-        </div>
-
-        {/* 2B: New ICPs */}
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <Plus className="h-4 w-4 text-primary" />
-            <h4 className="text-sm font-medium">New ICPs</h4>
-            {pendingNewCount > 0 && (
-              <Badge variant="outline" className="text-xs">
-                {pendingNewCount} pending
-              </Badge>
-            )}
-          </div>
-          
-          {newICPs.length === 0 ? (
-            <Card className="bg-muted/30 border-dashed">
-              <CardContent className="py-8 text-center">
-                <Target className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">
-                  No new ICP suggestions at this time.
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <ScrollArea className="w-full">
-              <div className="flex gap-4 pb-4">
-                {newICPs.map(renderSuggestionCard)}
-              </div>
-              <ScrollBar orientation="horizontal" />
-            </ScrollArea>
-          )}
-        </div>
+        {/* All ICP Suggestions in Single Row */}
+        {refinedICPs.length === 0 && newICPs.length === 0 ? (
+          <Card className="bg-muted/30 border-dashed">
+            <CardContent className="py-8 text-center">
+              <Check className="h-8 w-8 text-green-500 mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">
+                Your current ICPs are well-aligned. No suggestions at this time.
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <ScrollArea className="w-full">
+            <div className="flex gap-4 pb-4">
+              {refinedICPs.map(renderSuggestionCard)}
+              {newICPs.map(renderSuggestionCard)}
+            </div>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
+        )}
       </div>
 
       {/* Design Note */}
