@@ -168,63 +168,49 @@ async def upload_prospect_list(file: UploadFile = File(...)):
     result = process_prospect_list(file_path)
     return result
 
-@app.get("/leads", response_model=List[Lead])
+@app.get("/leads", response_model=List[Dict[str, Any]])
 def get_all_leads(user_id: str = Query(...), org_id: str = Query(...)):
     """
     Get all leads filtered by user_id and org_id (multitenant).
-    Returns leads with company, contact, and tech stack information.
+    Returns all lead properties directly - completely flexible like company profile.
     Uses parameterized queries for security.
     """
-    # Use parameterized query for security with multitenancy
-    query_string = """
-    MATCH (l:Lead)
-    WHERE l.user_id = $user_id AND l.org_id = $org_id
-    OPTIONAL MATCH (c:Company)-[:Has_Lead]->(l)
-    OPTIONAL MATCH (c)-[:Uses_Tech]->(t:Tech)
-    OPTIONAL MATCH (c)-[:Has_Contact]->(contact:Contact)-[:Is_POC_For]->(l)
-    RETURN 
-        l.lead_id AS lead_id,
-        COALESCE(c.name, '') AS company,
-        COALESCE(c.industry, '') AS industry,
-        COALESCE(toString(c.size), '') AS size,
-        COALESCE(c.region, '') AS region,
-        COALESCE(c.location, '') AS location,
-        collect(DISTINCT t.name) AS techStack,
-        COALESCE(contact.first_name, '') + ' ' + COALESCE(contact.last_name, '') AS contact_name,
-        contact.designation AS title,
-        contact.department AS department,
-        contact.email AS email,
-        COALESCE(l.stage, '') AS status,
-        l.user_id AS user_id,
-        l.org_id AS org_id
-    """
-    
-    # Execute query with parameters
-    with driver.session() as session:
-        results = session.run(query_string, user_id=user_id, org_id=org_id)
-        leads = []
-        for record in results:
-            lead = Lead(
-                lead_id=str(record["lead_id"]),
-                company=record.get("company", ""),
-                industry=record.get("industry", ""),
-                size=record.get("size", ""),
-                region=record.get("region", ""),
-                location=record.get("location", ""),
-                techStack=record.get("techStack", []),
-                contact=Contact(
-                    name=record.get("contact_name"),
-                    title=record.get("title"),
-                    department=record.get("department"),
-                    email=record.get("email")
-                ),
-                status=record.get("status", ""),
-                user_id=record.get("user_id"),
-                org_id=record.get("org_id")
-            )
-            leads.append(lead)
-
-    return leads
+    try:
+        # Use parameterized query for security with multitenancy
+        query_string = """
+        MATCH (l:Lead)
+        WHERE l.user_id = $user_id AND l.org_id = $org_id
+        RETURN l
+        """
+        
+        # Execute query with parameters
+        with driver.session() as session:
+            results = session.run(query_string, user_id=user_id, org_id=org_id)
+            leads = []
+            for record in results:
+                # Get all properties from the Lead node
+                lead_node = record["l"]
+                lead_dict = dict(lead_node.items())
+                
+                # Convert all values to JSON-compatible types
+                processed_lead = {}
+                for key, value in lead_dict.items():
+                    # Try to parse JSON strings back to objects
+                    if isinstance(value, str) and value.strip().startswith(('{', '[')):
+                        try:
+                            processed_lead[key] = json.loads(value)
+                        except json.JSONDecodeError:
+                            processed_lead[key] = value
+                    else:
+                        processed_lead[key] = value
+                
+                leads.append(processed_lead)
+        
+        return leads
+        
+    except Exception as e:
+        logger.error(f"Error fetching leads: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch leads: {str(e)}")
 
 @app.post("/leads", response_model=Dict[str, Any])
 async def add_lead(request: LeadCreateRequest):
