@@ -183,7 +183,7 @@ def get_all_leads(user_id: str = Query(...), org_id: str = Query(...)):
     OPTIONAL MATCH (c)-[:Uses_Tech]->(t:Tech)
     OPTIONAL MATCH (c)-[:Has_Contact]->(contact:Contact)-[:Is_POC_For]->(l)
     RETURN 
-        COALESCE(l.lead_id, toString(id(l))) AS lead_id,
+        l.lead_id AS lead_id,
         COALESCE(c.name, '') AS company,
         COALESCE(c.industry, '') AS industry,
         COALESCE(toString(c.size), '') AS size,
