@@ -80,6 +80,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import ApiService from "@/services/api";
+import { buildApiUrl } from "@/lib/api";
+import jwtManager from "@/lib/jwt";
 
 // Data Source Interface
 interface DataSource {
@@ -819,6 +821,28 @@ const MissionControl = () => {
     return profileData;
   };
 
+  // Check URL params for tab after profile loads
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabParam = urlParams.get('tab');
+    if (tabParam === 'customer-profile' && !isCustomerProfileLocked) {
+      setActiveTab('customer-profile');
+      // Clean up URL param after setting tab
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+    } else if (tabParam === 'sources' && !isDataSourcesLocked) {
+      setActiveTab('sources');
+      // Clean up URL param after setting tab
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+    } else if (tabParam === 'profile') {
+      setActiveTab('profile');
+      // Clean up URL param after setting tab
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+    }
+  }, [isCustomerProfileLocked, isDataSourcesLocked]); // Run after locks are determined
+
   // Load existing profile data on mount
   useEffect(() => {
     const loadProfileData = async () => {
@@ -1079,6 +1103,7 @@ const MissionControl = () => {
     // Add a small delay to ensure user is fully initialized
     const timeoutId = setTimeout(() => {
       loadProfileData();
+      loadDataSourcesFromBackend();
     }, 100);
 
     return () => clearTimeout(timeoutId);
@@ -2124,11 +2149,239 @@ const MissionControl = () => {
     setIsAddResourcePopoverOpen(true);
   };
 
-  const handleAddCustomResource = () => {
+  // Helper function to save data sources to backend
+  const saveDataSourcesToBackend = async (sourcesToSave: DataSource[]) => {
+    if (!currentUser?.uid) {
+      console.warn("Cannot save data sources: User not authenticated");
+      return;
+    }
+
+    try {
+      // First, fetch existing company profile data to preserve it
+      let existingCompanyData = {};
+      try {
+        const getResponse = await fetch(`/api/profile/company?user_id=${currentUser.uid}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+        
+        if (getResponse.ok) {
+          const existingData = await getResponse.json();
+          // Preserve all existing company profile fields
+          existingCompanyData = {
+            company_name: existingData.company_name,
+            headquarters: existingData.headquarters,
+            employee_size: existingData.employee_size,
+            industry: existingData.industry,
+            revenue_band: existingData.revenue_band,
+            gtm_model: existingData.gtm_model,
+            region_focus: existingData.region_focus,
+            typical_deal_size: existingData.typical_deal_size,
+            company_url: existingData.company_url,
+            key_buyer_persona: existingData.key_buyer_persona,
+            // Preserve any other fields that might exist
+            ...Object.fromEntries(
+              Object.entries(existingData).filter(([key]) => 
+                !key.startsWith('data_sources') &&
+                !['user_id', 'id', 'created_at', 'updated_at'].includes(key)
+              )
+            )
+          };
+        }
+      } catch (fetchError) {
+        console.warn("Could not fetch existing profile data, proceeding with data sources only:", fetchError);
+      }
+
+      // Prepare payload with data sources, preserving existing company profile fields
+      const payload = {
+        user_id: currentUser.uid,
+        profile_type: "company",
+        ...existingCompanyData,
+        data_sources: {
+          sources: sourcesToSave.map(source => ({
+            id: source.id,
+            name: source.name,
+            type: source.type,
+            platform: source.platform,
+            status: source.status,
+            sync_frequency: source.syncFrequency,
+            total_records: source.totalRecords,
+            new_records_this_week: source.newRecordsThisWeek,
+            updated_records: source.updatedRecords,
+            data_quality_score: source.dataQualityScore,
+            description: source.description || `Custom ${source.type} resource`,
+          })),
+        },
+      };
+
+      console.log("=== MISSION CONTROL: Saving data sources to backend ===");
+      console.log("Payload:", payload);
+
+      const apiUrl = `/api/profile/company?user_id=${currentUser.uid}`;
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("API Error:", response.status, errorText);
+        throw new Error(`Failed to save data sources: ${response.status} - ${errorText}`);
+      }
+
+      const data = await response.json();
+      console.log("Data sources saved successfully:", data);
+      return data;
+    } catch (error) {
+      console.error("Error saving data sources:", error);
+      throw error;
+    }
+  };
+
+  // Helper function to upload file to backend
+  const uploadFileToBackend = async (file: File): Promise<{ file_key: string; status: string }> => {
+    if (!currentUser?.uid) {
+      throw new Error("User not authenticated");
+    }
+
+    const authHeader = await jwtManager.getAuthHeader();
+    const url = buildApiUrl("upload_file/");
+    
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("user_id", currentUser.uid);
+
+    console.log("🚀 Mission Control - File Upload Starting:", {
+      url,
+      userId: currentUser.uid,
+      fileName: file.name,
+      fileSize: file.size,
+      hasAuth: !!authHeader,
+    });
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        ...(authHeader && { Authorization: authHeader }),
+      },
+      body: formData,
+    });
+
+    console.log("📨 Mission Control - File Upload Response:", {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("❌ Mission Control - File Upload Error:", {
+        status: response.status,
+        errorText,
+      });
+      throw new Error(`Failed to upload file: ${response.status} - ${errorText}`);
+    }
+
+    const result = await response.json();
+    console.log("✅ Mission Control - File Upload Success:", result);
+    return result;
+  };
+
+  // Helper function to check document status
+  const checkDocumentStatus = async (fileKey: string): Promise<{ status: string; chunks_count?: number; timestamps?: any }> => {
+    if (!currentUser?.uid) {
+      throw new Error("User not authenticated");
+    }
+
+    const authHeader = await jwtManager.getAuthHeader();
+    const url = buildApiUrl(`document-status/${fileKey}`);
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        ...(authHeader && { Authorization: authHeader }),
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to check document status: ${response.status} - ${errorText}`);
+    }
+
+    return await response.json();
+  };
+
+  // Helper function to load data sources from backend
+  const loadDataSourcesFromBackend = async () => {
+    if (!currentUser?.uid) {
+      return;
+    }
+
+    try {
+      const apiUrl = `/api/profile/company?user_id=${currentUser.uid}`;
+      const response = await fetch(apiUrl, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        console.log("No existing data sources found in API");
+        return;
+      }
+
+      const data = await response.json();
+      
+      // Check if data_sources exists in the response
+      if (data.data_sources && data.data_sources.sources && Array.isArray(data.data_sources.sources)) {
+        const loadedSources: DataSource[] = data.data_sources.sources.map((source: any) => ({
+          id: source.id || `source-${Date.now()}-${Math.random()}`,
+          name: source.name || "",
+          type: (source.type || "custom") as DataSource['type'],
+          icon: Database,
+          platform: source.platform || 'Custom',
+          status: (source.status || "disconnected") as DataSource['status'],
+          syncFrequency: (source.sync_frequency || 'daily') as DataSource['syncFrequency'],
+          totalRecords: source.total_records || 0,
+          newRecordsThisWeek: source.new_records_this_week || 0,
+          updatedRecords: source.updated_records || 0,
+          dataQualityScore: source.data_quality_score || 0,
+          objectsSynced: [],
+          fieldsMapped: 0,
+          filters: [],
+          description: source.description || "",
+          account: source.account,
+        }));
+
+        setDataSources(loadedSources);
+        console.log("Data sources loaded from backend:", loadedSources);
+      }
+    } catch (error) {
+      console.error("Error loading data sources:", error);
+    }
+  };
+
+  const handleAddCustomResource = async () => {
     if (!customResourceName.trim()) {
       toast({
         title: "Name required",
         description: "Please enter a name for the resource.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!currentUser?.uid) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to add data sources.",
         variant: "destructive",
       });
       return;
@@ -2166,21 +2419,33 @@ const MissionControl = () => {
       description: `Custom ${customResourceType} resource`
     };
 
-    // Add to data sources
-    setDataSources(prev => [...prev, newSource]);
+    // Add to data sources locally first
+    const updatedSources = [...dataSources, newSource];
+    setDataSources(updatedSources);
     
     // Reset form
     setCustomResourceName("");
     setCustomResourceType('custom');
     setIsAddResourcePopoverOpen(false);
     
-    toast({
-      title: `${resourceName} added`,
-      description: `Click "Connect" to set up the integration.`,
-    });
+    // Save to backend
+    try {
+      await saveDataSourcesToBackend(updatedSources);
+      toast({
+        title: `${resourceName} added`,
+        description: `Click "Connect" to set up the integration.`,
+      });
+    } catch (error) {
+      console.error("Failed to save data source to backend:", error);
+      toast({
+        title: "Save warning",
+        description: "Data source added locally but failed to sync with backend. Please try again later.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleAddCustomFileUpload = () => {
+  const handleAddCustomFileUpload = async () => {
     if (!customFileUploadName.trim()) {
       toast({
         title: "Name required",
@@ -2200,6 +2465,15 @@ const MissionControl = () => {
       return;
     }
 
+    if (!currentUser?.uid) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to upload files.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Check if source already exists
     const existingSource = dataSources.find(s => s.name === customFileUploadName.trim());
     if (existingSource) {
@@ -2212,6 +2486,47 @@ const MissionControl = () => {
     }
 
     const uploadName = customFileUploadName.trim();
+    let fileKey: string | undefined;
+    let uploadStatus: 'processing' | 'uploaded' | 'failed' = 'processing';
+
+    // If a file is provided, upload it to backend
+    if (customFileUploadFile) {
+      try {
+        toast({
+          title: "Uploading file",
+          description: `Uploading ${customFileUploadFile.name}...`,
+        });
+
+        const uploadResult = await uploadFileToBackend(customFileUploadFile);
+        fileKey = uploadResult.file_key;
+        uploadStatus = 'uploaded';
+
+        // Optionally check document status
+        if (fileKey) {
+          try {
+            const statusResult = await checkDocumentStatus(fileKey);
+            console.log("Document status:", statusResult);
+            if (statusResult.status === 'processing') {
+              uploadStatus = 'processing';
+            } else if (statusResult.status === 'failed') {
+              uploadStatus = 'failed';
+            }
+          } catch (statusError) {
+            console.warn("Could not check document status:", statusError);
+            // Continue anyway, file was uploaded
+          }
+        }
+      } catch (error) {
+        console.error("File upload failed:", error);
+        uploadStatus = 'failed';
+        toast({
+          title: "Upload failed",
+          description: error instanceof Error ? error.message : "Failed to upload file. Please try again.",
+          variant: "destructive",
+        });
+        // Continue to save metadata even if upload failed
+      }
+    }
 
     // Determine description based on what's provided
     let description = 'Custom file upload';
@@ -2228,7 +2543,7 @@ const MissionControl = () => {
       type: 'file',
       icon: FileText,
       platform: 'File Upload',
-      status: (customFileUploadFile || customFileUploadUrl.trim()) ? 'uploaded' : 'disconnected',
+      status: uploadStatus,
       syncFrequency: 'manual',
       totalRecords: 0,
       newRecordsThisWeek: 0,
@@ -2237,11 +2552,14 @@ const MissionControl = () => {
       objectsSynced: [],
       fieldsMapped: 0,
       filters: [],
-      description: description
+      description: description,
+      // Store file_key if available for future status checks
+      ...(fileKey && { account: fileKey })
     };
 
-    // Add to data sources
-    setDataSources(prev => [...prev, newSource]);
+    // Add to data sources locally first
+    const updatedSources = [...dataSources, newSource];
+    setDataSources(updatedSources);
     
     // Reset form
     setCustomFileUploadName("");
@@ -2249,10 +2567,25 @@ const MissionControl = () => {
     setCustomFileUploadUrl("");
     setIsAddResourcePopoverOpen(false);
     
-    toast({
-      title: `${uploadName} added`,
-      description: customFileUploadFile ? "File uploaded successfully." : customFileUploadUrl.trim() ? "File URL added successfully." : "Click 'Connect' to upload files.",
-    });
+    // Save to backend
+    try {
+      await saveDataSourcesToBackend(updatedSources);
+      toast({
+        title: `${uploadName} added`,
+        description: customFileUploadFile 
+          ? (uploadStatus === 'uploaded' ? "File uploaded successfully." : uploadStatus === 'processing' ? "File is being processed." : "File upload completed with warnings.")
+          : customFileUploadUrl.trim() 
+          ? "File URL added successfully." 
+          : "Click 'Connect' to upload files.",
+      });
+    } catch (error) {
+      console.error("Failed to save data source to backend:", error);
+      toast({
+        title: "Save warning",
+        description: "Data source added locally but failed to sync with backend. Please try again later.",
+        variant: "destructive",
+      });
+    }
   };
 
   // New handlers for Add Source
