@@ -529,6 +529,12 @@ const MissionControl = () => {
     dealSize: "",
     companyUrl: "",
     keyBuyerPersona: "",
+    goals: "",
+    painPoints: "",
+    targetSegments: "",
+    excludeSegments: "",
+    compliance: "",
+    constraints: "",
   });
 
   const handleSave = async () => {
@@ -569,6 +575,12 @@ const MissionControl = () => {
         typical_deal_size: companyProfile.dealSize.trim(),
         company_url: companyProfile.companyUrl.trim(),
         key_buyer_persona: companyProfile.keyBuyerPersona.trim(),
+        goals: companyProfile.goals.trim(),
+        pain_points: companyProfile.painPoints.trim(),
+        target_segments: companyProfile.targetSegments.trim(),
+        exclude_segments: companyProfile.excludeSegments.trim(),
+        compliance: companyProfile.compliance.trim(),
+        constraints: companyProfile.constraints.trim(),
       };
 
       console.log("=== MISSION CONTROL: Saving company profile ===");
@@ -639,6 +651,12 @@ const MissionControl = () => {
           typical_deal_size: payload.typical_deal_size,
           company_url: payload.company_url,
           key_buyer_persona: payload.key_buyer_persona,
+          goals: payload.goals,
+          pain_points: payload.pain_points,
+          target_segments: payload.target_segments,
+          exclude_segments: payload.exclude_segments,
+          compliance: payload.compliance,
+          constraints: payload.constraints,
         };
         setUserLocalStorage('companyProfile', JSON.stringify(dataToSave), currentUser.uid);
         console.log("MissionControl: Saved company profile to localStorage");
@@ -771,6 +789,12 @@ const MissionControl = () => {
       dealSize: (data.typical_deal_size || data.dealSize || "").trim(),
       companyUrl: (data.company_url || data.companyUrl || "").trim(),
       keyBuyerPersona: (data.key_buyer_persona || data.keyBuyerPersona || "").trim(),
+      goals: (data.goals || "").trim(),
+      painPoints: (data.pain_points || data.painPoints || "").trim(),
+      targetSegments: (data.target_segments || data.targetSegments || "").trim(),
+      excludeSegments: (data.exclude_segments || data.excludeSegments || "").trim(),
+      compliance: (data.compliance || "").trim(),
+      constraints: (data.constraints || "").trim(),
     };
 
     console.log("MissionControl: Mapped profile data result:", profileData);
@@ -785,6 +809,12 @@ const MissionControl = () => {
       dealSize: `"${profileData.dealSize}"`,
       companyUrl: `"${profileData.companyUrl}"`,
       keyBuyerPersona: `"${profileData.keyBuyerPersona}"`,
+      goals: `"${profileData.goals}"`,
+      painPoints: `"${profileData.painPoints}"`,
+      targetSegments: `"${profileData.targetSegments}"`,
+      excludeSegments: `"${profileData.excludeSegments}"`,
+      compliance: `"${profileData.compliance}"`,
+      constraints: `"${profileData.constraints}"`,
     });
     return profileData;
   };
@@ -3040,11 +3070,21 @@ const MissionControl = () => {
                         <CardContent className="p-4 space-y-4">
                           <div className="space-y-2">
                             <Label htmlFor="business-goals">Primary Business Goals</Label>
-                            <Textarea id="business-goals" placeholder="Be as specific as possible - clearer goals help Brewra generate more accurate insights." />
+                            <Textarea 
+                              id="business-goals" 
+                              placeholder="Be as specific as possible - clearer goals help Brewra generate more accurate insights."
+                              value={companyProfile.goals}
+                              onChange={(e) => setCompanyProfile(prev => ({ ...prev, goals: e.target.value }))}
+                            />
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="pain-points">Key Pain Points We Solve</Label>
-                            <Textarea id="pain-points" placeholder="Describe the key problems you're trying to solve. More detail leads to more relevant insights." />
+                            <Textarea 
+                              id="pain-points" 
+                              placeholder="Describe the key problems you're trying to solve. More detail leads to more relevant insights."
+                              value={companyProfile.painPoints}
+                              onChange={(e) => setCompanyProfile(prev => ({ ...prev, painPoints: e.target.value }))}
+                            />
                           </div>
                         </CardContent>
                       </Card>
@@ -3061,11 +3101,21 @@ const MissionControl = () => {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
                               <Label htmlFor="target-segments">Target Segments (Include)</Label>
-                              <Textarea id="target-segments" placeholder="e.g., Mid-market SaaS companies, Financial services..." />
+                              <Textarea 
+                                id="target-segments" 
+                                placeholder="e.g., Mid-market SaaS companies, Financial services..."
+                                value={companyProfile.targetSegments}
+                                onChange={(e) => setCompanyProfile(prev => ({ ...prev, targetSegments: e.target.value }))}
+                              />
                             </div>
                             <div className="space-y-2">
                               <Label htmlFor="exclude-segments">Exclude Segments</Label>
-                              <Textarea id="exclude-segments" placeholder="e.g., Startups under 50 employees, Government..." />
+                              <Textarea 
+                                id="exclude-segments" 
+                                placeholder="e.g., Startups under 50 employees, Government..."
+                                value={companyProfile.excludeSegments}
+                                onChange={(e) => setCompanyProfile(prev => ({ ...prev, excludeSegments: e.target.value }))}
+                              />
                             </div>
                           </div>
                         </CardContent>
@@ -3082,11 +3132,21 @@ const MissionControl = () => {
                         <CardContent className="p-4 space-y-4">
                           <div className="space-y-2">
                             <Label htmlFor="compliance-reqs">Compliance Requirements</Label>
-                            <Textarea id="compliance-reqs" placeholder="e.g., GDPR, HIPAA, SOC2..." />
+                            <Textarea 
+                              id="compliance-reqs" 
+                              placeholder="e.g., GDPR, HIPAA, SOC2..."
+                              value={companyProfile.compliance}
+                              onChange={(e) => setCompanyProfile(prev => ({ ...prev, compliance: e.target.value }))}
+                            />
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="messaging-constraints">General Instruction</Label>
-                            <Textarea id="messaging-constraints" placeholder="e.g., Avoid certain terms, required disclaimers..." />
+                            <Textarea 
+                              id="messaging-constraints" 
+                              placeholder="e.g., Avoid certain terms, required disclaimers..."
+                              value={companyProfile.constraints}
+                              onChange={(e) => setCompanyProfile(prev => ({ ...prev, constraints: e.target.value }))}
+                            />
                           </div>
                         </CardContent>
                       </Card>

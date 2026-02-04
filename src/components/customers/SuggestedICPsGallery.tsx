@@ -80,13 +80,13 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
     ];
   };
 
-  // Track when suggestedICPs count changes (not individual field edits)
+  // Track when suggestedICPs state changes
   useEffect(() => {
-    console.log("=== SUGGESTED ICPS COUNT CHANGED ===");
+    console.log("=== SUGGESTED ICPS STATE CHANGED ===");
     console.log("New suggestedICPs count:", suggestedICPs.length);
-    // Only update renderKey when the count changes, not on field edits
-    // This prevents remounting during edits which causes focus loss
-  }, [suggestedICPs.length]);
+    console.log("New suggestedICPs data:", suggestedICPs);
+    setRenderKey(prev => prev + 1); // Force re-render
+  }, [suggestedICPs]);
 
   // Fetch ICPs from backend
   const fetchICPs = async () => {
@@ -860,7 +860,7 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
       {!loading && !error && suggestedICPs.length > 0 && (
         <div className="relative px-16">
           <Carousel
-            key={`carousel-${suggestedICPs.length}`} // Re-render when count changes
+            key={`carousel-${renderKey}-${suggestedICPs.length}`} // Force re-render when data changes
             opts={{
               align: "start",
               loop: false,
@@ -869,7 +869,7 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
           >
             <CarouselContent className="-ml-4">
               {suggestedICPs.map((icp, index) => (
-              <CarouselItem key={icp.id} className="pl-4 basis-[420px]">
+              <CarouselItem key={`${icp.id}-${renderKey}-${index}`} className="pl-4 basis-[420px]">
                 <Card 
                   className={`h-full transition-all duration-200 hover:shadow-lg border ${
                     selectedICP === icp.id 
@@ -877,7 +877,8 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
                       : editingICP === icp.id
                       ? 'border-green-500 bg-green-50/20 shadow-md'
                       : 'border-gray-200 hover:border-blue-300'
-                  } ${editingICP !== icp.id ? 'hover:-translate-y-1' : ''}`}
+                  } ${editingICP !== icp.id ? 'hover:-translate-y-1 cursor-pointer' : ''}`}
+                  onClick={() => handleCardClick(icp)}
                 >
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
@@ -1055,10 +1056,7 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
                         variant="outline" 
                         size="sm" 
                         className="w-full mt-4 text-blue-600 border-blue-200 hover:bg-blue-50"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleCardClick(icp);
-                        }}
+                        onClick={(e) => e.stopPropagation()}
                       >
                         View ICP Details
                       </Button>
