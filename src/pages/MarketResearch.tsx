@@ -80,7 +80,7 @@ import { EmergingTrends } from "@/components/market-research/EmergingTrends";
 
 
 
-import { ConsumerTrends } from "@/components/market-research/ConsumerTrends";
+import LeadStream from "@/components/market-research/LeadStream";
 
 
 
@@ -15608,7 +15608,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-                <ConsumerTrends 
+                <LeadStream 
 
 
 

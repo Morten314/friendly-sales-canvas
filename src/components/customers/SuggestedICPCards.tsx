@@ -21,10 +21,12 @@ import {
   Sparkles,
   RefreshCw,
   Plus,
-  Globe
+  Globe,
+  ArrowRight
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 interface ExistingICP {
   id: string;
@@ -80,6 +82,7 @@ export const SuggestedICPCards = ({
   refreshTrigger = 0 
 }: SuggestedICPCardsProps) => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   
   const [existingICPs, setExistingICPs] = useState<ExistingICP[]>([]);
   const [refinedICPs, setRefinedICPs] = useState<SuggestedICP[]>([]);
@@ -323,7 +326,7 @@ export const SuggestedICPCards = ({
                 </Badge>
               )}
             </div>
-            <div className="flex flex-col items-end gap-1">
+            <div className="flex items-center gap-1 flex-wrap justify-end">
               <Badge variant={getConfidenceBadgeVariant(icp.confidenceScore)} className="text-xs">
                 {icp.confidenceScore}
               </Badge>

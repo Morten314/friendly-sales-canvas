@@ -1,5 +1,5 @@
 import React from 'react';
-import { Edit, MessageSquare, Pencil } from 'lucide-react';
+import { Edit, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -10,19 +10,22 @@ import {
 
 interface EditDropdownMenuProps {
   onModify: () => void;
-  onComment: () => void;
   className?: string;
 }
 
 export const EditDropdownMenu: React.FC<EditDropdownMenuProps> = ({
   onModify,
-  onComment,
   className = ""
 }) => {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className={`text-blue-800 hover:text-blue-900 ${className}`}>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className={`text-blue-800 hover:text-blue-900 pointer-events-auto ${className}`}
+          disabled={false}
+        >
           <Edit className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
@@ -33,13 +36,6 @@ export const EditDropdownMenu: React.FC<EditDropdownMenuProps> = ({
         >
           <Pencil className="h-4 w-4" />
           Modify
-        </DropdownMenuItem>
-        <DropdownMenuItem 
-          onClick={onComment}
-          className="flex items-center gap-2 cursor-pointer hover:bg-gray-50"
-        >
-          <MessageSquare className="h-4 w-4" />
-          Comment
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

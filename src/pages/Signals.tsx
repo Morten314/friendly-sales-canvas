@@ -1,4 +1,4 @@
-import { Filter, Check, X, Bookmark, MessageCircle, Info, Share2, Download, Bot, Send, RefreshCw } from 'lucide-react';
+import { Filter, Check, X, Bookmark, MessageCircle, Info, Share2, Download, Bot, Send, RefreshCw, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
@@ -96,6 +96,19 @@ const fetchSignals = async (userId: string) => {
   }
 };
 
+// Helper function to generate a stable content-based ID for a signal
+const getSignalContentHash = (signal: SignalCard): string => {
+  const content = `${signal.headline}-${signal.snippet}-${signal.agent}`;
+  // Simple hash function
+  let hash = 0;
+  for (let i = 0; i < content.length; i++) {
+    const char = content.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  return `signal-${Math.abs(hash).toString(36)}`;
+};
+
 const Index = () => {
   const { currentUser } = useAuth();
   const [currentTab, setCurrentTab] = useState('signals');
@@ -111,11 +124,36 @@ const Index = () => {
   const [dismissedSuggestions, setDismissedSuggestions] = useState<{
     [key: string]: number[];
   }>({});
+  const [acceptedSignals, setAcceptedSignals] = useState<Set<string>>(new Set());
+  const [rejectedSignalHashes, setRejectedSignalHashes] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const {
     toast
   } = useToast();
+
+  // Load accepted and rejected signals from localStorage on mount
+  useEffect(() => {
+    if (currentUser?.uid) {
+      const storageKey = `signals_${currentUser.uid}`;
+      try {
+        const savedAccepted = localStorage.getItem(`${storageKey}_accepted`);
+        const savedRejected = localStorage.getItem(`${storageKey}_rejected`);
+        
+        if (savedAccepted) {
+          const acceptedArray = JSON.parse(savedAccepted);
+          setAcceptedSignals(new Set(acceptedArray));
+        }
+        
+        if (savedRejected) {
+          const rejectedArray = JSON.parse(savedRejected);
+          setRejectedSignalHashes(new Set(rejectedArray));
+        }
+      } catch (error) {
+        console.error('Error loading signals from localStorage:', error);
+      }
+    }
+  }, [currentUser?.uid]);
 
   // Load signals on component mount
   useEffect(() => {
@@ -144,8 +182,75 @@ const Index = () => {
     }
     setIsLoading(true);
     try {
+      // Load rejected signals from localStorage directly to ensure they're available
+      const storageKey = `signals_${currentUser.uid}`;
+      let rejectedHashes = new Set<string>();
+      try {
+        const savedRejected = localStorage.getItem(`${storageKey}_rejected`);
+        if (savedRejected) {
+          const rejectedArray = JSON.parse(savedRejected);
+          rejectedHashes = new Set(rejectedArray);
+          // Also update state
+          setRejectedSignalHashes(rejectedHashes);
+        }
+      } catch (error) {
+        console.error('Error loading rejected signals from localStorage:', error);
+      }
+      
       const data = await fetchSignals(currentUser.uid);
-      setSignals(data.signals || []);
+      // Ensure all signals have unique IDs - always generate new unique IDs
+      const rawSignals = data.signals || [];
+      console.log('Raw signals from API:', rawSignals.map(s => ({ id: s.id, headline: s.headline })));
+      console.log('Rejected signal hashes from localStorage:', Array.from(rejectedHashes));
+      
+      const signalsWithIds = rawSignals.map((signal: SignalCard, index: number) => {
+        // Generate a truly unique ID for each signal
+        // Use crypto.randomUUID if available, otherwise use a combination of timestamp, index, and random
+        let uniqueId: string;
+        if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+          uniqueId = crypto.randomUUID();
+        } else {
+          const timestamp = Date.now();
+          const randomStr = Math.random().toString(36).substring(2, 11);
+          const perfNow = (performance?.now() || Math.random() * 1000).toString().replace('.', '');
+          uniqueId = `signal-${timestamp}-${index}-${randomStr}-${perfNow}`;
+        }
+        
+        return {
+          ...signal,
+          id: uniqueId
+        };
+      });
+      
+      // Verify all IDs are unique
+      const ids = signalsWithIds.map(s => s.id);
+      const uniqueIds = new Set(ids);
+      if (ids.length !== uniqueIds.size) {
+        console.error('Duplicate signal IDs detected after generation!', ids);
+        // Regenerate IDs if duplicates found using crypto.randomUUID or fallback
+        signalsWithIds.forEach((signal, index) => {
+          if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+            signal.id = crypto.randomUUID();
+          } else {
+            signal.id = `signal-${Date.now()}-${index}-${Math.random().toString(36).substring(2, 11)}-${performance?.now() || Math.random() * 1000}`;
+          }
+        });
+      }
+      
+      console.log('Signals with unique IDs:', signalsWithIds.map(s => ({ id: s.id, headline: s.headline })));
+      
+      // Filter out rejected signals using content hash (using localStorage data directly)
+      const filteredSignals = signalsWithIds.filter(signal => {
+        const contentHash = getSignalContentHash(signal);
+        const isRejected = rejectedHashes.has(contentHash);
+        if (isRejected) {
+          console.log('Filtering out rejected signal:', signal.headline, 'hash:', contentHash);
+        }
+        return !isRejected;
+      });
+      
+      console.log('Filtered signals count:', filteredSignals.length, 'out of', signalsWithIds.length);
+      setSignals(filteredSignals);
     } catch (error) {
       console.error('Error loading signals:', error);
       
@@ -184,7 +289,26 @@ const Index = () => {
         sourceLabel: 'Profiler internal analysis'
       }];
       
-      setSignals(sampleSignals);
+      // Load rejected signals from localStorage for sample data too
+      const storageKey = `signals_${currentUser.uid}`;
+      let rejectedHashes = new Set<string>();
+      try {
+        const savedRejected = localStorage.getItem(`${storageKey}_rejected`);
+        if (savedRejected) {
+          const rejectedArray = JSON.parse(savedRejected);
+          rejectedHashes = new Set(rejectedArray);
+        }
+      } catch (error) {
+        console.error('Error loading rejected signals from localStorage:', error);
+      }
+      
+      // Filter out rejected sample signals using content hash
+      const filteredSampleSignals = sampleSignals.filter(signal => {
+        const contentHash = getSignalContentHash(signal);
+        return !rejectedHashes.has(contentHash);
+      });
+      
+      setSignals(filteredSampleSignals);
       
       toast({
         title: "API Not Available",
@@ -360,6 +484,80 @@ const Index = () => {
     }
     return ["Should I analyze the broader implications of this development for your market?", "Want me to identify opportunities this creates for your sales approach?", "Do you want me to monitor for similar signals in your industry?"];
   };
+  const handleAcceptSignal = (signalId: string) => {
+    if (!currentUser?.uid) return;
+    
+    // Find the signal to get its content hash
+    const signal = signals.find(s => s.id === signalId);
+    if (!signal) return;
+    
+    const contentHash = getSignalContentHash(signal);
+    
+    if (!acceptedSignals.has(contentHash)) {
+      const newAccepted = new Set([...acceptedSignals, contentHash]);
+      setAcceptedSignals(newAccepted);
+      
+      // Save to localStorage
+      const storageKey = `signals_${currentUser.uid}`;
+      try {
+        localStorage.setItem(`${storageKey}_accepted`, JSON.stringify(Array.from(newAccepted)));
+      } catch (error) {
+        console.error('Error saving accepted signals to localStorage:', error);
+      }
+      
+      toast({
+        title: "Signal accepted",
+        description: "This signal has been marked as accepted.",
+      });
+    }
+  };
+
+  const handleRejectSignal = (signalId: string) => {
+    if (!currentUser?.uid) return;
+    
+    // Find the signal to get its content hash
+    const signal = signals.find(s => s.id === signalId);
+    if (!signal) return;
+    
+    const contentHash = getSignalContentHash(signal);
+    
+    // Remove from signals list
+    setSignals(prev => prev.filter(s => s.id !== signalId));
+    
+    // Remove from accepted if it was accepted (using content hash)
+    setAcceptedSignals(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(contentHash);
+      
+      // Update localStorage
+      const storageKey = `signals_${currentUser.uid}`;
+      try {
+        localStorage.setItem(`${storageKey}_accepted`, JSON.stringify(Array.from(newSet)));
+      } catch (error) {
+        console.error('Error updating accepted signals in localStorage:', error);
+      }
+      
+      return newSet;
+    });
+    
+    // Add to rejected list (using content hash)
+    const newRejected = new Set([...rejectedSignalHashes, contentHash]);
+    setRejectedSignalHashes(newRejected);
+    
+    // Save rejected signals to localStorage
+    const storageKey = `signals_${currentUser.uid}`;
+    try {
+      localStorage.setItem(`${storageKey}_rejected`, JSON.stringify(Array.from(newRejected)));
+    } catch (error) {
+      console.error('Error saving rejected signals to localStorage:', error);
+    }
+    
+    toast({
+      title: "Signal removed",
+      description: "This signal has been removed from your list.",
+    });
+  };
+
   const filteredSavedInsights = savedInsightsFilter === 'all' ? savedInsights : savedInsights.filter(insight => {
     if (savedInsightsFilter === 'competitor') return insight.headline.toLowerCase().includes('competitor');
     if (savedInsightsFilter === 'icp') return insight.headline.toLowerCase().includes('icp');
@@ -383,7 +581,11 @@ const Index = () => {
                 <p className="text-gray-500 mb-4">Click refresh in the header to generate new signals</p>
               </div>
             ) : (
-              signals.map(signal => <div key={signal.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-lg transition-all duration-200">
+              signals.map(signal => {
+                const contentHash = getSignalContentHash(signal);
+                const isAccepted = acceptedSignals.has(contentHash);
+                
+                return <div key={signal.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-lg transition-all duration-200">
                 {/* Card Header */}
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-3">
@@ -391,6 +593,40 @@ const Index = () => {
                     {getAgentBadge(signal.agent)}
                     <span className="text-sm text-gray-500">•</span>
                     <span className="text-sm text-gray-500">{signal.timestamp}</span>
+                    {isAccepted && (
+                      <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
+                        Accepted
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={`h-8 w-8 p-0 ${
+                        isAccepted
+                          ? 'text-green-600 bg-green-50'
+                          : 'text-gray-500 hover:text-green-600 hover:bg-green-50'
+                      }`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAcceptSignal(signal.id);
+                      }}
+                      disabled={isAccepted}
+                    >
+                      <ThumbsUp className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 text-gray-500 hover:text-red-600 hover:bg-red-50"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRejectSignal(signal.id);
+                      }}
+                    >
+                      <ThumbsDown className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
 
@@ -402,7 +638,7 @@ const Index = () => {
                         <h3 className="text-lg font-semibold text-gray-900">
                           {signal.headline}
                         </h3>
-                         <div className="flex items-center gap-3">
+                         {/* <div className="flex items-center gap-3">
                            <button 
                              className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
                              onClick={() => toast({
@@ -419,7 +655,7 @@ const Index = () => {
                            >
                              💬 Discuss with Agent
                            </button>
-                         </div>
+                         </div> */}
                       </div>
                       <p className="text-gray-600 text-sm leading-relaxed mb-2">
                         {signal.snippet}
@@ -436,7 +672,7 @@ const Index = () => {
                   </div>
                   
                   {/* Next Best Moves Section */}
-                  <div className="mt-2 pt-2 border-t border-gray-100">
+                  {/* <div className="mt-2 pt-2 border-t border-gray-100">
                     <h4 className="text-sm font-medium text-gray-900 mb-2">Next Best Moves</h4>
                     <div className="space-y-1">
                       {getNextBestMoves(signal).map((move, index) => {
@@ -460,7 +696,7 @@ const Index = () => {
                             </div>
                             
                             {/* Inline Chat Expansion */}
-                            {hasExpandedChat && <div className="mt-2 bg-white border border-gray-200 rounded-lg p-3 animate-fade-in shadow-sm">
+                            {/* {hasExpandedChat && <div className="mt-2 bg-white border border-gray-200 rounded-lg p-3 animate-fade-in shadow-sm">
                                 <div className="flex items-start gap-3 mb-2">
                                   <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
                                     <Bot className="h-4 w-4 text-white" />
@@ -485,17 +721,18 @@ const Index = () => {
                           </div>;
                 })}
                     </div>
-                  </div>
+                  </div> */}
                 </div>
 
                 {/* Card Actions */}
-                <div className="flex items-center gap-3 pt-2 border-t border-gray-100">
+                {/* <div className="flex items-center gap-3 pt-2 border-t border-gray-100">
                   <Button size="sm" variant="outline" className="text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-300" onClick={() => handleAction(signal.id, 'save')}>
                     <Bookmark className="h-4 w-4 mr-1" />
                     Save for Later
                   </Button>
-                </div>
-              </div>)
+                </div> */}
+              </div>;
+              })
             )}
           </div>}
 

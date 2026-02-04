@@ -199,6 +199,12 @@ export function Header() {
           {isMarketResearchPage && !getPageSubtitle() && (
             <span className="text-sm md:text-base italic font-normal text-gray-600 truncate">Find your best markets before your competitors do</span>
           )}
+          {/* Scout page info text */}
+          {(isMarketResearchPage || window.location.pathname.startsWith('/your-ai-team/scout')) && (
+            <span className="text-xs md:text-sm font-normal text-gray-400 mt-0.5 truncate">
+              Reports are generated according to fields such as company name, industry, etc. from your Company profile on Mission Control
+            </span>
+          )}
         </div>
       </div>
 
@@ -238,14 +244,14 @@ export function Header() {
                     <RefreshCw className="h-4 w-4 mr-2" />
                     Refresh
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('scoutHistory'))}>
+                  {/* <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('scoutHistory'))}>
                     <History className="h-4 w-4 mr-2" />
                     History
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('scoutSettings'))}>
                     <Settings className="h-4 w-4 mr-2" />
                     Settings
-                  </DropdownMenuItem>
+                  </DropdownMenuItem> */}
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
@@ -262,7 +268,7 @@ export function Header() {
                   Refresh
                 </Button>
 
-                <Button
+                {/* <Button
                   variant="outline"
                   size="sm"
                   onClick={() => {
@@ -284,7 +290,7 @@ export function Header() {
                 >
                   <Settings className="h-4 w-4" />
                   Settings
-                </Button>
+                </Button> */}
               </>
             )}
           </>
@@ -339,7 +345,7 @@ export function Header() {
                   <Download className="h-4 w-4" />
                   Export Data
                 </Button>
-                <Button 
+                {/* <Button 
                   size="sm"
                   className="bg-purple-600 hover:bg-purple-700 text-white flex items-center gap-2"
                   onClick={() => {
@@ -348,7 +354,7 @@ export function Header() {
                 >
                   <UserPlus className="h-4 w-4" />
                   Create New ICP
-                </Button>
+                </Button> */}
               </>
             )}
           </>
@@ -466,10 +472,10 @@ export function Header() {
          {/* Signals page controls */}
          {window.location.pathname === '/signals' && !isMobile && (
            <>
-             <Button variant="outline" size="sm" className="flex items-center gap-2">
+             {/* <Button variant="outline" size="sm" className="flex items-center gap-2">
                <Bookmark className="h-4 w-4" />
                Saved Insights (0)
-             </Button>
+             </Button> */}
              
              <Select defaultValue="today">
                <SelectTrigger className="w-32">
@@ -522,7 +528,7 @@ export function Header() {
         )}
 
          {/* Notification Bell */}
-        <DropdownMenu>
+        {/* <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="icon" className="relative">
               <Bell className="h-5 w-5" />
@@ -555,7 +561,7 @@ export function Header() {
               View all notifications
             </DropdownMenuItem>
           </DropdownMenuContent>
-        </DropdownMenu>
+        </DropdownMenu> */}
       </div>
     </header>
   );

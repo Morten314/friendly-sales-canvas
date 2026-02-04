@@ -41,7 +41,42 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
     if (!content) return '';
     
     return content
-      // FIRST: Remove markdown-style separators (--, ---, etc.) - do this early to catch all patterns
+      // FIRST: Remove any literal "response_message" text that might appear in the response
+      .replace(/["']?response_message["']?\s*[:=]\s*/gi, '')
+      .replace(/response_message/gi, '')
+      // Remove any literal "response_json" text
+      .replace(/["']?response_json["']?\s*[:=]\s*/gi, '')
+      .replace(/response_json/gi, '')
+      // Remove JSON-like structures that appear after the main message (e.g., "competitor_analysis": {...})
+      // Match patterns like: ", "key": {...}" or ", "key": "value""
+      .replace(/,\s*["']?\w+_analysis["']?\s*[:=]\s*\{[^}]*\}/gi, '')
+      .replace(/,\s*["']?\w+["']?\s*[:=]\s*\{[^{}]*\{[^}]*\}[^}]*\}/gi, '')
+      .replace(/,\s*["']?\w+["']?\s*[:=]\s*\{[^}]*\}/gi, '')
+      // Remove standalone JSON objects at the end
+      .replace(/\s*,\s*\{[^}]*\}/g, '')
+      // Remove key-value pairs that appear after commas (JSON-like patterns)
+      .replace(/,\s*["']?\w+["']?\s*[:=]\s*["']?[^"',}]+["']?\s*/gi, '')
+      // Handle escaped newline patterns - convert literal "\n" (backslash-n) to actual newline first
+      .replace(/\\n/g, '\n')
+      // Handle n- patterns (convert to newlines with bullets) - only when clearly formatting
+      // Match "n-" only when preceded by space, start of line, or punctuation
+      .replace(/(^|[\.:!?\s])n-\s*/g, '$1\n• ')
+      // Handle n n patterns (convert to paragraph breaks) - only when clearly two separate formatting n's
+      .replace(/(^|[\.:!?\s])n\s+n(\s|$|[\.:!?])/g, '$1\n\n$2')
+      // Handle n followed by actual newline character - only standalone formatting n
+      .replace(/(^|[\.:!?\s])n\s*\n/g, '$1\n')
+      // Handle n followed by whitespace and capital letter (new paragraph) - only when clearly formatting
+      // Must be preceded by space/punctuation to avoid matching "in APAC" -> "i APAC"
+      .replace(/(^|[\.:!?\s])n\s+([A-Z])/g, '$1\n\n$2')
+      // Handle n followed by bullet character - only when clearly formatting
+      .replace(/(^|[\.:!?\s])n\s*([•\-\u2022\u25E6\u25AA\u25AB\u25A0\u25A1\u2B24\u25CB])/g, '$1\n$2')
+      // Handle standalone n at end of sentence - convert to newline
+      .replace(/([\.:!?])\s+n(\s|$)/g, '$1\n$2')
+      // Handle r character used as line break (convert to newline)
+      .replace(/\s+r\s+/g, '\n')
+      .replace(/\s+r$/gm, '\n')
+      .replace(/r\s+([A-Z])/g, '\n$1')
+      // Remove markdown-style separators (--, ---, etc.) - do this early to catch all patterns
       // Handle bullets (both • and -) followed by dashes
       .replace(/[•\-\u2022\u25E6\u25AA\u25AB\u25A0\u25A1\u2B24\u25CB]\s*[-]{2,}\s*/g, '') // Remove any bullet followed by dashes (e.g., "• --")
       // Remove multiple dashes (3 or more) anywhere - do this before handling double dashes
@@ -65,6 +100,8 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
       .replace(/`{1,3}/g, '')
       .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1') // Remove markdown links but keep text
       // Normalize bullet points to standard bullet
+      // FIRST: Replace literal "u2022" text with actual bullet character
+      .replace(/u2022/gi, '•')
       .replace(/[•◦▪▫■□●○]/g, '•')
       .replace(/[\u2022\u25E6\u25AA\u25AB\u25A0\u25A1\u2B24\u25CB]/g, '•')
       // Normalize arrows
@@ -162,7 +199,7 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
         console.log('Response type:', typeof data);
         console.log('Is array:', Array.isArray(data));
         
-        // Handle different response formats
+        // Handle different response formats - STRICTLY only extract response_message
         let answer = '';
         if (Array.isArray(data) && data.length > 0) {
           console.log('Processing as array, first element:', data[0]);
@@ -171,19 +208,44 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
           if (typeof data[0] === 'string') {
             answer = data[0];
           } else if (typeof data[0] === 'object') {
-            answer = data[0].response || data[0].answer || data[0].message || JSON.stringify(data[0]);
+            // STRICTLY only use response_message - do not fall back to other fields or JSON.stringify
+            answer = data[0].response_message || '';
           } else {
             answer = String(data[0]);
           }
         } else if (typeof data === 'object' && data !== null) {
           console.log('Processing as object, keys:', Object.keys(data));
-          answer = data.response || data.answer || data.message || JSON.stringify(data);
+          // STRICTLY only use response_message - do not fall back to other fields or JSON.stringify
+          answer = data.response_message || '';
         } else if (typeof data === 'string') {
           console.log('Processing as string');
-          answer = data;
+          // Try to parse as JSON string in case it contains response_message
+          try {
+            const parsedData = JSON.parse(data);
+            // STRICTLY only use response_message
+            answer = parsedData.response_message || '';
+          } catch (e) {
+            // If it's not JSON, use the string as-is
+            answer = data;
+          }
         } else {
           console.log('Unknown data format, falling back');
           answer = 'I received your question but couldn\'t generate a proper response.';
+        }
+        
+        // If answer is empty, provide a fallback message instead of showing JSON
+        if (!answer || answer.trim() === '') {
+          answer = 'I received your question but couldn\'t generate a proper response.';
+        }
+        
+        // If answer contains JSON-like structures (e.g., starts with quote and has JSON), extract only the message part
+        // Split on common JSON delimiters to separate message from JSON
+        if (answer.includes('", "') || answer.includes('",\n"')) {
+          // Extract only the part before the JSON starts (before ", "key":)
+          const jsonStartIndex = answer.search(/",\s*["']?\w+["']?\s*[:=]/);
+          if (jsonStartIndex > 0) {
+            answer = answer.substring(0, jsonStartIndex).replace(/^["']|["']$/g, '').trim();
+          }
         }
         
         console.log('Final answer:', answer);

@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { MapPin, Bot, Edit, Target, Clock, AlertTriangle, X, FileText, Save, Share, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
-import { EditDropdownMenu } from './EditDropdownMenu';
+import { MapPin, Bot, Edit, Target, Clock, AlertTriangle, X, FileText, Save, Share, TrendingUp, ChevronDown, ChevronUp, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useToast } from '@/hooks/use-toast';
 import { EditRecord } from './types';
 import { toUTCTimestamp, isTimestampNewer } from '@/lib/timestampUtils';
 import { executeWithRateLimit } from '@/lib/rateLimitManager';
@@ -88,6 +88,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
   companyProfile
 }) => {
   const { currentUser } = useAuth();
+  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [marketEntryData, setMarketEntryData] = useState<any>(null);
@@ -101,6 +102,17 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
   const [editCompetitiveDifferentiation, setEditCompetitiveDifferentiation] = useState<string[]>([]);
   const [editStrategicRecommendations, setEditStrategicRecommendations] = useState<string[]>([]);
   const [editRiskAssessment, setEditRiskAssessment] = useState<string[]>([]);
+  const [editSwotAnalysis, setEditSwotAnalysis] = useState<{
+    strengths: string[];
+    weaknesses: string[];
+    opportunities: string[];
+    threats: string[];
+  }>({
+    strengths: [],
+    weaknesses: [],
+    opportunities: [],
+    threats: []
+  });
 
   // Debug logging for state changes
   useEffect(() => {
@@ -269,6 +281,15 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
     setEditStrategicRecommendations(displayData.strategicRecommendations || []);
     setEditRiskAssessment(displayData.riskAssessment || []);
     
+    // Initialize SWOT analysis - check if it exists in displayData, otherwise use defaults
+    const swotData = displayData.swotAnalysis || {
+      strengths: ['Strong tech platform'],
+      weaknesses: ['Limited local presence'],
+      opportunities: ['Growing market'],
+      threats: ['Regulatory changes']
+    };
+    setEditSwotAnalysis(swotData);
+    
     onToggleEdit();
   };
 
@@ -294,7 +315,13 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
       topBarrier: displayData.topBarrier || '',
       competitiveDifferentiation: displayData.competitiveDifferentiation || [],
       strategicRecommendations: displayData.strategicRecommendations || [],
-      riskAssessment: displayData.riskAssessment || []
+      riskAssessment: displayData.riskAssessment || [],
+      swotAnalysis: displayData.swotAnalysis || {
+        strengths: ['Strong tech platform'],
+        weaknesses: ['Limited local presence'],
+        opportunities: ['Growing market'],
+        threats: ['Regulatory changes']
+      }
     };
 
     const modifiedJson = {
@@ -305,7 +332,8 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
       topBarrier: editTopBarrier,
       competitiveDifferentiation: editCompetitiveDifferentiation,
       strategicRecommendations: editStrategicRecommendations,
-      riskAssessment: editRiskAssessment
+      riskAssessment: editRiskAssessment,
+      swotAnalysis: editSwotAnalysis
     };
 
     console.log('🚀 Market Entry Section - original_json:', JSON.stringify(originalJson, null, 2));
@@ -329,7 +357,13 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
         topBarrier: displayData.topBarrier,
         competitiveDifferentiation: displayData.competitiveDifferentiation,
         strategicRecommendations: displayData.strategicRecommendations,
-        riskAssessment: displayData.riskAssessment
+        riskAssessment: displayData.riskAssessment,
+        swotAnalysis: displayData.swotAnalysis || {
+          strengths: ['Strong tech platform'],
+          weaknesses: ['Limited local presence'],
+          opportunities: ['Growing market'],
+          threats: ['Regulatory changes']
+        }
       };
 
       // Prepare modified data using local edit state
@@ -342,7 +376,8 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
         topBarrier: editTopBarrier,
         competitiveDifferentiation: editCompetitiveDifferentiation,
         strategicRecommendations: editStrategicRecommendations,
-        riskAssessment: editRiskAssessment
+        riskAssessment: editRiskAssessment,
+        swotAnalysis: editSwotAnalysis
       };
 
       // Prepare data for API according to schema
@@ -412,26 +447,43 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
     }
   };
 
-  const SwotQuadrant = () => (
-    <div className="grid grid-cols-2 gap-2 text-xs">
-      <div className="bg-green-50 p-2 rounded border">
-        <div className="font-semibold text-green-700">Strengths</div>
-        <div className="text-green-600">• Strong tech platform</div>
+  const SwotQuadrant = ({ swotData }: { swotData?: { strengths: string[]; weaknesses: string[]; opportunities: string[]; threats: string[] } }) => {
+    const swotToUse = swotData || editSwotAnalysis || {
+      strengths: ['Strong tech platform'],
+      weaknesses: ['Limited local presence'],
+      opportunities: ['Growing market'],
+      threats: ['Regulatory changes']
+    };
+    
+    return (
+      <div className="grid grid-cols-2 gap-2 text-xs">
+        <div className="bg-green-50 p-2 rounded border">
+          <div className="font-semibold text-green-700">Strengths</div>
+          {swotToUse.strengths.map((strength, index) => (
+            <div key={index} className="text-green-600">• {strength}</div>
+          ))}
+        </div>
+        <div className="bg-blue-50 p-2 rounded border">
+          <div className="font-semibold text-blue-700">Opportunities</div>
+          {swotToUse.opportunities.map((opportunity, index) => (
+            <div key={index} className="text-blue-600">• {opportunity}</div>
+          ))}
+        </div>
+        <div className="bg-orange-50 p-2 rounded border">
+          <div className="font-semibold text-orange-700">Weaknesses</div>
+          {swotToUse.weaknesses.map((weakness, index) => (
+            <div key={index} className="text-orange-600">• {weakness}</div>
+          ))}
+        </div>
+        <div className="bg-red-50 p-2 rounded border">
+          <div className="font-semibold text-red-700">Threats</div>
+          {swotToUse.threats.map((threat, index) => (
+            <div key={index} className="text-red-600">• {threat}</div>
+          ))}
+        </div>
       </div>
-      <div className="bg-blue-50 p-2 rounded border">
-        <div className="font-semibold text-blue-700">Opportunities</div>
-        <div className="text-blue-600">• Growing market</div>
-      </div>
-      <div className="bg-orange-50 p-2 rounded border">
-        <div className="font-semibold text-orange-700">Weaknesses</div>
-        <div className="text-orange-600">• Limited local presence</div>
-      </div>
-      <div className="bg-red-50 p-2 rounded border">
-        <div className="font-semibold text-red-700">Threats</div>
-        <div className="text-red-600">• Regulatory changes</div>
-      </div>
-    </div>
-  );
+    );
+  };
 
   const TimelineChart = () => (
     <div className="space-y-2">
@@ -530,11 +582,14 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
           Market Entry & Growth Strategy
         </h2>
         <div className="flex items-center gap-3">
-          <EditDropdownMenu
-            onModify={handleModify}
-            onComment={() => onScoutIconClick('market-entry', hasEdits)}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleModify}
             className="text-purple-800 hover:text-purple-900"
-          />
+          >
+            <Edit className="h-4 w-4" />
+          </Button>
           {hasEdits && (
             <Button variant="ghost" size="sm" onClick={onEditHistoryOpen} className="text-gray-600 hover:text-gray-700">
               <Clock className="h-4 w-4" />
@@ -585,7 +640,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-2">
               <h4 className="text-sm font-medium text-gray-700 mb-2">SWOT Analysis</h4>
-              <SwotQuadrant />
+              <SwotQuadrant swotData={displayData.swotAnalysis || editSwotAnalysis} />
             </div>
             <div>
               <h4 className="text-sm font-medium text-gray-700 mb-2">Timeline Preview</h4>
@@ -646,7 +701,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-2">
               <h4 className="text-sm font-medium text-gray-700 mb-2">SWOT Analysis</h4>
-              <SwotQuadrant />
+              <SwotQuadrant swotData={displayData.swotAnalysis || editSwotAnalysis} />
             </div>
             <div>
               <h4 className="text-sm font-medium text-gray-700 mb-2">Timeline Preview</h4>
@@ -747,15 +802,30 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
       {isEditing && (
         <div className="space-y-6">
           <div className="relative group border border-gray-200 rounded-lg p-4">
-            <button
-              onClick={() => {
-                onDeleteSection('executive-summary');
-                onScoutIconClick('market-entry', true, 'I noticed you removed the Executive Summary. Want me to help refine or replace it?');
-              }}
-              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
-            >
-              <X className="h-4 w-4 text-red-600" />
-            </button>
+            <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
+              <button
+                onClick={() => {
+                  onExecutiveSummaryChange(editExecutiveSummary);
+                  toast({
+                    title: "Saved",
+                    description: "Executive Summary changes committed.",
+                  });
+                }}
+                className="text-gray-400 hover:text-green-600 hover:bg-green-50 p-1 rounded transition-colors"
+                title="Commit changes"
+              >
+                <Check className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => {
+                  onDeleteSection('executive-summary');
+                  onScoutIconClick('market-entry', true, 'I noticed you removed the Executive Summary. Want me to help refine or replace it?');
+                }}
+                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
+              >
+                <X className="h-4 w-4 text-red-600" />
+              </button>
+            </div>
             <div className="space-y-4">
               <Label htmlFor="market-entry-executive-summary" className="text-sm font-medium text-gray-700">
                 Executive Summary
@@ -772,15 +842,32 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
           </div>
 
           <div className="relative group border border-gray-200 rounded-lg p-4">
-            <button
-              onClick={() => {
-                onDeleteSection('key-metrics');
-                onScoutIconClick('market-entry', true, 'I noticed you removed the Key Metrics section. Want me to help refine or replace it?');
-              }}
-              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
-            >
-              <X className="h-4 w-4 text-red-600" />
-            </button>
+            <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
+              <button
+                onClick={() => {
+                  onRecommendedChannelChange(editRecommendedChannel);
+                  onTimeToMarketChange(editTimeToMarket);
+                  onTopBarrierChange(editTopBarrier);
+                  toast({
+                    title: "Saved",
+                    description: "Key Metrics changes committed.",
+                  });
+                }}
+                className="text-gray-400 hover:text-green-600 hover:bg-green-50 p-1 rounded transition-colors"
+                title="Commit changes"
+              >
+                <Check className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => {
+                  onDeleteSection('key-metrics');
+                  onScoutIconClick('market-entry', true, 'I noticed you removed the Key Metrics section. Want me to help refine or replace it?');
+                }}
+                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
+              >
+                <X className="h-4 w-4 text-red-600" />
+              </button>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="recommended-channel" className="text-sm font-medium text-gray-700">
@@ -819,15 +906,30 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
           </div>
 
           <div className="relative group border border-gray-200 rounded-lg p-4">
-            <button
-              onClick={() => {
-                onDeleteSection('entry-barriers');
-                onScoutIconClick('market-entry', true, 'I noticed you removed the Entry Barriers section. Want me to help refine or replace it?');
-              }}
-              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
-            >
-              <X className="h-4 w-4 text-red-600" />
-            </button>
+            <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
+              <button
+                onClick={() => {
+                  onEntryBarriersChange(editEntryBarriers);
+                  toast({
+                    title: "Saved",
+                    description: "Entry Barriers changes committed.",
+                  });
+                }}
+                className="text-gray-400 hover:text-green-600 hover:bg-green-50 p-1 rounded transition-colors"
+                title="Commit changes"
+              >
+                <Check className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => {
+                  onDeleteSection('entry-barriers');
+                  onScoutIconClick('market-entry', true, 'I noticed you removed the Entry Barriers section. Want me to help refine or replace it?');
+                }}
+                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
+              >
+                <X className="h-4 w-4 text-red-600" />
+              </button>
+            </div>
             <div className="space-y-4">
               <Label className="text-sm font-medium text-gray-700">Entry Barriers</Label>
               {editEntryBarriers.map((barrier, index) => (
@@ -862,6 +964,388 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
               </Button>
             </div>
           </div>
+
+          {/* SWOT Analysis Edit */}
+          {!deletedSections.has('swot-analysis') && (
+            <div className="relative group border border-gray-200 rounded-lg p-4">
+              <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
+                <button
+                  onClick={() => {
+                    toast({
+                      title: "Saved",
+                      description: "SWOT Analysis changes committed.",
+                    });
+                  }}
+                  className="text-gray-400 hover:text-green-600 hover:bg-green-50 p-1 rounded transition-colors"
+                  title="Commit changes"
+                >
+                  <Check className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => {
+                    onDeleteSection('swot-analysis');
+                    onScoutIconClick('market-entry', true, 'I noticed you removed the SWOT Analysis section. Want me to help refine or replace it?');
+                  }}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
+                >
+                  <X className="h-4 w-4 text-red-600" />
+                </button>
+              </div>
+              <div className="space-y-4">
+                <Label className="text-sm font-medium text-gray-700">SWOT Analysis</Label>
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Strengths */}
+                  <div className="bg-green-50 p-3 rounded border border-green-200">
+                    <Label className="text-sm font-semibold text-green-700 mb-2 block">Strengths</Label>
+                    <div className="space-y-2">
+                      {editSwotAnalysis.strengths.map((strength, index) => (
+                        <div key={index} className="flex gap-2">
+                          <Input
+                            value={strength}
+                            onChange={(e) => {
+                              const updated = [...editSwotAnalysis.strengths];
+                              updated[index] = e.target.value;
+                              setEditSwotAnalysis({ ...editSwotAnalysis, strengths: updated });
+                            }}
+                            className="flex-1 text-sm text-green-700"
+                            placeholder="Strength"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              const updated = editSwotAnalysis.strengths.filter((_, i) => i !== index);
+                              setEditSwotAnalysis({ ...editSwotAnalysis, strengths: updated });
+                            }}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setEditSwotAnalysis({ ...editSwotAnalysis, strengths: [...editSwotAnalysis.strengths, ''] })}
+                      >
+                        Add Strength
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Opportunities */}
+                  <div className="bg-blue-50 p-3 rounded border border-blue-200">
+                    <Label className="text-sm font-semibold text-blue-700 mb-2 block">Opportunities</Label>
+                    <div className="space-y-2">
+                      {editSwotAnalysis.opportunities.map((opportunity, index) => (
+                        <div key={index} className="flex gap-2">
+                          <Input
+                            value={opportunity}
+                            onChange={(e) => {
+                              const updated = [...editSwotAnalysis.opportunities];
+                              updated[index] = e.target.value;
+                              setEditSwotAnalysis({ ...editSwotAnalysis, opportunities: updated });
+                            }}
+                            className="flex-1 text-sm text-blue-700"
+                            placeholder="Opportunity"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              const updated = editSwotAnalysis.opportunities.filter((_, i) => i !== index);
+                              setEditSwotAnalysis({ ...editSwotAnalysis, opportunities: updated });
+                            }}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setEditSwotAnalysis({ ...editSwotAnalysis, opportunities: [...editSwotAnalysis.opportunities, ''] })}
+                      >
+                        Add Opportunity
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Weaknesses */}
+                  <div className="bg-orange-50 p-3 rounded border border-orange-200">
+                    <Label className="text-sm font-semibold text-orange-700 mb-2 block">Weaknesses</Label>
+                    <div className="space-y-2">
+                      {editSwotAnalysis.weaknesses.map((weakness, index) => (
+                        <div key={index} className="flex gap-2">
+                          <Input
+                            value={weakness}
+                            onChange={(e) => {
+                              const updated = [...editSwotAnalysis.weaknesses];
+                              updated[index] = e.target.value;
+                              setEditSwotAnalysis({ ...editSwotAnalysis, weaknesses: updated });
+                            }}
+                            className="flex-1 text-sm text-orange-700"
+                            placeholder="Weakness"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              const updated = editSwotAnalysis.weaknesses.filter((_, i) => i !== index);
+                              setEditSwotAnalysis({ ...editSwotAnalysis, weaknesses: updated });
+                            }}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setEditSwotAnalysis({ ...editSwotAnalysis, weaknesses: [...editSwotAnalysis.weaknesses, ''] })}
+                      >
+                        Add Weakness
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Threats */}
+                  <div className="bg-red-50 p-3 rounded border border-red-200">
+                    <Label className="text-sm font-semibold text-red-700 mb-2 block">Threats</Label>
+                    <div className="space-y-2">
+                      {editSwotAnalysis.threats.map((threat, index) => (
+                        <div key={index} className="flex gap-2">
+                          <Input
+                            value={threat}
+                            onChange={(e) => {
+                              const updated = [...editSwotAnalysis.threats];
+                              updated[index] = e.target.value;
+                              setEditSwotAnalysis({ ...editSwotAnalysis, threats: updated });
+                            }}
+                            className="flex-1 text-sm text-red-700"
+                            placeholder="Threat"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              const updated = editSwotAnalysis.threats.filter((_, i) => i !== index);
+                              setEditSwotAnalysis({ ...editSwotAnalysis, threats: updated });
+                            }}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setEditSwotAnalysis({ ...editSwotAnalysis, threats: [...editSwotAnalysis.threats, ''] })}
+                      >
+                        Add Threat
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Competitive Differentiation Edit */}
+          {!deletedSections.has('competitive-differentiation') && (
+            <div className="relative group border border-gray-200 rounded-lg p-4">
+              <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
+                <button
+                  onClick={() => {
+                    onCompetitiveDifferentiationChange(editCompetitiveDifferentiation);
+                    toast({
+                      title: "Saved",
+                      description: "Competitive Differentiation changes committed.",
+                    });
+                  }}
+                  className="text-gray-400 hover:text-green-600 hover:bg-green-50 p-1 rounded transition-colors"
+                  title="Commit changes"
+                >
+                  <Check className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => {
+                    onDeleteSection('competitive-differentiation');
+                    onScoutIconClick('market-entry', true, 'I noticed you removed the Competitive Differentiation section. Want me to help refine or replace it?');
+                  }}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
+                >
+                  <X className="h-4 w-4 text-red-600" />
+                </button>
+              </div>
+              <div className="space-y-4">
+                <Label className="text-sm font-medium text-gray-700">Competitive Differentiation</Label>
+                {editCompetitiveDifferentiation.map((diff, index) => (
+                  <div key={index} className="flex gap-2">
+                    <Input
+                      value={diff}
+                      onChange={(e) => {
+                        const updated = [...editCompetitiveDifferentiation];
+                        updated[index] = e.target.value;
+                        setEditCompetitiveDifferentiation(updated);
+                      }}
+                      placeholder={`Differentiation point ${index + 1}`}
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const updated = editCompetitiveDifferentiation.filter((_, i) => i !== index);
+                        setEditCompetitiveDifferentiation(updated);
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEditCompetitiveDifferentiation([...editCompetitiveDifferentiation, ''])}
+                >
+                  Add Differentiation Point
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Strategic Recommendations Edit */}
+          {!deletedSections.has('strategic-recommendations') && (
+            <div className="relative group border border-gray-200 rounded-lg p-4">
+              <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
+                <button
+                  onClick={() => {
+                    onStrategicRecommendationsChange(editStrategicRecommendations);
+                    toast({
+                      title: "Saved",
+                      description: "Strategic Recommendations changes committed.",
+                    });
+                  }}
+                  className="text-gray-400 hover:text-green-600 hover:bg-green-50 p-1 rounded transition-colors"
+                  title="Commit changes"
+                >
+                  <Check className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => {
+                    onDeleteSection('strategic-recommendations');
+                    onScoutIconClick('market-entry', true, 'I noticed you removed the Strategic Recommendations section. Want me to help refine or replace it?');
+                  }}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
+                >
+                  <X className="h-4 w-4 text-red-600" />
+                </button>
+              </div>
+              <div className="space-y-4">
+                <Label className="text-sm font-medium text-gray-700">Strategic Recommendations</Label>
+                {editStrategicRecommendations.map((recommendation, index) => (
+                  <div key={index} className="flex gap-2">
+                    <Textarea
+                      value={recommendation}
+                      onChange={(e) => {
+                        const updated = [...editStrategicRecommendations];
+                        updated[index] = e.target.value;
+                        setEditStrategicRecommendations(updated);
+                      }}
+                      className="flex-1"
+                      rows={2}
+                      placeholder={`Strategic recommendation ${index + 1}`}
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const updated = editStrategicRecommendations.filter((_, i) => i !== index);
+                        setEditStrategicRecommendations(updated);
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEditStrategicRecommendations([...editStrategicRecommendations, ''])}
+                >
+                  Add Recommendation
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Risk Assessment Edit */}
+          {!deletedSections.has('risk-assessment') && (
+            <div className="relative group border border-gray-200 rounded-lg p-4">
+              <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
+                <button
+                  onClick={() => {
+                    onRiskAssessmentChange(editRiskAssessment);
+                    toast({
+                      title: "Saved",
+                      description: "Risk Assessment changes committed.",
+                    });
+                  }}
+                  className="text-gray-400 hover:text-green-600 hover:bg-green-50 p-1 rounded transition-colors"
+                  title="Commit changes"
+                >
+                  <Check className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => {
+                    onDeleteSection('risk-assessment');
+                    onScoutIconClick('market-entry', true, 'I noticed you removed the Risk Assessment section. Want me to help refine or replace it?');
+                  }}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
+                >
+                  <X className="h-4 w-4 text-red-600" />
+                </button>
+              </div>
+              <div className="space-y-4">
+                <Label className="text-sm font-medium text-gray-700">Risk Assessment</Label>
+                {editRiskAssessment.map((risk, index) => (
+                  <div key={index} className="flex gap-2">
+                    <Textarea
+                      value={risk}
+                      onChange={(e) => {
+                        const updated = [...editRiskAssessment];
+                        updated[index] = e.target.value;
+                        setEditRiskAssessment(updated);
+                      }}
+                      className="flex-1"
+                      rows={2}
+                      placeholder={`Risk ${index + 1}`}
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const updated = editRiskAssessment.filter((_, i) => i !== index);
+                        setEditRiskAssessment(updated);
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEditRiskAssessment([...editRiskAssessment, ''])}
+                >
+                  Add Risk
+                </Button>
+              </div>
+            </div>
+          )}
 
           {/* Save/Cancel Buttons */}
           <div className="flex items-center gap-3 pt-6 border-t">

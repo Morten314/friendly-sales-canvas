@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { getUserLocalStorage, setUserLocalStorage } from '@/utils/cacheUtils';
-import { EditDropdownMenu } from './EditDropdownMenu';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Scale, 
   Shield, 
@@ -18,6 +19,7 @@ import {
   ChevronUp,
   Edit,
   Trash2,
+  Check,
   Save,
   X,
   Clock,
@@ -118,6 +120,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   regulatoryData: propRegulatoryData
 }) => {
   const { currentUser } = useAuth();
+  const { toast } = useToast();
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
   // Use centralized data from parent instead of local state
   const regulatoryData = propRegulatoryData;
@@ -125,6 +128,26 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [regulatoryExpanded, setRegulatoryExpanded] = useState(true);
+
+  // Normalize deletedSections to ensure it's always a Set
+  const normalizedDeletedSections = React.useMemo(() => {
+    if (!deletedSections) {
+      return new Set<string>();
+    }
+    if (deletedSections instanceof Set) {
+      return deletedSections;
+    }
+    // If it's an array, convert to Set
+    if (Array.isArray(deletedSections)) {
+      return new Set(deletedSections);
+    }
+    // If it's an object, convert keys to Set
+    if (typeof deletedSections === 'object') {
+      return new Set(Object.keys(deletedSections));
+    }
+    // Fallback to empty Set
+    return new Set<string>();
+  }, [deletedSections]);
 
   // Local state for editing - prioritize API data over localStorage for fresh updates (user-specific)
   const [localExecutiveSummary, setLocalExecutiveSummary] = useState(() => {
@@ -184,6 +207,19 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   
   // Dynamic local state for all key data points
   const [localKeyDataValues, setLocalKeyDataValues] = useState<Record<string, string>>({});
+
+  // Local state for regional data (table)
+  const [localRegionalData, setLocalRegionalData] = useState<any[]>([]);
+
+  // Local state for visual data cards
+  const [localVisualDataCards, setLocalVisualDataCards] = useState<any[]>([]);
+
+  // Local state for strategic recommendations
+  const [localStrategicRecommendations, setLocalStrategicRecommendations] = useState<any>({
+    mitigateRegulatoryRisks: [],
+    competitivePositioning: [],
+    goToMarketStrategy: []
+  });
 
   // Save local state to localStorage whenever it changes
   useEffect(() => {
@@ -285,12 +321,29 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
 
   // Initialize dynamic key data values after keyDataPoints is available
   useEffect(() => {
-    if (!isEditing && regulatoryData?.keyUpdates) {
+    if (!isEditing && regulatoryData?.keyUpdates && Array.isArray(regulatoryData.keyUpdates)) {
       const initialValues: Record<string, string> = {};
-      regulatoryData.keyUpdates.forEach((update: any) => {
-        if (update.title) {
-          const id = update.title.toLowerCase().replace(/\s+/g, '-');
-          initialValues[id] = update.description || '';
+      regulatoryData.keyUpdates.forEach((update: any, index: number) => {
+        if (update) {
+          // Parse if update is a JSON string
+          let parsedUpdate = update;
+          if (typeof update === 'string') {
+            try {
+              parsedUpdate = JSON.parse(update);
+            } catch (e) {
+              console.warn(`⚠️ Failed to parse update[${index}] as JSON in useEffect:`, e);
+              parsedUpdate = update;
+            }
+          }
+          
+          // Try multiple possible field names for title and value/description
+          const title = parsedUpdate.title || parsedUpdate.name || parsedUpdate.label || parsedUpdate.heading || `Update ${index + 1}`;
+          const value = parsedUpdate.description || parsedUpdate.value || parsedUpdate.content || parsedUpdate.text || parsedUpdate.details || '';
+          
+          if (title && title !== `Update ${index + 1}`) {
+            const id = title.toLowerCase().replace(/\s+/g, '-');
+            initialValues[id] = value;
+          }
         }
       });
       setLocalKeyDataValues(initialValues);
@@ -307,13 +360,134 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     setLocalDataLocalization(regulatoryData?.dataLocalization || dataLocalization || '');
     
     // Initialize dynamic key data values
-    if (regulatoryData?.keyUpdates) {
+    if (regulatoryData?.keyUpdates && Array.isArray(regulatoryData.keyUpdates)) {
       const initialValues: Record<string, string> = {};
-      regulatoryData.keyUpdates.forEach((update: any) => {
-        const id = update.title.toLowerCase().replace(/\s+/g, '-');
-        initialValues[id] = update.description || '';
+      regulatoryData.keyUpdates.forEach((update: any, index: number) => {
+        if (update) {
+          // Parse if update is a JSON string
+          let parsedUpdate = update;
+          if (typeof update === 'string') {
+            try {
+              parsedUpdate = JSON.parse(update);
+            } catch (e) {
+              console.warn(`⚠️ Failed to parse update[${index}] as JSON in handleModify:`, e);
+              parsedUpdate = update;
+            }
+          }
+          
+          // Try multiple possible field names for title and value/description
+          const title = parsedUpdate.title || parsedUpdate.name || parsedUpdate.label || parsedUpdate.heading || `Update ${index + 1}`;
+          const value = parsedUpdate.description || parsedUpdate.value || parsedUpdate.content || parsedUpdate.text || parsedUpdate.details || '';
+          
+          if (title && title !== `Update ${index + 1}`) {
+            const id = title.toLowerCase().replace(/\s+/g, '-');
+            initialValues[id] = value;
+          }
+        }
       });
       setLocalKeyDataValues(initialValues);
+    }
+    
+    // Initialize regional data
+    const defaultRegionalData = [
+      {
+        region: 'European Union',
+        framework: 'GDPR + AI Act',
+        deadline: 'Q1 2026',
+        impact: 'High',
+        status: 'Active',
+        requirements: 'Data protection, AI governance'
+      },
+      {
+        region: 'United States',
+        framework: 'CCPA + State Laws',
+        deadline: 'Ongoing',
+        impact: 'Medium',
+        status: 'Evolving',
+        requirements: 'Privacy rights, data handling'
+      },
+      {
+        region: 'China',
+        framework: 'PIPL + Cybersecurity Law',
+        deadline: 'Active',
+        impact: 'High',
+        status: 'Mandatory',
+        requirements: 'Data localization, security'
+      },
+      {
+        region: 'United Kingdom',
+        framework: 'UK GDPR + DPA',
+        deadline: 'Active',
+        impact: 'Medium',
+        status: 'Active',
+        requirements: 'Data protection, transfers'
+      }
+    ];
+    const regionalDataToUse = regulatoryData?.regionalData || defaultRegionalData;
+    setLocalRegionalData(regionalDataToUse && regionalDataToUse.length > 0 ? [...regionalDataToUse] : [...defaultRegionalData]);
+    
+    // Initialize visual data cards
+    const defaultVisualDataCards = [
+      {
+        title: 'Compliance Adoption Rates',
+        type: 'bar-chart',
+        data: [
+          { name: 'GDPR', value: 68, color: '#10b981' },
+          { name: 'CCPA', value: 45, color: '#3b82f6' },
+          { name: 'SOC 2', value: 72, color: '#8b5cf6' },
+          { name: 'ISO 27001', value: 38, color: '#f59e0b' }
+        ]
+      },
+      {
+        title: 'Regulatory Timeline',
+        type: 'timeline',
+        data: [
+          { date: 'Q1 2025', event: 'EU AI Act Phase 1', status: 'upcoming' },
+          { date: 'Q3 2025', event: 'GDPR Updates', status: 'upcoming' },
+          { date: 'Q1 2026', event: 'EU AI Act Full Enforcement', status: 'critical' }
+        ]
+      },
+      {
+        title: 'Risk Indicators',
+        type: 'percentage',
+        data: [
+          { metric: 'Data Breach Risk', value: 23, trend: 'down' },
+          { metric: 'Non-compliance Penalties', value: 15, trend: 'up' },
+          { metric: 'Audit Readiness', value: 67, trend: 'up' }
+        ]
+      }
+    ];
+    const visualDataCardsToUse = regulatoryData?.visualDataCards || defaultVisualDataCards;
+    setLocalVisualDataCards(visualDataCardsToUse && visualDataCardsToUse.length > 0 ? [...visualDataCardsToUse] : [...defaultVisualDataCards]);
+    
+    // Initialize strategic recommendations
+    if (regulatoryData?.strategicRecommendations) {
+      setLocalStrategicRecommendations({
+        mitigateRegulatoryRisks: regulatoryData.strategicRecommendations.mitigateRegulatoryRisks || [],
+        competitivePositioning: regulatoryData.strategicRecommendations.competitivePositioning || [],
+        goToMarketStrategy: regulatoryData.strategicRecommendations.goToMarketStrategy || []
+      });
+    } else {
+      setLocalStrategicRecommendations({
+        mitigateRegulatoryRisks: [
+          'Implement privacy by design principles',
+          'Establish automated compliance monitoring',
+          'Regular risk assessments and audits',
+          'Cross-functional compliance team'
+        ],
+        competitivePositioning: [
+          'Market compliance as differentiator',
+          'Showcase security certifications',
+          'Transparent data handling practices',
+          'Industry-leading privacy standards'
+        ],
+        goToMarketStrategy: [
+          'Regional deployment capabilities',
+          'Compliance-ready product offerings',
+          'Legal-friendly contract templates',
+          'Enterprise-grade data residency'
+        ]
+      });
     }
     
     onToggleEdit();
@@ -612,7 +786,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   console.log('  - regulatoryData content:', regulatoryData);
   console.log('  - regulatoryExpanded:', regulatoryExpanded);
 
-  if (deletedSections.has('regulatory-compliance')) {
+  if (normalizedDeletedSections.has('regulatory-compliance')) {
     return null;
   }
 
@@ -697,28 +871,60 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   // Debug logging for keyDataPoints
   console.log('🔍 RegulatoryComplianceSection - regulatoryData:', regulatoryData);
   console.log('🔍 RegulatoryComplianceSection - regulatoryData?.keyUpdates:', regulatoryData?.keyUpdates);
-  if (regulatoryData?.keyUpdates) {
+  console.log('🔍 RegulatoryComplianceSection - regulatoryData?.keyUpdates type:', typeof regulatoryData?.keyUpdates);
+  console.log('🔍 RegulatoryComplianceSection - regulatoryData?.keyUpdates isArray:', Array.isArray(regulatoryData?.keyUpdates));
+  console.log('🔍 RegulatoryComplianceSection - regulatoryData?.keyUpdates length:', regulatoryData?.keyUpdates?.length);
+  
+  if (regulatoryData?.keyUpdates && Array.isArray(regulatoryData.keyUpdates)) {
     console.log('🔍 RegulatoryComplianceSection - keyUpdates details:');
     regulatoryData.keyUpdates.forEach((update: any, index: number) => {
-      console.log(`  [${index}] Full update object:`, update);
-      console.log(`  [${index}] title: "${update.title}", description: "${update.description}", tag: "${update.tag}"`);
-      console.log(`  [${index}] All keys:`, Object.keys(update));
+      if (update) {
+        console.log(`  [${index}] Full update object:`, JSON.stringify(update, null, 2));
+        console.log(`  [${index}] title: "${update.title}", description: "${update.description}", tag: "${update.tag}"`);
+        console.log(`  [${index}] Alternative fields - name: "${update.name}", label: "${update.label}", value: "${update.value}", content: "${update.content}"`);
+        console.log(`  [${index}] All keys:`, Object.keys(update));
+        console.log(`  [${index}] Type of update:`, typeof update);
+        console.log(`  [${index}] Is update truthy:`, !!update);
+      } else {
+        console.log(`  [${index}] Update is falsy/null/undefined`);
+      }
     });
+  } else {
+    console.log('⚠️ RegulatoryComplianceSection - keyUpdates is not an array or does not exist');
+    console.log('  - regulatoryData?.keyUpdates:', regulatoryData?.keyUpdates);
+    console.log('  - Type:', typeof regulatoryData?.keyUpdates);
   }
   console.log('🔍 RegulatoryComplianceSection - euAiActDeadline:', euAiActDeadline);
   console.log('🔍 RegulatoryComplianceSection - gdprCompliance:', gdprCompliance);
   console.log('🔍 RegulatoryComplianceSection - potentialFines:', potentialFines);
   console.log('🔍 RegulatoryComplianceSection - dataLocalization:', dataLocalization);
 
-  const keyDataPoints = regulatoryData?.keyUpdates ? regulatoryData.keyUpdates.map((update: any, index: number) => ({
-    id: update.title?.toLowerCase().replace(/\s+/g, '-') || `update-${index}`,
-    icon: getIconByName(update.icon || 'scale'),
-    title: update.title || `Update ${index + 1}`,
-    value: update.description || '',
-    badge: update.tag || 'Update',
-    badgeColor: getBadgeColor(update.tag),
-    tooltip: update.description || ''
-  })) : [
+  const keyDataPoints = (regulatoryData?.keyUpdates && Array.isArray(regulatoryData.keyUpdates)) ? regulatoryData.keyUpdates.filter((update: any) => update).map((update: any, index: number) => {
+    // Parse if update is a JSON string
+    let parsedUpdate = update;
+    if (typeof update === 'string') {
+      try {
+        parsedUpdate = JSON.parse(update);
+      } catch (e) {
+        console.warn(`⚠️ Failed to parse update[${index}] as JSON:`, e);
+        parsedUpdate = update;
+      }
+    }
+    
+    // Try multiple possible field names for title and value/description
+    const title = parsedUpdate.title || parsedUpdate.name || parsedUpdate.label || parsedUpdate.heading || `Update ${index + 1}`;
+    const value = parsedUpdate.description || parsedUpdate.value || parsedUpdate.content || parsedUpdate.text || parsedUpdate.details || '';
+    
+    return {
+      id: title?.toLowerCase().replace(/\s+/g, '-') || `update-${index}`,
+      icon: getIconByName(parsedUpdate.icon || 'scale'),
+      title: title,
+      value: value,
+      badge: parsedUpdate.tag || parsedUpdate.badge || parsedUpdate.category || 'Update',
+      badgeColor: getBadgeColor(parsedUpdate.tag || parsedUpdate.badge || parsedUpdate.category),
+      tooltip: value || title
+    };
+  }) : [
     {
       id: 'eu-ai-act',
       icon: Scale,
@@ -832,6 +1038,87 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     }
   ];
 
+  // Initialize local state for regional data and visual data cards when not editing
+  useEffect(() => {
+    if (!isEditing) {
+      const defaultRegionalData = [
+        {
+          region: 'European Union',
+          framework: 'GDPR + AI Act',
+          deadline: 'Q1 2026',
+          impact: 'High',
+          status: 'Active',
+          requirements: 'Data protection, AI governance'
+        },
+        {
+          region: 'United States',
+          framework: 'CCPA + State Laws',
+          deadline: 'Ongoing',
+          impact: 'Medium',
+          status: 'Evolving',
+          requirements: 'Privacy rights, data handling'
+        },
+        {
+          region: 'China',
+          framework: 'PIPL + Cybersecurity Law',
+          deadline: 'Active',
+          impact: 'High',
+          status: 'Mandatory',
+          requirements: 'Data localization, security'
+        },
+        {
+          region: 'United Kingdom',
+          framework: 'UK GDPR + DPA',
+          deadline: 'Active',
+          impact: 'Medium',
+          status: 'Active',
+          requirements: 'Data protection, transfers'
+        }
+      ];
+      
+      const defaultVisualDataCards = [
+        {
+          title: 'Compliance Adoption Rates',
+          type: 'bar-chart',
+          data: [
+            { name: 'GDPR', value: 68, color: '#10b981' },
+            { name: 'CCPA', value: 45, color: '#3b82f6' },
+            { name: 'SOC 2', value: 72, color: '#8b5cf6' },
+            { name: 'ISO 27001', value: 38, color: '#f59e0b' }
+          ]
+        },
+        {
+          title: 'Regulatory Timeline',
+          type: 'timeline',
+          data: [
+            { date: 'Q1 2025', event: 'EU AI Act Phase 1', status: 'upcoming' },
+            { date: 'Q3 2025', event: 'GDPR Updates', status: 'upcoming' },
+            { date: 'Q1 2026', event: 'EU AI Act Full Enforcement', status: 'critical' }
+          ]
+        },
+        {
+          title: 'Risk Indicators',
+          type: 'percentage',
+          data: [
+            { metric: 'Data Breach Risk', value: 23, trend: 'down' },
+            { metric: 'Non-compliance Penalties', value: 15, trend: 'up' },
+            { metric: 'Audit Readiness', value: 67, trend: 'up' }
+          ]
+        }
+      ];
+      
+      const regionalDataToUse = regulatoryData?.regionalData || defaultRegionalData;
+      if (regionalDataToUse && regionalDataToUse.length > 0) {
+        setLocalRegionalData([...regionalDataToUse]);
+      }
+      
+      const visualDataCardsToUse = regulatoryData?.visualDataCards || defaultVisualDataCards;
+      if (visualDataCardsToUse && visualDataCardsToUse.length > 0) {
+        setLocalVisualDataCards([...visualDataCardsToUse]);
+      }
+    }
+  }, [regulatoryData, isEditing]);
+
   const currentExecutiveSummary = localExecutiveSummary || regulatoryData?.executiveSummary || executiveSummary;
 
   return (
@@ -854,12 +1141,22 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
           
           <div className="flex items-center space-x-2">
             
-            {/* Edit Dropdown */}
-            <EditDropdownMenu
-              onModify={handleModify}
-              onComment={() => onScoutIconClick('regulatory-compliance', hasEdits)}
-              className="h-8 w-8"
-            />
+            {/* Edit Button - Always visible */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleModify}
+                  className="h-8 w-8 text-blue-800 hover:text-blue-900 pointer-events-auto"
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Edit</p>
+              </TooltipContent>
+            </Tooltip>
 
             {/* Scout Chat Icon */}
             <Tooltip>
@@ -888,17 +1185,32 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
           /* Full Editable Report Mode */
           <div className="space-y-8">
             {/* Executive Summary */}
-            {!deletedSections.has('executive-summary') && (
+            {!normalizedDeletedSections.has('executive-summary') && (
               <div className="relative group border border-gray-200 rounded-lg p-4">
-                <button
-                  onClick={() => {
-                    onDeleteSection('executive-summary');
-                    onScoutIconClick('regulatory-compliance', true, 'I noticed you removed the Executive Summary. Want me to help refine or replace it?');
-                  }}
-                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
-                >
-                  <X className="h-4 w-4 text-red-600" />
-                </button>
+                <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
+                  <button
+                    onClick={() => {
+                      onExecutiveSummaryChange(localExecutiveSummary);
+                      toast({
+                        title: "Saved",
+                        description: "Executive Summary changes committed.",
+                      });
+                    }}
+                    className="text-gray-400 hover:text-green-600 hover:bg-green-50 p-1 rounded transition-colors"
+                    title="Commit changes"
+                  >
+                    <Check className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      onDeleteSection('executive-summary');
+                      onScoutIconClick('regulatory-compliance', true, 'I noticed you removed the Executive Summary. Want me to help refine or replace it?');
+                    }}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
+                  >
+                    <X className="h-4 w-4 text-red-600" />
+                  </button>
+                </div>
                 <h4 className="text-sm font-medium text-gray-700 mb-2">Executive Summary</h4>
                 <textarea
                   value={localExecutiveSummary}
@@ -914,17 +1226,31 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
             )}
 
             {/* Key Regulatory Updates */}
-            {!deletedSections.has('key-updates') && (
+            {!normalizedDeletedSections.has('key-updates') && (
               <div className="relative group border border-gray-200 rounded-lg p-4">
-                <button
-                  onClick={() => {
-                    onDeleteSection('key-updates');
-                    onScoutIconClick('regulatory-compliance', true, 'I noticed you removed the Key Regulatory Updates. Want me to help refine or replace it?');
-                  }}
-                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
-                >
-                  <X className="h-4 w-4 text-red-600" />
-                </button>
+                <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
+                  <button
+                    onClick={() => {
+                      toast({
+                        title: "Saved",
+                        description: "Key Regulatory Updates changes committed.",
+                      });
+                    }}
+                    className="text-gray-400 hover:text-green-600 hover:bg-green-50 p-1 rounded transition-colors"
+                    title="Commit changes"
+                  >
+                    <Check className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      onDeleteSection('key-updates');
+                      onScoutIconClick('regulatory-compliance', true, 'I noticed you removed the Key Regulatory Updates. Want me to help refine or replace it?');
+                    }}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
+                  >
+                    <X className="h-4 w-4 text-red-600" />
+                  </button>
+                </div>
                 <h4 className="text-sm font-medium text-gray-700 mb-3">Key Regulatory Updates</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {keyDataPoints.map((point) => {
@@ -999,89 +1325,321 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
             )}
 
             {/* Compliance Analytics */}
-            {!deletedSections.has('compliance-analytics') && (
+            {!normalizedDeletedSections.has('compliance-analytics') && (
               <div className="relative group border border-gray-200 rounded-lg p-4">
-                <button
-                  onClick={() => {
-                    onDeleteSection('compliance-analytics');
-                    onScoutIconClick('regulatory-compliance', true, 'I noticed you removed the Compliance Analytics. Want me to help refine or replace it?');
-                  }}
-                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
-                >
-                  <X className="h-4 w-4 text-red-600" />
-                </button>
-                <h4 className="text-sm font-medium text-gray-700 mb-4">Compliance Analytics</h4>
-                {visualDataCards && visualDataCards.length >= 3 ? (
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Compliance Adoption Rates - Bar Chart */}
-                    <div className="bg-white border border-gray-200 rounded-lg p-4">
-                      <h5 className="font-medium text-gray-900 mb-3 flex items-center">
-                        <Users className="h-4 w-4 mr-2 text-blue-600" />
-                        Compliance Adoption Rates
-                      </h5>
-                      <div className="space-y-3">
-                        {visualDataCards[0]?.data && visualDataCards[0].data.length > 0 ? visualDataCards[0].data.map((item, index) => (
-                        <div key={index} className="flex items-center justify-between">
-                          <span className="text-sm text-gray-600">{item.name}</span>
-                          <div className="flex items-center space-x-2">
-                            <div className="w-16 h-2 bg-gray-200 rounded-full">
-                              <div 
-                                className="h-2 rounded-full" 
-                                style={{ 
-                                  width: `${item.value}%`, 
-                                  backgroundColor: item.color 
-                                }}
-                              />
-                            </div>
-                            <span className="text-sm font-medium text-gray-900">{item.value}%</span>
-                          </div>
-                        </div>
-                      )) : <p className="text-gray-500 text-sm">No compliance adoption data available</p>}
-                    </div>
-                  </div>
-
-                  {/* Regulatory Timeline */}
-                  <div className="bg-white border border-gray-200 rounded-lg p-4">
-                    <h5 className="font-medium text-gray-900 mb-3 flex items-center">
-                      <Clock className="h-4 w-4 mr-2 text-orange-600" />
-                      Regulatory Timeline
-                    </h5>
-                    <div className="space-y-3">
-                      {visualDataCards[1]?.data && visualDataCards[1].data.length > 0 ? visualDataCards[1].data.map((item, index) => (
-                        <div key={index} className="flex items-start space-x-3">
-                          <div className={`w-2 h-2 rounded-full mt-2 ${
-                            item.status === 'critical' ? 'bg-red-500' : 'bg-blue-500'
-                          }`} />
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-900">{item.event}</p>
-                            <p className="text-xs text-gray-500">{item.date}</p>
-                          </div>
-                        </div>
-                      )) : <p className="text-gray-500 text-sm">No regulatory timeline data available</p>}
-                    </div>
-                  </div>
-
-                  {/* Risk Indicators */}
-                  <div className="bg-white border border-gray-200 rounded-lg p-4">
-                    <h5 className="font-medium text-gray-900 mb-3 flex items-center">
-                      <AlertTriangle className="h-4 w-4 mr-2 text-red-600" />
-                      Risk Indicators
-                    </h5>
-                    <div className="space-y-3">
-                      {visualDataCards[2]?.data && visualDataCards[2].data.length > 0 ? visualDataCards[2].data.map((item, index) => (
-                        <div key={index} className="flex items-center justify-between">
-                          <span className="text-sm text-gray-600">{item.metric}</span>
-                          <div className="flex items-center space-x-2">
-                            <span className="text-sm font-medium text-gray-900">{item.value}%</span>
-                            <TrendingUp className={`h-3 w-3 ${
-                              item.trend === 'up' ? 'text-green-600' : 'text-red-600'
-                            } ${item.trend === 'down' ? 'rotate-180' : ''}`} />
-                          </div>
-                        </div>
-                      )) : <p className="text-gray-500 text-sm">No risk indicators data available</p>}
-                    </div>
-                  </div>
+                <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
+                  <button
+                    onClick={() => {
+                      toast({
+                        title: "Saved",
+                        description: "Compliance Analytics changes committed.",
+                      });
+                    }}
+                    className="text-gray-400 hover:text-green-600 hover:bg-green-50 p-1 rounded transition-colors"
+                    title="Commit changes"
+                  >
+                    <Check className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      onDeleteSection('compliance-analytics');
+                      onScoutIconClick('regulatory-compliance', true, 'I noticed you removed the Compliance Analytics. Want me to help refine or replace it?');
+                    }}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
+                  >
+                    <X className="h-4 w-4 text-red-600" />
+                  </button>
                 </div>
+                <h4 className="text-sm font-medium text-gray-700 mb-4">Compliance Analytics</h4>
+                {(isEditing ? localVisualDataCards : visualDataCards) && (isEditing ? localVisualDataCards : visualDataCards).length > 0 ? (
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {(isEditing ? localVisualDataCards : visualDataCards).map((card: any, cardIndex: number) => {
+                      // Find card by type dynamically
+                      if (card.type === 'bar-chart') {
+                        return (
+                          <div key={cardIndex} className="bg-white border border-gray-200 rounded-lg p-4">
+                            {isEditing ? (
+                              <Input
+                                value={card.title || 'Compliance Adoption Rates'}
+                                onChange={(e) => {
+                                  const updated = [...localVisualDataCards];
+                                  updated[cardIndex] = { ...updated[cardIndex], title: e.target.value };
+                                  setLocalVisualDataCards(updated);
+                                }}
+                                className="font-medium text-gray-900 mb-3"
+                              />
+                            ) : (
+                              <h5 className="font-medium text-gray-900 mb-3 flex items-center">
+                                <BarChart3 className="h-4 w-4 mr-2 text-blue-600" />
+                                {card.title || 'Compliance Adoption Rates'}
+                              </h5>
+                            )}
+                            <div className="space-y-3">
+                              {card.data && card.data.length > 0 ? (() => {
+                                // Find max value to normalize progress bars
+                                const maxValue = Math.max(...card.data.map((item: any) => Number(item.value) || Number(item.name?.value) || 0));
+                                const normalizeValue = (val: number) => maxValue > 100 ? Math.min((val / maxValue) * 100, 100) : Math.min(val, 100);
+                                
+                                return card.data.map((item: any, index: number) => {
+                                  const numericValue = Number(item.value) || 0;
+                                  const normalizedWidth = normalizeValue(numericValue);
+                                  const itemName = item.name || item.label || '';
+                                  
+                                  return (
+                                    <div key={index} className="flex items-center justify-between gap-2">
+                                      {isEditing ? (
+                                        <>
+                                          <Input
+                                            value={itemName}
+                                            onChange={(e) => {
+                                              const updated = [...localVisualDataCards];
+                                              updated[cardIndex].data[index] = { ...updated[cardIndex].data[index], name: e.target.value, label: e.target.value };
+                                              setLocalVisualDataCards(updated);
+                                            }}
+                                            className="flex-1 text-sm"
+                                            placeholder="Name"
+                                          />
+                                          <Input
+                                            type="number"
+                                            value={item.value || ''}
+                                            onChange={(e) => {
+                                              const updated = [...localVisualDataCards];
+                                              updated[cardIndex].data[index] = { ...updated[cardIndex].data[index], value: Number(e.target.value) || 0 };
+                                              setLocalVisualDataCards(updated);
+                                            }}
+                                            className="w-20 text-sm"
+                                            placeholder="Value"
+                                          />
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => {
+                                              const updated = [...localVisualDataCards];
+                                              updated[cardIndex].data = updated[cardIndex].data.filter((_: any, i: number) => i !== index);
+                                              setLocalVisualDataCards(updated);
+                                            }}
+                                            className="text-red-600 hover:text-red-700"
+                                          >
+                                            <X className="h-4 w-4" />
+                                          </Button>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <span className="text-sm text-gray-600">{itemName}</span>
+                                          <div className="flex items-center space-x-2">
+                                            <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                              <div 
+                                                className="h-2 rounded-full" 
+                                                style={{ 
+                                                  width: `${normalizedWidth}%`, 
+                                                  backgroundColor: item.color || `hsl(${index * 60}, 70%, 50%)`,
+                                                  maxWidth: '100%'
+                                                }}
+                                              />
+                                            </div>
+                                            <span className="text-sm font-medium text-gray-900">{item.value}{card.title?.includes('Growth') ? 'B' : ''}</span>
+                                          </div>
+                                        </>
+                                      )}
+                                    </div>
+                                  );
+                                });
+                              })() : <p className="text-gray-500 text-sm">No data available</p>}
+                              {isEditing && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    const updated = [...localVisualDataCards];
+                                    updated[cardIndex].data = [...(updated[cardIndex].data || []), { name: '', value: 0, color: '#3b82f6' }];
+                                    setLocalVisualDataCards(updated);
+                                  }}
+                                >
+                                  Add Item
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      } else if (card.type === 'timeline') {
+                        return (
+                          <div key={cardIndex} className="bg-white border border-gray-200 rounded-lg p-4">
+                            {isEditing ? (
+                              <Input
+                                value={card.title || 'Regulatory Timeline'}
+                                onChange={(e) => {
+                                  const updated = [...localVisualDataCards];
+                                  updated[cardIndex] = { ...updated[cardIndex], title: e.target.value };
+                                  setLocalVisualDataCards(updated);
+                                }}
+                                className="font-medium text-gray-900 mb-3"
+                              />
+                            ) : (
+                              <h5 className="font-medium text-gray-900 mb-3 flex items-center">
+                                <Clock className="h-4 w-4 mr-2 text-orange-600" />
+                                {card.title || 'Regulatory Timeline'}
+                              </h5>
+                            )}
+                            <div className="space-y-3">
+                              {card.data && card.data.length > 0 ? card.data.map((item: any, index: number) => (
+                                <div key={index} className="flex items-start space-x-3">
+                                  {!isEditing && (
+                                    <div className={`w-2 h-2 rounded-full mt-2 ${
+                                      item.status === 'critical' ? 'bg-red-500' : 'bg-blue-500'
+                                    }`} />
+                                  )}
+                                  <div className="flex-1 space-y-2">
+                                    {isEditing ? (
+                                      <>
+                                        <Input
+                                          value={item.event || item.label || ''}
+                                          onChange={(e) => {
+                                            const updated = [...localVisualDataCards];
+                                            updated[cardIndex].data[index] = { ...updated[cardIndex].data[index], event: e.target.value, label: e.target.value };
+                                            setLocalVisualDataCards(updated);
+                                          }}
+                                          className="text-sm"
+                                          placeholder="Event"
+                                        />
+                                        <Input
+                                          value={item.date || item.time || ''}
+                                          onChange={(e) => {
+                                            const updated = [...localVisualDataCards];
+                                            updated[cardIndex].data[index] = { ...updated[cardIndex].data[index], date: e.target.value, time: e.target.value };
+                                            setLocalVisualDataCards(updated);
+                                          }}
+                                          className="text-xs"
+                                          placeholder="Date"
+                                        />
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => {
+                                            const updated = [...localVisualDataCards];
+                                            updated[cardIndex].data = updated[cardIndex].data.filter((_: any, i: number) => i !== index);
+                                            setLocalVisualDataCards(updated);
+                                          }}
+                                          className="text-red-600 hover:text-red-700"
+                                        >
+                                          <X className="h-4 w-4" />
+                                        </Button>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <p className="text-sm font-medium text-gray-900">{item.event || item.label}</p>
+                                        <p className="text-xs text-gray-500">{item.date || item.time}</p>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                              )) : <p className="text-gray-500 text-sm">No timeline data available</p>}
+                              {isEditing && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    const updated = [...localVisualDataCards];
+                                    updated[cardIndex].data = [...(updated[cardIndex].data || []), { event: '', date: '', status: 'upcoming' }];
+                                    setLocalVisualDataCards(updated);
+                                  }}
+                                >
+                                  Add Timeline Item
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      } else if (card.type === 'percentage') {
+                        return (
+                          <div key={cardIndex} className="bg-white border border-gray-200 rounded-lg p-4">
+                            {isEditing ? (
+                              <Input
+                                value={card.title || 'GTM Model Effectiveness'}
+                                onChange={(e) => {
+                                  const updated = [...localVisualDataCards];
+                                  updated[cardIndex] = { ...updated[cardIndex], title: e.target.value };
+                                  setLocalVisualDataCards(updated);
+                                }}
+                                className="font-medium text-gray-900 mb-3"
+                              />
+                            ) : (
+                              <h5 className="font-medium text-gray-900 mb-3 flex items-center">
+                                <TrendingUp className="h-4 w-4 mr-2 text-green-600" />
+                                {card.title || 'GTM Model Effectiveness'}
+                              </h5>
+                            )}
+                            <div className="space-y-3">
+                              {card.data && card.data.length > 0 ? card.data.map((item: any, index: number) => (
+                                <div key={index} className="flex items-center justify-between gap-2">
+                                  {isEditing ? (
+                                    <>
+                                      <Input
+                                        value={item.metric || item.label || ''}
+                                        onChange={(e) => {
+                                          const updated = [...localVisualDataCards];
+                                          updated[cardIndex].data[index] = { ...updated[cardIndex].data[index], metric: e.target.value, label: e.target.value };
+                                          setLocalVisualDataCards(updated);
+                                        }}
+                                        className="flex-1 text-sm"
+                                        placeholder="Metric"
+                                      />
+                                      <Input
+                                        type="number"
+                                        value={item.value || ''}
+                                        onChange={(e) => {
+                                          const updated = [...localVisualDataCards];
+                                          updated[cardIndex].data[index] = { ...updated[cardIndex].data[index], value: Number(e.target.value) || 0 };
+                                          setLocalVisualDataCards(updated);
+                                        }}
+                                        className="w-20 text-sm"
+                                        placeholder="Value"
+                                      />
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => {
+                                          const updated = [...localVisualDataCards];
+                                          updated[cardIndex].data = updated[cardIndex].data.filter((_: any, i: number) => i !== index);
+                                          setLocalVisualDataCards(updated);
+                                        }}
+                                        className="text-red-600 hover:text-red-700"
+                                      >
+                                        <X className="h-4 w-4" />
+                                      </Button>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <span className="text-sm text-gray-600">{item.metric || item.label}</span>
+                                      <div className="flex items-center space-x-2">
+                                        <span className="text-sm font-medium text-gray-900">{item.value}%</span>
+                                        <TrendingUp className={`h-3 w-3 ${
+                                          item.trend === 'up' ? 'text-green-600' : 'text-red-600'
+                                        } ${item.trend === 'down' ? 'rotate-180' : ''}`} />
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              )) : <p className="text-gray-500 text-sm">No percentage data available</p>}
+                              {isEditing && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    const updated = [...localVisualDataCards];
+                                    updated[cardIndex].data = [...(updated[cardIndex].data || []), { metric: '', value: 0, trend: 'up' }];
+                                    setLocalVisualDataCards(updated);
+                                  }}
+                                >
+                                  Add Metric
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })}
+                  </div>
                 ) : (
                   <p className="text-gray-500 text-sm">No compliance analytics data available</p>
                 )}
@@ -1089,17 +1647,31 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
             )}
 
             {/* Regional Breakdown */}
-            {!deletedSections.has('regional-breakdown') && (
+            {!normalizedDeletedSections.has('regional-breakdown') && (
               <div className="relative group border border-gray-200 rounded-lg p-4">
-                <button
-                  onClick={() => {
-                    onDeleteSection('regional-breakdown');
-                    onScoutIconClick('regulatory-compliance', true, 'I noticed you removed the Regional Compliance Overview. Want me to help refine or replace it?');
-                  }}
-                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
-                >
-                  <X className="h-4 w-4 text-red-600" />
-                </button>
+                <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
+                  <button
+                    onClick={() => {
+                      toast({
+                        title: "Saved",
+                        description: "Regional Breakdown changes committed.",
+                      });
+                    }}
+                    className="text-gray-400 hover:text-green-600 hover:bg-green-50 p-1 rounded transition-colors"
+                    title="Commit changes"
+                  >
+                    <Check className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      onDeleteSection('regional-breakdown');
+                      onScoutIconClick('regulatory-compliance', true, 'I noticed you removed the Regional Compliance Overview. Want me to help refine or replace it?');
+                    }}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
+                  >
+                    <X className="h-4 w-4 text-red-600" />
+                  </button>
+                </div>
                 <h4 className="text-sm font-medium text-gray-700 mb-4">Regional Compliance Overview</h4>
                 <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
                   <Table>
@@ -1111,66 +1683,248 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                         <TableHead className="font-medium">Impact</TableHead>
                         <TableHead className="font-medium">Status</TableHead>
                         <TableHead className="font-medium">Key Requirements</TableHead>
+                        {isEditing && <TableHead className="font-medium">Actions</TableHead>}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {regionalData.map((region, index) => (
+                      {(isEditing ? localRegionalData : regionalData).map((region, index) => (
                         <TableRow key={index}>
-                          <TableCell className="font-medium">{region.region}</TableCell>
-                          <TableCell>{region.framework}</TableCell>
-                          <TableCell>{region.deadline}</TableCell>
-                          <TableCell>
-                            <Badge className={`${
-                              region.impact === 'High' ? 'bg-red-100 text-red-800' :
-                              region.impact === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-green-100 text-green-800'
-                            }`}>
-                              {region.impact}
-                            </Badge>
+                          <TableCell className="font-medium">
+                            {isEditing ? (
+                              <Input
+                                value={region.region || ''}
+                                onChange={(e) => {
+                                  const updated = [...localRegionalData];
+                                  updated[index] = { ...updated[index], region: e.target.value };
+                                  setLocalRegionalData(updated);
+                                }}
+                                className="w-full text-sm"
+                              />
+                            ) : (
+                              region.region
+                            )}
                           </TableCell>
                           <TableCell>
-                            <Badge className={`${
-                              region.status === 'Active' || region.status === 'Mandatory' 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-blue-100 text-blue-800'
-                            }`}>
-                              {region.status}
-                            </Badge>
+                            {isEditing ? (
+                              <Input
+                                value={region.framework || ''}
+                                onChange={(e) => {
+                                  const updated = [...localRegionalData];
+                                  updated[index] = { ...updated[index], framework: e.target.value };
+                                  setLocalRegionalData(updated);
+                                }}
+                                className="w-full text-sm"
+                              />
+                            ) : (
+                              region.framework
+                            )}
                           </TableCell>
-                          <TableCell className="text-sm text-gray-600">{region.requirements}</TableCell>
+                          <TableCell>
+                            {isEditing ? (
+                              <Input
+                                value={region.deadline || ''}
+                                onChange={(e) => {
+                                  const updated = [...localRegionalData];
+                                  updated[index] = { ...updated[index], deadline: e.target.value };
+                                  setLocalRegionalData(updated);
+                                }}
+                                className="w-full text-sm"
+                              />
+                            ) : (
+                              region.deadline
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {isEditing ? (
+                              <Input
+                                value={region.impact || ''}
+                                onChange={(e) => {
+                                  const updated = [...localRegionalData];
+                                  updated[index] = { ...updated[index], impact: e.target.value };
+                                  setLocalRegionalData(updated);
+                                }}
+                                className="w-full text-sm"
+                              />
+                            ) : (
+                              <Badge className={`${
+                                region.impact === 'High' ? 'bg-red-100 text-red-800' :
+                                region.impact === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-green-100 text-green-800'
+                              }`}>
+                                {region.impact}
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {isEditing ? (
+                              <Input
+                                value={region.status || ''}
+                                onChange={(e) => {
+                                  const updated = [...localRegionalData];
+                                  updated[index] = { ...updated[index], status: e.target.value };
+                                  setLocalRegionalData(updated);
+                                }}
+                                className="w-full text-sm"
+                              />
+                            ) : (
+                              <Badge className={`${
+                                region.status === 'Active' || region.status === 'Mandatory' 
+                                  ? 'bg-green-100 text-green-800' 
+                                  : 'bg-blue-100 text-blue-800'
+                              }`}>
+                                {region.status}
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-sm text-gray-600">
+                            {isEditing ? (
+                              <Input
+                                value={region.requirements || ''}
+                                onChange={(e) => {
+                                  const updated = [...localRegionalData];
+                                  updated[index] = { ...updated[index], requirements: e.target.value };
+                                  setLocalRegionalData(updated);
+                                }}
+                                className="w-full text-sm"
+                              />
+                            ) : (
+                              region.requirements
+                            )}
+                          </TableCell>
+                          {isEditing && (
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setLocalRegionalData(localRegionalData.filter((_, i) => i !== index));
+                                }}
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          )}
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
+                  {isEditing && (
+                    <div className="p-4 border-t">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setLocalRegionalData([...localRegionalData, {
+                            region: '',
+                            framework: '',
+                            deadline: '',
+                            impact: 'Medium',
+                            status: 'Active',
+                            requirements: ''
+                          }]);
+                        }}
+                      >
+                        Add Region
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
 
             {/* Strategic Recommendations */}
-            {!deletedSections.has('strategic-recommendations') && (
+            {!normalizedDeletedSections.has('strategic-recommendations') && (
               <div className="relative group border border-gray-200 rounded-lg p-4">
-                <button
-                  onClick={() => {
-                    onDeleteSection('strategic-recommendations');
-                    onScoutIconClick('regulatory-compliance', true, 'I noticed you removed the Strategic Recommendations. Want me to help refine or replace it?');
-                  }}
-                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
-                >
-                  <X className="h-4 w-4 text-red-600" />
-                </button>
+                <div className="absolute top-2 right-2 flex items-center gap-1 z-10">
+                  <button
+                    onClick={() => {
+                      toast({
+                        title: "Saved",
+                        description: "Strategic Recommendations changes committed.",
+                      });
+                    }}
+                    className="text-gray-400 hover:text-green-600 hover:bg-green-50 p-1 rounded transition-colors"
+                    title="Commit changes"
+                  >
+                    <Check className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      onDeleteSection('strategic-recommendations');
+                      onScoutIconClick('regulatory-compliance', true, 'I noticed you removed the Strategic Recommendations. Want me to help refine or replace it?');
+                    }}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 bg-red-50 hover:bg-red-100 rounded"
+                  >
+                    <X className="h-4 w-4 text-red-600" />
+                  </button>
+                </div>
                 <h4 className="text-sm font-medium text-gray-700 mb-4">Strategic Recommendations</h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                     <div className="flex items-start space-x-3">
                       <Shield className="h-5 w-5 text-blue-600 mt-0.5" />
-                      <div>
-                        <h5 className="font-medium text-blue-900 mb-2">Mitigate Regulatory Risks</h5>
-                        <ul className="text-sm text-blue-700 space-y-1">
-                          <li>• Implement privacy by design principles</li>
-                          <li>• Establish automated compliance monitoring</li>
-                          <li>• Regular risk assessments and audits</li>
-                          <li>• Cross-functional compliance team</li>
-                        </ul>
+                      <div className="flex-1">
+                        {isEditing ? (
+                          <Input
+                            value="Mitigate Regulatory Risks"
+                            className="font-medium text-blue-900 mb-2"
+                            readOnly
+                          />
+                        ) : (
+                          <h5 className="font-medium text-blue-900 mb-2">Mitigate Regulatory Risks</h5>
+                        )}
+                        <div className="space-y-2">
+                          {(isEditing ? localStrategicRecommendations.mitigateRegulatoryRisks : [
+                            'Implement privacy by design principles',
+                            'Establish automated compliance monitoring',
+                            'Regular risk assessments and audits',
+                            'Cross-functional compliance team'
+                          ]).map((item: string, idx: number) => (
+                            <div key={idx} className="flex items-center gap-2">
+                              {isEditing ? (
+                                <>
+                                  <Input
+                                    value={item}
+                                    onChange={(e) => {
+                                      const updated = [...localStrategicRecommendations.mitigateRegulatoryRisks];
+                                      updated[idx] = e.target.value;
+                                      setLocalStrategicRecommendations({ ...localStrategicRecommendations, mitigateRegulatoryRisks: updated });
+                                    }}
+                                    className="flex-1 text-sm text-blue-700"
+                                  />
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      const updated = localStrategicRecommendations.mitigateRegulatoryRisks.filter((_: string, i: number) => i !== idx);
+                                      setLocalStrategicRecommendations({ ...localStrategicRecommendations, mitigateRegulatoryRisks: updated });
+                                    }}
+                                    className="text-red-600 hover:text-red-700"
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </>
+                              ) : (
+                                <li className="text-sm text-blue-700">• {item}</li>
+                              )}
+                            </div>
+                          ))}
+                          {isEditing && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setLocalStrategicRecommendations({
+                                  ...localStrategicRecommendations,
+                                  mitigateRegulatoryRisks: [...localStrategicRecommendations.mitigateRegulatoryRisks, '']
+                                });
+                              }}
+                            >
+                              Add Item
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1178,14 +1932,67 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                   <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
                     <div className="flex items-start space-x-3">
                       <Target className="h-5 w-5 text-green-600 mt-0.5" />
-                      <div>
-                        <h5 className="font-medium text-green-900 mb-2">Competitive Positioning</h5>
-                        <ul className="text-sm text-green-700 space-y-1">
-                          <li>• Market compliance as differentiator</li>
-                          <li>• Showcase security certifications</li>
-                          <li>• Transparent data handling practices</li>
-                          <li>• Industry-leading privacy standards</li>
-                        </ul>
+                      <div className="flex-1">
+                        {isEditing ? (
+                          <Input
+                            value="Competitive Positioning"
+                            className="font-medium text-green-900 mb-2"
+                            readOnly
+                          />
+                        ) : (
+                          <h5 className="font-medium text-green-900 mb-2">Competitive Positioning</h5>
+                        )}
+                        <div className="space-y-2">
+                          {(isEditing ? localStrategicRecommendations.competitivePositioning : [
+                            'Market compliance as differentiator',
+                            'Showcase security certifications',
+                            'Transparent data handling practices',
+                            'Industry-leading privacy standards'
+                          ]).map((item: string, idx: number) => (
+                            <div key={idx} className="flex items-center gap-2">
+                              {isEditing ? (
+                                <>
+                                  <Input
+                                    value={item}
+                                    onChange={(e) => {
+                                      const updated = [...localStrategicRecommendations.competitivePositioning];
+                                      updated[idx] = e.target.value;
+                                      setLocalStrategicRecommendations({ ...localStrategicRecommendations, competitivePositioning: updated });
+                                    }}
+                                    className="flex-1 text-sm text-green-700"
+                                  />
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      const updated = localStrategicRecommendations.competitivePositioning.filter((_: string, i: number) => i !== idx);
+                                      setLocalStrategicRecommendations({ ...localStrategicRecommendations, competitivePositioning: updated });
+                                    }}
+                                    className="text-red-600 hover:text-red-700"
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </>
+                              ) : (
+                                <li className="text-sm text-green-700">• {item}</li>
+                              )}
+                            </div>
+                          ))}
+                          {isEditing && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setLocalStrategicRecommendations({
+                                  ...localStrategicRecommendations,
+                                  competitivePositioning: [...localStrategicRecommendations.competitivePositioning, '']
+                                });
+                              }}
+                            >
+                              Add Item
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1193,14 +2000,67 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                   <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
                     <div className="flex items-start space-x-3">
                       <Building className="h-5 w-5 text-purple-600 mt-0.5" />
-                      <div>
-                        <h5 className="font-medium text-purple-900 mb-2">Go-to-Market Strategy</h5>
-                        <ul className="text-sm text-purple-700 space-y-1">
-                          <li>• Regional deployment capabilities</li>
-                          <li>• Compliance-ready product offerings</li>
-                          <li>• Legal-friendly contract templates</li>
-                          <li>• Enterprise-grade data residency</li>
-                        </ul>
+                      <div className="flex-1">
+                        {isEditing ? (
+                          <Input
+                            value="Go-to-Market Strategy"
+                            className="font-medium text-purple-900 mb-2"
+                            readOnly
+                          />
+                        ) : (
+                          <h5 className="font-medium text-purple-900 mb-2">Go-to-Market Strategy</h5>
+                        )}
+                        <div className="space-y-2">
+                          {(isEditing ? localStrategicRecommendations.goToMarketStrategy : [
+                            'Regional deployment capabilities',
+                            'Compliance-ready product offerings',
+                            'Legal-friendly contract templates',
+                            'Enterprise-grade data residency'
+                          ]).map((item: string, idx: number) => (
+                            <div key={idx} className="flex items-center gap-2">
+                              {isEditing ? (
+                                <>
+                                  <Input
+                                    value={item}
+                                    onChange={(e) => {
+                                      const updated = [...localStrategicRecommendations.goToMarketStrategy];
+                                      updated[idx] = e.target.value;
+                                      setLocalStrategicRecommendations({ ...localStrategicRecommendations, goToMarketStrategy: updated });
+                                    }}
+                                    className="flex-1 text-sm text-purple-700"
+                                  />
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      const updated = localStrategicRecommendations.goToMarketStrategy.filter((_: string, i: number) => i !== idx);
+                                      setLocalStrategicRecommendations({ ...localStrategicRecommendations, goToMarketStrategy: updated });
+                                    }}
+                                    className="text-red-600 hover:text-red-700"
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </>
+                              ) : (
+                                <li className="text-sm text-purple-700">• {item}</li>
+                              )}
+                            </div>
+                          ))}
+                          {isEditing && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setLocalStrategicRecommendations({
+                                  ...localStrategicRecommendations,
+                                  goToMarketStrategy: [...localStrategicRecommendations.goToMarketStrategy, '']
+                                });
+                              }}
+                            >
+                              Add Item
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1266,9 +2126,9 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                     onDataLocalizationChange(localDataLocalization);
                     
                     // Update key data points if regulatoryData exists
-                    if (regulatoryData?.keyUpdates) {
+                    if (regulatoryData?.keyUpdates && Array.isArray(regulatoryData.keyUpdates)) {
                       // For key updates, we need to update the regulatoryData directly since there's no individual change handlers
-                      const updatedKeyUpdates = regulatoryData.keyUpdates.map((update: any) => {
+                      const updatedKeyUpdates = regulatoryData.keyUpdates.filter((update: any) => update && update.title).map((update: any) => {
                         const id = update.title.toLowerCase().replace(/\s+/g, '-');
                         const localValue = localKeyDataValues[id];
                         if (localValue !== undefined) {
@@ -1417,20 +2277,60 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                           />
                         ) : card.type === 'bar-chart' ? (
                           <div className="space-y-3">
+                            {(() => {
+                              // Find max value to normalize progress bars
+                              const maxValue = Math.max(...card.data.map((item: any) => Number(item.value) || 0));
+                              const normalizeValue = (val: number) => maxValue > 100 ? Math.min((val / maxValue) * 100, 100) : Math.min(val, 100);
+                              
+                              return card.data.map((item: any, index: number) => {
+                                const numericValue = Number(item.value) || 0;
+                                const normalizedWidth = normalizeValue(numericValue);
+                                
+                                return (
+                                  <div key={index} className="flex items-center justify-between">
+                                    <span className="text-sm text-gray-600">{item.label || item.name}</span>
+                                    <div className="flex items-center space-x-2">
+                                      <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                        <div 
+                                          className="h-2 rounded-full" 
+                                          style={{ 
+                                            width: `${normalizedWidth}%`, 
+                                            backgroundColor: item.color || `hsl(${index * 60}, 70%, 50%)`,
+                                            maxWidth: '100%'
+                                          }}
+                                        />
+                                      </div>
+                                      <span className="text-sm font-medium text-gray-900">{item.value}{card.title?.includes('Growth') ? 'B' : ''}</span>
+                                    </div>
+                                  </div>
+                                );
+                              });
+                            })()}
+                          </div>
+                        ) : card.type === 'timeline' ? (
+                          <div className="space-y-3">
+                            {card.data.map((item: any, index: number) => (
+                              <div key={index} className="flex items-start space-x-3">
+                                <div className={`w-2 h-2 rounded-full mt-2 ${
+                                  item.status === 'critical' ? 'bg-red-500' : 'bg-blue-500'
+                                }`} />
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium text-gray-900">{item.event || item.label}</p>
+                                  <p className="text-xs text-gray-500">{item.date || item.time}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : card.type === 'percentage' ? (
+                          <div className="space-y-3">
                             {card.data.map((item: any, index: number) => (
                               <div key={index} className="flex items-center justify-between">
-                                <span className="text-sm text-gray-600">{item.label || item.name}</span>
+                                <span className="text-sm text-gray-600">{item.metric || item.label}</span>
                                 <div className="flex items-center space-x-2">
-                                  <div className="w-16 h-2 bg-gray-200 rounded-full">
-                                    <div 
-                                      className="h-2 rounded-full" 
-                                      style={{ 
-                                        width: `${item.value}%`, 
-                                        backgroundColor: `hsl(${index * 60}, 70%, 50%)`
-                                      }}
-                                    />
-                                  </div>
-                                  <span className="text-sm font-medium text-gray-900">{item.value}{card.title.includes('Growth') ? 'B' : '%'}</span>
+                                  <span className="text-sm font-medium text-gray-900">{item.value}%</span>
+                                  <TrendingUp className={`h-3 w-3 ${
+                                    item.trend === 'up' ? 'text-green-600' : 'text-red-600'
+                                  } ${item.trend === 'down' ? 'rotate-180' : ''}`} />
                                 </div>
                               </div>
                             ))}

@@ -80,6 +80,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import ApiService from "@/services/api";
+import { buildApiUrl } from "@/lib/api";
+import jwtManager from "@/lib/jwt";
 
 // Data Source Interface
 interface DataSource {
@@ -379,9 +381,6 @@ const MissionControl = () => {
   const [isCustomerProfileSaved, setIsCustomerProfileSaved] = useState(false);
   const [hasDataSources, setHasDataSources] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [isCustomCompanyName, setIsCustomCompanyName] = useState(false);
-  const [isCustomIndustryPopoverOpen, setIsCustomIndustryPopoverOpen] = useState(false);
-  const [customIndustryInput, setCustomIndustryInput] = useState("");
 
   // Tab locking logic
   const isCustomerProfileLocked = !isCompanyProfileSaved;
@@ -532,20 +531,13 @@ const MissionControl = () => {
     dealSize: "",
     companyUrl: "",
     keyBuyerPersona: "",
-    businessGoals: "",
+    goals: "",
     painPoints: "",
     targetSegments: "",
     excludeSegments: "",
-    complianceReqs: "",
-    messagingConstraints: "",
+    compliance: "",
+    constraints: "",
   });
-
-  // Initialize custom company name state based on existing value
-  useEffect(() => {
-    if (companyProfile.companyName && companyProfile.companyName.trim() !== "") {
-      setIsCustomCompanyName(true);
-    }
-  }, [companyProfile.companyName]);
 
   const handleSave = async () => {
     if (!currentUser?.uid) {
@@ -585,12 +577,12 @@ const MissionControl = () => {
         typical_deal_size: companyProfile.dealSize.trim(),
         company_url: companyProfile.companyUrl.trim(),
         key_buyer_persona: companyProfile.keyBuyerPersona.trim(),
-        business_goals: companyProfile.businessGoals.trim(),
+        goals: companyProfile.goals.trim(),
         pain_points: companyProfile.painPoints.trim(),
         target_segments: companyProfile.targetSegments.trim(),
         exclude_segments: companyProfile.excludeSegments.trim(),
-        compliance_reqs: companyProfile.complianceReqs.trim(),
-        messaging_constraints: companyProfile.messagingConstraints.trim(),
+        compliance: companyProfile.compliance.trim(),
+        constraints: companyProfile.constraints.trim(),
       };
 
       console.log("=== MISSION CONTROL: Saving company profile ===");
@@ -661,6 +653,12 @@ const MissionControl = () => {
           typical_deal_size: payload.typical_deal_size,
           company_url: payload.company_url,
           key_buyer_persona: payload.key_buyer_persona,
+          goals: payload.goals,
+          pain_points: payload.pain_points,
+          target_segments: payload.target_segments,
+          exclude_segments: payload.exclude_segments,
+          compliance: payload.compliance,
+          constraints: payload.constraints,
         };
         setUserLocalStorage('companyProfile', JSON.stringify(dataToSave), currentUser.uid);
         console.log("MissionControl: Saved company profile to localStorage");
@@ -740,12 +738,6 @@ const MissionControl = () => {
             dealSize: localProfile.typical_deal_size || localProfile.dealSize || "",
             companyUrl: localProfile.company_url || localProfile.companyUrl || "",
             keyBuyerPersona: localProfile.key_buyer_persona || localProfile.keyBuyerPersona || "",
-            businessGoals: localProfile.business_goals || localProfile.businessGoals || "",
-            painPoints: localProfile.pain_points || localProfile.painPoints || "",
-            targetSegments: localProfile.target_segments || localProfile.targetSegments || "",
-            excludeSegments: localProfile.exclude_segments || localProfile.excludeSegments || "",
-            complianceReqs: localProfile.compliance_reqs || localProfile.complianceReqs || "",
-            messagingConstraints: localProfile.messaging_constraints || localProfile.messagingConstraints || "",
           };
           setCompanyProfile(profileData);
           if (localProfile.company_name || localProfile.companyName) {
@@ -799,12 +791,12 @@ const MissionControl = () => {
       dealSize: (data.typical_deal_size || data.dealSize || "").trim(),
       companyUrl: (data.company_url || data.companyUrl || "").trim(),
       keyBuyerPersona: (data.key_buyer_persona || data.keyBuyerPersona || "").trim(),
-      businessGoals: (data.business_goals || data.businessGoals || "").trim(),
+      goals: (data.goals || "").trim(),
       painPoints: (data.pain_points || data.painPoints || "").trim(),
       targetSegments: (data.target_segments || data.targetSegments || "").trim(),
       excludeSegments: (data.exclude_segments || data.excludeSegments || "").trim(),
-      complianceReqs: (data.compliance_reqs || data.complianceReqs || "").trim(),
-      messagingConstraints: (data.messaging_constraints || data.messagingConstraints || "").trim(),
+      compliance: (data.compliance || "").trim(),
+      constraints: (data.constraints || "").trim(),
     };
 
     console.log("MissionControl: Mapped profile data result:", profileData);
@@ -819,9 +811,37 @@ const MissionControl = () => {
       dealSize: `"${profileData.dealSize}"`,
       companyUrl: `"${profileData.companyUrl}"`,
       keyBuyerPersona: `"${profileData.keyBuyerPersona}"`,
+      goals: `"${profileData.goals}"`,
+      painPoints: `"${profileData.painPoints}"`,
+      targetSegments: `"${profileData.targetSegments}"`,
+      excludeSegments: `"${profileData.excludeSegments}"`,
+      compliance: `"${profileData.compliance}"`,
+      constraints: `"${profileData.constraints}"`,
     });
     return profileData;
   };
+
+  // Check URL params for tab after profile loads
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabParam = urlParams.get('tab');
+    if (tabParam === 'customer-profile' && !isCustomerProfileLocked) {
+      setActiveTab('customer-profile');
+      // Clean up URL param after setting tab
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+    } else if (tabParam === 'sources' && !isDataSourcesLocked) {
+      setActiveTab('sources');
+      // Clean up URL param after setting tab
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+    } else if (tabParam === 'profile') {
+      setActiveTab('profile');
+      // Clean up URL param after setting tab
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+    }
+  }, [isCustomerProfileLocked, isDataSourcesLocked]); // Run after locks are determined
 
   // Load existing profile data on mount
   useEffect(() => {
@@ -1083,6 +1103,7 @@ const MissionControl = () => {
     // Add a small delay to ensure user is fully initialized
     const timeoutId = setTimeout(() => {
       loadProfileData();
+      loadDataSourcesFromBackend();
     }, 100);
 
     return () => clearTimeout(timeoutId);
@@ -2128,11 +2149,239 @@ const MissionControl = () => {
     setIsAddResourcePopoverOpen(true);
   };
 
-  const handleAddCustomResource = () => {
+  // Helper function to save data sources to backend
+  const saveDataSourcesToBackend = async (sourcesToSave: DataSource[]) => {
+    if (!currentUser?.uid) {
+      console.warn("Cannot save data sources: User not authenticated");
+      return;
+    }
+
+    try {
+      // First, fetch existing company profile data to preserve it
+      let existingCompanyData = {};
+      try {
+        const getResponse = await fetch(`/api/profile/company?user_id=${currentUser.uid}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+        
+        if (getResponse.ok) {
+          const existingData = await getResponse.json();
+          // Preserve all existing company profile fields
+          existingCompanyData = {
+            company_name: existingData.company_name,
+            headquarters: existingData.headquarters,
+            employee_size: existingData.employee_size,
+            industry: existingData.industry,
+            revenue_band: existingData.revenue_band,
+            gtm_model: existingData.gtm_model,
+            region_focus: existingData.region_focus,
+            typical_deal_size: existingData.typical_deal_size,
+            company_url: existingData.company_url,
+            key_buyer_persona: existingData.key_buyer_persona,
+            // Preserve any other fields that might exist
+            ...Object.fromEntries(
+              Object.entries(existingData).filter(([key]) => 
+                !key.startsWith('data_sources') &&
+                !['user_id', 'id', 'created_at', 'updated_at'].includes(key)
+              )
+            )
+          };
+        }
+      } catch (fetchError) {
+        console.warn("Could not fetch existing profile data, proceeding with data sources only:", fetchError);
+      }
+
+      // Prepare payload with data sources, preserving existing company profile fields
+      const payload = {
+        user_id: currentUser.uid,
+        profile_type: "company",
+        ...existingCompanyData,
+        data_sources: {
+          sources: sourcesToSave.map(source => ({
+            id: source.id,
+            name: source.name,
+            type: source.type,
+            platform: source.platform,
+            status: source.status,
+            sync_frequency: source.syncFrequency,
+            total_records: source.totalRecords,
+            new_records_this_week: source.newRecordsThisWeek,
+            updated_records: source.updatedRecords,
+            data_quality_score: source.dataQualityScore,
+            description: source.description || `Custom ${source.type} resource`,
+          })),
+        },
+      };
+
+      console.log("=== MISSION CONTROL: Saving data sources to backend ===");
+      console.log("Payload:", payload);
+
+      const apiUrl = `/api/profile/company?user_id=${currentUser.uid}`;
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("API Error:", response.status, errorText);
+        throw new Error(`Failed to save data sources: ${response.status} - ${errorText}`);
+      }
+
+      const data = await response.json();
+      console.log("Data sources saved successfully:", data);
+      return data;
+    } catch (error) {
+      console.error("Error saving data sources:", error);
+      throw error;
+    }
+  };
+
+  // Helper function to upload file to backend
+  const uploadFileToBackend = async (file: File): Promise<{ file_key: string; status: string }> => {
+    if (!currentUser?.uid) {
+      throw new Error("User not authenticated");
+    }
+
+    const authHeader = await jwtManager.getAuthHeader();
+    const url = buildApiUrl("upload_file/");
+    
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("user_id", currentUser.uid);
+
+    console.log("🚀 Mission Control - File Upload Starting:", {
+      url,
+      userId: currentUser.uid,
+      fileName: file.name,
+      fileSize: file.size,
+      hasAuth: !!authHeader,
+    });
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        ...(authHeader && { Authorization: authHeader }),
+      },
+      body: formData,
+    });
+
+    console.log("📨 Mission Control - File Upload Response:", {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("❌ Mission Control - File Upload Error:", {
+        status: response.status,
+        errorText,
+      });
+      throw new Error(`Failed to upload file: ${response.status} - ${errorText}`);
+    }
+
+    const result = await response.json();
+    console.log("✅ Mission Control - File Upload Success:", result);
+    return result;
+  };
+
+  // Helper function to check document status
+  const checkDocumentStatus = async (fileKey: string): Promise<{ status: string; chunks_count?: number; timestamps?: any }> => {
+    if (!currentUser?.uid) {
+      throw new Error("User not authenticated");
+    }
+
+    const authHeader = await jwtManager.getAuthHeader();
+    const url = buildApiUrl(`document-status/${fileKey}`);
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        ...(authHeader && { Authorization: authHeader }),
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to check document status: ${response.status} - ${errorText}`);
+    }
+
+    return await response.json();
+  };
+
+  // Helper function to load data sources from backend
+  const loadDataSourcesFromBackend = async () => {
+    if (!currentUser?.uid) {
+      return;
+    }
+
+    try {
+      const apiUrl = `/api/profile/company?user_id=${currentUser.uid}`;
+      const response = await fetch(apiUrl, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        console.log("No existing data sources found in API");
+        return;
+      }
+
+      const data = await response.json();
+      
+      // Check if data_sources exists in the response
+      if (data.data_sources && data.data_sources.sources && Array.isArray(data.data_sources.sources)) {
+        const loadedSources: DataSource[] = data.data_sources.sources.map((source: any) => ({
+          id: source.id || `source-${Date.now()}-${Math.random()}`,
+          name: source.name || "",
+          type: (source.type || "custom") as DataSource['type'],
+          icon: Database,
+          platform: source.platform || 'Custom',
+          status: (source.status || "disconnected") as DataSource['status'],
+          syncFrequency: (source.sync_frequency || 'daily') as DataSource['syncFrequency'],
+          totalRecords: source.total_records || 0,
+          newRecordsThisWeek: source.new_records_this_week || 0,
+          updatedRecords: source.updated_records || 0,
+          dataQualityScore: source.data_quality_score || 0,
+          objectsSynced: [],
+          fieldsMapped: 0,
+          filters: [],
+          description: source.description || "",
+          account: source.account,
+        }));
+
+        setDataSources(loadedSources);
+        console.log("Data sources loaded from backend:", loadedSources);
+      }
+    } catch (error) {
+      console.error("Error loading data sources:", error);
+    }
+  };
+
+  const handleAddCustomResource = async () => {
     if (!customResourceName.trim()) {
       toast({
         title: "Name required",
         description: "Please enter a name for the resource.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!currentUser?.uid) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to add data sources.",
         variant: "destructive",
       });
       return;
@@ -2170,21 +2419,33 @@ const MissionControl = () => {
       description: `Custom ${customResourceType} resource`
     };
 
-    // Add to data sources
-    setDataSources(prev => [...prev, newSource]);
+    // Add to data sources locally first
+    const updatedSources = [...dataSources, newSource];
+    setDataSources(updatedSources);
     
     // Reset form
     setCustomResourceName("");
     setCustomResourceType('custom');
     setIsAddResourcePopoverOpen(false);
     
-    toast({
-      title: `${resourceName} added`,
-      description: `Click "Connect" to set up the integration.`,
-    });
+    // Save to backend
+    try {
+      await saveDataSourcesToBackend(updatedSources);
+      toast({
+        title: `${resourceName} added`,
+        description: `Click "Connect" to set up the integration.`,
+      });
+    } catch (error) {
+      console.error("Failed to save data source to backend:", error);
+      toast({
+        title: "Save warning",
+        description: "Data source added locally but failed to sync with backend. Please try again later.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleAddCustomFileUpload = () => {
+  const handleAddCustomFileUpload = async () => {
     if (!customFileUploadName.trim()) {
       toast({
         title: "Name required",
@@ -2204,6 +2465,15 @@ const MissionControl = () => {
       return;
     }
 
+    if (!currentUser?.uid) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to upload files.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Check if source already exists
     const existingSource = dataSources.find(s => s.name === customFileUploadName.trim());
     if (existingSource) {
@@ -2216,6 +2486,47 @@ const MissionControl = () => {
     }
 
     const uploadName = customFileUploadName.trim();
+    let fileKey: string | undefined;
+    let uploadStatus: 'processing' | 'uploaded' | 'failed' = 'processing';
+
+    // If a file is provided, upload it to backend
+    if (customFileUploadFile) {
+      try {
+        toast({
+          title: "Uploading file",
+          description: `Uploading ${customFileUploadFile.name}...`,
+        });
+
+        const uploadResult = await uploadFileToBackend(customFileUploadFile);
+        fileKey = uploadResult.file_key;
+        uploadStatus = 'uploaded';
+
+        // Optionally check document status
+        if (fileKey) {
+          try {
+            const statusResult = await checkDocumentStatus(fileKey);
+            console.log("Document status:", statusResult);
+            if (statusResult.status === 'processing') {
+              uploadStatus = 'processing';
+            } else if (statusResult.status === 'failed') {
+              uploadStatus = 'failed';
+            }
+          } catch (statusError) {
+            console.warn("Could not check document status:", statusError);
+            // Continue anyway, file was uploaded
+          }
+        }
+      } catch (error) {
+        console.error("File upload failed:", error);
+        uploadStatus = 'failed';
+        toast({
+          title: "Upload failed",
+          description: error instanceof Error ? error.message : "Failed to upload file. Please try again.",
+          variant: "destructive",
+        });
+        // Continue to save metadata even if upload failed
+      }
+    }
 
     // Determine description based on what's provided
     let description = 'Custom file upload';
@@ -2232,7 +2543,7 @@ const MissionControl = () => {
       type: 'file',
       icon: FileText,
       platform: 'File Upload',
-      status: (customFileUploadFile || customFileUploadUrl.trim()) ? 'uploaded' : 'disconnected',
+      status: uploadStatus,
       syncFrequency: 'manual',
       totalRecords: 0,
       newRecordsThisWeek: 0,
@@ -2241,11 +2552,14 @@ const MissionControl = () => {
       objectsSynced: [],
       fieldsMapped: 0,
       filters: [],
-      description: description
+      description: description,
+      // Store file_key if available for future status checks
+      ...(fileKey && { account: fileKey })
     };
 
-    // Add to data sources
-    setDataSources(prev => [...prev, newSource]);
+    // Add to data sources locally first
+    const updatedSources = [...dataSources, newSource];
+    setDataSources(updatedSources);
     
     // Reset form
     setCustomFileUploadName("");
@@ -2253,10 +2567,25 @@ const MissionControl = () => {
     setCustomFileUploadUrl("");
     setIsAddResourcePopoverOpen(false);
     
-    toast({
-      title: `${uploadName} added`,
-      description: customFileUploadFile ? "File uploaded successfully." : customFileUploadUrl.trim() ? "File URL added successfully." : "Click 'Connect' to upload files.",
-    });
+    // Save to backend
+    try {
+      await saveDataSourcesToBackend(updatedSources);
+      toast({
+        title: `${uploadName} added`,
+        description: customFileUploadFile 
+          ? (uploadStatus === 'uploaded' ? "File uploaded successfully." : uploadStatus === 'processing' ? "File is being processed." : "File upload completed with warnings.")
+          : customFileUploadUrl.trim() 
+          ? "File URL added successfully." 
+          : "Click 'Connect' to upload files.",
+      });
+    } catch (error) {
+      console.error("Failed to save data source to backend:", error);
+      toast({
+        title: "Save warning",
+        description: "Data source added locally but failed to sync with backend. Please try again later.",
+        variant: "destructive",
+      });
+    }
   };
 
   // New handlers for Add Source
@@ -3012,15 +3341,8 @@ const MissionControl = () => {
                   <div className="space-y-2">
                     <Label htmlFor="industry">Industry</Label>
                     <Select 
-                      value={companyProfile.industry || ""}
-                      onValueChange={(value) => {
-                        if (value === "__custom__") {
-                          setCustomIndustryInput(companyProfile.industry || "");
-                          setIsCustomIndustryPopoverOpen(true);
-                        } else {
-                          setCompanyProfile(prev => ({ ...prev, industry: value }));
-                        }
-                      }}
+                      value={companyProfile.industry}
+                      onValueChange={(value) => setCompanyProfile(prev => ({ ...prev, industry: value }))}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select industry" />
@@ -3031,69 +3353,8 @@ const MissionControl = () => {
                         <SelectItem value="healthcare">Healthcare</SelectItem>
                         <SelectItem value="ecommerce">E-commerce</SelectItem>
                         <SelectItem value="enterprise">Enterprise Software</SelectItem>
-                        {companyProfile.industry && 
-                         companyProfile.industry.trim() !== "" && 
-                         !["saas", "fintech", "healthcare", "ecommerce", "enterprise"].includes(companyProfile.industry.toLowerCase()) && (
-                          <SelectItem value={companyProfile.industry}>
-                            {companyProfile.industry}
-                          </SelectItem>
-                        )}
-                        <SelectItem value="__custom__" className="text-muted-foreground italic border-t mt-1 pt-1">
-                          Enter custom industry...
-                        </SelectItem>
                       </SelectContent>
                     </Select>
-                    <Dialog open={isCustomIndustryPopoverOpen} onOpenChange={setIsCustomIndustryPopoverOpen}>
-                      <DialogContent className="sm:max-w-[425px]">
-                        <DialogHeader>
-                          <DialogTitle>Enter Custom Industry</DialogTitle>
-                          <DialogDescription>
-                            Enter a custom industry name for your company.
-                          </DialogDescription>
-                        </DialogHeader>
-                        <div className="space-y-4 py-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="custom-industry-input">Industry</Label>
-                            <Input
-                              id="custom-industry-input"
-                              placeholder="Enter custom industry"
-                              value={customIndustryInput}
-                              onChange={(e) => setCustomIndustryInput(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter" && customIndustryInput.trim()) {
-                                  setCompanyProfile(prev => ({ ...prev, industry: customIndustryInput.trim() }));
-                                  setIsCustomIndustryPopoverOpen(false);
-                                  setCustomIndustryInput("");
-                                }
-                              }}
-                              autoFocus
-                            />
-                          </div>
-                        </div>
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="outline"
-                            onClick={() => {
-                              setIsCustomIndustryPopoverOpen(false);
-                              setCustomIndustryInput("");
-                            }}
-                          >
-                            Cancel
-                          </Button>
-                          <Button
-                            onClick={() => {
-                              if (customIndustryInput.trim()) {
-                                setCompanyProfile(prev => ({ ...prev, industry: customIndustryInput.trim() }));
-                                setIsCustomIndustryPopoverOpen(false);
-                                setCustomIndustryInput("");
-                              }
-                            }}
-                          >
-                            Save
-                          </Button>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="revenue">Revenue Band</Label>
@@ -3145,8 +3406,8 @@ const MissionControl = () => {
                             <Textarea 
                               id="business-goals" 
                               placeholder="Be as specific as possible - clearer goals help Brewra generate more accurate insights."
-                              value={companyProfile.businessGoals}
-                              onChange={(e) => setCompanyProfile(prev => ({ ...prev, businessGoals: e.target.value }))}
+                              value={companyProfile.goals}
+                              onChange={(e) => setCompanyProfile(prev => ({ ...prev, goals: e.target.value }))}
                             />
                           </div>
                           <div className="space-y-2">
@@ -3207,8 +3468,8 @@ const MissionControl = () => {
                             <Textarea 
                               id="compliance-reqs" 
                               placeholder="e.g., GDPR, HIPAA, SOC2..."
-                              value={companyProfile.complianceReqs}
-                              onChange={(e) => setCompanyProfile(prev => ({ ...prev, complianceReqs: e.target.value }))}
+                              value={companyProfile.compliance}
+                              onChange={(e) => setCompanyProfile(prev => ({ ...prev, compliance: e.target.value }))}
                             />
                           </div>
                           <div className="space-y-2">
@@ -3216,8 +3477,8 @@ const MissionControl = () => {
                             <Textarea 
                               id="messaging-constraints" 
                               placeholder="e.g., Avoid certain terms, required disclaimers..."
-                              value={companyProfile.messagingConstraints}
-                              onChange={(e) => setCompanyProfile(prev => ({ ...prev, messagingConstraints: e.target.value }))}
+                              value={companyProfile.constraints}
+                              onChange={(e) => setCompanyProfile(prev => ({ ...prev, constraints: e.target.value }))}
                             />
                           </div>
                         </CardContent>

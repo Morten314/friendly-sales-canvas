@@ -6,6 +6,8 @@ interface ApiCallOptions {
   useCache?: boolean;
   cacheKey?: string;
   componentName?: string;
+  user_id?: string;
+  org_id?: string;
 }
 
 interface ApiResponse<T = any> {
@@ -283,12 +285,44 @@ class EnhancedApiClient {
     const randomParam = Math.random().toString(36).substring(7);
     const endpoint = `icp-research?t=${timestamp}&cache_bust=${randomParam}`;
 
+    // Get user_id from options, or try to extract from selectedICP, or use fallback
+    let userId = options.user_id;
+    if (!userId && selectedICP?._metadata?.userId) {
+      userId = selectedICP._metadata.userId;
+    }
+    if (!userId && selectedICP?.user_id) {
+      userId = selectedICP.user_id;
+    }
+    // If still no user_id, try to get it from JWT token (async, so we'll handle it in makeRequest if needed)
+    if (!userId) {
+      console.warn('⚠️ callICPresearch: No user_id provided. Backend may use default or saved profile.');
+    }
+
+    // Get org_id from options, or use user_id as fallback (many systems use user_id as org_id for single-org users)
+    const orgId = options.org_id || userId || "";
+
     const payload = {
-      user_id: "user_123",
+      user_id: userId || "user_123", // Fallback to prevent errors, but this should be fixed
+      org_id: orgId, // Required by Swagger spec
       component_name: componentName,
       refresh: true,
       data: selectedICP
     };
+
+    // Log payload for debugging
+    console.log('🔍 callICPresearch payload (per Swagger spec):', {
+      user_id: payload.user_id,
+      org_id: payload.org_id,
+      component_name: payload.component_name,
+      refresh: payload.refresh,
+      data_companySize: selectedICP?.companySize,
+      data_id: selectedICP?.id,
+      data_industry: selectedICP?.industry,
+      data_segment: selectedICP?.segment
+    });
+    
+    // Log full payload structure for debugging
+    console.log('📤 Full API Request Payload:', payload);
 
     return this.call(endpoint, payload, {
       ...options,

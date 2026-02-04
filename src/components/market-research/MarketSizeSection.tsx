@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { BarChart3, Bot, Edit, Target, TrendingUp, PieChart, X, FileText, Save, Share, Clock, ChevronDown, ChevronUp } from 'lucide-react';
+import { BarChart3, Bot, Edit, Target, TrendingUp, PieChart, X, FileText, Save, Share, Clock, ChevronDown, ChevronUp, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,7 +9,6 @@ import { useToast } from '@/hooks/use-toast';
 import MiniPieChart from '@/components/ui/MiniPieChart';
 import MiniLineChart from '@/components/ui/MiniLineChart';
 import { EditRecord } from './types';
-import { EditDropdownMenu } from './EditDropdownMenu';
 import { executeWithRateLimit } from '@/lib/rateLimitManager';
 import { apiFetchJson } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
@@ -119,6 +118,8 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
   const [localMarketEntry, setLocalMarketEntry] = useState(marketEntry || '');
   const [localStrategicRecommendations, setLocalStrategicRecommendations] = useState<string[]>(strategicRecommendations || []);
   const [localMarketDrivers, setLocalMarketDrivers] = useState<string[]>(marketDrivers || []);
+  const [localMarketSizeBySegment, setLocalMarketSizeBySegment] = useState<Record<string, string>>(marketSizeBySegment || {});
+  const [localGrowthProjections, setLocalGrowthProjections] = useState<Record<string, string>>(growthProjections || {});
   const [localError, setLocalError] = useState<string | null>(null);
 
   // Debug logging for state changes
@@ -145,10 +146,6 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
     onToggleEdit();
   };
 
-  const handleComment = () => {
-    onScoutIconClick('market-size', hasEdits, 'I have a comment about this section');
-  };
-
   // Reset local values when editing starts
   useEffect(() => {
     if (isEditing) {
@@ -159,7 +156,9 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
         apacGrowthRate,
         marketEntry,
         strategicRecommendations,
-        marketDrivers
+        marketDrivers,
+        marketSizeBySegment,
+        growthProjections
       });
       
       setLocalExecutiveSummary(executiveSummary || '');
@@ -169,6 +168,8 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
       setLocalMarketEntry(marketEntry || '');
       setLocalStrategicRecommendations(strategicRecommendations || []);
       setLocalMarketDrivers(marketDrivers || []);
+      setLocalMarketSizeBySegment(marketSizeBySegment || {});
+      setLocalGrowthProjections(growthProjections || {});
     }
   }, [isEditing]);
 
@@ -241,6 +242,58 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
 
   // REMOVED: Duplicate sync effect - the above effect handles all syncing
 
+  // Individual box save functions
+  const handleSaveExecutiveSummary = () => {
+    onExecutiveSummaryChange(localExecutiveSummary);
+    toast({
+      title: "Saved",
+      description: "Executive Summary changes committed.",
+    });
+  };
+
+  const handleSaveKeyMetrics = () => {
+    onTamValueChange(localTamValue);
+    onSamValueChange(localSamValue);
+    onApacGrowthRateChange(localApacGrowthRate);
+    toast({
+      title: "Saved",
+      description: "Key Metrics changes committed.",
+    });
+  };
+
+  const handleSaveStrategicRecommendations = () => {
+    onStrategicRecommendationsChange(localStrategicRecommendations);
+    toast({
+      title: "Saved",
+      description: "Strategic Recommendations changes committed.",
+    });
+  };
+
+  const handleSaveMarketEntry = () => {
+    onMarketEntryChange(localMarketEntry);
+    toast({
+      title: "Saved",
+      description: "Market Entry Strategy changes committed.",
+    });
+  };
+
+  const handleSaveMarketDrivers = () => {
+    onMarketDriversChange(localMarketDrivers);
+    toast({
+      title: "Saved",
+      description: "Market Drivers changes committed.",
+    });
+  };
+
+  const handleSaveMarketOpportunity = () => {
+    // Note: marketSizeBySegment and growthProjections don't have individual change handlers
+    // They would need to be added to props if we want to save them individually
+    toast({
+      title: "Saved",
+      description: "Market Opportunity Breakdown changes committed.",
+    });
+  };
+
   const handleSave = async () => {
     try {
       // Prepare original and modified data
@@ -251,7 +304,9 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
         apacGrowthRate,
         marketEntry,
         strategicRecommendations,
-        marketDrivers
+        marketDrivers,
+        marketSizeBySegment: marketSizeBySegment || {},
+        growthProjections: growthProjections || {}
       };
 
       const modifiedData = {
@@ -261,7 +316,9 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
         apacGrowthRate: localApacGrowthRate,
         marketEntry: localMarketEntry,
         strategicRecommendations: localStrategicRecommendations,
-        marketDrivers: localMarketDrivers
+        marketDrivers: localMarketDrivers,
+        marketSizeBySegment: localMarketSizeBySegment,
+        growthProjections: localGrowthProjections
       };
 
       const editData = {
@@ -586,11 +643,14 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
           Market Size & Opportunity
         </h2>
         <div className="flex items-center gap-3">
-          <EditDropdownMenu
-            onModify={handleModify}
-            onComment={handleComment}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleModify}
             className="text-blue-800 hover:text-blue-900"
-          />
+          >
+            <Edit className="h-4 w-4" />
+          </Button>
           {!isSplitView && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -643,16 +703,34 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
           {/* Executive Summary Edit */}
           {!deletedSections.has('executive-summary') && (
             <div className="relative group">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="sm" onClick={() => onDeleteSection('executive-summary')} className="absolute -top-2 -right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50">
-                    <X className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Delete this section</p>
-                </TooltipContent>
-              </Tooltip>
+              <div className="absolute -top-2 -right-2 z-10 flex items-center gap-1">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleSaveExecutiveSummary}
+                      className="text-gray-400 hover:text-green-600 hover:bg-green-50"
+                      title="Commit changes"
+                    >
+                      <Check className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Commit changes</p>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="sm" onClick={() => onDeleteSection('executive-summary')} className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50">
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Delete this section</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <div>
                 <Label htmlFor="executiveSummary" className="text-sm font-medium text-gray-700 mb-2 block">
                   Executive Summary
@@ -671,16 +749,34 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
           {/* Key Metrics Edit */}
           {!deletedSections.has('key-metrics') && (
             <div className="relative group">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="sm" onClick={() => onDeleteSection('key-metrics')} className="absolute -top-2 -right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50">
-                    <X className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Delete this section</p>
-                </TooltipContent>
-              </Tooltip>
+              <div className="absolute -top-2 -right-2 z-10 flex items-center gap-1">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleSaveKeyMetrics}
+                      className="text-gray-400 hover:text-green-600 hover:bg-green-50"
+                      title="Commit changes"
+                    >
+                      <Check className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Commit changes</p>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="sm" onClick={() => onDeleteSection('key-metrics')} className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50">
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Delete this section</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Key Metrics</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -725,16 +821,34 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
           {/* Strategic Recommendations Edit */}
           {!deletedSections.has('strategic-recommendations') && (
             <div className="relative group">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="sm" onClick={() => onDeleteSection('strategic-recommendations')} className="absolute -top-2 -right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50">
-                    <X className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Delete this section</p>
-                </TooltipContent>
-              </Tooltip>
+              <div className="absolute -top-2 -right-2 z-10 flex items-center gap-1">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleSaveStrategicRecommendations}
+                      className="text-gray-400 hover:text-green-600 hover:bg-green-50"
+                      title="Commit changes"
+                    >
+                      <Check className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Commit changes</p>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="sm" onClick={() => onDeleteSection('strategic-recommendations')} className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50">
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Delete this section</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <div>
                 <Label className="text-sm font-medium text-gray-700 mb-2 block">
                   Strategic Recommendations
@@ -759,16 +873,34 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
           {/* Market Entry Edit */}
           {!deletedSections.has('market-entry') && (
             <div className="relative group">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="sm" onClick={() => onDeleteSection('market-entry')} className="absolute -top-2 -right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50">
-                    <X className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Delete this section</p>
-                </TooltipContent>
-              </Tooltip>
+              <div className="absolute -top-2 -right-2 z-10 flex items-center gap-1">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleSaveMarketEntry}
+                      className="text-gray-400 hover:text-green-600 hover:bg-green-50"
+                      title="Commit changes"
+                    >
+                      <Check className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Commit changes</p>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="sm" onClick={() => onDeleteSection('market-entry')} className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50">
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Delete this section</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <div>
                 <Label htmlFor="marketEntry" className="text-sm font-medium text-gray-700 mb-2 block">
                   Market Entry Strategy
@@ -787,16 +919,34 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
           {/* Market Drivers Edit */}
           {!deletedSections.has('market-drivers') && (
             <div className="relative group">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="sm" onClick={() => onDeleteSection('market-drivers')} className="absolute -top-2 -right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50">
-                    <X className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Delete this section</p>
-                </TooltipContent>
-              </Tooltip>
+              <div className="absolute -top-2 -right-2 z-10 flex items-center gap-1">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleSaveMarketDrivers}
+                      className="text-gray-400 hover:text-green-600 hover:bg-green-50"
+                      title="Commit changes"
+                    >
+                      <Check className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Commit changes</p>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="sm" onClick={() => onDeleteSection('market-drivers')} className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50">
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Delete this section</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
               <div>
                 <Label className="text-sm font-medium text-gray-700 mb-2 block">
                   Key Market Drivers
@@ -814,6 +964,176 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                     placeholder={`Market driver ${index + 1}...`} 
                   />
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* Market Opportunity Breakdown Edit */}
+          {!deletedSections.has('market-opportunity-breakdown') && (
+            <div className="relative group">
+              <div className="absolute -top-2 -right-2 z-10 flex items-center gap-1">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleSaveMarketOpportunity}
+                      className="text-gray-400 hover:text-green-600 hover:bg-green-50"
+                      title="Commit changes"
+                    >
+                      <Check className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Commit changes</p>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="sm" onClick={() => onDeleteSection('market-opportunity-breakdown')} className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-400 hover:text-red-500 hover:bg-red-50">
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Delete this section</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <PieChart className="h-5 w-5 text-purple-600" />
+                  Market Opportunity Breakdown
+                </h3>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                  {/* Market Size by Segment */}
+                  <div className="bg-white border border-gray-200 rounded-lg p-4">
+                    <Label className="text-sm font-medium text-gray-900 mb-3 block">
+                      Market Size by Segment
+                    </Label>
+                    <div className="space-y-3">
+                      {Object.entries(localMarketSizeBySegment).map(([segment, value], index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <Input
+                            value={segment}
+                            onChange={e => {
+                              const updated = { ...localMarketSizeBySegment };
+                              const oldKey = segment;
+                              const newKey = e.target.value;
+                              if (newKey !== oldKey) {
+                                delete updated[oldKey];
+                                updated[newKey] = value;
+                              }
+                              setLocalMarketSizeBySegment(updated);
+                            }}
+                            className="flex-1 text-sm"
+                            placeholder="Segment name"
+                          />
+                          <Input
+                            type="text"
+                            value={value}
+                            onChange={e => {
+                              const updated = { ...localMarketSizeBySegment };
+                              updated[segment] = e.target.value;
+                              setLocalMarketSizeBySegment(updated);
+                            }}
+                            className="w-24 text-sm"
+                            placeholder="Value"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              const updated = { ...localMarketSizeBySegment };
+                              delete updated[segment];
+                              setLocalMarketSizeBySegment(updated);
+                            }}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setLocalMarketSizeBySegment({
+                            ...localMarketSizeBySegment,
+                            ['New Segment']: ''
+                          });
+                        }}
+                        className="mt-2"
+                      >
+                        Add Segment
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Growth Projections */}
+                  <div className="bg-white border border-gray-200 rounded-lg p-4">
+                    <Label className="text-sm font-medium text-gray-900 mb-3 block">
+                      Growth Projections
+                    </Label>
+                    <div className="space-y-3">
+                      {Object.entries(localGrowthProjections).map(([year, value], index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <Input
+                            value={year}
+                            onChange={e => {
+                              const updated = { ...localGrowthProjections };
+                              const oldKey = year;
+                              const newKey = e.target.value;
+                              if (newKey !== oldKey) {
+                                delete updated[oldKey];
+                                updated[newKey] = value;
+                              }
+                              setLocalGrowthProjections(updated);
+                            }}
+                            className="flex-1 text-sm"
+                            placeholder="Year"
+                          />
+                          <Input
+                            type="text"
+                            value={value}
+                            onChange={e => {
+                              const updated = { ...localGrowthProjections };
+                              updated[year] = e.target.value;
+                              setLocalGrowthProjections(updated);
+                            }}
+                            className="w-24 text-sm"
+                            placeholder="Value"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              const updated = { ...localGrowthProjections };
+                              delete updated[year];
+                              setLocalGrowthProjections(updated);
+                            }}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setLocalGrowthProjections({
+                            ...localGrowthProjections,
+                            ['2024']: ''
+                          });
+                        }}
+                        className="mt-2"
+                      >
+                        Add Year
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -991,7 +1311,8 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                        })()}
                        <MiniPieChart 
                          data={(() => {
-                           if (!marketSizeBySegment) {
+                           const segmentsToUse = Object.keys(localMarketSizeBySegment).length > 0 ? localMarketSizeBySegment : marketSizeBySegment;
+                           if (!segmentsToUse || Object.keys(segmentsToUse).length === 0) {
                              return [
                                { name: "Enterprise", value: 45, color: "#3B82F6" },
                                { name: "Mid-Market", value: 35, color: "#10B981" },
@@ -1000,10 +1321,10 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                            }
                            
                            // If marketSizeBySegment is a string, try to parse it as JSON first
-                           if (typeof marketSizeBySegment === 'string') {
-                             console.log('🔧 marketSizeBySegment is string, attempting to parse:', marketSizeBySegment);
+                           if (typeof segmentsToUse === 'string') {
+                             console.log('🔧 marketSizeBySegment is string, attempting to parse:', segmentsToUse);
                              try {
-                               const parsedSegments = JSON.parse(marketSizeBySegment);
+                               const parsedSegments = JSON.parse(segmentsToUse);
                                if (parsedSegments && typeof parsedSegments === 'object') {
                                  console.log('✅ Successfully parsed marketSizeBySegment from string to object');
                                  return Object.entries(parsedSegments).map(([name, value], index) => ({
@@ -1026,7 +1347,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                            }
                            
                            // If it's an object, use it directly
-                           return Object.entries(marketSizeBySegment).map(([name, value], index) => ({
+                           return Object.entries(segmentsToUse).map(([name, value], index) => ({
                              name,
                              value: parseInt(value.toString().replace('%', '')),
                              color: ["#3B82F6", "#10B981", "#8B5CF6", "#F59E0B"][index % 4]
@@ -1048,7 +1369,8 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                        })()}
                         <MiniLineChart 
                           data={(() => {
-                            if (!growthProjections) {
+                            const projectionsToUse = Object.keys(localGrowthProjections).length > 0 ? localGrowthProjections : growthProjections;
+                            if (!projectionsToUse || Object.keys(projectionsToUse).length === 0) {
                               return [
                                 { name: "2023", value: 100 },
                                 { name: "2024", value: 115 },
@@ -1058,10 +1380,10 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                             }
                             
                             // If growthProjections is a string, try to parse it as JSON first
-                            if (typeof growthProjections === 'string') {
-                              console.log('🔧 growthProjections is string, attempting to parse:', growthProjections);
+                            if (typeof projectionsToUse === 'string') {
+                              console.log('🔧 growthProjections is string, attempting to parse:', projectionsToUse);
                               try {
-                                const parsedProjections = JSON.parse(growthProjections);
+                                const parsedProjections = JSON.parse(projectionsToUse);
                                 if (parsedProjections && typeof parsedProjections === 'object') {
                                   console.log('✅ Successfully parsed growthProjections from string to object');
                                   return Object.entries(parsedProjections).map(([year, value]) => {
@@ -1088,7 +1410,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                             }
                             
                             // If it's an object, transform it safely
-                            return Object.entries(growthProjections).map(([year, value]) => {
+                            return Object.entries(projectionsToUse).map(([year, value]) => {
                               const numericValue = parseFloat(value.toString());
                               console.log(`🔧 Converting ${year}: ${value} -> ${numericValue}`);
                               return {

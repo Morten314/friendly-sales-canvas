@@ -4,7 +4,7 @@ import { usePageTitle } from "@/hooks/usePageTitle";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { FileText, PlusCircle, ArrowRight, Download, MessageSquare, Send, Clock } from "lucide-react";
+import { FileText, PlusCircle, ArrowRight, Download, MessageSquare, Send } from "lucide-react";
 
 const Deals = () => {
   usePageTitle("🧭 Strategist - Brewra");
@@ -13,14 +13,6 @@ const Deals = () => {
     { role: "ai", content: "Hello! I'm Strategist. How can I help with your go-to-market strategy today?" }
   ]);
   const [inputValue, setInputValue] = useState("");
-  const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
-  
-  const comingSoonMessages = [
-    
-    "We're Building Something Great",
-    "Stay Tuned",
-    
-  ];
 
   // Listen for strategist events from header
   useEffect(() => {
@@ -46,15 +38,6 @@ const Deals = () => {
     };
   }, [isChatOpen]);
 
-  // Rotate through coming soon messages
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentMessageIndex((prev) => (prev + 1) % comingSoonMessages.length);
-    }, 2000); // Change message every 2 seconds
-
-    return () => clearInterval(interval);
-  }, [comingSoonMessages.length]);
-
   const handleSendMessage = () => {
     if (!inputValue.trim()) return;
     
@@ -75,8 +58,8 @@ const Deals = () => {
   return (
     <Layout>
       <div className="animate-fade-in relative">
-        {/* Original Content - Visible in Background with Gray Overlay */}
-        <div className="opacity-30 pointer-events-none grayscale">
+        {/* Original Content */}
+        <div>
           {isChatOpen && (
           <Card className="border-blue-200 bg-blue-50/40 mb-6">
             <CardHeader className="pb-3">
@@ -300,56 +283,6 @@ const Deals = () => {
             </div>
           </CardContent>
         </Card>
-        </div>
-
-        {/* Coming Soon Overlay - Positioned on top */}
-        <div className="absolute inset-0 bg-gray-900/40 backdrop-blur-[2px] flex items-center justify-center z-10">
-          <Card className="max-w-md w-full mx-4 border-2 border-gray-300 bg-white/95 backdrop-blur-sm shadow-2xl">
-            <CardContent className="p-8 text-center">
-              <div className="flex justify-center mb-4">
-                <div className="p-4 bg-gray-200 rounded-full">
-                  <Clock className="h-12 w-12 text-gray-500" />
-                </div>
-              </div>
-              
-              <div className="mb-4 h-8 flex items-center justify-center">
-                <span 
-                  key={currentMessageIndex}
-                  className="inline-block bg-gray-300 text-gray-700 text-xs font-bold px-4 py-2 rounded-full uppercase tracking-wider"
-                  style={{
-                    animation: 'fadeIn 0.6s ease-in-out'
-                  }}
-                >
-                  {comingSoonMessages[currentMessageIndex]}
-                </span>
-              </div>
-              
-              <style>{`
-                @keyframes fadeIn {
-                  from {
-                    opacity: 0;
-                    transform: translateY(-8px);
-                  }
-                  to {
-                    opacity: 1;
-                    transform: translateY(0);
-                  }
-                }
-              `}</style>
-              
-              <h2 className="text-2xl font-bold text-gray-700 mb-3">
-                Strategist is Under Construction
-              </h2>
-              
-              <p className="text-gray-600 mb-6 leading-relaxed">
-                We're working hard to bring you an amazing experience. The Strategist page is currently being developed and will be available soon.
-              </p>
-              
-              <p className="text-sm text-gray-500">
-                Thank you for your patience!
-              </p>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </Layout>

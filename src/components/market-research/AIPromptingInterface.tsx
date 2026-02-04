@@ -47,6 +47,104 @@ export const AIPromptingInterface = ({
   const [messages, setMessages] = useState<AIMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Function to clean up response content - removes special characters and formats properly
+  const cleanResponseContent = (content: string): string => {
+    if (!content) return '';
+    
+    return content
+      // FIRST: Remove any literal "response_message" text that might appear in the response
+      .replace(/["']?response_message["']?\s*[:=]\s*/gi, '')
+      .replace(/response_message/gi, '')
+      // Remove any literal "response_json" text
+      .replace(/["']?response_json["']?\s*[:=]\s*/gi, '')
+      .replace(/response_json/gi, '')
+      // Remove JSON-like structures that appear after the main message (e.g., "competitor_analysis": {...})
+      // Match patterns like: ", "key": {...}" or ", "key": "value""
+      .replace(/,\s*["']?\w+_analysis["']?\s*[:=]\s*\{[^}]*\}/gi, '')
+      .replace(/,\s*["']?\w+["']?\s*[:=]\s*\{[^{}]*\{[^}]*\}[^}]*\}/gi, '')
+      .replace(/,\s*["']?\w+["']?\s*[:=]\s*\{[^}]*\}/gi, '')
+      // Remove standalone JSON objects at the end
+      .replace(/\s*,\s*\{[^}]*\}/g, '')
+      // Remove key-value pairs that appear after commas (JSON-like patterns)
+      .replace(/,\s*["']?\w+["']?\s*[:=]\s*["']?[^"',}]+["']?\s*/gi, '')
+      // Handle escaped newline patterns - convert literal "\n" (backslash-n) to actual newline first
+      .replace(/\\n/g, '\n')
+      // Handle n- patterns (convert to newlines with bullets) - only when clearly formatting
+      // Match "n-" only when preceded by space, start of line, or punctuation
+      .replace(/(^|[\.:!?\s])n-\s*/g, '$1\n• ')
+      // Handle n n patterns (convert to paragraph breaks) - only when clearly two separate formatting n's
+      .replace(/(^|[\.:!?\s])n\s+n(\s|$|[\.:!?])/g, '$1\n\n$2')
+      // Handle n followed by actual newline character - only standalone formatting n
+      .replace(/(^|[\.:!?\s])n\s*\n/g, '$1\n')
+      // Handle n followed by whitespace and capital letter (new paragraph) - only when clearly formatting
+      // Must be preceded by space/punctuation to avoid matching "in APAC" -> "i APAC"
+      .replace(/(^|[\.:!?\s])n\s+([A-Z])/g, '$1\n\n$2')
+      // Handle n followed by bullet character - only when clearly formatting
+      .replace(/(^|[\.:!?\s])n\s*([•\-\u2022\u25E6\u25AA\u25AB\u25A0\u25A1\u2B24\u25CB])/g, '$1\n$2')
+      // Handle standalone n at end of sentence - convert to newline
+      .replace(/([\.:!?])\s+n(\s|$)/g, '$1\n$2')
+      // Handle r character used as line break (convert to newline)
+      .replace(/\s+r\s+/g, '\n')
+      .replace(/\s+r$/gm, '\n')
+      .replace(/r\s+([A-Z])/g, '\n$1')
+      // Remove markdown-style separators (--, ---, etc.) - do this early to catch all patterns
+      // Handle bullets (both • and -) followed by dashes
+      .replace(/[•\-\u2022\u25E6\u25AA\u25AB\u25A0\u25A1\u2B24\u25CB]\s*[-]{2,}\s*/g, '') // Remove any bullet followed by dashes (e.g., "• --")
+      // Remove multiple dashes (3 or more) anywhere - do this before handling double dashes
+      .replace(/[-]{3,}/g, '')
+      // Remove standalone dash separators on their own lines
+      .replace(/\n\s*[-]{2,}\s*\n/g, '\n\n')
+      // Remove dashes at end of lines
+      .replace(/\s+[-]{2,}\s*\n/g, '\n')
+      // Remove dashes at start of lines
+      .replace(/\n\s*[-]{2,}\s*/g, '\n')
+      // Replace " -- " (double dash with spaces) with double newline for section separation
+      .replace(/\s+[-]{2}\s+/g, '\n\n')
+      // Remove trailing double dashes
+      .replace(/\s+[-]{2}$/gm, '')
+      // Remove leading double dashes
+      .replace(/^[-]{2}\s+/gm, '')
+      // Remove markdown formatting symbols
+      .replace(/\*\*/g, '')
+      .replace(/\*/g, '')
+      .replace(/#{1,6}\s/g, '')
+      .replace(/`{1,3}/g, '')
+      .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1') // Remove markdown links but keep text
+      // Normalize bullet points to standard bullet
+      // FIRST: Replace literal "u2022" text with actual bullet character
+      .replace(/u2022/gi, '•')
+      .replace(/[•◦▪▫■□●○]/g, '•')
+      .replace(/[\u2022\u25E6\u25AA\u25AB\u25A0\u25A1\u2B24\u25CB]/g, '•')
+      // Normalize arrows
+      .replace(/[→←↑↓]/g, '→')
+      // Normalize dashes (em dash, en dash to regular dash)
+      .replace(/[—–]/g, '-')
+      // Normalize quotes
+      .replace(/[""]/g, '"')
+      .replace(/['']/g, "'")
+      // Clean up excessive whitespace but preserve intentional line breaks
+      .replace(/[ \t]+/g, ' ') // Multiple spaces/tabs to single space
+      .replace(/\n{3,}/g, '\n\n') // More than 2 newlines to 2 newlines
+      // Format lists properly - ensure consistent bullet formatting
+      .replace(/\n\s*[-•]\s*/g, '\n• ')
+      .replace(/\n\s*\d+\.\s*/g, '\n• ')
+      // Remove empty lines with only whitespace or dashes
+      .replace(/\n\s*[-•\s]*\n/g, '\n\n')
+      // Ensure proper spacing around punctuation
+      .replace(/\s+([.,!?;:])/g, '$1')
+      .replace(/([.,!?;:])\s*([A-Z])/g, '$1 $2')
+      // Remove problematic special characters but keep common punctuation and symbols
+      .replace(/[^\w\s•\-\n\r.,!?;:()'"→$%&@#+=<>]/g, ' ')
+      // Clean up any double spaces that might have been created
+      .replace(/  +/g, ' ')
+      // Remove leading/trailing whitespace from each line but preserve line breaks
+      .split('\n')
+      .map(line => line.trim())
+      .join('\n')
+      // Remove leading/trailing whitespace but preserve internal structure
+      .trim();
+  };
+
   // Initialize with welcome message when component mounts or data changes
   useEffect(() => {
     const welcomeMessage: AIMessage = {
@@ -158,7 +256,7 @@ export const AIPromptingInterface = ({
       // Debug: Log the actual structure of the response
       console.log('Response data structure:', JSON.stringify(data, null, 2));
       
-      // Parse the response - handle both direct JSON and string responses
+      // Parse the response - STRICTLY only extract response_message
       let responseMessage = '';
       let responseJson = null;
 
@@ -166,24 +264,19 @@ export const AIPromptingInterface = ({
         // If response is a JSON string, parse it
         try {
           const parsedData = JSON.parse(data);
-          responseMessage = parsedData.response_message || parsedData.message || parsedData.text || parsedData.answer || JSON.stringify(parsedData);
+          // STRICTLY only use response_message - do not fall back to other fields
+          responseMessage = parsedData.response_message || '';
           responseJson = parsedData.response_json || parsedData.json || parsedData.data || null;
         } catch (e) {
+          // If it's not JSON, use the string as-is
           responseMessage = data;
         }
       } else {
         // If response is already an object
-        // Try multiple possible field names for the message
-        responseMessage = data.response_message || 
-                         data.message || 
-                         data.response || 
-                         data.text || 
-                         data.answer || 
-                         data.content ||
-                         // If none of the expected fields exist, stringify the whole response
-                         JSON.stringify(data, null, 2);
+        // STRICTLY only use response_message - do not fall back to other fields or JSON.stringify
+        responseMessage = data.response_message || '';
         
-        // Try multiple possible field names for JSON data
+        // Try multiple possible field names for JSON data (for internal processing only)
         responseJson = data.response_json || 
                       data.json || 
                       data.data || 
@@ -191,21 +284,37 @@ export const AIPromptingInterface = ({
                       null;
       }
       
-      // Create AI response message
+      // If responseMessage is empty, provide a fallback message instead of showing JSON
+      if (!responseMessage || responseMessage.trim() === '') {
+        responseMessage = 'I received your question but couldn\'t generate a proper response.';
+      }
+      
+      // If responseMessage contains JSON-like structures (e.g., starts with quote and has JSON), extract only the message part
+      // Split on common JSON delimiters to separate message from JSON
+      if (responseMessage.includes('", "') || responseMessage.includes('",\n"')) {
+        // Extract only the part before the JSON starts (before ", "key":)
+        const jsonStartIndex = responseMessage.search(/",\s*["']?\w+["']?\s*[:=]/);
+        if (jsonStartIndex > 0) {
+          responseMessage = responseMessage.substring(0, jsonStartIndex).replace(/^["']|["']$/g, '').trim();
+        }
+      }
+      
+      // Clean and format the response message before setting it
+      const cleanedResponseMessage = cleanResponseContent(responseMessage);
+      
+      // Create AI response message (without storing response_json to keep it hidden)
       const aiMessage: AIMessage = {
         id: `ai-${Date.now()}`,
         role: "ai",
-        content: responseMessage,
+        content: cleanedResponseMessage,
         timestamp: new Date(),
-        responseData: {
-          ...data,
-          responseJson: responseJson
-        }
+        // Don't store responseData to keep response_json completely hidden
       };
 
       setMessages(prev => [...prev, aiMessage]);
 
       // If the response contains updated market data, notify parent component
+      // Note: responseJson is processed but not displayed to keep it hidden from UI
       if (responseJson && onDataUpdate) {
         // Convert the response JSON back to MarketRanking format
         const updatedMarketData: MarketRanking = {
@@ -289,40 +398,6 @@ export const AIPromptingInterface = ({
               </span>
             </div>
             <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-            
-            {/* Display response JSON if available */}
-            {message.responseData && message.responseData.responseJson && (
-              <div className="mt-3 p-3 bg-white rounded border">
-                <p className="text-xs font-medium text-gray-600 mb-2">Updated Market Data:</p>
-                <div className="space-y-1 text-xs">
-                  <div><span className="font-medium">Market:</span> {message.responseData.responseJson.marketName}</div>
-                  <div><span className="font-medium">Score:</span> {message.responseData.responseJson.score}</div>
-                  <div><span className="font-medium">Size:</span> {message.responseData.responseJson.size}</div>
-                  <div><span className="font-medium">Competition:</span> {message.responseData.responseJson.competition}</div>
-                  <div><span className="font-medium">Barriers:</span> {message.responseData.responseJson.barriers}</div>
-                  
-                  {message.responseData.responseJson.details && (
-                    <div className="mt-2 pt-2 border-t">
-                      <div className="font-medium mb-1">Sub Markets:</div>
-                      {message.responseData.responseJson.details.subMarkets?.map((subMarket: any, idx: number) => (
-                        <div key={idx} className="ml-2">
-                          • {subMarket.name}: {subMarket.size} ({subMarket.growth} growth)
-                        </div>
-                      ))}
-                      
-                      {message.responseData.responseJson.details.keyInsights && (
-                        <div className="mt-2">
-                          <div className="font-medium">Key Insights:</div>
-                          {message.responseData.responseJson.details.keyInsights.map((insight: string, idx: number) => (
-                            <div key={idx} className="ml-2">• {insight}</div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
         ))}
         
