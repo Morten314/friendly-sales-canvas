@@ -738,6 +738,12 @@ const MissionControl = () => {
             dealSize: localProfile.typical_deal_size || localProfile.dealSize || "",
             companyUrl: localProfile.company_url || localProfile.companyUrl || "",
             keyBuyerPersona: localProfile.key_buyer_persona || localProfile.keyBuyerPersona || "",
+            goals: localProfile.goals || "",
+            painPoints: localProfile.pain_points || localProfile.painPoints || "",
+            targetSegments: localProfile.target_segments || localProfile.targetSegments || "",
+            excludeSegments: localProfile.exclude_segments || localProfile.excludeSegments || "",
+            compliance: localProfile.compliance || "",
+            constraints: localProfile.constraints || "",
           };
           setCompanyProfile(profileData);
           if (localProfile.company_name || localProfile.companyName) {
@@ -2487,7 +2493,7 @@ const MissionControl = () => {
 
     const uploadName = customFileUploadName.trim();
     let fileKey: string | undefined;
-    let uploadStatus: 'processing' | 'uploaded' | 'failed' = 'processing';
+    let uploadStatus: 'processing' | 'uploaded' | 'error' = 'processing';
 
     // If a file is provided, upload it to backend
     if (customFileUploadFile) {
@@ -2509,7 +2515,7 @@ const MissionControl = () => {
             if (statusResult.status === 'processing') {
               uploadStatus = 'processing';
             } else if (statusResult.status === 'failed') {
-              uploadStatus = 'failed';
+              uploadStatus = 'error';
             }
           } catch (statusError) {
             console.warn("Could not check document status:", statusError);
@@ -2518,7 +2524,7 @@ const MissionControl = () => {
         }
       } catch (error) {
         console.error("File upload failed:", error);
-        uploadStatus = 'failed';
+        uploadStatus = 'error';
         toast({
           title: "Upload failed",
           description: error instanceof Error ? error.message : "Failed to upload file. Please try again.",

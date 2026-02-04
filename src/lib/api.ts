@@ -1,18 +1,35 @@
 // API utility for handling base URL and proxy configuration
 const isDevelopment = import.meta.env.DEV;
-const isVercel = import.meta.env.VITE_VERCEL || window.location.hostname.includes('vercel.app');
+const isLocalhost = typeof window !== 'undefined' && (
+  window.location.hostname === 'localhost' || 
+  window.location.hostname === '127.0.0.1'
+);
+const isVercel = import.meta.env.VITE_VERCEL || (typeof window !== 'undefined' && window.location.hostname.includes('vercel.app'));
 
-// Use proxy in development and Vercel, direct URL in other production environments
-export const API_BASE_URL = (isDevelopment || isVercel)
+// IMPORTANT: Vite proxy only works on localhost. 
+// In Lovable preview (lovable.app) or other non-localhost environments, use direct backend URL
+const shouldUseProxy = isDevelopment && isLocalhost;
+
+// Use proxy only in local development, direct URL everywhere else
+export const API_BASE_URL = shouldUseProxy
   ? '/api' 
   : 'https://backend-11kr.onrender.com';
+
+console.log('🔧 API Config:', { 
+  isDevelopment, 
+  isLocalhost, 
+  isVercel, 
+  shouldUseProxy, 
+  API_BASE_URL,
+  hostname: typeof window !== 'undefined' ? window.location.hostname : 'unknown'
+});
 
 // Helper function to build API URLs
 export const buildApiUrl = (endpoint: string): string => {
   // Remove leading slash if present to avoid double slashes
   const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
   
-  // Use proxy for all endpoints in development to avoid CORS issues
+  // Use proxy for local dev only, direct URL for all other environments
   return `${API_BASE_URL}/${cleanEndpoint}`;
 };
 

@@ -136,6 +136,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   error: propError
 }) => {
   const { currentUser } = useAuth();
+  const { toast } = useToast();
   // Track previous user to detect user switches
   const previousUserRef = useRef<string | null | undefined>(currentUser?.uid);
   
