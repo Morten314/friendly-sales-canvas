@@ -38,8 +38,8 @@ export interface ApiFetchOptions extends Omit<RequestInit, 'body'> {
   body?: BodyInit | Record<string, any> | null;
 }
 
-// Helper function for fetch with common configuration
-export const apiFetch = async (endpoint: string, options: ApiFetchOptions = {}) => {
+// Helper function for fetch with common configuration and retry logic
+export const apiFetch = async (endpoint: string, options: ApiFetchOptions = {}, retries = 2): Promise<Response> => {
   const url = buildApiUrl(endpoint);
   
   // Handle body stringification for JSON requests
@@ -74,23 +74,74 @@ export const apiFetch = async (endpoint: string, options: ApiFetchOptions = {}) 
   console.log(`🌐 API Request: ${defaultOptions.method || 'GET'} ${url}`);
   console.log(`🔗 Full URL: ${url}`);
   
-  const response = await fetch(url, defaultOptions);
+  let lastError: Error | null = null;
   
-  console.log(`📨 API Response: ${response.status} ${response.statusText}`);
-  
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error(`❌ API Error: ${response.status} - ${errorText}`);
-    console.error(`❌ API Error URL: ${url}`);
-    console.error(`❌ API Error Method: ${defaultOptions.method || 'GET'}`);
-    console.error(`❌ API Error Headers:`, defaultOptions.headers);
-    if (defaultOptions.body) {
-      console.error(`❌ API Error Body:`, defaultOptions.body);
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      if (attempt > 0) {
+        console.log(`🔄 Retry attempt ${attempt}/${retries} for ${url}`);
+        // Wait before retry (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, Math.min(1000 * Math.pow(2, attempt - 1), 5000)));
+      }
+      
+      const response = await fetch(url, defaultOptions);
+      
+      console.log(`📨 API Response: ${response.status} ${response.statusText}`);
+      
+      // Check if response is HTML instead of JSON (indicates server error page)
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('text/html') && !response.ok) {
+        const htmlContent = await response.text();
+        console.error(`❌ API returned HTML error page (status ${response.status})`);
+        
+        // If server is waking up (503), retry
+        if (response.status === 503 && attempt < retries) {
+          console.log('⏳ Server may be cold starting, will retry...');
+          lastError = new Error(`Server unavailable (503). The backend may be starting up.`);
+          continue;
+        }
+        
+        throw new Error(`Server returned HTML error page (status ${response.status}). The backend may be unavailable.`);
+      }
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ API Error: ${response.status} - ${errorText}`);
+        console.error(`❌ API Error URL: ${url}`);
+        console.error(`❌ API Error Method: ${defaultOptions.method || 'GET'}`);
+        console.error(`❌ API Error Headers:`, defaultOptions.headers);
+        if (defaultOptions.body) {
+          console.error(`❌ API Error Body:`, defaultOptions.body);
+        }
+        
+        // Retry on server errors
+        if (response.status >= 500 && attempt < retries) {
+          lastError = new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+          continue;
+        }
+        
+        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+      }
+      
+      return response;
+      
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      
+      // Network errors - retry
+      if (error instanceof TypeError && error.message.includes('fetch') && attempt < retries) {
+        console.warn(`⚠️ Network error, will retry: ${error.message}`);
+        continue;
+      }
+      
+      // If this was the last attempt, throw
+      if (attempt >= retries) {
+        throw lastError;
+      }
     }
-    throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
   }
   
-  return response;
+  throw lastError || new Error('Unknown API error');
 };
 
 // Helper function for JSON responses
