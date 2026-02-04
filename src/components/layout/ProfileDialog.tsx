@@ -14,13 +14,13 @@ interface ProfileDialogProps {
 
 export function ProfileDialog({ open, onOpenChange, fullName, children }: ProfileDialogProps) {
   const { currentUser } = useAuth();
-  const { currentTenant } = useTenant();
+  const { selectedTenant } = useTenant();
 
   // Get user's email
   const userEmail = currentUser?.email || '';
   
   // Get organization domain or default to Brewra.com
-  const organizationDomain = currentTenant?.domain || 'brewra.com';
+  const organizationDomain = selectedTenant?.domain || 'brewra.com';
 
   // Get initials for profile picture
   const getInitials = (name: string): string => {
