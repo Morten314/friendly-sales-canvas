@@ -44,6 +44,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { setUserLocalStorage, getUserLocalStorage, removeUserLocalStorage } from "@/utils/cacheUtils";
+import { buildApiUrl } from "@/lib/api";
 
 // Types
 type SourceType = "url" | "file" | "system";
@@ -144,7 +145,7 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
       let existingCompanyData = {};
       let existingCustomerProfile = {};
       try {
-        const getResponse = await fetch(`/api/profile/company?user_id=${currentUser.uid}`, {
+        const getResponse = await fetch(buildApiUrl(`api/profile/company?user_id=${currentUser.uid}`), {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -216,7 +217,7 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
       console.log("=== DATA SOURCES MANAGER: Saving data sources to backend ===");
       console.log("Payload:", payload);
 
-      const apiUrl = `/api/profile/company?user_id=${currentUser.uid}`;
+      const apiUrl = buildApiUrl(`api/profile/company?user_id=${currentUser.uid}`);
       const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
@@ -281,7 +282,7 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
 
     setIsLoading(true);
     try {
-      const apiUrl = `/api/profile/company?user_id=${currentUser.uid}`;
+      const apiUrl = buildApiUrl(`api/profile/company?user_id=${currentUser.uid}`);
       const response = await fetch(apiUrl, {
         method: "GET",
         headers: {

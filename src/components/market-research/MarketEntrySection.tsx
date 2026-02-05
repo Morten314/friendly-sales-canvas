@@ -9,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { EditRecord } from './types';
 import { toUTCTimestamp, isTimestampNewer } from '@/lib/timestampUtils';
 import { executeWithRateLimit } from '@/lib/rateLimitManager';
-import { apiFetchJson } from '@/lib/api';
+import { apiFetchJson, buildApiUrl } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { getUserLocalStorage } from '@/utils/cacheUtils';
 
@@ -402,7 +402,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
         section: "market_entry"
       });
       
-      const response = await fetch(`/api/ask?${queryParams}`, {
+      const response = await fetch(buildApiUrl(`api/ask?${queryParams}`), {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

@@ -72,6 +72,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Layout } from "@/components/layout/Layout";
+import { buildApiUrl } from "@/lib/api";
 import {
   Select,
   SelectContent,
@@ -113,7 +114,7 @@ const Settings = () => {
     setLoading(true);
     try {
       // Include user_id in the API call (same pattern as Signals)
-      const response = await fetch(`/api/profile/${profileType}?user_id=${currentUser.uid}`, {
+      const response = await fetch(buildApiUrl(`api/profile/${profileType}?user_id=${currentUser.uid}`), {
         method: "GET",
         headers: {
           "Content-Type": "application/json",

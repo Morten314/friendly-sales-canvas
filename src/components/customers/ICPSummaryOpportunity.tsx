@@ -21,6 +21,8 @@ import { callICPresearch } from "@/lib/enhancedApi";
 
 import { RateLimitStatus } from "@/components/common/RateLimitStatus";
 
+import { buildApiUrl } from "@/lib/api";
+
 
 
 interface SuggestedICP {
@@ -701,7 +703,7 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
               // Fallback to proxy
 
-              directResponse = await fetch(`/api/${endpoint}`, {
+              directResponse = await fetch(buildApiUrl(`api/${endpoint}`), {
 
                 method: 'POST',
 
@@ -2623,7 +2625,7 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
          console.log('🏥 Testing backend health...');
 
-         const response = await fetch('/api/health', {
+          const response = await fetch(buildApiUrl('api/health'), {
 
            method: 'GET',
 
@@ -3193,7 +3195,7 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
 
 
-         const response = await fetch('/api/generate-report', {
+          const response = await fetch(buildApiUrl('api/generate-report'), {
 
            method: 'POST',
 
@@ -3277,7 +3279,7 @@ export const ICPSummaryOpportunity = ({ selectedICP, refreshTrigger }: ICPSummar
 
       const timestamp = new Date().getTime();
 
-      const apiUrl = `/api/icp?t=${timestamp}&fresh=true`;
+      const apiUrl = buildApiUrl(`api/icp?t=${timestamp}&fresh=true`);
 
 
 

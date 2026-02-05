@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { buildApiUrl } from "@/lib/api";
 import {
   Select,
   SelectContent,
@@ -80,7 +81,7 @@ export function AgentProfile({ onProfileUpdate, isEditMode = false, profileData 
     };
 
     try {
-      const response = await fetch("/api/profile/agent_name", {
+      const response = await fetch(buildApiUrl("api/profile/agent_name"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

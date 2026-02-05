@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { buildApiUrl } from "@/lib/api";
 import {
   Select,
   SelectContent,
@@ -195,7 +196,7 @@ const ICPManager: React.FC = () => {
         console.warn("Failed to save to localStorage:", e);
       }
 
-      const apiUrl = `/api/customer_profile?user_id=${currentUser.uid}`;
+      const apiUrl = buildApiUrl(`api/customer_profile?user_id=${currentUser.uid}`);
       const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
@@ -268,7 +269,7 @@ const ICPManager: React.FC = () => {
 
     setIsLoading(true);
     try {
-      const apiUrl = `/api/customer_profile?user_id=${currentUser.uid}`;
+      const apiUrl = buildApiUrl(`api/customer_profile?user_id=${currentUser.uid}`);
       const response = await fetch(apiUrl, {
         method: "GET",
         headers: {
