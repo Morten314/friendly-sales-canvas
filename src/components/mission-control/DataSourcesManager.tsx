@@ -282,6 +282,7 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
     setIsLoading(true);
     try {
       const apiUrl = `/api/profile/company?user_id=${currentUser.uid}`;
+      console.log("DataSourcesManager: Loading data sources from:", apiUrl);
       const response = await fetch(apiUrl, {
         method: "GET",
         headers: {
@@ -290,11 +291,32 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
       });
 
       if (!response.ok) {
-        console.log("No existing data sources found in API");
+        console.log("DataSourcesManager: No existing data sources found in API, checking localStorage");
+        // Try loading from localStorage as fallback
+        try {
+          const localData = getUserLocalStorage('dataSources', currentUser.uid);
+          if (localData) {
+            const localSources = JSON.parse(localData);
+            if (Array.isArray(localSources) && localSources.length > 0) {
+              console.log("DataSourcesManager: Loading data sources from localStorage fallback");
+              setDataSources(localSources);
+            }
+          }
+        } catch (e) {
+          console.error("Error loading from localStorage:", e);
+        }
         return;
       }
 
       const data = await response.json();
+      console.log("DataSourcesManager: Full API response:", data);
+      console.log("DataSourcesManager: Response structure:", {
+        'hasDataSources': 'data_sources' in data,
+        'dataSourcesKeys': data.data_sources ? Object.keys(data.data_sources) : [],
+        'hasSources': data.data_sources?.sources !== undefined,
+        'sourcesIsArray': Array.isArray(data.data_sources?.sources),
+        'sourcesLength': Array.isArray(data.data_sources?.sources) ? data.data_sources.sources.length : 0,
+      });
       
       // Check if data_sources exists in the response
       if (data.data_sources && data.data_sources.sources && Array.isArray(data.data_sources.sources)) {
@@ -311,10 +333,45 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
         }));
 
         setDataSources(loadedSources);
-        console.log("Data sources loaded from backend:", loadedSources);
+        console.log("✅ DataSourcesManager: Data sources loaded from backend successfully:", loadedSources);
+        
+        // Save to localStorage for offline access
+        try {
+          setUserLocalStorage('dataSources', JSON.stringify(loadedSources), currentUser.uid);
+        } catch (e) {
+          console.warn("Failed to save to localStorage:", e);
+        }
+      } else {
+        console.warn("DataSourcesManager: data_sources.sources not found or not an array in API response");
+        // Try loading from localStorage as fallback
+        try {
+          const localData = getUserLocalStorage('dataSources', currentUser.uid);
+          if (localData) {
+            const localSources = JSON.parse(localData);
+            if (Array.isArray(localSources) && localSources.length > 0) {
+              console.log("DataSourcesManager: Loading data sources from localStorage fallback (no API data)");
+              setDataSources(localSources);
+            }
+          }
+        } catch (e) {
+          console.error("Error loading from localStorage:", e);
+        }
       }
     } catch (error) {
-      console.error("Error loading data sources:", error);
+      console.error("DataSourcesManager: Error loading data sources:", error);
+      // Try loading from localStorage as fallback on error
+      try {
+        const localData = getUserLocalStorage('dataSources', currentUser.uid);
+        if (localData) {
+          const localSources = JSON.parse(localData);
+          if (Array.isArray(localSources) && localSources.length > 0) {
+            console.log("DataSourcesManager: Loading data sources from localStorage fallback (error case)");
+            setDataSources(localSources);
+          }
+        }
+      } catch (e) {
+        console.error("Error loading from localStorage:", e);
+      }
     } finally {
       setIsLoading(false);
     }
