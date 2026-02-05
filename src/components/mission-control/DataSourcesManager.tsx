@@ -43,11 +43,12 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { setUserLocalStorage, getUserLocalStorage, removeUserLocalStorage } from "@/utils/cacheUtils";
+import { buildApiUrl } from "@/lib/api";
+import jwtManager from "@/lib/jwt";
 
 // Types
 type SourceType = "url" | "file" | "system";
-type SourceStatus = "active" | "failed" | "processing";
+type SourceStatus = "active" | "failed" | "processing" | "completed";
 
 interface DataSource {
   id: string;
@@ -125,155 +126,102 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
     };
   }, [currentUser?.uid]);
 
-  // Save data sources to backend with retry logic
-  const saveDataSourcesToBackend = async (sourcesToSave: DataSource[], retryCount = 0) => {
-    if (!currentUser?.uid) {
-      console.warn("Cannot save data sources: User not authenticated");
-      // Save to localStorage as fallback
-      try {
-        setUserLocalStorage('dataSources', JSON.stringify(sourcesToSave), currentUser?.uid);
-      } catch (e) {
-        console.error("Failed to save to localStorage:", e);
-      }
-      return;
-    }
-
-    setIsSaving(true);
+  // Helpers for auth + backend integration
+  const getAuthHeader = async () => {
     try {
-      // First, fetch existing company and customer profile data to preserve it
-      let existingCompanyData = {};
-      let existingCustomerProfile = {};
-      try {
-        const getResponse = await fetch(`/api/profile/company?user_id=${currentUser.uid}`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-        
-        if (getResponse.ok) {
-          const existingData = await getResponse.json();
-          // Preserve all existing company profile fields
-          existingCompanyData = {
-            company_name: existingData.company_name,
-            headquarters: existingData.headquarters,
-            employee_size: existingData.employee_size,
-            industry: existingData.industry,
-            revenue_band: existingData.revenue_band,
-            gtm_model: existingData.gtm_model,
-            region_focus: existingData.region_focus,
-            typical_deal_size: existingData.typical_deal_size,
-            company_url: existingData.company_url,
-            key_buyer_persona: existingData.key_buyer_persona,
-            // Also preserve any other fields that might exist
-            ...Object.fromEntries(
-              Object.entries(existingData).filter(([key]) => 
-                !key.startsWith('customer_profile') && 
-                !key.startsWith('data_sources') &&
-                !['user_id', 'id', 'created_at', 'updated_at'].includes(key)
-              )
-            )
-          };
-          // Preserve customer profile if it exists
-          if (existingData.customer_profile) {
-            existingCustomerProfile = existingData.customer_profile;
-          }
-          console.log("Preserving existing company and customer profile data");
-        }
-      } catch (fetchError) {
-        console.warn("Could not fetch existing profile data, proceeding with data sources only:", fetchError);
-      }
-
-      // Always save to localStorage first as backup
-      try {
-        setUserLocalStorage('dataSources', JSON.stringify(sourcesToSave), currentUser.uid);
-        setUserLocalStorage('dataSources_pending', JSON.stringify(sourcesToSave), currentUser.uid);
-      } catch (e) {
-        console.warn("Failed to save to localStorage:", e);
-      }
-
-      // Prepare payload with data sources, preserving existing company and customer profile fields
-      const payload = {
-        user_id: currentUser.uid,
-        profile_type: "company",
-        ...existingCompanyData, // Preserve existing company profile fields
-        ...(Object.keys(existingCustomerProfile).length > 0 && { customer_profile: existingCustomerProfile }), // Preserve customer profile if exists
-        data_sources: {
-          sources: sourcesToSave.map(source => ({
-            id: source.id,
-            type: source.type,
-            name: source.name,
-            url: source.url,
-            file_name: source.fileName,
-            description: source.description,
-            tags: source.tags,
-            status: source.status,
-            created_at: source.createdAt instanceof Date ? source.createdAt.toISOString() : source.createdAt,
-          })),
-        },
-      };
-
-      console.log("=== DATA SOURCES MANAGER: Saving data sources to backend ===");
-      console.log("Payload:", payload);
-
-      const apiUrl = `/api/profile/company?user_id=${currentUser.uid}`;
-      const response = await fetch(apiUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("API Error:", response.status, errorText);
-        
-        // Retry for 500 errors (server/database issues) up to 2 times
-        if (response.status === 500 && retryCount < 2) {
-          console.log(`Retrying save (attempt ${retryCount + 1}/2)...`);
-          await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1))); // Exponential backoff
-          return saveDataSourcesToBackend(sourcesToSave, retryCount + 1);
-        }
-        
-        throw new Error(`Failed to save data sources: ${response.status} - ${errorText}`);
-      }
-
-      const data = await response.json();
-      console.log("Data sources saved successfully:", data);
-      
-      // Clear pending flag on success
-      try {
-        removeUserLocalStorage('dataSources_pending', currentUser.uid);
-      } catch (e) {
-        console.warn("Failed to clear pending flag:", e);
-      }
+      return await jwtManager.getAuthHeader();
     } catch (error) {
-      console.error("Error saving data sources:", error);
-      
-      // Determine error message based on error type
-      const isNetworkError = error instanceof TypeError && error.message.includes('fetch');
-      const isServerError = error instanceof Error && error.message.includes('500');
-      
-      if (isServerError || isNetworkError) {
-        toast({
-          title: "Backend temporarily unavailable",
-          description: "Your data sources have been saved locally and will sync automatically when the backend is available.",
-          variant: "default",
-        });
-      } else {
-        toast({
-          title: "Save warning",
-          description: "Data sources saved locally but failed to sync with backend. Please try again later.",
-          variant: "destructive",
-        });
-      }
-    } finally {
-      setIsSaving(false);
+      console.warn("DataSourcesManager: No auth header available", error);
+      return "";
     }
   };
 
-  // Load data sources from backend
+  // Upload file to backend (stores in S3 via backend)
+  const uploadFileToBackend = async (file: File): Promise<void> => {
+    if (!currentUser?.uid) {
+      throw new Error("User not authenticated");
+    }
+
+    const authHeader = await getAuthHeader();
+    const url = buildApiUrl("upload-document");
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("user_id", currentUser.uid);
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        ...(authHeader && { Authorization: authHeader }),
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to upload file: ${response.status} - ${errorText}`);
+    }
+
+    // Upload successful - file_key will be retrieved from /user-documents
+    return;
+  };
+
+  // Check processing status for a specific file
+  const checkDocumentStatus = async (fileKey: string): Promise<{ status: SourceStatus; chunks_count?: number; timestamps?: any }> => {
+    if (!currentUser?.uid) {
+      throw new Error("User not authenticated");
+    }
+
+    const authHeader = await getAuthHeader();
+    const url = buildApiUrl(`document-status/${fileKey}`);
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        ...(authHeader && { Authorization: authHeader }),
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to check document status: ${response.status} - ${errorText}`);
+    }
+
+    const payload = await response.json();
+    return {
+      status: (payload.status || "processing") as SourceStatus,
+      chunks_count: payload.chunks_count,
+      timestamps: payload.timestamps,
+    };
+  };
+
+  // Check status for processing files
+  const checkProcessingFilesStatus = async () => {
+    setDataSources((currentSources) => {
+      const processingFiles = currentSources.filter(
+        (s) => s.status === "processing" && s.type === "file"
+      );
+      
+      // Check status for each processing file using file_key
+      processingFiles.forEach(async (file) => {
+        try {
+          const statusPayload = await checkDocumentStatus(file.id);
+          setDataSources((prev) =>
+            prev.map((s) =>
+              s.id === file.id ? { ...s, status: statusPayload.status } : s
+            )
+          );
+        } catch (err) {
+          console.error(`Error checking status for file ${file.id}:`, err);
+        }
+      });
+      
+      return currentSources;
+    });
+  };
+
+  // Load documents from backend (separate storage, not company profile)
   const loadDataSourcesFromBackend = async () => {
     if (!currentUser?.uid) {
       return;
@@ -281,97 +229,48 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
 
     setIsLoading(true);
     try {
-      const apiUrl = `/api/profile/company?user_id=${currentUser.uid}`;
-      console.log("DataSourcesManager: Loading data sources from:", apiUrl);
-      const response = await fetch(apiUrl, {
+      const authHeader = await getAuthHeader();
+      const url = buildApiUrl(`user-documents?user_id=${currentUser.uid}`);
+      const response = await fetch(url, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
+          ...(authHeader && { Authorization: authHeader }),
         },
       });
 
       if (!response.ok) {
-        console.log("DataSourcesManager: No existing data sources found in API, checking localStorage");
-        // Try loading from localStorage as fallback
-        try {
-          const localData = getUserLocalStorage('dataSources', currentUser.uid);
-          if (localData) {
-            const localSources = JSON.parse(localData);
-            if (Array.isArray(localSources) && localSources.length > 0) {
-              console.log("DataSourcesManager: Loading data sources from localStorage fallback");
-              setDataSources(localSources);
-            }
-          }
-        } catch (e) {
-          console.error("Error loading from localStorage:", e);
-        }
+        console.log("DataSourcesManager: No existing documents found in backend");
         return;
       }
 
       const data = await response.json();
-      console.log("DataSourcesManager: Full API response:", data);
-      console.log("DataSourcesManager: Response structure:", {
-        'hasDataSources': 'data_sources' in data,
-        'dataSourcesKeys': data.data_sources ? Object.keys(data.data_sources) : [],
-        'hasSources': data.data_sources?.sources !== undefined,
-        'sourcesIsArray': Array.isArray(data.data_sources?.sources),
-        'sourcesLength': Array.isArray(data.data_sources?.sources) ? data.data_sources.sources.length : 0,
-      });
-      
-      // Check if data_sources exists in the response
-      if (data.data_sources && data.data_sources.sources && Array.isArray(data.data_sources.sources)) {
-        const loadedSources: DataSource[] = data.data_sources.sources.map((source: any) => ({
-          id: source.id || `source-${Date.now()}-${Math.random()}`,
-          type: (source.type || "url") as SourceType,
-          name: source.name || "",
-          url: source.url || source.url,
-          fileName: source.file_name || source.fileName,
-          description: source.description || "",
-          tags: Array.isArray(source.tags) ? source.tags : [],
-          status: (source.status || "active") as SourceStatus,
-          createdAt: source.created_at ? new Date(source.created_at) : (source.createdAt ? new Date(source.createdAt) : new Date()),
+      const documents = Array.isArray(data)
+        ? data
+        : data.documents || data.files || data.data || [];
+
+      if (Array.isArray(documents)) {
+        const loadedSources: DataSource[] = documents.map((doc: any) => ({
+          id: doc.file_key || doc.fileKey || doc.id || `source-${Date.now()}-${Math.random()}`,
+          type: "file",
+          name: doc.name || doc.file_name || doc.original_filename || doc.fileKey || "Uploaded file",
+          fileName: doc.file_name || doc.original_filename || doc.name,
+          url: doc.file_url,
+          description: doc.description,
+          tags: Array.isArray(doc.tags) ? doc.tags : [],
+          status: (doc.status || "processing") as SourceStatus,
+          createdAt: doc.uploaded_at
+            ? new Date(doc.uploaded_at)
+            : doc.created_at
+            ? new Date(doc.created_at)
+            : new Date(),
         }));
 
         setDataSources(loadedSources);
-        console.log("✅ DataSourcesManager: Data sources loaded from backend successfully:", loadedSources);
-        
-        // Save to localStorage for offline access
-        try {
-          setUserLocalStorage('dataSources', JSON.stringify(loadedSources), currentUser.uid);
-        } catch (e) {
-          console.warn("Failed to save to localStorage:", e);
-        }
-      } else {
-        console.warn("DataSourcesManager: data_sources.sources not found or not an array in API response");
-        // Try loading from localStorage as fallback
-        try {
-          const localData = getUserLocalStorage('dataSources', currentUser.uid);
-          if (localData) {
-            const localSources = JSON.parse(localData);
-            if (Array.isArray(localSources) && localSources.length > 0) {
-              console.log("DataSourcesManager: Loading data sources from localStorage fallback (no API data)");
-              setDataSources(localSources);
-            }
-          }
-        } catch (e) {
-          console.error("Error loading from localStorage:", e);
-        }
+        console.log("Data sources loaded from dedicated backend:", loadedSources);
       }
     } catch (error) {
-      console.error("DataSourcesManager: Error loading data sources:", error);
-      // Try loading from localStorage as fallback on error
-      try {
-        const localData = getUserLocalStorage('dataSources', currentUser.uid);
-        if (localData) {
-          const localSources = JSON.parse(localData);
-          if (Array.isArray(localSources) && localSources.length > 0) {
-            console.log("DataSourcesManager: Loading data sources from localStorage fallback (error case)");
-            setDataSources(localSources);
-          }
-        }
-      } catch (e) {
-        console.error("Error loading from localStorage:", e);
-      }
+      console.error("Error loading data sources:", error);
     } finally {
       setIsLoading(false);
     }
@@ -381,26 +280,6 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
   useEffect(() => {
     if (currentUser?.uid) {
       loadDataSourcesFromBackend();
-      
-      // Check for pending saves and retry them
-      const retryPendingSave = async () => {
-        try {
-          const pendingData = getUserLocalStorage('dataSources_pending', currentUser.uid);
-          if (pendingData) {
-            const pendingSources = JSON.parse(pendingData);
-            console.log("Found pending data sources save, retrying...");
-            if (Array.isArray(pendingSources) && pendingSources.length > 0) {
-              await saveDataSourcesToBackend(pendingSources, 0);
-            }
-          }
-        } catch (error) {
-          console.error("Error retrying pending save:", error);
-        }
-      };
-      
-      // Retry after a short delay to allow backend to recover
-      const retryTimer = setTimeout(retryPendingSave, 5000);
-      return () => clearTimeout(retryTimer);
     }
   }, [currentUser?.uid]);
   
@@ -506,56 +385,71 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
       return;
     }
 
-    const newSource: DataSource = {
-      id: editingId || `source-${Date.now()}`,
-      type: selectedType as SourceType,
-      name: sourceName.trim(),
-      url: selectedType === "url" ? sourceUrl.trim() : undefined,
-      fileName: selectedType === "file" ? selectedFile?.name : undefined,
-      description: sourceDescription.trim() || undefined,
-      tags: selectedTags,
-      status: "processing",
-      createdAt: new Date(),
-    };
+    try {
+      setIsSaving(true);
 
-    let updatedSources: DataSource[];
-    if (editingId) {
-      updatedSources = dataSources.map((s) => (s.id === editingId ? newSource : s));
-      setDataSources(updatedSources);
+      if (selectedType === "file" && selectedFile) {
+        // Upload file to backend (stored in S3)
+        await uploadFileToBackend(selectedFile);
+
+        toast({
+          title: "File uploaded",
+          description: `${sourceName} is being processed.`,
+        });
+
+        // Notify MissionControl that a new data source was added
+        window.dispatchEvent(new CustomEvent('dataSourceAdded'));
+
+        // Reload documents from backend to get the file_key
+        // Wait a moment for backend to process the upload and store in S3
+        setTimeout(async () => {
+          try {
+            await loadDataSourcesFromBackend();
+            
+            // Poll status for processing files after a delay
+            setTimeout(() => {
+              checkProcessingFilesStatus();
+            }, 2000);
+          } catch (err) {
+            console.error("Error reloading documents after upload:", err);
+          }
+        }, 1000);
+      } else {
+        // URL / other types are stored locally only (no backend endpoint provided)
+        const newSource: DataSource = {
+          id: editingId || `source-${Date.now()}`,
+          type: selectedType as SourceType,
+          name: sourceName.trim(),
+          url: selectedType === "url" ? sourceUrl.trim() : undefined,
+          description: sourceDescription.trim() || undefined,
+          tags: selectedTags,
+          status: "active",
+          createdAt: new Date(),
+        };
+
+        setDataSources((prev) => {
+          if (editingId) {
+            return prev.map((s) => (s.id === editingId ? newSource : s));
+          }
+          return [...prev, newSource];
+        });
+
+        toast({
+          title: "Source added",
+          description: `${sourceName} saved locally.`,
+        });
+      }
+    } catch (error) {
+      console.error("Error saving data source:", error);
       toast({
-        title: "Source updated",
-        description: `${sourceName} has been updated.`,
+        title: "Upload failed",
+        description: error instanceof Error ? error.message : "Could not upload file. Please try again.",
+        variant: "destructive",
       });
-    } else {
-      updatedSources = [...dataSources, newSource];
-      setDataSources(updatedSources);
-      toast({
-        title: "Source added",
-        description: `${sourceName} is being processed.`,
-      });
-      
-      // Dispatch event to notify MissionControl that data source is added
-      window.dispatchEvent(new CustomEvent('dataSourceAdded'));
+    } finally {
+      setIsSaving(false);
+      resetInlineForm();
     }
-
-    // Save to backend
-    await saveDataSourcesToBackend(updatedSources);
-
-    // Simulate processing -> active/failed status
-    setTimeout(() => {
-      setDataSources((prev) => {
-        const updated = prev.map((s) =>
-          s.id === newSource.id
-            ? { ...s, status: Math.random() > 0.1 ? "active" : "failed" as SourceStatus }
-            : s
-        );
-        // Save updated status to backend
-        saveDataSourcesToBackend(updated);
-        return updated;
-      });
-    }, 2000);
-
-    resetInlineForm();
   };
 
   const handleEditSource = (source: DataSource) => {
@@ -571,10 +465,7 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
   const handleDeleteSource = async (id: string) => {
     const updatedSources = dataSources.filter((s) => s.id !== id);
     setDataSources(updatedSources);
-    
-    // Save to backend
-    await saveDataSourcesToBackend(updatedSources);
-    
+
     toast({
       title: "Source deleted",
       description: "The data source has been removed.",
@@ -584,9 +475,10 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
   const getStatusBadge = (status: SourceStatus) => {
     switch (status) {
       case "active":
+      case "completed":
         return (
           <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-400 dark:border-green-800">
-            🟢 Active
+            🟢 {status === "completed" ? "Completed" : "Active"}
           </Badge>
         );
       case "failed":
