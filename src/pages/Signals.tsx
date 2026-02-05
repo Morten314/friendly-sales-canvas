@@ -1,5 +1,6 @@
 import { Filter, Check, X, Bookmark, MessageCircle, Info, Share2, Download, Bot, Send, RefreshCw, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { buildApiUrl } from '@/lib/api';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -24,7 +25,7 @@ interface SignalCard {
 // API functions
 const generateSignalsBatch = async (userId: string) => {
   try {
-    const response = await fetch('/api/generate-signals-batch', {
+    const response = await fetch(buildApiUrl('api/generate-signals-batch'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -71,7 +72,7 @@ const generateSignalsBatch = async (userId: string) => {
 
 const fetchSignals = async (userId: string) => {
   try {
-    const response = await fetch(`/api/fetch-signals?user_id=${userId}&limit=10`);
+    const response = await fetch(buildApiUrl(`api/fetch-signals?user_id=${userId}&limit=10`));
     
     console.log('Fetch signals response status:', response.status);
     console.log('Fetch signals response headers:', response.headers);

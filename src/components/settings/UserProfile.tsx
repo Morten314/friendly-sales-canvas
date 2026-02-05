@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { buildApiUrl } from "@/lib/api";
 import {
   Select,
   SelectContent,
@@ -113,7 +114,7 @@ export function UserProfile({ onProfileUpdate, isEditMode = false, profileData }
     };
 
     try {
-      const response = await fetch("/api/profile/user", {
+      const response = await fetch(buildApiUrl("api/profile/user"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

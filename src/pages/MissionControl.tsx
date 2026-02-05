@@ -588,7 +588,7 @@ const MissionControl = () => {
       console.log("=== MISSION CONTROL: Saving company profile ===");
       console.log("Payload:", payload);
 
-      const apiUrl = `/api/profile/company?user_id=${currentUser.uid}`;
+      const apiUrl = buildApiUrl(`api/profile/company?user_id=${currentUser.uid}`);
       console.log("MissionControl: POST request URL:", apiUrl);
       console.log("MissionControl: POST request payload:", payload);
       
@@ -683,7 +683,7 @@ const MissionControl = () => {
       console.log("MissionControl: Verifying data persistence by fetching saved profile...");
       setTimeout(async () => {
         try {
-          const verifyResponse = await fetch(`/api/profile/company?user_id=${currentUser.uid}`, {
+          const verifyResponse = await fetch(buildApiUrl(`api/profile/company?user_id=${currentUser.uid}`), {
             method: "GET",
             headers: { "Content-Type": "application/json" },
           });
@@ -869,7 +869,7 @@ const MissionControl = () => {
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
-          const response = await fetch(`/api/profile/company?user_id=${userId}`, {
+          const response = await fetch(buildApiUrl(`api/profile/company?user_id=${userId}`), {
             method: "GET",
             headers: {
               "Content-Type": "application/json",
@@ -2166,7 +2166,7 @@ const MissionControl = () => {
       // First, fetch existing company profile data to preserve it
       let existingCompanyData = {};
       try {
-        const getResponse = await fetch(`/api/profile/company?user_id=${currentUser.uid}`, {
+        const getResponse = await fetch(buildApiUrl(`api/profile/company?user_id=${currentUser.uid}`), {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -2225,7 +2225,7 @@ const MissionControl = () => {
       console.log("=== MISSION CONTROL: Saving data sources to backend ===");
       console.log("Payload:", payload);
 
-      const apiUrl = `/api/profile/company?user_id=${currentUser.uid}`;
+      const apiUrl = buildApiUrl(`api/profile/company?user_id=${currentUser.uid}`);
       const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
@@ -2330,7 +2330,7 @@ const MissionControl = () => {
     }
 
     try {
-      const apiUrl = `/api/profile/company?user_id=${currentUser.uid}`;
+      const apiUrl = buildApiUrl(`api/profile/company?user_id=${currentUser.uid}`);
       const response = await fetch(apiUrl, {
         method: "GET",
         headers: {

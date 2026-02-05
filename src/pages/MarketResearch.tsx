@@ -124,7 +124,7 @@ import { toUTCTimestamp, isTimestampNewer, logTimestampComparison } from '@/lib/
 
 
 
-import { apiFetchJson } from '@/lib/api';
+import { apiFetchJson, buildApiUrl } from '@/lib/api';
 
 import { marketResearchApiCall, logApiCallResult, shouldUseCachedData } from '@/utils/apiUtils';
 
@@ -4571,7 +4571,7 @@ const MarketResearch = React.memo(() => {
 
       try {
         // Include user_id in API call
-        const profileResponse = await fetch(`/api/profile/company?user_id=${currentUser.uid}`, {
+        const profileResponse = await fetch(buildApiUrl(`api/profile/company?user_id=${currentUser.uid}`), {
 
           method: 'GET',
 

@@ -19,6 +19,7 @@ import { Plus, X } from "lucide-react";
 import { profilerCache } from "@/lib/profilerCache";
 import { useAuth } from "@/contexts/AuthContext";
 import { getUserLocalStorage, setUserLocalStorage, removeUserLocalStorage } from "@/utils/cacheUtils";
+import { buildApiUrl } from "@/lib/api";
 
 interface SocialMediaUrl {
   platform: string;
@@ -51,7 +52,7 @@ export function CompanyProfile({ onProfileUpdate, isEditMode = false, profileDat
   // Fetch company profile from API (similar to Signals pattern)
   const fetchCompanyProfile = async (userId: string) => {
     try {
-      const response = await fetch(`/api/profile/company?user_id=${userId}`, {
+      const response = await fetch(buildApiUrl(`api/profile/company?user_id=${userId}`), {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -342,8 +343,8 @@ export function CompanyProfile({ onProfileUpdate, isEditMode = false, profileDat
     try {
       // Include user_id in URL query parameter like Signals does, AND in body
       const apiUrl = currentUser?.uid 
-        ? `/api/profile/company?user_id=${currentUser.uid}`
-        : "/api/profile/company";
+        ? buildApiUrl(`api/profile/company?user_id=${currentUser.uid}`)
+        : buildApiUrl("api/profile/company");
       const response = await fetch(apiUrl, {
         method: "POST",
         headers: {

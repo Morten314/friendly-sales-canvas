@@ -11,7 +11,7 @@ import MiniPieChart from '@/components/ui/MiniPieChart';
 import MiniLineChart from '@/components/ui/MiniLineChart';
 import { toUTCTimestamp, isTimestampNewer, getCurrentUTCTimestamp, logTimestampComparison } from '@/lib/timestampUtils';
 import { executeWithRateLimit } from '@/lib/rateLimitManager';
-import { apiFetchJson } from '@/lib/api';
+import { apiFetchJson, buildApiUrl } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { getUserLocalStorage, setUserLocalStorage } from '@/utils/cacheUtils';
 
@@ -740,7 +740,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
   const fetchUpdatedData = async () => {
     try {
       const response = await executeWithRateLimit(
-        () => fetch('/api/market-research', {
+        () => fetch(buildApiUrl('api/market-research'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ component_name: "industry_trends", user_id: currentUser?.uid || "" })
