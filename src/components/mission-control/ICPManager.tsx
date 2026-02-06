@@ -25,6 +25,12 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   Table,
   TableBody,
   TableCell,
@@ -951,16 +957,25 @@ const ICPManager: React.FC = () => {
                 onKeyDown={handleLocationInputKeyDown}
                 className="h-9 text-sm w-32"
               />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleAddLocation}
-                disabled={!locationInput.trim()}
-                className="h-9 px-3"
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleAddLocation}
+                      disabled={!locationInput.trim()}
+                      className="h-9 px-3"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Click to add location</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
             {locations.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-1">
