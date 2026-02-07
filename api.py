@@ -1803,6 +1803,8 @@ async def delete_data_source(file_id: str):
         
         file_key = file_doc.get("file_key")
         org_id = file_doc.get("org_id")
+        actual_file_id = file_doc.get("file_id")  # Get the actual file_id from document
+        
         # For backward compatibility: extract org_id from file_key if not in document
         if not org_id and file_key:
             # Try to extract org_id from file_key pattern: {org_id}/{file_id}_{filename}
@@ -1814,6 +1816,10 @@ async def delete_data_source(file_id: str):
             mongo_client.close()
             raise HTTPException(status_code=400, detail="File key not found in database")
         
+        # Use actual_file_id for Pinecone deletion, fallback to search_file_id if not available
+        if not actual_file_id:
+            actual_file_id = search_file_id
+        
         deletion_errors = []
         
         # 1. Delete from AWS S3
@@ -1821,8 +1827,13 @@ async def delete_data_source(file_id: str):
             s3_client.delete_object(Bucket=s3_bucket, Key=file_key)
             logger.info(f"Deleted file from S3: {file_key}")
         except Exception as e:
-            deletion_errors.append(f"S3 deletion failed: {str(e)}")
-            logger.error(f"Failed to delete from S3: {str(e)}")
+            error_msg = str(e)
+            # Check if it's a permissions error
+            if "AccessDenied" in error_msg or "not authorized" in error_msg:
+                deletion_errors.append(f"S3 deletion failed: AWS IAM user does not have s3:DeleteObject permission. Please update IAM policy for user 'brewra-ai'.")
+            else:
+                deletion_errors.append(f"S3 deletion failed: {error_msg}")
+            logger.error(f"Failed to delete from S3: {error_msg}")
         
         # 2. Delete from Pinecone (using org_id as namespace and file_id in metadata)
         if org_id:
@@ -1830,27 +1841,110 @@ async def delete_data_source(file_id: str):
                 index_name = "brewra-documents"
                 index = pc.Index(index_name)
                 
-                # Delete vectors by metadata filter (file_id in the specific namespace)
-                # Pinecone delete by metadata filter - try both file_id and file_key for compatibility
+                # Check if namespace exists first and log what we're searching for
+                logger.info(f"Attempting Pinecone deletion: namespace='{org_id}', file_id='{actual_file_id}', file_key='{file_key}'")
+                
                 try:
-                    index.delete(
-                        filter={"file_id": {"$eq": file_id}},
-                        namespace=org_id
-                    )
-                    logger.info(f"Deleted vectors from Pinecone for file_id: {file_id} in namespace: {org_id}")
-                except Exception:
-                    # Try with file_key if file_id filter doesn't work
+                    stats = index.describe_index_stats()
+                    namespaces = stats.get('namespaces', {})
+                    logger.info(f"Available namespaces in Pinecone: {list(namespaces.keys())}")
+                    
+                    if org_id not in namespaces:
+                        logger.warning(f"Namespace '{org_id}' does not exist in Pinecone. Available namespaces: {list(namespaces.keys())}")
+                        deletion_errors.append(f"Pinecone deletion skipped: Namespace '{org_id}' not found. Available namespaces: {list(namespaces.keys())}")
+                    else:
+                        # Namespace exists, try to delete
+                        # First, try to query vectors with our file_id to see if they exist
+                        try:
+                            # Query with a dummy vector to see if we can access the namespace and find our vectors
+                            from pinecone import QueryResponse
+                            sample_query = index.query(
+                                vector=[0.0] * 1024,  # Dummy vector
+                                top_k=10,
+                                namespace=org_id,
+                                filter={"file_id": {"$eq": actual_file_id}},
+                                include_metadata=True
+                            )
+                            if sample_query.matches:
+                                logger.info(f"Found {len(sample_query.matches)} vectors with file_id='{actual_file_id}' in namespace '{org_id}'. Sample metadata: {sample_query.matches[0].metadata}")
+                            else:
+                                logger.warning(f"No vectors found with file_id='{actual_file_id}' in namespace '{org_id}'. Trying with file_key...")
+                                # Try querying with file_key
+                                sample_query2 = index.query(
+                                    vector=[0.0] * 1024,
+                                    top_k=10,
+                                    namespace=org_id,
+                                    filter={"file_key": {"$eq": file_key}},
+                                    include_metadata=True
+                                )
+                                if sample_query2.matches:
+                                    logger.info(f"Found {len(sample_query2.matches)} vectors with file_key='{file_key}' in namespace '{org_id}'. Sample metadata: {sample_query2.matches[0].metadata}")
+                                else:
+                                    logger.warning(f"No vectors found with either file_id='{actual_file_id}' or file_key='{file_key}' in namespace '{org_id}'")
+                        except Exception as query_error:
+                            error_str = str(query_error)
+                            if "Namespace not found" in error_str or "code\":5" in error_str:
+                                logger.error(f"Namespace '{org_id}' not accessible during query. This suggests the namespace name might not match exactly. Error: {error_str}")
+                                deletion_errors.append(f"Pinecone deletion failed: Namespace '{org_id}' not accessible. Check if namespace name matches exactly (case-sensitive). Error: {error_str}")
+                                # Don't raise, continue to try deletion anyway
+                            else:
+                                logger.warning(f"Query failed but continuing with deletion attempt: {error_str}")
+                        
+                        # Delete vectors by metadata filter (file_id in the specific namespace)
+                        # Pinecone delete by metadata filter - try both file_id and file_key for compatibility
+                        try:
+                            logger.info(f"Attempting delete with filter: file_id='{actual_file_id}' in namespace='{org_id}'")
+                            index.delete(
+                                filter={"file_id": {"$eq": actual_file_id}},
+                                namespace=org_id
+                            )
+                            logger.info(f"Successfully deleted vectors from Pinecone for file_id: {actual_file_id} in namespace: {org_id}")
+                        except Exception as delete_error:
+                            error_str = str(delete_error)
+                            logger.warning(f"Delete with file_id failed: {error_str}. Trying with file_key...")
+                            
+                            # Try with file_key if file_id filter doesn't work
+                            try:
+                                logger.info(f"Attempting delete with filter: file_key='{file_key}' in namespace='{org_id}'")
+                                index.delete(
+                                    filter={"file_key": {"$eq": file_key}},
+                                    namespace=org_id
+                                )
+                                logger.info(f"Successfully deleted vectors from Pinecone for file_key: {file_key} in namespace: {org_id}")
+                            except Exception as e2:
+                                error_str = str(e2)
+                                # If both fail, check if it's a namespace not found error
+                                if "Namespace not found" in error_str or "code\":5" in error_str:
+                                    logger.error(f"Namespace '{org_id}' not found during deletion. This is unexpected since it exists in stats. Error: {error_str}")
+                                    deletion_errors.append(f"Pinecone deletion failed: Namespace '{org_id}' not accessible during deletion. Error: {error_str}")
+                                else:
+                                    logger.error(f"Pinecone deletion failed with both file_id and file_key filters. Last error: {error_str}")
+                                    deletion_errors.append(f"Pinecone deletion failed: No vectors found matching file_id='{actual_file_id}' or file_key='{file_key}'. Error: {error_str}")
+                                    raise e2
+                except Exception as stats_error:
+                    # If we can't get stats, try deletion anyway
+                    logger.warning(f"Could not check namespace stats: {str(stats_error)}. Attempting deletion anyway.")
                     try:
                         index.delete(
-                            filter={"file_key": {"$eq": file_key}},
+                            filter={"file_id": {"$eq": actual_file_id}},
                             namespace=org_id
                         )
-                        logger.info(f"Deleted vectors from Pinecone for file_key: {file_key} in namespace: {org_id}")
-                    except Exception as e2:
-                        raise e2
+                        logger.info(f"Deleted vectors from Pinecone for file_id: {actual_file_id} in namespace: {org_id}")
+                    except Exception as delete_error:
+                        error_str = str(delete_error)
+                        if "Namespace not found" in error_str or "code\":5" in error_str:
+                            logger.warning(f"Namespace '{org_id}' not found. Vectors may not exist.")
+                            deletion_errors.append(f"Pinecone deletion skipped: Namespace '{org_id}' not found. Vectors may not have been stored.")
+                        else:
+                            raise delete_error
             except Exception as e:
-                deletion_errors.append(f"Pinecone deletion failed: {str(e)}")
-                logger.error(f"Failed to delete from Pinecone: {str(e)}")
+                error_str = str(e)
+                if "Namespace not found" in error_str or "code\":5" in error_str:
+                    logger.warning(f"Namespace '{org_id}' not found. Vectors may not exist.")
+                    deletion_errors.append(f"Pinecone deletion skipped: Namespace '{org_id}' not found. Vectors may not have been stored.")
+                else:
+                    deletion_errors.append(f"Pinecone deletion failed: {error_str}")
+                    logger.error(f"Failed to delete from Pinecone: {error_str}")
         else:
             deletion_errors.append("Pinecone deletion skipped: Organization ID not found")
             logger.warning(f"Pinecone deletion skipped for file_id {file_id}: org_id not found")
