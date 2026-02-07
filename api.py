@@ -1542,12 +1542,18 @@ async def upload_document(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     user_id: str = Form(...),
-    org_id: str = Form(...)
+    org_id: str = Form(...),
+    tags: str = Form(None),  # Comma-separated string or JSON array string
+    description: str = Form(None)
 ):
     """
     Upload a PDF or TXT file to S3 and start background task to convert to embeddings.
     Returns immediately with upload status.
     Files are stored organized by org_id in both S3 and Pinecone.
+    
+    Parameters:
+    - tags: Optional comma-separated string or JSON array string (e.g., "tag1,tag2" or '["tag1","tag2"]')
+    - description: Optional description of the document
     """
     try:
         # Validate file type
@@ -1584,6 +1590,19 @@ async def upload_document(
                 }
             )
         
+        # Parse tags - handle both comma-separated string and JSON array string
+        tags_list = None
+        if tags:
+            try:
+                # Try to parse as JSON array first
+                tags_list = json.loads(tags)
+                if not isinstance(tags_list, list):
+                    # If not a list, treat as comma-separated string
+                    tags_list = [tag.strip() for tag in tags.split(",") if tag.strip()]
+            except (json.JSONDecodeError, AttributeError):
+                # If JSON parsing fails, treat as comma-separated string
+                tags_list = [tag.strip() for tag in tags.split(",") if tag.strip()]
+        
         # Store initial status in MongoDB
         try:
             username = urllib.parse.quote_plus("techbrewra")
@@ -1593,7 +1612,7 @@ async def upload_document(
             db = mongo_client["File_Processing"]
             collection = db["file_status"]
             
-            collection.insert_one({
+            doc = {
                 "file_key": file_key,
                 "file_id": file_id,
                 "user_id": user_id,
@@ -1602,7 +1621,15 @@ async def upload_document(
                 "status": "processing",
                 "uploaded_at": datetime.utcnow(),
                 "s3_url": f"s3://{s3_bucket}/{file_key}"
-            })
+            }
+            
+            # Add tags and description if provided
+            if tags_list:
+                doc["tags"] = tags_list
+            if description:
+                doc["description"] = description
+            
+            collection.insert_one(doc)
             mongo_client.close()
         except Exception as e:
             logger.warning(f"Failed to store status in MongoDB: {str(e)}")
@@ -1610,13 +1637,21 @@ async def upload_document(
         # Start background task (pass org_id for namespace)
         background_tasks.add_task(process_file_to_embeddings, file_key, user_id, file.filename, org_id, file_id)
         
-        return {
+        response = {
             "status": "success",
             "message": "File uploaded successfully. Processing embeddings in background.",
             "file_key": file_key,
             "file_id": file_id,
             "file_name": file.filename
         }
+        
+        # Include tags and description in response if provided
+        if tags_list:
+            response["tags"] = tags_list
+        if description:
+            response["description"] = description
+        
+        return response
         
     except Exception as e:
         return JSONResponse(
@@ -1678,13 +1713,21 @@ async def get_user_documents(user_id: str = Query(...)):
         
         file_list = []
         for file_doc in files:
-            file_list.append({
+            file_item = {
                 "file_id": file_doc.get("file_id") or file_doc.get("file_key"),
                 "file_key": file_doc.get("file_key"),
                 "file_name": file_doc.get("file_name"),
                 "status": file_doc.get("status", "unknown"),
                 "uploaded_at": file_doc.get("uploaded_at")
-            })
+            }
+            
+            # Include tags and description if they exist
+            if "tags" in file_doc:
+                file_item["tags"] = file_doc.get("tags")
+            if "description" in file_doc:
+                file_item["description"] = file_doc.get("description")
+            
+            file_list.append(file_item)
         
         mongo_client.close()
         
