@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional, Literal, Any, Dict
 
 # Request Model
@@ -104,6 +104,8 @@ class EditRequest(BaseModel):
 
 # Customer Profile ICP model
 class CustomerProfileICP(BaseModel):
+    model_config = ConfigDict(extra='allow')  # Allow any additional fields for flexibility
+    
     id: Optional[str] = None
     primary_region: str = Field(..., min_length=1)
     industry: List[str] = Field(..., min_items=1)
@@ -113,6 +115,7 @@ class CustomerProfileICP(BaseModel):
     accounts_to_avoid: Optional[List[str]] = None
     fit_confidence: Literal["high", "medium", "low"]
     additional_context: Optional[str] = None
+    location: Optional[List[str]] = None
     status: str = "saved"
     created_at: Optional[str] = None
 

@@ -1430,8 +1430,8 @@ s3_client = boto3.client(
 # Initialize Pinecone
 pc = Pinecone(api_key=pinecone_api_key)
 
-async def process_file_to_embeddings(file_key: str, user_id: str, file_name: str):
-    """Background task to convert file to embeddings and store in Pinecone"""
+async def process_file_to_embeddings(file_key: str, user_id: str, file_name: str, org_id: str, file_id: str):
+    """Background task to convert file to embeddings and store in Pinecone with org_id namespace"""
     try:
         # Download file from S3
         local_file_path = f"/tmp/{file_name}"
@@ -1450,6 +1450,16 @@ async def process_file_to_embeddings(file_key: str, user_id: str, file_name: str
         # Split documents into chunks
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
         chunks = text_splitter.split_documents(documents)
+        
+        # Add metadata to each chunk (file_key, file_id, org_id for filtering/deletion)
+        for chunk in chunks:
+            if not hasattr(chunk, 'metadata'):
+                chunk.metadata = {}
+            chunk.metadata['file_key'] = file_key
+            chunk.metadata['file_id'] = file_id
+            chunk.metadata['org_id'] = org_id
+            chunk.metadata['user_id'] = user_id
+            chunk.metadata['file_name'] = file_name
         
         # Initialize embeddings (using TogetherAI with multilingual-e5-large-instruct)
         embeddings = OpenAIEmbeddings(
@@ -1470,11 +1480,12 @@ async def process_file_to_embeddings(file_key: str, user_id: str, file_name: str
             # Index already exists
             pass
         
-        # Store embeddings in Pinecone
+        # Store embeddings in Pinecone with org_id as namespace
         vectorstore = PineconeVectorStore.from_documents(
             chunks,
             embeddings,
             index_name=index_name,
+            namespace=org_id,  # Use org_id as namespace for multitenancy
             pinecone_api_key=pinecone_api_key
         )
         
@@ -1530,11 +1541,13 @@ async def process_file_to_embeddings(file_key: str, user_id: str, file_name: str
 async def upload_document(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
-    user_id: str = Form(...)
+    user_id: str = Form(...),
+    org_id: str = Form(...)
 ):
     """
     Upload a PDF or TXT file to S3 and start background task to convert to embeddings.
     Returns immediately with upload status.
+    Files are stored organized by org_id in both S3 and Pinecone.
     """
     try:
         # Validate file type
@@ -1548,9 +1561,9 @@ async def upload_document(
                 }
             )
         
-        # Generate unique file key for S3
+        # Generate unique file key for S3 (organized by org_id)
         file_id = str(uuid.uuid4())
-        file_key = f"{user_id}/{file_id}_{file.filename}"
+        file_key = f"{org_id}/{file_id}_{file.filename}"
         
         # Upload to S3
         try:
@@ -1582,7 +1595,9 @@ async def upload_document(
             
             collection.insert_one({
                 "file_key": file_key,
+                "file_id": file_id,
                 "user_id": user_id,
+                "org_id": org_id,
                 "file_name": file.filename,
                 "status": "processing",
                 "uploaded_at": datetime.utcnow(),
@@ -1592,13 +1607,14 @@ async def upload_document(
         except Exception as e:
             logger.warning(f"Failed to store status in MongoDB: {str(e)}")
         
-        # Start background task
-        background_tasks.add_task(process_file_to_embeddings, file_key, user_id, file.filename)
+        # Start background task (pass org_id for namespace)
+        background_tasks.add_task(process_file_to_embeddings, file_key, user_id, file.filename, org_id, file_id)
         
         return {
             "status": "success",
             "message": "File uploaded successfully. Processing embeddings in background.",
             "file_key": file_key,
+            "file_id": file_id,
             "file_name": file.filename
         }
         
@@ -1663,7 +1679,8 @@ async def get_user_documents(user_id: str = Query(...)):
         file_list = []
         for file_doc in files:
             file_list.append({
-                "file_id": file_doc.get("file_key"),
+                "file_id": file_doc.get("file_id") or file_doc.get("file_key"),
+                "file_key": file_doc.get("file_key"),
                 "file_name": file_doc.get("file_name"),
                 "status": file_doc.get("status", "unknown"),
                 "uploaded_at": file_doc.get("uploaded_at")
@@ -1679,3 +1696,114 @@ async def get_user_documents(user_id: str = Query(...)):
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/data-source/{file_id}")
+async def delete_data_source(file_id: str):
+    """
+    Delete a data source file from AWS S3, Pinecone, and MongoDB.
+    Deletes based on file_id.
+    """
+    try:
+        # MongoDB connection
+        username = urllib.parse.quote_plus("techbrewra")
+        password = urllib.parse.quote_plus("Brewra@Best09")
+        mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
+        mongo_client = MongoClient(mongo_uri)
+        db = mongo_client["File_Processing"]
+        collection = db["file_status"]
+        
+        # Find file document by file_id
+        file_doc = collection.find_one({"file_id": file_id})
+        if not file_doc:
+            # Try to find by file_key if file_id not found (for backward compatibility)
+            file_doc = collection.find_one({"file_key": file_id})
+            if not file_doc:
+                mongo_client.close()
+                raise HTTPException(status_code=404, detail=f"File with id {file_id} not found")
+        
+        file_key = file_doc.get("file_key")
+        org_id = file_doc.get("org_id")
+        # For backward compatibility: extract org_id from file_key if not in document
+        if not org_id and file_key:
+            # Try to extract org_id from file_key pattern: {org_id}/{file_id}_{filename}
+            parts = file_key.split("/")
+            if len(parts) > 1:
+                org_id = parts[0]
+        
+        if not file_key:
+            mongo_client.close()
+            raise HTTPException(status_code=400, detail="File key not found in database")
+        
+        deletion_errors = []
+        
+        # 1. Delete from AWS S3
+        try:
+            s3_client.delete_object(Bucket=s3_bucket, Key=file_key)
+            logger.info(f"Deleted file from S3: {file_key}")
+        except Exception as e:
+            deletion_errors.append(f"S3 deletion failed: {str(e)}")
+            logger.error(f"Failed to delete from S3: {str(e)}")
+        
+        # 2. Delete from Pinecone (using org_id as namespace and file_id in metadata)
+        if org_id:
+            try:
+                index_name = "brewra-documents"
+                index = pc.Index(index_name)
+                
+                # Delete vectors by metadata filter (file_id in the specific namespace)
+                # Pinecone delete by metadata filter - try both file_id and file_key for compatibility
+                try:
+                    index.delete(
+                        filter={"file_id": {"$eq": file_id}},
+                        namespace=org_id
+                    )
+                    logger.info(f"Deleted vectors from Pinecone for file_id: {file_id} in namespace: {org_id}")
+                except Exception:
+                    # Try with file_key if file_id filter doesn't work
+                    try:
+                        index.delete(
+                            filter={"file_key": {"$eq": file_key}},
+                            namespace=org_id
+                        )
+                        logger.info(f"Deleted vectors from Pinecone for file_key: {file_key} in namespace: {org_id}")
+                    except Exception as e2:
+                        raise e2
+            except Exception as e:
+                deletion_errors.append(f"Pinecone deletion failed: {str(e)}")
+                logger.error(f"Failed to delete from Pinecone: {str(e)}")
+        else:
+            deletion_errors.append("Pinecone deletion skipped: Organization ID not found")
+            logger.warning(f"Pinecone deletion skipped for file_id {file_id}: org_id not found")
+        
+        # 3. Delete from MongoDB
+        try:
+            collection.delete_one({"file_id": file_id})
+            logger.info(f"Deleted file record from MongoDB: {file_id}")
+        except Exception as e:
+            deletion_errors.append(f"MongoDB deletion failed: {str(e)}")
+            logger.error(f"Failed to delete from MongoDB: {str(e)}")
+        
+        mongo_client.close()
+        
+        # Return success even if some deletions failed (partial success)
+        if deletion_errors:
+            return {
+                "status": "partial_success",
+                "message": "File deletion completed with some errors",
+                "file_id": file_id,
+                "file_key": file_key,
+                "errors": deletion_errors
+            }
+        
+        return {
+            "status": "success",
+            "message": "File deleted successfully from all storage systems",
+            "file_id": file_id,
+            "file_key": file_key
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting file {file_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete file: {str(e)}")
