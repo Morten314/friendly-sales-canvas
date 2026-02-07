@@ -1747,6 +1747,16 @@ async def delete_data_source(file_id: str):
     Deletes based on file_id.
     """
     try:
+        # Log the received file_id for debugging
+        logger.info(f"DELETE /data-source received file_id: '{file_id}' (length: {len(file_id)}, repr: {repr(file_id)})")
+        
+        # Strip any trailing slashes that might be added by the router or client
+        original_file_id = file_id
+        file_id = file_id.rstrip('/')
+        
+        if original_file_id != file_id:
+            logger.warning(f"Stripped trailing slash from file_id: '{original_file_id}' -> '{file_id}'")
+        
         # MongoDB connection
         username = urllib.parse.quote_plus("techbrewra")
         password = urllib.parse.quote_plus("Brewra@Best09")
@@ -1755,14 +1765,41 @@ async def delete_data_source(file_id: str):
         db = mongo_client["File_Processing"]
         collection = db["file_status"]
         
+        # Log what we're searching for
+        logger.info(f"Searching MongoDB for file_id: '{file_id}'")
+        
+        # If file_id contains a slash, it might be a file_key from old documents
+        # Extract just the UUID part if it looks like a file_key path
+        search_file_id = file_id
+        if "/" in file_id:
+            # Format: {org_id}/{file_id}_{filename} - extract the file_id part
+            parts = file_id.split("/")
+            if len(parts) > 1:
+                # Get the part after the slash
+                file_part = parts[-1]
+                # Extract UUID (before underscore if present)
+                if "_" in file_part:
+                    search_file_id = file_part.split("_")[0]
+                    logger.info(f"Extracted file_id from path: '{file_id}' -> '{search_file_id}'")
+                else:
+                    search_file_id = file_part
+        
         # Find file document by file_id
-        file_doc = collection.find_one({"file_id": file_id})
+        file_doc = collection.find_one({"file_id": search_file_id})
+        logger.info(f"Search by file_id field '{search_file_id}' result: {file_doc is not None}")
+        
         if not file_doc:
             # Try to find by file_key if file_id not found (for backward compatibility)
+            logger.info(f"Trying to find by file_key: '{file_id}'")
             file_doc = collection.find_one({"file_key": file_id})
+            logger.info(f"Search by file_key result: {file_doc is not None}")
+            
             if not file_doc:
+                # Log some sample documents to help debug
+                sample_docs = list(collection.find({}, {"file_id": 1, "file_key": 1, "_id": 0}).limit(3))
+                logger.error(f"File not found. Searched for file_id='{search_file_id}' and file_key='{file_id}'. Sample documents: {sample_docs}")
                 mongo_client.close()
-                raise HTTPException(status_code=404, detail=f"File with id {file_id} not found")
+                raise HTTPException(status_code=404, detail=f"File with id '{file_id}' not found")
         
         file_key = file_doc.get("file_key")
         org_id = file_doc.get("org_id")
