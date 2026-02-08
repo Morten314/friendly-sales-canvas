@@ -52,6 +52,7 @@ type SourceStatus = "active" | "failed" | "processing" | "completed";
 
 interface DataSource {
   id: string;
+  fileId?: string; // The actual file_id that backend expects for deletion (from doc.file_id or doc._id)
   type: SourceType;
   name: string;
   url?: string;
@@ -134,6 +135,55 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
       console.warn("DataSourcesManager: No auth header available", error);
       return "";
     }
+  };
+
+  // Extract file_id UUID from file_key (which is in format: {user_id}/{uuid}_{filename})
+  const extractFileIdFromFileKey = (fileKey: string): string => {
+    if (!fileKey) {
+      console.warn("⚠️ extractFileIdFromFileKey: fileKey is empty");
+      return fileKey;
+    }
+
+    console.log("🔍 extractFileIdFromFileKey - Input:", fileKey);
+
+    // If file_key contains a slash, extract the part after it
+    if (fileKey.includes('/')) {
+      const parts = fileKey.split('/');
+      const afterSlash = parts[parts.length - 1]; // Get the last part after the slash
+      console.log("🔍 extractFileIdFromFileKey - After slash:", afterSlash);
+      
+      // Extract UUID (36 characters with hyphens) before the first underscore
+      const uuidMatch = afterSlash.match(/^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+      if (uuidMatch && uuidMatch[1]) {
+        console.log("✅ extractFileIdFromFileKey - Extracted UUID via regex:", uuidMatch[1]);
+        return uuidMatch[1];
+      }
+      
+      // If no UUID pattern found, try to extract just the part before the first underscore
+      const beforeUnderscore = afterSlash.split('_')[0];
+      console.log("🔍 extractFileIdFromFileKey - Before underscore:", beforeUnderscore);
+      
+      // Check if it looks like a UUID (36 chars with hyphens)
+      if (beforeUnderscore.length === 36 && beforeUnderscore.includes('-')) {
+        // Validate it's actually a UUID format
+        const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (uuidPattern.test(beforeUnderscore)) {
+          console.log("✅ extractFileIdFromFileKey - Extracted UUID before underscore:", beforeUnderscore);
+          return beforeUnderscore;
+        }
+      }
+    }
+    
+    // If no slash, check if the whole string is a UUID
+    const uuidMatch = fileKey.match(/^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+    if (uuidMatch && uuidMatch[1]) {
+      console.log("✅ extractFileIdFromFileKey - Whole string is UUID:", uuidMatch[1]);
+      return uuidMatch[1];
+    }
+    
+    // Fallback: return the original fileKey if we can't extract UUID
+    console.warn("⚠️ extractFileIdFromFileKey - Could not extract UUID, returning original:", fileKey);
+    return fileKey;
   };
 
   // Upload file to backend (stores in S3 via backend)
@@ -297,8 +347,49 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
             }
           }
 
+          // Extract file_id - backend might use file_id, _id, or we extract from file_key
+          let fileId: string | undefined = undefined;
+          if (doc.file_id) {
+            fileId = doc.file_id;
+            console.log("📋 DataSourcesManager - Using doc.file_id:", fileId);
+          } else if (doc._id) {
+            fileId = doc._id;
+            console.log("📋 DataSourcesManager - Using doc._id:", fileId);
+          } else if (doc.file_key || doc.fileKey) {
+            // Extract UUID from file_key as fallback
+            const extracted = extractFileIdFromFileKey(doc.file_key || doc.fileKey);
+            // Validate that we got a UUID, not the full path
+            const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+            if (uuidPattern.test(extracted)) {
+              fileId = extracted;
+              console.log("📋 DataSourcesManager - Extracted valid file_id from file_key:", {
+                file_key: doc.file_key || doc.fileKey,
+                extracted_fileId: fileId
+              });
+            } else {
+              console.warn("⚠️ DataSourcesManager - Extraction failed, got full path instead of UUID:", {
+                file_key: doc.file_key || doc.fileKey,
+                extracted: extracted
+              });
+              // Try one more time with a more aggressive extraction
+              const fileKeyStr = doc.file_key || doc.fileKey;
+              if (fileKeyStr.includes('/')) {
+                const parts = fileKeyStr.split('/');
+                const afterSlash = parts[parts.length - 1];
+                const uuidPart = afterSlash.split('_')[0];
+                if (uuidPattern.test(uuidPart)) {
+                  fileId = uuidPart;
+                  console.log("✅ DataSourcesManager - Successfully extracted UUID on retry:", fileId);
+                }
+              }
+            }
+          } else {
+            console.warn("⚠️ DataSourcesManager - No file_id found in document:", doc);
+          }
+
           return {
             id: doc.file_key || doc.fileKey || doc.id || `source-${Date.now()}-${Math.random()}`,
+            fileId: fileId, // Store the file_id for deletion
             type: "file",
             name: doc.name || doc.file_name || doc.original_filename || doc.fileKey || "Uploaded file",
             fileName: doc.file_name || doc.original_filename || doc.name,
@@ -350,9 +441,11 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
               matchedExistingIds.add(existingFile.id);
               // Preserve ALL local metadata (name, description, tags) - local edits take precedence
               // Only update status and other backend fields that might have changed
+              // IMPORTANT: Preserve fileId from backend (it has the correct file_id for deletion)
               return {
                 ...backendFile,
                 id: existingFile.id, // Keep the original ID
+                fileId: backendFile.fileId || existingFile.fileId, // Use backend fileId (correct for deletion)
                 name: existingFile.name, // Always preserve local name
                 description: existingFile.description, // Always preserve local description
                 tags: existingFile.tags, // Always preserve local tags
@@ -728,10 +821,45 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
     if (sourceToDelete.type === "file") {
       try {
         const authHeader = await getAuthHeader();
-        // Use file_id (which is the id field for file sources - it contains file_key from backend)
-        const fileId = id;
-        // Note: Using plural form /data-sources/ to match backend API route
-        const url = buildApiUrl(`data-sources/${fileId}`);
+        // Use the stored fileId if available, otherwise extract from file_key
+        let fileId = sourceToDelete.fileId || extractFileIdFromFileKey(id);
+        
+        // Validate that fileId is a UUID, not a full path
+        const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!uuidPattern.test(fileId)) {
+          // If fileId is not a UUID, try extracting again from the id (file_key)
+          console.warn("⚠️ DataSourcesManager - fileId is not a valid UUID, re-extracting from id:", {
+            fileId,
+            id,
+            storedFileId: sourceToDelete.fileId
+          });
+          fileId = extractFileIdFromFileKey(id);
+          
+          // If still not a UUID, try extracting from the stored fileId if it exists
+          if (!uuidPattern.test(fileId) && sourceToDelete.fileId) {
+            fileId = extractFileIdFromFileKey(sourceToDelete.fileId);
+          }
+        }
+        
+        console.log("🗑️ DataSourcesManager - Delete file_id resolution:", {
+          sourceId: id,
+          storedFileId: sourceToDelete.fileId,
+          resolvedFileId: fileId,
+          isValidUUID: uuidPattern.test(fileId),
+          sourceToDelete: sourceToDelete
+        });
+        
+        if (!fileId) {
+          throw new Error("Unable to determine file_id for deletion");
+        }
+        
+        // Final validation - ensure we have a UUID before making the API call
+        if (!uuidPattern.test(fileId)) {
+          throw new Error(`Invalid file_id format: ${fileId}. Expected UUID format.`);
+        }
+        
+        // Use singular form /data-source/ to match backend API route
+        const url = buildApiUrl(`data-source/${fileId}`);
 
         console.log("🗑️ DataSourcesManager - Deleting data source:", {
           url,
@@ -744,6 +872,7 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
           method: "DELETE",
           headers: {
             "Content-Type": "application/json",
+            "accept": "application/json",
             ...(authHeader && { Authorization: authHeader }),
           },
         });
