@@ -382,9 +382,11 @@ const MissionControl = () => {
   const [hasDataSources, setHasDataSources] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Tab locking logic
+  // Tab locking logic - check if data exists in backend, not just session state
+  // Customer profile is unlocked if company profile exists in backend
   const isCustomerProfileLocked = !isCompanyProfileSaved;
-  const isDataSourcesLocked = !isCustomerProfileSaved;
+  // Data sources is unlocked if company profile exists (not dependent on customer profile)
+  const isDataSourcesLocked = !isCompanyProfileSaved;
   const [expandedSources, setExpandedSources] = useState<Set<string>>(new Set());
   const [expandedTableRows, setExpandedTableRows] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState("");
@@ -2361,6 +2363,9 @@ const MissionControl = () => {
         }));
 
         setDataSources(loadedSources);
+        if (loadedSources.length > 0) {
+          setHasDataSources(true);
+        }
         console.log("Data sources loaded from backend:", loadedSources);
       }
     } catch (error) {
@@ -3193,21 +3198,91 @@ const MissionControl = () => {
     };
   }, []);
 
-  // Check for existing customer profile data on mount
+  // Check for existing customer profile data on mount (from backend)
   useEffect(() => {
-    // Check localStorage for saved ICPs
-    const savedICPs = localStorage.getItem('icps');
-    if (savedICPs) {
-      try {
-        const icps = JSON.parse(savedICPs);
-        if (icps && icps.length > 0) {
-          setIsCustomerProfileSaved(true);
-        }
-      } catch (e) {
-        // Ignore parse errors
+    const loadCustomerProfileFromBackend = async () => {
+      if (!currentUser?.uid) {
+        return;
       }
+
+      try {
+        const apiUrl = `/api/customer_profile?user_id=${currentUser.uid}`;
+        const response = await fetch(apiUrl, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (response.ok) {
+          const responseData = await response.json();
+          const data = responseData.data || responseData;
+          
+          // Check if icps exists in the response
+          let icpsData = null;
+          if (responseData.data) {
+            if (Array.isArray(responseData.data.icps)) {
+              icpsData = responseData.data.icps;
+            } else if (responseData.data.customer_profiles && Array.isArray(responseData.data.customer_profiles.icps)) {
+              icpsData = responseData.data.customer_profiles.icps;
+            } else if (responseData.data.customer_profile && Array.isArray(responseData.data.customer_profile.icps)) {
+              icpsData = responseData.data.customer_profile.icps;
+            }
+          }
+          
+          if (!icpsData) {
+            if (Array.isArray(data.icps)) {
+              icpsData = data.icps;
+            } else if (data.customer_profiles && Array.isArray(data.customer_profiles.icps)) {
+              icpsData = data.customer_profiles.icps;
+            } else if (data.customer_profile && Array.isArray(data.customer_profile.icps)) {
+              icpsData = data.customer_profile.icps;
+            }
+          }
+          
+          if (Array.isArray(icpsData) && icpsData.length > 0) {
+            console.log("MissionControl: Customer profile found in backend, unlocking customer profile tab");
+            setIsCustomerProfileSaved(true);
+          }
+        } else {
+          // Try localStorage as fallback
+          try {
+            const { getUserLocalStorage } = await import("@/utils/cacheUtils");
+            const localData = getUserLocalStorage('customerProfile', currentUser.uid);
+            if (localData) {
+              const localICPs = JSON.parse(localData);
+              if (Array.isArray(localICPs) && localICPs.length > 0) {
+                console.log("MissionControl: Customer profile found in localStorage, unlocking customer profile tab");
+                setIsCustomerProfileSaved(true);
+              }
+            }
+          } catch (e) {
+            // Ignore errors
+          }
+        }
+      } catch (error) {
+        console.error("Error checking customer profile:", error);
+        // Try localStorage as fallback
+        try {
+          const { getUserLocalStorage } = await import("@/utils/cacheUtils");
+          const localData = getUserLocalStorage('customerProfile', currentUser.uid);
+          if (localData) {
+            const localICPs = JSON.parse(localData);
+            if (Array.isArray(localICPs) && localICPs.length > 0) {
+              console.log("MissionControl: Customer profile found in localStorage fallback, unlocking customer profile tab");
+              setIsCustomerProfileSaved(true);
+            }
+          }
+        } catch (e) {
+          // Ignore errors
+        }
+      }
+    };
+
+    if (currentUser?.uid) {
+      loadCustomerProfileFromBackend();
     }
-  }, []);
+  }, [currentUser?.uid]);
 
   // Listen for data source added events from DataSourcesManager
   useEffect(() => {
@@ -3229,6 +3304,41 @@ const MissionControl = () => {
       setHasDataSources(true);
     }
   }, [dataSources.length]);
+
+  // Check if data sources exist in backend on mount
+  useEffect(() => {
+    const checkDataSourcesInBackend = async () => {
+      if (!currentUser?.uid) {
+        return;
+      }
+
+      try {
+        const apiUrl = `/api/profile/company?user_id=${currentUser.uid}`;
+        const response = await fetch(apiUrl, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          
+          // Check if data_sources exists in the response
+          if (data.data_sources && data.data_sources.sources && Array.isArray(data.data_sources.sources) && data.data_sources.sources.length > 0) {
+            console.log("MissionControl: Data sources found in backend");
+            setHasDataSources(true);
+          }
+        }
+      } catch (error) {
+        console.error("Error checking data sources:", error);
+      }
+    };
+
+    if (currentUser?.uid) {
+      checkDataSourcesInBackend();
+    }
+  }, [currentUser?.uid]);
 
   return (
     <Layout>
