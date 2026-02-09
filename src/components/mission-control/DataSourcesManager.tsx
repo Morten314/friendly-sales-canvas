@@ -410,49 +410,89 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
           const urlAndSystemSources = prev.filter(s => s.type !== "file");
           const existingFileSources = prev.filter(s => s.type === "file");
           
-          // Create a map of existing files by ID for quick lookup
+          // Create a map of existing files by fileId (UUID) for primary matching - this is the most reliable
+          const existingFilesByFileId = new Map(
+            existingFileSources
+              .filter(f => f.fileId)
+              .map(f => [f.fileId!, f])
+          );
+          
+          // Create a map by ID (file_key) for fallback matching
           const existingFilesById = new Map(existingFileSources.map(f => [f.id, f]));
           
-          // Also create a map by fileName for fallback matching
+          // Also create a map by fileName for additional fallback matching
           const existingFilesByFileName = new Map(
             existingFileSources
               .filter(f => f.fileName)
               .map(f => [f.fileName!, f])
           );
           
-          // Track which existing files we've matched
+          // Track which existing files we've matched (by their IDs)
           const matchedExistingIds = new Set<string>();
           
           // Merge file sources: use backend data, but preserve any local metadata updates
           const mergedFileSources = loadedFileSources.map(backendFile => {
-            // Try to find existing file by ID (exact match) first
-            let existingFile = existingFilesById.get(backendFile.id);
+            let existingFile: DataSource | undefined = undefined;
+            let matchedById: string | undefined = undefined;
             
-            // If not found by exact ID, try to match by fileName
-            if (!existingFile && backendFile.fileName) {
-              existingFile = existingFilesByFileName.get(backendFile.fileName);
-              // If found by fileName, update the ID to match
+            // Priority 1: Match by fileId (UUID) - most reliable for updated entries
+            if (backendFile.fileId) {
+              existingFile = existingFilesByFileId.get(backendFile.fileId);
               if (existingFile) {
-                backendFile.id = existingFile.id;
+                matchedById = existingFile.id;
+                console.log("✅ DataSourcesManager - Matched by fileId:", {
+                  fileId: backendFile.fileId,
+                  existingId: existingFile.id,
+                  backendId: backendFile.id,
+                });
               }
             }
             
-            if (existingFile) {
-              matchedExistingIds.add(existingFile.id);
-              // Preserve ALL local metadata (name, description, tags) - local edits take precedence
-              // Only update status and other backend fields that might have changed
-              // IMPORTANT: Preserve fileId from backend (it has the correct file_id for deletion)
+            // Priority 2: Match by ID (file_key) if fileId match failed
+            if (!existingFile) {
+              existingFile = existingFilesById.get(backendFile.id);
+              if (existingFile) {
+                matchedById = existingFile.id;
+                console.log("✅ DataSourcesManager - Matched by ID:", {
+                  id: backendFile.id,
+                  existingId: existingFile.id,
+                });
+              }
+            }
+            
+            // Priority 3: Match by fileName if both above failed
+            if (!existingFile && backendFile.fileName) {
+              existingFile = existingFilesByFileName.get(backendFile.fileName);
+              if (existingFile) {
+                matchedById = existingFile.id;
+                // Update backend file ID to match existing
+                backendFile.id = existingFile.id;
+                console.log("✅ DataSourcesManager - Matched by fileName:", {
+                  fileName: backendFile.fileName,
+                  existingId: existingFile.id,
+                  backendId: backendFile.id,
+                });
+              }
+            }
+            
+            if (existingFile && matchedById) {
+              matchedExistingIds.add(matchedById);
+              // When matched by fileId, use backend data (which has the latest updates from PUT)
+              // This ensures that after refresh, we get the updated tags and description
               return {
                 ...backendFile,
-                id: existingFile.id, // Keep the original ID
-                fileId: backendFile.fileId || existingFile.fileId, // Use backend fileId (correct for deletion)
-                name: existingFile.name, // Always preserve local name
-                description: existingFile.description, // Always preserve local description
-                tags: existingFile.tags, // Always preserve local tags
-                fileName: existingFile.fileName || backendFile.fileName, // Preserve local fileName if exists
+                id: matchedById, // Keep the existing ID to maintain reference
+                fileId: backendFile.fileId || existingFile.fileId, // Use backend fileId (most up-to-date)
+                // Use backend data for all fields since backend is source of truth after PUT update
+                name: backendFile.name || existingFile.name,
+                description: backendFile.description !== undefined ? backendFile.description : existingFile.description,
+                tags: backendFile.tags, // Always use backend tags (even if empty array)
+                fileName: backendFile.fileName || existingFile.fileName,
                 createdAt: existingFile.createdAt, // Preserve original creation date
               };
             }
+            
+            // New file from backend - return as is
             return backendFile;
           });
           
@@ -467,10 +507,26 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
           allSources.forEach(source => {
             if (!uniqueSourcesMap.has(source.id)) {
               uniqueSourcesMap.set(source.id, source);
+            } else {
+              // If duplicate found, prefer the one with fileId match (from backend)
+              const existing = uniqueSourcesMap.get(source.id)!;
+              if (source.fileId && existing.fileId && source.fileId === existing.fileId) {
+                // Same fileId - use the backend version (more up-to-date)
+                uniqueSourcesMap.set(source.id, source);
+              }
             }
           });
           
-          return Array.from(uniqueSourcesMap.values());
+          const result = Array.from(uniqueSourcesMap.values());
+          console.log("📋 DataSourcesManager - Merged data sources:", {
+            urlAndSystemCount: urlAndSystemSources.length,
+            mergedFileCount: mergedFileSources.length,
+            unmatchedCount: unmatchedExistingFiles.length,
+            totalCount: result.length,
+            matchedIds: Array.from(matchedExistingIds),
+          });
+          
+          return result;
         });
         console.log("Data sources loaded from dedicated backend:", loadedFileSources);
       }
@@ -591,6 +647,7 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
       return;
     }
 
+    let updateSuccess = false;
     try {
       setIsSaving(true);
 
@@ -607,11 +664,75 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
             oldId: isEditing ? editingId! : null,
           };
 
-          // Capture current file IDs before any state changes (for identifying new file after reload)
-          const fileIdsBeforeReload = dataSources.filter(s => s.type === "file").map(s => s.id);
+          // If editing, get the old file's fileId to delete it after uploading the new one
+          let oldFileId: string | undefined = undefined;
+          if (isEditing && editingId) {
+            const existingSource = dataSources.find(s => s.id === editingId);
+            if (existingSource && existingSource.type === "file") {
+              oldFileId = existingSource.fileId || extractFileIdFromFileKey(existingSource.id);
+              // Validate oldFileId is a UUID
+              const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+              if (!oldFileId || !uuidPattern.test(oldFileId)) {
+                // Try extracting again
+                if (existingSource.fileId) {
+                  oldFileId = extractFileIdFromFileKey(existingSource.fileId);
+                }
+                if (!oldFileId || !uuidPattern.test(oldFileId)) {
+                  console.warn("⚠️ DataSourcesManager - Could not extract valid oldFileId for deletion:", {
+                    existingSourceId: existingSource.id,
+                    existingFileId: existingSource.fileId,
+                  });
+                  oldFileId = undefined; // Will skip deletion if we can't get valid fileId
+                }
+              }
+            }
+          }
 
-          // Upload file to backend (stored in S3)
+          // Capture current file IDs and fileIds before any state changes (for identifying new file after reload)
+          const fileIdsBeforeReload = dataSources.filter(s => s.type === "file").map(s => s.id);
+          const fileFileIdsBeforeReload = dataSources
+            .filter(s => s.type === "file" && s.fileId)
+            .map(s => s.fileId!);
+
+          // Upload new file to backend (stored in S3)
           await uploadFileToBackend(selectedFile, selectedTags, sourceDescription.trim() || undefined);
+          
+          // If editing, delete the old file from backend to prevent duplicates
+          if (isEditing && oldFileId) {
+            try {
+              console.log("🗑️ DataSourcesManager - Deleting old file after uploading replacement:", {
+                oldFileId,
+                oldId: editingId,
+              });
+              
+              const authHeader = await getAuthHeader();
+              const deleteUrl = buildApiUrl(`data-source/${oldFileId}`);
+              
+              const deleteResponse = await fetch(deleteUrl, {
+                method: "DELETE",
+                headers: {
+                  "Content-Type": "application/json",
+                  "accept": "application/json",
+                  ...(authHeader && { Authorization: authHeader }),
+                },
+              });
+
+              if (!deleteResponse.ok) {
+                const errorText = await deleteResponse.text();
+                console.warn("⚠️ DataSourcesManager - Failed to delete old file (non-critical):", {
+                  status: deleteResponse.status,
+                  errorText,
+                  oldFileId,
+                });
+                // Don't throw - continue with the update even if old file deletion fails
+              } else {
+                console.log("✅ DataSourcesManager - Old file deleted successfully");
+              }
+            } catch (deleteError) {
+              console.error("❌ DataSourcesManager - Error deleting old file (non-critical):", deleteError);
+              // Don't throw - continue with the update even if old file deletion fails
+            }
+          }
 
           toast({
             title: isEditing ? "File updated" : "File uploaded",
@@ -619,6 +740,7 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
               ? `${sourceName} has been updated.` 
               : `${sourceName} is being processed.`,
           });
+          updateSuccess = true;
 
           // Notify MissionControl that a data source was added/updated
           if (!isEditing) {
@@ -638,15 +760,36 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
                 console.log("📋 DataSourcesManager - File IDs before reload:", fileIdsBeforeReload);
                 
                 if (isEditing && uploadMetadata.oldId) {
-                  // If editing, remove the old entry first
-                  const withoutOldEntry = prev.filter(s => s.id !== uploadMetadata.oldId);
+                  // If editing, remove the old entry by both ID and fileId (in case old file still exists in backend)
+                  // Get old fileId from the closure (captured before state changes)
+                  const oldFileIdToExclude = oldFileId;
+                  
+                  const withoutOldEntry = prev.filter(s => {
+                    // Exclude by ID
+                    if (s.id === uploadMetadata.oldId) return false;
+                    // Also exclude by fileId if it matches the old file's fileId
+                    if (oldFileIdToExclude && s.fileId === oldFileIdToExclude) {
+                      console.log("🗑️ DataSourcesManager - Excluding old file by fileId:", {
+                        oldFileId: oldFileIdToExclude,
+                        excludedId: s.id,
+                      });
+                      return false;
+                    }
+                    return true;
+                  });
                   
                   // Find the new file (the one that wasn't in the list before) and apply metadata
+                  // Match by both ID and fileId to be sure
                   const updated = withoutOldEntry.map((s) => {
-                    if (s.type === "file" && !fileIdsBeforeReload.includes(s.id)) {
-                      // This is the newly uploaded file - apply all metadata
+                    const isNewFile = s.type === "file" && 
+                      (!fileIdsBeforeReload.includes(s.id)) &&
+                      (!s.fileId || !fileFileIdsBeforeReload.includes(s.fileId));
+                    
+                    if (isNewFile) {
+                      // This is the newly uploaded file - apply all metadata and update the ID to match old entry
                       console.log("✅ DataSourcesManager - Applying metadata to edited file:", {
-                        id: s.id,
+                        newId: s.id,
+                        oldId: uploadMetadata.oldId,
                         oldName: s.name,
                         newName: uploadMetadata.name,
                         oldTags: s.tags,
@@ -656,6 +799,7 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
                       });
                       return {
                         ...s,
+                        id: uploadMetadata.oldId, // Keep the old ID to maintain reference (replaces old entry)
                         name: uploadMetadata.name,
                         description: uploadMetadata.description,
                         tags: uploadMetadata.tags,
@@ -663,7 +807,8 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
                     }
                     return s;
                   });
-                  console.log("✅ DataSourcesManager - Metadata applied to edited file");
+                  
+                  console.log("✅ DataSourcesManager - Metadata applied to edited file, old entry replaced");
                   return updated;
                 } else {
                   // For new uploads, find the file that wasn't in the list before
@@ -716,44 +861,169 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
             }
           }, 1000);
         } else if (editingId) {
-          // Editing existing file source - just update metadata without re-uploading
+          // Editing existing file source - update metadata via PUT API
+          // IMPORTANT: We are EDITING, not creating a new entry
+          console.log("📝 DataSourcesManager - Editing existing source (not creating new):", editingId);
+          
           // Find the existing source to preserve its ID and other properties
           const existingSource = dataSources.find(s => s.id === editingId);
           if (!existingSource) {
+            console.error("❌ DataSourcesManager - Source not found for editing:", editingId);
             toast({
               title: "Error",
               description: "Source not found.",
               variant: "destructive",
             });
+            setIsSaving(false);
             return;
           }
+          
 
-          setDataSources((prev) => {
-            // Ensure we're updating the correct entry and not creating duplicates
-            const updated = prev.map((s) => {
-              if (s.id === editingId) {
-                return {
-                  ...s,
-                  name: sourceName.trim(),
-                  description: sourceDescription.trim() || undefined,
-                  tags: selectedTags,
-                };
-              }
-              return s;
+          // Get fileId for the PUT request
+          let fileId = existingSource.fileId || extractFileIdFromFileKey(existingSource.id);
+          
+          // Validate that fileId is a UUID
+          const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+          if (!fileId || !uuidPattern.test(fileId)) {
+            // If fileId is not a valid UUID, try extracting again
+            if (existingSource.fileId) {
+              fileId = extractFileIdFromFileKey(existingSource.fileId);
+            }
+            if (!fileId || !uuidPattern.test(fileId)) {
+              toast({
+                title: "Error",
+                description: "Unable to determine file ID for update.",
+                variant: "destructive",
+              });
+              return;
+            }
+          }
+
+          try {
+            // Call PUT API to update the data source
+            const authHeader = await getAuthHeader();
+            const url = buildApiUrl(`data-source/${fileId}`);
+            
+            const updatePayload = {
+              tags: selectedTags,
+              description: sourceDescription.trim() || undefined,
+            };
+
+            console.log("📝 DataSourcesManager - Updating data source:", {
+              url,
+              fileId,
+              payload: updatePayload,
+              hasAuth: !!authHeader,
             });
-            
-            // Remove any duplicates by ID (safety check)
-            const unique = updated.filter((source, index, self) => 
-              index === self.findIndex(s => s.id === source.id)
-            );
-            
-            return unique;
-          });
 
-          toast({
-            title: "Source updated",
-            description: `${sourceName} has been updated.`,
-          });
+            const response = await fetch(url, {
+              method: "PUT",
+              headers: {
+                "Content-Type": "application/json",
+                "accept": "application/json",
+                ...(authHeader && { Authorization: authHeader }),
+              },
+              body: JSON.stringify(updatePayload),
+            });
+
+            if (!response.ok) {
+              const errorText = await response.text();
+              console.error("❌ DataSourcesManager - Update error:", {
+                status: response.status,
+                errorText,
+                fileId,
+                url,
+              });
+              throw new Error(`Failed to update data source: ${response.status} - ${errorText}`);
+            }
+
+            console.log("✅ DataSourcesManager - Update success");
+
+            // Update local state after successful API call
+            // Update the existing entry in place - do NOT add a new entry
+            setDataSources((prev) => {
+              // First, find the existing entry to ensure it exists
+              const existingSourceIndex = prev.findIndex(s => s.id === editingId);
+              
+              if (existingSourceIndex === -1) {
+                console.error("❌ DataSourcesManager - Could not find source to update:", editingId);
+                // Return previous state unchanged if source not found
+                return prev;
+              }
+
+              // Create a new array with the updated entry
+              const updated = [...prev];
+              const existingSource = updated[existingSourceIndex];
+              
+              // Update only the existing entry - replace it in place
+              updated[existingSourceIndex] = {
+                ...existingSource,
+                name: sourceName.trim(),
+                description: sourceDescription.trim() || undefined,
+                tags: selectedTags,
+              };
+              
+              // Ensure no duplicates by ID - this is a safety check
+              const uniqueMap = new Map<string, DataSource>();
+              updated.forEach(source => {
+                // If we already have this ID, keep the one we just updated (if it's the one we're editing)
+                if (uniqueMap.has(source.id)) {
+                  if (source.id === editingId) {
+                    // Replace with our updated version
+                    uniqueMap.set(source.id, source);
+                  }
+                  // Otherwise, keep the existing one in the map
+                } else {
+                  uniqueMap.set(source.id, source);
+                }
+              });
+              
+              const unique = Array.from(uniqueMap.values());
+              
+              console.log("📝 DataSourcesManager - State update:", {
+                beforeCount: prev.length,
+                afterCount: unique.length,
+                updatedId: editingId,
+                updatedName: sourceName.trim(),
+                foundAtIndex: existingSourceIndex,
+              });
+              
+              // Verify we didn't accidentally add a new entry
+              if (unique.length > prev.length) {
+                console.warn("⚠️ DataSourcesManager - Warning: Entry count increased after update! This should not happen.");
+              }
+              
+              return unique;
+            });
+
+            toast({
+              title: "Source updated",
+              description: `${sourceName} has been updated.`,
+            });
+            updateSuccess = true;
+            
+            // Reload from backend after a short delay to ensure state is synced
+            // This ensures that after refresh, the updated data is properly matched
+            setTimeout(async () => {
+              try {
+                console.log("🔄 DataSourcesManager - Reloading after PUT update to sync state");
+                await loadDataSourcesFromBackend();
+              } catch (err) {
+                console.error("Error reloading after update:", err);
+                // Don't show error to user - local state is already updated
+              }
+            }, 500);
+          } catch (error) {
+            console.error("Error updating data source:", error);
+            toast({
+              title: "Update failed",
+              description: error instanceof Error ? error.message : "Could not update data source. Please try again.",
+              variant: "destructive",
+            });
+            // Don't throw - return early to prevent form reset on error
+            setIsSaving(false);
+            return;
+          }
         }
       } else {
         // URL / other types are stored locally only (no backend endpoint provided)
@@ -781,6 +1051,7 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
           title: editingId ? "Source updated" : "Source added",
           description: `${sourceName} ${editingId ? "has been updated" : "saved locally"}.`,
         });
+        updateSuccess = true;
       }
     } catch (error) {
       console.error("Error saving data source:", error);
@@ -791,7 +1062,10 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
       });
     } finally {
       setIsSaving(false);
-      resetInlineForm();
+      // Only reset form if operation was successful
+      if (updateSuccess || !editingId) {
+        resetInlineForm();
+      }
     }
   };
 
@@ -974,7 +1248,11 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
     selectedType && 
     selectedType !== "system" && 
     sourceName.trim() && 
-    (selectedType === "url" ? sourceUrl.trim() : selectedFile);
+    (selectedType === "url" 
+      ? sourceUrl.trim() 
+      : editingId 
+        ? true // When editing, file is optional - can update metadata without new file
+        : selectedFile); // When adding new, file is required
 
   // Render the add/edit form
   const renderAddForm = () => {
