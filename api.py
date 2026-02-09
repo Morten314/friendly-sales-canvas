@@ -1431,19 +1431,47 @@ s3_client = boto3.client(
 pc = Pinecone(api_key=pinecone_api_key)
 
 async def process_file_to_embeddings(file_key: str, user_id: str, file_name: str, org_id: str, file_id: str):
-    """Background task to convert file to embeddings and store in Pinecone with org_id namespace"""
+    """Background task to convert file to embeddings and store in Pinecone with org_id namespace.
+    Only processes PDF and TXT files. Other file types are skipped gracefully."""
     try:
+        # Only process PDF and TXT files
+        if not (file_name.lower().endswith('.pdf') or file_name.lower().endswith('.txt')):
+            logger.info(f"Skipping Pinecone embedding for unsupported file type: {file_name}")
+            # Update status to completed (not embedded)
+            try:
+                username = urllib.parse.quote_plus("techbrewra")
+                password = urllib.parse.quote_plus("Brewra@Best09")
+                mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
+                mongo_client = MongoClient(mongo_uri)
+                db = mongo_client["File_Processing"]
+                collection = db["file_status"]
+                
+                collection.update_one(
+                    {"file_key": file_key},
+                    {"$set": {
+                        "status": "completed",
+                        "completed_at": datetime.utcnow(),
+                        "embedding_supported": False
+                    }},
+                    upsert=True
+                )
+                mongo_client.close()
+            except Exception as e:
+                logger.warning(f"Failed to update status: {str(e)}")
+            return
+        
         # Download file from S3
         local_file_path = f"/tmp/{file_name}"
         s3_client.download_file(s3_bucket, file_key, local_file_path)
         
         # Load document based on file type
-        if file_name.endswith('.pdf'):
+        if file_name.lower().endswith('.pdf'):
             loader = PyPDFLoader(local_file_path)
-        elif file_name.endswith('.txt'):
+        elif file_name.lower().endswith('.txt'):
             loader = TextLoader(local_file_path)
         else:
-            raise ValueError(f"Unsupported file type: {file_name}")
+            logger.warning(f"Unexpected file type in process_file_to_embeddings: {file_name}")
+            return
         
         documents = loader.load()
         
@@ -1502,7 +1530,8 @@ async def process_file_to_embeddings(file_key: str, user_id: str, file_name: str
             {"$set": {
                 "status": "completed",
                 "completed_at": datetime.utcnow(),
-                "chunks_count": len(chunks)
+                "chunks_count": len(chunks),
+                "embedding_supported": True
             }},
             upsert=True
         )
@@ -1547,25 +1576,30 @@ async def upload_document(
     description: str = Form(None)
 ):
     """
-    Upload a PDF or TXT file to S3 and start background task to convert to embeddings.
+    Upload a file (PDF, TXT, CSV, XLSX, PPTX) to S3.
+    Only PDF and TXT files are embedded into Pinecone.
     Returns immediately with upload status.
-    Files are stored organized by org_id in both S3 and Pinecone.
+    Files are stored organized by org_id in S3.
     
     Parameters:
     - tags: Optional comma-separated string or JSON array string (e.g., "tag1,tag2" or '["tag1","tag2"]')
     - description: Optional description of the document
     """
     try:
-        # Validate file type
-        if not (file.filename.endswith('.pdf') or file.filename.endswith('.txt')):
+        # Validate file type - accept PDF, TXT, CSV, XLSX, PPTX
+        allowed_extensions = ['.pdf', '.txt', '.csv', '.xlsx', '.pptx']
+        if not any(file.filename.lower().endswith(ext) for ext in allowed_extensions):
             return JSONResponse(
                 status_code=400,
                 content={
                     "status": "error",
                     "error": "upload_failed",
-                    "message": "Only PDF and TXT files are supported"
+                    "message": f"Only {', '.join(ext.upper() for ext in allowed_extensions)} files are supported"
                 }
             )
+        
+        # Check if file will be embedded (only PDF and TXT)
+        will_be_embedded = file.filename.lower().endswith(('.pdf', '.txt'))
         
         # Generate unique file key for S3 (organized by org_id)
         file_id = str(uuid.uuid4())
@@ -1618,9 +1652,10 @@ async def upload_document(
                 "user_id": user_id,
                 "org_id": org_id,
                 "file_name": file.filename,
-                "status": "processing",
+                "status": "processing" if will_be_embedded else "completed",
                 "uploaded_at": datetime.utcnow(),
-                "s3_url": f"s3://{s3_bucket}/{file_key}"
+                "s3_url": f"s3://{s3_bucket}/{file_key}",
+                "embedding_supported": will_be_embedded
             }
             
             # Add tags and description if provided
@@ -1634,8 +1669,31 @@ async def upload_document(
         except Exception as e:
             logger.warning(f"Failed to store status in MongoDB: {str(e)}")
         
-        # Start background task (pass org_id for namespace)
-        background_tasks.add_task(process_file_to_embeddings, file_key, user_id, file.filename, org_id, file_id)
+        # Start background task only for PDF and TXT files
+        if will_be_embedded:
+            background_tasks.add_task(process_file_to_embeddings, file_key, user_id, file.filename, org_id, file_id)
+        else:
+            # For non-embeddable files, mark as completed immediately
+            try:
+                username = urllib.parse.quote_plus("techbrewra")
+                password = urllib.parse.quote_plus("Brewra@Best09")
+                mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
+                mongo_client = MongoClient(mongo_uri)
+                db = mongo_client["File_Processing"]
+                collection = db["file_status"]
+                
+                collection.update_one(
+                    {"file_key": file_key},
+                    {"$set": {
+                        "status": "completed",
+                        "completed_at": datetime.utcnow(),
+                        "embedding_supported": False
+                    }},
+                    upsert=True
+                )
+                mongo_client.close()
+            except Exception as e:
+                logger.warning(f"Failed to update status for non-embeddable file: {str(e)}")
         
         response = {
             "status": "success",
@@ -1981,3 +2039,69 @@ async def delete_data_source(file_id: str):
     except Exception as e:
         logger.error(f"Error deleting file {file_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to delete file: {str(e)}")
+
+@app.put("/data-source/{file_id}")
+async def update_data_source(file_id: str, request: dict = Body(...)):
+    """
+    Update tags and description for a data source file.
+    """
+    try:
+        file_id = file_id.rstrip('/')
+        
+        tags = request.get("tags")
+        description = request.get("description")
+        
+        if tags is None and description is None:
+            raise HTTPException(status_code=400, detail="At least one of 'tags' or 'description' must be provided")
+        
+        username = urllib.parse.quote_plus("techbrewra")
+        password = urllib.parse.quote_plus("Brewra@Best09")
+        mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
+        mongo_client = MongoClient(mongo_uri)
+        db = mongo_client["File_Processing"]
+        collection = db["file_status"]
+        
+        file_doc = collection.find_one({"file_id": file_id})
+        if not file_doc:
+            file_doc = collection.find_one({"file_key": file_id})
+            if not file_doc:
+                mongo_client.close()
+                raise HTTPException(status_code=404, detail=f"File with id '{file_id}' not found")
+        
+        update_doc = {}
+        
+        if tags is not None:
+            if isinstance(tags, str):
+                try:
+                    tags_list = json.loads(tags)
+                    if not isinstance(tags_list, list):
+                        tags_list = [tag.strip() for tag in tags.split(",") if tag.strip()]
+                except (json.JSONDecodeError, AttributeError):
+                    tags_list = [tag.strip() for tag in tags.split(",") if tag.strip()]
+            elif isinstance(tags, list):
+                tags_list = tags
+            else:
+                raise HTTPException(status_code=400, detail="tags must be a list or comma-separated string")
+            update_doc["tags"] = tags_list
+        
+        if description is not None:
+            if not isinstance(description, str):
+                raise HTTPException(status_code=400, detail="description must be a string")
+            update_doc["description"] = description
+        
+        collection.update_one(
+            {"file_id": file_doc.get("file_id") or file_doc.get("file_key")},
+            {"$set": update_doc}
+        )
+        
+        mongo_client.close()
+        
+        return {
+            "status": "success",
+            "message": "Data source updated successfully"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to update file: {str(e)}")
