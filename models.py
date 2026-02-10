@@ -122,4 +122,5 @@ class CustomerProfileICP(BaseModel):
 # Customer Profile Request model
 class CustomerProfileRequest(BaseModel):
     profile_type: Literal["customer"] = "customer"
+    org_id: str  # Required for multi-org support
     icps: List[CustomerProfileICP] = Field(..., min_items=1)

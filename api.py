@@ -528,6 +528,11 @@ async def create_or_update_profile(
         if profile_type != "company" and not user_id:
             raise HTTPException(status_code=400, detail="user_id is required in payload")
         
+        # Extract org_id for company profiles (required for multi-org support)
+        org_id = payload.get("org_id")
+        if profile_type == "company" and not org_id:
+            raise HTTPException(status_code=400, detail="org_id is required for company profiles")
+        
         # Prepare data - convert all values to Neo4j-compatible types
         data = {}
         for key, value in payload.items():
@@ -560,11 +565,14 @@ async def create_or_update_profile(
             
             # Determine unique identifier field based on profile_type
             if profile_type == "company":
-                # For shared company profile, use a fixed identifier
-                match_field = "companyUrl"
-                match_value = payload.get("companyUrl") or "shared"
-                # Delete ALL existing company profiles (since there's only one shared profile)
-                session.run("MATCH (p:CompanyProfile) DELETE p")
+                # For company profile, use org_id for multi-org support
+                match_field = "org_id"
+                match_value = org_id
+                # Delete existing company profile for this org_id only
+                session.run(
+                    "MATCH (p:CompanyProfile {org_id: $org_id}) DELETE p",
+                    org_id=org_id
+                )
             elif profile_type == "user":
                 match_field = "name"
                 match_value = payload.get("name") or payload.get("user_id")
@@ -610,20 +618,26 @@ async def create_or_update_profile(
 @app.get("/profile/{profile_type}")
 async def get_single_profile(
     profile_type: str,
-    user_id: str = Query(None)
+    user_id: str = Query(None),
+    org_id: str = Query(None)
 ):
     """
     Flexible profile fetch endpoint that returns any JSON structure.
-    Filters by user_id for multitenancy (except for company profiles which are shared).
+    Filters by user_id for multitenancy (except for company profiles which are filtered by org_id).
     For company profiles, also includes customer profiles from MongoDB.
     """
     try:
         with driver.session() as session:
-            # For company profiles, don't filter by user_id (shared profile)
+            # For company profiles, filter by org_id (required for multi-org support)
             if profile_type == "company":
+                if not org_id:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="org_id is required for company profiles"
+                    )
                 neo4j_label = "CompanyProfile"
-                query_string = f"MATCH (p:{neo4j_label}) RETURN p LIMIT 1"
-                result = session.run(query_string)
+                query_string = f"MATCH (p:{neo4j_label} {{org_id: $org_id}}) RETURN p LIMIT 1"
+                result = session.run(query_string, org_id=org_id)
             else:
                 # For other profiles, user_id is required
                 if not user_id:
@@ -672,8 +686,8 @@ async def get_single_profile(
                     db = mongo_client["Profiler"]
                     collection = db["Company_Profile"]
                     
-                    # Find the company profile document with customer profiles
-                    filter_query = {"profile_type": "company"}
+                    # Find the company profile document with customer profiles (filter by org_id)
+                    filter_query = {"profile_type": "company", "org_id": org_id}
                     document = collection.find_one(filter_query)
                     
                     mongo_client.close()
@@ -767,19 +781,27 @@ async def market_research(request: MarketRequest):
             latest_report.pop("_id", None)
             return {"status": "success", "data": latest_report}
 
-    # --- Neo4j query inside a thread - get shared company profile ---
+    # --- Neo4j query inside a thread - get company profile by org_id ---
     def fetch_company_profile():
         with driver.session() as session:
-            # Get the shared company profile (no user_id filter)
-            result = session.run(
-                "MATCH (c:CompanyProfile) RETURN c LIMIT 1"
-            )
+            # Get the company profile filtered by org_id (if provided)
+            if request.org_id:
+                result = session.run(
+                    "MATCH (c:CompanyProfile {org_id: $org_id}) RETURN c LIMIT 1",
+                    org_id=request.org_id
+                )
+            else:
+                # Fallback: get any company profile (backward compatibility)
+                result = session.run(
+                    "MATCH (c:CompanyProfile) RETURN c LIMIT 1"
+                )
             record = result.single()
             return record
 
     record = await asyncio.to_thread(fetch_company_profile)
     if not record:
-        raise HTTPException(status_code=404, detail="No company profile found in Neo4j")
+        org_msg = f" for org_id: {request.org_id}" if request.org_id else ""
+        raise HTTPException(status_code=404, detail=f"No company profile found in Neo4j{org_msg}")
 
     company_profile = dict(record.values()[0])
     if "socialMediaUrls" in company_profile and isinstance(company_profile["socialMediaUrls"], str):
@@ -948,19 +970,27 @@ async def icp_research(request: MarketRequest):
                 latest_report.pop("_id", None)
                 return {"status": "success", "data": latest_report}
 
-        # --- Neo4j query inside a thread - get shared company profile ---
+        # --- Neo4j query inside a thread - get company profile by org_id ---
         def fetch_company_profile():
             with driver.session() as session:
-                # Get the shared company profile (no user_id filter)
-                result = session.run(
-                    "MATCH (c:CompanyProfile) RETURN c LIMIT 1"
-                )
+                # Get the company profile filtered by org_id (if provided)
+                if request.org_id:
+                    result = session.run(
+                        "MATCH (c:CompanyProfile {org_id: $org_id}) RETURN c LIMIT 1",
+                        org_id=request.org_id
+                    )
+                else:
+                    # Fallback: get any company profile (backward compatibility)
+                    result = session.run(
+                        "MATCH (c:CompanyProfile) RETURN c LIMIT 1"
+                    )
                 record = result.single()
                 return record
 
         record = await asyncio.to_thread(fetch_company_profile)
         if not record:
-            raise HTTPException(status_code=404, detail="No company profile found in Neo4j")
+            org_msg = f" for org_id: {request.org_id}" if request.org_id else ""
+            raise HTTPException(status_code=404, detail=f"No company profile found in Neo4j{org_msg}")
 
         company_profile = dict(record.values()[0])
         if "socialMediaUrls" in company_profile and isinstance(company_profile["socialMediaUrls"], str):
@@ -1293,10 +1323,13 @@ async def create_or_update_customer_profile(request: CustomerProfileRequest):
         db = mongo_client["Profiler"]
         collection = db["Company_Profile"]
         
-        # Get company profile from Neo4j to include in MongoDB document
+        # Get company profile from Neo4j to include in MongoDB document (filter by org_id)
         company_profile_data = {}
         with driver.session() as session:
-            result = session.run("MATCH (c:CompanyProfile) RETURN c LIMIT 1")
+            result = session.run(
+                "MATCH (c:CompanyProfile {org_id: $org_id}) RETURN c LIMIT 1",
+                org_id=request.org_id
+            )
             record = result.single()
             if record:
                 company_profile_data = dict(record.values()[0])
@@ -1329,13 +1362,13 @@ async def create_or_update_customer_profile(request: CustomerProfileRequest):
             
             processed_icps.append(icp_dict)
         
-        # Upsert the document - store company profile + customer profiles together
-        # Use a fixed identifier since there's only one company profile
-        filter_query = {"profile_type": "company"}
+        # Upsert the document - store company profile + customer profiles together (filter by org_id)
+        filter_query = {"profile_type": "company", "org_id": request.org_id}
         
         update_doc = {
             "$set": {
                 "profile_type": "company",
+                "org_id": request.org_id,
                 "company_profile": company_profile_data,
                 "customer_profiles": {
                     "icps": processed_icps
@@ -1362,10 +1395,11 @@ async def create_or_update_customer_profile(request: CustomerProfileRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/customer_profile")
-async def get_customer_profile():
+async def get_customer_profile(org_id: str = Query(...)):
     """
     Get customer profiles (ICPs) from MongoDB.
     Returns both company profile and associated customer profiles from the same document.
+    Filtered by org_id for multi-org support.
     """
     try:
         # MongoDB connection
@@ -1376,8 +1410,8 @@ async def get_customer_profile():
         db = mongo_client["Profiler"]
         collection = db["Company_Profile"]
         
-        # Find the company profile document
-        filter_query = {"profile_type": "company"}
+        # Find the company profile document (filter by org_id)
+        filter_query = {"profile_type": "company", "org_id": org_id}
         document = collection.find_one(filter_query)
         
         mongo_client.close()
@@ -1385,12 +1419,15 @@ async def get_customer_profile():
         if not document:
             # If no MongoDB document exists, try to get from Neo4j and return empty customer profiles
             with driver.session() as session:
-                result = session.run("MATCH (c:CompanyProfile) RETURN c LIMIT 1")
+                result = session.run(
+                    "MATCH (c:CompanyProfile {org_id: $org_id}) RETURN c LIMIT 1",
+                    org_id=org_id
+                )
                 record = result.single()
                 if not record:
                     raise HTTPException(
                         status_code=404,
-                        detail="No company profile found"
+                        detail=f"No company profile found for org_id: {org_id}"
                     )
             
             return {
@@ -1850,10 +1887,11 @@ async def get_document_status(file_key: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/user-documents")
-async def get_user_documents(user_id: str = Query(...)):
+async def get_user_documents(org_id: str = Query(...)):
     """
-    Get all files uploaded by a user.
-    Returns list of files with file_name and file_id (file_key)
+    Get all data sources (files and URLs) for an organization.
+    Returns list of files and URLs with file_name, file_id, and other metadata.
+    Filtered by org_id for multi-org support.
     """
     try:
         username = urllib.parse.quote_plus("techbrewra")
@@ -1863,8 +1901,8 @@ async def get_user_documents(user_id: str = Query(...)):
         db = mongo_client["File_Processing"]
         collection = db["file_status"]
         
-        # Find all files for this user
-        files = collection.find({"user_id": user_id}).sort("uploaded_at", -1)
+        # Find all data sources (files and URLs) for this org
+        files = collection.find({"org_id": org_id}).sort("uploaded_at", -1)
         
         file_list = []
         for file_doc in files:
@@ -1873,8 +1911,13 @@ async def get_user_documents(user_id: str = Query(...)):
                 "file_key": file_doc.get("file_key"),
                 "file_name": file_doc.get("file_name"),
                 "status": file_doc.get("status", "unknown"),
-                "uploaded_at": file_doc.get("uploaded_at")
+                "uploaded_at": file_doc.get("uploaded_at"),
+                "data_source_type": file_doc.get("data_source_type", "file")  # "file" or "url"
             }
+            
+            # Include URL if it's a URL data source
+            if file_doc.get("url"):
+                file_item["url"] = file_doc.get("url")
             
             # Include tags and description if they exist
             if "tags" in file_doc:
