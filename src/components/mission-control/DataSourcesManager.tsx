@@ -844,7 +844,7 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
       return;
     }
 
-    if (selectedType === "url" && !sourceUrl.trim()) {
+    if (selectedType === "url" && !sourceUrl.trim() && !editingId) {
       toast({
         title: "URL required",
         description: "Please enter a website URL.",
@@ -1295,7 +1295,7 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
             
             const updatePayload = {
               name: sourceName.trim(),
-              url: sourceUrl.trim(),
+              url: sourceUrl.trim() || existingSource.url || "",
               tags: selectedTags,
               description: sourceDescription.trim() || undefined,
             };
@@ -1350,7 +1350,7 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
               updated[existingSourceIndex] = {
                 ...existingSource,
                 name: sourceName.trim(),
-                url: sourceUrl.trim(),
+                url: sourceUrl.trim() || existingSource.url || "",
                 description: sourceDescription.trim() || undefined,
                 tags: selectedTags,
               };
@@ -1835,7 +1835,7 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
     selectedType !== "system" && 
     sourceName.trim() && 
     (selectedType === "url" 
-      ? sourceUrl.trim() 
+      ? editingId ? true : sourceUrl.trim() // When editing URL, URL is optional; when adding new, URL is required
       : editingId 
         ? true // When editing, file is optional - can update metadata without new file
         : selectedFile); // When adding new, file is required
