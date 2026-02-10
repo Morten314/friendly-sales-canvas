@@ -757,6 +757,23 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
   const [editingId, setEditingId] = useState<string | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const formCardRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to form when editing URL source
+  useEffect(() => {
+    if (isAddingInline && editingId && formCardRef.current) {
+      const source = dataSources.find(s => s.id === editingId);
+      if (source && source.type === "url") {
+        // Use setTimeout to ensure DOM has updated
+        setTimeout(() => {
+          formCardRef.current?.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start' 
+          });
+        }, 100);
+      }
+    }
+  }, [isAddingInline, editingId, dataSources]);
 
   const resetInlineForm = () => {
     setIsAddingInline(false);
@@ -1828,7 +1845,8 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
     if (!isAddingInline) return null;
 
     return (
-      <Card className="mb-6">
+      <div ref={formCardRef}>
+        <Card className="mb-6">
         <CardHeader>
           <CardTitle>{editingId ? "Edit Data Source" : "Add Data Source"}</CardTitle>
         </CardHeader>
@@ -2003,6 +2021,7 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
           </div>
         </CardContent>
       </Card>
+      </div>
     );
   };
 
