@@ -1569,23 +1569,118 @@ async def process_file_to_embeddings(file_key: str, user_id: str, file_name: str
 @app.post("/upload-document")
 async def upload_document(
     background_tasks: BackgroundTasks,
-    file: UploadFile = File(...),
+    file: UploadFile = File(None),
     user_id: str = Form(...),
     org_id: str = Form(...),
+    url: str = Form(None),
+    name: str = Form(None),
     tags: str = Form(None),  # Comma-separated string or JSON array string
     description: str = Form(None)
 ):
     """
-    Upload a file (PDF, TXT, CSV, XLSX, PPTX) to S3.
+    Upload a file (PDF, TXT, CSV, XLSX, PPTX) to S3 OR save a URL as data source.
     Only PDF and TXT files are embedded into Pinecone.
     Returns immediately with upload status.
-    Files are stored organized by org_id in S3.
     
     Parameters:
+    - file: File to upload (required if url not provided)
+    - url: URL to save as data source (required if file not provided)
+    - name: Name for the URL data source (required if url provided)
     - tags: Optional comma-separated string or JSON array string (e.g., "tag1,tag2" or '["tag1","tag2"]')
     - description: Optional description of the document
     """
     try:
+        # Validate that either file or url is provided
+        if not file and not url:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "status": "error",
+                    "error": "validation_failed",
+                    "message": "Either 'file' or 'url' must be provided"
+                }
+            )
+        
+        # If URL is provided, handle URL data source
+        if url:
+            if not name:
+                return JSONResponse(
+                    status_code=400,
+                    content={
+                        "status": "error",
+                        "error": "validation_failed",
+                        "message": "name is required when url is provided"
+                    }
+                )
+            
+            # Generate unique ID for URL data source
+            file_id = str(uuid.uuid4())
+            
+            # Parse tags
+            tags_list = None
+            if tags:
+                try:
+                    tags_list = json.loads(tags)
+                    if not isinstance(tags_list, list):
+                        tags_list = [tag.strip() for tag in tags.split(",") if tag.strip()]
+                except (json.JSONDecodeError, AttributeError):
+                    tags_list = [tag.strip() for tag in tags.split(",") if tag.strip()]
+            
+            # Save URL data source to MongoDB
+            try:
+                username = urllib.parse.quote_plus("techbrewra")
+                password = urllib.parse.quote_plus("Brewra@Best09")
+                mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
+                mongo_client = MongoClient(mongo_uri)
+                db = mongo_client["File_Processing"]
+                collection = db["file_status"]
+                
+                doc = {
+                    "file_id": file_id,
+                    "user_id": user_id,
+                    "org_id": org_id,
+                    "file_name": name,
+                    "url": url,
+                    "status": "completed",
+                    "uploaded_at": datetime.utcnow(),
+                    "embedding_supported": False,
+                    "data_source_type": "url"
+                }
+                
+                if tags_list:
+                    doc["tags"] = tags_list
+                if description:
+                    doc["description"] = description
+                
+                collection.insert_one(doc)
+                mongo_client.close()
+            except Exception as e:
+                logger.error(f"Failed to save URL data source to MongoDB: {str(e)}")
+                return JSONResponse(
+                    status_code=500,
+                    content={
+                        "status": "error",
+                        "error": "save_failed",
+                        "message": f"Failed to save URL data source: {str(e)}"
+                    }
+                )
+            
+            response = {
+                "status": "success",
+                "message": "URL data source saved successfully",
+                "file_id": file_id,
+                "name": name,
+                "url": url
+            }
+            
+            if tags_list:
+                response["tags"] = tags_list
+            if description:
+                response["description"] = description
+            
+            return response
+        
+        # Handle file upload (existing logic)
         # Validate file type - accept PDF, TXT, CSV, XLSX, PPTX
         allowed_extensions = ['.pdf', '.txt', '.csv', '.xlsx', '.pptx']
         if not any(file.filename.lower().endswith(ext) for ext in allowed_extensions):
