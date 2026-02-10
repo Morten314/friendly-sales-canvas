@@ -749,6 +749,7 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
   const [sourceName, setSourceName] = useState("");
   const [sourceUrl, setSourceUrl] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [existingFileName, setExistingFileName] = useState<string | null>(null);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [customTag, setCustomTag] = useState("");
   const [sourceDescription, setSourceDescription] = useState("");
@@ -781,6 +782,7 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
     setSourceName("");
     setSourceUrl("");
     setSelectedFile(null);
+    setExistingFileName(null);
     setSelectedTags([]);
     setCustomTag("");
     setSourceDescription("");
@@ -801,6 +803,7 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
     // Clear URL/file when switching types
     if (type === "url") {
       setSelectedFile(null);
+      setExistingFileName(null);
     } else if (type === "file") {
       setSourceUrl("");
     }
@@ -811,6 +814,7 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
     const file = e.target.files?.[0];
     if (file) {
       setSelectedFile(file);
+      setExistingFileName(null); // Clear existing filename when new file is selected
     }
   };
 
@@ -1498,6 +1502,7 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
                       return {
                         ...s,
                         name: uploadMetadata.name,
+                        url: uploadMetadata.url || s.url || "",
                         description: uploadMetadata.description,
                         tags: uploadMetadata.tags,
                       };
@@ -1565,6 +1570,12 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
     setSourceUrl(source.url || "");
     setSourceDescription(source.description || "");
     setSelectedTags(source.tags);
+    if (source.type === "file") {
+      setExistingFileName(source.fileName || null);
+      setSelectedFile(null); // Clear selected file so existing filename shows
+    } else {
+      setExistingFileName(null);
+    }
     setIsAddingInline(true);
   };
 
@@ -1934,6 +1945,8 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
                     <Upload className="h-5 w-5 text-muted-foreground" />
                     {selectedFile ? (
                       <span className="text-foreground font-medium">{selectedFile.name}</span>
+                    ) : existingFileName ? (
+                      <span className="text-foreground font-medium">{existingFileName}</span>
                     ) : (
                       <span className="text-muted-foreground">Click to browse or drag and drop files here</span>
                     )}
