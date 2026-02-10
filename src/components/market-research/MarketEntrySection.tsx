@@ -426,7 +426,22 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
       onStrategicRecommendationsChange(editStrategicRecommendations);
       onRiskAssessmentChange(editRiskAssessment);
       
+      // Update local display data immediately so UI reflects changes right away
+      setMarketEntryData({
+        executiveSummary: editExecutiveSummary,
+        entryBarriers: editEntryBarriers,
+        recommendedChannel: editRecommendedChannel,
+        timeToMarket: editTimeToMarket,
+        topBarrier: editTopBarrier,
+        competitiveDifferentiation: editCompetitiveDifferentiation,
+        strategicRecommendations: editStrategicRecommendations,
+        riskAssessment: editRiskAssessment,
+        swotAnalysis: editSwotAnalysis,
+        timestamp: Date.now()
+      });
+      
       console.log('✅ Market Entry - Parent state updated with local edits');
+      console.log('✅ Market Entry - Local display data updated for immediate UI refresh');
       
       // Call the original save function
       onSaveChanges();
@@ -442,6 +457,20 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
       onCompetitiveDifferentiationChange(editCompetitiveDifferentiation);
       onStrategicRecommendationsChange(editStrategicRecommendations);
       onRiskAssessmentChange(editRiskAssessment);
+      
+      // Update local display data immediately so UI reflects changes even if API fails
+      setMarketEntryData({
+        executiveSummary: editExecutiveSummary,
+        entryBarriers: editEntryBarriers,
+        recommendedChannel: editRecommendedChannel,
+        timeToMarket: editTimeToMarket,
+        topBarrier: editTopBarrier,
+        competitiveDifferentiation: editCompetitiveDifferentiation,
+        strategicRecommendations: editStrategicRecommendations,
+        riskAssessment: editRiskAssessment,
+        swotAnalysis: editSwotAnalysis,
+        timestamp: Date.now()
+      });
       
       // Still call the original save function even if API fails
       onSaveChanges();

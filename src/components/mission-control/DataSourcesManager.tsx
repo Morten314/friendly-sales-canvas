@@ -200,6 +200,7 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
 
     const formData = new FormData();
     formData.append("file", file);
+    formData.append("user_id", currentUser.uid);
     formData.append("org_id", orgId);
     
     // Add optional fields if provided
@@ -260,6 +261,7 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
     const formData = new FormData();
     formData.append("url", url);
     formData.append("name", name);
+    formData.append("user_id", currentUser.uid);
     formData.append("org_id", orgId);
     
     // Add optional fields if provided
@@ -311,7 +313,7 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
     }
 
     const authHeader = await getAuthHeader();
-    const url = buildApiUrl(`document-status/${fileKey}?org_id=brewra`);
+    const url = buildApiUrl(`document-status/${fileKey}`);
 
     const response = await fetch(url, {
       method: "GET",
@@ -924,7 +926,7 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
               });
               
               const authHeader = await getAuthHeader();
-              const deleteUrl = buildApiUrl(`data-source/${oldFileId}?org_id=brewra`);
+              const deleteUrl = buildApiUrl(`data-source/${oldFileId}`);
               
               const deleteResponse = await fetch(deleteUrl, {
                 method: "DELETE",
@@ -1120,9 +1122,11 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
           try {
             // Call PUT API to update the data source
             const authHeader = await getAuthHeader();
-            const url = buildApiUrl(`data-source/${fileId}?org_id=brewra`);
+            const url = buildApiUrl(`data-source/${fileId}`);
             
             const updatePayload = {
+              user_id: currentUser.uid,
+              org_id: "brewra",
               tags: selectedTags,
               description: sourceDescription.trim() || undefined,
             };
@@ -1295,17 +1299,25 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
             const authHeader = await getAuthHeader();
             const url = buildApiUrl(`data-source/${fileId}?org_id=brewra`);
             
+            // Always use the form value, don't fall back to existing URL
+            // This ensures the backend receives the updated value even if it's empty
             const updatePayload = {
+              user_id: currentUser.uid,
+              org_id: "brewra",
               name: sourceName.trim(),
-              url: sourceUrl.trim() || existingSource.url || "",
+              url: sourceUrl.trim(), // Send the form value directly, no fallback
               tags: selectedTags,
               description: sourceDescription.trim() || undefined,
             };
 
             console.log("📝 DataSourcesManager - Updating URL data source:", {
-              url,
+              requestUrl: url,
               fileId,
               payload: updatePayload,
+              payloadStringified: JSON.stringify(updatePayload),
+              formUrl: sourceUrl,
+              trimmedUrl: sourceUrl.trim(),
+              existingUrl: existingSource.url,
               hasAuth: !!authHeader,
             });
 
@@ -1319,6 +1331,19 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
               body: JSON.stringify(updatePayload),
             });
 
+            // Log the raw response for debugging
+            const responseClone = response.clone();
+            responseClone.text().then(text => {
+              console.log("📥 DataSourcesManager - PUT Response (raw):", {
+                status: response.status,
+                statusText: response.statusText,
+                headers: Object.fromEntries(response.headers.entries()),
+                body: text,
+              });
+            }).catch(err => {
+              console.error("Error reading response:", err);
+            });
+
             if (!response.ok) {
               const errorText = await response.text();
               console.error("❌ DataSourcesManager - URL update error:", {
@@ -1330,7 +1355,40 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
               throw new Error(`Failed to update URL data source: ${response.status} - ${errorText}`);
             }
 
-            console.log("✅ DataSourcesManager - URL update success");
+            // Try to get the updated data from the response
+            // Backend might return data in different structures: { data: {...} }, { dataSource: {...} }, or directly
+            let updatedDataFromBackend = null;
+            try {
+              const responseData = await response.json();
+              // Handle different response structures
+              updatedDataFromBackend = responseData.data || responseData.dataSource || responseData.document || responseData;
+              console.log("✅ DataSourcesManager - URL update success, response data:", {
+                rawResponse: responseData,
+                extractedData: updatedDataFromBackend,
+                responseUrl: updatedDataFromBackend?.url || updatedDataFromBackend?.source_url || updatedDataFromBackend?.file_url,
+                sentUrl: updatePayload.url,
+                urlMatches: (updatedDataFromBackend?.url || updatedDataFromBackend?.source_url || updatedDataFromBackend?.file_url) === updatePayload.url,
+                allUrlFields: {
+                  url: updatedDataFromBackend?.url,
+                  source_url: updatedDataFromBackend?.source_url,
+                  file_url: updatedDataFromBackend?.file_url,
+                  website_url: updatedDataFromBackend?.website_url
+                }
+              });
+              
+              // Warn if the URL in response doesn't match what we sent
+              const responseUrl = updatedDataFromBackend?.url || updatedDataFromBackend?.source_url || updatedDataFromBackend?.file_url;
+              if (responseUrl && responseUrl !== updatePayload.url) {
+                console.warn("⚠️ DataSourcesManager - URL mismatch detected!", {
+                  sent: updatePayload.url,
+                  received: responseUrl,
+                  message: "Backend returned a different URL than what was sent. This may indicate a backend issue."
+                });
+              }
+            } catch (e) {
+              // Response might not be JSON, that's okay
+              console.log("✅ DataSourcesManager - URL update success (no response body or not JSON)");
+            }
 
             // Update local state after successful API call
             // Update the existing entry in place - do NOT add a new entry
@@ -1348,13 +1406,28 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
               const updated = [...prev];
               const existingSource = updated[existingSourceIndex];
               
+              // Use response data if available (most reliable), otherwise use form values
+              // For URL: prefer response data, then form value, never fall back to old value
+              const responseUrl = updatedDataFromBackend?.url || updatedDataFromBackend?.source_url || updatedDataFromBackend?.file_url;
+              const finalUrl = responseUrl !== undefined 
+                ? responseUrl 
+                : sourceUrl.trim(); // Use form value directly, no fallback to old value
+              
+              console.log("📝 DataSourcesManager - Updating local state with URL:", {
+                responseUrl,
+                formUrl: sourceUrl.trim(),
+                existingUrl: existingSource.url,
+                finalUrl,
+                responseData: updatedDataFromBackend
+              });
+              
               // Update only the existing entry - replace it in place
               updated[existingSourceIndex] = {
                 ...existingSource,
-                name: sourceName.trim(),
-                url: sourceUrl.trim() || existingSource.url || "",
-                description: sourceDescription.trim() || undefined,
-                tags: selectedTags,
+                name: updatedDataFromBackend?.name || sourceName.trim(),
+                url: finalUrl, // Use the determined final URL
+                description: updatedDataFromBackend?.description !== undefined ? updatedDataFromBackend.description : (sourceDescription.trim() || undefined),
+                tags: updatedDataFromBackend?.tags || selectedTags,
               };
               
               // Ensure no duplicates by ID - this is a safety check
@@ -1631,7 +1704,7 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
         }
         
         // Use singular form /data-source/ to match backend API route
-        const url = buildApiUrl(`data-source/${fileId}?org_id=brewra`);
+        const url = buildApiUrl(`data-source/${fileId}`);
 
         console.log("🗑️ DataSourcesManager - Deleting data source:", {
           url,
@@ -1728,7 +1801,7 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
         }
         
         // Use singular form /data-source/ to match backend API route
-        const url = buildApiUrl(`data-source/${fileId}?org_id=brewra`);
+        const url = buildApiUrl(`data-source/${fileId}`);
 
         console.log("🗑️ DataSourcesManager - Deleting URL data source:", {
           url,
