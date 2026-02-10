@@ -192,8 +192,8 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
       throw new Error("User not authenticated");
     }
 
-    // org_id should be same as user_id
-    const orgId = currentUser.uid;
+    // org_id is set to "brewra"
+    const orgId = "brewra";
 
     const authHeader = await getAuthHeader();
     const url = buildApiUrl("upload-document");
@@ -252,8 +252,8 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
       throw new Error("User not authenticated");
     }
 
-    // org_id should be same as user_id
-    const orgId = currentUser.uid;
+    // org_id is set to "brewra"
+    const orgId = "brewra";
 
     const authHeader = await getAuthHeader();
     const apiUrl = buildApiUrl("upload-document");

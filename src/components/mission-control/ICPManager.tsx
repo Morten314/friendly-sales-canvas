@@ -197,6 +197,7 @@ const ICPManager: React.FC = () => {
       // Prepare payload with customer profile data
       const payload = {
         user_id: currentUser.uid,
+        org_id: "brewra",
         icps: icpsToSave.map(icp => ({
           id: icp.id,
           primary_region: icp.primaryRegion,
