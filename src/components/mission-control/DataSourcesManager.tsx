@@ -200,7 +200,6 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
 
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("user_id", currentUser.uid);
     formData.append("org_id", orgId);
     
     // Add optional fields if provided
@@ -261,7 +260,6 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
     const formData = new FormData();
     formData.append("url", url);
     formData.append("name", name);
-    formData.append("user_id", currentUser.uid);
     formData.append("org_id", orgId);
     
     // Add optional fields if provided
@@ -313,7 +311,7 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
     }
 
     const authHeader = await getAuthHeader();
-    const url = buildApiUrl(`document-status/${fileKey}`);
+    const url = buildApiUrl(`document-status/${fileKey}?org_id=brewra`);
 
     const response = await fetch(url, {
       method: "GET",
@@ -370,7 +368,7 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
     setIsLoading(true);
     try {
       const authHeader = await getAuthHeader();
-      const url = buildApiUrl(`user-documents?user_id=${currentUser.uid}`);
+      const url = buildApiUrl(`user-documents?org_id=brewra`);
       const response = await fetch(url, {
         method: "GET",
         headers: {
@@ -926,7 +924,7 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
               });
               
               const authHeader = await getAuthHeader();
-              const deleteUrl = buildApiUrl(`data-source/${oldFileId}`);
+              const deleteUrl = buildApiUrl(`data-source/${oldFileId}?org_id=brewra`);
               
               const deleteResponse = await fetch(deleteUrl, {
                 method: "DELETE",
@@ -1122,7 +1120,7 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
           try {
             // Call PUT API to update the data source
             const authHeader = await getAuthHeader();
-            const url = buildApiUrl(`data-source/${fileId}`);
+            const url = buildApiUrl(`data-source/${fileId}?org_id=brewra`);
             
             const updatePayload = {
               tags: selectedTags,
@@ -1295,7 +1293,7 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
           try {
             // Call PUT API to update the URL data source
             const authHeader = await getAuthHeader();
-            const url = buildApiUrl(`data-source/${fileId}`);
+            const url = buildApiUrl(`data-source/${fileId}?org_id=brewra`);
             
             const updatePayload = {
               name: sourceName.trim(),
@@ -1633,7 +1631,7 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
         }
         
         // Use singular form /data-source/ to match backend API route
-        const url = buildApiUrl(`data-source/${fileId}`);
+        const url = buildApiUrl(`data-source/${fileId}?org_id=brewra`);
 
         console.log("🗑️ DataSourcesManager - Deleting data source:", {
           url,
@@ -1730,7 +1728,7 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
         }
         
         // Use singular form /data-source/ to match backend API route
-        const url = buildApiUrl(`data-source/${fileId}`);
+        const url = buildApiUrl(`data-source/${fileId}?org_id=brewra`);
 
         console.log("🗑️ DataSourcesManager - Deleting URL data source:", {
           url,

@@ -567,30 +567,30 @@ const MissionControl = () => {
     try {
       // Prepare payload with profile_type as required by the API
       const payload = {
-        user_id: currentUser.uid,
+        org_id: "brewra",
         profile_type: "company",
         company_name: trimmedCompanyName,
-        headquarters: companyProfile.headquarters.trim(),
-        employee_size: companyProfile.employeeSize.trim(),
-        industry: companyProfile.industry.trim(),
-        revenue_band: companyProfile.revenue.trim(),
-        gtm_model: companyProfile.gtmModel.trim(),
-        region_focus: companyProfile.regionFocus.trim(),
-        typical_deal_size: companyProfile.dealSize.trim(),
-        company_url: companyProfile.companyUrl.trim(),
-        key_buyer_persona: companyProfile.keyBuyerPersona.trim(),
-        goals: companyProfile.goals.trim(),
-        pain_points: companyProfile.painPoints.trim(),
-        target_segments: companyProfile.targetSegments.trim(),
-        exclude_segments: companyProfile.excludeSegments.trim(),
-        compliance: companyProfile.compliance.trim(),
-        constraints: companyProfile.constraints.trim(),
+        headquarters: (companyProfile.headquarters || "").trim(),
+        employee_size: (companyProfile.employeeSize || "").trim(),
+        industry: (companyProfile.industry || "").trim(),
+        revenue_band: (companyProfile.revenue || "").trim(),
+        gtm_model: (companyProfile.gtmModel || "").trim(),
+        region_focus: (companyProfile.regionFocus || "").trim(),
+        typical_deal_size: (companyProfile.dealSize || "").trim(),
+        company_url: (companyProfile.companyUrl || "").trim(),
+        key_buyer_persona: (companyProfile.keyBuyerPersona || "").trim(),
+        goals: (companyProfile.goals || "").trim(),
+        pain_points: (companyProfile.painPoints || "").trim(),
+        target_segments: (companyProfile.targetSegments || "").trim(),
+        exclude_segments: (companyProfile.excludeSegments || "").trim(),
+        compliance: (companyProfile.compliance || "").trim(),
+        constraints: (companyProfile.constraints || "").trim(),
       };
 
       console.log("=== MISSION CONTROL: Saving company profile ===");
       console.log("Payload:", payload);
 
-      const apiUrl = `/api/profile/company?user_id=${currentUser.uid}`;
+      const apiUrl = `/api/profile/company?org_id=brewra`;
       console.log("MissionControl: POST request URL:", apiUrl);
       console.log("MissionControl: POST request payload:", payload);
       
@@ -685,7 +685,7 @@ const MissionControl = () => {
       console.log("MissionControl: Verifying data persistence by fetching saved profile...");
       setTimeout(async () => {
         try {
-          const verifyResponse = await fetch(`/api/profile/company?user_id=${currentUser.uid}`, {
+          const verifyResponse = await fetch(`/api/profile/company?org_id=brewra`, {
             method: "GET",
             headers: { "Content-Type": "application/json" },
           });
@@ -865,7 +865,7 @@ const MissionControl = () => {
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
-          const response = await fetch(`/api/profile/company?user_id=${userId}`, {
+          const response = await fetch(`/api/profile/company?org_id=brewra`, {
             method: "GET",
             headers: {
               "Content-Type": "application/json",
@@ -2162,7 +2162,7 @@ const MissionControl = () => {
       // First, fetch existing company profile data to preserve it
       let existingCompanyData = {};
       try {
-        const getResponse = await fetch(`/api/profile/company?user_id=${currentUser.uid}`, {
+        const getResponse = await fetch(`/api/profile/company?org_id=brewra`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -2198,7 +2198,7 @@ const MissionControl = () => {
 
       // Prepare payload with data sources, preserving existing company profile fields
       const payload = {
-        user_id: currentUser.uid,
+        org_id: "brewra",
         profile_type: "company",
         ...existingCompanyData,
         data_sources: {
@@ -2221,7 +2221,7 @@ const MissionControl = () => {
       console.log("=== MISSION CONTROL: Saving data sources to backend ===");
       console.log("Payload:", payload);
 
-      const apiUrl = `/api/profile/company?user_id=${currentUser.uid}`;
+      const apiUrl = `/api/profile/company?org_id=brewra`;
       const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
@@ -2326,7 +2326,7 @@ const MissionControl = () => {
     }
 
     try {
-      const apiUrl = `/api/profile/company?user_id=${currentUser.uid}`;
+      const apiUrl = `/api/profile/company?org_id=brewra`;
       const response = await fetch(apiUrl, {
         method: "GET",
         headers: {
@@ -3206,7 +3206,7 @@ const MissionControl = () => {
       }
 
       try {
-        const apiUrl = `/api/customer_profile?user_id=${currentUser.uid}`;
+        const apiUrl = `/api/customer_profile?org_id=brewra`;
         const response = await fetch(apiUrl, {
           method: "GET",
           headers: {
@@ -3313,7 +3313,7 @@ const MissionControl = () => {
       }
 
       try {
-        const apiUrl = `/api/profile/company?user_id=${currentUser.uid}`;
+        const apiUrl = `/api/profile/company?org_id=brewra`;
         const response = await fetch(apiUrl, {
           method: "GET",
           headers: {

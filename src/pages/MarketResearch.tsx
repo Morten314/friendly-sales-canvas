@@ -3862,7 +3862,8 @@ const MarketResearch = React.memo(() => {
 
         component_name: "market size & opportunity",
 
-        user_id: currentUser.uid,
+        org_id: "brewra",
+        user_id: currentUser?.uid || "",
 
         refresh: true,
 
@@ -4570,8 +4571,8 @@ const MarketResearch = React.memo(() => {
       if (!companyProfileData && currentUser?.uid) {
 
       try {
-        // Include user_id in API call
-        const profileResponse = await fetch(`/api/profile/company?user_id=${currentUser.uid}`, {
+        // Include org_id in API call
+        const profileResponse = await fetch(`/api/profile/company?org_id=brewra`, {
 
           method: 'GET',
 
@@ -5421,7 +5422,8 @@ const MarketResearch = React.memo(() => {
 
 
 
-        user_id: currentUser.uid,
+        org_id: "brewra",
+        user_id: currentUser?.uid || "",
 
 
 
@@ -6345,6 +6347,7 @@ const MarketResearch = React.memo(() => {
 
       const payload = {
 
+        org_id: "brewra",
         user_id: currentUser?.uid || "",
 
         component_name: "industry trends report",
@@ -7375,6 +7378,7 @@ const MarketResearch = React.memo(() => {
 
 
       const payload = {
+        org_id: "brewra",
         user_id: currentUser?.uid || "",
         component_name: "competitor landscape",
         data: {},

@@ -51,7 +51,7 @@ export function CompanyProfile({ onProfileUpdate, isEditMode = false, profileDat
   // Fetch company profile from API (similar to Signals pattern)
   const fetchCompanyProfile = async (userId: string) => {
     try {
-      const response = await fetch(`/api/profile/company?user_id=${userId}`, {
+      const response = await fetch(`/api/profile/company?org_id=brewra`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -64,12 +64,6 @@ export function CompanyProfile({ onProfileUpdate, isEditMode = false, profileDat
       }
       
       const data = await response.json();
-      // Verify the data belongs to the current user
-      if (data.user_id && data.user_id !== userId) {
-        console.warn('⚠️ [COMPANY PROFILE] API returned profile with different user_id, ignoring');
-        return null;
-      }
-      
       return data;
     } catch (error) {
       console.error('Error fetching company profile:', error);
@@ -169,20 +163,11 @@ export function CompanyProfile({ onProfileUpdate, isEditMode = false, profileDat
       const apiData = await fetchCompanyProfile(currentUserId);
       
       if (apiData) {
-        // CRITICAL: Validate API response belongs to current user
-        if (apiData.user_id && apiData.user_id !== currentUserId) {
-          console.error('❌ [COMPANY PROFILE] API returned profile for different user! API user_id:', apiData.user_id, 'Current:', currentUserId);
-          console.error('❌ [COMPANY PROFILE] Rejecting data to prevent data leakage');
-          setIsLoading(false);
-          previousUserIdRef.current = currentUserId;
-          return;
-        }
-
-        console.log('✅ [COMPANY PROFILE] Loaded profile from API for user:', currentUserId);
-        // Store in localStorage for future use - ALWAYS include user_id
+        console.log('✅ [COMPANY PROFILE] Loaded profile from API');
+        // Store in localStorage for future use
         const profileToSave = {
           ...apiData,
-          user_id: currentUserId // Ensure user_id is always included
+          org_id: "brewra" // Ensure org_id is always included
         };
         setUserLocalStorage('companyProfile', JSON.stringify(profileToSave), currentUserId);
         setUserLocalStorage('companyProfileForRefresh', JSON.stringify(profileToSave), currentUserId);
@@ -320,7 +305,7 @@ export function CompanyProfile({ onProfileUpdate, isEditMode = false, profileDat
       return;
     }
     const payload = {
-      user_id: currentUser.uid,
+      org_id: "brewra",
       industry: formData.industry,
       companySize: formData.companySize,
       companyUrl: formData.companyUrl,
@@ -340,10 +325,8 @@ export function CompanyProfile({ onProfileUpdate, isEditMode = false, profileDat
     console.log("=== PAYLOAD TO SEND ===", payload);
 
     try {
-      // Include user_id in URL query parameter like Signals does, AND in body
-      const apiUrl = currentUser?.uid 
-        ? `/api/profile/company?user_id=${currentUser.uid}`
-        : "/api/profile/company";
+      // Include org_id in URL query parameter
+      const apiUrl = "/api/profile/company?org_id=brewra";
       const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
@@ -372,12 +355,8 @@ export function CompanyProfile({ onProfileUpdate, isEditMode = false, profileDat
       // Store the updated profile data immediately in user-specific localStorage
       console.log("=== STORING UPDATED PROFILE DATA (USER-SPECIFIC) ===");
       console.log("User ID:", currentUser?.uid);
-      const payloadWithUserId = {
-        ...payload,
-        user_id: currentUser.uid // Ensure user_id is included
-      };
-      setUserLocalStorage('companyProfile', JSON.stringify(payloadWithUserId), currentUser?.uid);
-      setUserLocalStorage('companyProfileForRefresh', JSON.stringify(payloadWithUserId), currentUser?.uid);
+      setUserLocalStorage('companyProfile', JSON.stringify(payload), currentUser?.uid);
+      setUserLocalStorage('companyProfileForRefresh', JSON.stringify(payload), currentUser?.uid);
       
       // Set flag to indicate new company profile data is available (user-specific)
       setUserLocalStorage('companyProfileUpdated', '1', currentUser?.uid);

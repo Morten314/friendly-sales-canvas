@@ -148,10 +148,8 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
         console.log("🔄 REFRESH MODE - Fetching company profile for ICP generation");
         
         try {
-          // Fetch the latest company profile from backend with user_id
-          const profileUrl = currentUser?.uid 
-            ? `/api/profile/company?user_id=${currentUser.uid}`
-            : '/api/profile/company';
+          // Fetch the latest company profile from backend with org_id
+          const profileUrl = '/api/profile/company?org_id=brewra';
           
           const profileResponse = await fetch(profileUrl, {
             method: 'GET',

@@ -822,7 +822,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
           </div>
           
           <div className="flex items-center gap-2">
-            {competitorLandscapeHasEdits && (
+            {competitorLandscapeHasEdits && !isCompetitorLandscapeEditing && (
               <Badge variant="secondary" className="bg-orange-100 text-orange-700 border-orange-200">
                 <Clock className="h-3 w-3 mr-1" />
                 Unsaved
@@ -1093,8 +1093,8 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
           )}
         </div>
 
-        {/* Read More Button - Only show when not expanded and not in split view */}
-        {!competitorLandscapeExpanded && !isSplitView && (
+        {/* Read More Button - Only show when not expanded, not in split view, and not in edit mode */}
+        {!competitorLandscapeExpanded && !isSplitView && !isCompetitorLandscapeEditing && (
           <div className="flex justify-center pt-4">
             <Button
               onClick={() => onCompetitorLandscapeExpandToggle(true)}
@@ -1107,8 +1107,8 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
           </div>
         )}
 
-        {/* Expanded content */}
-        {(competitorLandscapeExpanded || isSplitView) && (
+        {/* Expanded content - Show when expanded, in split view, or in edit mode */}
+        {(competitorLandscapeExpanded || isSplitView || isCompetitorLandscapeEditing) && (
           <div className="space-y-6">
 
             {/* Executive Summary section is now moved above for collapsed view */}

@@ -144,6 +144,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
       }
       
       const payload = {
+        org_id: "brewra",
         user_id: currentUser.uid,
         component_name: "Market Entry & Growth Strategy", // Exact match from swagger
         refresh: refresh,

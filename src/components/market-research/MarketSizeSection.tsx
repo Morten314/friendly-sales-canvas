@@ -395,7 +395,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
       const data = await executeWithRateLimit(
         () => apiFetchJson('market-research', {
           method: 'POST',
-          body: { component_name: "market_size", user_id: currentUser.uid }
+          body: { component_name: "market_size", org_id: "brewra" }
         }),
         'Market Size Update'
       );
@@ -427,6 +427,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
       }
       
       const payload = {
+        org_id: "brewra",
         user_id: currentUser.uid,
         component_name: "market size & opportunity", // Exact match from swagger
         refresh: refresh,

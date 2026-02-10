@@ -196,7 +196,6 @@ const ICPManager: React.FC = () => {
     try {
       // Prepare payload with customer profile data
       const payload = {
-        user_id: currentUser.uid,
         org_id: "brewra",
         icps: icpsToSave.map(icp => ({
           id: icp.id,
@@ -231,7 +230,7 @@ const ICPManager: React.FC = () => {
         console.warn("Failed to save to localStorage:", e);
       }
 
-      const apiUrl = `/api/customer_profile?user_id=${currentUser.uid}`;
+      const apiUrl = `/api/customer_profile?org_id=brewra`;
       const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
@@ -308,7 +307,7 @@ const ICPManager: React.FC = () => {
     console.log("User ID:", currentUser.uid);
     setIsLoading(true);
     try {
-      const apiUrl = `/api/customer_profile?user_id=${currentUser.uid}`;
+      const apiUrl = `/api/customer_profile?org_id=brewra`;
       console.log("ICPManager: Fetching from API:", apiUrl);
       const response = await fetch(apiUrl, {
         method: "GET",

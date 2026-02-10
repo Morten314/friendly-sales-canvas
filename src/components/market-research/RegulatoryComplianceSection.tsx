@@ -595,6 +595,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
       }
       
       const payload = {
+        org_id: "brewra",
         user_id: currentUser.uid,
         component_name: "regulatory & compliance highlights", // Exact match for regulatory compliance
         refresh: refresh,
@@ -732,11 +733,9 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
       // Wait a bit for the backend to process the profile update
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Fetch the latest company profile from backend (with user_id)
+      // Fetch the latest company profile from backend (with org_id)
       try {
-        const profileUrl = currentUser?.uid 
-          ? `https://backend-11kr.onrender.com/profile/company?user_id=${currentUser.uid}`
-          : 'https://backend-11kr.onrender.com/profile/company';
+        const profileUrl = 'https://backend-11kr.onrender.com/profile/company?org_id=brewra';
         const profileResponse = await fetch(profileUrl, {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' }
