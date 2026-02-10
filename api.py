@@ -1261,6 +1261,8 @@ def process_edit(request: EditRequest):
             # Ensure user_id is in the modified_json before inserting (multitenancy)
             modified_doc = request.modified_json.copy()
             modified_doc["user_id"] = request.user_id
+            # Add timestamp to ensure edited components are fetched as most recent
+            modified_doc["timestamp"] = datetime.utcnow()
             
             # Insert modified JSON into MongoDB
             insert_result = collection.insert_one(modified_doc)
@@ -1955,8 +1957,13 @@ async def delete_data_source(file_id: str):
                 raise HTTPException(status_code=404, detail=f"File with id '{file_id}' not found")
         
         file_key = file_doc.get("file_key")
+        url = file_doc.get("url")
+        data_source_type = file_doc.get("data_source_type")
         org_id = file_doc.get("org_id")
         actual_file_id = file_doc.get("file_id")  # Get the actual file_id from document
+        
+        # Check if this is a URL data source (not a file)
+        is_url_data_source = url is not None or data_source_type == "url"
         
         # For backward compatibility: extract org_id from file_key if not in document
         if not org_id and file_key:
@@ -1965,31 +1972,32 @@ async def delete_data_source(file_id: str):
             if len(parts) > 1:
                 org_id = parts[0]
         
-        if not file_key:
-            mongo_client.close()
-            raise HTTPException(status_code=400, detail="File key not found in database")
-        
         # Use actual_file_id for Pinecone deletion, fallback to search_file_id if not available
         if not actual_file_id:
             actual_file_id = search_file_id
         
         deletion_errors = []
         
-        # 1. Delete from AWS S3
-        try:
-            s3_client.delete_object(Bucket=s3_bucket, Key=file_key)
-            logger.info(f"Deleted file from S3: {file_key}")
-        except Exception as e:
-            error_msg = str(e)
-            # Check if it's a permissions error
-            if "AccessDenied" in error_msg or "not authorized" in error_msg:
-                deletion_errors.append(f"S3 deletion failed: AWS IAM user does not have s3:DeleteObject permission. Please update IAM policy for user 'brewra-ai'.")
-            else:
-                deletion_errors.append(f"S3 deletion failed: {error_msg}")
-            logger.error(f"Failed to delete from S3: {error_msg}")
+        # 1. Delete from AWS S3 (only for file data sources, not URLs)
+        if not is_url_data_source and file_key:
+            try:
+                s3_client.delete_object(Bucket=s3_bucket, Key=file_key)
+                logger.info(f"Deleted file from S3: {file_key}")
+            except Exception as e:
+                error_msg = str(e)
+                # Check if it's a permissions error
+                if "AccessDenied" in error_msg or "not authorized" in error_msg:
+                    deletion_errors.append(f"S3 deletion failed: AWS IAM user does not have s3:DeleteObject permission. Please update IAM policy for user 'brewra-ai'.")
+                else:
+                    deletion_errors.append(f"S3 deletion failed: {error_msg}")
+                logger.error(f"Failed to delete from S3: {error_msg}")
+        elif is_url_data_source:
+            logger.info(f"Skipping S3 deletion for URL data source: {url}")
+        else:
+            logger.warning(f"No file_key found, skipping S3 deletion")
         
-        # 2. Delete from Pinecone (using org_id as namespace and file_id in metadata)
-        if org_id:
+        # 2. Delete from Pinecone (only for file data sources that were embedded, not URLs)
+        if not is_url_data_source and org_id and file_key:
             try:
                 index_name = "brewra-documents"
                 index = pc.Index(index_name)
@@ -2098,14 +2106,22 @@ async def delete_data_source(file_id: str):
                 else:
                     deletion_errors.append(f"Pinecone deletion failed: {error_str}")
                     logger.error(f"Failed to delete from Pinecone: {error_str}")
-        else:
+        elif is_url_data_source:
+            logger.info(f"Skipping Pinecone deletion for URL data source: {url}")
+        elif not org_id:
             deletion_errors.append("Pinecone deletion skipped: Organization ID not found")
             logger.warning(f"Pinecone deletion skipped for file_id {file_id}: org_id not found")
+        elif not file_key:
+            logger.info(f"Skipping Pinecone deletion: No file_key found (may be URL data source or incomplete record)")
         
         # 3. Delete from MongoDB
         try:
-            collection.delete_one({"file_id": file_id})
-            logger.info(f"Deleted file record from MongoDB: {file_id}")
+            # Use actual_file_id from document, fallback to search_file_id
+            delete_result = collection.delete_one({"file_id": actual_file_id})
+            if delete_result.deleted_count == 0:
+                # Fallback: try with the original file_id parameter
+                collection.delete_one({"file_id": file_id})
+            logger.info(f"Deleted data source record from MongoDB: file_id={actual_file_id}")
         except Exception as e:
             deletion_errors.append(f"MongoDB deletion failed: {str(e)}")
             logger.error(f"Failed to delete from MongoDB: {str(e)}")
