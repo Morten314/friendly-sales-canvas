@@ -1458,6 +1458,166 @@ async def get_customer_profile(org_id: str = Query(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# ============================================================================
+# ORG MANAGEMENT APIs
+# ============================================================================
+
+@app.get("/org")
+async def get_org_by_user(user_id: str = Query(...)):
+    """
+    Get org_id for a given user_id.
+    Fetches from MongoDB users collection (single document).
+    """
+    try:
+        # MongoDB connection
+        username = urllib.parse.quote_plus("techbrewra")
+        password = urllib.parse.quote_plus("Brewra@Best09")
+        mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
+        mongo_client = MongoClient(mongo_uri)
+        db = mongo_client["Org_Management"]
+        collection = db["users"]
+        
+        # Get the single users document
+        users_doc = collection.find_one({"_id": "users"})
+        
+        if not users_doc:
+            mongo_client.close()
+            raise HTTPException(status_code=404, detail="Users document not found")
+        
+        # Get user_id to org_id mapping
+        user_mappings = users_doc.get("user_mappings", {})
+        org_id = user_mappings.get(user_id)
+        
+        mongo_client.close()
+        
+        if not org_id:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No org_id found for user_id: {user_id}"
+            )
+        
+        return {
+            "status": "success",
+            "user_id": user_id,
+            "org_id": org_id
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching org for user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch org: {str(e)}")
+
+@app.post("/org")
+async def create_org():
+    """
+    Generate a new org_id and save it to MongoDB orgs collection (single document).
+    Returns the newly created org_id.
+    """
+    try:
+        # Generate new org_id
+        new_org_id = str(uuid.uuid4())
+        
+        # MongoDB connection
+        username = urllib.parse.quote_plus("techbrewra")
+        password = urllib.parse.quote_plus("Brewra@Best09")
+        mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
+        mongo_client = MongoClient(mongo_uri)
+        db = mongo_client["Org_Management"]
+        collection = db["orgs"]
+        
+        # Get or create the single orgs document
+        orgs_doc = collection.find_one({"_id": "orgs"})
+        
+        if orgs_doc:
+            # Add new org_id to existing list
+            org_list = orgs_doc.get("org_list", [])
+            if new_org_id not in org_list:
+                org_list.append(new_org_id)
+                collection.update_one(
+                    {"_id": "orgs"},
+                    {
+                        "$set": {
+                            "org_list": org_list,
+                            "updated_at": datetime.utcnow()
+                        }
+                    }
+                )
+        else:
+            # Create new document with the org_id
+            collection.insert_one({
+                "_id": "orgs",
+                "org_list": [new_org_id],
+                "created_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow()
+            })
+        
+        mongo_client.close()
+        
+        return {
+            "status": "success",
+            "message": "Org created successfully",
+            "org_id": new_org_id
+        }
+        
+    except Exception as e:
+        logger.error(f"Error creating org: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to create org: {str(e)}")
+
+@app.post("/connect_org")
+async def connect_user_to_org(user_id: str = Body(...), org_id: str = Body(...)):
+    """
+    Connect a user_id to an org_id.
+    Saves the mapping in MongoDB users collection (single document).
+    """
+    try:
+        # MongoDB connection
+        username = urllib.parse.quote_plus("techbrewra")
+        password = urllib.parse.quote_plus("Brewra@Best09")
+        mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
+        mongo_client = MongoClient(mongo_uri)
+        db = mongo_client["Org_Management"]
+        collection = db["users"]
+        
+        # Get or create the single users document
+        users_doc = collection.find_one({"_id": "users"})
+        
+        if users_doc:
+            # Update existing user_mappings
+            user_mappings = users_doc.get("user_mappings", {})
+            user_mappings[user_id] = org_id
+            
+            collection.update_one(
+                {"_id": "users"},
+                {
+                    "$set": {
+                        "user_mappings": user_mappings,
+                        "updated_at": datetime.utcnow()
+                    }
+                }
+            )
+        else:
+            # Create new document with the mapping
+            collection.insert_one({
+                "_id": "users",
+                "user_mappings": {user_id: org_id},
+                "created_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow()
+            })
+        
+        mongo_client.close()
+        
+        return {
+            "status": "success",
+            "message": f"User {user_id} connected to org {org_id}",
+            "user_id": user_id,
+            "org_id": org_id
+        }
+        
+    except Exception as e:
+        logger.error(f"Error connecting user to org: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to connect user to org: {str(e)}")
+
 # Initialize S3 client
 s3_client = boto3.client(
     's3',
