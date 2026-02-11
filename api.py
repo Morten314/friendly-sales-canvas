@@ -1465,8 +1465,8 @@ async def get_customer_profile(org_id: str = Query(...)):
 @app.get("/org")
 async def get_org_by_user(user_id: str = Query(...)):
     """
-    Get org_id for a given user_id.
-    Fetches from MongoDB users collection (single document).
+    Get org_id and org_name for a given user_id.
+    Fetches from MongoDB users collection (single document) and orgs collection for org_name.
     """
     try:
         # MongoDB connection
@@ -1475,10 +1475,11 @@ async def get_org_by_user(user_id: str = Query(...)):
         mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
         mongo_client = MongoClient(mongo_uri)
         db = mongo_client["Org_Management"]
-        collection = db["users"]
+        users_collection = db["users"]
+        orgs_collection = db["orgs"]
         
         # Get the single users document
-        users_doc = collection.find_one({"_id": "users"})
+        users_doc = users_collection.find_one({"_id": "users"})
         
         if not users_doc:
             mongo_client.close()
@@ -1488,19 +1489,31 @@ async def get_org_by_user(user_id: str = Query(...)):
         user_mappings = users_doc.get("user_mappings", {})
         org_id = user_mappings.get(user_id)
         
-        mongo_client.close()
-        
         if not org_id:
+            mongo_client.close()
             raise HTTPException(
                 status_code=404,
                 detail=f"No org_id found for user_id: {user_id}"
             )
         
-        return {
+        # Get org_name from orgs collection
+        org_name = None
+        orgs_doc = orgs_collection.find_one({"_id": "orgs"})
+        if orgs_doc:
+            org_names = orgs_doc.get("org_names", {})
+            org_name = org_names.get(org_id)
+        
+        mongo_client.close()
+        
+        response = {
             "status": "success",
             "user_id": user_id,
             "org_id": org_id
         }
+        if org_name:
+            response["org_name"] = org_name
+        
+        return response
         
     except HTTPException:
         raise
@@ -1509,12 +1522,18 @@ async def get_org_by_user(user_id: str = Query(...)):
         raise HTTPException(status_code=500, detail=f"Failed to fetch org: {str(e)}")
 
 @app.post("/org")
-async def create_org():
+async def create_org(request: dict = Body(None)):
     """
     Generate a new org_id and save it to MongoDB orgs collection (single document).
-    Returns the newly created org_id.
+    Optionally accepts org_name to link with the org_id.
+    Returns the newly created org_id and org_name (if provided).
     """
     try:
+        # Extract org_name from request body (optional)
+        org_name = None
+        if request and "org_name" in request:
+            org_name = request.get("org_name")
+        
         # Generate new org_id
         new_org_id = str(uuid.uuid4())
         
@@ -1534,31 +1553,45 @@ async def create_org():
             org_list = orgs_doc.get("org_list", [])
             if new_org_id not in org_list:
                 org_list.append(new_org_id)
-                collection.update_one(
-                    {"_id": "orgs"},
-                    {
-                        "$set": {
-                            "org_list": org_list,
-                            "updated_at": datetime.utcnow()
-                        }
+            
+            # Update org_names mapping if org_name is provided
+            org_names = orgs_doc.get("org_names", {})
+            if org_name:
+                org_names[new_org_id] = org_name
+            
+            collection.update_one(
+                {"_id": "orgs"},
+                {
+                    "$set": {
+                        "org_list": org_list,
+                        "org_names": org_names,
+                        "updated_at": datetime.utcnow()
                     }
-                )
+                }
+            )
         else:
             # Create new document with the org_id
-            collection.insert_one({
+            org_data = {
                 "_id": "orgs",
                 "org_list": [new_org_id],
                 "created_at": datetime.utcnow(),
                 "updated_at": datetime.utcnow()
-            })
+            }
+            if org_name:
+                org_data["org_names"] = {new_org_id: org_name}
+            collection.insert_one(org_data)
         
         mongo_client.close()
         
-        return {
+        response = {
             "status": "success",
             "message": "Org created successfully",
             "org_id": new_org_id
         }
+        if org_name:
+            response["org_name"] = org_name
+        
+        return response
         
     except Exception as e:
         logger.error(f"Error creating org: {str(e)}")
