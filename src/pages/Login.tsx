@@ -79,15 +79,16 @@ const Login: React.FC = () => {
         setFullName('');
       } else {
         await login(email, password);
-        // Fetch org_id after successful login
+        // Fetch org_id and org_name after successful login
         const user = auth.currentUser;
         if (user?.uid) {
-          const fetchedOrgId = await fetchOrgId(user.uid);
-          // Auto-select organization after login using fetched org_id or fallback to brewra
+          const { orgId: fetchedOrgId, orgName: fetchedOrgName } = await fetchOrgId(user.uid);
+          // Auto-select organization after login using fetched org_id and org_name or fallback to brewra
           const orgIdToUse = fetchedOrgId || 'brewra';
+          const orgNameToUse = fetchedOrgName || 'Brewra';
           selectTenant({
             id: orgIdToUse,
-            name: orgIdToUse.charAt(0).toUpperCase() + orgIdToUse.slice(1),
+            name: orgNameToUse,
             domain: `${orgIdToUse}.com`
           });
           // Store full name if it was pending from signup, or retrieve existing

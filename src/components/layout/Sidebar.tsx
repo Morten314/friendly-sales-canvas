@@ -381,7 +381,7 @@ const navItems: NavItem[] = [
 
 export function Sidebar() {
   const { logout, currentUser } = useAuth();
-  const { clearTenant } = useTenant();
+  const { clearTenant, selectedTenant } = useTenant();
   const navigate = useNavigate();
   const { mobileOpen, setMobileOpen } = useSidebar();
   const isMobile = useIsMobile();
@@ -469,7 +469,7 @@ export function Sidebar() {
       {/* Logo Section */}
       <div className="p-4 border-b border-gray-200 flex items-center justify-between">
         {!isCollapsed && (
-          <div className="text-xl font-bold text-sales-blue">Brewra</div>
+          <div className="text-xl font-bold text-sales-blue">{selectedTenant?.name || 'Brewra'}</div>
         )}
         {!isMobile && (
           <Button 

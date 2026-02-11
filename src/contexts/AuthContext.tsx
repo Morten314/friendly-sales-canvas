@@ -11,10 +11,11 @@ import { auth } from '../lib/firebase';
 interface AuthContextType {
   currentUser: User | null;
   orgId: string | null;
+  orgName: string | null;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  fetchOrgId: (userId: string) => Promise<string | null>;
+  fetchOrgId: (userId: string) => Promise<{ orgId: string | null; orgName: string | null }>;
   loading: boolean;
 }
 
@@ -35,6 +36,7 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [orgId, setOrgId] = useState<string | null>(null);
+  const [orgName, setOrgName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const signup = async (email: string, password: string) => {
@@ -47,20 +49,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = async () => {
     await signOut(auth);
-    // Clear org_id on logout
+    // Clear org_id and org_name on logout
     setOrgId(null);
+    setOrgName(null);
     if (currentUser?.uid) {
       localStorage.removeItem(`org_id_${currentUser.uid}`);
+      localStorage.removeItem(`org_name_${currentUser.uid}`);
     }
   };
 
-  const fetchOrgId = useCallback(async (userId: string): Promise<string | null> => {
+  const fetchOrgId = useCallback(async (userId: string): Promise<{ orgId: string | null; orgName: string | null }> => {
     try {
       // Check localStorage first
       const storedOrgId = localStorage.getItem(`org_id_${userId}`);
-      if (storedOrgId) {
+      const storedOrgName = localStorage.getItem(`org_name_${userId}`);
+      if (storedOrgId && storedOrgName) {
         setOrgId(storedOrgId);
-        return storedOrgId;
+        setOrgName(storedOrgName);
+        return { orgId: storedOrgId, orgName: storedOrgName };
       }
 
       // Fetch from API
@@ -72,23 +78,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
 
       if (!response.ok) {
-        console.error('Failed to fetch org_id:', response.status, response.statusText);
-        return null;
+        console.error('Failed to fetch org data:', response.status, response.statusText);
+        return { orgId: null, orgName: null };
       }
 
       const data = await response.json();
       
       if (data.status === 'success' && data.org_id) {
         // Store in state and localStorage
-        setOrgId(data.org_id);
-        localStorage.setItem(`org_id_${userId}`, data.org_id);
-        return data.org_id;
+        const fetchedOrgId = data.org_id;
+        const fetchedOrgName = data.org_name || null;
+        
+        setOrgId(fetchedOrgId);
+        setOrgName(fetchedOrgName);
+        localStorage.setItem(`org_id_${userId}`, fetchedOrgId);
+        if (fetchedOrgName) {
+          localStorage.setItem(`org_name_${userId}`, fetchedOrgName);
+        }
+        return { orgId: fetchedOrgId, orgName: fetchedOrgName };
       }
 
-      return null;
+      return { orgId: null, orgName: null };
     } catch (error) {
-      console.error('Error fetching org_id:', error);
-      return null;
+      console.error('Error fetching org data:', error);
+      return { orgId: null, orgName: null };
     }
   }, []);
 
@@ -96,17 +109,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
       
-      // Load org_id from localStorage when user changes
+      // Load org_id and org_name from localStorage when user changes
       if (user?.uid) {
         const storedOrgId = localStorage.getItem(`org_id_${user.uid}`);
+        const storedOrgName = localStorage.getItem(`org_name_${user.uid}`);
         if (storedOrgId) {
           setOrgId(storedOrgId);
+          if (storedOrgName) {
+            setOrgName(storedOrgName);
+          }
         } else {
-          // Fetch org_id if not in localStorage
+          // Fetch org data if not in localStorage
           fetchOrgId(user.uid);
         }
       } else {
         setOrgId(null);
+        setOrgName(null);
       }
       
       setLoading(false);
@@ -118,6 +136,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const value = {
     currentUser,
     orgId,
+    orgName,
     login,
     signup,
     logout,

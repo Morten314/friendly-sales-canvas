@@ -54,6 +54,7 @@ export const useAuth = () => {
   return {
     ...firebaseAuth,
     orgId: firebaseAuth.orgId,
+    orgName: firebaseAuth.orgName,
     jwtToken,
     isGeneratingToken,
     logout
