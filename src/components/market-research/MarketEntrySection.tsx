@@ -87,7 +87,8 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
   isRefreshing = false,
   companyProfile
 }) => {
-  const { currentUser } = useAuth();
+  const { currentUser, orgId } = useAuth();
+  const orgIdToUse = orgId || 'brewra'; // Fallback to 'brewra' for backward compatibility
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -144,7 +145,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
       }
       
       const payload = {
-        org_id: "brewra",
+        org_id: orgIdToUse,
         user_id: currentUser.uid,
         component_name: "Market Entry & Growth Strategy", // Exact match from swagger
         refresh: refresh,

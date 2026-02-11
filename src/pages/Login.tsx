@@ -21,7 +21,7 @@ const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   
-  const { login, signup, currentUser, loading: authLoading } = useAuth();
+  const { login, signup, currentUser, fetchOrgId, loading: authLoading } = useAuth();
   const { selectTenant } = useTenant();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -79,15 +79,18 @@ const Login: React.FC = () => {
         setFullName('');
       } else {
         await login(email, password);
-        // Auto-select Brewra organization after login
-        selectTenant({
-          id: 'brewra',
-          name: 'Brewra',
-          domain: 'brewra.com'
-        });
-        // Store full name if it was pending from signup, or retrieve existing
+        // Fetch org_id after successful login
         const user = auth.currentUser;
         if (user?.uid) {
+          const fetchedOrgId = await fetchOrgId(user.uid);
+          // Auto-select organization after login using fetched org_id or fallback to brewra
+          const orgIdToUse = fetchedOrgId || 'brewra';
+          selectTenant({
+            id: orgIdToUse,
+            name: orgIdToUse.charAt(0).toUpperCase() + orgIdToUse.slice(1),
+            domain: `${orgIdToUse}.com`
+          });
+          // Store full name if it was pending from signup, or retrieve existing
           const pendingFullName = localStorage.getItem('pendingFullName');
           if (pendingFullName) {
             localStorage.setItem(`userFullName_${user.uid}`, pendingFullName);

@@ -146,7 +146,8 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
   onIndustryTrendsRegulatoryChange,
   onIndustryTrendSnapshotsChange
 }) => {
-  const { currentUser } = useAuth();
+  const { currentUser, orgId } = useAuth();
+  const orgIdToUse = orgId || 'brewra'; // Fallback to 'brewra' for backward compatibility
   // State for API data
   const [industryTrendsData, setIndustryTrendsData] = useState<IndustryTrendsData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -312,7 +313,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
       }
       
       const payload = {
-        org_id: "brewra",
+        org_id: orgIdToUse,
         user_id: currentUser.uid,
         component_name: "industry trends report",
         refresh: refresh,
@@ -744,7 +745,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
         () => fetch('/api/market-research', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ component_name: "industry_trends", org_id: "brewra" })
+          body: JSON.stringify({ component_name: "industry_trends", org_id: orgIdToUse })
         }),
         'Industry Trends Update'
       );

@@ -138,7 +138,8 @@ type InlineStep =
 
 const ICPManager: React.FC = () => {
   const { toast } = useToast();
-  const { currentUser } = useAuth();
+  const { currentUser, orgId } = useAuth();
+  const orgIdToUse = orgId || 'brewra'; // Fallback to 'brewra' for backward compatibility
   const [icps, setIcps] = useState<ICP[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -196,7 +197,7 @@ const ICPManager: React.FC = () => {
     try {
       // Prepare payload with customer profile data
       const payload = {
-        org_id: "brewra",
+        org_id: orgIdToUse,
         icps: icpsToSave.map(icp => ({
           id: icp.id,
           primary_region: icp.primaryRegion,
@@ -230,7 +231,7 @@ const ICPManager: React.FC = () => {
         console.warn("Failed to save to localStorage:", e);
       }
 
-      const apiUrl = `/api/customer_profile?org_id=brewra`;
+      const apiUrl = `/api/customer_profile?org_id=${orgIdToUse}`;
       const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
@@ -307,7 +308,7 @@ const ICPManager: React.FC = () => {
     console.log("User ID:", currentUser.uid);
     setIsLoading(true);
     try {
-      const apiUrl = `/api/customer_profile?org_id=brewra`;
+      const apiUrl = `/api/customer_profile?org_id=${orgIdToUse}`;
       console.log("ICPManager: Fetching from API:", apiUrl);
       const response = await fetch(apiUrl, {
         method: "GET",

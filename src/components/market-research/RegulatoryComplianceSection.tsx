@@ -119,7 +119,8 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   companyProfile,
   regulatoryData: propRegulatoryData
 }) => {
-  const { currentUser } = useAuth();
+  const { currentUser, orgId } = useAuth();
+  const orgIdToUse = orgId || 'brewra'; // Fallback to 'brewra' for backward compatibility
   const { toast } = useToast();
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
   // Use centralized data from parent instead of local state
@@ -595,7 +596,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
       }
       
       const payload = {
-        org_id: "brewra",
+        org_id: orgIdToUse,
         user_id: currentUser.uid,
         component_name: "regulatory & compliance highlights", // Exact match for regulatory compliance
         refresh: refresh,
@@ -735,7 +736,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
       
       // Fetch the latest company profile from backend (with org_id)
       try {
-        const profileUrl = 'https://backend-11kr.onrender.com/profile/company?org_id=brewra';
+        const profileUrl = `https://backend-11kr.onrender.com/profile/company?org_id=${orgIdToUse}`;
         const profileResponse = await fetch(profileUrl, {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' }

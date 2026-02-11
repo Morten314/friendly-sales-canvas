@@ -728,7 +728,8 @@ const getCachedData = (userId: string | null | undefined): MarketIntelligenceDat
 
 
 const MarketResearch = React.memo(() => {
-  const { currentUser } = useAuth();
+  const { currentUser, orgId } = useAuth();
+  const orgIdToUse = orgId || 'brewra'; // Fallback to 'brewra' for backward compatibility
   const previousUserIdRef = useRef<string | null | undefined>(currentUser?.uid);
 
   console.log('🔥 MarketResearch component is mounting!');
@@ -923,7 +924,7 @@ const MarketResearch = React.memo(() => {
         user_id: currentUserId // Include user_id even when clearing
       });
       setIndustryTrendsData(null);
-      setRegulatoryData(null);
+      setRegulatoryData(getDefaultRegulatoryData());
       setCompetitorData(null);
       setMarketEntryData(null);
     }
@@ -949,7 +950,7 @@ const MarketResearch = React.memo(() => {
         user_id: currentUserId // Include user_id even when clearing
       });
       setIndustryTrendsData(null);
-      setRegulatoryData(null);
+      setRegulatoryData(getDefaultRegulatoryData());
       setCompetitorData(null);
       setMarketEntryData(null);
     }
@@ -2722,10 +2723,25 @@ const MarketResearch = React.memo(() => {
 
 
 
+  // Helper function to get default regulatory data (used when clearing/resetting)
+  const getDefaultRegulatoryData = () => ({
+    executiveSummary: 'The regulatory landscape for SaaS companies continues to evolve rapidly, with new compliance requirements emerging across multiple jurisdictions. Organizations must navigate an increasingly complex web of data protection, AI governance, and industry-specific regulations.',
+    euAiActDeadline: 'February 2, 2025',
+    gdprCompliance: '68%',
+    potentialFines: 'Up to 6% of annual revenue',
+    dataLocalization: 'Mandatory for customer data',
+    keyUpdates: [],
+    visualDataCards: [],
+    regionalData: [],
+    strategicRecommendations: {
+      mitigateRegulatoryRisks: [],
+      competitivePositioning: [],
+      goToMarketStrategy: []
+    },
+    timestamp: null as string | null
+  });
+
   // Function to get initial Regulatory data from localStorage or defaults
-
-
-
   const getInitialRegulatoryData = () => {
 
 
@@ -2805,59 +2821,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-    return {
-
-
-
-      executiveSummary: 'The regulatory landscape for SaaS companies continues to evolve rapidly, with new compliance requirements emerging across multiple jurisdictions. Organizations must navigate an increasingly complex web of data protection, AI governance, and industry-specific regulations.',
-
-
-
-      euAiActDeadline: 'February 2, 2025',
-
-
-
-      gdprCompliance: '68%',
-
-
-
-      potentialFines: 'Up to 6% of annual revenue',
-
-
-
-      dataLocalization: 'Mandatory for customer data',
-
-
-
-      keyUpdates: [],
-
-
-
-      visualDataCards: [],
-
-
-
-      regionalData: [],
-
-
-
-      strategicRecommendations: {
-
-        mitigateRegulatoryRisks: [],
-
-        competitivePositioning: [],
-
-        goToMarketStrategy: []
-
-      },
-
-
-
-      timestamp: null as string | null
-
-
-
-    };
+    return getDefaultRegulatoryData();
 
 
 
@@ -3862,7 +3826,7 @@ const MarketResearch = React.memo(() => {
 
         component_name: "market size & opportunity",
 
-        org_id: "brewra",
+        org_id: orgIdToUse,
         user_id: currentUser?.uid || "",
 
         refresh: true,
@@ -4255,7 +4219,7 @@ const MarketResearch = React.memo(() => {
         // Only clear regulatory data if it doesn't have a timestamp (meaning it's fallback data)
         if (!regulatoryData?.timestamp) {
           console.log('🧹 Company profile update - clearing regulatory data (no timestamp)');
-          setRegulatoryData(null);
+          setRegulatoryData(getDefaultRegulatoryData());
         } else {
           console.log('🧹 Company profile update - keeping regulatory data (has timestamp):', regulatoryData.timestamp);
         }
@@ -4362,7 +4326,7 @@ const MarketResearch = React.memo(() => {
     // Don't clear fresh API data that has a timestamp
     if (!regulatoryData?.timestamp) {
       console.log('🧹 Clearing regulatory data - no timestamp found');
-      setRegulatoryData(null);
+      setRegulatoryData(getDefaultRegulatoryData());
     } else {
       console.log('🧹 Keeping regulatory data - has timestamp:', regulatoryData.timestamp);
     }
@@ -4476,7 +4440,7 @@ const MarketResearch = React.memo(() => {
         // Only clear regulatory data if it doesn't have a timestamp (meaning it's fallback data)
         if (!regulatoryData?.timestamp) {
           console.log('🧹 Fresh fetch - clearing regulatory data (no timestamp)');
-          setRegulatoryData(null);
+          setRegulatoryData(getDefaultRegulatoryData());
         } else {
           console.log('🧹 Fresh fetch - keeping regulatory data (has timestamp):', regulatoryData.timestamp);
         }
@@ -4572,7 +4536,7 @@ const MarketResearch = React.memo(() => {
 
       try {
         // Include org_id in API call
-        const profileResponse = await fetch(`/api/profile/company?org_id=brewra`, {
+        const profileResponse = await fetch(`/api/profile/company?org_id=${orgIdToUse}`, {
 
           method: 'GET',
 
@@ -4674,7 +4638,7 @@ const MarketResearch = React.memo(() => {
       // Only clear regulatory data if it doesn't have a timestamp (meaning it's fallback data)
       if (!regulatoryData?.timestamp) {
         console.log('🧹 Force clear - clearing regulatory data (no timestamp)');
-        setRegulatoryData(null);
+        setRegulatoryData(getDefaultRegulatoryData());
       } else {
         console.log('🧹 Force clear - keeping regulatory data (has timestamp):', regulatoryData.timestamp);
       }
@@ -5422,7 +5386,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-        org_id: "brewra",
+        org_id: orgIdToUse,
         user_id: currentUser?.uid || "",
 
 
@@ -6347,7 +6311,7 @@ const MarketResearch = React.memo(() => {
 
       const payload = {
 
-        org_id: "brewra",
+        org_id: orgIdToUse,
         user_id: currentUser?.uid || "",
 
         component_name: "industry trends report",
@@ -7378,7 +7342,7 @@ const MarketResearch = React.memo(() => {
 
 
       const payload = {
-        org_id: "brewra",
+        org_id: orgIdToUse,
         user_id: currentUser?.uid || "",
         component_name: "competitor landscape",
         data: {},
@@ -10622,11 +10586,8 @@ const MarketResearch = React.memo(() => {
 
 
 
-    // Force contextual message state for Competitor Landscape Scout
-
-
-
-    setCompetitorHasEdits(true);
+    // Clear hasEdits flag since changes have been saved
+    setCompetitorHasEdits(false);
 
 
 
@@ -14817,23 +14778,23 @@ const MarketResearch = React.memo(() => {
 
 
 
-                        regulatoryExecutiveSummary={regulatoryData.executiveSummary}
+                        regulatoryExecutiveSummary={regulatoryData?.executiveSummary || ''}
 
 
 
-                       regulatoryEuAiActDeadline={regulatoryData.euAiActDeadline}
+                       regulatoryEuAiActDeadline={regulatoryData?.euAiActDeadline || ''}
 
 
 
-                       regulatoryGdprCompliance={regulatoryData.gdprCompliance}
+                       regulatoryGdprCompliance={regulatoryData?.gdprCompliance || ''}
 
 
 
-                       regulatoryPotentialFines={regulatoryData.potentialFines}
+                       regulatoryPotentialFines={regulatoryData?.potentialFines || ''}
 
 
 
-                       regulatoryDataLocalization={regulatoryData.dataLocalization}
+                       regulatoryDataLocalization={regulatoryData?.dataLocalization || ''}
 
 
 

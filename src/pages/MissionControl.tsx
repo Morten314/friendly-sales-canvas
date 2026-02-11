@@ -519,7 +519,8 @@ const MissionControl = () => {
   const [productDocFiles, setProductDocFiles] = useState<Array<{file: File | null, destinationUrl: string}>>([{file: null, destinationUrl: ""}]);
   
   const { toast } = useToast();
-  const { currentUser } = useAuth();
+  const { currentUser, orgId } = useAuth();
+  const orgIdToUse = orgId || 'brewra'; // Fallback to 'brewra' for backward compatibility
 
   // Form state for company profile
   const [companyProfile, setCompanyProfile] = useState({
@@ -567,7 +568,7 @@ const MissionControl = () => {
     try {
       // Prepare payload with profile_type as required by the API
       const payload = {
-        org_id: "brewra",
+        org_id: orgIdToUse,
         profile_type: "company",
         company_name: trimmedCompanyName,
         headquarters: (companyProfile.headquarters || "").trim(),
@@ -590,7 +591,7 @@ const MissionControl = () => {
       console.log("=== MISSION CONTROL: Saving company profile ===");
       console.log("Payload:", payload);
 
-      const apiUrl = `/api/profile/company?org_id=brewra`;
+      const apiUrl = `/api/profile/company?org_id=${orgIdToUse}`;
       console.log("MissionControl: POST request URL:", apiUrl);
       console.log("MissionControl: POST request payload:", payload);
       
@@ -685,7 +686,7 @@ const MissionControl = () => {
       console.log("MissionControl: Verifying data persistence by fetching saved profile...");
       setTimeout(async () => {
         try {
-          const verifyResponse = await fetch(`/api/profile/company?org_id=brewra`, {
+          const verifyResponse = await fetch(`/api/profile/company?org_id=${orgIdToUse}`, {
             method: "GET",
             headers: { "Content-Type": "application/json" },
           });
@@ -865,7 +866,7 @@ const MissionControl = () => {
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
-          const response = await fetch(`/api/profile/company?org_id=brewra`, {
+          const response = await fetch(`/api/profile/company?org_id=${orgIdToUse}`, {
             method: "GET",
             headers: {
               "Content-Type": "application/json",
@@ -2162,7 +2163,7 @@ const MissionControl = () => {
       // First, fetch existing company profile data to preserve it
       let existingCompanyData = {};
       try {
-        const getResponse = await fetch(`/api/profile/company?org_id=brewra`, {
+        const getResponse = await fetch(`/api/profile/company?org_id=${orgIdToUse}`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -2198,7 +2199,7 @@ const MissionControl = () => {
 
       // Prepare payload with data sources, preserving existing company profile fields
       const payload = {
-        org_id: "brewra",
+        org_id: orgIdToUse,
         profile_type: "company",
         ...existingCompanyData,
         data_sources: {
@@ -2221,7 +2222,7 @@ const MissionControl = () => {
       console.log("=== MISSION CONTROL: Saving data sources to backend ===");
       console.log("Payload:", payload);
 
-      const apiUrl = `/api/profile/company?org_id=brewra`;
+      const apiUrl = `/api/profile/company?org_id=${orgIdToUse}`;
       const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
@@ -2326,7 +2327,7 @@ const MissionControl = () => {
     }
 
     try {
-      const apiUrl = `/api/profile/company?org_id=brewra`;
+      const apiUrl = `/api/profile/company?org_id=${orgIdToUse}`;
       const response = await fetch(apiUrl, {
         method: "GET",
         headers: {
@@ -3206,7 +3207,7 @@ const MissionControl = () => {
       }
 
       try {
-        const apiUrl = `/api/customer_profile?org_id=brewra`;
+        const apiUrl = `/api/customer_profile?org_id=${orgIdToUse}`;
         const response = await fetch(apiUrl, {
           method: "GET",
           headers: {
@@ -3313,7 +3314,7 @@ const MissionControl = () => {
       }
 
       try {
-        const apiUrl = `/api/profile/company?org_id=brewra`;
+        const apiUrl = `/api/profile/company?org_id=${orgIdToUse}`;
         const response = await fetch(apiUrl, {
           method: "GET",
           headers: {

@@ -34,7 +34,8 @@ interface SuggestedICPsGalleryProps {
 }
 
 export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshTrigger, isRefreshing = false, onRefreshComplete }: SuggestedICPsGalleryProps) => {
-  const { currentUser } = useAuth();
+  const { currentUser, orgId } = useAuth();
+  const orgIdToUse = orgId || 'brewra'; // Fallback to 'brewra' for backward compatibility
   const [selectedICP, setSelectedICP] = useState<string | null>(null);
   const [editingICP, setEditingICP] = useState<string | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
@@ -149,7 +150,7 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
         
         try {
           // Fetch the latest company profile from backend with org_id
-          const profileUrl = '/api/profile/company?org_id=brewra';
+          const profileUrl = `/api/profile/company?org_id=${orgIdToUse}`;
           
           const profileResponse = await fetch(profileUrl, {
             method: 'GET',

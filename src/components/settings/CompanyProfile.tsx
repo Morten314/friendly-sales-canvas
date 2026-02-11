@@ -32,7 +32,8 @@ interface CompanyProfileProps {
 }
 
 export function CompanyProfile({ onProfileUpdate, isEditMode = false, profileData }: CompanyProfileProps) {
-  const { currentUser } = useAuth();
+  const { currentUser, orgId } = useAuth();
+  const orgIdToUse = orgId || 'brewra'; // Fallback to 'brewra' for backward compatibility
   const [formData, setFormData] = useState({
     industry: "",
     companySize: "",
@@ -51,7 +52,7 @@ export function CompanyProfile({ onProfileUpdate, isEditMode = false, profileDat
   // Fetch company profile from API (similar to Signals pattern)
   const fetchCompanyProfile = async (userId: string) => {
     try {
-      const response = await fetch(`/api/profile/company?org_id=brewra`, {
+      const response = await fetch(`/api/profile/company?org_id=${orgIdToUse}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -167,7 +168,7 @@ export function CompanyProfile({ onProfileUpdate, isEditMode = false, profileDat
         // Store in localStorage for future use
         const profileToSave = {
           ...apiData,
-          org_id: "brewra" // Ensure org_id is always included
+          org_id: orgIdToUse // Ensure org_id is always included
         };
         setUserLocalStorage('companyProfile', JSON.stringify(profileToSave), currentUserId);
         setUserLocalStorage('companyProfileForRefresh', JSON.stringify(profileToSave), currentUserId);
@@ -305,7 +306,7 @@ export function CompanyProfile({ onProfileUpdate, isEditMode = false, profileDat
       return;
     }
     const payload = {
-      org_id: "brewra",
+      org_id: orgIdToUse,
       industry: formData.industry,
       companySize: formData.companySize,
       companyUrl: formData.companyUrl,
@@ -326,7 +327,7 @@ export function CompanyProfile({ onProfileUpdate, isEditMode = false, profileDat
 
     try {
       // Include org_id in URL query parameter
-      const apiUrl = "/api/profile/company?org_id=brewra";
+      const apiUrl = `/api/profile/company?org_id=${orgIdToUse}`;
       const response = await fetch(apiUrl, {
         method: "POST",
         headers: {

@@ -86,7 +86,8 @@ interface DataSourcesManagerProps {
 
 const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCompanyProfile }) => {
   const { toast } = useToast();
-  const { currentUser } = useAuth();
+  const { currentUser, orgId } = useAuth();
+  const orgIdToUse = orgId || 'brewra'; // Fallback to 'brewra' for backward compatibility
   const [dataSources, setDataSources] = useState<DataSource[]>([]);
   const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -192,8 +193,8 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
       throw new Error("User not authenticated");
     }
 
-    // org_id is set to "brewra"
-    const orgId = "brewra";
+    // Use org_id fetched from login API, fallback to 'brewra' for backward compatibility
+    const orgIdToUse = orgId || 'brewra';
 
     const authHeader = await getAuthHeader();
     const url = buildApiUrl("upload-document");
@@ -201,7 +202,7 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
     const formData = new FormData();
     formData.append("file", file);
     formData.append("user_id", currentUser.uid);
-    formData.append("org_id", orgId);
+    formData.append("org_id", orgIdToUse);
     
     // Add optional fields if provided
     // Backend accepts either comma-separated string or JSON array string
@@ -217,7 +218,7 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
       url,
       fileName: file.name,
       userId: currentUser.uid,
-      orgId,
+      orgId: orgIdToUse,
       tags: tags && tags.length > 0 ? tags : "none",
       description: description || "none",
       hasAuth: !!authHeader,
@@ -252,8 +253,8 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
       throw new Error("User not authenticated");
     }
 
-    // org_id is set to "brewra"
-    const orgId = "brewra";
+    // Use org_id fetched from login API, fallback to 'brewra' for backward compatibility
+    const orgIdToUse = orgId || 'brewra';
 
     const authHeader = await getAuthHeader();
     const apiUrl = buildApiUrl("upload-document");
@@ -262,7 +263,7 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
     formData.append("url", url);
     formData.append("name", name);
     formData.append("user_id", currentUser.uid);
-    formData.append("org_id", orgId);
+    formData.append("org_id", orgIdToUse);
     
     // Add optional fields if provided
     if (tags && tags.length > 0) {
@@ -277,7 +278,7 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
       url,
       name,
       userId: currentUser.uid,
-      orgId,
+      orgId: orgIdToUse,
       tags: tags && tags.length > 0 ? tags : "none",
       description: description || "none",
       hasAuth: !!authHeader,
@@ -370,7 +371,7 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
     setIsLoading(true);
     try {
       const authHeader = await getAuthHeader();
-      const url = buildApiUrl(`user-documents?org_id=brewra`);
+      const url = buildApiUrl(`user-documents?org_id=${orgIdToUse}`);
       const response = await fetch(url, {
         method: "GET",
         headers: {
@@ -1126,7 +1127,7 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
             
             const updatePayload = {
               user_id: currentUser.uid,
-              org_id: "brewra",
+              org_id: orgIdToUse,
               tags: selectedTags,
               description: sourceDescription.trim() || undefined,
             };
@@ -1297,13 +1298,13 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
           try {
             // Call PUT API to update the URL data source
             const authHeader = await getAuthHeader();
-            const url = buildApiUrl(`data-source/${fileId}?org_id=brewra`);
+            const url = buildApiUrl(`data-source/${fileId}?org_id=${orgIdToUse}`);
             
             // Always use the form value, don't fall back to existing URL
             // This ensures the backend receives the updated value even if it's empty
             const updatePayload = {
               user_id: currentUser.uid,
-              org_id: "brewra",
+              org_id: orgIdToUse,
               name: sourceName.trim(),
               url: sourceUrl.trim(), // Send the form value directly, no fallback
               tags: selectedTags,
@@ -1977,6 +1978,8 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
                   placeholder="e.g., Competitor Pricing Page"
                   value={sourceName}
                   onChange={(e) => setSourceName(e.target.value)}
+                  disabled={!!editingId && selectedType === "url"}
+                  className={editingId && selectedType === "url" ? "bg-gray-100 text-gray-500 cursor-not-allowed" : ""}
                 />
               </div>
             </div>
@@ -1991,7 +1994,8 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
                   placeholder="https://example.com"
                   value={sourceUrl}
                   onChange={(e) => setSourceUrl(e.target.value)}
-                  className="text-base"
+                  className={`text-base ${editingId ? "bg-gray-100 text-gray-500 cursor-not-allowed" : ""}`}
+                  disabled={!!editingId}
                 />
                 <p className="text-xs text-muted-foreground">Enter the full URL of the website you want to add as a data source</p>
               </div>

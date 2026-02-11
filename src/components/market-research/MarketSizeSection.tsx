@@ -99,7 +99,8 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
   isRefreshing,
   companyProfile
 }) => {
-  const { currentUser } = useAuth();
+  const { currentUser, orgId } = useAuth();
+  const orgIdToUse = orgId || 'brewra'; // Fallback to 'brewra' for backward compatibility
   // Track previous user to detect user switches
   const previousUserRef = useRef<string | null | undefined>(currentUser?.uid);
   // Track if we just cleared due to user switch (to prevent immediate sync with stale props)
@@ -461,7 +462,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
       const data = await executeWithRateLimit(
         () => apiFetchJson('market-research', {
           method: 'POST',
-          body: { component_name: "market_size", org_id: "brewra" }
+          body: { component_name: "market_size", org_id: orgIdToUse }
         }),
         'Market Size Update'
       );
@@ -493,7 +494,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
       }
       
       const payload = {
-        org_id: "brewra",
+        org_id: orgIdToUse,
         user_id: currentUser.uid,
         component_name: "market size & opportunity", // Exact match from swagger
         refresh: refresh,
