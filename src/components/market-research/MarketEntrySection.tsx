@@ -582,13 +582,25 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
             {!isSplitView && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="ghost" size="sm" onClick={() => onScoutIconClick('market-entry')} className="text-purple-600 hover:text-purple-700 hover:bg-purple-50 transition-all duration-200 hover:shadow-md hover:shadow-purple-200/50 relative">
-                    <div className="absolute inset-0 rounded-md bg-gradient-to-r from-purple-400/20 to-blue-400/20 animate-pulse opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => {
+                      // onScoutIconClick('market-entry');
+                      toast({
+                        title: "Coming Soon",
+                        description: "Scout feature is coming soon!",
+                      });
+                    }} 
+                    className="text-gray-400 hover:text-gray-500 opacity-50 cursor-not-allowed transition-all duration-200 relative"
+                    disabled
+                  >
+                    {/* <div className="absolute inset-0 rounded-md bg-gradient-to-r from-purple-400/20 to-blue-400/20 animate-pulse opacity-0 hover:opacity-100 transition-opacity duration-300"></div> */}
                     <Bot className="h-5 w-5 relative z-10" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Generate Market Entry Report with Scout</p>
+                  <p>Coming Soon</p>
                 </TooltipContent>
               </Tooltip>
             )}
@@ -596,7 +608,17 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
         </div>
         <div className="text-center py-12">
           <p className="text-gray-600 mb-4">No market entry data available</p>
-          <Button onClick={() => onScoutIconClick('market-entry')} variant="outline" className="text-purple-600 border-purple-200 hover:bg-purple-50">
+          <Button 
+            onClick={() => {
+              // onScoutIconClick('market-entry');
+              toast({
+                title: "Coming Soon",
+                description: "Scout feature is coming soon!",
+              });
+            }} 
+            variant="outline" 
+            className="text-gray-400 border-gray-300 opacity-50"
+          >
             <Bot className="h-4 w-4 mr-2" />
             Generate Report with Scout
           </Button>
@@ -629,13 +651,24 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
           {!isSplitView && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="sm" onClick={() => onScoutIconClick('market-entry')} className="text-purple-600 hover:text-purple-700 hover:bg-purple-50 transition-all duration-200 hover:shadow-md hover:shadow-purple-200/50 relative">
-                  <div className="absolute inset-0 rounded-md bg-gradient-to-r from-purple-400/20 to-blue-400/20 animate-pulse opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => {
+                    // onScoutIconClick('market-entry');
+                    toast({
+                      title: "Coming Soon",
+                      description: "Scout feature is coming soon!",
+                    });
+                  }} 
+                  className="text-gray-400 hover:text-gray-500 opacity-50 transition-all duration-200 relative"
+                >
+                  {/* <div className="absolute inset-0 rounded-md bg-gradient-to-r from-purple-400/20 to-blue-400/20 animate-pulse opacity-0 hover:opacity-100 transition-opacity duration-300"></div> */}
                   <Bot className="h-5 w-5 relative z-10" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Explore More with Scout</p>
+                <p>Coming Soon</p>
               </TooltipContent>
             </Tooltip>
           )}
@@ -645,7 +678,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
       {/* Collapsed View */}
       {!isExpanded && !isEditing && (
         <div className="space-y-4">
-          <div className="text-sm text-gray-700 leading-relaxed">
+          <div className="text-gray-700 leading-relaxed">
             {displayData.executiveSummary?.slice(0, 200)}...
           </div>
 
@@ -670,11 +703,11 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-2">
-              <h4 className="text-sm font-medium text-gray-700 mb-2">SWOT Analysis</h4>
+              <h4 className="text-lg font-semibold text-gray-900 mb-2">SWOT Analysis</h4>
               <SwotQuadrant swotData={displayData.swotAnalysis || editSwotAnalysis} />
             </div>
             <div>
-              <h4 className="text-sm font-medium text-gray-700 mb-2">Timeline Preview</h4>
+              <h4 className="text-lg font-semibold text-gray-900 mb-2">Timeline Preview</h4>
               <TimelineChart />
             </div>
           </div>
@@ -703,7 +736,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
               <FileText className="h-4 w-4 text-purple-600" />
               Executive Summary
             </h3>
-            <div className="text-sm text-gray-700 leading-relaxed space-y-3">
+            <div className="text-gray-700 leading-relaxed space-y-3">
               {displayData.executiveSummary.split('\n').map((paragraph, index) => (
                 <p key={index}>{paragraph}</p>
               ))}
@@ -731,18 +764,18 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-2">
-              <h4 className="text-sm font-medium text-gray-700 mb-2">SWOT Analysis</h4>
+              <h4 className="text-lg font-semibold text-gray-900 mb-2">SWOT Analysis</h4>
               <SwotQuadrant swotData={displayData.swotAnalysis || editSwotAnalysis} />
             </div>
             <div>
-              <h4 className="text-sm font-medium text-gray-700 mb-2">Timeline Preview</h4>
+              <h4 className="text-lg font-semibold text-gray-900 mb-2">Timeline Preview</h4>
               <TimelineChart />
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
-              <h4 className="text-md font-semibold text-gray-900 flex items-center gap-2">
+              <h4 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4 text-orange-600" />
                 Entry Barriers
               </h4>
@@ -757,7 +790,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
             </div>
 
             <div className="space-y-4">
-              <h4 className="text-md font-semibold text-gray-900 flex items-center gap-2">
+              <h4 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                 <Target className="h-4 w-4 text-green-600" />
                 Competitive Differentiation
               </h4>
@@ -773,7 +806,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
           </div>
 
           <div className="space-y-4">
-            <h4 className="text-md font-semibold text-gray-900 flex items-center gap-2">
+            <h4 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-blue-600" />
               Strategic Recommendations
             </h4>
@@ -787,7 +820,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
           </div>
 
           <div className="space-y-4">
-            <h4 className="text-md font-semibold text-gray-900 flex items-center gap-2">
+            <h4 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-red-600" />
               Risk Assessment
             </h4>
@@ -1403,13 +1436,24 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
 
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="sm" onClick={() => onScoutIconClick('market-entry')} className="text-purple-600 hover:text-purple-700 bg-purple-50 border border-purple-200 hover:shadow-md hover:shadow-purple-200/50 transition-all duration-200 relative">
-                  <div className="absolute inset-0 rounded-md bg-gradient-to-r from-purple-400/20 to-blue-400/20 opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => {
+                    // onScoutIconClick('market-entry');
+                    toast({
+                      title: "Coming Soon",
+                      description: "Scout feature is coming soon!",
+                    });
+                  }} 
+                  className="text-gray-400 hover:text-gray-500 opacity-50 transition-all duration-200 relative"
+                >
+                  {/* <div className="absolute inset-0 rounded-md bg-gradient-to-r from-purple-400/20 to-blue-400/20 opacity-0 hover:opacity-100 transition-opacity duration-300"></div> */}
                   <Bot className="h-4 w-4 relative z-10" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Get Scout's help with market entry strategy</p>
+                <p>Coming Soon</p>
               </TooltipContent>
             </Tooltip>
           </div>

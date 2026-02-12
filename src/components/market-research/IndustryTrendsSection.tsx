@@ -846,13 +846,24 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
           {!isSplitView && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="sm" onClick={() => onScoutIconClick('industry-trends')} className="text-purple-600 hover:text-purple-700 hover:bg-purple-50 transition-all duration-200 hover:shadow-md hover:shadow-purple-200/50 relative">
-                  <div className="absolute inset-0 rounded-md bg-gradient-to-r from-purple-400/20 to-blue-400/20 animate-pulse opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => {
+                    // onScoutIconClick('industry-trends');
+                    toast({
+                      title: "Coming Soon",
+                      description: "Scout feature is coming soon!",
+                    });
+                  }} 
+                  className="text-gray-400 hover:text-gray-500 opacity-50 transition-all duration-200 relative"
+                >
+                  {/* <div className="absolute inset-0 rounded-md bg-gradient-to-r from-purple-400/20 to-blue-400/20 animate-pulse opacity-0 hover:opacity-100 transition-opacity duration-300"></div> */}
                   <Bot className="h-5 w-5 relative z-10" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Explore More with Scout</p>
+                <p>Coming Soon</p>
               </TooltipContent>
             </Tooltip>
           )}
@@ -1432,13 +1443,24 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
 
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="sm" onClick={() => onScoutIconClick('industry-trends')} className="text-purple-600 hover:text-purple-700 bg-purple-50 border border-purple-200 hover:shadow-md hover:shadow-purple-200/50 transition-all duration-200 relative">
-                  <div className="absolute inset-0 rounded-md bg-gradient-to-r from-purple-400/20 to-blue-400/20 opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => {
+                    // onScoutIconClick('industry-trends');
+                    toast({
+                      title: "Coming Soon",
+                      description: "Scout feature is coming soon!",
+                    });
+                  }} 
+                  className="text-gray-400 hover:text-gray-500 opacity-50 transition-all duration-200 relative"
+                >
+                  {/* <div className="absolute inset-0 rounded-md bg-gradient-to-r from-purple-400/20 to-blue-400/20 opacity-0 hover:opacity-100 transition-opacity duration-300"></div> */}
                   <Bot className="h-4 w-4 relative z-10" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Explore More with Scout</p>
+                <p>Coming Soon</p>
               </TooltipContent>
             </Tooltip>
           </div>

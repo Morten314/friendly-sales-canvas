@@ -9,6 +9,7 @@ import MiniPieChart from '@/components/ui/MiniPieChart';
 import MiniLineChart from '@/components/ui/MiniLineChart';
 import { useAuth } from '@/contexts/AuthContext';
 import { setUserLocalStorage } from '@/utils/cacheUtils';
+import { useToast } from '@/hooks/use-toast';
 
 // Define the EditRecord interface within this file
 interface EditRecord {
@@ -92,6 +93,7 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
   scoutChatPanel
 }) => {
   const { currentUser } = useAuth();
+  const { toast } = useToast();
   // Local state for editing - these are the source of truth for display
   const [localExecutiveSummary, setLocalExecutiveSummary] = React.useState(executiveSummary || '');
   const [localTamValue, setLocalTamValue] = React.useState(tamValue || '');
@@ -375,13 +377,24 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
           {!isSplitView && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="sm" onClick={() => onScoutIconClick('market-size')} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-all duration-200 hover:shadow-md hover:shadow-blue-200/50 relative">
-                  <div className="absolute inset-0 rounded-md bg-gradient-to-r from-blue-400/20 to-green-400/20 animate-pulse opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => {
+                    // onScoutIconClick('market-size');
+                    toast({
+                      title: "Coming Soon",
+                      description: "Scout feature is coming soon!",
+                    });
+                  }} 
+                  className="text-gray-400 hover:text-gray-500 opacity-50 transition-all duration-200 relative"
+                >
+                  {/* <div className="absolute inset-0 rounded-md bg-gradient-to-r from-blue-400/20 to-green-400/20 animate-pulse opacity-0 hover:opacity-100 transition-opacity duration-300"></div> */}
                   <Bot className="h-5 w-5 relative z-10" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Explore More with Scout</p>
+                <p>Coming Soon</p>
               </TooltipContent>
             </Tooltip>
           )}
@@ -616,13 +629,24 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
 
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="sm" onClick={() => onScoutIconClick('market-size')} className="text-blue-600 hover:text-blue-700 bg-blue-50 border border-blue-200 hover:shadow-md hover:shadow-blue-200/50 transition-all duration-200 relative">
-                  <div className="absolute inset-0 rounded-md bg-gradient-to-r from-blue-400/20 to-green-400/20 opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => {
+                    // onScoutIconClick('market-size');
+                    toast({
+                      title: "Coming Soon",
+                      description: "Scout feature is coming soon!",
+                    });
+                  }} 
+                  className="text-gray-400 hover:text-gray-500 opacity-50 transition-all duration-200 relative"
+                >
+                  {/* <div className="absolute inset-0 rounded-md bg-gradient-to-r from-blue-400/20 to-green-400/20 opacity-0 hover:opacity-100 transition-opacity duration-300"></div> */}
                   <Bot className="h-4 w-4 relative z-10" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Explore More with Scout</p>
+                <p>Coming Soon</p>
               </TooltipContent>
             </Tooltip>
           </div>

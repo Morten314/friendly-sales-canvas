@@ -136,6 +136,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
   error: propError
 }) => {
   const { currentUser } = useAuth();
+  const { toast } = useToast();
   // Track previous user to detect user switches
   const previousUserRef = useRef<string | null | undefined>(currentUser?.uid);
   
@@ -1020,7 +1021,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
               <BarChart3 className="h-6 w-6 text-blue-600" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-gray-900">Competitor Landscape</h2>
+              <h2 className="text-xl font-semibold text-gray-900">Competitor Landscape</h2>
               <p className="text-sm text-gray-600">Comprehensive analysis of competitive environment</p>
             </div>
           </div>
@@ -1047,14 +1048,20 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => onScoutIconClick('competitor-landscape', competitorLandscapeHasEdits)}
-                  className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                  onClick={() => {
+                    // onScoutIconClick('competitor-landscape', competitorLandscapeHasEdits);
+                    toast({
+                      title: "Coming Soon",
+                      description: "Scout feature is coming soon!",
+                    });
+                  }}
+                  className="text-gray-400 hover:text-gray-500 opacity-50"
                 >
                   <Bot className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Chat with Scout about competitor landscape</p>
+                <p>Coming Soon</p>
               </TooltipContent>
             </Tooltip>
             
@@ -1155,7 +1162,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                                 updated[index] = { ...updated[index], value: e.target.value };
                                 setLocalMetrics(updated);
                               }}
-                              className="text-lg font-bold text-blue-600 bg-white"
+                              className="text-2xl font-bold text-blue-600 bg-white"
                               placeholder="Value"
                             />
                             <Input
@@ -1181,7 +1188,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                           </div>
                         ) : (
                           <>
-                            <div className="text-lg font-bold text-blue-600">{metric.value || 'N/A'}</div>
+                            <div className="text-2xl font-bold text-blue-600">{metric.value || 'N/A'}</div>
                             <div className="text-sm text-gray-700">{metric.label || 'Metric'}</div>
                           </>
                         )}
@@ -1223,14 +1230,14 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                             <Input
                               value={localTopPlayerShare}
                               onChange={(e) => setLocalTopPlayerShare(e.target.value)}
-                              className="text-lg font-bold text-blue-600 bg-white"
+                              className="text-2xl font-bold text-blue-600 bg-white"
                               placeholder="Top Player Market Share"
                             />
                             <div className="text-sm text-gray-700">Top Player Market Share</div>
                           </div>
                         ) : (
                           <>
-                            <div className="text-lg font-bold text-blue-600">{displayTopPlayerShare}</div>
+                            <div className="text-2xl font-bold text-blue-600">{displayTopPlayerShare}</div>
                             <div className="text-sm text-gray-700">Top Player Market Share</div>
                           </>
                         )}
@@ -1267,14 +1274,14 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                             <Input
                               value={localEmergingPlayers}
                               onChange={(e) => setLocalEmergingPlayers(e.target.value)}
-                              className="text-lg font-bold text-blue-600 bg-white"
+                              className="text-2xl font-bold text-blue-600 bg-white"
                               placeholder="Emerging Players Added"
                             />
                             <div className="text-sm text-gray-700">Emerging Players Added</div>
                           </div>
                         ) : (
                           <>
-                            <div className="text-lg font-bold text-blue-600">{displayEmergingPlayers}</div>
+                            <div className="text-2xl font-bold text-blue-600">{displayEmergingPlayers}</div>
                             <div className="text-sm text-gray-700">Emerging Players Added</div>
                           </>
                         )}

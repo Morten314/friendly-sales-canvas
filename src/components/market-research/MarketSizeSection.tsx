@@ -693,8 +693,18 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <div className="text-center py-12">
           <p className="text-gray-600 mb-4">No market size data available</p>
-          <Button onClick={() => onScoutIconClick('market-size')} variant="outline">
-            <Bot className="h-4 w-4 mr-2" />
+          <Button 
+            onClick={() => {
+              // onScoutIconClick('market-size');
+              toast({
+                title: "Coming Soon",
+                description: "Scout feature is coming soon!",
+              });
+            }} 
+            variant="outline"
+            className="opacity-50"
+          >
+            <Bot className="h-4 w-4 mr-2 text-gray-400" />
             Generate Report with Scout
           </Button>
         </div>
@@ -722,13 +732,24 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
           {!isSplitView && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="sm" onClick={() => onScoutIconClick('market-size')} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-all duration-200 hover:shadow-md hover:shadow-blue-200/50 relative">
-                  <div className="absolute inset-0 rounded-md bg-gradient-to-r from-blue-400/20 to-green-400/20 animate-pulse opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => {
+                    // onScoutIconClick('market-size');
+                    toast({
+                      title: "Coming Soon",
+                      description: "Scout feature is coming soon!",
+                    });
+                  }} 
+                  className="text-gray-400 hover:text-gray-500 opacity-50 transition-all duration-200 relative"
+                >
+                  {/* <div className="absolute inset-0 rounded-md bg-gradient-to-r from-blue-400/20 to-green-400/20 animate-pulse opacity-0 hover:opacity-100 transition-opacity duration-300"></div> */}
                   <Bot className="h-5 w-5 relative z-10" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Explore More with Scout</p>
+                <p>Coming Soon</p>
               </TooltipContent>
             </Tooltip>
           )}
@@ -1226,13 +1247,24 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
 
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="sm" onClick={() => onScoutIconClick('market-size')} className="text-blue-600 hover:text-blue-700 bg-blue-50 border border-blue-200 hover:shadow-md hover:shadow-blue-200/50 transition-all duration-200 relative">
-                  <div className="absolute inset-0 rounded-md bg-gradient-to-r from-blue-400/20 to-green-400/20 opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => {
+                    // onScoutIconClick('market-size');
+                    toast({
+                      title: "Coming Soon",
+                      description: "Scout feature is coming soon!",
+                    });
+                  }} 
+                  className="text-gray-400 hover:text-gray-500 opacity-50 transition-all duration-200 relative"
+                >
+                  {/* <div className="absolute inset-0 rounded-md bg-gradient-to-r from-blue-400/20 to-green-400/20 opacity-0 hover:opacity-100 transition-opacity duration-300"></div> */}
                   <Bot className="h-4 w-4 relative z-10" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Explore More with Scout</p>
+                <p>Coming Soon</p>
               </TooltipContent>
             </Tooltip>
           </div>
