@@ -648,6 +648,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
         if (apiData.keyUpdates) {
           const initialValues: Record<string, string> = {};
           apiData.keyUpdates.forEach((update: any) => {
+            if (!update || !update.title) return;
             const id = update.title.toLowerCase().replace(/\s+/g, '-');
             initialValues[id] = update.description || '';
           });
@@ -2095,7 +2096,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                       gdprCompliance: localGdprCompliance,
                       potentialFines: localPotentialFines,
                       dataLocalization: localDataLocalization,
-                      keyUpdates: regulatoryData?.keyUpdates?.map((update: any) => {
+                      keyUpdates: (regulatoryData?.keyUpdates || []).filter((update: any) => update && update?.title && typeof update.title === 'string').map((update: any) => {
                         const id = update.title.toLowerCase().replace(/\s+/g, '-');
                         let localValue = localKeyDataValues[id];
                         
@@ -2134,7 +2135,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                     // Update key data points if regulatoryData exists
                     if (regulatoryData?.keyUpdates && Array.isArray(regulatoryData.keyUpdates)) {
                       // For key updates, we need to update the regulatoryData directly since there's no individual change handlers
-                      const updatedKeyUpdates = regulatoryData.keyUpdates.filter((update: any) => update && update.title).map((update: any) => {
+                      const updatedKeyUpdates = regulatoryData.keyUpdates.filter((update: any) => update && update?.title && typeof update.title === 'string').map((update: any) => {
                         const id = update.title.toLowerCase().replace(/\s+/g, '-');
                         const localValue = localKeyDataValues[id];
                         if (localValue !== undefined) {

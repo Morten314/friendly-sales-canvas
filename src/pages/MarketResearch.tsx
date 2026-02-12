@@ -3043,6 +3043,13 @@ const MarketResearch = React.memo(() => {
 
   const [marketSizeCustomMessage, setMarketSizeCustomMessage] = useState<string | undefined>(undefined);
 
+  // Collapse Market Size section when chat opens
+  useEffect(() => {
+    if (showMarketSizeScoutChat) {
+      setIsMarketIntelligenceExpanded(false);
+    }
+  }, [showMarketSizeScoutChat]);
+
 
 
 
@@ -3075,6 +3082,13 @@ const MarketResearch = React.memo(() => {
 
   const [competitorCustomMessage, setCompetitorCustomMessage] = useState<string | undefined>(undefined);
 
+  // Collapse Competitor Landscape section when chat opens
+  useEffect(() => {
+    if (showCompetitorScoutChat) {
+      setCompetitorExpanded(false);
+    }
+  }, [showCompetitorScoutChat]);
+
 
 
 
@@ -3094,6 +3108,13 @@ const MarketResearch = React.memo(() => {
 
 
   const [regulatoryCustomMessage, setRegulatoryCustomMessage] = useState<string | undefined>(undefined);
+
+  // Collapse Regulatory Compliance section when chat opens
+  useEffect(() => {
+    if (showRegulatoryScoutChat) {
+      setRegulatoryExpanded(false);
+    }
+  }, [showRegulatoryScoutChat]);
 
 
 
@@ -9910,6 +9931,11 @@ const MarketResearch = React.memo(() => {
 
 
 
+    // Collapse the report section when chat opens
+    setIsMarketIntelligenceExpanded(false);
+
+
+
     setShowMarketSizeScoutChat(true);
 
 
@@ -10660,6 +10686,11 @@ const MarketResearch = React.memo(() => {
 
 
     setCompetitorCustomMessage(customMessage);
+
+
+
+    // Collapse the report section when chat opens
+    setCompetitorExpanded(false);
 
 
 
