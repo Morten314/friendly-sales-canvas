@@ -3428,6 +3428,46 @@ const MarketResearch = React.memo(() => {
 
   }, []);
 
+  // Expose getAllScoutComponentResponses to window for console access
+  useEffect(() => {
+    // Expose the function globally so it can be called from browser console
+    (window as any).getAllScoutComponentResponses = async (refresh = false) => {
+      console.log('🔍 Fetching all 5 Scout component response bodies...');
+      const result = await getAllScoutComponentResponses(refresh);
+      
+      // Log summary to console
+      console.log('📊 ===== SCOUT COMPONENTS SUMMARY =====');
+      console.log(`Total: ${result.summary.total}, Successful: ${result.summary.successful}, Failed: ${result.summary.failed}`);
+      console.log('========================================');
+      
+      // Log each component's response body
+      result.results.forEach((componentResult, index) => {
+        console.log(`\n${index + 1}. ${componentResult.component} (${componentResult.component_name})`);
+        if (componentResult.success) {
+          console.log('✅ Status:', componentResult.status);
+          console.log('📦 Response Body:', componentResult.responseBody);
+        } else {
+          console.error('❌ Error:', componentResult.error);
+          console.error('Status:', componentResult.status);
+        }
+      });
+      
+      // Also log the full result object
+      console.log('\n📋 Full Result Object:', result);
+      
+      return result;
+    };
+
+    // Also create a simpler alias for quick access
+    (window as any).getScoutResponses = (window as any).getAllScoutComponentResponses;
+
+    return () => {
+      delete (window as any).getAllScoutComponentResponses;
+      delete (window as any).getScoutResponses;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.uid, orgIdToUse]);
+
 
 
   // Transform raw report data to our expected structure (for historical data only)
@@ -5284,6 +5324,122 @@ const MarketResearch = React.memo(() => {
 
     await smartRefresh(true); // Start with first refresh
 
+  };
+
+  // Fetch all 5 Scout components and return their response bodies
+  const getAllScoutComponentResponses = async (refresh = false) => {
+    console.log('🔍 Fetching all 5 Scout component response bodies...');
+    
+    if (!currentUser?.uid) {
+      console.error('User not authenticated, cannot fetch Scout components');
+      throw new Error('Please log in to fetch Scout components');
+    }
+
+    const components = [
+      {
+        name: 'market size & opportunity',
+        displayName: 'Market Size & Opportunity'
+      },
+      {
+        name: 'industry trends report',
+        displayName: 'Industry Trends Report'
+      },
+      {
+        name: 'regulatory & compliance highlights',
+        displayName: 'Regulatory & Compliance Highlights'
+      },
+      {
+        name: 'competitor landscape',
+        displayName: 'Competitor Landscape'
+      },
+      {
+        name: 'market entry & growth strategy',
+        displayName: 'Market Entry & Growth Strategy'
+      }
+    ];
+
+    const fetchComponent = async (component: { name: string; displayName: string }) => {
+      try {
+        const payload = {
+          org_id: orgIdToUse,
+          user_id: currentUser.uid,
+          component_name: component.name,
+          data: {},
+          refresh: refresh
+        };
+
+        // Add cache busting for components that support it
+        if (component.name === 'industry trends report' || component.name === 'market entry & growth strategy') {
+          (payload as any)._forceRefresh = refresh;
+          (payload as any)._timestamp = Date.now();
+          (payload as any)._cacheBust = Math.random().toString(36).substring(7);
+        } else if (component.name === 'competitor landscape') {
+          (payload as any)._timestamp = Date.now();
+          (payload as any)._cache_bust = Math.random().toString(36).substring(7);
+        }
+
+        console.log(`📤 Fetching ${component.displayName}...`);
+        const response = await fetch('/api/market-research', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`❌ Error fetching ${component.displayName}:`, errorText);
+          return {
+            component: component.displayName,
+            component_name: component.name,
+            success: false,
+            error: errorText,
+            status: response.status,
+            responseBody: null
+          };
+        }
+
+        const responseBody = await response.json();
+        console.log(`✅ Successfully fetched ${component.displayName}`);
+        
+        return {
+          component: component.displayName,
+          component_name: component.name,
+          success: true,
+          error: null,
+          status: response.status,
+          responseBody: responseBody
+        };
+      } catch (error) {
+        console.error(`❌ Exception fetching ${component.displayName}:`, error);
+        return {
+          component: component.displayName,
+          component_name: component.name,
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+          status: null,
+          responseBody: null
+        };
+      }
+    };
+
+    // Fetch all components in parallel
+    const results = await Promise.all(components.map(fetchComponent));
+
+    // Log summary
+    const successful = results.filter(r => r.success).length;
+    const failed = results.filter(r => !r.success).length;
+    console.log(`📊 Scout Components Summary: ${successful} successful, ${failed} failed`);
+
+    return {
+      results: results,
+      summary: {
+        total: results.length,
+        successful: successful,
+        failed: failed
+      }
+    };
   };
 
 

@@ -75,7 +75,8 @@ import {
   Link,
   X,
   Info,
-  Lock
+  Lock,
+  Loader2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -381,6 +382,7 @@ const MissionControl = () => {
   const [isCustomerProfileSaved, setIsCustomerProfileSaved] = useState(false);
   const [hasDataSources, setHasDataSources] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
 
   // Tab locking logic - check if data exists in backend, not just session state
   // Customer profile is unlocked if company profile exists in backend
@@ -854,12 +856,14 @@ const MissionControl = () => {
         return;
       }
 
-      const userId = currentUser.uid;
-      let retryCount = 0;
-      const maxRetries = 2;
-      const retryDelay = 1000; // 1 second
+      setIsLoadingProfile(true);
+      try {
+        const userId = currentUser.uid;
+        let retryCount = 0;
+        const maxRetries = 2;
+        const retryDelay = 1000; // 1 second
 
-      while (retryCount <= maxRetries) {
+        while (retryCount <= maxRetries) {
         try {
           console.log(`MissionControl: Loading company profile for user: ${userId} (attempt ${retryCount + 1})`);
           
@@ -933,6 +937,7 @@ const MissionControl = () => {
               const loaded = await loadProfileFromLocalStorage(userId);
               if (loaded) {
                 console.log("✅ MissionControl: Successfully loaded from localStorage backup");
+                setIsLoadingProfile(false);
                 return; // Exit retry loop - don't process empty API data
               } else {
                 console.warn("⚠️ MissionControl: No localStorage backup available, will proceed with empty data");
@@ -1005,12 +1010,16 @@ const MissionControl = () => {
                 // Don't unlock customer profile if company name is empty
                 setIsCompanyProfileSaved(false);
               }
+              setIsLoadingProfile(false);
               return; // Success, exit retry loop
             } else {
               // Data validation failed, try localStorage
               console.log("MissionControl: Data validation failed, trying localStorage fallback");
               const loaded = await loadProfileFromLocalStorage(userId);
-              if (loaded) return;
+              if (loaded) {
+                setIsLoadingProfile(false);
+                return;
+              }
             }
           } else {
             // Try to get error message from response
@@ -1034,7 +1043,10 @@ const MissionControl = () => {
             if (response.status === 404) {
               console.log("MissionControl: No company profile found (404) - trying localStorage fallback");
               const loaded = await loadProfileFromLocalStorage(userId);
-              if (loaded) return;
+              if (loaded) {
+                setIsLoadingProfile(false);
+                return;
+              }
             } else if (response.status >= 500 && retryCount < maxRetries) {
               // Server error, retry
               console.log(`MissionControl: Server error ${response.status}, will retry...`);
@@ -1045,7 +1057,10 @@ const MissionControl = () => {
               // Other error status, try localStorage
               console.log(`MissionControl: API error (${response.status}), trying localStorage fallback`);
               const loaded = await loadProfileFromLocalStorage(userId);
-              if (loaded) return;
+              if (loaded) {
+                setIsLoadingProfile(false);
+                return;
+              }
             }
           }
         } catch (error: any) {
@@ -1075,6 +1090,7 @@ const MissionControl = () => {
             const loaded = await loadProfileFromLocalStorage(userId);
             if (loaded) {
               console.log("MissionControl: Successfully loaded from localStorage fallback");
+              setIsLoadingProfile(false);
               return;
             }
           }
@@ -1088,6 +1104,7 @@ const MissionControl = () => {
             } else {
               console.warn("MissionControl: Failed to load from both API and localStorage");
             }
+            setIsLoadingProfile(false);
             return;
           }
           
@@ -1097,6 +1114,9 @@ const MissionControl = () => {
             await new Promise(resolve => setTimeout(resolve, retryDelay * retryCount));
           }
         }
+        }
+      } finally {
+        setIsLoadingProfile(false);
       }
       
       // If we get here, all attempts failed
@@ -3341,8 +3361,51 @@ const MissionControl = () => {
     }
   }, [currentUser?.uid]);
 
+  // Preload logo image to prevent delay when loading modal appears
+  useEffect(() => {
+    const preloadLogo = () => {
+      const img = new Image();
+      img.src = '/logo.png';
+    };
+    preloadLogo();
+  }, []);
+
   return (
     <Layout>
+      {/* Loading Modal */}
+      <Dialog open={isLoadingProfile} onOpenChange={() => {}}>
+        <DialogContent className="sm:max-w-md border-0 bg-transparent shadow-none p-0">
+          <div className="flex flex-col items-center justify-center gap-6 p-8 bg-background rounded-lg border border-border shadow-2xl">
+            {/* Animated Brewra Logo */}
+            <div className="relative w-24 h-24 flex items-center justify-center">
+              <img 
+                src="/logo.png" 
+                alt="Brewra Logo" 
+                className="h-20 w-20 object-contain"
+                loading="eager"
+                style={{ 
+                  animation: 'logo-reveal 2.5s ease-in-out infinite',
+                  clipPath: 'inset(0% 0% 0% 0%)'
+                }}
+              />
+            </div>
+            {/* Loading Text */}
+            <div className="flex flex-col items-center gap-2">
+              <p className="text-lg font-semibold bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent">
+                Loading company profile
+              </p>
+              <p className="text-sm text-muted-foreground font-medium">Please wait while we fetch your data...</p>
+            </div>
+            {/* Animated Progress Dots */}
+            <div className="flex gap-2">
+              <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms', animationDuration: '1.4s' }}></div>
+              <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '200ms', animationDuration: '1.4s' }}></div>
+              <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '400ms', animationDuration: '1.4s' }}></div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <div className="space-y-6">
         {/* Profile Completeness - Common to all tabs */}
         <div className="flex items-center justify-end gap-2">
