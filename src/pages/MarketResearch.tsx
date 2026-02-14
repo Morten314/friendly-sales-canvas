@@ -5372,10 +5372,15 @@ const MarketResearch = React.memo(() => {
     ];
 
     // Build and log all request bodies before making API calls
-    console.log('📋 ===== SCOUT PAGE LOAD - ALL 5 COMPONENT REQUEST BODIES =====');
+    console.log('');
+    console.log('═══════════════════════════════════════════════════════════════');
+    console.log('📋 SCOUT PAGE LOAD - ALL 5 COMPONENT REQUEST BODIES');
+    console.log('═══════════════════════════════════════════════════════════════');
     const allRequestBodies: { [key: string]: any } = {};
     
-    components.forEach(component => {
+    components.forEach((component, index) => {
+      // Build clean payload with only fields the backend expects
+      // Note: cache_bust fields are removed as backend doesn't accept them
       const payload: any = {
         org_id: orgIdToUse,
         user_id: currentUser.uid,
@@ -5384,25 +5389,22 @@ const MarketResearch = React.memo(() => {
         refresh: refresh
       };
 
-      // Add cache busting for components that support it
-      if (component.name === 'industry trends report' || component.name === 'market entry & growth strategy') {
-        payload._forceRefresh = refresh;
-        payload._timestamp = Date.now();
-        payload._cacheBust = Math.random().toString(36).substring(7);
-      } else if (component.name === 'competitor landscape') {
-        payload._timestamp = Date.now();
-        payload._cache_bust = Math.random().toString(36).substring(7);
-      }
-
       allRequestBodies[component.displayName] = payload;
+      
+      // Log each component individually for clarity
+      console.log(`\n📤 Component ${index + 1}/5: ${component.displayName}`);
+      console.log(JSON.stringify(payload, null, 2));
     });
 
-    // Log all request bodies in JSON format
-    console.log('📤 All 5 Scout Component Request Bodies (JSON):', JSON.stringify(allRequestBodies, null, 2));
-    console.log('📋 ===== END OF REQUEST BODIES =====');
+    // Log all request bodies together in JSON format
+    console.log('\n📋 ALL 5 COMPONENTS REQUEST BODIES (COMBINED JSON):');
+    console.log(JSON.stringify(allRequestBodies, null, 2));
+    console.log('═══════════════════════════════════════════════════════════════');
+    console.log('');
 
     const fetchComponent = async (component: { name: string; displayName: string }) => {
       try {
+        // Build clean payload with only fields the backend expects
         const payload = {
           org_id: orgIdToUse,
           user_id: currentUser.uid,
@@ -5411,17 +5413,7 @@ const MarketResearch = React.memo(() => {
           refresh: refresh
         };
 
-        // Add cache busting for components that support it
-        if (component.name === 'industry trends report' || component.name === 'market entry & growth strategy') {
-          (payload as any)._forceRefresh = refresh;
-          (payload as any)._timestamp = Date.now();
-          (payload as any)._cacheBust = Math.random().toString(36).substring(7);
-        } else if (component.name === 'competitor landscape') {
-          (payload as any)._timestamp = Date.now();
-          (payload as any)._cache_bust = Math.random().toString(36).substring(7);
-        }
-
-        // Log request body in JSON format
+        // Log request body in JSON format (before sending to API)
         console.log(`📤 [SCOUT REQUEST BODY] ${component.displayName}:`, JSON.stringify(payload, null, 2));
         console.log(`📤 Fetching ${component.displayName}...`);
         const response = await fetch('/api/market-research', {
@@ -6532,45 +6524,24 @@ const MarketResearch = React.memo(() => {
       // Payload specifically for Industry Trends using API structure
 
       const payload = {
-
         org_id: orgIdToUse,
         user_id: currentUser?.uid || "",
-
         component_name: "industry trends report",
-
         data: {},
-
-        refresh: refresh,
-
-        _forceRefresh: refresh,
-
-        _timestamp: Date.now(),
-
-        _cacheBust: Math.random().toString(36).substring(7)
-
+        refresh: refresh
       };
 
 
 
       console.log('📤 Sending Industry Trends API request with payload:', payload);
+      console.log('📤 [SCOUT REQUEST BODY] Industry Trends Report:', JSON.stringify(payload, null, 2));
 
       console.log('🔄 Industry Trends refresh parameter:', refresh);
 
 
 
-      // Use cache-busted API call for fresh data
-
-      const cacheBustedPayload = {
-
-        ...payload,
-
-        _timestamp: Date.now(),
-
-        _cache_bust: Math.random().toString(36).substring(7)
-
-      };
-
-      console.log('📤 Industry Trends cache-busted payload:', cacheBustedPayload);
+      // Note: Removed cache-busting fields (_timestamp, _cache_bust) as backend doesn't accept them
+      // The backend expects only: org_id, user_id, component_name, data, refresh
 
       console.log('📈 INDUSTRY TRENDS - Making API call to /api/market-research');
       const response = await fetch('/api/market-research', {
@@ -6578,7 +6549,7 @@ const MarketResearch = React.memo(() => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(cacheBustedPayload)
+        body: JSON.stringify(payload)
       });
 
       if (!response.ok) {
@@ -6895,25 +6866,11 @@ const MarketResearch = React.memo(() => {
 
 
       const payload = {
-
-
-
+        org_id: orgIdToUse,
         user_id: currentUser?.uid || "",
-
-
-
         component_name: "regulatory & compliance highlights",
-
-
-
         data: {},
-
-
-
         refresh: refresh
-
-
-
       };
 
 
@@ -6923,6 +6880,7 @@ const MarketResearch = React.memo(() => {
 
 
       console.log('📤 Sending Regulatory API request with payload:', payload);
+      console.log('📤 [SCOUT REQUEST BODY] Regulatory & Compliance Highlights:', JSON.stringify(payload, null, 2));
 
 
 
@@ -7294,6 +7252,18 @@ const MarketResearch = React.memo(() => {
           console.log('  - updatedRegulatoryData.euAiActDeadline:', updatedRegulatoryData.euAiActDeadline);
 
           console.log('  - updatedRegulatoryData.gdprCompliance:', updatedRegulatoryData.gdprCompliance);
+          
+          console.log('  - updatedRegulatoryData.keyUpdates:', updatedRegulatoryData.keyUpdates);
+          console.log('  - updatedRegulatoryData.keyUpdates length:', updatedRegulatoryData.keyUpdates?.length);
+          
+          console.log('  - updatedRegulatoryData.visualDataCards:', updatedRegulatoryData.visualDataCards);
+          console.log('  - updatedRegulatoryData.visualDataCards length:', updatedRegulatoryData.visualDataCards?.length);
+          
+          console.log('  - updatedRegulatoryData.regionalData:', updatedRegulatoryData.regionalData);
+          console.log('  - updatedRegulatoryData.regionalData length:', updatedRegulatoryData.regionalData?.length);
+          
+          console.log('  - updatedRegulatoryData.strategicRecommendations:', updatedRegulatoryData.strategicRecommendations);
+          console.log('  - Full updatedRegulatoryData object:', JSON.stringify(updatedRegulatoryData, null, 2));
 
 
 
@@ -7568,9 +7538,7 @@ const MarketResearch = React.memo(() => {
         user_id: currentUser?.uid || "",
         component_name: "competitor landscape",
         data: {},
-        refresh: refresh,
-        _timestamp: Date.now(),
-        _cache_bust: Math.random().toString(36).substring(7)
+        refresh: refresh
       };
 
 
@@ -8597,28 +8565,11 @@ const MarketResearch = React.memo(() => {
 
 
       const payload = {
-
-
-
+        org_id: orgIdToUse,
         user_id: currentUser?.uid || "",
-
-
-
         component_name: "market entry & growth strategy",
-
-
-
         data: {},
-
-
-
-        refresh: refresh,
-
-        _forceRefresh: refresh,
-
-        _timestamp: Date.now(),
-
-        _cacheBust: Math.random().toString(36).substring(7)
+        refresh: refresh
 
 
 
@@ -8631,6 +8582,7 @@ const MarketResearch = React.memo(() => {
 
 
       console.log('📤 Sending Market Entry API request with payload:', payload);
+      console.log('📤 [SCOUT REQUEST BODY] Market Entry & Growth Strategy:', JSON.stringify(payload, null, 2));
 
       console.log('🔄 Market Entry refresh parameter:', refresh);
 
@@ -8638,28 +8590,15 @@ const MarketResearch = React.memo(() => {
 
 
 
-      // Use cache-busted API call for fresh data
-
-      const cacheBustedPayload = {
-
-        ...payload,
-
-        _timestamp: Date.now(),
-
-        _cache_bust: Math.random().toString(36).substring(7)
-
-      };
-
-      console.log('📤 Market Entry cache-busted payload:', cacheBustedPayload);
-
-      
+      // Note: Removed cache-busting fields (_timestamp, _cache_bust) as backend doesn't accept them
+      // The backend expects only: org_id, user_id, component_name, data, refresh
 
       const response = await fetch('/api/market-research', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(cacheBustedPayload)
+        body: JSON.stringify(payload)
       });
 
       if (!response.ok) {
@@ -8704,6 +8643,8 @@ const MarketResearch = React.memo(() => {
 
 
         console.log('🎯 Processing API data for Market Entry:', apiData);
+        console.log('🎯 Market Entry API Data Keys:', Object.keys(apiData));
+        console.log('🎯 Market Entry API Data (Full):', JSON.stringify(apiData, null, 2));
 
 
 
@@ -8715,7 +8656,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-        const currentTimestamp = marketEntryData.timestamp || null;
+        const currentTimestamp = marketEntryData?.timestamp || null;
 
 
 
@@ -8811,51 +8752,51 @@ const MarketResearch = React.memo(() => {
 
 
 
-            executiveSummary: apiData.executiveSummary || marketEntryData.executiveSummary,
+            executiveSummary: apiData.executiveSummary || marketEntryData?.executiveSummary,
 
 
 
-            entryBarriers: apiData.entryBarriers || marketEntryData.entryBarriers,
+            entryBarriers: apiData.entryBarriers || marketEntryData?.entryBarriers,
 
 
 
-            recommendedChannel: apiData.recommendedChannel || marketEntryData.recommendedChannel,
+            recommendedChannel: apiData.recommendedChannel || marketEntryData?.recommendedChannel,
 
 
 
-            timeToMarket: apiData.timeToMarket || marketEntryData.timeToMarket,
+            timeToMarket: apiData.timeToMarket || marketEntryData?.timeToMarket,
 
 
 
-            topBarrier: apiData.topBarrier || marketEntryData.topBarrier,
+            topBarrier: apiData.topBarrier || marketEntryData?.topBarrier,
 
 
 
-            competitiveDifferentiation: apiData.competitiveDifferentiation || marketEntryData.competitiveDifferentiation,
+            competitiveDifferentiation: apiData.competitiveDifferentiation || marketEntryData?.competitiveDifferentiation,
 
 
 
-            strategicRecommendations: apiData.strategicRecommendations || marketEntryData.strategicRecommendations,
+            strategicRecommendations: apiData.strategicRecommendations || marketEntryData?.strategicRecommendations,
 
 
 
-            riskAssessment: apiData.riskAssessment || marketEntryData.riskAssessment,
+            riskAssessment: apiData.riskAssessment || marketEntryData?.riskAssessment,
 
 
 
-            swot: apiData.swot || marketEntryData.swot,
+            swot: apiData.swot || marketEntryData?.swot,
 
 
 
-            timeline: apiData.timeline || marketEntryData.timeline,
+            timeline: apiData.timeline || marketEntryData?.timeline,
 
 
 
-            marketSizeBySegment: apiData.marketSizeBySegment || marketEntryData.marketSizeBySegment,
+            marketSizeBySegment: apiData.marketSizeBySegment || marketEntryData?.marketSizeBySegment,
 
 
 
-            growthProjections: apiData.growthProjections || marketEntryData.growthProjections,
+            growthProjections: apiData.growthProjections || marketEntryData?.growthProjections,
 
 
 
@@ -8892,6 +8833,10 @@ const MarketResearch = React.memo(() => {
 
 
           console.log('✅ MARKET ENTRY DATA UPDATED - Component name:', apiData.component_name);
+          console.log('✅ MARKET ENTRY UPDATED DATA (Full):', JSON.stringify(updatedData, null, 2));
+          console.log('✅ MARKET ENTRY - executiveSummary:', updatedData.executiveSummary);
+          console.log('✅ MARKET ENTRY - entryBarriers:', updatedData.entryBarriers);
+          console.log('✅ MARKET ENTRY - strategicRecommendations:', updatedData.strategicRecommendations);
 
 
 
@@ -12521,7 +12466,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-    const oldValue = marketEntryData.executiveSummary;
+    const oldValue = marketEntryData?.executiveSummary;
 
 
 
@@ -12601,7 +12546,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-    const oldValue = marketEntryData.entryBarriers.join(', ');
+    const oldValue = marketEntryData?.entryBarriers?.join(', ');
 
 
 
@@ -12685,7 +12630,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-    const oldValue = marketEntryData.recommendedChannel;
+    const oldValue = marketEntryData?.recommendedChannel;
 
 
 
@@ -12765,7 +12710,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-    const oldValue = marketEntryData.timeToMarket;
+    const oldValue = marketEntryData?.timeToMarket;
 
 
 
@@ -12845,7 +12790,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-    const oldValue = marketEntryData.topBarrier;
+    const oldValue = marketEntryData?.topBarrier;
 
 
 
@@ -12925,7 +12870,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-    const oldValue = marketEntryData.competitiveDifferentiation.join(', ');
+    const oldValue = marketEntryData?.competitiveDifferentiation?.join(', ');
 
 
 
@@ -13009,7 +12954,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-    const oldValue = marketEntryData.strategicRecommendations.join(', ');
+    const oldValue = marketEntryData?.strategicRecommendations?.join(', ');
 
 
 
@@ -13085,7 +13030,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-    const oldValue = marketEntryData.riskAssessment.join(', ');
+    const oldValue = marketEntryData?.riskAssessment?.join(', ');
 
 
 
@@ -15034,35 +14979,35 @@ const MarketResearch = React.memo(() => {
 
 
 
-                      marketEntryExecutiveSummary={marketEntryData.executiveSummary}
+                      marketEntryExecutiveSummary={marketEntryData?.executiveSummary}
 
 
 
-                      marketEntryBarriers={marketEntryData.entryBarriers}
+                      marketEntryBarriers={marketEntryData?.entryBarriers}
 
 
 
-                      marketEntryRecommendedChannel={marketEntryData.recommendedChannel}
+                      marketEntryRecommendedChannel={marketEntryData?.recommendedChannel}
 
 
 
-                      marketEntryTimeToMarket={marketEntryData.timeToMarket}
+                      marketEntryTimeToMarket={marketEntryData?.timeToMarket}
 
 
 
-                      marketEntryTopBarrier={marketEntryData.topBarrier}
+                      marketEntryTopBarrier={marketEntryData?.topBarrier}
 
 
 
-                      marketEntryCompetitiveDifferentiation={marketEntryData.competitiveDifferentiation}
+                      marketEntryCompetitiveDifferentiation={marketEntryData?.competitiveDifferentiation}
 
 
 
-                        marketEntryStrategicRecommendations={marketEntryData.strategicRecommendations}
+                        marketEntryStrategicRecommendations={marketEntryData?.strategicRecommendations}
 
 
 
-                        marketEntryRiskAssessment={marketEntryData.riskAssessment}
+                        marketEntryRiskAssessment={marketEntryData?.riskAssessment}
 
 
 
