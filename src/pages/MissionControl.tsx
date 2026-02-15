@@ -1047,6 +1047,12 @@ const MissionControl = () => {
                 setIsLoadingProfile(false);
                 return;
               }
+              // 404 is expected for new users - no profile exists yet
+              // Don't retry, just stop loading and let user create a new profile
+              console.log("MissionControl: No company profile found (new user) - stopping load, user can create profile");
+              setIsLoadingProfile(false);
+              setIsCompanyProfileSaved(false); // Ensure customer profile tab is locked
+              return; // Exit retry loop - 404 is not an error, it's expected for new users
             } else if (response.status >= 500 && retryCount < maxRetries) {
               // Server error, retry
               console.log(`MissionControl: Server error ${response.status}, will retry...`);
