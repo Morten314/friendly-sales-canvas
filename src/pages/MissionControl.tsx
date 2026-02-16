@@ -75,7 +75,8 @@ import {
   Link,
   X,
   Info,
-  Lock
+  Lock,
+  Loader2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -381,10 +382,13 @@ const MissionControl = () => {
   const [isCustomerProfileSaved, setIsCustomerProfileSaved] = useState(false);
   const [hasDataSources, setHasDataSources] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
 
-  // Tab locking logic
+  // Tab locking logic - check if data exists in backend, not just session state
+  // Customer profile is unlocked if company profile exists in backend
   const isCustomerProfileLocked = !isCompanyProfileSaved;
-  const isDataSourcesLocked = !isCustomerProfileSaved;
+  // Data sources is unlocked if company profile exists (not dependent on customer profile)
+  const isDataSourcesLocked = !isCompanyProfileSaved;
   const [expandedSources, setExpandedSources] = useState<Set<string>>(new Set());
   const [expandedTableRows, setExpandedTableRows] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState("");
@@ -517,7 +521,8 @@ const MissionControl = () => {
   const [productDocFiles, setProductDocFiles] = useState<Array<{file: File | null, destinationUrl: string}>>([{file: null, destinationUrl: ""}]);
   
   const { toast } = useToast();
-  const { currentUser } = useAuth();
+  const { currentUser, orgId } = useAuth();
+  const orgIdToUse = orgId || 'brewra'; // Fallback to 'brewra' for backward compatibility
 
   // Form state for company profile
   const [companyProfile, setCompanyProfile] = useState({
@@ -565,30 +570,30 @@ const MissionControl = () => {
     try {
       // Prepare payload with profile_type as required by the API
       const payload = {
-        user_id: currentUser.uid,
+        org_id: orgIdToUse,
         profile_type: "company",
         company_name: trimmedCompanyName,
-        headquarters: companyProfile.headquarters.trim(),
-        employee_size: companyProfile.employeeSize.trim(),
-        industry: companyProfile.industry.trim(),
-        revenue_band: companyProfile.revenue.trim(),
-        gtm_model: companyProfile.gtmModel.trim(),
-        region_focus: companyProfile.regionFocus.trim(),
-        typical_deal_size: companyProfile.dealSize.trim(),
-        company_url: companyProfile.companyUrl.trim(),
-        key_buyer_persona: companyProfile.keyBuyerPersona.trim(),
-        goals: companyProfile.goals.trim(),
-        pain_points: companyProfile.painPoints.trim(),
-        target_segments: companyProfile.targetSegments.trim(),
-        exclude_segments: companyProfile.excludeSegments.trim(),
-        compliance: companyProfile.compliance.trim(),
-        constraints: companyProfile.constraints.trim(),
+        headquarters: (companyProfile.headquarters || "").trim(),
+        employee_size: (companyProfile.employeeSize || "").trim(),
+        industry: (companyProfile.industry || "").trim(),
+        revenue_band: (companyProfile.revenue || "").trim(),
+        gtm_model: (companyProfile.gtmModel || "").trim(),
+        region_focus: (companyProfile.regionFocus || "").trim(),
+        typical_deal_size: (companyProfile.dealSize || "").trim(),
+        company_url: (companyProfile.companyUrl || "").trim(),
+        key_buyer_persona: (companyProfile.keyBuyerPersona || "").trim(),
+        goals: (companyProfile.goals || "").trim(),
+        pain_points: (companyProfile.painPoints || "").trim(),
+        target_segments: (companyProfile.targetSegments || "").trim(),
+        exclude_segments: (companyProfile.excludeSegments || "").trim(),
+        compliance: (companyProfile.compliance || "").trim(),
+        constraints: (companyProfile.constraints || "").trim(),
       };
 
       console.log("=== MISSION CONTROL: Saving company profile ===");
       console.log("Payload:", payload);
 
-      const apiUrl = buildApiUrl(`api/profile/company?user_id=${currentUser.uid}`);
+      const apiUrl = `/api/profile/company?org_id=${orgIdToUse}`;
       console.log("MissionControl: POST request URL:", apiUrl);
       console.log("MissionControl: POST request payload:", payload);
       
@@ -683,7 +688,7 @@ const MissionControl = () => {
       console.log("MissionControl: Verifying data persistence by fetching saved profile...");
       setTimeout(async () => {
         try {
-          const verifyResponse = await fetch(buildApiUrl(`api/profile/company?user_id=${currentUser.uid}`), {
+          const verifyResponse = await fetch(`/api/profile/company?org_id=${orgIdToUse}`, {
             method: "GET",
             headers: { "Content-Type": "application/json" },
           });
@@ -738,12 +743,6 @@ const MissionControl = () => {
             dealSize: localProfile.typical_deal_size || localProfile.dealSize || "",
             companyUrl: localProfile.company_url || localProfile.companyUrl || "",
             keyBuyerPersona: localProfile.key_buyer_persona || localProfile.keyBuyerPersona || "",
-            goals: localProfile.goals || "",
-            painPoints: localProfile.pain_points || localProfile.painPoints || "",
-            targetSegments: localProfile.target_segments || localProfile.targetSegments || "",
-            excludeSegments: localProfile.exclude_segments || localProfile.excludeSegments || "",
-            compliance: localProfile.compliance || "",
-            constraints: localProfile.constraints || "",
           };
           setCompanyProfile(profileData);
           if (localProfile.company_name || localProfile.companyName) {
@@ -857,19 +856,21 @@ const MissionControl = () => {
         return;
       }
 
-      const userId = currentUser.uid;
-      let retryCount = 0;
-      const maxRetries = 2;
-      const retryDelay = 1000; // 1 second
+      setIsLoadingProfile(true);
+      try {
+        const userId = currentUser.uid;
+        let retryCount = 0;
+        const maxRetries = 2;
+        const retryDelay = 1000; // 1 second
 
-      while (retryCount <= maxRetries) {
+        while (retryCount <= maxRetries) {
         try {
           console.log(`MissionControl: Loading company profile for user: ${userId} (attempt ${retryCount + 1})`);
           
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
-          const response = await fetch(buildApiUrl(`api/profile/company?user_id=${userId}`), {
+          const response = await fetch(`/api/profile/company?org_id=${orgIdToUse}`, {
             method: "GET",
             headers: {
               "Content-Type": "application/json",
@@ -936,6 +937,7 @@ const MissionControl = () => {
               const loaded = await loadProfileFromLocalStorage(userId);
               if (loaded) {
                 console.log("✅ MissionControl: Successfully loaded from localStorage backup");
+                setIsLoadingProfile(false);
                 return; // Exit retry loop - don't process empty API data
               } else {
                 console.warn("⚠️ MissionControl: No localStorage backup available, will proceed with empty data");
@@ -1008,12 +1010,16 @@ const MissionControl = () => {
                 // Don't unlock customer profile if company name is empty
                 setIsCompanyProfileSaved(false);
               }
+              setIsLoadingProfile(false);
               return; // Success, exit retry loop
             } else {
               // Data validation failed, try localStorage
               console.log("MissionControl: Data validation failed, trying localStorage fallback");
               const loaded = await loadProfileFromLocalStorage(userId);
-              if (loaded) return;
+              if (loaded) {
+                setIsLoadingProfile(false);
+                return;
+              }
             }
           } else {
             // Try to get error message from response
@@ -1037,7 +1043,16 @@ const MissionControl = () => {
             if (response.status === 404) {
               console.log("MissionControl: No company profile found (404) - trying localStorage fallback");
               const loaded = await loadProfileFromLocalStorage(userId);
-              if (loaded) return;
+              if (loaded) {
+                setIsLoadingProfile(false);
+                return;
+              }
+              // 404 is expected for new users - no profile exists yet
+              // Don't retry, just stop loading and let user create a new profile
+              console.log("MissionControl: No company profile found (new user) - stopping load, user can create profile");
+              setIsLoadingProfile(false);
+              setIsCompanyProfileSaved(false); // Ensure customer profile tab is locked
+              return; // Exit retry loop - 404 is not an error, it's expected for new users
             } else if (response.status >= 500 && retryCount < maxRetries) {
               // Server error, retry
               console.log(`MissionControl: Server error ${response.status}, will retry...`);
@@ -1048,7 +1063,10 @@ const MissionControl = () => {
               // Other error status, try localStorage
               console.log(`MissionControl: API error (${response.status}), trying localStorage fallback`);
               const loaded = await loadProfileFromLocalStorage(userId);
-              if (loaded) return;
+              if (loaded) {
+                setIsLoadingProfile(false);
+                return;
+              }
             }
           }
         } catch (error: any) {
@@ -1078,6 +1096,7 @@ const MissionControl = () => {
             const loaded = await loadProfileFromLocalStorage(userId);
             if (loaded) {
               console.log("MissionControl: Successfully loaded from localStorage fallback");
+              setIsLoadingProfile(false);
               return;
             }
           }
@@ -1091,6 +1110,7 @@ const MissionControl = () => {
             } else {
               console.warn("MissionControl: Failed to load from both API and localStorage");
             }
+            setIsLoadingProfile(false);
             return;
           }
           
@@ -1100,6 +1120,9 @@ const MissionControl = () => {
             await new Promise(resolve => setTimeout(resolve, retryDelay * retryCount));
           }
         }
+        }
+      } finally {
+        setIsLoadingProfile(false);
       }
       
       // If we get here, all attempts failed
@@ -2166,7 +2189,7 @@ const MissionControl = () => {
       // First, fetch existing company profile data to preserve it
       let existingCompanyData = {};
       try {
-        const getResponse = await fetch(buildApiUrl(`api/profile/company?user_id=${currentUser.uid}`), {
+        const getResponse = await fetch(`/api/profile/company?org_id=${orgIdToUse}`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -2202,7 +2225,7 @@ const MissionControl = () => {
 
       // Prepare payload with data sources, preserving existing company profile fields
       const payload = {
-        user_id: currentUser.uid,
+        org_id: orgIdToUse,
         profile_type: "company",
         ...existingCompanyData,
         data_sources: {
@@ -2225,7 +2248,7 @@ const MissionControl = () => {
       console.log("=== MISSION CONTROL: Saving data sources to backend ===");
       console.log("Payload:", payload);
 
-      const apiUrl = buildApiUrl(`api/profile/company?user_id=${currentUser.uid}`);
+      const apiUrl = `/api/profile/company?org_id=${orgIdToUse}`;
       const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
@@ -2330,7 +2353,7 @@ const MissionControl = () => {
     }
 
     try {
-      const apiUrl = buildApiUrl(`api/profile/company?user_id=${currentUser.uid}`);
+      const apiUrl = `/api/profile/company?org_id=${orgIdToUse}`;
       const response = await fetch(apiUrl, {
         method: "GET",
         headers: {
@@ -2367,6 +2390,9 @@ const MissionControl = () => {
         }));
 
         setDataSources(loadedSources);
+        if (loadedSources.length > 0) {
+          setHasDataSources(true);
+        }
         console.log("Data sources loaded from backend:", loadedSources);
       }
     } catch (error) {
@@ -2493,7 +2519,7 @@ const MissionControl = () => {
 
     const uploadName = customFileUploadName.trim();
     let fileKey: string | undefined;
-    let uploadStatus: 'processing' | 'uploaded' | 'error' = 'processing';
+    let uploadStatus: 'processing' | 'uploaded' | 'failed' = 'processing';
 
     // If a file is provided, upload it to backend
     if (customFileUploadFile) {
@@ -2515,7 +2541,7 @@ const MissionControl = () => {
             if (statusResult.status === 'processing') {
               uploadStatus = 'processing';
             } else if (statusResult.status === 'failed') {
-              uploadStatus = 'error';
+              uploadStatus = 'failed';
             }
           } catch (statusError) {
             console.warn("Could not check document status:", statusError);
@@ -2524,7 +2550,7 @@ const MissionControl = () => {
         }
       } catch (error) {
         console.error("File upload failed:", error);
-        uploadStatus = 'error';
+        uploadStatus = 'failed';
         toast({
           title: "Upload failed",
           description: error instanceof Error ? error.message : "Failed to upload file. Please try again.",
@@ -3199,21 +3225,91 @@ const MissionControl = () => {
     };
   }, []);
 
-  // Check for existing customer profile data on mount
+  // Check for existing customer profile data on mount (from backend)
   useEffect(() => {
-    // Check localStorage for saved ICPs
-    const savedICPs = localStorage.getItem('icps');
-    if (savedICPs) {
-      try {
-        const icps = JSON.parse(savedICPs);
-        if (icps && icps.length > 0) {
-          setIsCustomerProfileSaved(true);
-        }
-      } catch (e) {
-        // Ignore parse errors
+    const loadCustomerProfileFromBackend = async () => {
+      if (!currentUser?.uid) {
+        return;
       }
+
+      try {
+        const apiUrl = `/api/customer_profile?org_id=${orgIdToUse}`;
+        const response = await fetch(apiUrl, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (response.ok) {
+          const responseData = await response.json();
+          const data = responseData.data || responseData;
+          
+          // Check if icps exists in the response
+          let icpsData = null;
+          if (responseData.data) {
+            if (Array.isArray(responseData.data.icps)) {
+              icpsData = responseData.data.icps;
+            } else if (responseData.data.customer_profiles && Array.isArray(responseData.data.customer_profiles.icps)) {
+              icpsData = responseData.data.customer_profiles.icps;
+            } else if (responseData.data.customer_profile && Array.isArray(responseData.data.customer_profile.icps)) {
+              icpsData = responseData.data.customer_profile.icps;
+            }
+          }
+          
+          if (!icpsData) {
+            if (Array.isArray(data.icps)) {
+              icpsData = data.icps;
+            } else if (data.customer_profiles && Array.isArray(data.customer_profiles.icps)) {
+              icpsData = data.customer_profiles.icps;
+            } else if (data.customer_profile && Array.isArray(data.customer_profile.icps)) {
+              icpsData = data.customer_profile.icps;
+            }
+          }
+          
+          if (Array.isArray(icpsData) && icpsData.length > 0) {
+            console.log("MissionControl: Customer profile found in backend, unlocking customer profile tab");
+            setIsCustomerProfileSaved(true);
+          }
+        } else {
+          // Try localStorage as fallback
+          try {
+            const { getUserLocalStorage } = await import("@/utils/cacheUtils");
+            const localData = getUserLocalStorage('customerProfile', currentUser.uid);
+            if (localData) {
+              const localICPs = JSON.parse(localData);
+              if (Array.isArray(localICPs) && localICPs.length > 0) {
+                console.log("MissionControl: Customer profile found in localStorage, unlocking customer profile tab");
+                setIsCustomerProfileSaved(true);
+              }
+            }
+          } catch (e) {
+            // Ignore errors
+          }
+        }
+      } catch (error) {
+        console.error("Error checking customer profile:", error);
+        // Try localStorage as fallback
+        try {
+          const { getUserLocalStorage } = await import("@/utils/cacheUtils");
+          const localData = getUserLocalStorage('customerProfile', currentUser.uid);
+          if (localData) {
+            const localICPs = JSON.parse(localData);
+            if (Array.isArray(localICPs) && localICPs.length > 0) {
+              console.log("MissionControl: Customer profile found in localStorage fallback, unlocking customer profile tab");
+              setIsCustomerProfileSaved(true);
+            }
+          }
+        } catch (e) {
+          // Ignore errors
+        }
+      }
+    };
+
+    if (currentUser?.uid) {
+      loadCustomerProfileFromBackend();
     }
-  }, []);
+  }, [currentUser?.uid]);
 
   // Listen for data source added events from DataSourcesManager
   useEffect(() => {
@@ -3236,8 +3332,86 @@ const MissionControl = () => {
     }
   }, [dataSources.length]);
 
+  // Check if data sources exist in backend on mount
+  useEffect(() => {
+    const checkDataSourcesInBackend = async () => {
+      if (!currentUser?.uid) {
+        return;
+      }
+
+      try {
+        const apiUrl = `/api/profile/company?org_id=${orgIdToUse}`;
+        const response = await fetch(apiUrl, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          
+          // Check if data_sources exists in the response
+          if (data.data_sources && data.data_sources.sources && Array.isArray(data.data_sources.sources) && data.data_sources.sources.length > 0) {
+            console.log("MissionControl: Data sources found in backend");
+            setHasDataSources(true);
+          }
+        }
+      } catch (error) {
+        console.error("Error checking data sources:", error);
+      }
+    };
+
+    if (currentUser?.uid) {
+      checkDataSourcesInBackend();
+    }
+  }, [currentUser?.uid]);
+
+  // Preload logo image to prevent delay when loading modal appears
+  useEffect(() => {
+    const preloadLogo = () => {
+      const img = new Image();
+      img.src = '/logo.png';
+    };
+    preloadLogo();
+  }, []);
+
   return (
     <Layout>
+      {/* Loading Modal */}
+      <Dialog open={isLoadingProfile} onOpenChange={() => {}}>
+        <DialogContent className="sm:max-w-md border-0 bg-transparent shadow-none p-0">
+          <div className="flex flex-col items-center justify-center gap-6 p-8 bg-background rounded-lg border border-border shadow-2xl">
+            {/* Animated Brewra Logo */}
+            <div className="relative w-24 h-24 flex items-center justify-center">
+              <img 
+                src="/logo.png" 
+                alt="Brewra Logo" 
+                className="h-20 w-20 object-contain"
+                loading="eager"
+                style={{ 
+                  animation: 'logo-reveal 2.5s ease-in-out infinite',
+                  clipPath: 'inset(0% 0% 0% 0%)'
+                }}
+              />
+            </div>
+            {/* Loading Text */}
+            <div className="flex flex-col items-center gap-2">
+              <p className="text-lg font-semibold bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent">
+                Loading company profile
+              </p>
+              <p className="text-sm text-muted-foreground font-medium">Please wait while we fetch your data...</p>
+            </div>
+            {/* Animated Progress Dots */}
+            <div className="flex gap-2">
+              <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms', animationDuration: '1.4s' }}></div>
+              <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '200ms', animationDuration: '1.4s' }}></div>
+              <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '400ms', animationDuration: '1.4s' }}></div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <div className="space-y-6">
         {/* Profile Completeness - Common to all tabs */}
         <div className="flex items-center justify-end gap-2">
