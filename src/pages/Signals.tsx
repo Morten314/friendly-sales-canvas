@@ -10,6 +10,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { useAuth } from '@/contexts/AuthContext';
+import { buildApiUrl } from '@/lib/api';
 type Agent = 'scout' | 'profiler';
 type ActionType = 'accept' | 'dismiss' | 'save' | 'ask';
 interface SignalCard {
@@ -24,7 +25,7 @@ interface SignalCard {
 // API functions
 const generateSignalsBatch = async (userId: string) => {
   try {
-    const response = await fetch('/api/generate-signals-batch', {
+    const response = await fetch(buildApiUrl('generate-signals-batch'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -71,7 +72,7 @@ const generateSignalsBatch = async (userId: string) => {
 
 const fetchSignals = async (userId: string) => {
   try {
-    const response = await fetch(`/api/fetch-signals?user_id=${userId}&limit=10`);
+    const response = await fetch(`${buildApiUrl('fetch-signals')}?user_id=${userId}&limit=10`);
     
     console.log('Fetch signals response status:', response.status);
     console.log('Fetch signals response headers:', response.headers);

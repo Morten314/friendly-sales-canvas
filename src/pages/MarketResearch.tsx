@@ -128,7 +128,7 @@ import { toUTCTimestamp, isTimestampNewer, logTimestampComparison } from '@/lib/
 
 
 
-import { apiFetchJson } from '@/lib/api';
+import { apiFetchJson, buildApiUrl } from '@/lib/api';
 
 import { marketResearchApiCall, logApiCallResult, shouldUseCachedData } from '@/utils/apiUtils';
 
@@ -5416,7 +5416,7 @@ const MarketResearch = React.memo(() => {
         // Log request body in JSON format (before sending to API)
         console.log(`📤 [SCOUT REQUEST BODY] ${component.displayName}:`, JSON.stringify(payload, null, 2));
         console.log(`📤 Fetching ${component.displayName}...`);
-        const response = await fetch('/api/market-research', {
+        const response = await fetch(buildApiUrl('market-research'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -5669,7 +5669,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-      const response = await fetch('/api/market-research', {
+      const response = await fetch(buildApiUrl('market-research'), {
 
 
 
@@ -5812,7 +5812,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-              const altResponse = await fetch('/api/market-research', {
+              const altResponse = await fetch(buildApiUrl('market-research'), {
 
 
 
@@ -6544,7 +6544,7 @@ const MarketResearch = React.memo(() => {
       // The backend expects only: org_id, user_id, component_name, data, refresh
 
       console.log('📈 INDUSTRY TRENDS - Making API call to /api/market-research');
-      const response = await fetch('/api/market-research', {
+      const response = await fetch(buildApiUrl('market-research'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -6888,7 +6888,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-      const response = await fetch('/api/market-research', {
+      const response = await fetch(buildApiUrl('market-research'), {
 
 
 
@@ -7609,7 +7609,7 @@ const MarketResearch = React.memo(() => {
 
           console.log(`🔄🏆 COMPETITOR LANDSCAPE - Attempting API call (attempt ${retryCount + 1}/${maxRetries + 1})`);
 
-          const response = await fetch('/api/market-research', {
+          const response = await fetch(buildApiUrl('market-research'), {
 
 
 
@@ -8593,7 +8593,7 @@ const MarketResearch = React.memo(() => {
       // Note: Removed cache-busting fields (_timestamp, _cache_bust) as backend doesn't accept them
       // The backend expects only: org_id, user_id, component_name, data, refresh
 
-      const response = await fetch('/api/market-research', {
+      const response = await fetch(buildApiUrl('market-research'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
