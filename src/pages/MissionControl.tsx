@@ -743,6 +743,13 @@ const MissionControl = () => {
             dealSize: localProfile.typical_deal_size || localProfile.dealSize || "",
             companyUrl: localProfile.company_url || localProfile.companyUrl || "",
             keyBuyerPersona: localProfile.key_buyer_persona || localProfile.keyBuyerPersona || "",
+            goals: localProfile.goals || "",
+            painPoints: localProfile.pain_points || localProfile.painPoints || "",
+            targetSegments: localProfile.target_segments || localProfile.targetSegments || "",
+            excludeSegments: localProfile.exclude_segments || localProfile.excludeSegments || "",
+            additionalNotes: localProfile.additional_notes || localProfile.additionalNotes || "",
+            constraints: localProfile.constraints || "",
+            compliance: localProfile.compliance || "",
           };
           setCompanyProfile(profileData);
           if (localProfile.company_name || localProfile.companyName) {
@@ -2575,7 +2582,7 @@ const MissionControl = () => {
       type: 'file',
       icon: FileText,
       platform: 'File Upload',
-      status: uploadStatus,
+      status: uploadStatus === 'failed' ? 'error' : uploadStatus,
       syncFrequency: 'manual',
       totalRecords: 0,
       newRecordsThisWeek: 0,
