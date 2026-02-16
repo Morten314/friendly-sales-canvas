@@ -32,7 +32,7 @@ interface TenantProviderProps {
 }
 
 export const TenantProvider: React.FC<TenantProviderProps> = ({ children }) => {
-  const { currentUser, loading: authLoading } = useAuth();
+  const { currentUser, orgId, orgName, loading: authLoading } = useAuth();
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
   const [availableTenants, setAvailableTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
@@ -68,12 +68,30 @@ export const TenantProvider: React.FC<TenantProviderProps> = ({ children }) => {
       const storedTenant = localStorage.getItem(`selectedTenant_${currentUser.uid}`);
       if (storedTenant) {
         try {
-          setSelectedTenant(JSON.parse(storedTenant));
+          const parsedTenant = JSON.parse(storedTenant);
+          // Update tenant name if org_name is available from AuthContext
+          if (orgName && parsedTenant.id === orgId) {
+            parsedTenant.name = orgName;
+            setSelectedTenant(parsedTenant);
+            // Update localStorage with the latest org_name
+            localStorage.setItem(`selectedTenant_${currentUser.uid}`, JSON.stringify(parsedTenant));
+          } else {
+            setSelectedTenant(parsedTenant);
+          }
         } catch (error) {
           console.error('Error parsing stored tenant:', error);
           localStorage.removeItem(`selectedTenant_${currentUser.uid}`);
           setSelectedTenant(null);
         }
+      } else if (orgId && orgName) {
+        // If no stored tenant but we have org_id and org_name from AuthContext, set it
+        const tenant = {
+          id: orgId,
+          name: orgName,
+          domain: `${orgId}.com`
+        };
+        setSelectedTenant(tenant);
+        localStorage.setItem(`selectedTenant_${currentUser.uid}`, JSON.stringify(tenant));
       } else {
         // Clear tenant if no stored tenant for this user
         setSelectedTenant(null);
@@ -84,7 +102,7 @@ export const TenantProvider: React.FC<TenantProviderProps> = ({ children }) => {
     }
     
     setLoading(false);
-  }, [currentUser?.uid, authLoading]);
+  }, [currentUser?.uid, authLoading, orgId, orgName]);
 
   const value = {
     selectedTenant,
