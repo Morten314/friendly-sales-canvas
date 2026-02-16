@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { getUserLocalStorage, setUserLocalStorage } from '@/utils/cacheUtils';
 import { Badge } from '@/components/ui/badge';
@@ -119,7 +119,8 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   companyProfile,
   regulatoryData: propRegulatoryData
 }) => {
-  const { currentUser } = useAuth();
+  const { currentUser, orgId } = useAuth();
+  const orgIdToUse = orgId || 'brewra'; // Fallback to 'brewra' for backward compatibility
   const { toast } = useToast();
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
   // Use centralized data from parent instead of local state
@@ -595,6 +596,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
       }
       
       const payload = {
+        org_id: orgIdToUse,
         user_id: currentUser.uid,
         component_name: "regulatory & compliance highlights", // Exact match for regulatory compliance
         refresh: refresh,
@@ -646,6 +648,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
         if (apiData.keyUpdates) {
           const initialValues: Record<string, string> = {};
           apiData.keyUpdates.forEach((update: any) => {
+            if (!update || !update.title) return;
             const id = update.title.toLowerCase().replace(/\s+/g, '-');
             initialValues[id] = update.description || '';
           });
@@ -732,11 +735,9 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
       // Wait a bit for the backend to process the profile update
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Fetch the latest company profile from backend (with user_id)
+      // Fetch the latest company profile from backend (with org_id)
       try {
-        const profileUrl = currentUser?.uid 
-          ? `https://backend-11kr.onrender.com/profile/company?user_id=${currentUser.uid}`
-          : 'https://backend-11kr.onrender.com/profile/company';
+        const profileUrl = `https://backend-11kr.onrender.com/profile/company?org_id=${orgIdToUse}`;
         const profileResponse = await fetch(profileUrl, {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' }
@@ -1130,9 +1131,9 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
               <FileText className="h-5 w-5 text-teal-600" />
             </div>
             <div>
-              <CardTitle className="text-lg font-semibold text-gray-900">
+              <h2 className="text-xl font-semibold text-gray-900">
                 Regulatory & Compliance Highlights
-              </CardTitle>
+              </h2>
               <p className="text-sm text-gray-500 mt-1">
                 Current regulatory landscape and compliance requirements
               </p>
@@ -1164,15 +1165,17 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  className="h-8 w-8 relative hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 transition-all duration-200"
-                  onClick={() => onScoutIconClick('regulatory-compliance', hasEdits)}
+                  className="h-8 w-8 relative text-blue-600 hover:text-blue-700 transition-all duration-200"
+                  onClick={() => {
+                    onScoutIconClick('regulatory-compliance', hasEdits);
+                  }}
                 >
-                  <div className="absolute inset-0 rounded-md bg-gradient-to-r from-blue-400/20 to-purple-400/20 animate-pulse opacity-75"></div>
-                  <Bot className="h-4 w-4 relative z-10 text-blue-600" />
+                  <div className="absolute inset-0 rounded-md bg-gradient-to-r from-blue-400/20 to-purple-400/20 animate-pulse opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
+                  <Bot className="h-4 w-4 relative z-10" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Explore More with Scout</p>
+                <p>Chat with Scout</p>
               </TooltipContent>
             </Tooltip>
           </div>
@@ -1211,7 +1214,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                     <X className="h-4 w-4 text-red-600" />
                   </button>
                 </div>
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Executive Summary</h4>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Executive Summary</h3>
                 <textarea
                   value={localExecutiveSummary}
                   onChange={(e) => {
@@ -1251,7 +1254,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                     <X className="h-4 w-4 text-red-600" />
                   </button>
                 </div>
-                <h4 className="text-sm font-medium text-gray-700 mb-3">Key Regulatory Updates</h4>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Key Regulatory Updates</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {keyDataPoints.map((point) => {
                     const IconComponent = point.icon;
@@ -1350,7 +1353,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                     <X className="h-4 w-4 text-red-600" />
                   </button>
                 </div>
-                <h4 className="text-sm font-medium text-gray-700 mb-4">Compliance Analytics</h4>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Compliance Analytics</h3>
                 {(isEditing ? localVisualDataCards : visualDataCards) && (isEditing ? localVisualDataCards : visualDataCards).length > 0 ? (
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {(isEditing ? localVisualDataCards : visualDataCards).map((card: any, cardIndex: number) => {
@@ -1369,7 +1372,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                                 className="font-medium text-gray-900 mb-3"
                               />
                             ) : (
-                              <h5 className="font-medium text-gray-900 mb-3 flex items-center">
+                              <h5 className="text-sm font-medium text-gray-900 mb-3 flex items-center">
                                 <BarChart3 className="h-4 w-4 mr-2 text-blue-600" />
                                 {card.title || 'Compliance Adoption Rates'}
                               </h5>
@@ -1475,7 +1478,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                                 className="font-medium text-gray-900 mb-3"
                               />
                             ) : (
-                              <h5 className="font-medium text-gray-900 mb-3 flex items-center">
+                              <h5 className="text-sm font-medium text-gray-900 mb-3 flex items-center">
                                 <Clock className="h-4 w-4 mr-2 text-orange-600" />
                                 {card.title || 'Regulatory Timeline'}
                               </h5>
@@ -1563,7 +1566,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                                 className="font-medium text-gray-900 mb-3"
                               />
                             ) : (
-                              <h5 className="font-medium text-gray-900 mb-3 flex items-center">
+                              <h5 className="text-sm font-medium text-gray-900 mb-3 flex items-center">
                                 <TrendingUp className="h-4 w-4 mr-2 text-green-600" />
                                 {card.title || 'GTM Model Effectiveness'}
                               </h5>
@@ -1672,7 +1675,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                     <X className="h-4 w-4 text-red-600" />
                   </button>
                 </div>
-                <h4 className="text-sm font-medium text-gray-700 mb-4">Regional Compliance Overview</h4>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Regional Compliance Overview</h3>
                 <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
                   <Table>
                     <TableHeader>
@@ -1859,7 +1862,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                     <X className="h-4 w-4 text-red-600" />
                   </button>
                 </div>
-                <h4 className="text-sm font-medium text-gray-700 mb-4">Strategic Recommendations</h4>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Strategic Recommendations</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                     <div className="flex items-start space-x-3">
@@ -1872,7 +1875,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                             readOnly
                           />
                         ) : (
-                          <h5 className="font-medium text-blue-900 mb-2">Mitigate Regulatory Risks</h5>
+                          <h5 className="text-sm font-medium text-blue-900 mb-2">Mitigate Regulatory Risks</h5>
                         )}
                         <div className="space-y-2">
                           {(isEditing ? localStrategicRecommendations.mitigateRegulatoryRisks : [
@@ -1940,7 +1943,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                             readOnly
                           />
                         ) : (
-                          <h5 className="font-medium text-green-900 mb-2">Competitive Positioning</h5>
+                          <h5 className="text-sm font-medium text-green-900 mb-2">Competitive Positioning</h5>
                         )}
                         <div className="space-y-2">
                           {(isEditing ? localStrategicRecommendations.competitivePositioning : [
@@ -2008,7 +2011,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                             readOnly
                           />
                         ) : (
-                          <h5 className="font-medium text-purple-900 mb-2">Go-to-Market Strategy</h5>
+                          <h5 className="text-sm font-medium text-purple-900 mb-2">Go-to-Market Strategy</h5>
                         )}
                         <div className="space-y-2">
                           {(isEditing ? localStrategicRecommendations.goToMarketStrategy : [
@@ -2089,7 +2092,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                       gdprCompliance: localGdprCompliance,
                       potentialFines: localPotentialFines,
                       dataLocalization: localDataLocalization,
-                      keyUpdates: regulatoryData?.keyUpdates?.map((update: any) => {
+                      keyUpdates: (regulatoryData?.keyUpdates || []).filter((update: any) => update && update?.title && typeof update.title === 'string').map((update: any) => {
                         const id = update.title.toLowerCase().replace(/\s+/g, '-');
                         let localValue = localKeyDataValues[id];
                         
@@ -2128,7 +2131,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                     // Update key data points if regulatoryData exists
                     if (regulatoryData?.keyUpdates && Array.isArray(regulatoryData.keyUpdates)) {
                       // For key updates, we need to update the regulatoryData directly since there's no individual change handlers
-                      const updatedKeyUpdates = regulatoryData.keyUpdates.filter((update: any) => update && update.title).map((update: any) => {
+                      const updatedKeyUpdates = regulatoryData.keyUpdates.filter((update: any) => update && update?.title && typeof update.title === 'string').map((update: any) => {
                         const id = update.title.toLowerCase().replace(/\s+/g, '-');
                         const localValue = localKeyDataValues[id];
                         if (localValue !== undefined) {
@@ -2176,15 +2179,15 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
           <>
             {/* Executive Summary */}
             <div>
-              <h4 className="text-sm font-medium text-gray-700 mb-2">Executive Summary</h4>
-                <p className="text-gray-600 text-sm leading-relaxed">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Executive Summary</h3>
+                <p className="text-gray-600 leading-relaxed">
                  {currentExecutiveSummary || 'The regulatory landscape for SaaS companies continues to evolve rapidly, with new compliance requirements emerging across multiple jurisdictions.'}
                </p>
             </div>
 
             {/* Key Data Points */}
             <div>
-              <h4 className="text-sm font-medium text-gray-700 mb-3">Key Regulatory Updates</h4>
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">Key Regulatory Updates</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {keyDataPoints.map((point) => {
                   const IconComponent = point.icon;
@@ -2244,11 +2247,11 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
               <div className="space-y-8 pt-6 border-t border-gray-200">
                 {/* Visual Data Cards */}
                 <div>
-                  <h4 className="text-sm font-medium text-gray-700 mb-4">Compliance Analytics</h4>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Compliance Analytics</h3>
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {visualDataCards.map((card, cardIndex) => (
                       <div key={cardIndex} className="bg-white border border-gray-200 rounded-lg p-4">
-                        <h5 className="font-medium text-gray-900 mb-3 flex items-center">
+                        <h5 className="text-sm font-medium text-gray-900 mb-3 flex items-center">
                           {card.type === 'pie-chart' && <Users className="h-4 w-4 mr-2 text-blue-600" />}
                           {card.type === 'line-chart' && <TrendingUp className="h-4 w-4 mr-2 text-green-600" />}
                           {card.type === 'bar-chart' && <BarChart3 className="h-4 w-4 mr-2 text-purple-600" />}
@@ -2360,7 +2363,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
 
                 {/* Regional Breakdown */}
                 <div>
-                  <h4 className="text-sm font-medium text-gray-700 mb-4">Regional Compliance Overview</h4>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Regional Compliance Overview</h3>
                   <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
                     <Table>
                       <TableHeader>
@@ -2407,13 +2410,13 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
 
                 {/* Strategic Recommendations */}
                 <div>
-                  <h4 className="text-sm font-medium text-gray-700 mb-4">Strategic Recommendations</h4>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Strategic Recommendations</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                       <div className="flex items-start space-x-3">
                         <Shield className="h-5 w-5 text-blue-600 mt-0.5" />
                         <div>
-                          <h5 className="font-medium text-blue-900 mb-2">
+                          <h5 className="text-sm font-medium text-blue-900 mb-2">
                             {regulatoryData?.strategicRecommendations ? 'Mitigate Regulatory Risks' : 'Mitigate Regulatory Risks'}
                           </h5>
                           <ul className="text-sm text-blue-700 space-y-1">
@@ -2437,7 +2440,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                       <div className="flex items-start space-x-3">
                         <Target className="h-5 w-5 text-green-600 mt-0.5" />
                         <div>
-                          <h5 className="font-medium text-green-900 mb-2">
+                          <h5 className="text-sm font-medium text-green-900 mb-2">
                             {regulatoryData?.strategicRecommendations ? 'Competitive Positioning' : 'Competitive Positioning'}
                           </h5>
                           <ul className="text-sm text-green-700 space-y-1">
@@ -2461,7 +2464,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                       <div className="flex items-start space-x-3">
                         <Building className="h-5 w-5 text-purple-600 mt-0.5" />
                         <div>
-                          <h5 className="font-medium text-purple-900 mb-2">
+                          <h5 className="text-sm font-medium text-purple-900 mb-2">
                             {regulatoryData?.strategicRecommendations ? 'Go-to-Market Strategy' : 'Go-to-Market Strategy'}
                           </h5>
                           <ul className="text-sm text-purple-700 space-y-1">

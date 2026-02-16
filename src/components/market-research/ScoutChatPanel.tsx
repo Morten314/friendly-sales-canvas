@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { Bot, X, Send, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -35,6 +35,7 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
   const [userInput, setUserInput] = useState('');
   const [chatResponse, setChatResponse] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   // Function to clean up response content - removes special characters and formats properly
   const cleanResponseContent = (content: string): string => {
@@ -534,6 +535,110 @@ const getContextualScoutMessage = () => {
     }
   };
 
+  // Auto-scroll to top when chat panel opens (only when showScoutChat becomes true)
+  useEffect(() => {
+    if (!showScoutChat) return;
+    
+    const container = chatContainerRef.current;
+    if (!container) return;
+    
+    let isScrolling = true; // Flag to control persistent scrolling
+    let scrollInterval: NodeJS.Timeout | null = null;
+    let scrollListener: ((e: Event) => void) | null = null;
+    
+    const scrollToTop = () => {
+      if (!container || !isScrolling) return;
+      
+      // Force scroll to top - simple and direct
+      container.scrollTop = 0;
+      
+      // Also use scrollTo for browser compatibility
+      try {
+        container.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+      } catch (e) {
+        try {
+          container.scrollTo(0, 0);
+        } catch (e2) {
+          // Fallback
+        }
+      }
+      
+      // Final force to ensure it's at 0
+      container.scrollTop = 0;
+    };
+    
+    // Add scroll event listener to prevent scrolling down
+    scrollListener = (e: Event) => {
+      if (!isScrolling) return;
+      const target = e.target as HTMLElement;
+      if (target && target.scrollTop > 0) {
+        // If scrolling down, immediately scroll back to top
+        target.scrollTop = 0;
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+    
+    // Use capture phase to catch scroll events early
+    container.addEventListener('scroll', scrollListener, { passive: false, capture: true });
+    
+    // Immediate scroll - execute right away
+    scrollToTop();
+    
+    // Use requestAnimationFrame for DOM-ready scroll
+    const rafId1 = requestAnimationFrame(() => {
+      scrollToTop();
+      const rafId2 = requestAnimationFrame(() => {
+        scrollToTop();
+      });
+      return () => cancelAnimationFrame(rafId2);
+    });
+    
+    // Multiple timeouts with increasing delays to catch all render phases
+    // Focus on earlier delays to prevent any bottom-scrolling from taking effect
+    const timeouts: NodeJS.Timeout[] = [];
+    [0, 10, 25, 50, 100, 150, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1200, 1500, 2000].forEach(delay => {
+      const timeoutId = setTimeout(() => {
+        scrollToTop();
+      }, delay);
+      timeouts.push(timeoutId);
+    });
+    
+    // Persistent scroll check - keep forcing to top for the first 3 seconds
+    // This prevents any other code from scrolling to bottom
+    scrollInterval = setInterval(() => {
+      if (container && container.scrollTop > 0 && isScrolling) {
+        // If it's scrolled down at all, force it back to top
+        container.scrollTop = 0;
+        container.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+      }
+    }, 20); // Check every 20ms for more aggressive monitoring
+    
+    // Stop persistent scrolling after 3 seconds
+    setTimeout(() => {
+      isScrolling = false;
+      if (scrollInterval) {
+        clearInterval(scrollInterval);
+      }
+      if (scrollListener) {
+        container.removeEventListener('scroll', scrollListener, { capture: true });
+      }
+    }, 3000);
+    
+    // Cleanup function
+    return () => {
+      isScrolling = false;
+      cancelAnimationFrame(rafId1);
+      timeouts.forEach(timeout => clearTimeout(timeout));
+      if (scrollInterval) {
+        clearInterval(scrollInterval);
+      }
+      if (scrollListener) {
+        container.removeEventListener('scroll', scrollListener, { capture: true });
+      }
+    };
+  }, [showScoutChat]); // Only trigger when panel opens/closes, NOT on content changes
+
   if (!showScoutChat) return null;
 
   return (
@@ -559,7 +664,7 @@ const getContextualScoutMessage = () => {
         </Button>
       </div>
 
-      <div className="space-y-4 mb-4 flex-1 overflow-y-auto">
+      <div ref={chatContainerRef} className="space-y-4 mb-4 flex-1 overflow-y-auto">
         <div className="bg-gradient-to-r from-blue-50 to-green-50 p-4 rounded-lg border border-blue-200">
           <p className="text-sm text-gray-700">
             {getContextualScoutMessage()}

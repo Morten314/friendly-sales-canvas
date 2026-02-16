@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useReducer } from 'react';
 import { BarChart3, Bot, Edit, X, FileText, Save, Share, Clock, ChevronDown, ChevronUp, Zap, ArrowUp, ArrowDown, Loader2, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import MiniPieChart from '@/components/ui/MiniPieChart';
 import MiniLineChart from '@/components/ui/MiniLineChart';
 import { toUTCTimestamp, isTimestampNewer, getCurrentUTCTimestamp, logTimestampComparison } from '@/lib/timestampUtils';
-import { apiFetchJson, buildApiUrl } from '@/lib/api';
+import { apiFetchJson } from '@/lib/api';
 import { executeWithRateLimit } from '@/lib/rateLimitManager';
 import { useAuth } from '@/contexts/AuthContext';
 import { getUserLocalStorage, setUserLocalStorage } from '@/utils/cacheUtils';
@@ -272,6 +272,17 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
     const sectionComponent = normalizedComponents.find((comp: any) => comp?.type === 'section');
     return sectionComponent?.metrics || [];
   });
+  
+  // Track if we just saved to prevent useEffect from overwriting our changes
+  const justSavedRef = useRef(false);
+  const savedLocalStateRef = useRef<{
+    executiveSummary: string;
+    topPlayerShare: string;
+    emergingPlayers: string;
+  } | null>(null);
+  
+  // Force re-render trigger to ensure UI updates immediately after save
+  const [, forceUpdate] = useReducer(x => x + 1, 0);
 
   // Save local state to localStorage whenever they change (user-specific)
   useEffect(() => {
@@ -294,12 +305,73 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
 
   // Sync local state with centralized data props when they change (but not while editing)
   // IMPORTANT: Only sync if competitorData exists and belongs to current user
+  // Never overwrite local state if we just saved until props/competitorData catch up
   useEffect(() => {
     if (!isCompetitorLandscapeEditing && currentUser?.uid) {
       // Skip syncing if we just cleared due to user switch (local state is empty and competitorData is null/undefined)
       if (!localExecutiveSummary && !localTopPlayerShare && !localEmergingPlayers && !competitorData) {
         console.log('🔄 [COMPETITOR] Skipping sync - data was just cleared due to user switch');
         return;
+      }
+      
+      // If we just saved, NEVER overwrite local state until props/competitorData catch up
+      // Also, if local state was overwritten, restore it from saved state
+      if (justSavedRef.current && savedLocalStateRef.current) {
+        const propsMatchSaved = 
+          (executiveSummary || '') === savedLocalStateRef.current.executiveSummary &&
+          (topPlayerShare || '') === savedLocalStateRef.current.topPlayerShare &&
+          (emergingPlayers || '') === savedLocalStateRef.current.emergingPlayers;
+        
+        const competitorDataMatchesSaved = 
+          (competitorData?.executiveSummary || '') === savedLocalStateRef.current.executiveSummary &&
+          (competitorData?.topPlayerShare || '') === savedLocalStateRef.current.topPlayerShare &&
+          (competitorData?.emergingPlayers || '') === savedLocalStateRef.current.emergingPlayers;
+        
+        // Check if local state was overwritten with old values - if so, restore from saved state
+        const localStateWasOverwritten = 
+          localExecutiveSummary !== savedLocalStateRef.current.executiveSummary ||
+          localTopPlayerShare !== savedLocalStateRef.current.topPlayerShare ||
+          localEmergingPlayers !== savedLocalStateRef.current.emergingPlayers;
+        
+        if (localStateWasOverwritten) {
+          console.log('🔄 Competitor Landscape - Local state was overwritten, restoring from saved state');
+          setLocalExecutiveSummary(savedLocalStateRef.current.executiveSummary);
+          setLocalTopPlayerShare(savedLocalStateRef.current.topPlayerShare);
+          setLocalEmergingPlayers(savedLocalStateRef.current.emergingPlayers);
+        }
+        
+        if (propsMatchSaved || competitorDataMatchesSaved) {
+          // Props/competitorData have caught up - safe to reset flag and allow normal syncing
+          console.log('✅ Competitor Landscape - Props/competitorData caught up with saved state, resetting flag');
+          justSavedRef.current = false;
+          savedLocalStateRef.current = null;
+          // Continue to sync below
+        } else {
+          // Props/competitorData haven't caught up yet - DO NOT overwrite local state
+          console.log('🛡️ Competitor Landscape - Preserving local state, props/competitorData not caught up yet (or API returned old data)');
+          console.log('🛡️ Saved state (user edits):', {
+            exec: savedLocalStateRef.current.executiveSummary.substring(0, 50),
+            topPlayer: savedLocalStateRef.current.topPlayerShare.substring(0, 50),
+            emerging: savedLocalStateRef.current.emergingPlayers.substring(0, 50)
+          });
+          console.log('🛡️ Props (from parent):', {
+            exec: (executiveSummary || '').substring(0, 50),
+            topPlayer: (topPlayerShare || '').substring(0, 50),
+            emerging: (emergingPlayers || '').substring(0, 50)
+          });
+          console.log('🛡️ CompetitorData (from API - might be old):', {
+            exec: (competitorData?.executiveSummary || '').substring(0, 50),
+            topPlayer: (competitorData?.topPlayerShare || '').substring(0, 50),
+            emerging: (competitorData?.emergingPlayers || '').substring(0, 50),
+            timestamp: competitorData?.timestamp
+          });
+          console.log('🛡️ Local state (preserved - will be used for display):', {
+            exec: localExecutiveSummary.substring(0, 50),
+            topPlayer: localTopPlayerShare.substring(0, 50),
+            emerging: localEmergingPlayers.substring(0, 50)
+          });
+          return; // Exit early, don't overwrite - user's edits are preserved in local state
+        }
       }
       
       // Verify competitorData belongs to current user before syncing
@@ -318,6 +390,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
       console.log('  - competitorData.user_id:', competitorData?.user_id);
       console.log('  - currentUser.uid:', currentUser.uid);
       console.log('  - isRefreshing:', isRefreshing);
+      console.log('  - justSaved:', justSavedRef.current);
       
       // Always update local state with competitorData (prioritize API data)
       // But only if competitorData exists (not null/undefined)
@@ -467,10 +540,33 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
     try {
       console.log('🚀 Competitor Landscape - Starting save operation');
       
+      // IMPORTANT: Set the flag FIRST before any state updates to prevent useEffect from overwriting
+      justSavedRef.current = true;
+      savedLocalStateRef.current = {
+        executiveSummary: localExecutiveSummary,
+        topPlayerShare: localTopPlayerShare,
+        emergingPlayers: localEmergingPlayers
+      };
+      
+      // Explicitly update local state to ensure React detects the change and re-renders
+      // This ensures the display variables will use the updated local state
+      setLocalExecutiveSummary(localExecutiveSummary);
+      setLocalTopPlayerShare(localTopPlayerShare);
+      setLocalEmergingPlayers(localEmergingPlayers);
+      
       // Apply local edits to props
       onExecutiveSummaryChange(localExecutiveSummary);
       onTopPlayerShareChange(localTopPlayerShare);
       onEmergingPlayersChange(localEmergingPlayers);
+      
+      console.log('✅ Competitor Landscape - Local state preserved for immediate UI refresh:', {
+        exec: localExecutiveSummary.substring(0, 30),
+        topPlayer: localTopPlayerShare.substring(0, 30),
+        emerging: localEmergingPlayers.substring(0, 30)
+      });
+      
+      // Force a re-render to ensure UI updates immediately with local state values
+      forceUpdate();
       
       // Prepare original data
       const originalData = {
@@ -523,57 +619,143 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
         section: "competitor_landscape"
       });
       
-      const response = await fetch(buildApiUrl(`api/ask?${queryParams}`), {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      let response;
+      try {
+        response = await fetch(`/api/ask?${queryParams}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          redirect: 'follow', // Follow redirects (307, 308, etc.)
+        });
 
-      console.log('📥 GET /ask status:', response.status);
+        console.log('📥 GET /ask status:', response.status);
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      // Fetch updated data using GET API
-      const getResponse = await fetch(buildApiUrl('api/market_intelligence'), {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
+        // 307 is a redirect - fetch should follow it automatically, but check if final response is ok
+        if (!response.ok && response.status !== 307) {
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
-      });
-
-      console.log('📥 GET /market_intelligence status:', getResponse.status);
-
-      if (!getResponse.ok) {
-        throw new Error(`HTTP error! status: ${getResponse.status}`);
+        
+        // If we got a redirect (307), the fetch should have followed it
+        // If the final response is still not ok, log it but don't throw (we'll preserve local state anyway)
+        if (!response.ok) {
+          console.warn('⚠️ Competitor Landscape - API returned redirect or error, but preserving local state:', response.status);
+        }
+      } catch (fetchError) {
+        // Network errors or other fetch errors - log but don't throw
+        // We'll preserve local state anyway
+        console.warn('⚠️ Competitor Landscape - Fetch error (preserving local state):', fetchError);
+        response = null; // Mark as no response
       }
 
-      const getData = await getResponse.json();
-      console.log('✅ Competitor Landscape - GET /market_intelligence successful:', getData);
+      // Fetch updated data using GET API (only if first API call succeeded)
+      let getData = null;
+      if (response && response.ok) {
+        try {
+          const getResponse = await fetch('/api/market_intelligence', {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          });
+
+          console.log('📥 GET /market_intelligence status:', getResponse.status);
+
+          if (getResponse.ok) {
+            getData = await getResponse.json();
+            console.log('✅ Competitor Landscape - GET /market_intelligence successful:', getData);
+          } else {
+            console.warn('⚠️ Competitor Landscape - GET /market_intelligence failed, but preserving local state');
+          }
+        } catch (getError) {
+          console.warn('⚠️ Competitor Landscape - GET /market_intelligence error (preserving local state):', getError);
+        }
+      } else {
+        console.log('⏭️ Competitor Landscape - Skipping GET /market_intelligence (first API call failed/redirected)');
+      }
       
-      // Update component with fresh data from API response
+      // Update component with fresh data from API response (if available)
+      // Otherwise, use local state (user's edits) which is already preserved
       if (getData && getData.competitor_landscape_data) {
         const apiData = getData.competitor_landscape_data;
         
-        // Update local state with API response data
-        setLocalExecutiveSummary(apiData.executiveSummary || '');
-        setLocalTopPlayerShare(apiData.topPlayerShare || '');
-        setLocalEmergingPlayers(apiData.emergingPlayers || '');
+        // Use API data if available, otherwise keep local state (user's edits)
+        const finalExecutiveSummary = apiData.executiveSummary || localExecutiveSummary;
+        const finalTopPlayerShare = apiData.topPlayerShare || localTopPlayerShare;
+        const finalEmergingPlayers = apiData.emergingPlayers || localEmergingPlayers;
         
-        // Update parent state with API response data
-        onExecutiveSummaryChange(apiData.executiveSummary || '');
-        onTopPlayerShareChange(apiData.topPlayerShare || '');
-        onEmergingPlayersChange(apiData.emergingPlayers || '');
+        // Update saved state ref with final values
+        savedLocalStateRef.current = {
+          executiveSummary: finalExecutiveSummary,
+          topPlayerShare: finalTopPlayerShare,
+          emergingPlayers: finalEmergingPlayers
+        };
+        
+        // Update local state with final values (this will be displayed immediately)
+        setLocalExecutiveSummary(finalExecutiveSummary);
+        setLocalTopPlayerShare(finalTopPlayerShare);
+        setLocalEmergingPlayers(finalEmergingPlayers);
+        
+        // Update parent state with final values
+        onExecutiveSummaryChange(finalExecutiveSummary);
+        onTopPlayerShareChange(finalTopPlayerShare);
+        onEmergingPlayersChange(finalEmergingPlayers);
         
         console.log('✅ Competitor Landscape - State updated with API response data');
+        console.log('✅ Competitor Landscape - Local state preserved for immediate UI refresh:', {
+          exec: finalExecutiveSummary.substring(0, 30),
+          topPlayer: finalTopPlayerShare.substring(0, 30),
+          emerging: finalEmergingPlayers.substring(0, 30)
+        });
+      } else {
+        // No API data - local state is already set and preserved above
+        // Just ensure the saved state ref matches local state
+        savedLocalStateRef.current = {
+          executiveSummary: localExecutiveSummary,
+          topPlayerShare: localTopPlayerShare,
+          emergingPlayers: localEmergingPlayers
+        };
+        
+        console.log('✅ Competitor Landscape - No API response, using local state (user edits preserved)');
+        console.log('✅ Competitor Landscape - Local state values:', {
+          exec: localExecutiveSummary.substring(0, 30),
+          topPlayer: localTopPlayerShare.substring(0, 30),
+          emerging: localEmergingPlayers.substring(0, 30)
+        });
       }
       
+      // Force a re-render to ensure UI updates immediately with local state values
+      forceUpdate();
+      
       // Call the original save function to trigger chat panel
+      // This may set isEditing to false, but our flag prevents useEffect from overwriting
       onCompetitorLandscapeSaveChanges();
     } catch (error) {
       console.error('❌ Competitor Landscape - Error saving changes:', error);
+      
+      // IMPORTANT: Set the flag even if API fails to prevent useEffect from overwriting
+      justSavedRef.current = true;
+      savedLocalStateRef.current = {
+        executiveSummary: localExecutiveSummary,
+        topPlayerShare: localTopPlayerShare,
+        emergingPlayers: localEmergingPlayers
+      };
+      
+      // Explicitly update local state to ensure React detects the change and re-renders
+      setLocalExecutiveSummary(localExecutiveSummary);
+      setLocalTopPlayerShare(localTopPlayerShare);
+      setLocalEmergingPlayers(localEmergingPlayers);
+      
+      console.log('✅ Competitor Landscape - Local state preserved even after API error');
+      console.log('✅ Competitor Landscape - Local state values:', {
+        exec: localExecutiveSummary.substring(0, 30),
+        topPlayer: localTopPlayerShare.substring(0, 30),
+        emerging: localEmergingPlayers.substring(0, 30)
+      });
+      
+      // Force a re-render to ensure UI updates immediately with local state values
+      forceUpdate();
+      
       // Still call the original save function even if API fails
       onCompetitorLandscapeSaveChanges();
     }
@@ -759,14 +941,36 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
     isRefreshing
   });
 
-  // Ensure we have some data to display - prioritize fresh API data (competitorData) over local state and fallback props
-  const displayExecutiveSummary = competitorData?.executiveSummary || localExecutiveSummary || executiveSummary || 'No data available';
-  const displayTopPlayerShare = competitorData?.topPlayerShare || localTopPlayerShare || topPlayerShare || 'No data available';
-  const displayEmergingPlayers = competitorData?.emergingPlayers || localEmergingPlayers || emergingPlayers || 'No data available';
+  // Ensure we have some data to display - prioritize local state (which has the latest edits) over competitorData and props
+  // This ensures UI updates immediately after save since local state is preserved and updated during editing
+  // Local state is the source of truth for display - it's updated during editing and preserved after save
+  // IMPORTANT: When we just saved, always use local state (it has the user's edits)
+  const displayExecutiveSummary = justSavedRef.current && savedLocalStateRef.current
+    ? savedLocalStateRef.current.executiveSummary
+    : (localExecutiveSummary || competitorData?.executiveSummary || executiveSummary || 'No data available');
+  const displayTopPlayerShare = justSavedRef.current && savedLocalStateRef.current
+    ? savedLocalStateRef.current.topPlayerShare
+    : (localTopPlayerShare || competitorData?.topPlayerShare || topPlayerShare || 'No data available');
+  const displayEmergingPlayers = justSavedRef.current && savedLocalStateRef.current
+    ? savedLocalStateRef.current.emergingPlayers
+    : (localEmergingPlayers || competitorData?.emergingPlayers || emergingPlayers || 'No data available');
 
-  console.log('- displayExecutiveSummary:', displayExecutiveSummary);
-  console.log('- displayTopPlayerShare:', displayTopPlayerShare);
-  console.log('- displayEmergingPlayers:', displayEmergingPlayers);
+  console.log('👁️ Competitor Landscape - Display values:', {
+    displayExecutiveSummary: displayExecutiveSummary.substring(0, 50),
+    displayTopPlayerShare: displayTopPlayerShare.substring(0, 50),
+    displayEmergingPlayers: displayEmergingPlayers.substring(0, 50),
+    localExecutiveSummary: localExecutiveSummary.substring(0, 50),
+    localTopPlayerShare: localTopPlayerShare.substring(0, 50),
+    localEmergingPlayers: localEmergingPlayers.substring(0, 50),
+    propExecutiveSummary: (executiveSummary || '').substring(0, 50),
+    competitorDataExecutiveSummary: (competitorData?.executiveSummary || '').substring(0, 50),
+    justSaved: justSavedRef.current,
+    savedState: savedLocalStateRef.current ? {
+      exec: savedLocalStateRef.current.executiveSummary.substring(0, 30),
+      topPlayer: savedLocalStateRef.current.topPlayerShare.substring(0, 30)
+    } : null,
+    isEditing: isCompetitorLandscapeEditing
+  });
   console.log('- isRefreshing:', isRefreshing);
   console.log('- competitorData.timestamp:', competitorData?.timestamp);
   console.log('🔍 Data source priority check:');
@@ -817,13 +1021,13 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
               <BarChart3 className="h-6 w-6 text-blue-600" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-gray-900">Competitor Landscape</h2>
+              <h2 className="text-xl font-semibold text-gray-900">Competitor Landscape</h2>
               <p className="text-sm text-gray-600">Comprehensive analysis of competitive environment</p>
             </div>
           </div>
           
           <div className="flex items-center gap-2">
-            {competitorLandscapeHasEdits && (
+            {competitorLandscapeHasEdits && !isCompetitorLandscapeEditing && (
               <Badge variant="secondary" className="bg-orange-100 text-orange-700 border-orange-200">
                 <Clock className="h-3 w-3 mr-1" />
                 Unsaved
@@ -844,14 +1048,17 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => onScoutIconClick('competitor-landscape', competitorLandscapeHasEdits)}
-                  className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                  onClick={() => {
+                    onScoutIconClick('competitor-landscape', competitorLandscapeHasEdits);
+                  }}
+                  className="text-orange-600 hover:text-orange-700 transition-all duration-200 relative"
                 >
-                  <Bot className="h-4 w-4" />
+                  <div className="absolute inset-0 rounded-md bg-gradient-to-r from-orange-400/20 to-red-400/20 opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
+                  <Bot className="h-4 w-4 relative z-10" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Chat with Scout about competitor landscape</p>
+                <p>Chat with Scout</p>
               </TooltipContent>
             </Tooltip>
             
@@ -952,7 +1159,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                                 updated[index] = { ...updated[index], value: e.target.value };
                                 setLocalMetrics(updated);
                               }}
-                              className="text-lg font-bold text-blue-600 bg-white"
+                              className="text-2xl font-bold text-blue-600 bg-white"
                               placeholder="Value"
                             />
                             <Input
@@ -978,7 +1185,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                           </div>
                         ) : (
                           <>
-                            <div className="text-lg font-bold text-blue-600">{metric.value || 'N/A'}</div>
+                            <div className="text-2xl font-bold text-blue-600">{metric.value || 'N/A'}</div>
                             <div className="text-sm text-gray-700">{metric.label || 'Metric'}</div>
                           </>
                         )}
@@ -1020,14 +1227,14 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                             <Input
                               value={localTopPlayerShare}
                               onChange={(e) => setLocalTopPlayerShare(e.target.value)}
-                              className="text-lg font-bold text-blue-600 bg-white"
+                              className="text-2xl font-bold text-blue-600 bg-white"
                               placeholder="Top Player Market Share"
                             />
                             <div className="text-sm text-gray-700">Top Player Market Share</div>
                           </div>
                         ) : (
                           <>
-                            <div className="text-lg font-bold text-blue-600">{displayTopPlayerShare}</div>
+                            <div className="text-2xl font-bold text-blue-600">{displayTopPlayerShare}</div>
                             <div className="text-sm text-gray-700">Top Player Market Share</div>
                           </>
                         )}
@@ -1064,14 +1271,14 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                             <Input
                               value={localEmergingPlayers}
                               onChange={(e) => setLocalEmergingPlayers(e.target.value)}
-                              className="text-lg font-bold text-blue-600 bg-white"
+                              className="text-2xl font-bold text-blue-600 bg-white"
                               placeholder="Emerging Players Added"
                             />
                             <div className="text-sm text-gray-700">Emerging Players Added</div>
                           </div>
                         ) : (
                           <>
-                            <div className="text-lg font-bold text-blue-600">{displayEmergingPlayers}</div>
+                            <div className="text-2xl font-bold text-blue-600">{displayEmergingPlayers}</div>
                             <div className="text-sm text-gray-700">Emerging Players Added</div>
                           </>
                         )}
@@ -1094,8 +1301,8 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
           )}
         </div>
 
-        {/* Read More Button - Only show when not expanded and not in split view */}
-        {!competitorLandscapeExpanded && !isSplitView && (
+        {/* Read More Button - Only show when not expanded, not in split view, and not in edit mode */}
+        {!competitorLandscapeExpanded && !isSplitView && !isCompetitorLandscapeEditing && (
           <div className="flex justify-center pt-4">
             <Button
               onClick={() => onCompetitorLandscapeExpandToggle(true)}
@@ -1108,8 +1315,8 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
           </div>
         )}
 
-        {/* Expanded content */}
-        {(competitorLandscapeExpanded || isSplitView) && (
+        {/* Expanded content - Show when expanded, in split view, or in edit mode */}
+        {(competitorLandscapeExpanded || isSplitView || isCompetitorLandscapeEditing) && (
           <div className="space-y-6">
 
             {/* Executive Summary section is now moved above for collapsed view */}

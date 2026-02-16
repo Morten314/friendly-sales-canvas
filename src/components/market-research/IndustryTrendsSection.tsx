@@ -11,7 +11,7 @@ import MiniPieChart from '@/components/ui/MiniPieChart';
 import MiniLineChart from '@/components/ui/MiniLineChart';
 import { toUTCTimestamp, isTimestampNewer, getCurrentUTCTimestamp, logTimestampComparison } from '@/lib/timestampUtils';
 import { executeWithRateLimit } from '@/lib/rateLimitManager';
-import { apiFetchJson, buildApiUrl } from '@/lib/api';
+import { apiFetchJson } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { getUserLocalStorage, setUserLocalStorage } from '@/utils/cacheUtils';
 
@@ -146,7 +146,8 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
   onIndustryTrendsRegulatoryChange,
   onIndustryTrendSnapshotsChange
 }) => {
-  const { currentUser } = useAuth();
+  const { currentUser, orgId } = useAuth();
+  const orgIdToUse = orgId || 'brewra'; // Fallback to 'brewra' for backward compatibility
   // State for API data
   const [industryTrendsData, setIndustryTrendsData] = useState<IndustryTrendsData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -312,6 +313,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
       }
       
       const payload = {
+        org_id: orgIdToUse,
         user_id: currentUser.uid,
         component_name: "industry trends report",
         refresh: refresh,
@@ -740,10 +742,10 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
   const fetchUpdatedData = async () => {
     try {
       const response = await executeWithRateLimit(
-        () => fetch(buildApiUrl('api/market-research'), {
+        () => fetch('/api/market-research', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ component_name: "industry_trends", user_id: currentUser?.uid || "" })
+          body: JSON.stringify({ component_name: "industry_trends", org_id: orgIdToUse })
         }),
         'Industry Trends Update'
       );
@@ -844,13 +846,20 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
           {!isSplitView && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="sm" onClick={() => onScoutIconClick('industry-trends')} className="text-purple-600 hover:text-purple-700 hover:bg-purple-50 transition-all duration-200 hover:shadow-md hover:shadow-purple-200/50 relative">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => {
+                    onScoutIconClick('industry-trends');
+                  }} 
+                  className="text-purple-600 hover:text-purple-700 transition-all duration-200 relative"
+                >
                   <div className="absolute inset-0 rounded-md bg-gradient-to-r from-purple-400/20 to-blue-400/20 animate-pulse opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
                   <Bot className="h-5 w-5 relative z-10" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Explore More with Scout</p>
+                <p>Chat with Scout</p>
               </TooltipContent>
             </Tooltip>
           )}
@@ -1430,13 +1439,20 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
 
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="sm" onClick={() => onScoutIconClick('industry-trends')} className="text-purple-600 hover:text-purple-700 bg-purple-50 border border-purple-200 hover:shadow-md hover:shadow-purple-200/50 transition-all duration-200 relative">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => {
+                    onScoutIconClick('industry-trends');
+                  }} 
+                  className="text-purple-600 hover:text-purple-700 transition-all duration-200 relative"
+                >
                   <div className="absolute inset-0 rounded-md bg-gradient-to-r from-purple-400/20 to-blue-400/20 opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
                   <Bot className="h-4 w-4 relative z-10" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Explore More with Scout</p>
+                <p>Chat with Scout</p>
               </TooltipContent>
             </Tooltip>
           </div>
@@ -1464,22 +1480,22 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
         <div className="space-y-6">
           {/* Default View */}
           <div>
-            <p className="text-gray-700 mb-6">{propExecutiveSummary || industryTrendsData.executiveSummary}</p>
+            <p className="text-gray-700 mb-6">{propExecutiveSummary || industryTrendsData?.executiveSummary || ''}</p>
 
             {/* Key Metrics Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
-                <div className="text-2xl font-bold text-blue-600">{propAiAdoption || industryTrendsData.aiAdoption}</div>
+                <div className="text-2xl font-bold text-blue-600">{propAiAdoption || industryTrendsData?.aiAdoption || ''}</div>
                 <div className="text-sm font-medium text-gray-900">AI Adoption Rate</div>
                 <div className="text-xs text-gray-600">Enterprise pilots</div>
               </div>
               <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded-r-lg">
-                <div className="text-2xl font-bold text-green-600">{propCloudMigration || industryTrendsData.cloudMigration}</div>
+                <div className="text-2xl font-bold text-green-600">{propCloudMigration || industryTrendsData?.cloudMigration || ''}</div>
                 <div className="text-sm font-medium text-gray-900">Cloud Migration Increase</div>
                 <div className="text-xs text-gray-600">Year over year</div>
               </div>
               <div className="bg-purple-50 border-l-4 border-purple-500 p-4 rounded-r-lg">
-                <div className="text-2xl font-bold text-purple-600">{propRegulatory || industryTrendsData.regulatory}</div>
+                <div className="text-2xl font-bold text-purple-600">{propRegulatory || industryTrendsData?.regulatory || ''}</div>
                 <div className="text-sm font-medium text-gray-900">Regulatory Changes</div>
                 <div className="text-xs text-gray-600">Impacting sector</div>
               </div>
@@ -1509,7 +1525,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                 <div className="mb-8">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Key Trend Snapshots</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {(propTrendSnapshots || industryTrendsData.trendSnapshots)?.map((trend, index) => (
+                    {(propTrendSnapshots || industryTrendsData?.trendSnapshots)?.map((trend, index) => (
                       <div key={index} className="bg-white border border-gray-200 rounded-lg p-4">
                         <h4 className="font-medium text-gray-900 mb-2">{trend.title}</h4>
                         <p className="text-sm text-gray-600 mb-3">{trend.metric}</p>
@@ -1523,7 +1539,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                 <div className="mb-8">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Regional Hotspots</h3>
                   <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                    {industryTrendsData.regionalHotspots ? (
+                    {industryTrendsData?.regionalHotspots ? (
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="text-center">
                           <div className="text-2xl font-bold text-blue-600">{industryTrendsData.regionalHotspots.APAC}</div>
@@ -1550,11 +1566,11 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="bg-green-50 p-4 rounded-lg border border-green-200">
                       <h4 className="font-medium text-green-900 mb-2">Primary Focus</h4>
-                      <p className="text-green-700 text-sm">{propRecommendations?.primaryFocus || industryTrendsData.strategicRecommendations?.primaryFocus || 'No recommendations available'}</p>
+                      <p className="text-green-700 text-sm">{propRecommendations?.primaryFocus || industryTrendsData?.strategicRecommendations?.primaryFocus || 'No recommendations available'}</p>
                     </div>
                     <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
                       <h4 className="font-medium text-blue-900 mb-2">Market Entry</h4>
-                      <p className="text-blue-700 text-sm">{propRecommendations?.marketEntry || industryTrendsData.strategicRecommendations?.marketEntry || 'No recommendations available'}</p>
+                      <p className="text-blue-700 text-sm">{propRecommendations?.marketEntry || industryTrendsData?.strategicRecommendations?.marketEntry || 'No recommendations available'}</p>
                     </div>
                   </div>
                 </div>
@@ -1564,7 +1580,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Risks & Watchouts</h3>
                   <div className="bg-red-50 p-4 rounded-lg border border-red-200">
                      <ul className="space-y-2">
-                      {(propRisks || industryTrendsData.risks)?.map((risk, index) => (
+                      {(propRisks || industryTrendsData?.risks)?.map((risk, index) => (
                         <li key={index} className="flex items-start gap-2 text-red-700 text-sm">
                           <div className="w-2 h-2 rounded-full bg-red-500 mt-2 flex-shrink-0"></div>
                           {risk}

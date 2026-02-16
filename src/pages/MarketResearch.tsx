@@ -105,6 +105,10 @@ import { ComponentStatusLoadingScreen } from "@/components/market-research/Compo
 
 
 import { DataHistoryDialog } from "@/components/market-research/DataHistoryDialog";
+import {
+  Dialog,
+  DialogContent,
+} from "@/components/ui/dialog";
 
 import SafeMarketIntelligenceTab from "@/components/market-research/SafeMarketIntelligenceTab";
 
@@ -124,7 +128,7 @@ import { toUTCTimestamp, isTimestampNewer, logTimestampComparison } from '@/lib/
 
 
 
-import { apiFetchJson, buildApiUrl } from '@/lib/api';
+import { apiFetchJson } from '@/lib/api';
 
 import { marketResearchApiCall, logApiCallResult, shouldUseCachedData } from '@/utils/apiUtils';
 
@@ -728,7 +732,8 @@ const getCachedData = (userId: string | null | undefined): MarketIntelligenceDat
 
 
 const MarketResearch = React.memo(() => {
-  const { currentUser } = useAuth();
+  const { currentUser, orgId } = useAuth();
+  const orgIdToUse = orgId || 'brewra'; // Fallback to 'brewra' for backward compatibility
   const previousUserIdRef = useRef<string | null | undefined>(currentUser?.uid);
 
   console.log('🔥 MarketResearch component is mounting!');
@@ -923,7 +928,7 @@ const MarketResearch = React.memo(() => {
         user_id: currentUserId // Include user_id even when clearing
       });
       setIndustryTrendsData(null);
-      setRegulatoryData(null);
+      setRegulatoryData(getDefaultRegulatoryData());
       setCompetitorData(null);
       setMarketEntryData(null);
     }
@@ -949,11 +954,20 @@ const MarketResearch = React.memo(() => {
         user_id: currentUserId // Include user_id even when clearing
       });
       setIndustryTrendsData(null);
-      setRegulatoryData(null);
+      setRegulatoryData(getDefaultRegulatoryData());
       setCompetitorData(null);
       setMarketEntryData(null);
     }
   }, [currentUser?.uid]);
+
+  // Preload logo image to prevent delay when loading modal appears
+  useEffect(() => {
+    const preloadLogo = () => {
+      const img = new Image();
+      img.src = '/logo.png';
+    };
+    preloadLogo();
+  }, []);
 
   // Reload marketIntelligenceData from localStorage when user changes
   // This runs AFTER the clear effect to ensure we load the correct user's data
@@ -2722,10 +2736,25 @@ const MarketResearch = React.memo(() => {
 
 
 
+  // Helper function to get default regulatory data (used when clearing/resetting)
+  const getDefaultRegulatoryData = () => ({
+    executiveSummary: 'The regulatory landscape for SaaS companies continues to evolve rapidly, with new compliance requirements emerging across multiple jurisdictions. Organizations must navigate an increasingly complex web of data protection, AI governance, and industry-specific regulations.',
+    euAiActDeadline: 'February 2, 2025',
+    gdprCompliance: '68%',
+    potentialFines: 'Up to 6% of annual revenue',
+    dataLocalization: 'Mandatory for customer data',
+    keyUpdates: [],
+    visualDataCards: [],
+    regionalData: [],
+    strategicRecommendations: {
+      mitigateRegulatoryRisks: [],
+      competitivePositioning: [],
+      goToMarketStrategy: []
+    },
+    timestamp: null as string | null
+  });
+
   // Function to get initial Regulatory data from localStorage or defaults
-
-
-
   const getInitialRegulatoryData = () => {
 
 
@@ -2805,59 +2834,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-    return {
-
-
-
-      executiveSummary: 'The regulatory landscape for SaaS companies continues to evolve rapidly, with new compliance requirements emerging across multiple jurisdictions. Organizations must navigate an increasingly complex web of data protection, AI governance, and industry-specific regulations.',
-
-
-
-      euAiActDeadline: 'February 2, 2025',
-
-
-
-      gdprCompliance: '68%',
-
-
-
-      potentialFines: 'Up to 6% of annual revenue',
-
-
-
-      dataLocalization: 'Mandatory for customer data',
-
-
-
-      keyUpdates: [],
-
-
-
-      visualDataCards: [],
-
-
-
-      regionalData: [],
-
-
-
-      strategicRecommendations: {
-
-        mitigateRegulatoryRisks: [],
-
-        competitivePositioning: [],
-
-        goToMarketStrategy: []
-
-      },
-
-
-
-      timestamp: null as string | null
-
-
-
-    };
+    return getDefaultRegulatoryData();
 
 
 
@@ -3079,6 +3056,13 @@ const MarketResearch = React.memo(() => {
 
   const [marketSizeCustomMessage, setMarketSizeCustomMessage] = useState<string | undefined>(undefined);
 
+  // Collapse Market Size section when chat opens
+  useEffect(() => {
+    if (showMarketSizeScoutChat) {
+      setIsMarketIntelligenceExpanded(false);
+    }
+  }, [showMarketSizeScoutChat]);
+
 
 
 
@@ -3111,6 +3095,13 @@ const MarketResearch = React.memo(() => {
 
   const [competitorCustomMessage, setCompetitorCustomMessage] = useState<string | undefined>(undefined);
 
+  // Collapse Competitor Landscape section when chat opens
+  useEffect(() => {
+    if (showCompetitorScoutChat) {
+      setCompetitorExpanded(false);
+    }
+  }, [showCompetitorScoutChat]);
+
 
 
 
@@ -3130,6 +3121,13 @@ const MarketResearch = React.memo(() => {
 
 
   const [regulatoryCustomMessage, setRegulatoryCustomMessage] = useState<string | undefined>(undefined);
+
+  // Collapse Regulatory Compliance section when chat opens
+  useEffect(() => {
+    if (showRegulatoryScoutChat) {
+      setRegulatoryExpanded(false);
+    }
+  }, [showRegulatoryScoutChat]);
 
 
 
@@ -3442,6 +3440,46 @@ const MarketResearch = React.memo(() => {
     };
 
   }, []);
+
+  // Expose getAllScoutComponentResponses to window for console access
+  useEffect(() => {
+    // Expose the function globally so it can be called from browser console
+    (window as any).getAllScoutComponentResponses = async (refresh = false) => {
+      console.log('🔍 Fetching all 5 Scout component response bodies...');
+      const result = await getAllScoutComponentResponses(refresh);
+      
+      // Log summary to console
+      console.log('📊 ===== SCOUT COMPONENTS SUMMARY =====');
+      console.log(`Total: ${result.summary.total}, Successful: ${result.summary.successful}, Failed: ${result.summary.failed}`);
+      console.log('========================================');
+      
+      // Log each component's response body
+      result.results.forEach((componentResult, index) => {
+        console.log(`\n${index + 1}. ${componentResult.component} (${componentResult.component_name})`);
+        if (componentResult.success) {
+          console.log('✅ Status:', componentResult.status);
+          console.log('📦 Response Body:', componentResult.responseBody);
+        } else {
+          console.error('❌ Error:', componentResult.error);
+          console.error('Status:', componentResult.status);
+        }
+      });
+      
+      // Also log the full result object
+      console.log('\n📋 Full Result Object:', result);
+      
+      return result;
+    };
+
+    // Also create a simpler alias for quick access
+    (window as any).getScoutResponses = (window as any).getAllScoutComponentResponses;
+
+    return () => {
+      delete (window as any).getAllScoutComponentResponses;
+      delete (window as any).getScoutResponses;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.uid, orgIdToUse]);
 
 
 
@@ -3862,7 +3900,8 @@ const MarketResearch = React.memo(() => {
 
         component_name: "market size & opportunity",
 
-        user_id: currentUser.uid,
+        org_id: orgIdToUse,
+        user_id: currentUser?.uid || "",
 
         refresh: true,
 
@@ -4254,7 +4293,7 @@ const MarketResearch = React.memo(() => {
         // Only clear regulatory data if it doesn't have a timestamp (meaning it's fallback data)
         if (!regulatoryData?.timestamp) {
           console.log('🧹 Company profile update - clearing regulatory data (no timestamp)');
-          setRegulatoryData(null);
+          setRegulatoryData(getDefaultRegulatoryData());
         } else {
           console.log('🧹 Company profile update - keeping regulatory data (has timestamp):', regulatoryData.timestamp);
         }
@@ -4361,7 +4400,7 @@ const MarketResearch = React.memo(() => {
     // Don't clear fresh API data that has a timestamp
     if (!regulatoryData?.timestamp) {
       console.log('🧹 Clearing regulatory data - no timestamp found');
-      setRegulatoryData(null);
+      setRegulatoryData(getDefaultRegulatoryData());
     } else {
       console.log('🧹 Keeping regulatory data - has timestamp:', regulatoryData.timestamp);
     }
@@ -4475,7 +4514,7 @@ const MarketResearch = React.memo(() => {
         // Only clear regulatory data if it doesn't have a timestamp (meaning it's fallback data)
         if (!regulatoryData?.timestamp) {
           console.log('🧹 Fresh fetch - clearing regulatory data (no timestamp)');
-          setRegulatoryData(null);
+          setRegulatoryData(getDefaultRegulatoryData());
         } else {
           console.log('🧹 Fresh fetch - keeping regulatory data (has timestamp):', regulatoryData.timestamp);
         }
@@ -4570,8 +4609,8 @@ const MarketResearch = React.memo(() => {
       if (!companyProfileData && currentUser?.uid) {
 
       try {
-        // Include user_id in API call
-        const profileResponse = await fetch(buildApiUrl(`api/profile/company?user_id=${currentUser.uid}`), {
+        // Include org_id in API call
+        const profileResponse = await fetch(`/api/profile/company?org_id=${orgIdToUse}`, {
 
           method: 'GET',
 
@@ -4673,7 +4712,7 @@ const MarketResearch = React.memo(() => {
       // Only clear regulatory data if it doesn't have a timestamp (meaning it's fallback data)
       if (!regulatoryData?.timestamp) {
         console.log('🧹 Force clear - clearing regulatory data (no timestamp)');
-        setRegulatoryData(null);
+        setRegulatoryData(getDefaultRegulatoryData());
       } else {
         console.log('🧹 Force clear - keeping regulatory data (has timestamp):', regulatoryData.timestamp);
       }
@@ -5300,6 +5339,146 @@ const MarketResearch = React.memo(() => {
 
   };
 
+  // Fetch all 5 Scout components and return their response bodies
+  const getAllScoutComponentResponses = async (refresh = false) => {
+    console.log('🔍 Fetching all 5 Scout component response bodies...');
+    
+    if (!currentUser?.uid) {
+      console.error('User not authenticated, cannot fetch Scout components');
+      throw new Error('Please log in to fetch Scout components');
+    }
+
+    const components = [
+      {
+        name: 'market size & opportunity',
+        displayName: 'Market Size & Opportunity'
+      },
+      {
+        name: 'industry trends report',
+        displayName: 'Industry Trends Report'
+      },
+      {
+        name: 'regulatory & compliance highlights',
+        displayName: 'Regulatory & Compliance Highlights'
+      },
+      {
+        name: 'competitor landscape',
+        displayName: 'Competitor Landscape'
+      },
+      {
+        name: 'market entry & growth strategy',
+        displayName: 'Market Entry & Growth Strategy'
+      }
+    ];
+
+    // Build and log all request bodies before making API calls
+    console.log('');
+    console.log('═══════════════════════════════════════════════════════════════');
+    console.log('📋 SCOUT PAGE LOAD - ALL 5 COMPONENT REQUEST BODIES');
+    console.log('═══════════════════════════════════════════════════════════════');
+    const allRequestBodies: { [key: string]: any } = {};
+    
+    components.forEach((component, index) => {
+      // Build clean payload with only fields the backend expects
+      // Note: cache_bust fields are removed as backend doesn't accept them
+      const payload: any = {
+        org_id: orgIdToUse,
+        user_id: currentUser.uid,
+        component_name: component.name,
+        data: {},
+        refresh: refresh
+      };
+
+      allRequestBodies[component.displayName] = payload;
+      
+      // Log each component individually for clarity
+      console.log(`\n📤 Component ${index + 1}/5: ${component.displayName}`);
+      console.log(JSON.stringify(payload, null, 2));
+    });
+
+    // Log all request bodies together in JSON format
+    console.log('\n📋 ALL 5 COMPONENTS REQUEST BODIES (COMBINED JSON):');
+    console.log(JSON.stringify(allRequestBodies, null, 2));
+    console.log('═══════════════════════════════════════════════════════════════');
+    console.log('');
+
+    const fetchComponent = async (component: { name: string; displayName: string }) => {
+      try {
+        // Build clean payload with only fields the backend expects
+        const payload = {
+          org_id: orgIdToUse,
+          user_id: currentUser.uid,
+          component_name: component.name,
+          data: {},
+          refresh: refresh
+        };
+
+        // Log request body in JSON format (before sending to API)
+        console.log(`📤 [SCOUT REQUEST BODY] ${component.displayName}:`, JSON.stringify(payload, null, 2));
+        console.log(`📤 Fetching ${component.displayName}...`);
+        const response = await fetch('/api/market-research', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`❌ Error fetching ${component.displayName}:`, errorText);
+          return {
+            component: component.displayName,
+            component_name: component.name,
+            success: false,
+            error: errorText,
+            status: response.status,
+            responseBody: null
+          };
+        }
+
+        const responseBody = await response.json();
+        console.log(`✅ Successfully fetched ${component.displayName}`);
+        
+        return {
+          component: component.displayName,
+          component_name: component.name,
+          success: true,
+          error: null,
+          status: response.status,
+          responseBody: responseBody
+        };
+      } catch (error) {
+        console.error(`❌ Exception fetching ${component.displayName}:`, error);
+        return {
+          component: component.displayName,
+          component_name: component.name,
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+          status: null,
+          responseBody: null
+        };
+      }
+    };
+
+    // Fetch all components in parallel
+    const results = await Promise.all(components.map(fetchComponent));
+
+    // Log summary
+    const successful = results.filter(r => r.success).length;
+    const failed = results.filter(r => !r.success).length;
+    console.log(`📊 Scout Components Summary: ${successful} successful, ${failed} failed`);
+
+    return {
+      results: results,
+      summary: {
+        total: results.length,
+        successful: successful,
+        failed: failed
+      }
+    };
+  };
+
 
 
 
@@ -5421,7 +5600,8 @@ const MarketResearch = React.memo(() => {
 
 
 
-        user_id: currentUser.uid,
+        org_id: orgIdToUse,
+        user_id: currentUser?.uid || "",
 
 
 
@@ -6344,44 +6524,24 @@ const MarketResearch = React.memo(() => {
       // Payload specifically for Industry Trends using API structure
 
       const payload = {
-
+        org_id: orgIdToUse,
         user_id: currentUser?.uid || "",
-
         component_name: "industry trends report",
-
         data: {},
-
-        refresh: refresh,
-
-        _forceRefresh: refresh,
-
-        _timestamp: Date.now(),
-
-        _cacheBust: Math.random().toString(36).substring(7)
-
+        refresh: refresh
       };
 
 
 
       console.log('📤 Sending Industry Trends API request with payload:', payload);
+      console.log('📤 [SCOUT REQUEST BODY] Industry Trends Report:', JSON.stringify(payload, null, 2));
 
       console.log('🔄 Industry Trends refresh parameter:', refresh);
 
 
 
-      // Use cache-busted API call for fresh data
-
-      const cacheBustedPayload = {
-
-        ...payload,
-
-        _timestamp: Date.now(),
-
-        _cache_bust: Math.random().toString(36).substring(7)
-
-      };
-
-      console.log('📤 Industry Trends cache-busted payload:', cacheBustedPayload);
+      // Note: Removed cache-busting fields (_timestamp, _cache_bust) as backend doesn't accept them
+      // The backend expects only: org_id, user_id, component_name, data, refresh
 
       console.log('📈 INDUSTRY TRENDS - Making API call to /api/market-research');
       const response = await fetch('/api/market-research', {
@@ -6389,7 +6549,7 @@ const MarketResearch = React.memo(() => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(cacheBustedPayload)
+        body: JSON.stringify(payload)
       });
 
       if (!response.ok) {
@@ -6706,25 +6866,11 @@ const MarketResearch = React.memo(() => {
 
 
       const payload = {
-
-
-
+        org_id: orgIdToUse,
         user_id: currentUser?.uid || "",
-
-
-
         component_name: "regulatory & compliance highlights",
-
-
-
         data: {},
-
-
-
         refresh: refresh
-
-
-
       };
 
 
@@ -6734,6 +6880,7 @@ const MarketResearch = React.memo(() => {
 
 
       console.log('📤 Sending Regulatory API request with payload:', payload);
+      console.log('📤 [SCOUT REQUEST BODY] Regulatory & Compliance Highlights:', JSON.stringify(payload, null, 2));
 
 
 
@@ -7105,6 +7252,18 @@ const MarketResearch = React.memo(() => {
           console.log('  - updatedRegulatoryData.euAiActDeadline:', updatedRegulatoryData.euAiActDeadline);
 
           console.log('  - updatedRegulatoryData.gdprCompliance:', updatedRegulatoryData.gdprCompliance);
+          
+          console.log('  - updatedRegulatoryData.keyUpdates:', updatedRegulatoryData.keyUpdates);
+          console.log('  - updatedRegulatoryData.keyUpdates length:', updatedRegulatoryData.keyUpdates?.length);
+          
+          console.log('  - updatedRegulatoryData.visualDataCards:', updatedRegulatoryData.visualDataCards);
+          console.log('  - updatedRegulatoryData.visualDataCards length:', updatedRegulatoryData.visualDataCards?.length);
+          
+          console.log('  - updatedRegulatoryData.regionalData:', updatedRegulatoryData.regionalData);
+          console.log('  - updatedRegulatoryData.regionalData length:', updatedRegulatoryData.regionalData?.length);
+          
+          console.log('  - updatedRegulatoryData.strategicRecommendations:', updatedRegulatoryData.strategicRecommendations);
+          console.log('  - Full updatedRegulatoryData object:', JSON.stringify(updatedRegulatoryData, null, 2));
 
 
 
@@ -7375,12 +7534,11 @@ const MarketResearch = React.memo(() => {
 
 
       const payload = {
+        org_id: orgIdToUse,
         user_id: currentUser?.uid || "",
         component_name: "competitor landscape",
         data: {},
-        refresh: refresh,
-        _timestamp: Date.now(),
-        _cache_bust: Math.random().toString(36).substring(7)
+        refresh: refresh
       };
 
 
@@ -8407,28 +8565,11 @@ const MarketResearch = React.memo(() => {
 
 
       const payload = {
-
-
-
+        org_id: orgIdToUse,
         user_id: currentUser?.uid || "",
-
-
-
         component_name: "market entry & growth strategy",
-
-
-
         data: {},
-
-
-
-        refresh: refresh,
-
-        _forceRefresh: refresh,
-
-        _timestamp: Date.now(),
-
-        _cacheBust: Math.random().toString(36).substring(7)
+        refresh: refresh
 
 
 
@@ -8441,6 +8582,7 @@ const MarketResearch = React.memo(() => {
 
 
       console.log('📤 Sending Market Entry API request with payload:', payload);
+      console.log('📤 [SCOUT REQUEST BODY] Market Entry & Growth Strategy:', JSON.stringify(payload, null, 2));
 
       console.log('🔄 Market Entry refresh parameter:', refresh);
 
@@ -8448,28 +8590,15 @@ const MarketResearch = React.memo(() => {
 
 
 
-      // Use cache-busted API call for fresh data
-
-      const cacheBustedPayload = {
-
-        ...payload,
-
-        _timestamp: Date.now(),
-
-        _cache_bust: Math.random().toString(36).substring(7)
-
-      };
-
-      console.log('📤 Market Entry cache-busted payload:', cacheBustedPayload);
-
-      
+      // Note: Removed cache-busting fields (_timestamp, _cache_bust) as backend doesn't accept them
+      // The backend expects only: org_id, user_id, component_name, data, refresh
 
       const response = await fetch('/api/market-research', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(cacheBustedPayload)
+        body: JSON.stringify(payload)
       });
 
       if (!response.ok) {
@@ -8514,6 +8643,8 @@ const MarketResearch = React.memo(() => {
 
 
         console.log('🎯 Processing API data for Market Entry:', apiData);
+        console.log('🎯 Market Entry API Data Keys:', Object.keys(apiData));
+        console.log('🎯 Market Entry API Data (Full):', JSON.stringify(apiData, null, 2));
 
 
 
@@ -8525,7 +8656,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-        const currentTimestamp = marketEntryData.timestamp || null;
+        const currentTimestamp = marketEntryData?.timestamp || null;
 
 
 
@@ -8621,51 +8752,51 @@ const MarketResearch = React.memo(() => {
 
 
 
-            executiveSummary: apiData.executiveSummary || marketEntryData.executiveSummary,
+            executiveSummary: apiData.executiveSummary || marketEntryData?.executiveSummary,
 
 
 
-            entryBarriers: apiData.entryBarriers || marketEntryData.entryBarriers,
+            entryBarriers: apiData.entryBarriers || marketEntryData?.entryBarriers,
 
 
 
-            recommendedChannel: apiData.recommendedChannel || marketEntryData.recommendedChannel,
+            recommendedChannel: apiData.recommendedChannel || marketEntryData?.recommendedChannel,
 
 
 
-            timeToMarket: apiData.timeToMarket || marketEntryData.timeToMarket,
+            timeToMarket: apiData.timeToMarket || marketEntryData?.timeToMarket,
 
 
 
-            topBarrier: apiData.topBarrier || marketEntryData.topBarrier,
+            topBarrier: apiData.topBarrier || marketEntryData?.topBarrier,
 
 
 
-            competitiveDifferentiation: apiData.competitiveDifferentiation || marketEntryData.competitiveDifferentiation,
+            competitiveDifferentiation: apiData.competitiveDifferentiation || marketEntryData?.competitiveDifferentiation,
 
 
 
-            strategicRecommendations: apiData.strategicRecommendations || marketEntryData.strategicRecommendations,
+            strategicRecommendations: apiData.strategicRecommendations || marketEntryData?.strategicRecommendations,
 
 
 
-            riskAssessment: apiData.riskAssessment || marketEntryData.riskAssessment,
+            riskAssessment: apiData.riskAssessment || marketEntryData?.riskAssessment,
 
 
 
-            swot: apiData.swot || marketEntryData.swot,
+            swot: apiData.swot || marketEntryData?.swot,
 
 
 
-            timeline: apiData.timeline || marketEntryData.timeline,
+            timeline: apiData.timeline || marketEntryData?.timeline,
 
 
 
-            marketSizeBySegment: apiData.marketSizeBySegment || marketEntryData.marketSizeBySegment,
+            marketSizeBySegment: apiData.marketSizeBySegment || marketEntryData?.marketSizeBySegment,
 
 
 
-            growthProjections: apiData.growthProjections || marketEntryData.growthProjections,
+            growthProjections: apiData.growthProjections || marketEntryData?.growthProjections,
 
 
 
@@ -8702,6 +8833,10 @@ const MarketResearch = React.memo(() => {
 
 
           console.log('✅ MARKET ENTRY DATA UPDATED - Component name:', apiData.component_name);
+          console.log('✅ MARKET ENTRY UPDATED DATA (Full):', JSON.stringify(updatedData, null, 2));
+          console.log('✅ MARKET ENTRY - executiveSummary:', updatedData.executiveSummary);
+          console.log('✅ MARKET ENTRY - entryBarriers:', updatedData.entryBarriers);
+          console.log('✅ MARKET ENTRY - strategicRecommendations:', updatedData.strategicRecommendations);
 
 
 
@@ -9092,7 +9227,13 @@ const MarketResearch = React.memo(() => {
         console.log('📊 Regulatory data already has fresh timestamp, skipping fetch:', regulatoryData.timestamp);
       }
 
-
+      // Log all 5 Scout component request bodies on page load
+      if (!isMounted) return;
+      try {
+        await getAllScoutComponentResponses(false);
+      } catch (error) {
+        console.error('Error logging Scout component request bodies:', error);
+      }
 
     };
 
@@ -9942,6 +10083,11 @@ const MarketResearch = React.memo(() => {
 
 
 
+    // Collapse the report section when chat opens
+    setIsMarketIntelligenceExpanded(false);
+
+
+
     setShowMarketSizeScoutChat(true);
 
 
@@ -10618,11 +10764,8 @@ const MarketResearch = React.memo(() => {
 
 
 
-    // Force contextual message state for Competitor Landscape Scout
-
-
-
-    setCompetitorHasEdits(true);
+    // Clear hasEdits flag since changes have been saved
+    setCompetitorHasEdits(false);
 
 
 
@@ -10695,6 +10838,11 @@ const MarketResearch = React.memo(() => {
 
 
     setCompetitorCustomMessage(customMessage);
+
+
+
+    // Collapse the report section when chat opens
+    setCompetitorExpanded(false);
 
 
 
@@ -12318,7 +12466,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-    const oldValue = marketEntryData.executiveSummary;
+    const oldValue = marketEntryData?.executiveSummary;
 
 
 
@@ -12398,7 +12546,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-    const oldValue = marketEntryData.entryBarriers.join(', ');
+    const oldValue = marketEntryData?.entryBarriers?.join(', ');
 
 
 
@@ -12482,7 +12630,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-    const oldValue = marketEntryData.recommendedChannel;
+    const oldValue = marketEntryData?.recommendedChannel;
 
 
 
@@ -12562,7 +12710,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-    const oldValue = marketEntryData.timeToMarket;
+    const oldValue = marketEntryData?.timeToMarket;
 
 
 
@@ -12642,7 +12790,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-    const oldValue = marketEntryData.topBarrier;
+    const oldValue = marketEntryData?.topBarrier;
 
 
 
@@ -12722,7 +12870,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-    const oldValue = marketEntryData.competitiveDifferentiation.join(', ');
+    const oldValue = marketEntryData?.competitiveDifferentiation?.join(', ');
 
 
 
@@ -12806,7 +12954,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-    const oldValue = marketEntryData.strategicRecommendations.join(', ');
+    const oldValue = marketEntryData?.strategicRecommendations?.join(', ');
 
 
 
@@ -12882,7 +13030,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-    const oldValue = marketEntryData.riskAssessment.join(', ');
+    const oldValue = marketEntryData?.riskAssessment?.join(', ');
 
 
 
@@ -14405,33 +14553,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-            {/* Component Status Loading Screen */}
-
-            {isRefreshing && (
-
-              <ComponentStatusLoadingScreen 
-
-                componentStatus={componentStatus}
-
-                refreshAttempt={refreshAttempt}
-
-                maxRetries={3}
-
-                isValidating={validationAttempts > 0}
-
-                validationAttempt={validationAttempts}
-
-                consecutiveValidations={consecutiveValidations}
-
-                loadingPhase={loadingPhase}
-
-                componentRenderingStatus={componentRenderingStatus}
-
-                onClose={() => setIsRefreshing(false)}
-
-              />
-
-            )}
+            {/* Loading Modal - Replaced ComponentStatusLoadingScreen */}
 
 
             
@@ -14813,23 +14935,23 @@ const MarketResearch = React.memo(() => {
 
 
 
-                        regulatoryExecutiveSummary={regulatoryData.executiveSummary}
+                        regulatoryExecutiveSummary={regulatoryData?.executiveSummary || ''}
 
 
 
-                       regulatoryEuAiActDeadline={regulatoryData.euAiActDeadline}
+                       regulatoryEuAiActDeadline={regulatoryData?.euAiActDeadline || ''}
 
 
 
-                       regulatoryGdprCompliance={regulatoryData.gdprCompliance}
+                       regulatoryGdprCompliance={regulatoryData?.gdprCompliance || ''}
 
 
 
-                       regulatoryPotentialFines={regulatoryData.potentialFines}
+                       regulatoryPotentialFines={regulatoryData?.potentialFines || ''}
 
 
 
-                       regulatoryDataLocalization={regulatoryData.dataLocalization}
+                       regulatoryDataLocalization={regulatoryData?.dataLocalization || ''}
 
 
 
@@ -14857,35 +14979,35 @@ const MarketResearch = React.memo(() => {
 
 
 
-                      marketEntryExecutiveSummary={marketEntryData.executiveSummary}
+                      marketEntryExecutiveSummary={marketEntryData?.executiveSummary}
 
 
 
-                      marketEntryBarriers={marketEntryData.entryBarriers}
+                      marketEntryBarriers={marketEntryData?.entryBarriers}
 
 
 
-                      marketEntryRecommendedChannel={marketEntryData.recommendedChannel}
+                      marketEntryRecommendedChannel={marketEntryData?.recommendedChannel}
 
 
 
-                      marketEntryTimeToMarket={marketEntryData.timeToMarket}
+                      marketEntryTimeToMarket={marketEntryData?.timeToMarket}
 
 
 
-                      marketEntryTopBarrier={marketEntryData.topBarrier}
+                      marketEntryTopBarrier={marketEntryData?.topBarrier}
 
 
 
-                      marketEntryCompetitiveDifferentiation={marketEntryData.competitiveDifferentiation}
+                      marketEntryCompetitiveDifferentiation={marketEntryData?.competitiveDifferentiation}
 
 
 
-                        marketEntryStrategicRecommendations={marketEntryData.strategicRecommendations}
+                        marketEntryStrategicRecommendations={marketEntryData?.strategicRecommendations}
 
 
 
-                        marketEntryRiskAssessment={marketEntryData.riskAssessment}
+                        marketEntryRiskAssessment={marketEntryData?.riskAssessment}
 
 
 
@@ -15772,7 +15894,39 @@ const MarketResearch = React.memo(() => {
 
       />
 
-
+      {/* Loading Modal for Scout Refresh */}
+      <Dialog open={isRefreshing} onOpenChange={() => {}}>
+        <DialogContent className="sm:max-w-md border-0 bg-transparent shadow-none p-0">
+          <div className="flex flex-col items-center justify-center gap-6 p-8 bg-background rounded-lg border border-border shadow-2xl">
+            {/* Animated Brewra Logo */}
+            <div className="relative w-24 h-24 flex items-center justify-center">
+              <img 
+                src="/logo.png" 
+                alt="Brewra Logo" 
+                className="h-20 w-20 object-contain"
+                loading="eager"
+                style={{ 
+                  animation: 'logo-reveal 2.5s ease-in-out infinite',
+                  clipPath: 'inset(0% 0% 0% 0%)'
+                }}
+              />
+            </div>
+            {/* Loading Text */}
+            <div className="flex flex-col items-center gap-2">
+              <p className="text-lg font-semibold bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent">
+                Refreshing Scout data
+              </p>
+              <p className="text-sm text-muted-foreground font-medium">Please wait while we update your market intelligence...</p>
+            </div>
+            {/* Animated Progress Dots */}
+            <div className="flex gap-2">
+              <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms', animationDuration: '1.4s' }}></div>
+              <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '200ms', animationDuration: '1.4s' }}></div>
+              <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '400ms', animationDuration: '1.4s' }}></div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
     </Layout>
 

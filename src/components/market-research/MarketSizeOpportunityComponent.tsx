@@ -7,6 +7,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import MiniPieChart from '@/components/ui/MiniPieChart';
 import MiniLineChart from '@/components/ui/MiniLineChart';
+import { useAuth } from '@/contexts/AuthContext';
+import { setUserLocalStorage } from '@/utils/cacheUtils';
+import { useToast } from '@/hooks/use-toast';
 
 // Define the EditRecord interface within this file
 interface EditRecord {
@@ -89,7 +92,9 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
   showScoutChat,
   scoutChatPanel
 }) => {
-  // Local state for editing
+  const { currentUser } = useAuth();
+  const { toast } = useToast();
+  // Local state for editing - these are the source of truth for display
   const [localExecutiveSummary, setLocalExecutiveSummary] = React.useState(executiveSummary || '');
   const [localTamValue, setLocalTamValue] = React.useState(tamValue || '');
   const [localSamValue, setLocalSamValue] = React.useState(samValue || '');
@@ -97,19 +102,95 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
   const [localMarketEntry, setLocalMarketEntry] = React.useState(marketEntry || '');
   const [localStrategicRecommendations, setLocalStrategicRecommendations] = React.useState([...strategicRecommendations]);
   const [localMarketDrivers, setLocalMarketDrivers] = React.useState([...marketDrivers]);
+  
+  // Force re-render trigger to ensure UI updates immediately after save
+  const [, forceUpdate] = React.useReducer(x => x + 1, 0);
 
-  // Sync local state with props when they change (but only when not editing)
+  // Track if we just saved to prevent useEffect from overwriting our changes
+  const justSavedRef = React.useRef(false);
+  const savedLocalStateRef = React.useRef<{
+    executiveSummary: string;
+    tamValue: string;
+    samValue: string;
+    apacGrowthRate: string;
+    marketEntry: string;
+    strategicRecommendations: string[];
+    marketDrivers: string[];
+  } | null>(null);
+
+  // Sync local state with props when they change, but NEVER overwrite if we just saved
+  // Local state is the source of truth for display - props are only synced when safe
+  React.useEffect(() => {
+    // If we just saved, NEVER overwrite local state until props match what we saved
+    if (justSavedRef.current && savedLocalStateRef.current) {
+      const propsMatchSaved = 
+        (executiveSummary || '') === savedLocalStateRef.current.executiveSummary &&
+        (tamValue || '') === savedLocalStateRef.current.tamValue &&
+        (samValue || '') === savedLocalStateRef.current.samValue &&
+        (apacGrowthRate || '') === savedLocalStateRef.current.apacGrowthRate &&
+        (marketEntry || '') === savedLocalStateRef.current.marketEntry;
+      
+      if (propsMatchSaved) {
+        // Props have caught up - safe to reset flag and sync
+        justSavedRef.current = false;
+        savedLocalStateRef.current = null;
+      } else {
+        // Props haven't caught up yet - DO NOT overwrite local state
+        console.log('🛡️ Market Size - Preserving local state, props not caught up yet');
+        return; // Exit early, don't overwrite
+      }
+    }
+    
+    // Only sync when not editing (and either not just saved, or props have caught up)
+    if (!isEditing) {
+      // Check if local state differs from props - if so, and we're not just saved, sync
+      const localDiffers = 
+        localExecutiveSummary !== (executiveSummary || '') ||
+        localTamValue !== (tamValue || '') ||
+        localSamValue !== (samValue || '') ||
+        localApacGrowthRate !== (apacGrowthRate || '') ||
+        localMarketEntry !== (marketEntry || '');
+      
+      // Only sync if local differs AND we're not in a "just saved" state
+      if (localDiffers && !justSavedRef.current) {
+        console.log('🔄 Market Size - Syncing local state with props');
+        setLocalExecutiveSummary(executiveSummary || '');
+        setLocalTamValue(tamValue || '');
+        setLocalSamValue(samValue || '');
+        setLocalApacGrowthRate(apacGrowthRate || '');
+        setLocalMarketEntry(marketEntry || '');
+        setLocalStrategicRecommendations([...strategicRecommendations]);
+        setLocalMarketDrivers([...marketDrivers]);
+      }
+    }
+  }, [executiveSummary, tamValue, samValue, apacGrowthRate, marketEntry, strategicRecommendations, marketDrivers, isEditing, localExecutiveSummary, localTamValue, localSamValue, localApacGrowthRate, localMarketEntry]);
+
+  // Use local state for display to ensure immediate UI updates after save
+  // Local state is synced with props when not editing, and updated immediately during editing
+  // This ensures UI reflects changes immediately without waiting for parent prop updates
+  // IMPORTANT: These display variables use local state, which is updated during editing
+  // and preserved after save, so UI will show changes immediately
+  const displayExecutiveSummary = localExecutiveSummary || executiveSummary || '';
+  const displayTamValue = localTamValue || tamValue || '';
+  const displaySamValue = localSamValue || samValue || '';
+  const displayApacGrowthRate = localApacGrowthRate || apacGrowthRate || '';
+  const displayMarketEntry = localMarketEntry || marketEntry || '';
+  const displayStrategicRecommendations = localStrategicRecommendations.length > 0 ? localStrategicRecommendations : strategicRecommendations;
+  const displayMarketDrivers = localMarketDrivers.length > 0 ? localMarketDrivers : marketDrivers;
+  
+  // Debug: Log display values when isEditing changes
   React.useEffect(() => {
     if (!isEditing) {
-      setLocalExecutiveSummary(executiveSummary || '');
-      setLocalTamValue(tamValue || '');
-      setLocalSamValue(samValue || '');
-      setLocalApacGrowthRate(apacGrowthRate || '');
-      setLocalMarketEntry(marketEntry || '');
-      setLocalStrategicRecommendations([...strategicRecommendations]);
-      setLocalMarketDrivers([...marketDrivers]);
+      console.log('👁️ Market Size - View mode display values:', {
+        displayExecutiveSummary: displayExecutiveSummary.substring(0, 50),
+        displayTamValue: displayTamValue,
+        displaySamValue: displaySamValue,
+        localExecutiveSummary: localExecutiveSummary.substring(0, 50),
+        propExecutiveSummary: (executiveSummary || '').substring(0, 50),
+        justSaved: justSavedRef.current
+      });
     }
-  }, [executiveSummary, tamValue, samValue, apacGrowthRate, marketEntry, strategicRecommendations, marketDrivers, isEditing]);
+  }, [isEditing, displayExecutiveSummary, displayTamValue, displaySamValue, localExecutiveSummary, executiveSummary]);
 
   // Debug logging
   React.useEffect(() => {
@@ -121,42 +202,139 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
     });
   }, [isEditing, localExecutiveSummary, executiveSummary]);
 
-  const handleMarketSizeSaveChanges = () => {
-    // Log original and modified JSON for debugging
-    const originalJson = {
-      executiveSummary: executiveSummary || '',
-      tamValue: tamValue || '',
-      samValue: samValue || '',
-      apacGrowthRate: apacGrowthRate || '',
-      strategicRecommendations: strategicRecommendations || [],
-      marketEntry: marketEntry || '',
-      marketDrivers: marketDrivers || []
-    };
+  const handleMarketSizeSaveChanges = async () => {
+    try {
+      console.log('🚀 Market Size & Opportunity - Starting save operation');
+      
+      // Prepare original data
+      const originalData = {
+        section: 'market-size',
+        executiveSummary: executiveSummary || '',
+        tamValue: tamValue || '',
+        samValue: samValue || '',
+        apacGrowthRate: apacGrowthRate || '',
+        strategicRecommendations: strategicRecommendations || [],
+        marketEntry: marketEntry || '',
+        marketDrivers: marketDrivers || []
+      };
 
-    const modifiedJson = {
-      executiveSummary: localExecutiveSummary,
-      tamValue: localTamValue,
-      samValue: localSamValue,
-      apacGrowthRate: localApacGrowthRate,
-      strategicRecommendations: localStrategicRecommendations,
-      marketEntry: localMarketEntry,
-      marketDrivers: localMarketDrivers
-    };
+      // Prepare modified data using local state
+      const modifiedData = {
+        section: 'market-size',
+        executiveSummary: localExecutiveSummary,
+        tamValue: localTamValue,
+        samValue: localSamValue,
+        apacGrowthRate: localApacGrowthRate,
+        strategicRecommendations: localStrategicRecommendations,
+        marketEntry: localMarketEntry,
+        marketDrivers: localMarketDrivers
+      };
 
-    console.log('📊 Market Size & Opportunity Component - original_json:', originalJson);
-    console.log('📊 Market Size & Opportunity Component - modified_json:', modifiedJson);
+      console.log('📤 Market Size & Opportunity - original_json:', originalData);
+      console.log('📤 Market Size & Opportunity - modified_json:', modifiedData);
 
-    // Update parent state with local changes
-    onExecutiveSummaryChange(localExecutiveSummary);
-    onTamValueChange(localTamValue);
-    onSamValueChange(localSamValue);
-    onApacGrowthRateChange(localApacGrowthRate);
-    onStrategicRecommendationsChange(localStrategicRecommendations);
-    onMarketEntryChange(localMarketEntry);
-    onMarketDriversChange(localMarketDrivers);
-    
-    // Call the parent save function
-    onSaveChanges();
+      // Store data for /ask API (user-specific)
+      if (currentUser?.uid) {
+        setUserLocalStorage('market-size_original_json', JSON.stringify(originalData), currentUser.uid);
+        setUserLocalStorage('market-size_modified_json', JSON.stringify(modifiedData), currentUser.uid);
+      }
+
+      // Call GET API to save edits using /ask endpoint with query parameters
+      const queryParams = new URLSearchParams({
+        original_json: JSON.stringify(originalData),
+        modified_json: JSON.stringify(modifiedData),
+        edit_type: "modification",
+        section: "market_size"
+      });
+      
+      const response = await fetch(`/api/ask?${queryParams}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      console.log('📥 GET /ask status:', response.status);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // IMPORTANT: Set the flag FIRST before any state updates to prevent useEffect from overwriting
+      justSavedRef.current = true;
+      savedLocalStateRef.current = {
+        executiveSummary: localExecutiveSummary,
+        tamValue: localTamValue,
+        samValue: localSamValue,
+        apacGrowthRate: localApacGrowthRate,
+        marketEntry: localMarketEntry,
+        strategicRecommendations: [...localStrategicRecommendations],
+        marketDrivers: [...localMarketDrivers]
+      };
+
+      console.log('💾 Market Size - Saving with local state:', {
+        exec: localExecutiveSummary.substring(0, 30),
+        tam: localTamValue,
+        sam: localSamValue
+      });
+
+      // Update parent state with local values (trust the user's edits)
+      // These updates are async, so local state will show immediately while props catch up
+      onExecutiveSummaryChange(localExecutiveSummary);
+      onTamValueChange(localTamValue);
+      onSamValueChange(localSamValue);
+      onApacGrowthRateChange(localApacGrowthRate);
+      onStrategicRecommendationsChange(localStrategicRecommendations);
+      onMarketEntryChange(localMarketEntry);
+      onMarketDriversChange(localMarketDrivers);
+      
+      console.log('✅ Market Size & Opportunity - Parent state updated with local edits');
+      console.log('✅ Market Size & Opportunity - Local state preserved for immediate UI refresh');
+      console.log('✅ Market Size & Opportunity - Display values will be:', {
+        displayExecutiveSummary: localExecutiveSummary.substring(0, 50),
+        displayTamValue: localTamValue,
+        displaySamValue: localSamValue
+      });
+      
+      // Call the parent save function (this may set isEditing to false)
+      // The flag is already set, so useEffect won't overwrite local state
+      onSaveChanges();
+      
+      // Force a re-render AFTER onSaveChanges to ensure UI updates with local state
+      // This ensures that when isEditing becomes false, the view mode renders with correct local state
+      setTimeout(() => {
+        forceUpdate();
+        console.log('🔄 Market Size - Forced re-render after save');
+      }, 10);
+    } catch (error) {
+      console.error('❌ Market Size & Opportunity - Error saving changes:', error);
+      
+      // Even if API fails, update parent state with local values
+      justSavedRef.current = true;
+      savedLocalStateRef.current = {
+        executiveSummary: localExecutiveSummary,
+        tamValue: localTamValue,
+        samValue: localSamValue,
+        apacGrowthRate: localApacGrowthRate,
+        marketEntry: localMarketEntry,
+        strategicRecommendations: [...localStrategicRecommendations],
+        marketDrivers: [...localMarketDrivers]
+      };
+      
+      onExecutiveSummaryChange(localExecutiveSummary);
+      onTamValueChange(localTamValue);
+      onSamValueChange(localSamValue);
+      onApacGrowthRateChange(localApacGrowthRate);
+      onStrategicRecommendationsChange(localStrategicRecommendations);
+      onMarketEntryChange(localMarketEntry);
+      onMarketDriversChange(localMarketDrivers);
+      
+      // Force a re-render to ensure UI updates immediately with local state values
+      forceUpdate();
+      
+      // Still call the original save function even if API fails
+      onSaveChanges();
+    }
   };
 
   // Mock data for charts
@@ -199,13 +377,20 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
           {!isSplitView && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="sm" onClick={() => onScoutIconClick('market-size')} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-all duration-200 hover:shadow-md hover:shadow-blue-200/50 relative">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => {
+                    onScoutIconClick('market-size');
+                  }} 
+                  className="text-blue-600 hover:text-blue-700 transition-all duration-200 relative"
+                >
                   <div className="absolute inset-0 rounded-md bg-gradient-to-r from-blue-400/20 to-green-400/20 animate-pulse opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
                   <Bot className="h-5 w-5 relative z-10" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Explore More with Scout</p>
+                <p>Chat with Scout</p>
               </TooltipContent>
             </Tooltip>
           )}
@@ -440,13 +625,20 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
 
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="sm" onClick={() => onScoutIconClick('market-size')} className="text-blue-600 hover:text-blue-700 bg-blue-50 border border-blue-200 hover:shadow-md hover:shadow-blue-200/50 transition-all duration-200 relative">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => {
+                    onScoutIconClick('market-size');
+                  }} 
+                  className="text-blue-600 hover:text-blue-700 transition-all duration-200 relative"
+                >
                   <div className="absolute inset-0 rounded-md bg-gradient-to-r from-blue-400/20 to-green-400/20 opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
                   <Bot className="h-4 w-4 relative z-10" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Explore More with Scout</p>
+                <p>Chat with Scout</p>
               </TooltipContent>
             </Tooltip>
           </div>
@@ -478,22 +670,22 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
               <BarChart3 className="h-5 w-5 text-blue-600" />
               Executive Summary
             </h3>
-            <p className="text-gray-700 mb-6">{executiveSummary}</p>
+            <p className="text-gray-700 mb-6">{displayExecutiveSummary}</p>
 
             {/* Key Metrics Cards - Always Visible */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
-                <div className="text-2xl font-bold text-blue-600">{tamValue}</div>
+                <div className="text-2xl font-bold text-blue-600">{displayTamValue}</div>
                 <div className="text-sm font-medium text-gray-900">Total Addressable Market</div>
                 <div className="text-xs text-gray-600">Growing 15% YoY</div>
               </div>
               <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded-r-lg">
-                <div className="text-2xl font-bold text-green-600">{samValue}</div>
+                <div className="text-2xl font-bold text-green-600">{displaySamValue}</div>
                 <div className="text-sm font-medium text-gray-900">Serviceable Addressable Market</div>
                 <div className="text-xs text-gray-600">Mid-market focus</div>
               </div>
               <div className="bg-purple-50 border-l-4 border-purple-500 p-4 rounded-r-lg">
-                <div className="text-2xl font-bold text-purple-600">{apacGrowthRate}</div>
+                <div className="text-2xl font-bold text-purple-600">{displayApacGrowthRate}</div>
                 <div className="text-sm font-medium text-gray-900">APAC Growth Rate</div>
                 <div className="text-xs text-gray-600">Fastest growing region</div>
               </div>
@@ -530,7 +722,7 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
                   </h3>
                   <div className="bg-green-50 p-4 rounded-lg border border-green-200">
                     <ul className="space-y-2 text-gray-700">
-                      {strategicRecommendations.map((rec, index) => (
+                      {displayStrategicRecommendations.map((rec, index) => (
                         <li key={index} className="flex items-start gap-2">
                           <span className="text-green-600 font-bold text-lg leading-6">•</span>
                           <span>{rec}</span>
@@ -547,7 +739,7 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
                     Market Entry & Growth Strategy
                   </h3>
                   <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
-                    <p className="text-gray-700">{marketEntry}</p>
+                    <p className="text-gray-700">{displayMarketEntry}</p>
                   </div>
                 </div>
 
@@ -559,7 +751,7 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
                   </h3>
                   <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
                     <ul className="space-y-3 text-gray-700">
-                      {marketDrivers.map((driver, index) => (
+                      {displayMarketDrivers.map((driver, index) => (
                         <li key={index} className="flex items-start gap-3">
                           <div className="bg-purple-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-semibold flex-shrink-0 mt-0.5">
                             {index + 1}

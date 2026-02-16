@@ -10,7 +10,7 @@ import MiniPieChart from '@/components/ui/MiniPieChart';
 import MiniLineChart from '@/components/ui/MiniLineChart';
 import { EditRecord } from './types';
 import { executeWithRateLimit } from '@/lib/rateLimitManager';
-import { apiFetchJson, buildApiUrl } from '@/lib/api';
+import { apiFetchJson } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { getUserLocalStorage, setUserLocalStorage, removeUserLocalStorage } from '@/utils/cacheUtils';
 
@@ -99,7 +99,8 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
   isRefreshing,
   companyProfile
 }) => {
-  const { currentUser } = useAuth();
+  const { currentUser, orgId } = useAuth();
+  const orgIdToUse = orgId || 'brewra'; // Fallback to 'brewra' for backward compatibility
   // Track previous user to detect user switches
   const previousUserRef = useRef<string | null | undefined>(currentUser?.uid);
   // Track if we just cleared due to user switch (to prevent immediate sync with stale props)
@@ -121,6 +122,18 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
   const [localMarketSizeBySegment, setLocalMarketSizeBySegment] = useState<Record<string, string>>(marketSizeBySegment || {});
   const [localGrowthProjections, setLocalGrowthProjections] = useState<Record<string, string>>(growthProjections || {});
   const [localError, setLocalError] = useState<string | null>(null);
+  
+  // Track if we just saved to prevent useEffect from overwriting our changes
+  const justSavedRef = useRef(false);
+  const savedLocalStateRef = useRef<{
+    executiveSummary: string;
+    tamValue: string;
+    samValue: string;
+    apacGrowthRate: string;
+    marketEntry: string;
+    strategicRecommendations: string[];
+    marketDrivers: string[];
+  } | null>(null);
 
   // Debug logging for state changes
   useEffect(() => {
@@ -173,14 +186,35 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
     }
   }, [isEditing]);
 
-  // Sync local state with props when they change (but only when not editing)
-  // IMPORTANT: Always sync with props when they change, but verify data belongs to current user
+  // Sync local state with props when they change (but only when not editing and not just saved)
+  // IMPORTANT: Never overwrite local state if we just saved until props catch up
   useEffect(() => {
     if (!isEditing && currentUser?.uid) {
       // Skip syncing if we just cleared due to user switch (prevent syncing with stale props)
       if (justClearedRef.current) {
         console.log('🔄 [MARKET SIZE] Skipping sync - data was just cleared due to user switch, waiting for new user data');
         return;
+      }
+      
+      // If we just saved, check if props have caught up with our saved state
+      if (justSavedRef.current && savedLocalStateRef.current) {
+        const propsMatchSaved = 
+          (executiveSummary || '') === savedLocalStateRef.current.executiveSummary &&
+          (tamValue || '') === savedLocalStateRef.current.tamValue &&
+          (samValue || '') === savedLocalStateRef.current.samValue &&
+          (apacGrowthRate || '') === savedLocalStateRef.current.apacGrowthRate &&
+          (marketEntry || '') === savedLocalStateRef.current.marketEntry;
+        
+        if (propsMatchSaved) {
+          // Props have caught up - safe to reset flag and allow normal syncing
+          console.log('✅ Market Size - Props caught up with saved state, resetting flag');
+          justSavedRef.current = false;
+          savedLocalStateRef.current = null;
+        } else {
+          // Props haven't caught up yet - DO NOT overwrite local state
+          console.log('🛡️ Market Size - Preserving local state, props not caught up yet');
+          return; // Exit early, don't overwrite
+        }
       }
       
       console.log('🔄 MarketSizeSection: Syncing with props (not editing):', {
@@ -191,11 +225,12 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
         marketEntry,
         strategicRecommendations: strategicRecommendations?.length || 0,
         marketDrivers: marketDrivers?.length || 0,
-        currentUserId: currentUser.uid
+        currentUserId: currentUser.uid,
+        justSaved: justSavedRef.current
       });
       
-      // Always sync with props when they change (if not editing)
-      // This ensures we get fresh data from parent/API
+      // Only sync with props when they change (if not editing and not just saved)
+      // This ensures we get fresh data from parent/API, but preserves our edits
       if (executiveSummary && executiveSummary !== localExecutiveSummary) {
         setLocalExecutiveSummary(executiveSummary);
       }
@@ -342,7 +377,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
         section: "market_size"
       });
       
-      const response = await fetch(buildApiUrl(`api/ask?${queryParams}`), {
+      const response = await fetch(`/api/ask?${queryParams}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -355,6 +390,18 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
         throw new Error(`Failed to save: ${response.status}`);
       }
 
+      // IMPORTANT: Set the flag FIRST before any state updates to prevent useEffect from overwriting
+      justSavedRef.current = true;
+      savedLocalStateRef.current = {
+        executiveSummary: localExecutiveSummary,
+        tamValue: localTamValue,
+        samValue: localSamValue,
+        apacGrowthRate: localApacGrowthRate,
+        marketEntry: localMarketEntry,
+        strategicRecommendations: [...localStrategicRecommendations],
+        marketDrivers: [...localMarketDrivers]
+      };
+
       // Update parent state with local values (trust the user's edits)
       onExecutiveSummaryChange(localExecutiveSummary);
       onTamValueChange(localTamValue);
@@ -365,12 +412,30 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
       onMarketDriversChange(localMarketDrivers);
       
       console.log('✅ Market Size - Parent state updated with local edits');
+      console.log('✅ Market Size - Local state preserved for immediate UI refresh:', {
+        exec: localExecutiveSummary.substring(0, 30),
+        tam: localTamValue,
+        sam: localSamValue,
+        apac: localApacGrowthRate
+      });
       
       // Call the original save function to trigger chat panel
       onSaveChanges();
       
     } catch (error) {
       console.error('❌ Market Size - Error saving changes:', error);
+      
+      // IMPORTANT: Set the flag even if API fails to prevent useEffect from overwriting
+      justSavedRef.current = true;
+      savedLocalStateRef.current = {
+        executiveSummary: localExecutiveSummary,
+        tamValue: localTamValue,
+        samValue: localSamValue,
+        apacGrowthRate: localApacGrowthRate,
+        marketEntry: localMarketEntry,
+        strategicRecommendations: [...localStrategicRecommendations],
+        marketDrivers: [...localMarketDrivers]
+      };
       
       // Even if API fails, update parent state with local values
       onExecutiveSummaryChange(localExecutiveSummary);
@@ -380,6 +445,8 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
       onMarketEntryChange(localMarketEntry);
       onStrategicRecommendationsChange(localStrategicRecommendations);
       onMarketDriversChange(localMarketDrivers);
+      
+      console.log('✅ Market Size - Parent state updated even after API error');
       
       // Still call the original save function even if API fails
       onSaveChanges();
@@ -395,7 +462,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
       const data = await executeWithRateLimit(
         () => apiFetchJson('market-research', {
           method: 'POST',
-          body: { component_name: "market_size", user_id: currentUser.uid }
+          body: { component_name: "market_size", org_id: orgIdToUse }
         }),
         'Market Size Update'
       );
@@ -427,6 +494,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
       }
       
       const payload = {
+        org_id: orgIdToUse,
         user_id: currentUser.uid,
         component_name: "market size & opportunity", // Exact match from swagger
         refresh: refresh,
@@ -625,8 +693,18 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <div className="text-center py-12">
           <p className="text-gray-600 mb-4">No market size data available</p>
-          <Button onClick={() => onScoutIconClick('market-size')} variant="outline">
-            <Bot className="h-4 w-4 mr-2" />
+          <Button 
+            onClick={() => {
+              // onScoutIconClick('market-size');
+              toast({
+                title: "Coming Soon",
+                description: "Scout feature is coming soon!",
+              });
+            }} 
+            variant="outline"
+            className="opacity-50"
+          >
+            <Bot className="h-4 w-4 mr-2 text-gray-400" />
             Generate Report with Scout
           </Button>
         </div>
@@ -654,13 +732,20 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
           {!isSplitView && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="sm" onClick={() => onScoutIconClick('market-size')} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-all duration-200 hover:shadow-md hover:shadow-blue-200/50 relative">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => {
+                    onScoutIconClick('market-size');
+                  }} 
+                  className="text-blue-600 hover:text-blue-700 transition-all duration-200 relative"
+                >
                   <div className="absolute inset-0 rounded-md bg-gradient-to-r from-blue-400/20 to-green-400/20 animate-pulse opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
                   <Bot className="h-5 w-5 relative z-10" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Explore More with Scout</p>
+                <p>Chat with Scout</p>
               </TooltipContent>
             </Tooltip>
           )}
@@ -1158,13 +1243,20 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
 
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="sm" onClick={() => onScoutIconClick('market-size')} className="text-blue-600 hover:text-blue-700 bg-blue-50 border border-blue-200 hover:shadow-md hover:shadow-blue-200/50 transition-all duration-200 relative">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => {
+                    onScoutIconClick('market-size');
+                  }} 
+                  className="text-blue-600 hover:text-blue-700 transition-all duration-200 relative"
+                >
                   <div className="absolute inset-0 rounded-md bg-gradient-to-r from-blue-400/20 to-green-400/20 opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
                   <Bot className="h-4 w-4 relative z-10" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Explore More with Scout</p>
+                <p>Chat with Scout</p>
               </TooltipContent>
             </Tooltip>
           </div>

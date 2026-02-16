@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { buildApiUrl } from "@/lib/api";
 import {
   Select,
   SelectContent,
@@ -37,7 +36,7 @@ export function ScoutSettingsForm({ isOpen, onOpenChange }: ScoutSettingsFormPro
 
   const handleSave = async () => {
   try {
-    const response = await fetch(buildApiUrl("api/profile/agent_name"), {
+    const response = await fetch("/api/profile/agent_name", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
