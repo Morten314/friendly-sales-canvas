@@ -586,21 +586,16 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
                     variant="ghost" 
                     size="sm" 
                     onClick={() => {
-                      // onScoutIconClick('market-entry');
-                      toast({
-                        title: "Coming Soon",
-                        description: "Scout feature is coming soon!",
-                      });
+                      onScoutIconClick('market-entry');
                     }} 
-                    className="text-gray-400 hover:text-gray-500 opacity-50 cursor-not-allowed transition-all duration-200 relative"
-                    disabled
+                    className="text-purple-600 hover:text-purple-700 transition-all duration-200 relative"
                   >
-                    {/* <div className="absolute inset-0 rounded-md bg-gradient-to-r from-purple-400/20 to-blue-400/20 animate-pulse opacity-0 hover:opacity-100 transition-opacity duration-300"></div> */}
+                    <div className="absolute inset-0 rounded-md bg-gradient-to-r from-purple-400/20 to-blue-400/20 animate-pulse opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
                     <Bot className="h-5 w-5 relative z-10" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Coming Soon</p>
+                  <p>Chat with Scout</p>
                 </TooltipContent>
               </Tooltip>
             )}
@@ -655,20 +650,16 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
                   variant="ghost" 
                   size="sm" 
                   onClick={() => {
-                    // onScoutIconClick('market-entry');
-                    toast({
-                      title: "Coming Soon",
-                      description: "Scout feature is coming soon!",
-                    });
+                    onScoutIconClick('market-entry');
                   }} 
-                  className="text-gray-400 hover:text-gray-500 opacity-50 transition-all duration-200 relative"
+                  className="text-purple-600 hover:text-purple-700 transition-all duration-200 relative"
                 >
-                  {/* <div className="absolute inset-0 rounded-md bg-gradient-to-r from-purple-400/20 to-blue-400/20 animate-pulse opacity-0 hover:opacity-100 transition-opacity duration-300"></div> */}
+                  <div className="absolute inset-0 rounded-md bg-gradient-to-r from-purple-400/20 to-blue-400/20 animate-pulse opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
                   <Bot className="h-5 w-5 relative z-10" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Coming Soon</p>
+                <p>Chat with Scout</p>
               </TooltipContent>
             </Tooltip>
           )}
@@ -1440,20 +1431,16 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
                   variant="ghost" 
                   size="sm" 
                   onClick={() => {
-                    // onScoutIconClick('market-entry');
-                    toast({
-                      title: "Coming Soon",
-                      description: "Scout feature is coming soon!",
-                    });
+                    onScoutIconClick('market-entry');
                   }} 
-                  className="text-gray-400 hover:text-gray-500 opacity-50 transition-all duration-200 relative"
+                  className="text-purple-600 hover:text-purple-700 transition-all duration-200 relative"
                 >
-                  {/* <div className="absolute inset-0 rounded-md bg-gradient-to-r from-purple-400/20 to-blue-400/20 opacity-0 hover:opacity-100 transition-opacity duration-300"></div> */}
+                  <div className="absolute inset-0 rounded-md bg-gradient-to-r from-purple-400/20 to-blue-400/20 opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
                   <Bot className="h-4 w-4 relative z-10" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Coming Soon</p>
+                <p>Chat with Scout</p>
               </TooltipContent>
             </Tooltip>
           </div>

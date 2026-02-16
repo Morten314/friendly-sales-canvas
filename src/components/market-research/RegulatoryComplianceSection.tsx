@@ -1165,21 +1165,17 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  className="h-8 w-8 relative opacity-50 transition-all duration-200"
+                  className="h-8 w-8 relative text-blue-600 hover:text-blue-700 transition-all duration-200"
                   onClick={() => {
-                    // onScoutIconClick('regulatory-compliance', hasEdits);
-                    toast({
-                      title: "Coming Soon",
-                      description: "Scout feature is coming soon!",
-                    });
+                    onScoutIconClick('regulatory-compliance', hasEdits);
                   }}
                 >
-                  {/* <div className="absolute inset-0 rounded-md bg-gradient-to-r from-blue-400/20 to-purple-400/20 animate-pulse opacity-75"></div> */}
-                  <Bot className="h-4 w-4 relative z-10 text-gray-400" />
+                  <div className="absolute inset-0 rounded-md bg-gradient-to-r from-blue-400/20 to-purple-400/20 animate-pulse opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
+                  <Bot className="h-4 w-4 relative z-10" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Coming Soon</p>
+                <p>Chat with Scout</p>
               </TooltipContent>
             </Tooltip>
           </div>

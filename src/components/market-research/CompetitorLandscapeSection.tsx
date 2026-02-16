@@ -1049,19 +1049,16 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
                   variant="ghost"
                   size="sm"
                   onClick={() => {
-                    // onScoutIconClick('competitor-landscape', competitorLandscapeHasEdits);
-                    toast({
-                      title: "Coming Soon",
-                      description: "Scout feature is coming soon!",
-                    });
+                    onScoutIconClick('competitor-landscape', competitorLandscapeHasEdits);
                   }}
-                  className="text-gray-400 hover:text-gray-500 opacity-50"
+                  className="text-orange-600 hover:text-orange-700 transition-all duration-200 relative"
                 >
-                  <Bot className="h-4 w-4" />
+                  <div className="absolute inset-0 rounded-md bg-gradient-to-r from-orange-400/20 to-red-400/20 opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
+                  <Bot className="h-4 w-4 relative z-10" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Coming Soon</p>
+                <p>Chat with Scout</p>
               </TooltipContent>
             </Tooltip>
             
