@@ -540,59 +540,36 @@ export const SuggestedICPCards = ({
       {/* ═══ Section 3: Recommended ICP Cards ═══ */}
       {showRecommendations && (
         <div className="space-y-6 animate-fade-in">
-          {/* Refined ICPs */}
-          {refinedICPs.length > 0 && (
-            <div className="space-y-3">
-              <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-2">
-                <RefreshCw className="h-3.5 w-3.5" />
-                Refined ICPs
-              </h3>
-              <ScrollArea className="w-full">
-                <div className="flex gap-4 pb-4">
-                  {refinedICPs.map((icp) => (
-                    <ICPCard
-                      key={icp.id}
-                      icp={icp}
-                      status={cardStatuses[icp.id] || { status: "suggested" }}
-                      onAccept={() => handleAcceptClick(icp)}
-                      onReject={() => handleRejectICP(icp)}
-                      onUndo={() => handleUndoAction(icp.id)}
-                      onViewDetails={() => setExpandedReportId(expandedReportId === icp.id ? null : icp.id)}
-                      isExpanded={expandedReportId === icp.id}
-                    />
-                  ))}
-                </div>
-                <ScrollBar orientation="horizontal" />
-              </ScrollArea>
+          {/* All ICP Cards in a single row */}
+          <ScrollArea className="w-full">
+            <div className="flex gap-4 pb-4">
+              {refinedICPs.map((icp) => (
+                <ICPCard
+                  key={icp.id}
+                  icp={icp}
+                  status={cardStatuses[icp.id] || { status: "suggested" }}
+                  onAccept={() => handleAcceptClick(icp)}
+                  onReject={() => handleRejectICP(icp)}
+                  onUndo={() => handleUndoAction(icp.id)}
+                  onViewDetails={() => setExpandedReportId(expandedReportId === icp.id ? null : icp.id)}
+                  isExpanded={expandedReportId === icp.id}
+                />
+              ))}
+              {newICPs.map((icp) => (
+                <ICPCard
+                  key={icp.id}
+                  icp={icp}
+                  status={cardStatuses[icp.id] || { status: "suggested" }}
+                  onAccept={() => handleAcceptClick(icp)}
+                  onReject={() => handleRejectICP(icp)}
+                  onUndo={() => handleUndoAction(icp.id)}
+                  onViewDetails={() => setExpandedReportId(expandedReportId === icp.id ? null : icp.id)}
+                  isExpanded={expandedReportId === icp.id}
+                />
+              ))}
             </div>
-          )}
-
-          {/* New ICPs */}
-          {newICPs.length > 0 && (
-            <div className="space-y-3">
-              <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-2">
-                <Plus className="h-3.5 w-3.5" />
-                New ICPs
-              </h3>
-              <ScrollArea className="w-full">
-                <div className="flex gap-4 pb-4">
-                  {newICPs.map((icp) => (
-                    <ICPCard
-                      key={icp.id}
-                      icp={icp}
-                      status={cardStatuses[icp.id] || { status: "suggested" }}
-                      onAccept={() => handleAcceptClick(icp)}
-                      onReject={() => handleRejectICP(icp)}
-                      onUndo={() => handleUndoAction(icp.id)}
-                      onViewDetails={() => setExpandedReportId(expandedReportId === icp.id ? null : icp.id)}
-                      isExpanded={expandedReportId === icp.id}
-                    />
-                  ))}
-                </div>
-                <ScrollBar orientation="horizontal" />
-              </ScrollArea>
-            </div>
-          )}
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
 
           {/* ICP Report (full-width, shown after accept) */}
           {expandedReportId && (() => {
