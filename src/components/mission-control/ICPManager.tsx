@@ -1623,12 +1623,12 @@ const ICPManager: React.FC = () => {
       )}
 
       {/* Add Another ICP */}
-      {icps.length > 0 && !isAddingInline && (
+      {/* {icps.length > 0 && !isAddingInline && (
         <Button variant="outline" onClick={handleStartAdd} className="gap-2">
           <Plus className="h-4 w-4" />
           Add another ICP
         </Button>
-      )}
+      )} */}
     </div>
   );
 };
