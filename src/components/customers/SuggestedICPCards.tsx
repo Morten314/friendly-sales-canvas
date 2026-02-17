@@ -1,33 +1,57 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { 
-  Check, 
-  X, 
-  Eye, 
-  TrendingUp, 
-  Building, 
-  Users, 
-  Target, 
-  ChevronDown, 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Check,
+  X,
+  Eye,
+  TrendingUp,
+  Users,
+  Target,
+  ChevronDown,
   ChevronUp,
   Edit,
   Save,
   Download,
   Minimize2,
-  AlertCircle,
   Sparkles,
   RefreshCw,
   Plus,
-  Globe,
-  ArrowRight
+  ArrowRight,
+  AlertTriangle,
+  ThumbsUp,
+  ThumbsDown,
+  Undo2,
+  Shield,
+  Gauge,
+  Lightbulb,
+  Zap,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 
+// --- Types ---
 interface ExistingICP {
   id: string;
   name: string;
@@ -36,13 +60,13 @@ interface ExistingICP {
   companySize?: string;
   buyerRole?: string;
   fitConfidence?: string;
-  status?: 'active' | 'inactive';
+  status?: "active" | "inactive";
 }
 
 interface SuggestedICP {
   id: string;
   name: string;
-  type: 'refined' | 'new';
+  type: "refined" | "new";
   sourceICPId?: string;
   sourceICPName?: string;
   industry: string;
@@ -55,7 +79,7 @@ interface SuggestedICP {
   whySuggested: string[];
   whatChanged?: string[];
   opportunityUnlocked?: string;
-  confidenceScore: 'High' | 'Medium' | 'Low';
+  confidenceScore: "High" | "Medium" | "Low";
   tag?: string;
   marketSize?: string;
   growth?: string;
@@ -65,7 +89,7 @@ interface SuggestedICP {
 }
 
 interface ICPCardStatus {
-  status: 'suggested' | 'accepted' | 'rejected';
+  status: "suggested" | "accepted" | "rejected";
   acceptedAt?: Date;
   rejectedAt?: Date;
 }
@@ -76,14 +100,77 @@ interface SuggestedICPCardsProps {
   refreshTrigger?: number;
 }
 
-export const SuggestedICPCards = ({ 
-  onICPAccepted, 
-  onICPRejected, 
-  refreshTrigger = 0 
+// --- ICP Chip Modal Content (Profiler's interpretation) ---
+interface ICPAnalysis {
+  interpretation: string;
+  strengths: string[];
+  weaknesses: string[];
+  missing: string[];
+  broadNarrow: string;
+  confidence: "High" | "Medium" | "Low";
+}
+
+const analyzeICP = (icp: ExistingICP): ICPAnalysis => {
+  const strengths: string[] = [];
+  const weaknesses: string[] = [];
+  const missing: string[] = [];
+
+  if (icp.industry) strengths.push(`Clear industry focus: ${icp.industry}`);
+  else missing.push("No industry specified — targeting is too broad");
+
+  if (icp.buyerRole) strengths.push(`Defined buyer role: ${icp.buyerRole}`);
+  else missing.push("No buyer role — unclear who to engage");
+
+  if (icp.companySize) strengths.push(`Company size defined: ${icp.companySize}`);
+  else missing.push("No company size filter");
+
+  if (icp.geography) strengths.push(`Geographic focus: ${icp.geography}`);
+  else weaknesses.push("No geographic focus — could dilute outreach");
+
+  if (icp.fitConfidence === "Low" || icp.fitConfidence === "Medium") {
+    weaknesses.push(`Fit confidence is ${icp.fitConfidence} — may need tighter criteria`);
+  }
+
+  if (!icp.buyerRole?.includes(",") && !icp.buyerRole?.includes("/")) {
+    weaknesses.push("Single buyer role — consider adding secondary decision-makers");
+  }
+
+  const broadNarrow =
+    strengths.length >= 3 && weaknesses.length <= 1
+      ? "Well-balanced targeting scope"
+      : weaknesses.length > strengths.length
+        ? "Too broad — consider adding more filters to tighten targeting"
+        : "Slightly narrow — expanding regions or roles could increase pipeline";
+
+  const confidence: "High" | "Medium" | "Low" =
+    strengths.length >= 4 ? "High" : strengths.length >= 2 ? "Medium" : "Low";
+
+  return {
+    interpretation: `Profiler sees "${icp.name}" as targeting ${icp.industry || "unspecified industry"} companies (${icp.companySize || "any size"}) in ${icp.geography || "all regions"}, engaging ${icp.buyerRole || "unspecified roles"}.`,
+    strengths,
+    weaknesses,
+    missing,
+    broadNarrow,
+    confidence,
+  };
+};
+
+// --- Confidence badge color ---
+const confidenceColor = (c: string) => {
+  if (c === "High") return "bg-emerald-50 text-emerald-700 border-emerald-200";
+  if (c === "Medium") return "bg-amber-50 text-amber-700 border-amber-200";
+  return "bg-muted text-muted-foreground border-border";
+};
+
+// ========== MAIN COMPONENT ==========
+export const SuggestedICPCards = ({
+  onICPAccepted,
+  onICPRejected,
+  refreshTrigger = 0,
 }: SuggestedICPCardsProps) => {
   const { toast } = useToast();
   const navigate = useNavigate();
-  
+
   const [existingICPs, setExistingICPs] = useState<ExistingICP[]>([]);
   const [refinedICPs, setRefinedICPs] = useState<SuggestedICP[]>([]);
   const [newICPs, setNewICPs] = useState<SuggestedICP[]>([]);
@@ -91,23 +178,23 @@ export const SuggestedICPCards = ({
   const [expandedReportId, setExpandedReportId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Load existing ICPs and generate suggestions
+  // Modal states
+  const [selectedExistingICP, setSelectedExistingICP] = useState<ExistingICP | null>(null);
+  const [confirmAcceptICP, setConfirmAcceptICP] = useState<SuggestedICP | null>(null);
+  const [showAnnouncement, setShowAnnouncement] = useState(true);
+  const [showRecommendations, setShowRecommendations] = useState(false);
+
+  // Load data
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      
-      // Load existing ICPs from localStorage (Customer Profile)
+
       let icps: ExistingICP[] = [];
       try {
-        const stored = localStorage.getItem('customerICPs') || localStorage.getItem('missionControlICPs');
-        if (stored) {
-          icps = JSON.parse(stored);
-        }
-      } catch (error) {
-        console.error('Error loading existing ICPs:', error);
-      }
-      
-      // Default ICPs if none exist
+        const stored = localStorage.getItem("customerICPs") || localStorage.getItem("missionControlICPs");
+        if (stored) icps = JSON.parse(stored);
+      } catch {}
+
       if (icps.length === 0) {
         icps = [
           {
@@ -118,7 +205,7 @@ export const SuggestedICPCards = ({
             companySize: "100-500 employees",
             buyerRole: "CTO / VP Engineering",
             fitConfidence: "High",
-            status: 'active'
+            status: "active",
           },
           {
             id: "existing-2",
@@ -128,22 +215,19 @@ export const SuggestedICPCards = ({
             companySize: "200-1000 employees",
             buyerRole: "CIO / Chief Digital Officer",
             fitConfidence: "Medium",
-            status: 'active'
-          }
+            status: "active",
+          },
         ];
       }
-      
       setExistingICPs(icps);
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Generate Refined ICPs (improvements to existing)
+
+      await new Promise((r) => setTimeout(r, 500));
+
       const refined: SuggestedICP[] = [
         {
           id: "refined-1",
           name: "Mid-Market SaaS – RevOps Teams",
-          type: 'refined',
+          type: "refined",
           sourceICPId: icps[0]?.id,
           sourceICPName: icps[0]?.name || "ICP 1",
           industry: "Software & Technology",
@@ -155,28 +239,27 @@ export const SuggestedICPCards = ({
           whySuggested: [
             "RevOps roles show 3x higher engagement with your content",
             "Faster sales cycles when RevOps is involved early",
-            "Higher average deal size in this segment"
+            "Higher average deal size in this segment",
           ],
           whatChanged: [
             "Added RevOps focus to buyer roles",
             "Included UK in target regions",
-            "Added tech stack qualification criteria"
+            "Added tech stack qualification criteria",
           ],
-          confidenceScore: 'High',
+          confidenceScore: "High",
           marketSize: "$45B",
           growth: "+18% YoY",
           topPainPoint: "Sales & marketing alignment",
           buyingTriggers: ["New CRO hire", "Revenue target increase", "Tech stack consolidation"],
-          competitors: ["Clari", "Gong", "Outreach"]
-        }
+          competitors: ["Clari", "Gong", "Outreach"],
+        },
       ];
-      
-      // Generate New ICPs (brand new suggestions)
+
       const newSuggestions: SuggestedICP[] = [
         {
           id: "new-1",
           name: "Enterprise FinTech Decision Makers",
-          type: 'new',
+          type: "new",
           tag: "New ICP",
           industry: "Financial Services",
           segment: "FinTech",
@@ -187,20 +270,20 @@ export const SuggestedICPCards = ({
           whySuggested: [
             "High overlap with your current product capabilities",
             "Growing market with 24% YoY expansion",
-            "Lower competition in this segment"
+            "Lower competition in this segment",
           ],
           opportunityUnlocked: "Access to $2.4B addressable market with strong product-market fit signals",
-          confidenceScore: 'Medium',
+          confidenceScore: "Medium",
           marketSize: "$28B",
           growth: "+24% YoY",
           topPainPoint: "Legacy system modernization",
           buyingTriggers: ["Regulatory changes", "Digital transformation initiative", "Competitor pressure"],
-          competitors: ["Stripe", "Plaid", "Marqeta"]
+          competitors: ["Stripe", "Plaid", "Marqeta"],
         },
         {
           id: "new-2",
           name: "Growth-Stage E-commerce Leaders",
-          type: 'new',
+          type: "new",
           sourceICPName: icps[0]?.name || "ICP 1",
           tag: `Lookalike of ${icps[0]?.name || "ICP 1"}`,
           industry: "E-commerce & Retail",
@@ -212,469 +295,507 @@ export const SuggestedICPCards = ({
           whySuggested: [
             "Similar buying patterns to your best customers",
             "Strong intent signals detected in this segment",
-            "Complementary to existing ICP focus"
+            "Complementary to existing ICP focus",
           ],
           opportunityUnlocked: "Expand into adjacent market with proven playbook from ICP 1",
-          confidenceScore: 'High',
+          confidenceScore: "High",
           marketSize: "$18B",
           growth: "+22% YoY",
           topPainPoint: "Scaling customer acquisition",
           buyingTriggers: ["Series A+ funding", "New market expansion", "Holiday season prep"],
-          competitors: ["Shopify", "Klaviyo", "Attentive"]
-        }
+          competitors: ["Shopify", "Klaviyo", "Attentive"],
+        },
       ];
-      
+
       setRefinedICPs(refined);
       setNewICPs(newSuggestions);
-      
-      // Initialize card statuses
+
       const initialStatuses: Record<string, ICPCardStatus> = {};
-      [...refined, ...newSuggestions].forEach(icp => {
-        initialStatuses[icp.id] = { status: 'suggested' };
+      [...refined, ...newSuggestions].forEach((icp) => {
+        initialStatuses[icp.id] = { status: "suggested" };
       });
       setCardStatuses(initialStatuses);
-      
       setLoading(false);
     };
-    
     loadData();
   }, [refreshTrigger]);
 
-  const handleAcceptICP = (icp: SuggestedICP) => {
-    setCardStatuses(prev => ({
+  // --- Accept flow with confirmation dialog ---
+  const handleAcceptClick = (icp: SuggestedICP) => {
+    setConfirmAcceptICP(icp);
+  };
+
+  const handleConfirmAccept = () => {
+    if (!confirmAcceptICP) return;
+    const icp = confirmAcceptICP;
+    setCardStatuses((prev) => ({
       ...prev,
-      [icp.id]: { status: 'accepted', acceptedAt: new Date() }
+      [icp.id]: { status: "accepted", acceptedAt: new Date() },
     }));
-    
     onICPAccepted?.(icp);
-    
     toast({
-      title: "ICP Accepted",
-      description: `"${icp.name}" has been added to your Customer Profile.`,
+      title: "Customer Profile updated.",
+      description: `"${icp.name}" has been saved to your Customer Profile.`,
     });
+    setConfirmAcceptICP(null);
+    // Auto-open report after accepting
+    setExpandedReportId(icp.id);
   };
 
   const handleRejectICP = (icp: SuggestedICP) => {
-    setCardStatuses(prev => ({
+    setCardStatuses((prev) => ({
       ...prev,
-      [icp.id]: { status: 'rejected', rejectedAt: new Date() }
+      [icp.id]: { status: "rejected", rejectedAt: new Date() },
     }));
-    
     onICPRejected?.(icp);
-    
     toast({
-      title: "ICP Rejected",
-      description: `"${icp.name}" has been dismissed.`,
+      title: "ICP Dismissed",
+      description: `"${icp.name}" has been rejected.`,
       variant: "destructive",
     });
   };
 
-  const handleViewDetails = (icpId: string) => {
-    setExpandedReportId(expandedReportId === icpId ? null : icpId);
+  const handleUndoAction = (icpId: string) => {
+    setCardStatuses((prev) => ({
+      ...prev,
+      [icpId]: { status: "suggested" },
+    }));
+    if (expandedReportId === icpId) setExpandedReportId(null);
+    toast({ title: "Action undone", description: "ICP returned to suggestions." });
   };
 
-  const getConfidenceBadgeVariant = (confidence: string): "default" | "secondary" | "outline" => {
-    switch (confidence) {
-      case 'High': return 'default';
-      case 'Medium': return 'secondary';
-      case 'Low': return 'outline';
-      default: return 'outline';
-    }
-  };
-
-  const pendingRefinedCount = refinedICPs.filter(icp => cardStatuses[icp.id]?.status === 'suggested').length;
-  const pendingNewCount = newICPs.filter(icp => cardStatuses[icp.id]?.status === 'suggested').length;
-
-  // Render a suggestion card (used for both refined and new ICPs)
-  const renderSuggestionCard = (icp: SuggestedICP) => {
-    const status = cardStatuses[icp.id] || { status: 'suggested' };
-    const isExpanded = expandedReportId === icp.id;
-    const isRejected = status.status === 'rejected';
-    const isAccepted = status.status === 'accepted';
-    
-    return (
-      <Card 
-        key={icp.id} 
-        className={`min-w-[340px] max-w-[360px] flex-shrink-0 transition-all duration-300 ${
-          isAccepted ? 'border-green-200 bg-green-50/30' :
-          isRejected ? 'opacity-50 border-muted' : ''
-        }`}
-      >
-        <CardHeader className="pb-2">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex-1 min-w-0">
-              {/* Category label inside the card */}
-              <Badge 
-                variant={icp.type === 'refined' ? 'secondary' : 'default'} 
-                className={`text-xs mb-2 ${icp.type === 'refined' ? 'bg-amber-100 text-amber-800' : 'bg-primary/10 text-primary'}`}
-              >
-                {icp.type === 'refined' ? (
-                  <><RefreshCw className="h-3 w-3 mr-1" />Refined ICP</>
-                ) : (
-                  <><Plus className="h-3 w-3 mr-1" />New ICP</>
-                )}
-              </Badge>
-              <CardTitle className="text-base font-semibold truncate">{icp.name}</CardTitle>
-              {icp.type === 'refined' && icp.sourceICPName && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Refined from: {icp.sourceICPName}
-                </p>
-              )}
-              {icp.tag && icp.type === 'new' && (
-                <Badge variant="outline" className="mt-1 text-xs">
-                  {icp.tag}
-                </Badge>
-              )}
-            </div>
-            <div className="flex items-center gap-1 flex-wrap justify-end">
-              <Badge variant={getConfidenceBadgeVariant(icp.confidenceScore)} className="text-xs">
-                {icp.confidenceScore}
-              </Badge>
-              {isAccepted && (
-                <Badge className="bg-green-600 text-xs">Accepted</Badge>
-              )}
-              {isRejected && (
-                <Badge variant="secondary" className="text-xs">Rejected</Badge>
-              )}
-            </div>
-          </div>
-        </CardHeader>
-        
-        <CardContent className="space-y-3 pb-3">
-          {/* Why Suggested */}
-          <div>
-            <p className="text-xs font-medium text-muted-foreground mb-1">Why Suggested</p>
-            <ul className="space-y-1">
-              {icp.whySuggested.slice(0, 3).map((reason, idx) => (
-                <li key={idx} className="text-xs flex items-start gap-1.5">
-                  <Check className="h-3 w-3 text-green-600 mt-0.5 flex-shrink-0" />
-                  <span>{reason}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-          
-          {/* What Changed (for refined) or Opportunity (for new) */}
-          {icp.type === 'refined' && icp.whatChanged && (
-            <div>
-              <p className="text-xs font-medium text-muted-foreground mb-1">What Changed</p>
-              <ul className="space-y-1">
-                {icp.whatChanged.slice(0, 2).map((change, idx) => (
-                  <li key={idx} className="text-xs flex items-start gap-1.5">
-                    <RefreshCw className="h-3 w-3 text-amber-500 mt-0.5 flex-shrink-0" />
-                    <span>{change}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          
-          {icp.type === 'new' && icp.opportunityUnlocked && (
-            <div className="bg-primary/5 rounded-md p-2">
-              <p className="text-xs font-medium text-primary mb-0.5">Opportunity Unlocked</p>
-              <p className="text-xs">{icp.opportunityUnlocked}</p>
-            </div>
-          )}
-
-          {/* Status Message for Accepted */}
-          {isAccepted && (
-            <div className="flex items-center gap-2 text-xs text-green-700 bg-green-100 rounded-md p-2">
-              <Check className="h-3 w-3" />
-              <span>Added to Customer Profile</span>
-            </div>
-          )}
-        </CardContent>
-
-        <CardFooter className="pt-3 border-t flex flex-col gap-2">
-          {/* Actions for Suggested */}
-          {status.status === 'suggested' && (
-            <div className="flex items-center gap-2 w-full">
-              <Button
-                size="sm"
-                onClick={() => handleAcceptICP(icp)}
-                className="flex-1"
-              >
-                <Check className="h-3 w-3 mr-1" />
-                Accept
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => handleRejectICP(icp)}
-                className="flex-1"
-              >
-                <X className="h-3 w-3 mr-1" />
-                Reject
-              </Button>
-            </div>
-          )}
-          
-          {/* Post-Accept: View ICP Details (only shown after acceptance) */}
-          {isAccepted && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => handleViewDetails(icp.id)}
-              className="w-full"
-            >
-              <Eye className="h-3 w-3 mr-1" />
-              View ICP Details
-              {isExpanded ? (
-                <ChevronUp className="h-3 w-3 ml-auto" />
-              ) : (
-                <ChevronDown className="h-3 w-3 ml-auto" />
-              )}
-            </Button>
-          )}
-        </CardFooter>
-        
-      </Card>
+  const handleViewProspects = (icpName: string) => {
+    // Navigate to Lead Stream tab (the parent Customers page handles tabs)
+    // Dispatch event so the parent can switch tab + filter
+    window.dispatchEvent(
+      new CustomEvent("navigateToLeadStream", { detail: { filterICP: icpName } })
     );
   };
 
+  // --- Render ---
   if (loading) {
     return (
       <div className="space-y-6 animate-pulse">
-        <div className="h-20 bg-muted rounded-lg" />
+        <div className="h-12 bg-muted rounded-lg" />
+        <div className="h-24 bg-muted rounded-lg" />
         <div className="h-48 bg-muted rounded-lg" />
       </div>
     );
   }
 
+  const allSuggestions = [...refinedICPs, ...newICPs];
+  const pendingCount = allSuggestions.filter((s) => cardStatuses[s.id]?.status === "suggested").length;
+
   return (
     <div className="space-y-8">
-      {/* Section 1: Current ICPs from Customer Profile */}
+      {/* ═══ Section 1: Current ICPs (clickable chips) ═══ */}
       <div className="space-y-3">
         <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
           Current ICPs
         </h3>
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-2">
           {existingICPs.map((icp) => (
-            <Card key={icp.id} className="inline-flex items-center gap-3 px-4 py-3 bg-card">
-              <div className="flex items-center gap-2">
-                <Target className="h-4 w-4 text-primary" />
-                <span className="font-medium">{icp.name}</span>
-              </div>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span>{icp.industry}</span>
-                <span>·</span>
-                <span>{icp.companySize}</span>
-                <span>·</span>
-                <span>{icp.geography}</span>
-              </div>
-              <Badge variant="default" className="bg-green-600 text-xs">
-                Active
+            <button
+              key={icp.id}
+              onClick={() => setSelectedExistingICP(icp)}
+              className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium hover:bg-accent hover:border-primary/30 transition-colors cursor-pointer"
+            >
+              <Target className="h-3.5 w-3.5 text-primary" />
+              {icp.name}
+              <span className="text-xs text-muted-foreground">·</span>
+              <span className="text-xs text-muted-foreground">{icp.industry}</span>
+              <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${confidenceColor(icp.fitConfidence || "Medium")}`}>
+                {icp.fitConfidence || "Medium"}
               </Badge>
-            </Card>
+            </button>
           ))}
         </div>
       </div>
 
-      {/* Section 2: Profiler Suggestions */}
-      <div className="space-y-6">
-        <div>
-          <h2 className="text-lg font-semibold flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-primary" />
-            Profiler Suggestions
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Based on your existing ICPs and available signals
-          </p>
-        </div>
+      {/* ═══ ICP Chip Modal (Profiler's interpretation) ═══ */}
+      <Dialog
+        open={!!selectedExistingICP}
+        onOpenChange={(open) => !open && setSelectedExistingICP(null)}
+      >
+        {selectedExistingICP && (() => {
+          const analysis = analyzeICP(selectedExistingICP);
+          return (
+            <DialogContent className="sm:max-w-lg">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  Profiler's Analysis: {selectedExistingICP.name}
+                </DialogTitle>
+                <DialogDescription>
+                  Here's how Profiler interprets this ICP targeting.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-2">
+                {/* Interpretation */}
+                <div className="bg-muted/50 rounded-lg p-3">
+                  <p className="text-sm">{analysis.interpretation}</p>
+                </div>
 
-        {/* All ICP Suggestions in Single Row */}
-        {refinedICPs.length === 0 && newICPs.length === 0 ? (
-          <Card className="bg-muted/30 border-dashed">
-            <CardContent className="py-8 text-center">
-              <Check className="h-8 w-8 text-green-500 mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">
-                Your current ICPs are well-aligned. No suggestions at this time.
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <ScrollArea className="w-full">
-            <div className="flex gap-4 pb-4">
-              {refinedICPs.map(renderSuggestionCard)}
-              {newICPs.map(renderSuggestionCard)}
+                {/* Strengths */}
+                {analysis.strengths.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wide mb-1.5 flex items-center gap-1">
+                      <ThumbsUp className="h-3 w-3" /> What's Good
+                    </p>
+                    <ul className="space-y-1">
+                      {analysis.strengths.map((s, i) => (
+                        <li key={i} className="text-sm flex items-start gap-2">
+                          <Check className="h-3.5 w-3.5 text-emerald-600 mt-0.5 shrink-0" />
+                          {s}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Weaknesses */}
+                {analysis.weaknesses.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-1.5 flex items-center gap-1">
+                      <AlertTriangle className="h-3 w-3" /> Weak Points
+                    </p>
+                    <ul className="space-y-1">
+                      {analysis.weaknesses.map((w, i) => (
+                        <li key={i} className="text-sm flex items-start gap-2">
+                          <AlertTriangle className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />
+                          {w}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Missing */}
+                {analysis.missing.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-destructive uppercase tracking-wide mb-1.5 flex items-center gap-1">
+                      <X className="h-3 w-3" /> Missing
+                    </p>
+                    <ul className="space-y-1">
+                      {analysis.missing.map((m, i) => (
+                        <li key={i} className="text-sm flex items-start gap-2">
+                          <X className="h-3.5 w-3.5 text-destructive mt-0.5 shrink-0" />
+                          {m}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Broad/Narrow + Confidence */}
+                <div className="flex items-center justify-between pt-2 border-t">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Gauge className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">{analysis.broadNarrow}</span>
+                  </div>
+                  <Badge variant="outline" className={`text-xs ${confidenceColor(analysis.confidence)}`}>
+                    Confidence: {analysis.confidence}
+                  </Badge>
+                </div>
+              </div>
+            </DialogContent>
+          );
+        })()}
+      </Dialog>
+
+      {/* ═══ Section 2: Profiler Work Announcement ═══ */}
+      {showAnnouncement && !showRecommendations && (
+        <Card className="border-primary/20 bg-primary/[0.03]">
+          <CardContent className="py-6">
+            <div className="flex items-start gap-4">
+              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <Lightbulb className="h-5 w-5 text-primary" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-foreground">
+                  I reviewed your ICPs and found opportunities to tighten targeting.
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {refinedICPs.length} refinement{refinedICPs.length !== 1 ? "s" : ""} to existing ICPs and{" "}
+                  {newICPs.length} new segment{newICPs.length !== 1 ? "s" : ""} identified.
+                </p>
+                <Button
+                  size="sm"
+                  className="mt-3 gap-1.5"
+                  onClick={() => {
+                    setShowRecommendations(true);
+                    setShowAnnouncement(false);
+                  }}
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Show me the recommended ICPs
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Button>
+              </div>
             </div>
-            <ScrollBar orientation="horizontal" />
-          </ScrollArea>
-        )}
-      </div>
+          </CardContent>
+        </Card>
+      )}
 
-      {/* Full-Width ICP Report Panel */}
-      {expandedReportId && (() => {
-        const allICPs = [...refinedICPs, ...newICPs];
-        const expandedICP = allICPs.find(icp => icp.id === expandedReportId);
-        const isAccepted = cardStatuses[expandedReportId]?.status === 'accepted';
-        
-        if (!expandedICP || !isAccepted) return null;
-        
-        return (
-          <Card className="w-full border-primary/20 shadow-lg">
-            <ICPReportPanel 
-              icp={expandedICP} 
-              onClose={() => setExpandedReportId(null)}
-            />
-          </Card>
-        );
-      })()}
+      {/* ═══ Section 3: Recommended ICP Cards ═══ */}
+      {showRecommendations && (
+        <div className="space-y-6 animate-fade-in">
+          {/* Refined ICPs */}
+          {refinedICPs.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+                <RefreshCw className="h-3.5 w-3.5" />
+                Refined ICPs
+              </h3>
+              <ScrollArea className="w-full">
+                <div className="flex gap-4 pb-4">
+                  {refinedICPs.map((icp) => (
+                    <ICPCard
+                      key={icp.id}
+                      icp={icp}
+                      status={cardStatuses[icp.id] || { status: "suggested" }}
+                      onAccept={() => handleAcceptClick(icp)}
+                      onReject={() => handleRejectICP(icp)}
+                      onUndo={() => handleUndoAction(icp.id)}
+                      onViewDetails={() => setExpandedReportId(expandedReportId === icp.id ? null : icp.id)}
+                      isExpanded={expandedReportId === icp.id}
+                    />
+                  ))}
+                </div>
+                <ScrollBar orientation="horizontal" />
+              </ScrollArea>
+            </div>
+          )}
 
-      {/* Design Note */}
-      <div className="text-xs text-muted-foreground text-center p-3 bg-muted/30 rounded-lg border border-dashed">
-        <span className="font-medium">UX Principle:</span> Reports only update when an ICP is accepted. 
-        Suggestions never alter system context by themselves.
-      </div>
+          {/* New ICPs */}
+          {newICPs.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+                <Plus className="h-3.5 w-3.5" />
+                New ICPs
+              </h3>
+              <ScrollArea className="w-full">
+                <div className="flex gap-4 pb-4">
+                  {newICPs.map((icp) => (
+                    <ICPCard
+                      key={icp.id}
+                      icp={icp}
+                      status={cardStatuses[icp.id] || { status: "suggested" }}
+                      onAccept={() => handleAcceptClick(icp)}
+                      onReject={() => handleRejectICP(icp)}
+                      onUndo={() => handleUndoAction(icp.id)}
+                      onViewDetails={() => setExpandedReportId(expandedReportId === icp.id ? null : icp.id)}
+                      isExpanded={expandedReportId === icp.id}
+                    />
+                  ))}
+                </div>
+                <ScrollBar orientation="horizontal" />
+              </ScrollArea>
+            </div>
+          )}
+
+          {/* ICP Report (full-width, shown after accept) */}
+          {expandedReportId && (() => {
+            const expandedICP = allSuggestions.find((s) => s.id === expandedReportId);
+            if (!expandedICP || cardStatuses[expandedReportId]?.status !== "accepted") return null;
+            return (
+              <Card className="w-full border-primary/20 shadow-lg animate-fade-in">
+                <ICPReportPanel
+                  icp={expandedICP}
+                  onClose={() => setExpandedReportId(null)}
+                  onViewProspects={() => handleViewProspects(expandedICP.name)}
+                />
+              </Card>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* ═══ Accept Confirmation Dialog ═══ */}
+      <AlertDialog open={!!confirmAcceptICP} onOpenChange={(open) => !open && setConfirmAcceptICP(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Save to Customer Profile?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Do you want me to save "{confirmAcceptICP?.name}" to your Customer Profile? This will make it available for Lead Stream scoring and agent routing.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmAccept}>Okay</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
 
-// ICP Report Panel Component
-interface ICPReportPanelProps {
+// ========== ICP CARD COMPONENT ==========
+interface ICPCardProps {
   icp: SuggestedICP;
-  onClose: () => void;
+  status: ICPCardStatus;
+  onAccept: () => void;
+  onReject: () => void;
+  onUndo: () => void;
+  onViewDetails: () => void;
+  isExpanded: boolean;
 }
 
-// Editable section with commit/delete controls
-interface EditableSectionProps {
-  title: string;
-  icon?: React.ReactNode;
-  isEditing: boolean;
-  onCommit: () => void;
-  onDelete: () => void;
-  children: React.ReactNode;
-}
+const ICPCard = ({ icp, status, onAccept, onReject, onUndo, onViewDetails, isExpanded }: ICPCardProps) => {
+  const isAccepted = status.status === "accepted";
+  const isRejected = status.status === "rejected";
+  const isSuggested = status.status === "suggested";
 
-const EditableSection = ({ title, icon, isEditing, onCommit, onDelete, children }: EditableSectionProps) => {
-  const { toast } = useToast();
-  
-  const handleCommit = () => {
-    onCommit();
-    toast({
-      title: "Changes Saved",
-      description: `"${title}" section has been updated.`,
-    });
-  };
-  
-  const handleDelete = () => {
-    onDelete();
-    toast({
-      title: "Section Removed",
-      description: `"${title}" section has been deleted.`,
-      variant: "destructive",
-    });
-  };
-  
   return (
-    <Card className={`transition-all ${isEditing ? 'ring-2 ring-primary/20' : ''}`}>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-base flex items-center gap-2">
-            {icon}
-            {title}
-          </CardTitle>
-          {isEditing && (
-            <div className="flex items-center gap-1">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-7 w-7 text-green-600 hover:text-green-700 hover:bg-green-50"
-                onClick={handleCommit}
-                title="Commit changes"
-              >
-                <Check className="h-4 w-4" />
-              </Button>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
-                onClick={handleDelete}
-                title="Delete section"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
+    <Card
+      className={`min-w-[340px] max-w-[360px] flex-shrink-0 transition-all duration-300 ${
+        isAccepted
+          ? "border-emerald-200 bg-emerald-50/30"
+          : isRejected
+            ? "opacity-50 border-muted"
+            : ""
+      }`}
+    >
+      <CardHeader className="pb-2">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1 min-w-0">
+            <Badge
+              variant="secondary"
+              className={`text-xs mb-2 ${
+                icp.type === "refined"
+                  ? "bg-amber-100 text-amber-800"
+                  : "bg-primary/10 text-primary"
+              }`}
+            >
+              {icp.type === "refined" ? (
+                <>
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                  Refined ICP
+                </>
+              ) : (
+                <>
+                  <Plus className="h-3 w-3 mr-1" />
+                  New ICP
+                </>
+              )}
+            </Badge>
+            <CardTitle className="text-base font-semibold truncate">{icp.name}</CardTitle>
+            {icp.type === "refined" && icp.sourceICPName && (
+              <p className="text-xs text-muted-foreground mt-1">Refined from: {icp.sourceICPName}</p>
+            )}
+            {icp.tag && icp.type === "new" && (
+              <Badge variant="outline" className="mt-1 text-xs">
+                {icp.tag}
+              </Badge>
+            )}
+          </div>
+          <Badge variant="outline" className={`text-xs shrink-0 ${confidenceColor(icp.confidenceScore)}`}>
+            {icp.confidenceScore}
+          </Badge>
         </div>
       </CardHeader>
-      <CardContent className={isEditing ? 'bg-muted/20' : ''}>
-        {children}
+
+      <CardContent className="space-y-3 pb-3">
+        <div>
+          <p className="text-xs font-medium text-muted-foreground mb-1">Why Suggested</p>
+          <ul className="space-y-1">
+            {icp.whySuggested.slice(0, 3).map((reason, idx) => (
+              <li key={idx} className="text-xs flex items-start gap-1.5">
+                <Check className="h-3 w-3 text-emerald-600 mt-0.5 shrink-0" />
+                <span>{reason}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {icp.type === "refined" && icp.whatChanged && (
+          <div>
+            <p className="text-xs font-medium text-muted-foreground mb-1">What Changed</p>
+            <ul className="space-y-1">
+              {icp.whatChanged.slice(0, 2).map((c, idx) => (
+                <li key={idx} className="text-xs flex items-start gap-1.5">
+                  <RefreshCw className="h-3 w-3 text-amber-500 mt-0.5 shrink-0" />
+                  <span>{c}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {icp.type === "new" && icp.opportunityUnlocked && (
+          <div className="bg-primary/5 rounded-md p-2">
+            <p className="text-xs font-medium text-primary mb-0.5">Opportunity Unlocked</p>
+            <p className="text-xs">{icp.opportunityUnlocked}</p>
+          </div>
+        )}
+
+        {/* Status badges */}
+        {isAccepted && (
+          <div className="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-100 rounded-md p-2">
+            <Check className="h-3 w-3" />
+            <span>Added to Customer Profile</span>
+          </div>
+        )}
+        {isRejected && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted rounded-md p-2">
+            <X className="h-3 w-3" />
+            <span>Dismissed</span>
+          </div>
+        )}
       </CardContent>
+
+      <CardFooter className="pt-3 border-t flex flex-col gap-2">
+        {isSuggested && (
+          <div className="flex items-center gap-2 w-full">
+            <Button size="sm" onClick={onAccept} className="flex-1">
+              <Check className="h-3 w-3 mr-1" />
+              Accept
+            </Button>
+            <Button size="sm" variant="outline" onClick={onReject} className="flex-1">
+              <X className="h-3 w-3 mr-1" />
+              Reject
+            </Button>
+          </div>
+        )}
+
+        {(isAccepted || isRejected) && (
+          <Button size="sm" variant="ghost" onClick={onUndo} className="w-full text-xs text-muted-foreground">
+            <Undo2 className="h-3 w-3 mr-1" />
+            Undo
+          </Button>
+        )}
+
+        {isAccepted && (
+          <Button size="sm" variant="outline" onClick={onViewDetails} className="w-full">
+            <Eye className="h-3 w-3 mr-1" />
+            View ICP Report
+            {isExpanded ? <ChevronUp className="h-3 w-3 ml-auto" /> : <ChevronDown className="h-3 w-3 ml-auto" />}
+          </Button>
+        )}
+      </CardFooter>
     </Card>
   );
 };
 
-const ICPReportPanel = ({ icp, onClose }: ICPReportPanelProps) => {
-  const { toast } = useToast();
-  const [isEditing, setIsEditing] = useState(false);
-  
-  // Track visible sections (for delete functionality)
-  const [visibleSections, setVisibleSections] = useState({
-    profileOverview: true,
-    decisionMakers: true,
-    painPoints: true,
-    competitive: true,
-    recommendations: true,
-  });
-  
-  // Editable content state
-  const [editableContent, setEditableContent] = useState({
-    industry: icp.industry,
-    segment: icp.segment,
-    companySize: icp.companySize,
-    marketSize: icp.marketSize || 'N/A',
-    keyAttributes: [...icp.keyAttributes],
-    regions: [...icp.regions],
-    decisionMakers: [...icp.decisionMakers],
-    topPainPoint: icp.topPainPoint || 'Not specified',
-    buyingTriggers: [...(icp.buyingTriggers || [])],
-    competitors: [...(icp.competitors || [])],
-  });
-  
-  const handleSectionCommit = (sectionName: string) => {
-    // In a real app, this would persist changes
-    console.log(`Committing changes for section: ${sectionName}`, editableContent);
-  };
-  
-  const handleSectionDelete = (sectionKey: keyof typeof visibleSections) => {
-    setVisibleSections(prev => ({ ...prev, [sectionKey]: false }));
-  };
-  
-  const handleToggleEdit = () => {
-    if (isEditing) {
-      // Exiting edit mode - could auto-save here
-      toast({
-        title: "Edit Mode Disabled",
-        description: "Click Edit to make changes to sections.",
-      });
-    }
-    setIsEditing(!isEditing);
-  };
-  
+// ========== ICP REPORT PANEL ==========
+interface ICPReportPanelProps {
+  icp: SuggestedICP;
+  onClose: () => void;
+  onViewProspects: () => void;
+}
+
+const ICPReportPanel = ({ icp, onClose, onViewProspects }: ICPReportPanelProps) => {
   return (
     <div className="p-6 space-y-6">
-      {/* Report Header */}
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h4 className="text-lg font-semibold">ICP Report: {icp.name}</h4>
           <p className="text-sm text-muted-foreground">
-            {isEditing 
-              ? "Click ✔️ to commit changes or ✖️ to delete a section"
-              : "Full report generated using accepted ICP context"
-            }
+            Full report generated from accepted ICP context
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button 
-            variant={isEditing ? "default" : "ghost"} 
-            size="sm" 
-            onClick={handleToggleEdit}
-            className={isEditing ? "bg-primary" : ""}
-          >
-            <Edit className="h-4 w-4 mr-1" />
-            {isEditing ? "Done Editing" : "Edit"}
-          </Button>
           <Button variant="ghost" size="sm">
             <Save className="h-4 w-4 mr-1" />
             Save
@@ -689,319 +810,159 @@ const ICPReportPanel = ({ icp, onClose }: ICPReportPanelProps) => {
         </div>
       </div>
 
-      {/* Editing indicator */}
-      {isEditing && (
-        <div className="flex items-center gap-2 p-3 bg-primary/10 rounded-lg border border-primary/20">
-          <Edit className="h-4 w-4 text-primary" />
-          <span className="text-sm text-primary font-medium">
-            Edit Mode: Use ✔️ to save section changes or ✖️ to remove sections
-          </span>
-        </div>
-      )}
-
-      {/* Report Content */}
+      {/* Report grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Profile Overview */}
-        {visibleSections.profileOverview && (
-          <EditableSection
-            title="Profile Overview"
-            isEditing={isEditing}
-            onCommit={() => handleSectionCommit('profileOverview')}
-            onDelete={() => handleSectionDelete('profileOverview')}
-          >
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <p className="text-muted-foreground">Industry</p>
-                  {isEditing ? (
-                    <input 
-                      type="text"
-                      value={editableContent.industry}
-                      onChange={(e) => setEditableContent(prev => ({ ...prev, industry: e.target.value }))}
-                      className="w-full font-medium bg-background border rounded px-2 py-1 text-sm"
-                    />
-                  ) : (
-                    <p className="font-medium">{editableContent.industry}</p>
-                  )}
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Segment</p>
-                  {isEditing ? (
-                    <input 
-                      type="text"
-                      value={editableContent.segment}
-                      onChange={(e) => setEditableContent(prev => ({ ...prev, segment: e.target.value }))}
-                      className="w-full font-medium bg-background border rounded px-2 py-1 text-sm"
-                    />
-                  ) : (
-                    <p className="font-medium">{editableContent.segment}</p>
-                  )}
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Company Size</p>
-                  {isEditing ? (
-                    <input 
-                      type="text"
-                      value={editableContent.companySize}
-                      onChange={(e) => setEditableContent(prev => ({ ...prev, companySize: e.target.value }))}
-                      className="w-full font-medium bg-background border rounded px-2 py-1 text-sm"
-                    />
-                  ) : (
-                    <p className="font-medium">{editableContent.companySize}</p>
-                  )}
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Market Size</p>
-                  {isEditing ? (
-                    <input 
-                      type="text"
-                      value={editableContent.marketSize}
-                      onChange={(e) => setEditableContent(prev => ({ ...prev, marketSize: e.target.value }))}
-                      className="w-full font-medium bg-background border rounded px-2 py-1 text-sm"
-                    />
-                  ) : (
-                    <p className="font-medium">{editableContent.marketSize}</p>
-                  )}
-                </div>
-              </div>
-              
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Profile Overview</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-3 text-sm">
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Key Attributes</p>
-                <div className="flex flex-wrap gap-1">
-                  {editableContent.keyAttributes.map((attr, idx) => (
-                    <Badge key={idx} variant="secondary" className="text-xs">
-                      {attr}
-                      {isEditing && (
-                        <button
-                          onClick={() => setEditableContent(prev => ({
-                            ...prev,
-                            keyAttributes: prev.keyAttributes.filter((_, i) => i !== idx)
-                          }))}
-                          className="ml-1 hover:text-destructive"
-                        >
-                          <X className="h-2.5 w-2.5" />
-                        </button>
-                      )}
-                    </Badge>
-                  ))}
-                </div>
+                <p className="text-muted-foreground text-xs">Industry</p>
+                <p className="font-medium">{icp.industry}</p>
               </div>
-              
               <div>
-                <p className="text-sm text-muted-foreground mb-1">Regions</p>
-                <div className="flex flex-wrap gap-1">
-                  {editableContent.regions.map((region, idx) => (
-                    <Badge key={idx} variant="outline" className="text-xs">
-                      {region}
-                      {isEditing && (
-                        <button
-                          onClick={() => setEditableContent(prev => ({
-                            ...prev,
-                            regions: prev.regions.filter((_, i) => i !== idx)
-                          }))}
-                          className="ml-1 hover:text-destructive"
-                        >
-                          <X className="h-2.5 w-2.5" />
-                        </button>
-                      )}
-                    </Badge>
-                  ))}
-                </div>
+                <p className="text-muted-foreground text-xs">Segment</p>
+                <p className="font-medium">{icp.segment}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground text-xs">Company Size</p>
+                <p className="font-medium">{icp.companySize}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground text-xs">Market Size</p>
+                <p className="font-medium">{icp.marketSize || "N/A"}</p>
               </div>
             </div>
-          </EditableSection>
-        )}
+            <div className="mt-3">
+              <p className="text-xs text-muted-foreground mb-1">Regions</p>
+              <div className="flex flex-wrap gap-1">
+                {icp.regions.map((r, i) => (
+                  <Badge key={i} variant="outline" className="text-xs">
+                    {r}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+            <div className="mt-3">
+              <p className="text-xs text-muted-foreground mb-1">Key Attributes</p>
+              <div className="flex flex-wrap gap-1">
+                {icp.keyAttributes.map((a, i) => (
+                  <Badge key={i} variant="secondary" className="text-xs">
+                    {a}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Decision Makers */}
-        {visibleSections.decisionMakers && (
-          <EditableSection
-            title="Key Decision Makers"
-            icon={<Users className="h-4 w-4" />}
-            isEditing={isEditing}
-            onCommit={() => handleSectionCommit('decisionMakers')}
-            onDelete={() => handleSectionDelete('decisionMakers')}
-          >
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Key Decision Makers
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
             <div className="space-y-2">
-              {editableContent.decisionMakers.map((dm, idx) => (
+              {icp.decisionMakers.map((dm, idx) => (
                 <div key={idx} className="flex items-center gap-2 p-2 bg-muted/50 rounded-md">
-                  <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                    <Users className="h-4 w-4 text-primary" />
+                  <div className="w-7 h-7 bg-primary/10 rounded-full flex items-center justify-center">
+                    <Users className="h-3.5 w-3.5 text-primary" />
                   </div>
-                  {isEditing ? (
-                    <input 
-                      type="text"
-                      value={dm}
-                      onChange={(e) => setEditableContent(prev => ({
-                        ...prev,
-                        decisionMakers: prev.decisionMakers.map((d, i) => i === idx ? e.target.value : d)
-                      }))}
-                      className="flex-1 font-medium bg-background border rounded px-2 py-1 text-sm"
-                    />
-                  ) : (
-                    <span className="text-sm font-medium">{dm}</span>
-                  )}
-                  {isEditing && (
-                    <button
-                      onClick={() => setEditableContent(prev => ({
-                        ...prev,
-                        decisionMakers: prev.decisionMakers.filter((_, i) => i !== idx)
-                      }))}
-                      className="text-destructive hover:text-destructive/80"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  )}
+                  <span className="text-sm font-medium">{dm}</span>
                 </div>
               ))}
             </div>
-          </EditableSection>
-        )}
+          </CardContent>
+        </Card>
 
         {/* Pain Points & Triggers */}
-        {visibleSections.painPoints && (
-          <EditableSection
-            title="Pain Points & Buying Triggers"
-            icon={<Target className="h-4 w-4" />}
-            isEditing={isEditing}
-            onCommit={() => handleSectionCommit('painPoints')}
-            onDelete={() => handleSectionDelete('painPoints')}
-          >
-            <div className="space-y-4">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Target className="h-4 w-4" />
+              Pain Points & Buying Triggers
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {icp.topPainPoint && (
               <div>
-                <p className="text-sm text-muted-foreground mb-2">Top Pain Point</p>
-                {isEditing ? (
-                  <input 
-                    type="text"
-                    value={editableContent.topPainPoint}
-                    onChange={(e) => setEditableContent(prev => ({ ...prev, topPainPoint: e.target.value }))}
-                    className="w-full font-medium bg-red-50 text-red-700 border border-red-200 rounded px-2 py-2 text-sm"
-                  />
-                ) : (
-                  <p className="text-sm font-medium bg-red-50 text-red-700 p-2 rounded-md">
-                    {editableContent.topPainPoint}
-                  </p>
-                )}
+                <p className="text-xs text-muted-foreground mb-1">Top Pain Point</p>
+                <p className="text-sm font-medium bg-destructive/10 text-destructive p-2 rounded-md">
+                  {icp.topPainPoint}
+                </p>
               </div>
-              
-              {editableContent.buyingTriggers.length > 0 && (
-                <div>
-                  <p className="text-sm text-muted-foreground mb-2">Buying Triggers</p>
-                  <ul className="space-y-1">
-                    {editableContent.buyingTriggers.map((trigger, idx) => (
-                      <li key={idx} className="text-sm flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
-                        {isEditing ? (
-                          <>
-                            <input 
-                              type="text"
-                              value={trigger}
-                              onChange={(e) => setEditableContent(prev => ({
-                                ...prev,
-                                buyingTriggers: prev.buyingTriggers.map((t, i) => i === idx ? e.target.value : t)
-                              }))}
-                              className="flex-1 bg-background border rounded px-2 py-1 text-sm"
-                            />
-                            <button
-                              onClick={() => setEditableContent(prev => ({
-                                ...prev,
-                                buyingTriggers: prev.buyingTriggers.filter((_, i) => i !== idx)
-                              }))}
-                              className="text-destructive hover:text-destructive/80"
-                            >
-                              <X className="h-3.5 w-3.5" />
-                            </button>
-                          </>
-                        ) : (
-                          trigger
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          </EditableSection>
-        )}
+            )}
+            {icp.buyingTriggers && icp.buyingTriggers.length > 0 && (
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Buying Triggers</p>
+                <ul className="space-y-1">
+                  {icp.buyingTriggers.map((t, i) => (
+                    <li key={i} className="text-sm flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 bg-primary rounded-full" />
+                      {t}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Competitive Landscape */}
-        {visibleSections.competitive && (
-          <EditableSection
-            title="Competitive Landscape"
-            isEditing={isEditing}
-            onCommit={() => handleSectionCommit('competitive')}
-            onDelete={() => handleSectionDelete('competitive')}
-          >
-            {editableContent.competitors.length > 0 ? (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Shield className="h-4 w-4" />
+              Competitive Landscape
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {icp.competitors && icp.competitors.length > 0 ? (
               <div className="space-y-2">
-                {editableContent.competitors.map((competitor, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-2 bg-muted/50 rounded-md">
-                    {isEditing ? (
-                      <input 
-                        type="text"
-                        value={competitor}
-                        onChange={(e) => setEditableContent(prev => ({
-                          ...prev,
-                          competitors: prev.competitors.map((c, i) => i === idx ? e.target.value : c)
-                        }))}
-                        className="flex-1 font-medium bg-background border rounded px-2 py-1 text-sm mr-2"
-                      />
-                    ) : (
-                      <span className="text-sm font-medium">{competitor}</span>
-                    )}
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-xs">Competitor</Badge>
-                      {isEditing && (
-                        <button
-                          onClick={() => setEditableContent(prev => ({
-                            ...prev,
-                            competitors: prev.competitors.filter((_, i) => i !== idx)
-                          }))}
-                          className="text-destructive hover:text-destructive/80"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      )}
-                    </div>
+                {icp.competitors.map((c, i) => (
+                  <div key={i} className="flex items-center justify-between p-2 bg-muted/50 rounded-md">
+                    <span className="text-sm font-medium">{c}</span>
+                    <Badge variant="outline" className="text-xs">
+                      Competitor
+                    </Badge>
                   </div>
                 ))}
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">No competitor data available</p>
             )}
-          </EditableSection>
-        )}
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Recommended Actions */}
-      {visibleSections.recommendations && (
-        <EditableSection
-          title="Recommended Actions"
-          isEditing={isEditing}
-          onCommit={() => handleSectionCommit('recommendations')}
-          onDelete={() => handleSectionDelete('recommendations')}
-        >
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div className="p-3 bg-blue-50 rounded-lg border border-blue-100">
-              <p className="text-sm font-medium text-blue-800">Prioritize Outreach</p>
-              <p className="text-xs text-blue-600 mt-1">
-                Focus on {editableContent.decisionMakers[0] || 'key decision makers'} in target companies
-              </p>
+      {/* ═══ View Prospects CTA ═══ */}
+      <Card className="border-primary/20 bg-primary/[0.03]">
+        <CardContent className="py-5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
+                <Zap className="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-foreground">View prospects for this ICP</p>
+                <p className="text-xs text-muted-foreground">
+                  See high-intent leads in Lead Stream filtered by "{icp.name}"
+                </p>
+              </div>
             </div>
-            <div className="p-3 bg-green-50 rounded-lg border border-green-100">
-              <p className="text-sm font-medium text-green-800">Content Strategy</p>
-              <p className="text-xs text-green-600 mt-1">
-                Create content addressing "{editableContent.topPainPoint}"
-              </p>
-            </div>
-            <div className="p-3 bg-purple-50 rounded-lg border border-purple-100">
-              <p className="text-sm font-medium text-purple-800">Monitor Signals</p>
-              <p className="text-xs text-purple-600 mt-1">
-                Track buying triggers in {editableContent.regions[0] || 'target regions'}
-              </p>
-            </div>
+            <Button size="sm" className="gap-1.5" onClick={onViewProspects}>
+              Go to Lead Stream
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Button>
           </div>
-        </EditableSection>
-      )}
+        </CardContent>
+      </Card>
     </div>
   );
 };
