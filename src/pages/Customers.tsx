@@ -12,6 +12,7 @@ import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 
 const Customers = () => {
   usePageTitle("👤 Profiler - Brewra");
+  const [activeTab, setActiveTab] = useState("icp-intelligence");
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [messages, setMessages] = useState([
     { role: "ai", content: "I'm Profiler, your ICP research assistant. I can help you define ideal customer profiles, find prospects, and enrich your data. What would you like to work on today?" }
@@ -22,11 +23,14 @@ const Customers = () => {
   useEffect(() => {
     const handleProfilerExportData = () => console.log('Export data triggered from header');
     const handleProfilerCreateICP = () => console.log('Create new ICP triggered from header');
+    const handleNavigateToLeadStream = () => setActiveTab('lead-stream');
     window.addEventListener('profilerExportData', handleProfilerExportData);
     window.addEventListener('profilerCreateICP', handleProfilerCreateICP);
+    window.addEventListener('navigateToLeadStream', handleNavigateToLeadStream);
     return () => {
       window.removeEventListener('profilerExportData', handleProfilerExportData);
       window.removeEventListener('profilerCreateICP', handleProfilerCreateICP);
+      window.removeEventListener('navigateToLeadStream', handleNavigateToLeadStream);
     };
   }, []);
 
@@ -94,7 +98,7 @@ const Customers = () => {
 
         {/* Main Tabs */}
         <div className="h-full w-full">
-        <Tabs defaultValue="icp-intelligence" className="h-full w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full w-full">
             <TabsList className="mb-4 md:mb-6 w-full grid grid-cols-3 h-auto">
               <TabsTrigger value="icp-intelligence" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm px-2 md:px-4 py-2">
                 <Users className="h-3 w-3 md:h-4 md:w-4" />
