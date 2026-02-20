@@ -20,7 +20,7 @@ export interface MarketIntelligenceTabProps {
   executiveSummary: string;
   tamValue: string;
   samValue: string;
-  apacGrowthRate: string;
+  GrowthRate: string;
   strategicRecommendations: string[];
   marketEntry: string;
   marketDrivers: string[];
@@ -114,7 +114,7 @@ export interface MarketIntelligenceTabProps {
   onExecutiveSummaryChange: (value: string) => void;
   onTamValueChange: (value: string) => void;
   onSamValueChange: (value: string) => void;
-  onApacGrowthRateChange: (value: string) => void;
+  onGrowthRateChange: (value: string) => void;
   onStrategicRecommendationsChange: (recommendations: string[]) => void;
   onMarketEntryChange: (value: string) => void;
   onMarketDriversChange: (drivers: string[]) => void;

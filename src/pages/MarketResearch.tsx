@@ -478,7 +478,7 @@ interface MarketIntelligenceData {
 
 
 
-  apacGrowthRate?: string;
+  GrowthRate?: string;
 
 
 
@@ -918,7 +918,7 @@ const MarketResearch = React.memo(() => {
         executiveSummary: "",
         tamValue: "",
         samValue: "",
-        apacGrowthRate: "",
+        GrowthRate: "",
         strategicRecommendations: [],
         marketEntry: "",
         marketDrivers: [],
@@ -944,7 +944,7 @@ const MarketResearch = React.memo(() => {
         executiveSummary: "",
         tamValue: "",
         samValue: "",
-        apacGrowthRate: "",
+        GrowthRate: "",
         strategicRecommendations: [],
         marketEntry: "",
         marketDrivers: [],
@@ -1223,7 +1223,7 @@ const MarketResearch = React.memo(() => {
 
       const renderingChecks = {
 
-        'Market Size': marketData?.executiveSummary && marketData?.tamValue && marketData?.apacGrowthRate,
+        'Market Size': marketData?.executiveSummary && marketData?.tamValue && marketData?.GrowthRate,
 
         'Industry Trends': industryTrendsData?.executiveSummary && industryTrendsData?.aiAdoption,
 
@@ -1437,7 +1437,7 @@ const MarketResearch = React.memo(() => {
 
     const componentDataChecks = {
 
-      'Market Size': marketData?.executiveSummary && marketData?.tamValue && marketData?.apacGrowthRate && 
+      'Market Size': marketData?.executiveSummary && marketData?.tamValue && marketData?.GrowthRate && 
 
                      !isMarketSizeLoading && isDataFresh(marketData?.timestamp),
 
@@ -1482,7 +1482,7 @@ const MarketResearch = React.memo(() => {
 
     console.log('  - Market Size - tamValue:', marketData?.tamValue);
 
-    console.log('  - Market Size - apacGrowthRate:', marketData?.apacGrowthRate);
+    console.log('  - Market Size - GrowthRate:', marketData?.GrowthRate);
 
     console.log('  - Market Size - timestamp:', marketData?.timestamp);
 
@@ -2116,7 +2116,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-      apacGrowthRate: "",
+      GrowthRate: "",
 
 
 
@@ -3583,7 +3583,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-      apacGrowthRate: reportData.apacGrowthRate || '',
+      GrowthRate: reportData.GrowthRate || '',
 
 
 
@@ -4526,7 +4526,7 @@ const MarketResearch = React.memo(() => {
           executiveSummary: "",
           tamValue: "",
           samValue: "",
-          apacGrowthRate: "",
+          GrowthRate: "",
           strategicRecommendations: [],
           marketEntry: "",
           marketDrivers: [],
@@ -4723,7 +4723,7 @@ const MarketResearch = React.memo(() => {
         executiveSummary: prev?.executiveSummary || '',
         tamValue: prev?.tamValue || '',
         samValue: prev?.samValue || '',
-        apacGrowthRate: prev?.apacGrowthRate || '',
+        GrowthRate: prev?.GrowthRate || '',
         strategicRecommendations: prev?.strategicRecommendations || [],
         marketEntry: prev?.marketEntry || '',
         marketDrivers: prev?.marketDrivers || [],
@@ -5949,6 +5949,7 @@ const MarketResearch = React.memo(() => {
 
 
       console.log('🔍 API Response structure:', JSON.stringify(apiResponse, null, 2));
+      console.log('🔥📊 RAW Market Size API Response:', JSON.stringify(apiResponse, null, 2));
 
       // CRITICAL: Validate that the API response belongs to the current user
       if (!validateApiResponseUserId(apiResponse, currentUser?.uid, 'Market Size')) {
@@ -6122,7 +6123,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-        console.log('🔍 FIELD CHECK - apacGrowthRate:', report.apacGrowthRate);
+        console.log('🔍 FIELD CHECK - GrowthRate:', report.GrowthRate);
 
 
 
@@ -6186,7 +6187,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-            apacGrowthRate: report.apacGrowthRate !== undefined ? report.apacGrowthRate : prev.apacGrowthRate,
+            GrowthRate: report.GrowthRate !== undefined ? report.GrowthRate : prev.GrowthRate,
 
 
 
@@ -6323,7 +6324,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-            apacGrowthRate: report.apacGrowthRate !== undefined ? report.apacGrowthRate : prev?.apacGrowthRate,
+            GrowthRate: report.GrowthRate !== undefined ? report.GrowthRate : prev?.GrowthRate,
 
 
 
@@ -6558,6 +6559,9 @@ const MarketResearch = React.memo(() => {
       }
 
       const result = await response.json();
+
+      // Log full API response in JSON format (matching competitor landscape format)
+      console.log('🔥📈 RAW Industry Trends API Response:', JSON.stringify(result, null, 2));
 
       // CRITICAL: Validate that the API response belongs to the current user
       if (!validateApiResponseUserId(result, currentUser?.uid, 'Industry Trends')) {
@@ -6945,6 +6949,9 @@ const MarketResearch = React.memo(() => {
 
 
       const result = await response.json();
+
+      // Log full API response in JSON format (matching competitor landscape format)
+      console.log('🔥🚀 RAW Regulatory Compliance API Response:', JSON.stringify(result, null, 2));
 
       // CRITICAL: Validate that the API response belongs to the current user
       if (!validateApiResponseUserId(result, currentUser?.uid, 'Regulatory Compliance')) {
@@ -9015,7 +9022,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-                  apacGrowthRate: parsedData.apacGrowthRate,
+                  GrowthRate: parsedData.GrowthRate,
 
 
 
@@ -11433,11 +11440,11 @@ const MarketResearch = React.memo(() => {
 
 
 
-  const handleMarketIntelligenceApacGrowthRateChange = (value: string) => {
+  const handleMarketIntelligenceGrowthRateChange = (value: string) => {
 
 
 
-    const oldValue = marketIntelligenceData.apacGrowthRate;
+    const oldValue = marketIntelligenceData.GrowthRate;
 
 
 
@@ -11445,7 +11452,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-      'APAC Growth',
+      'Growth Rate',
 
 
 
@@ -11457,7 +11464,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-      'Updated APAC region growth rate'
+      'Updated growth rate'
 
 
 
@@ -11470,7 +11477,7 @@ const MarketResearch = React.memo(() => {
 
 
       // CRITICAL: Always include user_id to ensure data isolation
-      const newData = { ...prev, apacGrowthRate: value, user_id: currentUser?.uid || prev.user_id };
+      const newData = { ...prev, GrowthRate: value, user_id: currentUser?.uid || prev.user_id };
 
 
 
@@ -13354,11 +13361,11 @@ const MarketResearch = React.memo(() => {
 
 
 
-      case 'APAC Growth':
+      case 'Growth Rate':
 
 
 
-        setMarketIntelligenceData(prev => ({ ...prev, apacGrowthRate: edit.oldValue }));
+        setMarketIntelligenceData(prev => ({ ...prev, GrowthRate: edit.oldValue }));
 
 
 
@@ -14765,7 +14772,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-                       apacGrowthRate={marketData?.apacGrowthRate || marketIntelligenceData.apacGrowthRate}
+                       GrowthRate={marketData?.GrowthRate || marketIntelligenceData.GrowthRate}
 
 
 
@@ -15075,7 +15082,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-                      onApacGrowthRateChange={handleMarketIntelligenceApacGrowthRateChange}
+                      onGrowthRateChange={handleMarketIntelligenceGrowthRateChange}
 
 
 

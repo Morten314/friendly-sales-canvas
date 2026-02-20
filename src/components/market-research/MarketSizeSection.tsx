@@ -24,7 +24,7 @@ interface MarketSizeSectionProps {
   executiveSummary: string;
   tamValue: string;
   samValue: string;
-  apacGrowthRate: string;
+  GrowthRate: string;
   strategicRecommendations: string[];
   marketEntry: string;
   marketDrivers: string[];
@@ -40,7 +40,7 @@ interface MarketSizeSectionProps {
   onExecutiveSummaryChange: (value: string) => void;
   onTamValueChange: (value: string) => void;
   onSamValueChange: (value: string) => void;
-  onApacGrowthRateChange: (value: string) => void;
+  onGrowthRateChange: (value: string) => void;
   onStrategicRecommendationsChange: (recommendations: string[]) => void;
   onMarketEntryChange: (value: string) => void;
   onMarketDriversChange: (drivers: string[]) => void;
@@ -68,7 +68,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
   executiveSummary,
   tamValue,
   samValue,
-  apacGrowthRate,
+  GrowthRate,
   strategicRecommendations,
   marketEntry,
   marketDrivers,
@@ -84,7 +84,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
   onExecutiveSummaryChange,
   onTamValueChange,
   onSamValueChange,
-  onApacGrowthRateChange,
+  onGrowthRateChange,
   onStrategicRecommendationsChange,
   onMarketEntryChange,
   onMarketDriversChange,
@@ -115,7 +115,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
   const [localExecutiveSummary, setLocalExecutiveSummary] = useState(executiveSummary || '');
   const [localTamValue, setLocalTamValue] = useState(tamValue || '');
   const [localSamValue, setLocalSamValue] = useState(samValue || '');
-  const [localApacGrowthRate, setLocalApacGrowthRate] = useState(apacGrowthRate || '');
+  const [localGrowthRate, setLocalGrowthRate] = useState(GrowthRate || '');
   const [localMarketEntry, setLocalMarketEntry] = useState(marketEntry || '');
   const [localStrategicRecommendations, setLocalStrategicRecommendations] = useState<string[]>(strategicRecommendations || []);
   const [localMarketDrivers, setLocalMarketDrivers] = useState<string[]>(marketDrivers || []);
@@ -129,7 +129,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
     executiveSummary: string;
     tamValue: string;
     samValue: string;
-    apacGrowthRate: string;
+    GrowthRate: string;
     marketEntry: string;
     strategicRecommendations: string[];
     marketDrivers: string[];
@@ -166,7 +166,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
         executiveSummary,
         tamValue,
         samValue,
-        apacGrowthRate,
+        GrowthRate,
         marketEntry,
         strategicRecommendations,
         marketDrivers,
@@ -177,7 +177,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
       setLocalExecutiveSummary(executiveSummary || '');
       setLocalTamValue(tamValue || '');
       setLocalSamValue(samValue || '');
-      setLocalApacGrowthRate(apacGrowthRate || '');
+      setLocalGrowthRate(GrowthRate || '');
       setLocalMarketEntry(marketEntry || '');
       setLocalStrategicRecommendations(strategicRecommendations || []);
       setLocalMarketDrivers(marketDrivers || []);
@@ -202,7 +202,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
           (executiveSummary || '') === savedLocalStateRef.current.executiveSummary &&
           (tamValue || '') === savedLocalStateRef.current.tamValue &&
           (samValue || '') === savedLocalStateRef.current.samValue &&
-          (apacGrowthRate || '') === savedLocalStateRef.current.apacGrowthRate &&
+          (GrowthRate || '') === savedLocalStateRef.current.GrowthRate &&
           (marketEntry || '') === savedLocalStateRef.current.marketEntry;
         
         if (propsMatchSaved) {
@@ -221,7 +221,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
         executiveSummary,
         tamValue,
         samValue,
-        apacGrowthRate,
+        GrowthRate,
         marketEntry,
         strategicRecommendations: strategicRecommendations?.length || 0,
         marketDrivers: marketDrivers?.length || 0,
@@ -240,8 +240,8 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
       if (samValue && samValue !== localSamValue) {
         setLocalSamValue(samValue);
       }
-      if (apacGrowthRate && apacGrowthRate !== localApacGrowthRate) {
-        setLocalApacGrowthRate(apacGrowthRate);
+      if (GrowthRate && GrowthRate !== localGrowthRate) {
+        setLocalGrowthRate(GrowthRate);
       }
       if (marketEntry && marketEntry !== localMarketEntry) {
         setLocalMarketEntry(marketEntry);
@@ -273,7 +273,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
         setLocalMarketDrivers([]);
       }
     }
-  }, [executiveSummary, tamValue, samValue, apacGrowthRate, marketEntry, strategicRecommendations, marketDrivers, isEditing, currentUser?.uid]);
+  }, [executiveSummary, tamValue, samValue, GrowthRate, marketEntry, strategicRecommendations, marketDrivers, isEditing, currentUser?.uid]);
 
   // REMOVED: Duplicate sync effect - the above effect handles all syncing
 
@@ -289,7 +289,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
   const handleSaveKeyMetrics = () => {
     onTamValueChange(localTamValue);
     onSamValueChange(localSamValue);
-    onApacGrowthRateChange(localApacGrowthRate);
+    onGrowthRateChange(localGrowthRate);
     toast({
       title: "Saved",
       description: "Key Metrics changes committed.",
@@ -336,7 +336,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
         executiveSummary,
         tamValue,
         samValue,
-        apacGrowthRate,
+        GrowthRate,
         marketEntry,
         strategicRecommendations,
         marketDrivers,
@@ -348,7 +348,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
         executiveSummary: localExecutiveSummary,
         tamValue: localTamValue,
         samValue: localSamValue,
-        apacGrowthRate: localApacGrowthRate,
+        GrowthRate: localGrowthRate,
         marketEntry: localMarketEntry,
         strategicRecommendations: localStrategicRecommendations,
         marketDrivers: localMarketDrivers,
@@ -396,7 +396,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
         executiveSummary: localExecutiveSummary,
         tamValue: localTamValue,
         samValue: localSamValue,
-        apacGrowthRate: localApacGrowthRate,
+        GrowthRate: localGrowthRate,
         marketEntry: localMarketEntry,
         strategicRecommendations: [...localStrategicRecommendations],
         marketDrivers: [...localMarketDrivers]
@@ -406,7 +406,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
       onExecutiveSummaryChange(localExecutiveSummary);
       onTamValueChange(localTamValue);
       onSamValueChange(localSamValue);
-      onApacGrowthRateChange(localApacGrowthRate);
+      onGrowthRateChange(localGrowthRate);
       onMarketEntryChange(localMarketEntry);
       onStrategicRecommendationsChange(localStrategicRecommendations);
       onMarketDriversChange(localMarketDrivers);
@@ -416,7 +416,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
         exec: localExecutiveSummary.substring(0, 30),
         tam: localTamValue,
         sam: localSamValue,
-        apac: localApacGrowthRate
+        apac: localGrowthRate
       });
       
       // Call the original save function to trigger chat panel
@@ -431,7 +431,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
         executiveSummary: localExecutiveSummary,
         tamValue: localTamValue,
         samValue: localSamValue,
-        apacGrowthRate: localApacGrowthRate,
+        GrowthRate: localGrowthRate,
         marketEntry: localMarketEntry,
         strategicRecommendations: [...localStrategicRecommendations],
         marketDrivers: [...localMarketDrivers]
@@ -441,7 +441,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
       onExecutiveSummaryChange(localExecutiveSummary);
       onTamValueChange(localTamValue);
       onSamValueChange(localSamValue);
-      onApacGrowthRateChange(localApacGrowthRate);
+      onGrowthRateChange(localGrowthRate);
       onMarketEntryChange(localMarketEntry);
       onStrategicRecommendationsChange(localStrategicRecommendations);
       onMarketDriversChange(localMarketDrivers);
@@ -548,7 +548,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
           if (dataToUse.executiveSummary) onExecutiveSummaryChange(dataToUse.executiveSummary);
           if (dataToUse.tamValue) onTamValueChange(dataToUse.tamValue);
           if (dataToUse.samValue) onSamValueChange(dataToUse.samValue);
-          if (dataToUse.apacGrowthRate) onApacGrowthRateChange(dataToUse.apacGrowthRate);
+          if (dataToUse.GrowthRate) onGrowthRateChange(dataToUse.GrowthRate);
           if (dataToUse.marketEntry) onMarketEntryChange(dataToUse.marketEntry);
           
           // Handle strategic recommendations - check if it's an array or needs to be converted
@@ -611,7 +611,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
       setLocalExecutiveSummary('');
       setLocalTamValue('');
       setLocalSamValue('');
-      setLocalApacGrowthRate('');
+      setLocalGrowthRate('');
       setLocalMarketEntry('');
       setLocalStrategicRecommendations([]);
       setLocalMarketDrivers([]);
@@ -646,7 +646,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
     
     // Always check if we have fresh data for this user
     // The parent component should pass fresh data, but if not, we fetch
-    const hasData = executiveSummary || tamValue || samValue || apacGrowthRate || strategicRecommendations.length > 0 || marketEntry || marketDrivers.length > 0;
+    const hasData = executiveSummary || tamValue || samValue || GrowthRate || strategicRecommendations.length > 0 || marketEntry || marketDrivers.length > 0;
     
     if (!hasData && !isLoadingData) {
       console.log('🚀 MarketSizeSection: No data found for current user, fetching fresh data');
@@ -658,7 +658,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
     } else if (hasData) {
       console.log('🚀 MarketSizeSection: Data already available for current user, skipping fetch');
     }
-  }, [currentUser?.uid, executiveSummary, tamValue, samValue, apacGrowthRate, strategicRecommendations.length, marketEntry, marketDrivers.length]);
+  }, [currentUser?.uid, executiveSummary, tamValue, samValue, GrowthRate, strategicRecommendations.length, marketEntry, marketDrivers.length]);
   
   // Handle refresh when parent triggers it
   useEffect(() => {
@@ -673,7 +673,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
   }, [isRefreshing]);
 
   // Check if we have any meaningful data
-  const hasData = executiveSummary || tamValue || samValue || apacGrowthRate || strategicRecommendations.length > 0 || marketEntry || marketDrivers.length > 0;
+  const hasData = executiveSummary || tamValue || samValue || GrowthRate || strategicRecommendations.length > 0 || marketEntry || marketDrivers.length > 0;
 
   // Loading state
   if (isLoadingData && !hasData) {
@@ -888,13 +888,13 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                     />
                   </div>
                   <div>
-                    <Label htmlFor="apacGrowthRate" className="text-sm font-medium text-gray-700 mb-2 block">
-                      APAC Growth Rate
+                    <Label htmlFor="GrowthRate" className="text-sm font-medium text-gray-700 mb-2 block">
+                      Growth Rate
                     </Label>
                     <Input 
-                      id="apacGrowthRate" 
-                      value={localApacGrowthRate} 
-                      onChange={(e) => setLocalApacGrowthRate(e.target.value)} 
+                      id="GrowthRate" 
+                      value={localGrowthRate} 
+                      onChange={(e) => setLocalGrowthRate(e.target.value)} 
                       placeholder="e.g., 25%" 
                     />
                   </div>
@@ -1303,8 +1303,8 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                 <div className="text-xs text-gray-600">Mid-market focus</div>
               </div>
               <div className="bg-purple-50 border-l-4 border-purple-500 p-4 rounded-r-lg">
-                <div className="text-2xl font-bold text-purple-600">{localApacGrowthRate || apacGrowthRate}</div>
-                <div className="text-sm font-medium text-gray-900">APAC Growth Rate</div>
+                <div className="text-2xl font-bold text-purple-600">{localGrowthRate || GrowthRate}</div>
+                <div className="text-sm font-medium text-gray-900">Growth Rate</div>
                 <div className="text-xs text-gray-600">Fastest growing region</div>
               </div>
             </div>
