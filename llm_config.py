@@ -288,14 +288,14 @@ chain2 = GraphCypherQAChain.from_llm(
 
 # Search tool configuration
 search_tool = TavilySearchResults(
-    k=5,
+    k=10,  # Increased from 5 to 10 for more comprehensive results
     tavily_api_key=tavily_api_key
 )
 tools = [
     Tool(
         name="WebSearch",
         func=search_tool.run,
-        description="Use this to gather up-to-date market data, TAM, competition, rankings, submarkets, etc."
+        description="Use this to gather up-to-date market data, TAM, competition, rankings, submarkets, industry trends, growth rates, market segments, regulatory information, and strategic insights. Perform multiple searches to cross-reference data from different sources for accuracy. Focus on recent data (2024-2025) when available."
     )
 ]
 
@@ -306,6 +306,6 @@ agent_chain = initialize_agent(
     agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
     verbose=False,
     handle_parsing_errors=True,
-    max_iterations=10,
-    max_execution_time=60
+    max_iterations=20,  # Increased from 10 to 20 to allow more search queries
+    max_execution_time=120  # Increased from 60 to 120 seconds for deeper research
 )

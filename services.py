@@ -273,29 +273,81 @@ def process_prospect_list(file_path):
     return {"message": f"{added_count} new prospects added."}
 
 # Research Market Functions
-def Research_Market_1(pre_data: str) -> dict:
-    # Construct prompt by embedding the entire JSON string
-    template = """Task: Research and compile an updated overview of market, including size, segment breakdown, growth projections, strategic recommendations, and market drivers based on the data below based on this ( follow this strictly and do research based on what all provided here - {pre_data}.
+def Research_Market_1(pre_data) -> dict:
+    # Convert company profile to JSON string (handle both dict and string inputs)
+    if isinstance(pre_data, dict):
+        company_profile_json = json.dumps(pre_data, indent=2)
+    elif isinstance(pre_data, str):
+        # If it's already a string, try to parse and reformat for better readability
+        try:
+            parsed = json.loads(pre_data)
+            company_profile_json = json.dumps(parsed, indent=2)
+        except:
+            company_profile_json = pre_data
+    else:
+        company_profile_json = str(pre_data)
+    
+    # Construct prompt with full company profile and WebSearch instructions
+    template = """Task: Research and compile an updated overview of market, including size, segment breakdown, growth projections, strategic recommendations, and market drivers.
 
-Return your findings in the following exact JSON format --  use this data to do the research - {pre_data}
+STEP 1 - COMPANY PROFILE DATA:
+Review the complete company profile data below. Extract all relevant information about the company's industry, target markets, regions, company size, strategic goals, and any other relevant attributes. Use this information to guide your research.
 
+Company Profile Data:
+{company_profile_json}
+
+STEP 2 - RESEARCH REQUIREMENTS (CRITICAL):
+You MUST use the WebSearch tool to find real, up-to-date market data. Based on the company profile above, identify the industry and target markets/regions, then perform comprehensive research:
+
+1. Market Size Research:
+   - Search for market size (TAM/SAM) for the company's industry in their target markets/regions
+   - Include recent data (2024-2025) when available
+   - Example searches: "[industry] market size TAM SAM [regions] 2024 2025"
+
+2. Growth Rate Research:
+   - Search for growth rates in the company's primary target market/region
+   - Find market growth projections for their target regions
+   - Example searches: "[industry] growth rate [primary region] 2024 2025"
+
+3. Market Segmentation:
+   - Search for market segment breakdowns (Enterprise, Mid-Market, SMB)
+   - Find market size distribution by segment
+   - Example searches: "[industry] market segments Enterprise Mid-Market SMB breakdown"
+
+4. Market Entry & Strategy:
+   - Search for market entry strategies relevant to the company's target markets
+   - Find market drivers and trends in their target regions
+   - Example searches: "[industry] market entry strategy [regions]"
+
+IMPORTANT RESEARCH GUIDELINES:
+- Perform at least 5-7 WebSearch queries to ensure comprehensive coverage
+- Cross-reference data from multiple sources for accuracy
+- Focus on recent data (2024-2025) when available
+- Provide specific metrics with sources where possible
+- Extract industry and target markets/regions from the company profile - do NOT assume or hardcode regions
+- The GrowthRate field should reflect growth rate for the PRIMARY target market/region identified from the company profile
+- Market entry strategy should be based on the company's actual target markets/regions from the profile
+- Do NOT use hardcoded regions like APAC, North America, etc. - use what's in the company profile
+
+STEP 3 - OUTPUT FORMAT:
+Return your findings in the following exact JSON format (use exact keys as shown):
 
 {{
-  "executiveSummary": "[1-2 sentence summary of overall market opportunity and trends]",
+  "executiveSummary": "[1-2 sentence summary of overall market opportunity and trends based on company profile]",
   "tamValue": "[Total Addressable Market size, e.g., '$4.2B']",
   "samValue": "[Serviceable Addressable Market size, e.g., '$2.1B']",
-  "apacGrowthRate": "[Growth rate of APAC market, e.g., '25%']",
+  "GrowthRate": "[Growth rate for primary target market/region from company profile, e.g., '25%']",
   "strategicRecommendations": [
-    "[Recommendation #1]",
-    "[Recommendation #2]",
-    "[Recommendation #3]"
+    "[Recommendation #1 based on company profile]",
+    "[Recommendation #2 based on company profile]",
+    "[Recommendation #3 based on company profile]"
   ],
-  "marketEntry": "[Brief description of phased market entry strategy, ideally mentioning regions like North America and APAC]",
+  "marketEntry": "[Brief description of phased market entry strategy based on company's target markets from profile]",
   "marketDrivers": [
-    "[Key driver #1]",
-    "[Key driver #2]",
-    "[Key driver #3]",
-    "[Key driver #4]"
+    "[Key driver #1 based on company profile]",
+    "[Key driver #2 based on company profile]",
+    "[Key driver #3 based on company profile]",
+    "[Key driver #4 based on company profile]"
   ],
   "marketSizeBySegment": {{
     "Enterprise": "[e.g., '45%']",
@@ -309,27 +361,22 @@ Return your findings in the following exact JSON format --  use this data to do 
     "2026": "[value or index]"
   }}
 }}
-⚠️ Notes:
 
-Use USD for monetary values in billions (B) or millions (M).
-
-If numeric growth values aren't available for projections, provide a normalized trend (e.g., index from 1.0 to 2.5).
-
-Pie chart data under marketSizeBySegment must sum to ~100%.
-
-Keep bullet point recommendations short and actionable.
-
-give only json , nothing else , nothing at all
+⚠️ OUTPUT NOTES:
+- Use USD for monetary values in billions (B) or millions (M)
+- If numeric growth values aren't available for projections, provide a normalized trend (e.g., index from 1.0 to 2.5)
+- Pie chart data under marketSizeBySegment must sum to ~100%
+- Keep bullet point recommendations short and actionable
+- GrowthRate must be for the PRIMARY target market/region from the company profile, not APAC or any hardcoded region
+- Market entry strategy must be based on actual target markets/regions from the company profile
+- Return ONLY valid JSON, nothing else
 
 When you have reached the final answer, respond only with:
-Final Answer: <your answer here>
+Final Answer: <your JSON answer here>
 Do not include any additional reasoning, thoughts, or steps after that.
 """
 
-    prompt = PromptTemplate(
-    input_variables=["pre_data"],
-    template=template
-    ).format(pre_data=pre_data)
+    prompt = template.format(company_profile_json=company_profile_json)
 
     # Step 3: Get LLM response
     raw_response = agent_chain.invoke({'input': prompt})
