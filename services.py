@@ -752,37 +752,99 @@ Do not include any additional reasoning, thoughts, or steps after that.
     # ✅ Return the Python dict
     return parsed_json
 
-def Research_Market_4(pre_data: str) -> dict:
-    # Construct prompt by embedding the entire JSON string
-    template = """Task: Research and compile an updated overview of market in the exact format given at end, based on the data below based on this ( follow this strictly and do research based on what all provided here - {pre_data}.
+def Research_Market_4(pre_data) -> dict:
+    # Convert company profile to JSON string (handle both dict and string inputs)
+    if isinstance(pre_data, dict):
+        company_profile_json = json.dumps(pre_data, indent=2)
+    elif isinstance(pre_data, str):
+        # If it's already a string, try to parse and reformat for better readability
+        try:
+            parsed = json.loads(pre_data)
+            company_profile_json = json.dumps(parsed, indent=2)
+        except:
+            company_profile_json = pre_data
+    else:
+        company_profile_json = str(pre_data)
+    
+    # Construct prompt with full company profile and WebSearch instructions
+    template = """Task: Research and compile a comprehensive regulatory and compliance analysis, including key regulatory updates, compliance frameworks, regional requirements, and strategic recommendations.
 
-Return your findings in the following exact JSON format --  use this data to do the research - {pre_data}
+STEP 1 - COMPANY PROFILE DATA:
+Review the complete company profile data below. Extract all relevant information about the company's industry, target markets, regions, and any other relevant attributes. Use this information to guide your regulatory research.
 
+Company Profile Data:
+{company_profile_json}
+
+STEP 2 - RESEARCH REQUIREMENTS (CRITICAL):
+You MUST use the WebSearch tool extensively to find real, up-to-date regulatory and compliance data. Based on the company profile above, identify the industry and target markets/regions, then perform comprehensive research:
+
+1. Regulatory Framework Research:
+   - Search for region-specific regulatory frameworks for the company's target markets/regions
+   - Find industry-specific compliance requirements
+   - Example searches: "[region] [industry] regulatory framework 2024 2025"
+   - Example searches: "[region] [industry] compliance requirements"
+
+2. Regulatory Updates Research:
+   - Search for recent regulatory changes and updates (2024-2025) in the company's industry and target regions
+   - Find upcoming mandates and deadlines
+   - Example searches: "[industry] regulatory changes [regions] 2024 2025"
+   - Example searches: "[industry] upcoming regulations [regions]"
+
+3. Compliance Deadlines Research:
+   - Search for specific compliance deadlines and timelines
+   - Find mandatory requirements with dates
+   - Example searches: "[region] [industry] compliance deadlines 2024 2025"
+   - Example searches: "[industry] regulatory deadlines [regions]"
+
+4. Regional Compliance Research:
+   - Search for compliance requirements for each target region from the company profile
+   - Find region-specific regulatory bodies and frameworks
+   - Example searches: "[region] [industry] compliance framework"
+   - Extract regions from company profile - do NOT use hardcoded regions
+
+5. Impact Assessment Research:
+   - Search for impact assessments of regulatory changes on the industry
+   - Find risk levels and compliance priorities
+   - Example searches: "[industry] regulatory impact assessment [regions]"
+
+IMPORTANT RESEARCH GUIDELINES:
+- Perform at least 7-10 WebSearch queries to ensure comprehensive coverage
+- Cross-reference data from multiple sources for accuracy
+- Focus on recent data (2024-2025) when available
+- Provide specific framework names, regulatory body names, and deadline dates
+- Extract target markets/regions from the company profile - do NOT assume or hardcode regions
+- The regionalData array should use regions from the company profile
+- Framework names must be official (e.g., "GDPR", "HIPAA", "SOC 2", not generic)
+- Deadlines must be specific dates (YYYY-MM-DD format when possible)
+- Do NOT use hardcoded regions - use what's in the company profile
+
+STEP 3 - OUTPUT FORMAT:
+Return your findings in the following exact JSON format (use exact keys as shown):
 
 {{
-  "executiveSummary": "[1-2 sentence summary of regulatory landscape and compliance requirements]",
+  "executiveSummary": "[1-2 sentence summary of regulatory landscape and compliance requirements based on company profile]",
   "keyUpdates": [
     {{
-      "title": "[Update title]",
-      "description": "[Update description or date]",
+      "title": "[Real regulatory update title]",
+      "description": "[Real update description with date/source]",
       "tag": "[New|Update|Risk|High Priority]",
       "icon": "[icon name]"
     }},
     {{
-      "title": "[Update title]",
-      "description": "[Update description or percentage]",
+      "title": "[Real regulatory update title]",
+      "description": "[Real update description with date/source]",
       "tag": "[New|Update|Risk|High Priority]",
       "icon": "[icon name]"
     }},
     {{
-      "title": "[Update title]",
-      "description": "[Update description]",
+      "title": "[Real regulatory update title]",
+      "description": "[Real update description with date/source]",
       "tag": "[New|Update|Risk|High Priority]",
       "icon": "[icon name]"
     }},
     {{
-      "title": "[Update title]",
-      "description": "[Update description]",
+      "title": "[Real regulatory update title]",
+      "description": "[Real update description with date/source]",
       "tag": "[New|Update|Risk|High Priority]",
       "icon": "[icon name]"
     }}
@@ -819,33 +881,33 @@ Return your findings in the following exact JSON format --  use this data to do 
   ],
   "regionalData": [
     {{
-      "region": "[Region name]",
-      "framework": "[Regulatory framework]",
-      "deadline": "[Deadline or status]",
+      "region": "[Region from company profile]",
+      "framework": "[Official regulatory framework name]",
+      "deadline": "[Specific deadline date or status]",
       "impact": "[High|Medium|Low]",
       "status": "[Active|Evolving|Mandatory]",
       "requirements": "[Key requirements]"
     }},
     {{
-      "region": "[Region name]",
-      "framework": "[Regulatory framework]",
-      "deadline": "[Deadline or status]",
+      "region": "[Region from company profile]",
+      "framework": "[Official regulatory framework name]",
+      "deadline": "[Specific deadline date or status]",
       "impact": "[High|Medium|Low]",
       "status": "[Active|Evolving|Mandatory]",
       "requirements": "[Key requirements]"
     }},
     {{
-      "region": "[Region name]",
-      "framework": "[Regulatory framework]",
-      "deadline": "[Deadline or status]",
+      "region": "[Region from company profile]",
+      "framework": "[Official regulatory framework name]",
+      "deadline": "[Specific deadline date or status]",
       "impact": "[High|Medium|Low]",
       "status": "[Active|Evolving|Mandatory]",
       "requirements": "[Key requirements]"
     }},
     {{
-      "region": "[Region name]",
-      "framework": "[Regulatory framework]",
-      "deadline": "[Deadline or status]",
+      "region": "[Region from company profile]",
+      "framework": "[Official regulatory framework name]",
+      "deadline": "[Specific deadline date or status]",
       "impact": "[High|Medium|Low]",
       "status": "[Active|Evolving|Mandatory]",
       "requirements": "[Key requirements]"
@@ -853,48 +915,42 @@ Return your findings in the following exact JSON format --  use this data to do 
   ],
   "strategicRecommendations": {{
     "mitigateRegulatoryRisks": [
-      "[Recommendation #1]",
-      "[Recommendation #2]",
-      "[Recommendation #3]",
-      "[Recommendation #4]"
+      "[Recommendation #1 based on company profile]",
+      "[Recommendation #2 based on company profile]",
+      "[Recommendation #3 based on company profile]",
+      "[Recommendation #4 based on company profile]"
     ],
     "competitivePositioning": [
-      "[Recommendation #1]",
-      "[Recommendation #2]",
-      "[Recommendation #3]",
-      "[Recommendation #4]"
+      "[Recommendation #1 based on company profile]",
+      "[Recommendation #2 based on company profile]",
+      "[Recommendation #3 based on company profile]",
+      "[Recommendation #4 based on company profile]"
     ],
     "goToMarketStrategy": [
-      "[Recommendation #1]",
-      "[Recommendation #2]",
-      "[Recommendation #3]",
-      "[Recommendation #4]"
+      "[Recommendation #1 based on company profile]",
+      "[Recommendation #2 based on company profile]",
+      "[Recommendation #3 based on company profile]",
+      "[Recommendation #4 based on company profile]"
     ]
   }}
 }}
 
-
-⚠️ Notes:
-
-Use USD for monetary values in billions (B) or millions (M).
-
-If numeric growth values aren't available for projections, provide a normalized trend (e.g., index from 1.0 to 2.5).
-
-Pie chart data under marketSizeBySegment must sum to ~100%.
-
-Keep bullet point recommendations short and actionable.
-
-give only json , nothing else , nothing at all
+⚠️ OUTPUT NOTES:
+- Use USD for monetary values in billions (B) or millions (M)
+- Framework names must be official (e.g., "GDPR", "HIPAA", "SOC 2", "ISO 27001", not generic)
+- Deadlines must be specific dates (YYYY-MM-DD format when possible) or clear status
+- regionalData must use regions from the company profile, not hardcoded regions
+- Include 2-5 regions in regionalData based on what's in the company profile
+- Key updates must be REAL regulatory updates with dates/sources, not generic examples
+- Keep bullet point recommendations short and actionable
+- Return ONLY valid JSON, nothing else
 
 When you have reached the final answer, respond only with:
-Final Answer: <your answer here>
+Final Answer: <your JSON answer here>
 Do not include any additional reasoning, thoughts, or steps after that.
 """
 
-    prompt = PromptTemplate(
-    input_variables=["pre_data"],
-    template=template
-    ).format(pre_data=pre_data)
+    prompt = template.format(company_profile_json=company_profile_json)
 
     # Step 3: Get LLM response
     raw_response = agent_chain.invoke({'input': prompt})
@@ -911,46 +967,114 @@ Do not include any additional reasoning, thoughts, or steps after that.
     # ✅ Return the Python dict
     return parsed_json
 
-def Research_Market_5(pre_data: str) -> dict:
-    # Construct prompt by embedding the entire JSON string
-    template = """Task: Research and compile an updated overview of market in the exact format given at end, based on the data below based on this ( follow this strictly and do research based on what all provided here - {pre_data}.
+def Research_Market_5(pre_data) -> dict:
+    # Convert company profile to JSON string (handle both dict and string inputs)
+    if isinstance(pre_data, dict):
+        company_profile_json = json.dumps(pre_data, indent=2)
+    elif isinstance(pre_data, str):
+        # If it's already a string, try to parse and reformat for better readability
+        try:
+            parsed = json.loads(pre_data)
+            company_profile_json = json.dumps(parsed, indent=2)
+        except:
+            company_profile_json = pre_data
+    else:
+        company_profile_json = str(pre_data)
+    
+    # Construct prompt with full company profile and WebSearch instructions
+    template = """Task: Research and compile a comprehensive market entry and growth strategy analysis, including entry barriers, channel strategies, competitive differentiation, SWOT analysis, and strategic timeline.
 
-Return your findings in the following exact JSON format --  use this data to do the research - {pre_data}
+STEP 1 - COMPANY PROFILE DATA:
+Review the complete company profile data below. Extract all relevant information about the company's industry, target markets, regions, company size, strategic goals, and any other relevant attributes. Use this information to guide your market entry research.
 
+Company Profile Data:
+{company_profile_json}
+
+STEP 2 - RESEARCH REQUIREMENTS (CRITICAL):
+You MUST use the WebSearch tool extensively to find real, up-to-date market entry and growth strategy data. Based on the company profile above, identify the industry and target markets/regions, then perform comprehensive research:
+
+1. Market Entry Barriers Research:
+   - Search for market entry barriers and challenges in the company's industry and target regions
+   - Find regulatory, competitive, and operational barriers
+   - Example searches: "[industry] market entry barriers [regions] 2024"
+   - Example searches: "[industry] entry challenges [regions]"
+
+2. Channel Strategy Research:
+   - Search for successful channel strategies and go-to-market approaches in the industry
+   - Find distribution and sales channel best practices
+   - Example searches: "[industry] channel strategy [regions]"
+   - Example searches: "[industry] go-to-market strategy [regions]"
+
+3. Competitive Differentiation Research:
+   - Search for competitive differentiation strategies in the industry
+   - Find unique value propositions and positioning strategies
+   - Example searches: "[industry] competitive differentiation [regions]"
+   - Example searches: "[industry] value proposition [regions]"
+
+4. Market Entry Timeline Research:
+   - Search for market entry timelines and phases from case studies
+   - Find typical time-to-market estimates for the industry
+   - Example searches: "[industry] market entry timeline [regions]"
+   - Example searches: "[industry] time to market [regions]"
+
+5. SWOT Analysis Research:
+   - Search for industry SWOT analysis and competitive positioning
+   - Find strengths, weaknesses, opportunities, and threats in the market
+   - Example searches: "[industry] SWOT analysis [regions]"
+   - Example searches: "[industry] market opportunities [regions]"
+
+6. Risk Assessment Research:
+   - Search for market entry risks and mitigation strategies
+   - Find risk factors specific to the industry and regions
+   - Example searches: "[industry] market entry risks [regions]"
+   - Example searches: "[industry] risk assessment [regions]"
+
+IMPORTANT RESEARCH GUIDELINES:
+- Perform at least 7-10 WebSearch queries to ensure comprehensive coverage
+- Cross-reference data from multiple sources for accuracy
+- Focus on recent data (2024-2025) when available
+- Provide specific examples, case studies, and sources where possible
+- Extract target markets/regions from the company profile - do NOT assume or hardcode regions
+- Entry barriers, channel strategies, and recommendations must be based on the company's actual industry and target markets
+- Timeline should be realistic based on industry standards and company profile
+- Do NOT use generic examples - use real industry data
+
+STEP 3 - OUTPUT FORMAT:
+Return your findings in the following exact JSON format (use exact keys as shown):
 
 {{
-  "executiveSummary": "[1-2 sentence summary of market entry opportunity and challenges]",
+  "executiveSummary": "[1-2 sentence summary of market entry opportunity and challenges based on company profile]",
   "entryBarriers": [
-    "[Entry barrier #1]",
-    "[Entry barrier #2]",
-    "[Entry barrier #3]",
-    "[Entry barrier #4]"
+    "[Real entry barrier #1 based on company profile]",
+    "[Real entry barrier #2 based on company profile]",
+    "[Real entry barrier #3 based on company profile]",
+    "[Real entry barrier #4 based on company profile]"
   ],
-  "recommendedChannel": "[Recommended channel strategy]",
-  "timeToMarket": "[Time to market estimate, e.g., '12-18 months']",
-  "topBarrier": "[Top barrier description]",
+  "recommendedChannel": "[Recommended channel strategy based on company profile]",
+  "timeToMarket": "[Time to market estimate based on company profile, e.g., '12-18 months']",
+  "topBarrier": "[Top barrier description based on company profile]",
   "competitiveDifferentiation": [
-    "[Differentiation factor #1]",
-    "[Differentiation factor #2]",
-    "[Differentiation factor #3]",
-    "[Differentiation factor #4]"
+    "[Differentiation factor #1 based on company profile]",
+    "[Differentiation factor #2 based on company profile]",
+    "[Differentiation factor #3 based on company profile]",
+    "[Differentiation factor #4 based on company profile]"
   ],
   "strategicRecommendations": [
-    "[Strategic recommendation #1]",
-    "[Strategic recommendation #2]",
-    "[Strategic recommendation #3]",
-    "[Strategic recommendation #4]"
+    "[Strategic recommendation #1 based on company profile]",
+    "[Strategic recommendation #2 based on company profile]",
+    "[Strategic recommendation #3 based on company profile]",
+    "[Strategic recommendation #4 based on company profile]"
   ],
   "riskAssessment": [
-    "[Risk #1]",
-    "[Risk #2]",
-    "[Risk #3]"
+    "[Risk #1 based on company profile]",
+    "[Risk #2 based on company profile]",
+    "[Risk #3 based on company profile]"
   ],
   "swot": {{
-    "strengths": ["[Strength]", "[Strength]"],
-    "weaknesses": ["[Weakness]", "[Weakness]"],
-    "opportunities": ["[Opportunity]", "[Opportunity]"],
-    "threats": ["[Threat]", "[Threat]"]
+    "strengths": ["[Strength based on company profile]", "[Strength based on company profile]"],
+    "weaknesses": ["[Weakness based on company profile]", "[Weakness based on company profile]"],
+    "opportunities": ["[Opportunity based on company profile]", "[Opportunity based on company profile]"],
+    "threats": ["[Threat based on company profile]", "[Threat based on company profile]"]
   }},
   "timeline": [
     {{
@@ -974,29 +1098,22 @@ Return your findings in the following exact JSON format --  use this data to do 
   ]
 }}
 
-
-
-⚠️ Notes:
-
-Use USD for monetary values in billions (B) or millions (M).
-
-If numeric growth values aren't available for projections, provide a normalized trend (e.g., index from 1.0 to 2.5).
-
-Pie chart data under marketSizeBySegment must sum to ~100%.
-
-Keep bullet point recommendations short and actionable.
-
-give only json , nothing else , nothing at all
+⚠️ OUTPUT NOTES:
+- Use USD for monetary values in billions (B) or millions (M)
+- Entry barriers must be REAL barriers for the company's industry and target markets
+- Channel strategy must be relevant to the company's industry and target markets
+- Time to market should be realistic based on industry standards
+- SWOT analysis must be specific to the company profile, not generic
+- Timeline should be based on realistic market entry phases
+- Keep bullet point recommendations short and actionable
+- Return ONLY valid JSON, nothing else
 
 When you have reached the final answer, respond only with:
-Final Answer: <your answer here>
+Final Answer: <your JSON answer here>
 Do not include any additional reasoning, thoughts, or steps after that.
 """
 
-    prompt = PromptTemplate(
-    input_variables=["pre_data"],
-    template=template
-    ).format(pre_data=pre_data)
+    prompt = template.format(company_profile_json=company_profile_json)
 
     # Step 3: Get LLM response
     raw_response = agent_chain.invoke({'input': prompt})
