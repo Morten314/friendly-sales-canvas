@@ -418,6 +418,7 @@ export const SuggestedICPCards = ({
                 <TableHead>Company Size</TableHead>
                 <TableHead>Buyer Role</TableHead>
                 <TableHead>Confidence</TableHead>
+                <TableHead>Leads</TableHead>
                 <TableHead className="text-right">Report</TableHead>
               </TableRow>
             </TableHeader>
@@ -433,6 +434,17 @@ export const SuggestedICPCards = ({
                     <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${confidenceColor(icp.fitConfidence || "Medium")}`}>
                       {icp.fitConfidence || "Medium"}
                     </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleViewProspects(icp.name)}
+                      className="text-primary hover:text-primary/80"
+                    >
+                      <Zap className="h-3.5 w-3.5 mr-1" />
+                      View Leads
+                    </Button>
                   </TableCell>
                   <TableCell className="text-right">
                     <Button

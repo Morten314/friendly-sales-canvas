@@ -13,6 +13,7 @@ import { ErrorBoundary } from "@/components/common/ErrorBoundary";
 const Customers = () => {
   usePageTitle("👤 Profiler - Brewra");
   const [activeTab, setActiveTab] = useState("icp-intelligence");
+  const [filteredICP, setFilteredICP] = useState<string | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [messages, setMessages] = useState([
     { role: "ai", content: "I'm Profiler, your ICP research assistant. I can help you define ideal customer profiles, find prospects, and enrich your data. What would you like to work on today?" }
@@ -23,7 +24,12 @@ const Customers = () => {
   useEffect(() => {
     const handleProfilerExportData = () => console.log('Export data triggered from header');
     const handleProfilerCreateICP = () => console.log('Create new ICP triggered from header');
-    const handleNavigateToLeadStream = () => setActiveTab('lead-stream');
+    const handleNavigateToLeadStream = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const filterICP = customEvent.detail?.filterICP || null;
+      setFilteredICP(filterICP);
+      setActiveTab('lead-stream');
+    };
     window.addEventListener('profilerExportData', handleProfilerExportData);
     window.addEventListener('profilerCreateICP', handleProfilerCreateICP);
     window.addEventListener('navigateToLeadStream', handleNavigateToLeadStream);
@@ -119,7 +125,7 @@ const Customers = () => {
 
             <TabsContent value="lead-stream" className="h-full w-full m-0">
               <ErrorBoundary fallbackMessage="There was an error loading the Lead Stream">
-                <LeadStreamPanel />
+                <LeadStreamPanel filterByICP={filteredICP} onClearFilter={() => setFilteredICP(null)} />
               </ErrorBoundary>
             </TabsContent>
 

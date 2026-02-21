@@ -156,10 +156,19 @@ const EmptyState = () => (
 );
 
 // --- Main Component ---
-export const LeadStreamPanel = () => {
+interface LeadStreamPanelProps {
+  filterByICP?: string | null;
+  onClearFilter?: () => void;
+}
+
+export const LeadStreamPanel = ({ filterByICP, onClearFilter }: LeadStreamPanelProps) => {
   const [howOpen, setHowOpen] = useState(false);
   const [savedLeads, setSavedLeads] = useState<Set<string>>(new Set());
   const hasProspectData = true; // TODO: derive from Data Sources
+
+  const displayedLeads = filterByICP
+    ? mockLeads.filter((lead) => lead.matchedICP === filterByICP || lead.matchedICP.toLowerCase().includes(filterByICP.toLowerCase()) || filterByICP.toLowerCase().includes(lead.matchedICP.toLowerCase()))
+    : mockLeads;
 
   const toggleSave = (id: string) => {
     setSavedLeads((prev) => {
@@ -178,7 +187,11 @@ export const LeadStreamPanel = () => {
         <div>
           <h2 className="text-xl font-bold text-foreground tracking-tight">Lead Stream</h2>
           <p className="text-sm text-muted-foreground mt-0.5">
-            High-intent leads based on your ICPs and uploaded prospect lists.
+            {filterByICP
+              ? <>Showing leads matched to <Badge variant="secondary" className="text-xs mx-1">{filterByICP}</Badge>
+                <Button variant="link" size="sm" className="text-xs h-auto p-0 ml-1" onClick={onClearFilter}>Show all</Button>
+              </>
+              : "High-intent leads based on your ICPs and uploaded prospect lists."}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
@@ -228,7 +241,7 @@ export const LeadStreamPanel = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {mockLeads.map((lead) => (
+              {displayedLeads.map((lead) => (
                 <TableRow key={lead.id} className="group">
                   <TableCell className="font-medium text-foreground">{lead.name}</TableCell>
                   <TableCell className="text-muted-foreground">{lead.company}</TableCell>
