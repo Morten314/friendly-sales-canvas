@@ -35,6 +35,10 @@ const mockLeads: Lead[] = [
   { id: "4", name: "Marcus Liu", company: "DataDriven AI", title: "CRO", source: "ICP 2", intentLevel: "Medium", reason: "Right buyer role + region match. Recent funding round signals growth phase." },
   { id: "5", name: "Elena Vasquez", company: "CloudFirst Systems", title: "VP Sales", source: "ICP 1", intentLevel: "High", reason: "Matches ICP + active job postings for sales leadership + competitor tool churn." },
   { id: "6", name: "David Park", company: "Momentum Labs", title: "Head of Partnerships", source: "ICP 2", intentLevel: "Medium", reason: "Strong ICP alignment. Partnership-led growth model fits your offering." },
+  { id: "7", name: "Amara Johnson", company: "RevStack AI", title: "VP of RevOps", source: "Refined ICP", intentLevel: "High", reason: "Matches refined ICP targeting RevOps teams. High engagement with your content." },
+  { id: "8", name: "Tobias Müller", company: "FinServ Digital", title: "Chief Digital Officer", source: "New ICP", intentLevel: "Medium", reason: "Matches new FinTech ICP segment. Digital transformation initiative underway." },
+  { id: "9", name: "Lily Tran", company: "ShopScale D2C", title: "Head of Growth", source: "New ICP", intentLevel: "High", reason: "Growth-stage e-commerce leader. Similar buying patterns to best customers." },
+  { id: "10", name: "Raj Patel", company: "OpsFlow SaaS", title: "Head of Sales Operations", source: "Refined ICP", intentLevel: "Medium", reason: "RevOps focus + Series B funding. Tech stack consolidation signals." },
 ];
 
 const mockContextChips: ContextChip[] = [
@@ -67,14 +71,20 @@ const IntentBadge = ({ level }: { level: Lead["intentLevel"] }) => {
 };
 
 // --- Source Badge ---
-const SourceBadge = ({ source }: { source: string }) => (
-  <Badge
-    variant="outline"
-    className="text-xs font-medium bg-primary/5 text-primary border-primary/20"
-  >
-    {source}
-  </Badge>
-);
+const SourceBadge = ({ source }: { source: string }) => {
+  const isRefined = source === "Refined ICP";
+  const isNew = source === "New ICP";
+  const colorClass = isRefined
+    ? "bg-amber-50 text-amber-700 border-amber-200"
+    : isNew
+      ? "bg-primary/5 text-primary border-primary/20"
+      : "bg-muted/50 text-foreground border-border";
+  return (
+    <Badge variant="outline" className={`text-xs font-medium ${colorClass}`}>
+      {source}
+    </Badge>
+  );
+};
 
 // --- Empty State ---
 const EmptyState = () => (
