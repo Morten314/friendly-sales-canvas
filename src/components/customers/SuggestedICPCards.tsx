@@ -12,6 +12,21 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -388,61 +403,87 @@ export const SuggestedICPCards = ({
 
   return (
     <div className="space-y-8">
-      {/* ═══ Section 1: Current ICPs (clickable chips) ═══ */}
+      {/* ═══ Section 1: Current ICPs (table format) ═══ */}
       <div className="space-y-3">
         <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
           Current ICPs
         </h3>
-        <div className="flex flex-wrap gap-2">
-          {existingICPs.map((icp) => (
-            <button
-              key={icp.id}
-              onClick={() => setSelectedExistingICP(icp)}
-              className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium hover:bg-accent hover:border-primary/30 transition-colors cursor-pointer"
-            >
-              <Target className="h-3.5 w-3.5 text-primary" />
-              {icp.name}
-              <span className="text-xs text-muted-foreground">·</span>
-              <span className="text-xs text-muted-foreground">{icp.industry}</span>
-              <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${confidenceColor(icp.fitConfidence || "Medium")}`}>
-                {icp.fitConfidence || "Medium"}
-              </Badge>
-            </button>
-          ))}
-        </div>
+        <Card>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Industry</TableHead>
+                <TableHead>Region</TableHead>
+                <TableHead>Company Size</TableHead>
+                <TableHead>Buyer Role</TableHead>
+                <TableHead>Confidence</TableHead>
+                <TableHead className="text-right">Report</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {existingICPs.map((icp) => (
+                <TableRow key={icp.id}>
+                  <TableCell className="font-medium">{icp.name}</TableCell>
+                  <TableCell>{icp.industry || "—"}</TableCell>
+                  <TableCell>{icp.geography || "—"}</TableCell>
+                  <TableCell>{icp.companySize || "—"}</TableCell>
+                  <TableCell>{icp.buyerRole || "—"}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${confidenceColor(icp.fitConfidence || "Medium")}`}>
+                      {icp.fitConfidence || "Medium"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedExistingICP(icp)}
+                      className="text-primary hover:text-primary/80"
+                    >
+                      <Eye className="h-3.5 w-3.5 mr-1" />
+                      View Report
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
       </div>
 
-      {/* ═══ ICP Chip Modal (Profiler's interpretation) ═══ */}
-      <Dialog
+      {/* ═══ ICP Report Sheet (partial screen) ═══ */}
+      <Sheet
         open={!!selectedExistingICP}
         onOpenChange={(open) => !open && setSelectedExistingICP(null)}
       >
         {selectedExistingICP && (() => {
           const analysis = analyzeICP(selectedExistingICP);
           return (
-            <DialogContent className="sm:max-w-lg">
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
+            <SheetContent side="right" className="sm:max-w-lg overflow-y-auto">
+              <SheetHeader className="mb-4">
+                <SheetTitle className="flex items-center gap-2">
                   <Sparkles className="h-5 w-5 text-primary" />
                   Profiler's Analysis: {selectedExistingICP.name}
-                </DialogTitle>
-                <DialogDescription>
+                </SheetTitle>
+                <SheetDescription>
                   Here's how Profiler interprets this ICP targeting.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 py-2">
+                </SheetDescription>
+              </SheetHeader>
+              <div className="space-y-5">
                 {/* Interpretation */}
-                <div className="bg-muted/50 rounded-lg p-3">
-                  <p className="text-sm">{analysis.interpretation}</p>
+                <div className="bg-muted/50 rounded-lg p-4">
+                  <p className="text-sm font-medium text-foreground mb-1">Profiler's Interpretation</p>
+                  <p className="text-sm text-muted-foreground">{analysis.interpretation}</p>
                 </div>
 
                 {/* Strengths */}
                 {analysis.strengths.length > 0 && (
                   <div>
-                    <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wide mb-1.5 flex items-center gap-1">
+                    <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wide mb-2 flex items-center gap-1">
                       <ThumbsUp className="h-3 w-3" /> What's Good
                     </p>
-                    <ul className="space-y-1">
+                    <ul className="space-y-1.5">
                       {analysis.strengths.map((s, i) => (
                         <li key={i} className="text-sm flex items-start gap-2">
                           <Check className="h-3.5 w-3.5 text-emerald-600 mt-0.5 shrink-0" />
@@ -456,10 +497,10 @@ export const SuggestedICPCards = ({
                 {/* Weaknesses */}
                 {analysis.weaknesses.length > 0 && (
                   <div>
-                    <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-1.5 flex items-center gap-1">
+                    <p className="text-xs font-semibold text-amber-700 uppercase tracking-wide mb-2 flex items-center gap-1">
                       <AlertTriangle className="h-3 w-3" /> Weak Points
                     </p>
-                    <ul className="space-y-1">
+                    <ul className="space-y-1.5">
                       {analysis.weaknesses.map((w, i) => (
                         <li key={i} className="text-sm flex items-start gap-2">
                           <AlertTriangle className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />
@@ -473,10 +514,10 @@ export const SuggestedICPCards = ({
                 {/* Missing */}
                 {analysis.missing.length > 0 && (
                   <div>
-                    <p className="text-xs font-semibold text-destructive uppercase tracking-wide mb-1.5 flex items-center gap-1">
+                    <p className="text-xs font-semibold text-destructive uppercase tracking-wide mb-2 flex items-center gap-1">
                       <X className="h-3 w-3" /> Missing
                     </p>
-                    <ul className="space-y-1">
+                    <ul className="space-y-1.5">
                       {analysis.missing.map((m, i) => (
                         <li key={i} className="text-sm flex items-start gap-2">
                           <X className="h-3.5 w-3.5 text-destructive mt-0.5 shrink-0" />
@@ -488,7 +529,7 @@ export const SuggestedICPCards = ({
                 )}
 
                 {/* Broad/Narrow + Confidence */}
-                <div className="flex items-center justify-between pt-2 border-t">
+                <div className="flex items-center justify-between pt-3 border-t">
                   <div className="flex items-center gap-2 text-sm">
                     <Gauge className="h-4 w-4 text-muted-foreground" />
                     <span className="text-muted-foreground">{analysis.broadNarrow}</span>
@@ -498,10 +539,10 @@ export const SuggestedICPCards = ({
                   </Badge>
                 </div>
               </div>
-            </DialogContent>
+            </SheetContent>
           );
         })()}
-      </Dialog>
+      </Sheet>
 
       {/* ═══ Section 2: Profiler Work Announcement ═══ */}
       {showAnnouncement && !showRecommendations && (
