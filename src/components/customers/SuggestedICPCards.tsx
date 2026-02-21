@@ -746,7 +746,7 @@ export const SuggestedICPCards = ({
           {/* ICP Report Sheet (side panel) */}
           <Sheet open={!!reportSheetICP} onOpenChange={(open) => !open && setReportSheetICP(null)}>
             {reportSheetICP && (
-              <SheetContent side="right" className="sm:max-w-lg overflow-y-auto">
+              <SheetContent side="right" className="sm:max-w-2xl w-[90vw] overflow-y-auto">
                 <SheetHeader className="mb-4">
                   <SheetTitle className="flex items-center gap-2">
                     <Sparkles className="h-5 w-5 text-primary" />
@@ -942,12 +942,12 @@ interface ICPReportPanelProps {
 
 const ICPReportPanel = ({ icp, onClose, onViewProspects }: ICPReportPanelProps) => {
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <h4 className="text-lg font-semibold">ICP Report: {icp.name}</h4>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h4 className="text-lg font-semibold truncate">ICP Report: {icp.name}</h4>
             <Badge
               variant="secondary"
               className={`text-xs ${
@@ -979,7 +979,7 @@ const ICPReportPanel = ({ icp, onClose, onViewProspects }: ICPReportPanelProps) 
       </div>
 
       {/* Why Suggested & What Changed */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4">
         {/* Why This ICP Was Suggested */}
         <Card className="border-primary/10 bg-primary/[0.02]">
           <CardHeader className="pb-3">
@@ -1052,7 +1052,7 @@ const ICPReportPanel = ({ icp, onClose, onViewProspects }: ICPReportPanelProps) 
       </div>
 
       {/* Report grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-4">
         {/* Profile Overview */}
         <Card>
           <CardHeader className="pb-3">
