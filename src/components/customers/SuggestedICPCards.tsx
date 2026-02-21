@@ -441,8 +441,10 @@ export const SuggestedICPCards = ({
       ...prev,
       [icpId]: { status: "suggested" },
     }));
+    // Remove from Current ICPs table if it was previously accepted
+    setExistingICPs((prev) => prev.filter((icp) => icp.id !== `accepted-${icpId}`));
     if (reportSheetICP?.id === icpId) setReportSheetICP(null);
-    toast({ title: "Action undone", description: "ICP returned to suggestions." });
+    toast({ title: "Action undone", description: "ICP returned to suggestions and removed from Current ICPs." });
   };
 
   const handleViewProspects = (icpName: string) => {
