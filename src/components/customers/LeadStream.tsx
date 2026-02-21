@@ -5,9 +5,10 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Zap, Download, RefreshCw, Save, Eye, ChevronDown, ChevronRight,
-  Database, Users, Target, MapPin, Briefcase, ArrowUpRight, Info, Bookmark
+  Database, Users, Target, MapPin, Briefcase, ArrowUpRight, Info, Bookmark, Filter
 } from "lucide-react";
 
 // --- Types ---
@@ -115,11 +116,15 @@ export const LeadStreamPanel = ({ filterByICP, onClearFilter }: LeadStreamPanelP
   const [howOpen, setHowOpen] = useState(false);
   const [savedLeads, setSavedLeads] = useState<Set<string>>(new Set());
   const [sortSourceAsc, setSortSourceAsc] = useState<boolean | null>(null);
+  const [sourceFilter, setSourceFilter] = useState<string>("all");
   const hasProspectData = true; // TODO: derive from Data Sources
 
-  const filteredLeads = filterByICP
+  const uniqueSources = Array.from(new Set(mockLeads.map((l) => l.source))).sort();
+
+  const filteredLeads = (filterByICP
     ? mockLeads.filter((lead) => lead.source === filterByICP || lead.source.toLowerCase().includes(filterByICP.toLowerCase()) || filterByICP.toLowerCase().includes(lead.source.toLowerCase()))
-    : mockLeads;
+    : mockLeads
+  ).filter((lead) => sourceFilter === "all" || lead.source === sourceFilter);
 
   const displayedLeads = sortSourceAsc !== null
     ? [...filteredLeads].sort((a, b) => sortSourceAsc ? a.source.localeCompare(b.source) : b.source.localeCompare(a.source))
@@ -189,15 +194,29 @@ export const LeadStreamPanel = ({ filterByICP, onClearFilter }: LeadStreamPanelP
                 <TableHead className="w-[140px]">Company</TableHead>
                 <TableHead className="w-[160px]">Title</TableHead>
                 <TableHead className="w-[100px]">Intent</TableHead>
-                <TableHead
-                  className="w-[100px] cursor-pointer select-none"
-                  onClick={() => setSortSourceAsc(prev => prev === null ? true : prev ? false : null)}
-                >
-                  <span className="inline-flex items-center gap-1">
-                    Source
-                    {sortSourceAsc === true && <ChevronDown className="h-3 w-3 rotate-180" />}
-                    {sortSourceAsc === false && <ChevronDown className="h-3 w-3" />}
-                  </span>
+                <TableHead className="w-[160px]">
+                  <div className="flex items-center gap-1.5">
+                    <Select value={sourceFilter} onValueChange={setSourceFilter}>
+                      <SelectTrigger className="h-7 w-[110px] text-xs border-none bg-transparent shadow-none px-1 font-medium text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <Filter className="h-3 w-3" />
+                          <SelectValue placeholder="Source" />
+                        </div>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Sources</SelectItem>
+                        {uniqueSources.map((src) => (
+                          <SelectItem key={src} value={src}>{src}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <button
+                      className="p-0.5 rounded hover:bg-muted transition-colors"
+                      onClick={() => setSortSourceAsc(prev => prev === null ? true : prev ? false : null)}
+                    >
+                      <ChevronDown className={`h-3 w-3 text-muted-foreground transition-transform ${sortSourceAsc === true ? "rotate-180" : ""} ${sortSourceAsc === null ? "opacity-40" : ""}`} />
+                    </button>
+                  </div>
                 </TableHead>
                 <TableHead className="min-w-[200px]">Reason</TableHead>
                 <TableHead className="w-[100px] text-right">Actions</TableHead>
