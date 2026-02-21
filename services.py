@@ -393,48 +393,103 @@ Do not include any additional reasoning, thoughts, or steps after that.
     # ✅ Return the Python dict
     return parsed_json
 
-def Research_Market_2(pre_data: str) -> dict:
-    # Construct prompt by embedding the entire JSON string
-    template = """Task: Research and compile an updated overview of market, including size, segment breakdown, growth projections, strategic recommendations, and market drivers based on the data below based on this ( follow this strictly and do research based on what all provided here - {pre_data}.
+def Research_Market_2(pre_data) -> dict:
+    # Convert company profile to JSON string (handle both dict and string inputs)
+    if isinstance(pre_data, dict):
+        company_profile_json = json.dumps(pre_data, indent=2)
+    elif isinstance(pre_data, str):
+        # If it's already a string, try to parse and reformat for better readability
+        try:
+            parsed = json.loads(pre_data)
+            company_profile_json = json.dumps(parsed, indent=2)
+        except:
+            company_profile_json = pre_data
+    else:
+        company_profile_json = str(pre_data)
+    
+    # Construct prompt with full company profile and WebSearch instructions
+    template = """Task: Research and compile an updated overview of industry trends, including technology adoption, regulatory changes, regional hotspots, and strategic recommendations.
 
-Return your findings in the following exact JSON format --  use this data to do the research - {pre_data}
+STEP 1 - COMPANY PROFILE DATA:
+Review the complete company profile data below. Extract all relevant information about the company's industry, target markets, regions, and any other relevant attributes. Use this information to guide your research.
 
+Company Profile Data:
+{company_profile_json}
+
+STEP 2 - RESEARCH REQUIREMENTS (CRITICAL):
+You MUST use the WebSearch tool to find real, up-to-date industry trend data. Based on the company profile above, identify the industry and target markets/regions, then perform comprehensive research:
+
+1. Technology Adoption Research:
+   - Search for AI adoption rates, cloud migration percentages, and technology trends in the company's industry
+   - Include recent data (2024-2025) when available
+   - Example searches: "[industry] AI adoption rate 2024 2025"
+   - Example searches: "[industry] cloud migration percentage [regions]"
+
+2. Regulatory Changes Research:
+   - Search for recent regulatory changes and compliance updates in the company's industry and target regions
+   - Find number of regulatory changes and their impact
+   - Example searches: "[industry] regulatory changes [regions] 2024 2025"
+
+3. Regional Hotspots Research:
+   - Search for regional market hotspots and growth areas in the company's target markets/regions
+   - Find percentage values for different regions based on the company profile
+   - Example searches: "[industry] market growth [regions] 2024 2025"
+   - Extract regions from company profile - do NOT use hardcoded regions like APAC, Europe, North America
+
+4. Industry Trends Research:
+   - Search for current industry trends, adoption patterns, and performance metrics
+   - Find technology budget allocation trends
+   - Example searches: "[industry] trends 2024 2025"
+   - Example searches: "[industry] technology budget allocation"
+
+IMPORTANT RESEARCH GUIDELINES:
+- Perform at least 5-7 WebSearch queries to ensure comprehensive coverage
+- Cross-reference data from multiple sources for accuracy
+- Focus on recent data (2024-2025) when available
+- Provide specific metrics with sources where possible
+- Extract target markets/regions from the company profile - do NOT assume or hardcode regions
+- The regionalHotspots object should contain regions from the company profile, not hardcoded APAC/Europe/North America
+- If company profile has 2 regions, include 2 in regionalHotspots; if 5 regions, include 5
+- Do NOT use hardcoded regions - use what's in the company profile
+
+STEP 3 - OUTPUT FORMAT:
+Return your findings in the following exact JSON format (use exact keys as shown):
 
 {{
-  "executiveSummary": "[1-2 sentence summary of overall market opportunity and trends]",
+  "executiveSummary": "[1-2 sentence summary of overall industry trends and opportunities based on company profile]",
   "aiAdoption": "[AI adoption percentage, e.g., '78%']",
   "cloudMigration": "[Cloud migration percentage, e.g., '45%']",
   "regulatory": "[Number of regulatory changes, e.g., '12']",
   "trendSnapshots": [
     {{
-      "title": "[Trend title]",
+      "title": "[Trend title based on company profile]",
       "metric": "[Metric value]",
       "type": "[adoption|growth|performance]"
     }},
     {{
-      "title": "[Trend title]",
+      "title": "[Trend title based on company profile]",
       "metric": "[Metric value]",
       "type": "[adoption|growth|performance]"
     }},
     {{
-      "title": "[Trend title]",
+      "title": "[Trend title based on company profile]",
       "metric": "[Metric value]",
       "type": "[adoption|growth|performance]"
     }}
   ],
   "regionalHotspots": {{
-    "APAC": "[Percentage value]",
-    "Europe": "[Percentage value]",
-    "North America": "[Percentage value]"
+    "[Region 1 from company profile]": "[Percentage value]",
+    "[Region 2 from company profile]": "[Percentage value]",
+    "[Region 3 from company profile if exists]": "[Percentage value]"
   }},
   "recommendations": {{
-    "primaryFocus": "[Primary focus recommendation]",
-    "marketEntry": "[Market entry strategy recommendation]"
+    "primaryFocus": "[Primary focus recommendation based on company profile]",
+    "marketEntry": "[Market entry strategy recommendation based on company profile]"
   }},
   "risks": [
-    "[Risk #1]",
-    "[Risk #2]",
-    "[Risk #3]"
+    "[Risk #1 based on company profile]",
+    "[Risk #2 based on company profile]",
+    "[Risk #3 based on company profile]"
   ],
   "visualCharts": {{
     "aiAdoptionTrends": ["[Quarter labels]"],
@@ -445,27 +500,20 @@ Return your findings in the following exact JSON format --  use this data to do 
     }}
   }}
 }}
-⚠️ Notes:
 
-Use USD for monetary values in billions (B) or millions (M).
-
-If numeric growth values aren't available for projections, provide a normalized trend (e.g., index from 1.0 to 2.5).
-
-Pie chart data under marketSizeBySegment must sum to ~100%.
-
-Keep bullet point recommendations short and actionable.
-
-give only json , nothing else , nothing at all
+⚠️ OUTPUT NOTES:
+- Use USD for monetary values in billions (B) or millions (M)
+- regionalHotspots must use regions from the company profile, not hardcoded APAC/Europe/North America
+- Include 2-5 regions in regionalHotspots based on what's in the company profile
+- Keep bullet point recommendations short and actionable
+- Return ONLY valid JSON, nothing else
 
 When you have reached the final answer, respond only with:
-Final Answer: <your answer here>
+Final Answer: <your JSON answer here>
 Do not include any additional reasoning, thoughts, or steps after that.
 """
 
-    prompt = PromptTemplate(
-    input_variables=["pre_data"],
-    template=template
-    ).format(pre_data=pre_data)
+    prompt = template.format(company_profile_json=company_profile_json)
 
     # Step 3: Get LLM response
     raw_response = agent_chain.invoke({'input': prompt})
@@ -482,29 +530,98 @@ Do not include any additional reasoning, thoughts, or steps after that.
     # ✅ Return the Python dict
     return parsed_json
 
-def Research_Market_3(pre_data: str) -> dict:
-    # Construct prompt by embedding the entire JSON string
-    template = """Task: Research and compile an updated overview of market in the exact format given at end, based on the data below based on this ( follow this strictly and do research based on what all provided here - {pre_data}.
+def Research_Market_3(pre_data) -> dict:
+    # Convert company profile to JSON string (handle both dict and string inputs)
+    if isinstance(pre_data, dict):
+        company_profile_json = json.dumps(pre_data, indent=2)
+    elif isinstance(pre_data, str):
+        # If it's already a string, try to parse and reformat for better readability
+        try:
+            parsed = json.loads(pre_data)
+            company_profile_json = json.dumps(parsed, indent=2)
+        except:
+            company_profile_json = pre_data
+    else:
+        company_profile_json = str(pre_data)
+    
+    # Construct prompt with full company profile and WebSearch instructions
+    template = """Task: Research and compile a comprehensive competitive landscape analysis, including competitor identification, market share data, SWOT analysis, recent news, feature comparisons, and market trends.
 
-Return your findings in the following exact JSON format --  use this data to do the research - {pre_data}
+STEP 1 - COMPANY PROFILE DATA:
+Review the complete company profile data below. Extract all relevant information about the company's industry, target markets, regions, and any other relevant attributes. Use this information to guide your competitive research.
 
+Company Profile Data:
+{company_profile_json}
+
+STEP 2 - RESEARCH REQUIREMENTS (CRITICAL):
+You MUST use the WebSearch tool extensively to find real, up-to-date competitive data. Based on the company profile above, identify the industry and target markets/regions, then perform comprehensive research:
+
+1. Competitor Identification Research:
+   - Search for real competitors operating in the company's industry and target markets/regions
+   - Find actual competitor names, not generic examples
+   - Example searches: "[industry] competitors [regions] 2024"
+   - Example searches: "[industry] top companies [regions]"
+
+2. Market Share Research:
+   - Search for market share data by region for the company's target markets
+   - Find competitor market share percentages from industry reports
+   - Example searches: "[industry] market share [region] 2024"
+   - Example searches: "[industry] competitor market share [regions]"
+   - Extract regions from company profile for marketShareCharts - do NOT use hardcoded regions
+
+3. Competitor News & Events Research:
+   - Search for recent news, product launches, and events from competitors
+   - Find M&A activity and strategic moves
+   - Example searches: "[competitor name] news 2024 2025"
+   - Example searches: "[industry] M&A activity [regions] 2024"
+
+4. SWOT Analysis Research:
+   - Search for competitor strengths and weaknesses from industry reports
+   - Find competitive positioning data
+   - Example searches: "[competitor name] SWOT analysis"
+   - Example searches: "[industry] competitive analysis [regions]"
+
+5. Feature Comparison Research:
+   - Search for product/feature comparisons in the industry
+   - Find competitive feature matrices
+   - Example searches: "[industry] product comparison [regions]"
+   - Example searches: "[industry] feature comparison tools"
+
+6. Market Trends Research:
+   - Search for current market trends and competitive dynamics
+   - Find industry trend reports
+   - Example searches: "[industry] market trends 2024 2025"
+
+IMPORTANT RESEARCH GUIDELINES:
+- Perform at least 7-10 WebSearch queries to ensure comprehensive coverage
+- Cross-reference data from multiple sources for accuracy
+- Focus on recent data (2024-2025) when available
+- Provide specific metrics, competitor names, and sources where possible
+- Extract target markets/regions from the company profile - do NOT assume or hardcode regions
+- The marketShareCharts regions array should use regions from the company profile
+- Competitor names must be REAL companies, not generic examples
+- News headlines must be REAL recent news with sources
+- Do NOT use hardcoded regions - use what's in the company profile
+
+STEP 3 - OUTPUT FORMAT:
+Return your findings in the following exact JSON format (use exact keys as shown):
 
 {{
   "uiComponents": [
     {{
       "type": "section",
-      "title": "[Section title]",
-      "description": "[Section description]",
+      "title": "[Section title based on company profile]",
+      "description": "[Section description based on company profile]",
       "metrics": [
         {{ "label": "[Metric label]", "value": "[Metric value]", "trend": "[up|down|stable]" }},
         {{ "label": "[Metric label]", "value": "[Metric value]", "trend": "[up|down|stable]" }}
       ],
-      "tags": ["[Competitor name]", "[Competitor name]", "[Competitor name]"]
+      "tags": ["[Real Competitor name]", "[Real Competitor name]", "[Real Competitor name]"]
     }},
     {{
       "type": "report",
-      "title": "[Report title]",
-      "executiveSummary": "[Executive summary of competitive landscape]",
+      "title": "[Report title based on company profile]",
+      "executiveSummary": "[Executive summary of competitive landscape based on company profile]",
       "dataPoints": [
         {{
           "label": "[Data point label]",
@@ -524,12 +641,12 @@ Return your findings in the following exact JSON format --  use this data to do 
       "type": "swotAnalysis",
       "entities": [
         {{
-          "name": "[Competitor name]",
+          "name": "[Real Competitor name]",
           "strengths": ["[Strength]", "[Strength]"],
           "weaknesses": ["[Weakness]", "[Weakness]"]
         }},
         {{
-          "name": "[Competitor name]",
+          "name": "[Real Competitor name]",
           "strengths": ["[Strength]", "[Strength]"],
           "weaknesses": ["[Weakness]", "[Weakness]"]
         }}
@@ -538,29 +655,29 @@ Return your findings in the following exact JSON format --  use this data to do 
     {{
       "type": "news",
       "headlines": [
-        "[News headline #1]",
-        "[News headline #2]",
-        "[News headline #3]"
+        "[Real News headline #1 with source]",
+        "[Real News headline #2 with source]",
+        "[Real News headline #3 with source]"
       ]
     }},
     {{
       "type": "marketShareCharts",
       "regions": [
         {{
-          "name": "[Region name]",
+          "name": "[Region from company profile]",
           "data": {{
-            "[Competitor]": "[Market share percentage]",
-            "[Competitor]": "[Market share percentage]",
-            "[Competitor]": "[Market share percentage]",
+            "[Real Competitor]": "[Market share percentage]",
+            "[Real Competitor]": "[Market share percentage]",
+            "[Real Competitor]": "[Market share percentage]",
             "Others": "[Market share percentage]"
           }}
         }},
         {{
-          "name": "[Region name]",
+          "name": "[Region from company profile]",
           "data": {{
-            "[Competitor]": "[Market share percentage]",
-            "[Competitor]": "[Market share percentage]",
-            "[Competitor]": "[Market share percentage]",
+            "[Real Competitor]": "[Market share percentage]",
+            "[Real Competitor]": "[Market share percentage]",
+            "[Real Competitor]": "[Market share percentage]",
             "Others": "[Market share percentage]"
           }}
         }}
@@ -570,10 +687,10 @@ Return your findings in the following exact JSON format --  use this data to do 
       "type": "featureComparison",
       "features": ["[Feature]", "[Feature]", "[Feature]", "[Feature]"],
       "tools": {{
-        "[Tool name]": ["[Comparison value]", "[Comparison value]", "[Comparison value]", "[Comparison value]"],
-        "[Tool name]": ["[Comparison value]", "[Comparison value]", "[Comparison value]", "[Comparison value]"],
-        "[Tool name]": ["[Comparison value]", "[Comparison value]", "[Comparison value]", "[Comparison value]"],
-        "[Tool name]": ["[Comparison value]", "[Comparison value]", "[Comparison value]", "[Comparison value]"]
+        "[Real Tool/Competitor name]": ["[Comparison value]", "[Comparison value]", "[Comparison value]", "[Comparison value]"],
+        "[Real Tool/Competitor name]": ["[Comparison value]", "[Comparison value]", "[Comparison value]", "[Comparison value]"],
+        "[Real Tool/Competitor name]": ["[Comparison value]", "[Comparison value]", "[Comparison value]", "[Comparison value]"],
+        "[Real Tool/Competitor name]": ["[Comparison value]", "[Comparison value]", "[Comparison value]", "[Comparison value]"]
       }}
     }},
     {{
@@ -603,27 +720,22 @@ Return your findings in the following exact JSON format --  use this data to do 
   ]
 }}
 
-⚠️ Notes:
-
-Use USD for monetary values in billions (B) or millions (M).
-
-If numeric growth values aren't available for projections, provide a normalized trend (e.g., index from 1.0 to 2.5).
-
-Pie chart data under marketSizeBySegment must sum to ~100%.
-
-Keep bullet point recommendations short and actionable.
-
-give only json , nothing else , nothing at all
+⚠️ OUTPUT NOTES:
+- Use USD for monetary values in billions (B) or millions (M)
+- Competitor names must be REAL companies, not generic examples
+- News headlines must be REAL recent news (within 6 months) with sources
+- Market share percentages must have sources
+- marketShareCharts regions must use regions from the company profile, not hardcoded regions
+- Include 2-5 regions in marketShareCharts based on what's in the company profile
+- Keep bullet point recommendations short and actionable
+- Return ONLY valid JSON, nothing else
 
 When you have reached the final answer, respond only with:
-Final Answer: <your answer here>
+Final Answer: <your JSON answer here>
 Do not include any additional reasoning, thoughts, or steps after that.
 """
 
-    prompt = PromptTemplate(
-    input_variables=["pre_data"],
-    template=template
-    ).format(pre_data=pre_data)
+    prompt = template.format(company_profile_json=company_profile_json)
 
     # Step 3: Get LLM response
     raw_response = agent_chain.invoke({'input': prompt})
