@@ -190,7 +190,7 @@ export const SuggestedICPCards = ({
   const [refinedICPs, setRefinedICPs] = useState<SuggestedICP[]>([]);
   const [newICPs, setNewICPs] = useState<SuggestedICP[]>([]);
   const [cardStatuses, setCardStatuses] = useState<Record<string, ICPCardStatus>>({});
-  const [expandedReportId, setExpandedReportId] = useState<string | null>(null);
+  
   const [loading, setLoading] = useState(true);
 
   // Modal states
@@ -198,6 +198,7 @@ export const SuggestedICPCards = ({
   const [confirmAcceptICP, setConfirmAcceptICP] = useState<SuggestedICP | null>(null);
   const [showAnnouncement, setShowAnnouncement] = useState(true);
   const [showRecommendations, setShowRecommendations] = useState(false);
+  const [reportSheetICP, setReportSheetICP] = useState<SuggestedICP | null>(null);
 
   // Load data
   useEffect(() => {
@@ -347,14 +348,28 @@ export const SuggestedICPCards = ({
       ...prev,
       [icp.id]: { status: "accepted", acceptedAt: new Date() },
     }));
+
+    // Add accepted ICP to Current ICPs table
+    const newExistingICP: ExistingICP = {
+      id: `accepted-${icp.id}`,
+      name: icp.name,
+      geography: icp.regions?.join(", ") || "—",
+      industry: icp.industry,
+      companySize: icp.companySize,
+      buyerRole: icp.decisionMakers?.join(", ") || "—",
+      fitConfidence: icp.confidenceScore,
+      status: "active",
+    };
+    setExistingICPs((prev) => [...prev, newExistingICP]);
+
     onICPAccepted?.(icp);
     toast({
       title: "Customer Profile updated.",
-      description: `"${icp.name}" has been saved to your Customer Profile.`,
+      description: `"${icp.name}" has been saved to your Customer Profile and Current ICPs.`,
     });
     setConfirmAcceptICP(null);
-    // Auto-open report after accepting
-    setExpandedReportId(icp.id);
+    // Auto-open report Sheet after accepting
+    setReportSheetICP(icp);
   };
 
   const handleRejectICP = (icp: SuggestedICP) => {
@@ -375,7 +390,7 @@ export const SuggestedICPCards = ({
       ...prev,
       [icpId]: { status: "suggested" },
     }));
-    if (expandedReportId === icpId) setExpandedReportId(null);
+    if (reportSheetICP?.id === icpId) setReportSheetICP(null);
     toast({ title: "Action undone", description: "ICP returned to suggestions." });
   };
 
@@ -557,7 +572,7 @@ export const SuggestedICPCards = ({
       </Sheet>
 
       {/* ═══ Section 2: Profiler Work Announcement ═══ */}
-      {showAnnouncement && !showRecommendations && (
+      {showAnnouncement && (
         <Card className="border-primary/20 bg-primary/[0.03]">
           <CardContent className="py-6">
             <div className="flex items-start gap-4">
@@ -572,18 +587,24 @@ export const SuggestedICPCards = ({
                   {refinedICPs.length} refinement{refinedICPs.length !== 1 ? "s" : ""} to existing ICPs and{" "}
                   {newICPs.length} new segment{newICPs.length !== 1 ? "s" : ""} identified.
                 </p>
-                <Button
-                  size="sm"
-                  className="mt-3 gap-1.5"
-                  onClick={() => {
-                    setShowRecommendations(true);
-                    setShowAnnouncement(false);
-                  }}
-                >
-                  <Sparkles className="h-3.5 w-3.5" />
-                  Show me the recommended ICPs
-                  <ArrowRight className="h-3.5 w-3.5" />
-                </Button>
+                {!showRecommendations ? (
+                  <Button
+                    size="sm"
+                    className="mt-3 gap-1.5"
+                    onClick={() => {
+                      setShowRecommendations(true);
+                    }}
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    Show me the recommended ICPs
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </Button>
+                ) : (
+                  <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+                    <Check className="h-3 w-3 text-emerald-600" />
+                    Recommended ICPs shown below
+                  </p>
+                )}
               </div>
             </div>
           </CardContent>
@@ -703,11 +724,13 @@ export const SuggestedICPCards = ({
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                onClick={() => setExpandedReportId(expandedReportId === icp.id ? null : icp.id)}
+                                onClick={() => {
+                                  const foundICP = allSuggestions.find(s => s.id === icp.id);
+                                  if (foundICP) setReportSheetICP(foundICP);
+                                }}
                                 className="h-7 px-2 text-xs text-primary"
                               >
                                 <Eye className="h-3.5 w-3.5 mr-1" />Report
-                                {expandedReportId === icp.id ? <ChevronUp className="h-3 w-3 ml-0.5" /> : <ChevronDown className="h-3 w-3 ml-0.5" />}
                               </Button>
                             )}
                           </div>
@@ -720,20 +743,27 @@ export const SuggestedICPCards = ({
             </Card>
           </div>
 
-          {/* ICP Report (full-width, shown after accept) */}
-          {expandedReportId && (() => {
-            const expandedICP = allSuggestions.find((s) => s.id === expandedReportId);
-            if (!expandedICP || cardStatuses[expandedReportId]?.status !== "accepted") return null;
-            return (
-              <Card className="w-full border-primary/20 shadow-lg animate-fade-in">
+          {/* ICP Report Sheet (side panel) */}
+          <Sheet open={!!reportSheetICP} onOpenChange={(open) => !open && setReportSheetICP(null)}>
+            {reportSheetICP && (
+              <SheetContent side="right" className="sm:max-w-lg overflow-y-auto">
+                <SheetHeader className="mb-4">
+                  <SheetTitle className="flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-primary" />
+                    ICP Report: {reportSheetICP.name}
+                  </SheetTitle>
+                  <SheetDescription>
+                    Full report for the accepted {reportSheetICP.type === "refined" ? "refined" : "new"} ICP
+                  </SheetDescription>
+                </SheetHeader>
                 <ICPReportPanel
-                  icp={expandedICP}
-                  onClose={() => setExpandedReportId(null)}
-                  onViewProspects={() => handleViewProspects(expandedICP.type === "refined" ? "Refined ICP" : "New ICP")}
+                  icp={reportSheetICP}
+                  onClose={() => setReportSheetICP(null)}
+                  onViewProspects={() => handleViewProspects(reportSheetICP.type === "refined" ? "Refined ICP" : "New ICP")}
                 />
-              </Card>
-            );
-          })()}
+              </SheetContent>
+            )}
+          </Sheet>
         </div>
       )}
 
