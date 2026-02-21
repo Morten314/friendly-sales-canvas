@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { EditDropdownMenu } from "@/components/market-research/EditDropdownMenu";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
@@ -61,6 +62,8 @@ import {
   Gauge,
   Lightbulb,
   Zap,
+  MessageSquare,
+  Pencil,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -537,10 +540,30 @@ export const SuggestedICPCards = ({
           return (
             <SheetContent side="right" className="sm:max-w-lg overflow-y-auto">
               <SheetHeader className="mb-4">
-                <SheetTitle className="flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-primary" />
-                  Profiler's Analysis: {selectedExistingICP.name}
-                </SheetTitle>
+                <div className="flex items-center justify-between">
+                  <SheetTitle className="flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-primary" />
+                    Profiler's Analysis: {selectedExistingICP.name}
+                  </SheetTitle>
+                  <div className="flex items-center gap-1">
+                    <EditDropdownMenu
+                      onModify={() => {
+                        toast({ title: "Edit mode", description: "You can now modify this report." });
+                      }}
+                    />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-primary hover:text-primary/80 gap-1.5"
+                      onClick={() => {
+                        toast({ title: "Chat with Profiler", description: "Profiler agent chat opening..." });
+                      }}
+                    >
+                      <MessageSquare className="h-4 w-4" />
+                      Agentic
+                    </Button>
+                  </div>
+                </div>
                 <SheetDescription>
                   Here's how Profiler interprets this ICP targeting.
                 </SheetDescription>
@@ -613,6 +636,29 @@ export const SuggestedICPCards = ({
                     Confidence: {analysis.confidence}
                   </Badge>
                 </div>
+
+                {/* View Leads CTA */}
+                <Card className="border-primary/20 bg-primary/[0.03]">
+                  <CardContent className="py-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
+                          <Zap className="h-4 w-4 text-primary" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-foreground">View prospects for this ICP</p>
+                          <p className="text-xs text-muted-foreground">
+                            See leads in Lead Stream filtered by "{selectedExistingICP.name}"
+                          </p>
+                        </div>
+                      </div>
+                      <Button size="sm" className="gap-1.5" onClick={() => handleViewProspects(selectedExistingICP.name)}>
+                        Go to Lead Stream
+                        <ArrowRight className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             </SheetContent>
           );
@@ -989,6 +1035,7 @@ interface ICPReportPanelProps {
 }
 
 const ICPReportPanel = ({ icp, onClose, onViewProspects }: ICPReportPanelProps) => {
+  const { toast: reportToast } = useToast();
   return (
     <div className="space-y-5">
       {/* Header */}
@@ -1012,6 +1059,22 @@ const ICPReportPanel = ({ icp, onClose, onViewProspects }: ICPReportPanelProps) 
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <EditDropdownMenu
+            onModify={() => {
+              reportToast({ title: "Edit mode", description: "You can now modify this report." });
+            }}
+          />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-primary hover:text-primary/80 gap-1.5"
+            onClick={() => {
+              reportToast({ title: "Chat with Profiler", description: "Profiler agent chat opening..." });
+            }}
+          >
+            <MessageSquare className="h-4 w-4" />
+            Agentic
+          </Button>
           <Button variant="ghost" size="sm">
             <Save className="h-4 w-4 mr-1" />
             Save
