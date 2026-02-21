@@ -186,10 +186,22 @@ export const SuggestedICPCards = ({
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const [existingICPs, setExistingICPs] = useState<ExistingICP[]>([]);
+  const [existingICPs, setExistingICPs] = useState<ExistingICP[]>(() => {
+    try {
+      const saved = localStorage.getItem("profiler_existingICPs");
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return [];
+  });
   const [refinedICPs, setRefinedICPs] = useState<SuggestedICP[]>([]);
   const [newICPs, setNewICPs] = useState<SuggestedICP[]>([]);
-  const [cardStatuses, setCardStatuses] = useState<Record<string, ICPCardStatus>>({});
+  const [cardStatuses, setCardStatuses] = useState<Record<string, ICPCardStatus>>(() => {
+    try {
+      const saved = localStorage.getItem("profiler_cardStatuses");
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return {};
+  });
   
   const [loading, setLoading] = useState(true);
 
@@ -197,8 +209,26 @@ export const SuggestedICPCards = ({
   const [selectedExistingICP, setSelectedExistingICP] = useState<ExistingICP | null>(null);
   const [confirmAcceptICP, setConfirmAcceptICP] = useState<SuggestedICP | null>(null);
   const [showAnnouncement, setShowAnnouncement] = useState(true);
-  const [showRecommendations, setShowRecommendations] = useState(false);
+  const [showRecommendations, setShowRecommendations] = useState(() => {
+    try {
+      return localStorage.getItem("profiler_showRecommendations") === "true";
+    } catch {}
+    return false;
+  });
   const [reportSheetICP, setReportSheetICP] = useState<SuggestedICP | null>(null);
+
+  // Persist state changes to localStorage
+  useEffect(() => {
+    localStorage.setItem("profiler_cardStatuses", JSON.stringify(cardStatuses));
+  }, [cardStatuses]);
+
+  useEffect(() => {
+    localStorage.setItem("profiler_existingICPs", JSON.stringify(existingICPs));
+  }, [existingICPs]);
+
+  useEffect(() => {
+    localStorage.setItem("profiler_showRecommendations", String(showRecommendations));
+  }, [showRecommendations]);
 
   // Load data
   useEffect(() => {
@@ -206,34 +236,48 @@ export const SuggestedICPCards = ({
       setLoading(true);
 
       let icps: ExistingICP[] = [];
+      // Check if we already have persisted existingICPs (from accepted recommendations)
       try {
-        const stored = localStorage.getItem("customerICPs") || localStorage.getItem("missionControlICPs");
-        if (stored) icps = JSON.parse(stored);
+        const persistedExisting = localStorage.getItem("profiler_existingICPs");
+        if (persistedExisting) {
+          const parsed = JSON.parse(persistedExisting);
+          if (parsed.length > 0) {
+            icps = parsed;
+          }
+        }
       } catch {}
 
+      // If no persisted data, load from other sources or use defaults
       if (icps.length === 0) {
-        icps = [
-          {
-            id: "existing-1",
-            name: "ICP 1",
-            geography: "North America",
-            industry: "Software & Technology",
-            companySize: "100-500 employees",
-            buyerRole: "CTO / VP Engineering",
-            fitConfidence: "High",
-            status: "active",
-          },
-          {
-            id: "existing-2",
-            name: "ICP 2",
-            geography: "US, UK",
-            industry: "Healthcare",
-            companySize: "200-1000 employees",
-            buyerRole: "CIO / Chief Digital Officer",
-            fitConfidence: "Medium",
-            status: "active",
-          },
-        ];
+        try {
+          const stored = localStorage.getItem("customerICPs") || localStorage.getItem("missionControlICPs");
+          if (stored) icps = JSON.parse(stored);
+        } catch {}
+
+        if (icps.length === 0) {
+          icps = [
+            {
+              id: "existing-1",
+              name: "ICP 1",
+              geography: "North America",
+              industry: "Software & Technology",
+              companySize: "100-500 employees",
+              buyerRole: "CTO / VP Engineering",
+              fitConfidence: "High",
+              status: "active",
+            },
+            {
+              id: "existing-2",
+              name: "ICP 2",
+              geography: "US, UK",
+              industry: "Healthcare",
+              companySize: "200-1000 employees",
+              buyerRole: "CIO / Chief Digital Officer",
+              fitConfidence: "Medium",
+              status: "active",
+            },
+          ];
+        }
       }
       setExistingICPs(icps);
 
@@ -326,11 +370,15 @@ export const SuggestedICPCards = ({
       setRefinedICPs(refined);
       setNewICPs(newSuggestions);
 
-      const initialStatuses: Record<string, ICPCardStatus> = {};
-      [...refined, ...newSuggestions].forEach((icp) => {
-        initialStatuses[icp.id] = { status: "suggested" };
-      });
-      setCardStatuses(initialStatuses);
+      // Only set initial statuses if we don't have persisted ones
+      const persistedStatuses = localStorage.getItem("profiler_cardStatuses");
+      if (!persistedStatuses || Object.keys(JSON.parse(persistedStatuses)).length === 0) {
+        const initialStatuses: Record<string, ICPCardStatus> = {};
+        [...refined, ...newSuggestions].forEach((icp) => {
+          initialStatuses[icp.id] = { status: "suggested" };
+        });
+        setCardStatuses(initialStatuses);
+      }
       setLoading(false);
     };
     loadData();
