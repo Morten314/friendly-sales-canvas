@@ -2559,17 +2559,9 @@ const MarketResearch = React.memo(() => {
             ...parsedData,
             visualCharts: parsedData.visualCharts || {
               aiAdoptionTrends: [],
-              technologyBudgetAllocation: {
-                "AI/ML": '',
-                Cloud: '',
-                Security: ''
-              }
+              technologyBudgetAllocation: {}
             },
-            regionalHotspots: parsedData.regionalHotspots || {
-              APAC: '',
-              Europe: '',
-              "North America": ''
-            }
+            regionalHotspots: parsedData.regionalHotspots || {}
           };
 
           return dataWithDefaults;
@@ -2632,29 +2624,13 @@ const MarketResearch = React.memo(() => {
 
       },
 
-      regionalHotspots: {
-
-        APAC: "78%",
-
-        Europe: "65%",
-
-        "North America": "72%"
-
-      },
+      regionalHotspots: {},
 
       visualCharts: {
 
-        aiAdoptionTrends: ["Q1", "Q2", "Q3", "Q4"],
+        aiAdoptionTrends: [],
 
-        technologyBudgetAllocation: {
-
-          "AI/ML": "35%",
-
-          Cloud: "40%",
-
-          Security: "25%"
-
-        }
+        technologyBudgetAllocation: {}
 
       },
 
@@ -6651,11 +6627,7 @@ const MarketResearch = React.memo(() => {
 
             regionalHotspots: (apiData.regionalHotspots !== undefined && apiData.regionalHotspots && typeof apiData.regionalHotspots === 'object' && Object.keys(apiData.regionalHotspots).length > 0)
               ? apiData.regionalHotspots
-              : (industryTrendsData?.regionalHotspots || {
-                  APAC: '',
-                  Europe: '',
-                  "North America": ''
-                }),
+              : (industryTrendsData?.regionalHotspots || {}),
 
             visualCharts: (apiData.visualCharts !== undefined && apiData.visualCharts && typeof apiData.visualCharts === 'object' && Object.keys(apiData.visualCharts).length > 0)
               ? {
@@ -6670,19 +6642,11 @@ const MarketResearch = React.memo(() => {
                       })(),
                   technologyBudgetAllocation: (apiData.visualCharts.technologyBudgetAllocation !== undefined && apiData.visualCharts.technologyBudgetAllocation && typeof apiData.visualCharts.technologyBudgetAllocation === 'object' && Object.keys(apiData.visualCharts.technologyBudgetAllocation).length > 0)
                     ? apiData.visualCharts.technologyBudgetAllocation
-                    : (industryTrendsData?.visualCharts?.technologyBudgetAllocation || {
-                        "AI/ML": '',
-                        Cloud: '',
-                        Security: ''
-                      })
+                    : (industryTrendsData?.visualCharts?.technologyBudgetAllocation || {})
                 }
               : (industryTrendsData?.visualCharts || {
                   aiAdoptionTrends: [],
-                  technologyBudgetAllocation: {
-                    "AI/ML": '',
-                    Cloud: '',
-                    Security: ''
-                  }
+                  technologyBudgetAllocation: {}
                 }),
 
             risks: (apiData.risks !== undefined && Array.isArray(apiData.risks) && apiData.risks.length > 0)

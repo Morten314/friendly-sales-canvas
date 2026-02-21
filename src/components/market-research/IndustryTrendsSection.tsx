@@ -44,9 +44,7 @@ interface IndustryTrendsData {
   timestamp?: string | number; // Allow both string and number for flexibility
   trendSnapshots: TrendSnapshot[];
   regionalHotspots: {
-    APAC: string;
-    Europe: string;
-    "North America": string;
+    [key: string]: string;
   };
   strategicRecommendations: IndustryTrendsRecommendations;
   recommendations?: IndustryTrendsRecommendations; // Allow both property names for compatibility
@@ -54,9 +52,7 @@ interface IndustryTrendsData {
   visualCharts: {
     aiAdoptionTrends: string[];
     technologyBudgetAllocation: {
-      "AI/ML": string;
-      Cloud: string;
-      Security: string;
+      [key: string]: string;
     };
   };
 }
@@ -90,16 +86,12 @@ interface IndustryTrendsSectionProps {
   recommendations?: IndustryTrendsRecommendations;
   risks?: string[];
   regionalHotspots?: {
-    APAC: string;
-    Europe: string;
-    "North America": string;
+    [key: string]: string;
   };
   visualCharts?: {
     aiAdoptionTrends: string[];
     technologyBudgetAllocation: {
-      "AI/ML": string;
-      Cloud: string;
-      Security: string;
+      [key: string]: string;
     };
   };
   // Add individual field update functions
@@ -394,18 +386,10 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                 marketEntry: 'Strategic partnerships and gradual market penetration'
               });
 
-          // Fix regional hotspots structure
-          const regionalHotspots = reportData.regionalHotspots && typeof reportData.regionalHotspots === 'object'
-            ? {
-                APAC: reportData.regionalHotspots.India || reportData.regionalHotspots.APAC || '60%',
-                Europe: reportData.regionalHotspots.Europe || '45%',
-                "North America": reportData.regionalHotspots["North America"] || '55%'
-              }
-            : {
-                APAC: '60%',
-                Europe: '45%',
-                "North America": '55%'
-              };
+          // Use regional hotspots data as-is from backend
+          const regionalHotspots = reportData.regionalHotspots && typeof reportData.regionalHotspots === 'object' && Object.keys(reportData.regionalHotspots).length > 0
+            ? reportData.regionalHotspots
+            : {};
 
           const dataWithFallbacks = {
             ...reportData,
@@ -419,19 +403,11 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                     : [],
                   technologyBudgetAllocation: (reportData.visualCharts.technologyBudgetAllocation && typeof reportData.visualCharts.technologyBudgetAllocation === 'object' && Object.keys(reportData.visualCharts.technologyBudgetAllocation).length > 0)
                     ? reportData.visualCharts.technologyBudgetAllocation
-                    : {
-                        "AI/ML": '',
-                        Cloud: '',
-                        Security: ''
-                      }
+                    : {}
                 }
               : {
                   aiAdoptionTrends: [],
-                  technologyBudgetAllocation: {
-                    "AI/ML": '',
-                    Cloud: '',
-                    Security: ''
-                  }
+                  technologyBudgetAllocation: {}
                 },
             risks: reportData.risks || [],
             marketDrivers: reportData.marketDrivers || [],
@@ -542,13 +518,9 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
           strategicRecommendations: (prevData.strategicRecommendations?.primaryFocus || prevData.recommendations?.primaryFocus) ? (prevData.strategicRecommendations || prevData.recommendations) : (propRecommendations || { primaryFocus: '', marketEntry: '' }),
           recommendations: (prevData.strategicRecommendations?.primaryFocus || prevData.recommendations?.primaryFocus) ? (prevData.strategicRecommendations || prevData.recommendations) : (propRecommendations || { primaryFocus: '', marketEntry: '' }),
           risks: prevData.risks?.length > 0 ? prevData.risks : (propRisks || []),
-          regionalHotspots: (prevData.regionalHotspots && Object.keys(prevData.regionalHotspots).length > 0 && prevData.regionalHotspots.APAC) 
+          regionalHotspots: (prevData.regionalHotspots && Object.keys(prevData.regionalHotspots).length > 0) 
             ? prevData.regionalHotspots 
-            : (propRegionalHotspots || {
-                APAC: '',
-                Europe: '',
-                "North America": ''
-              }),
+            : (propRegionalHotspots || {}),
           visualCharts: (prevData.visualCharts && Object.keys(prevData.visualCharts).length > 0 && prevData.visualCharts.aiAdoptionTrends?.length > 0)
             ? prevData.visualCharts
             : (propVisualCharts || {
@@ -574,11 +546,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
         cloudMigration: industryTrendsData?.cloudMigration || '',
         regulatory: industryTrendsData?.regulatory || '',
         trendSnapshots: industryTrendsData?.trendSnapshots || [],
-        regionalHotspots: industryTrendsData?.regionalHotspots || propRegionalHotspots || {
-          APAC: '',
-          Europe: '',
-          "North America": ''
-        },
+        regionalHotspots: industryTrendsData?.regionalHotspots || propRegionalHotspots || {},
         strategicRecommendations: industryTrendsData?.strategicRecommendations || industryTrendsData?.recommendations || propRecommendations || {
           primaryFocus: '',
           marketEntry: ''
@@ -586,11 +554,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
         risks: industryTrendsData?.risks || propRisks || [],
         visualCharts: industryTrendsData?.visualCharts || propVisualCharts || {
           aiAdoptionTrends: [],
-          technologyBudgetAllocation: {
-            "AI/ML": '',
-            Cloud: '',
-            Security: ''
-          }
+          technologyBudgetAllocation: {}
         }
       };
 
@@ -1539,20 +1503,14 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                 <div className="mb-8">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Regional Hotspots</h3>
                   <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                    {industryTrendsData?.regionalHotspots ? (
+                    {industryTrendsData?.regionalHotspots && Object.keys(industryTrendsData.regionalHotspots).length > 0 ? (
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-blue-600">{industryTrendsData.regionalHotspots.APAC}</div>
-                          <div className="text-sm text-gray-700">APAC</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-blue-600">{industryTrendsData.regionalHotspots.Europe}</div>
-                          <div className="text-sm text-gray-700">Europe</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-blue-600">{industryTrendsData.regionalHotspots["North America"]}</div>
-                          <div className="text-sm text-gray-700">North America</div>
-                        </div>
+                        {Object.entries(industryTrendsData.regionalHotspots).map(([region, value]) => (
+                          <div key={region} className="text-center">
+                            <div className="text-2xl font-bold text-blue-600">{value}</div>
+                            <div className="text-sm text-gray-700">{region}</div>
+                          </div>
+                        ))}
                       </div>
                     ) : (
                       <p className="text-gray-500">No regional hotspots data available</p>
@@ -1636,34 +1594,28 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                         {(() => {
                           try {
                             const budgetData = visualCharts?.technologyBudgetAllocation || industryTrendsData?.visualCharts?.technologyBudgetAllocation;
-                            if (!budgetData) {
+                            if (!budgetData || Object.keys(budgetData).length === 0) {
                               return <p className="text-gray-500 text-sm">No budget allocation data available</p>;
                             }
                             
-                            // Safely parse the data with fallbacks
-                            const aiValue = budgetData["AI/ML"] ? parseInt(String(budgetData["AI/ML"]).replace('%', '')) : 30;
-                            const cloudValue = budgetData.Cloud ? parseInt(String(budgetData.Cloud).replace('%', '')) : 25;
-                            const securityValue = budgetData.Security ? parseInt(String(budgetData.Security).replace('%', '')) : 20;
+                            // Dynamically parse all entries from the budget data
+                            const colors = ["#8B5CF6", "#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#06B6D4", "#84CC16", "#EC4899"];
+                            const chartData = Object.entries(budgetData).map(([name, value], index) => {
+                              const numericValue = value ? parseInt(String(value).replace('%', '')) : 0;
+                              return {
+                                name: name,
+                                value: isNaN(numericValue) ? 0 : numericValue,
+                                color: colors[index % colors.length]
+                              };
+                            }).filter(item => item.value > 0); // Only include items with valid values
+                            
+                            if (chartData.length === 0) {
+                              return <p className="text-gray-500 text-sm">No valid budget allocation data available</p>;
+                            }
                             
                             return (
                               <MiniPieChart 
-                                data={[
-                                  { 
-                                    name: "AI/ML", 
-                                    value: isNaN(aiValue) ? 30 : aiValue,
-                                    color: "#8B5CF6" 
-                                  },
-                                  { 
-                                    name: "Cloud", 
-                                    value: isNaN(cloudValue) ? 25 : cloudValue,
-                                    color: "#3B82F6" 
-                                  },
-                                  { 
-                                    name: "Security", 
-                                    value: isNaN(securityValue) ? 20 : securityValue,
-                                    color: "#10B981" 
-                                  }
-                                ]} 
+                                data={chartData} 
                                 title="" 
                               />
                             );
