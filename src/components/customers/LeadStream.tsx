@@ -16,9 +16,8 @@ interface Lead {
   name: string;
   company: string;
   title: string;
-  matchedICP: string;
+  source: string;
   intentLevel: "High" | "Medium" | "Low";
-  sourceLabel: "Existing" | "New";
   reason: string;
 }
 
@@ -30,66 +29,12 @@ interface ContextChip {
 
 // --- Mock Data ---
 const mockLeads: Lead[] = [
-  {
-    id: "1",
-    name: "Sarah Chen",
-    company: "Acme Corp",
-    title: "VP of Revenue Operations",
-    matchedICP: "ICP 1",
-    intentLevel: "High",
-    sourceLabel: "Existing",
-    reason: "Matches ICP + buyer role + region. Active hiring for RevOps roles.",
-  },
-  {
-    id: "2",
-    name: "James Okoro",
-    company: "ScaleUp Inc",
-    title: "Head of GTM Strategy",
-    matchedICP: "ICP 2",
-    intentLevel: "High",
-    sourceLabel: "New",
-    reason: "Strong intent: expanding GTM team + evaluating competitors in your space.",
-  },
-  {
-    id: "3",
-    name: "Priya Sharma",
-    company: "NovaTech Solutions",
-    title: "Director of Sales Enablement",
-    matchedICP: "ICP 1",
-    intentLevel: "High",
-    sourceLabel: "Existing",
-    reason: "Lookalike of accepted ICP + high fit. Competitor tool usage detected.",
-  },
-  {
-    id: "4",
-    name: "Marcus Liu",
-    company: "DataDriven AI",
-    title: "CRO",
-    matchedICP: "ICP 2",
-    intentLevel: "Medium",
-    sourceLabel: "New",
-    reason: "Right buyer role + region match. Recent funding round signals growth phase.",
-  },
-  {
-    id: "5",
-    name: "Elena Vasquez",
-    company: "CloudFirst Systems",
-    title: "VP Sales",
-    matchedICP: "ICP 1",
-    intentLevel: "High",
-    sourceLabel: "Existing",
-    reason: "Matches ICP + active job postings for sales leadership + competitor tool churn.",
-  },
-  {
-    id: "6",
-    name: "David Park",
-    company: "Momentum Labs",
-    title: "Head of Partnerships",
-    matchedICP: "ICP 2",
-    intentLevel: "Medium",
-    sourceLabel: "New",
-    reason: "Strong ICP alignment. Partnership-led growth model fits your offering.",
-  },
+  { id: "1", name: "Sarah Chen", company: "Acme Corp", title: "VP of Revenue Operations", source: "ICP 1", intentLevel: "High", reason: "Matches ICP + buyer role + region. Active hiring for RevOps roles." },
+  { id: "2", name: "James Okoro", company: "ScaleUp Inc", title: "Head of GTM Strategy", source: "ICP 2", intentLevel: "High", reason: "Strong intent: expanding GTM team + evaluating competitors in your space." },
+  { id: "3", name: "Priya Sharma", company: "NovaTech Solutions", title: "Director of Sales Enablement", source: "ICP 1", intentLevel: "High", reason: "Lookalike of accepted ICP + high fit. Competitor tool usage detected." },
+  { id: "4", name: "Marcus Liu", company: "DataDriven AI", title: "CRO", source: "ICP 2", intentLevel: "Medium", reason: "Right buyer role + region match. Recent funding round signals growth phase." },
+  { id: "5", name: "Elena Vasquez", company: "CloudFirst Systems", title: "VP Sales", source: "ICP 1", intentLevel: "High", reason: "Matches ICP + active job postings for sales leadership + competitor tool churn." },
+  { id: "6", name: "David Park", company: "Momentum Labs", title: "Head of Partnerships", source: "ICP 2", intentLevel: "Medium", reason: "Strong ICP alignment. Partnership-led growth model fits your offering." },
 ];
 
 const mockContextChips: ContextChip[] = [
@@ -122,16 +67,11 @@ const IntentBadge = ({ level }: { level: Lead["intentLevel"] }) => {
 };
 
 // --- Source Badge ---
-const SourceBadge = ({ source }: { source: Lead["sourceLabel"] }) => (
+const SourceBadge = ({ source }: { source: string }) => (
   <Badge
     variant="outline"
-    className={`text-xs font-medium ${
-      source === "Existing"
-        ? "bg-primary/5 text-primary border-primary/20"
-        : "bg-violet-50 text-violet-700 border-violet-200"
-    }`}
+    className="text-xs font-medium bg-primary/5 text-primary border-primary/20"
   >
-    {source === "New" && <Zap className="h-3 w-3 mr-1" />}
     {source}
   </Badge>
 );
@@ -164,11 +104,16 @@ interface LeadStreamPanelProps {
 export const LeadStreamPanel = ({ filterByICP, onClearFilter }: LeadStreamPanelProps) => {
   const [howOpen, setHowOpen] = useState(false);
   const [savedLeads, setSavedLeads] = useState<Set<string>>(new Set());
+  const [sortSourceAsc, setSortSourceAsc] = useState<boolean | null>(null);
   const hasProspectData = true; // TODO: derive from Data Sources
 
-  const displayedLeads = filterByICP
-    ? mockLeads.filter((lead) => lead.matchedICP === filterByICP || lead.matchedICP.toLowerCase().includes(filterByICP.toLowerCase()) || filterByICP.toLowerCase().includes(lead.matchedICP.toLowerCase()))
+  const filteredLeads = filterByICP
+    ? mockLeads.filter((lead) => lead.source === filterByICP || lead.source.toLowerCase().includes(filterByICP.toLowerCase()) || filterByICP.toLowerCase().includes(lead.source.toLowerCase()))
     : mockLeads;
+
+  const displayedLeads = sortSourceAsc !== null
+    ? [...filteredLeads].sort((a, b) => sortSourceAsc ? a.source.localeCompare(b.source) : b.source.localeCompare(a.source))
+    : filteredLeads;
 
   const toggleSave = (id: string) => {
     setSavedLeads((prev) => {
@@ -233,9 +178,17 @@ export const LeadStreamPanel = ({ filterByICP, onClearFilter }: LeadStreamPanelP
                 <TableHead className="w-[160px]">Lead Name</TableHead>
                 <TableHead className="w-[140px]">Company</TableHead>
                 <TableHead className="w-[160px]">Title</TableHead>
-                <TableHead className="w-[130px]">Matched ICP</TableHead>
                 <TableHead className="w-[100px]">Intent</TableHead>
-                <TableHead className="w-[80px]">Source</TableHead>
+                <TableHead
+                  className="w-[100px] cursor-pointer select-none"
+                  onClick={() => setSortSourceAsc(prev => prev === null ? true : prev ? false : null)}
+                >
+                  <span className="inline-flex items-center gap-1">
+                    Source
+                    {sortSourceAsc === true && <ChevronDown className="h-3 w-3 rotate-180" />}
+                    {sortSourceAsc === false && <ChevronDown className="h-3 w-3" />}
+                  </span>
+                </TableHead>
                 <TableHead className="min-w-[200px]">Reason</TableHead>
                 <TableHead className="w-[100px] text-right">Actions</TableHead>
               </TableRow>
@@ -246,13 +199,8 @@ export const LeadStreamPanel = ({ filterByICP, onClearFilter }: LeadStreamPanelP
                   <TableCell className="font-medium text-foreground">{lead.name}</TableCell>
                   <TableCell className="text-muted-foreground">{lead.company}</TableCell>
                   <TableCell className="text-muted-foreground text-xs">{lead.title}</TableCell>
-                  <TableCell>
-                    <Badge variant="secondary" className="text-xs font-normal">
-                      {lead.matchedICP}
-                    </Badge>
-                  </TableCell>
                   <TableCell><IntentBadge level={lead.intentLevel} /></TableCell>
-                  <TableCell><SourceBadge source={lead.sourceLabel} /></TableCell>
+                  <TableCell><SourceBadge source={lead.source} /></TableCell>
                   <TableCell>
                     <TooltipProvider delayDuration={200}>
                       <Tooltip>
