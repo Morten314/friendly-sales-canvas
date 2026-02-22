@@ -36,6 +36,7 @@ interface MarketSizeOpportunityComponentProps {
   strategicRecommendations: string[];
   marketEntry: string;
   marketDrivers: string[];
+  marketSizeBySegment?: Record<string, string>;
   onToggleEdit: () => void;
   onScoutIconClick: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape', hasEdits?: boolean, customMessage?: string) => void;
   onEditHistoryOpen: () => void;
@@ -72,6 +73,7 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
   strategicRecommendations,
   marketEntry,
   marketDrivers,
+  marketSizeBySegment,
   onToggleEdit,
   onScoutIconClick,
   onEditHistoryOpen,
@@ -337,13 +339,25 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
     }
   };
 
-  // Mock data for charts
-  const pieChartData = [
-    { name: 'North America', value: 40, color: '#3B82F6' },
-    { name: 'Europe', value: 30, color: '#10B981' },
-    { name: 'APAC', value: 25, color: '#8B5CF6' },
-    { name: 'Others', value: 5, color: '#F59E0B' }
-  ];
+  // Convert marketSizeBySegment from backend to chart format
+  // Backend format: { "Enterprise": "45%", "Mid-Market": "35%", "SMB": "20%" }
+  // Chart format: [{ name: "Enterprise", value: 45, color: "#..." }, ...]
+  const segmentChartData = React.useMemo(() => {
+    if (!marketSizeBySegment || Object.keys(marketSizeBySegment).length === 0) {
+      return [];
+    }
+    
+    const colors = ['#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EF4444', '#06B6D4'];
+    return Object.entries(marketSizeBySegment).map(([segment, percentage], index) => {
+      // Remove % sign and convert to number
+      const value = parseFloat(percentage.replace('%', ''));
+      return {
+        name: segment,
+        value: isNaN(value) ? 0 : value,
+        color: colors[index % colors.length]
+      };
+    });
+  }, [marketSizeBySegment]);
 
   const lineChartData = [
     { name: 'Jan', value: 2.1 },
@@ -763,19 +777,21 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
                   </div>
                 </div>
 
-                {/* Regional Distribution Chart */}
-                <div className="mb-8">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                    <PieChart className="h-5 w-5 text-indigo-600" />
-                    Regional Market Distribution
-                  </h3>
-                  <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
-                    <MiniPieChart 
-                      data={pieChartData}
-                      title="Market Share by Region"
-                    />
+                {/* Market Size by Segment Chart */}
+                {segmentChartData.length > 0 && (
+                  <div className="mb-8">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <PieChart className="h-5 w-5 text-indigo-600" />
+                      Market Size by Segment
+                    </h3>
+                    <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                      <MiniPieChart 
+                        data={segmentChartData}
+                        title="Market Share by Segment"
+                      />
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Market Growth Trajectory */}
                 <div className="mb-8">

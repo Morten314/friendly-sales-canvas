@@ -559,7 +559,27 @@ const Index = () => {
     
     const contentHash = getSignalContentHash(signal);
     
-    if (!acceptedSignals.has(contentHash)) {
+    // Toggle accept state - if already accepted, unaccept it
+    if (acceptedSignals.has(contentHash)) {
+      // Unaccept the signal
+      const newAccepted = new Set(acceptedSignals);
+      newAccepted.delete(contentHash);
+      setAcceptedSignals(newAccepted);
+      
+      // Save to localStorage
+      const storageKey = `signals_${currentUser.uid}`;
+      try {
+        localStorage.setItem(`${storageKey}_accepted`, JSON.stringify(Array.from(newAccepted)));
+      } catch (error) {
+        console.error('Error saving accepted signals to localStorage:', error);
+      }
+      
+      toast({
+        title: "Signal unaccepted",
+        description: "This signal has been unaccepted.",
+      });
+    } else {
+      // Accept the signal
       const newAccepted = new Set([...acceptedSignals, contentHash]);
       setAcceptedSignals(newAccepted);
       
@@ -581,11 +601,17 @@ const Index = () => {
   const handleRejectSignal = (signalId: string) => {
     if (!currentUser?.uid) return;
     
-    // Find the signal to get its content hash
-    const signal = signals.find(s => s.id === signalId);
+    // Find the signal and its index to get its content hash
+    const signalIndex = signals.findIndex(s => s.id === signalId);
+    const signal = signals[signalIndex];
     if (!signal) return;
     
     const contentHash = getSignalContentHash(signal);
+    const storageKey = `signals_${currentUser.uid}`;
+    
+    // Store the signal and its original index for undo
+    const signalToRestore = signal;
+    const originalIndex = signalIndex;
     
     // Remove from signals list
     setSignals(prev => prev.filter(s => s.id !== signalId));
@@ -596,7 +622,6 @@ const Index = () => {
       newSet.delete(contentHash);
       
       // Update localStorage
-      const storageKey = `signals_${currentUser.uid}`;
       try {
         localStorage.setItem(`${storageKey}_accepted`, JSON.stringify(Array.from(newSet)));
       } catch (error) {
@@ -611,16 +636,58 @@ const Index = () => {
     setRejectedSignalHashes(newRejected);
     
     // Save rejected signals to localStorage
-    const storageKey = `signals_${currentUser.uid}`;
     try {
       localStorage.setItem(`${storageKey}_rejected`, JSON.stringify(Array.from(newRejected)));
     } catch (error) {
       console.error('Error saving rejected signals to localStorage:', error);
     }
     
+    // Show toast with undo option
     toast({
       title: "Signal removed",
       description: "This signal has been removed from your list.",
+      action: (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            // Restore the signal to its original position
+            setSignals(prev => {
+              // Check if signal already exists (shouldn't, but be safe)
+              const exists = prev.find(s => s.id === signalToRestore.id);
+              if (exists) return prev;
+              
+              // Insert at original position, or at the end if original position is beyond current length
+              const insertIndex = Math.min(originalIndex, prev.length);
+              const newSignals = [...prev];
+              newSignals.splice(insertIndex, 0, signalToRestore);
+              return newSignals;
+            });
+            
+            // Remove from rejected list
+            setRejectedSignalHashes(prev => {
+              const updatedRejected = new Set(prev);
+              updatedRejected.delete(contentHash);
+              
+              // Update localStorage
+              try {
+                localStorage.setItem(`${storageKey}_rejected`, JSON.stringify(Array.from(updatedRejected)));
+              } catch (error) {
+                console.error('Error updating rejected signals in localStorage:', error);
+              }
+              
+              return updatedRejected;
+            });
+            
+            toast({
+              title: "Signal restored",
+              description: "The signal has been restored to your list.",
+            });
+          }}
+        >
+          Undo
+        </Button>
+      ),
     });
   };
 
@@ -679,7 +746,6 @@ const Index = () => {
                         e.stopPropagation();
                         handleAcceptSignal(signal.id);
                       }}
-                      disabled={isAccepted}
                     >
                       <ThumbsUp className="h-4 w-4" />
                     </Button>
