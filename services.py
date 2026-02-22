@@ -1676,146 +1676,305 @@ COMPONENT_FUNCTIONS = {
 }
 
 # Signals Research Functions
-def search_signals_scout(pre_data: str) -> dict:
-    """Search for market, competitor, and industry trend signals for Scout agent"""
-    # For now, generate realistic signals based on the company profile
-    # TODO: Integrate with actual LLM once configuration issues are resolved
+def search_signals_scout(pre_data) -> dict:
+    """Search for market, competitor, and industry trend signals for Scout agent using WebSearch"""
     
-    import random
-    from datetime import datetime, timedelta
+    # Convert company profile to JSON string (handle both dict and string inputs)
+    if isinstance(pre_data, dict):
+        company_profile_json = json.dumps(pre_data, indent=2)
+    elif isinstance(pre_data, str):
+        # If it's already a string, try to parse and reformat for better readability
+        try:
+            parsed = json.loads(pre_data)
+            company_profile_json = json.dumps(parsed, indent=2)
+        except:
+            company_profile_json = pre_data
+    else:
+        company_profile_json = str(pre_data)
     
-    # Generate realistic market signals based on company profile
-    industry = pre_data.get("industry", "SaaS")
-    company_size = pre_data.get("companySize", "50-200 employees")
+    # Construct prompt with full company profile and WebSearch instructions
+    template = """Task: Research and identify a high-quality, actionable market signal for a sales scout agent. This signal should help the sales team understand market opportunities, competitor movements, or industry trends that could impact their sales strategy.
+
+STEP 1 - COMPANY PROFILE DATA:
+Review the complete company profile data below. Extract all relevant information about the company's industry, target markets, regions, company size, strategic goals, and any other relevant attributes.
+
+Company Profile Data:
+{company_profile_json}
+
+STEP 2 - RESEARCH REQUIREMENTS (CRITICAL):
+You MUST use the WebSearch tool to find a REAL, RECENT, and ACTIONABLE market signal. Based on the company profile above, perform comprehensive research to identify:
+
+1. Market Opportunity Signals:
+   - Search for recent market growth, trends, or opportunities in the company's industry
+   - Find market size changes, adoption rates, or emerging segments
+   - Example searches: "[industry] market trends [regions] 2024 2025"
+   - Example searches: "[industry] growth opportunities [recent]"
+
+2. Competitor Activity Signals:
+   - Search for competitor funding rounds, product launches, or strategic moves
+   - Find market share changes or competitive landscape shifts
+   - Example searches: "[industry] competitor funding [recent]"
+   - Example searches: "[industry] competitor product launch [recent]"
+
+3. Industry Trend Signals:
+   - Search for technology adoption, regulatory changes, or industry shifts
+   - Find emerging trends that could impact sales strategy
+   - Example searches: "[industry] technology adoption [recent]"
+   - Example searches: "[industry] regulatory changes [recent]"
+
+4. Market Dynamics Signals:
+   - Search for buying behavior changes, market disruptions, or new opportunities
+   - Find signals that indicate market readiness or buying intent
+   - Example searches: "[industry] buying trends [regions]"
+   - Example searches: "[industry] market disruption [recent]"
+
+IMPORTANT RESEARCH GUIDELINES:
+- Perform at least 5-7 WebSearch queries to find the BEST signal
+- Focus on RECENT signals (within last 1-3 months when possible)
+- The signal must be REAL and ACTIONABLE - not generic
+- Extract industry and target markets from the company profile
+- Cross-reference multiple sources to verify signal accuracy
+- Prioritize signals that are relevant to the company's specific industry and target markets
+
+STEP 3 - OUTPUT FORMAT:
+Return your findings in the following exact JSON format (use exact keys as shown):
+
+{{
+  "headline": "[Compelling, specific headline about the signal - must be real and recent]",
+  "snippet": "[Brief 1-2 sentence summary of the signal]",
+  "description": "[One full paragraph (4-6 sentences) providing detailed context about the signal. Explain what the signal means, why it matters for the company's sales strategy, what opportunities or challenges it presents, and how the sales team should respond. Make it descriptive and actionable.]",
+  "sourceUrl": "[Real source URL where this signal was found]",
+  "sourceLabel": "[Source type: Industry report, News article, Research report, Funding news, etc.]",
+  "nextBestMoves": [
+    "[Actionable question/suggestion #1 related to the signal]",
+    "[Actionable question/suggestion #2 related to the signal]"
+  ],
+  "contextualSuggestions": [
+    {{"icon": "[icon name]", "text": "[Suggestion text related to signal]"}},
+    {{"icon": "[icon name]", "text": "[Suggestion text related to signal]"}}
+  ]
+}}
+
+⚠️ OUTPUT NOTES:
+- headline must be REAL and SPECIFIC - include actual numbers, dates, or company names when available
+- snippet should be concise (1-2 sentences)
+- description must be ONE FULL PARAGRAPH (4-6 sentences) with detailed context
+- sourceUrl must be a REAL, accessible URL
+- sourceLabel should accurately describe the source type
+- nextBestMoves should be actionable questions related to the specific signal
+- contextualSuggestions should be relevant to the signal content
+- Return ONLY valid JSON, nothing else
+
+When you have reached the final answer, respond only with:
+Final Answer: <your JSON answer here>
+Do not include any additional reasoning, thoughts, or steps after that.
+"""
+
+    prompt = template.format(company_profile_json=company_profile_json)
     
-    # Sample market signals
-    market_signals = [
-        {
-            "headline": f"{industry} market shows 25% growth in Q4 2024",
-            "snippet": f"Market analysis indicates strong demand for {industry} solutions in your target segment.",
-            "sourceUrl": "https://techcrunch.com/market-analysis-2024",
-            "sourceLabel": "Industry report"
-        },
-        {
-            "headline": f"Competitors in {industry} space raise $50M in funding",
-            "snippet": f"Recent funding rounds suggest increased competition in the {industry} market.",
-            "sourceUrl": "https://crunchbase.com/funding-rounds",
-            "sourceLabel": "Funding news"
-        },
-        {
-            "headline": f"AI adoption in {industry} increases by 40%",
-            "snippet": f"Companies in your target market are rapidly adopting AI-powered solutions.",
-            "sourceUrl": "https://gartner.com/ai-adoption-trends",
-            "sourceLabel": "Research report"
-        },
-        {
-            "headline": f"Regulatory changes impact {industry} compliance",
-            "snippet": f"New regulations create opportunities for compliance-focused solutions.",
-            "sourceUrl": "https://regulatory-updates.com",
-            "sourceLabel": "Regulatory news"
-        }
-    ]
+    # Get LLM response with WebSearch
+    raw_response = agent_chain.invoke({'input': prompt})
+    response = raw_response["output"]
     
-    # Select a random signal
-    signal = random.choice(market_signals)
+    # Extract JSON from response
+    if "Final Answer:" in response:
+        response = response.split("Final Answer:")[-1].strip()
     
-    # Generate timestamp
-    hours_ago = random.randint(1, 24)
+    # Clean and escape the JSON string
+    cleaned_str = response.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+    # Remove any leading/trailing text before first { or after last }
+    if "{" in cleaned_str:
+        cleaned_str = cleaned_str[cleaned_str.index("{"):]
+    if "}" in cleaned_str:
+        cleaned_str = cleaned_str[:cleaned_str.rindex("}") + 1]
+    
+    # Escape newline and other control characters within string values
+    cleaned_str = re.sub(r'\"description\": \"(.*?)\"', lambda m: '"description": "' + m.group(1).replace('\n', '\\n').replace('\r', '\\r').replace('"', '\\"') + '"', cleaned_str, flags=re.DOTALL)
+    cleaned_str = re.sub(r'\"snippet\": \"(.*?)\"', lambda m: '"snippet": "' + m.group(1).replace('\n', '\\n').replace('\r', '\\r').replace('"', '\\"') + '"', cleaned_str, flags=re.DOTALL)
+    cleaned_str = re.sub(r'\"headline\": \"(.*?)\"', lambda m: '"headline": "' + m.group(1).replace('\n', '\\n').replace('\r', '\\r').replace('"', '\\"') + '"', cleaned_str, flags=re.DOTALL)
+    
+    # Parse to JSON (Python dict)
+    parsed_json = json.loads(cleaned_str)
+    
+    # Add metadata (ID will be generated in API layer to ensure uniqueness per org_id)
+    from datetime import datetime
+    hours_ago = 1  # Default, can be made dynamic based on signal recency
     timestamp = f"{hours_ago}h ago"
     
-    return {
-        "id": "1",
+    result = {
         "agent": "scout",
         "timestamp": timestamp,
-        "headline": signal["headline"],
-        "snippet": signal["snippet"],
-        "sourceUrl": signal["sourceUrl"],
-        "sourceLabel": signal["sourceLabel"],
-        "nextBestMoves": [
-            "Should I analyze competitor strategies in your market?",
-            "Would you like me to identify market opportunities for your product?"
-        ],
-        "contextualSuggestions": [
-            {"icon": "chart", "text": "View market trends"},
-            {"icon": "target", "text": "Update targeting strategy"}
-        ]
+        "headline": parsed_json.get("headline", ""),
+        "snippet": parsed_json.get("snippet", ""),
+        "description": parsed_json.get("description", ""),
+        "sourceUrl": parsed_json.get("sourceUrl", ""),
+        "sourceLabel": parsed_json.get("sourceLabel", ""),
+        "nextBestMoves": parsed_json.get("nextBestMoves", []),
+        "contextualSuggestions": parsed_json.get("contextualSuggestions", [])
     }
+    
+    return result
 
-def search_signals_profiler(pre_data: str) -> dict:
-    """Search for ICP and customer-related signals for Profiler agent"""
-    # For now, generate realistic signals based on the company profile and ICP data
-    # TODO: Integrate with actual LLM once configuration issues are resolved
+def search_signals_profiler(pre_data) -> dict:
+    """Search for ICP and customer-related signals for Profiler agent using WebSearch"""
     
-    import random
-    from datetime import datetime, timedelta
-    
-    # Extract company profile data
+    # Extract company profile and ICP data
     if isinstance(pre_data, dict):
         if "company_profile" in pre_data:
-            company_data = pre_data["company_profile"]
+            company_profile = pre_data["company_profile"]
             icp_data = pre_data.get("icp_data", {})
         else:
-            company_data = pre_data
+            company_profile = pre_data
             icp_data = {}
     else:
-        company_data = {}
-        icp_data = {}
+        try:
+            parsed = json.loads(pre_data) if isinstance(pre_data, str) else {}
+            if "company_profile" in parsed:
+                company_profile = parsed["company_profile"]
+                icp_data = parsed.get("icp_data", {})
+            else:
+                company_profile = parsed
+                icp_data = {}
+        except:
+            company_profile = {}
+            icp_data = {}
     
-    industry = company_data.get("industry", "SaaS")
-    company_size = company_data.get("companySize", "50-200 employees")
+    # Convert to JSON string for prompt
+    context_data = {
+        "company_profile": company_profile,
+        "icp_data": icp_data
+    }
+    context_json = json.dumps(context_data, indent=2)
     
-    # Sample customer/ICP signals
-    customer_signals = [
-        {
-            "headline": f"Mid-market {industry} companies increase tech spending by 30%",
-            "snippet": f"Your ICP segment shows strong buying signals for technology solutions in {industry}.",
-            "sourceUrl": "https://gartner.com/midmarket-tech-spending-2024",
-            "sourceLabel": "Market research"
-        },
-        {
-            "headline": f"Customer acquisition costs rise 15% in {industry}",
-            "snippet": f"Companies in your target market are investing more in customer acquisition.",
-            "sourceUrl": "https://marketingland.com/cac-trends-2024",
-            "sourceLabel": "Marketing report"
-        },
-        {
-            "headline": f"Buying committees expand in {industry} sector",
-            "snippet": f"Decision-making processes are becoming more complex in your target market.",
-            "sourceUrl": "https://salesforce.com/buying-committee-research",
-            "sourceLabel": "Sales research"
-        },
-        {
-            "headline": f"Customer success metrics show 25% improvement",
-            "snippet": f"Companies in your ICP are focusing more on customer success and retention.",
-            "sourceUrl": "https://customer-success.com/metrics-2024",
-            "sourceLabel": "Customer success report"
-        }
-    ]
+    # Construct prompt with full company profile/ICP data and WebSearch instructions
+    template = """Task: Research and identify a high-quality, actionable ICP/customer signal for a profiler agent. This signal should help the sales team understand customer buying behavior, ICP trends, or customer acquisition opportunities.
+
+STEP 1 - COMPANY PROFILE AND ICP DATA:
+Review the complete company profile and ICP data below. Extract all relevant information about the company's industry, target markets, regions, ICP segments, company sizes, buyer personas, and any other relevant attributes.
+
+Company Profile and ICP Data:
+{context_json}
+
+STEP 2 - RESEARCH REQUIREMENTS (CRITICAL):
+You MUST use the WebSearch tool to find a REAL, RECENT, and ACTIONABLE ICP/customer signal. Based on the company profile and ICP data above, perform comprehensive research to identify:
+
+1. ICP Buying Behavior Signals:
+   - Search for buying trends, purchase patterns, or buying signals in the company's ICP segments
+   - Find customer acquisition trends or buying committee changes
+   - Example searches: "[industry] [ICP segment] buying trends [recent]"
+   - Example searches: "[industry] customer acquisition [ICP segment] [recent]"
+
+2. Customer Spending Signals:
+   - Search for tech spending, budget allocation, or investment trends in target ICP segments
+   - Find customer spending patterns or budget increases
+   - Example searches: "[industry] tech spending [company size] [recent]"
+   - Example searches: "[industry] budget allocation [ICP segment]"
+
+3. ICP Market Dynamics Signals:
+   - Search for ICP segment growth, market expansion, or customer behavior changes
+   - Find signals about target customer needs or pain points
+   - Example searches: "[industry] [ICP segment] market trends [recent]"
+   - Example searches: "[industry] customer needs [ICP segment]"
+
+4. Customer Success Signals:
+   - Search for customer success metrics, retention trends, or customer satisfaction in ICP segments
+   - Find signals about customer lifecycle or engagement patterns
+   - Example searches: "[industry] customer success [ICP segment] [recent]"
+   - Example searches: "[industry] customer retention [company size]"
+
+5. Buyer Persona Signals:
+   - Search for decision maker trends, buying committee changes, or buyer behavior in target segments
+   - Find signals about how target customers make purchasing decisions
+   - Example searches: "[industry] buying committee [ICP segment] [recent]"
+   - Example searches: "[industry] decision maker trends [recent]"
+
+IMPORTANT RESEARCH GUIDELINES:
+- Perform at least 5-7 WebSearch queries to find the BEST signal
+- Focus on RECENT signals (within last 1-3 months when possible)
+- The signal must be REAL and ACTIONABLE - not generic
+- Extract industry, ICP segments, and target markets from the provided data
+- Cross-reference multiple sources to verify signal accuracy
+- Prioritize signals that are relevant to the company's specific ICP segments and target customers
+- If ICP data is available, use it to make the signal more specific and relevant
+
+STEP 3 - OUTPUT FORMAT:
+Return your findings in the following exact JSON format (use exact keys as shown):
+
+{{
+  "headline": "[Compelling, specific headline about the ICP/customer signal - must be real and recent]",
+  "snippet": "[Brief 1-2 sentence summary of the signal]",
+  "description": "[One full paragraph (4-6 sentences) providing detailed context about the signal. Explain what the signal means for the company's ICP and target customers, why it matters for customer acquisition and sales strategy, what opportunities or challenges it presents for reaching the target ICP, and how the sales/profiling team should respond. Make it descriptive and actionable.]",
+  "sourceUrl": "[Real source URL where this signal was found]",
+  "sourceLabel": "[Source type: Market research, Customer research, Sales report, ICP analysis, etc.]",
+  "nextBestMoves": [
+    "[Actionable question/suggestion #1 related to the ICP signal]",
+    "[Actionable question/suggestion #2 related to the ICP signal]"
+  ],
+  "contextualSuggestions": [
+    {{"icon": "[icon name]", "text": "[Suggestion text related to ICP signal]"}},
+    {{"icon": "[icon name]", "text": "[Suggestion text related to ICP signal]"}}
+  ]
+}}
+
+⚠️ OUTPUT NOTES:
+- headline must be REAL and SPECIFIC - include actual numbers, dates, or ICP segment details when available
+- snippet should be concise (1-2 sentences)
+- description must be ONE FULL PARAGRAPH (4-6 sentences) with detailed context about ICP/customer implications
+- sourceUrl must be a REAL, accessible URL
+- sourceLabel should accurately describe the source type
+- nextBestMoves should be actionable questions related to the specific ICP signal
+- contextualSuggestions should be relevant to the ICP signal content
+- Return ONLY valid JSON, nothing else
+
+When you have reached the final answer, respond only with:
+Final Answer: <your JSON answer here>
+Do not include any additional reasoning, thoughts, or steps after that.
+"""
+
+    prompt = template.format(context_json=context_json)
     
-    # Select a random signal
-    signal = random.choice(customer_signals)
+    # Get LLM response with WebSearch
+    raw_response = agent_chain.invoke({'input': prompt})
+    response = raw_response["output"]
     
-    # Generate timestamp
-    hours_ago = random.randint(1, 24)
+    # Extract JSON from response
+    if "Final Answer:" in response:
+        response = response.split("Final Answer:")[-1].strip()
+    
+    # Clean and escape the JSON string
+    cleaned_str = response.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+    # Remove any leading/trailing text before first { or after last }
+    if "{" in cleaned_str:
+        cleaned_str = cleaned_str[cleaned_str.index("{"):]
+    if "}" in cleaned_str:
+        cleaned_str = cleaned_str[:cleaned_str.rindex("}") + 1]
+    
+    # Escape newline and other control characters within string values
+    cleaned_str = re.sub(r'\"description\": \"(.*?)\"', lambda m: '"description": "' + m.group(1).replace('\n', '\\n').replace('\r', '\\r').replace('"', '\\"') + '"', cleaned_str, flags=re.DOTALL)
+    cleaned_str = re.sub(r'\"snippet\": \"(.*?)\"', lambda m: '"snippet": "' + m.group(1).replace('\n', '\\n').replace('\r', '\\r').replace('"', '\\"') + '"', cleaned_str, flags=re.DOTALL)
+    cleaned_str = re.sub(r'\"headline\": \"(.*?)\"', lambda m: '"headline": "' + m.group(1).replace('\n', '\\n').replace('\r', '\\r').replace('"', '\\"') + '"', cleaned_str, flags=re.DOTALL)
+    
+    # Parse to JSON (Python dict)
+    parsed_json = json.loads(cleaned_str)
+    
+    # Add metadata (ID will be generated in API layer to ensure uniqueness per org_id)
+    from datetime import datetime
+    hours_ago = 1  # Default, can be made dynamic based on signal recency
     timestamp = f"{hours_ago}h ago"
     
-    return {
-        "id": "1",
+    result = {
         "agent": "profiler",
         "timestamp": timestamp,
-        "headline": signal["headline"],
-        "snippet": signal["snippet"],
-        "sourceUrl": signal["sourceUrl"],
-        "sourceLabel": signal["sourceLabel"],
-        "nextBestMoves": [
-            "Should I identify high-value prospects in your ICP?",
-            "Would you like me to analyze customer buying patterns?"
-        ],
-        "contextualSuggestions": [
-            {"icon": "target", "text": "Update targeting criteria"},
-            {"icon": "chart", "text": "Analyze customer trends"}
-        ]
+        "headline": parsed_json.get("headline", ""),
+        "snippet": parsed_json.get("snippet", ""),
+        "description": parsed_json.get("description", ""),
+        "sourceUrl": parsed_json.get("sourceUrl", ""),
+        "sourceLabel": parsed_json.get("sourceLabel", ""),
+        "nextBestMoves": parsed_json.get("nextBestMoves", []),
+        "contextualSuggestions": parsed_json.get("contextualSuggestions", [])
     }
+    
+    return result
 
 # Signals function mapping
 SIGNALS_FUNCTIONS = {

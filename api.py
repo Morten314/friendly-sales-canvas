@@ -15,7 +15,9 @@ from pymongo import MongoClient
 import boto3
 from pinecone import Pinecone
 from langchain_pinecone import PineconeVectorStore
-from langchain_community.document_loaders import PyPDFLoader, TextLoader
+from langchain_community.document_loaders import PyPDFLoader, TextLoader, CSVLoader, UnstructuredExcelLoader
+from langchain_core.documents import Document
+import pandas as pd
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 
@@ -1116,8 +1118,12 @@ async def signals_research(request: MarketRequest):
                     )
                 await asyncio.sleep(1)  # retry delay
 
+        # Generate unique ID for signal
+        signal_id = str(uuid.uuid4())
+        
         # Add metadata - filter by user_id only
         signals_result.update({
+            "id": signal_id,
             "user_id": request.user_id,
             "agent": agent_name,
             "timestamp": datetime.utcnow()
@@ -1173,7 +1179,9 @@ async def generate_signals_batch(request: MarketRequest):
             try:
                 print(f"Generating scout signal {i+1}...")
                 signals_result = await asyncio.to_thread(search_signals_scout, pre_data)
+                signal_id = str(uuid.uuid4())
                 signals_result.update({
+                    "id": signal_id,
                     "user_id": request.user_id,
                     "agent": "scout",
                     "timestamp": datetime.utcnow(),
@@ -1200,7 +1208,9 @@ async def generate_signals_batch(request: MarketRequest):
             try:
                 print(f"Generating profiler signal {i+1}...")
                 signals_result = await asyncio.to_thread(search_signals_profiler, profiler_pre_data)
+                signal_id = str(uuid.uuid4())
                 signals_result.update({
+                    "id": signal_id,
                     "user_id": request.user_id,
                     "agent": "profiler",
                     "timestamp": datetime.utcnow(),
@@ -1664,10 +1674,11 @@ pc = Pinecone(api_key=pinecone_api_key)
 
 async def process_file_to_embeddings(file_key: str, user_id: str, file_name: str, org_id: str, file_id: str):
     """Background task to convert file to embeddings and store in Pinecone with org_id namespace.
-    Only processes PDF and TXT files. Other file types are skipped gracefully."""
+    Processes PDF, TXT, CSV, and XLSX files. Other file types are skipped gracefully."""
     try:
-        # Only process PDF and TXT files
-        if not (file_name.lower().endswith('.pdf') or file_name.lower().endswith('.txt')):
+        # Only process PDF, TXT, CSV, and XLSX files
+        supported_extensions = ('.pdf', '.txt', '.csv', '.xlsx')
+        if not file_name.lower().endswith(supported_extensions):
             logger.info(f"Skipping Pinecone embedding for unsupported file type: {file_name}")
             # Update status to completed (not embedded)
             try:
@@ -1699,13 +1710,64 @@ async def process_file_to_embeddings(file_key: str, user_id: str, file_name: str
         # Load document based on file type
         if file_name.lower().endswith('.pdf'):
             loader = PyPDFLoader(local_file_path)
+            documents = loader.load()
         elif file_name.lower().endswith('.txt'):
             loader = TextLoader(local_file_path)
+            documents = loader.load()
+        elif file_name.lower().endswith('.csv'):
+            # Load CSV using pandas and convert to text documents
+            try:
+                df = pd.read_csv(local_file_path)
+                # Convert DataFrame to text format
+                documents = []
+                # Create a document for each row, combining all columns
+                for idx, row in df.iterrows():
+                    row_text = " | ".join([f"{col}: {str(val)}" for col, val in row.items() if pd.notna(val)])
+                    documents.append(Document(page_content=row_text, metadata={"row_index": idx}))
+                # Also create a summary document with column names and data types
+                summary_text = f"CSV File Summary:\nColumns: {', '.join(df.columns.tolist())}\nRows: {len(df)}\n\n"
+                summary_text += "Sample data:\n" + df.head(10).to_string()
+                documents.insert(0, Document(page_content=summary_text, metadata={"type": "summary"}))
+            except Exception as e:
+                logger.error(f"Error loading CSV file {file_name}: {str(e)}")
+                # Fallback to CSVLoader if pandas fails
+                loader = CSVLoader(local_file_path)
+                documents = loader.load()
+        elif file_name.lower().endswith('.xlsx'):
+            # Load XLSX using pandas and convert to text documents
+            try:
+                # Read all sheets
+                excel_file = pd.ExcelFile(local_file_path)
+                documents = []
+                
+                for sheet_name in excel_file.sheet_names:
+                    df = pd.read_excel(local_file_path, sheet_name=sheet_name)
+                    # Create a document for each row in the sheet
+                    for idx, row in df.iterrows():
+                        row_text = " | ".join([f"{col}: {str(val)}" for col, val in row.items() if pd.notna(val)])
+                        documents.append(Document(
+                            page_content=row_text, 
+                            metadata={"sheet_name": sheet_name, "row_index": idx}
+                        ))
+                    # Add summary for each sheet
+                    summary_text = f"Sheet: {sheet_name}\nColumns: {', '.join(df.columns.tolist())}\nRows: {len(df)}\n\n"
+                    summary_text += "Sample data:\n" + df.head(10).to_string()
+                    documents.append(Document(
+                        page_content=summary_text, 
+                        metadata={"type": "summary", "sheet_name": sheet_name}
+                    ))
+            except Exception as e:
+                logger.error(f"Error loading XLSX file {file_name}: {str(e)}")
+                # Fallback to UnstructuredExcelLoader if pandas fails
+                try:
+                    loader = UnstructuredExcelLoader(local_file_path)
+                    documents = loader.load()
+                except Exception as e2:
+                    logger.error(f"Error with UnstructuredExcelLoader: {str(e2)}")
+                    raise
         else:
             logger.warning(f"Unexpected file type in process_file_to_embeddings: {file_name}")
             return
-        
-        documents = loader.load()
         
         # Split documents into chunks
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
@@ -1810,8 +1872,9 @@ async def upload_document(
     description: str = Form(None)
 ):
     """
-    Upload a file (PDF, TXT, CSV, XLSX, PPTX) to S3 OR save a URL as data source.
-    Only PDF and TXT files are embedded into Pinecone.
+    Upload a file (any format) to S3 OR save a URL as data source.
+    PDF, TXT, CSV, and XLSX files are embedded into Pinecone.
+    Other formats are uploaded to S3 but not vectorized.
     Returns immediately with upload status.
     
     Parameters:
@@ -1912,21 +1975,9 @@ async def upload_document(
             
             return response
         
-        # Handle file upload (existing logic)
-        # Validate file type - accept PDF, TXT, CSV, XLSX, PPTX
-        allowed_extensions = ['.pdf', '.txt', '.csv', '.xlsx', '.pptx']
-        if not any(file.filename.lower().endswith(ext) for ext in allowed_extensions):
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "status": "error",
-                    "error": "upload_failed",
-                    "message": f"Only {', '.join(ext.upper() for ext in allowed_extensions)} files are supported"
-                }
-            )
-        
-        # Check if file will be embedded (only PDF and TXT)
-        will_be_embedded = file.filename.lower().endswith(('.pdf', '.txt'))
+        # Handle file upload - accept ALL file formats for AWS upload
+        # Check if file will be embedded (PDF, TXT, CSV, XLSX)
+        will_be_embedded = file.filename.lower().endswith(('.pdf', '.txt', '.csv', '.xlsx'))
         
         # Generate unique file key for S3 (organized by org_id)
         file_id = str(uuid.uuid4())
@@ -1996,7 +2047,7 @@ async def upload_document(
         except Exception as e:
             logger.warning(f"Failed to store status in MongoDB: {str(e)}")
         
-        # Start background task only for PDF and TXT files
+        # Start background task for PDF, TXT, CSV, and XLSX files (vectorization)
         if will_be_embedded:
             background_tasks.add_task(process_file_to_embeddings, file_key, user_id, file.filename, org_id, file_id)
         else:
@@ -2024,7 +2075,7 @@ async def upload_document(
         
         response = {
             "status": "success",
-            "message": "File uploaded successfully. Processing embeddings in background.",
+            "message": f"File uploaded successfully. {'Processing embeddings in background.' if will_be_embedded else 'File uploaded to S3 (not vectorized).'}",
             "file_key": file_key,
             "file_id": file_id,
             "file_name": file.filename
