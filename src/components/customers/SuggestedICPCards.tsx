@@ -533,7 +533,6 @@ export const SuggestedICPCards = ({
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
-                  <TableHead>Type</TableHead>
                   <TableHead>Industry</TableHead>
                   <TableHead>Region</TableHead>
                   <TableHead>Company Size</TableHead>
@@ -548,22 +547,18 @@ export const SuggestedICPCards = ({
                 {acceptedICPs.map((icp) => (
                   <>
                     <TableRow key={icp.id} className="bg-emerald-50/20">
-                      <TableCell className="font-medium">{icp.name}</TableCell>
-                      <TableCell>
+                      <TableCell className="font-medium">
                         <Badge
                           variant="secondary"
-                          className={`text-[10px] ${
+                          className={`text-[9px] px-1.5 py-0 mb-1 block w-fit ${
                             icp.type === "refined"
                               ? "bg-amber-100 text-amber-800"
                               : "bg-primary/10 text-primary"
                           }`}
                         >
-                          {icp.type === "refined" ? (
-                            <><RefreshCw className="h-2.5 w-2.5 mr-0.5" />Refined</>
-                          ) : (
-                            <><Plus className="h-2.5 w-2.5 mr-0.5" />New</>
-                          )}
+                          {icp.type === "refined" ? "Refined" : "New"}
                         </Badge>
+                        {icp.name}
                       </TableCell>
                       <TableCell>{icp.industry || "—"}</TableCell>
                       <TableCell>{icp.regions?.join(", ") || "—"}</TableCell>
@@ -612,7 +607,7 @@ export const SuggestedICPCards = ({
                     {/* Inline expanded report for accepted ICP */}
                     {expandedReportId === icp.id && (
                       <TableRow key={`${icp.id}-report`}>
-                        <TableCell colSpan={10} className="p-0">
+                        <TableCell colSpan={9} className="p-0">
                           <div className="transition-all duration-500 ease-in-out border-t px-6 py-5 space-y-5 bg-background">
                             {/* Card summary info */}
                             <div className="flex items-center justify-between flex-wrap gap-2">
