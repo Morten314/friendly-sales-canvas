@@ -8,7 +8,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
-    port: 5175, // Changed from 8080 to test if port/origin affects PWA behavior
+    port: 8080,
     proxy: {
       '/api': {
         target: 'https://backend-11kr.onrender.com',
@@ -75,6 +75,7 @@ export default defineConfig(({ mode }) => ({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         additionalManifestEntries: [
           { url: '/logo.png', revision: null }
         ],
