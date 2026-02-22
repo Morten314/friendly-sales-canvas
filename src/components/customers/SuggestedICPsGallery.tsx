@@ -13,6 +13,7 @@ import { ICPEditHistory } from "./ICPEditHistory";
 import { useToast } from "@/hooks/use-toast";
 import { profilerCache } from "@/lib/profilerCache";
 import { useAuth } from "@/contexts/AuthContext";
+import { buildApiUrl } from "@/lib/api";
 
 interface SuggestedICP {
   id: string;
@@ -34,8 +35,7 @@ interface SuggestedICPsGalleryProps {
 }
 
 export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshTrigger, isRefreshing = false, onRefreshComplete }: SuggestedICPsGalleryProps) => {
-  const { currentUser, orgId } = useAuth();
-  const orgIdToUse = orgId || 'brewra'; // Fallback to 'brewra' for backward compatibility
+  const { currentUser } = useAuth();
   const [selectedICP, setSelectedICP] = useState<string | null>(null);
   const [editingICP, setEditingICP] = useState<string | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
@@ -143,14 +143,16 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
       }
       
       // For refresh mode, fetch company profile and include it in the request
-      let apiUrl = `/api/icp?${baseParams.toString()}`;
+      let apiUrl = buildApiUrl(`api/icp?${baseParams.toString()}`);
       
       if (refreshTrigger > 0) {
         console.log("🔄 REFRESH MODE - Fetching company profile for ICP generation");
         
         try {
-          // Fetch the latest company profile from backend with org_id
-          const profileUrl = `/api/profile/company?org_id=${orgIdToUse}`;
+          // Fetch the latest company profile from backend with user_id
+          const profileUrl = currentUser?.uid 
+            ? buildApiUrl(`api/profile/company?user_id=${currentUser.uid}`)
+            : buildApiUrl('api/profile/company');
           
           const profileResponse = await fetch(profileUrl, {
             method: 'GET',
