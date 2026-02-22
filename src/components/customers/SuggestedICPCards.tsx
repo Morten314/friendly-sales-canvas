@@ -56,6 +56,7 @@ import {
   Zap,
   MessageSquare,
   Pencil,
+  Trash2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -523,7 +524,7 @@ export const SuggestedICPCards = ({
                       }}
                       className="text-destructive hover:text-destructive/80 hover:bg-destructive/10"
                     >
-                      <X className="h-3.5 w-3.5" />
+                      <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -755,7 +756,7 @@ export const SuggestedICPCards = ({
           </h3>
           <ScrollArea className="w-full">
             <div className="flex gap-4 pb-4">
-              {allSuggestions.map((icp) => (
+              {allSuggestions.filter((s) => cardStatuses[s.id]?.status !== "accepted").map((icp) => (
                 <RecommendedICPCard
                   key={icp.id}
                   icp={icp}
