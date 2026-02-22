@@ -484,7 +484,8 @@ export const SuggestedICPCards = ({
                 <TableHead>Buyer Role</TableHead>
                 <TableHead>Confidence</TableHead>
                 <TableHead>Leads</TableHead>
-                <TableHead className="text-right">Report</TableHead>
+                <TableHead>Report</TableHead>
+                <TableHead className="text-right">Delete</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -506,10 +507,23 @@ export const SuggestedICPCards = ({
                       View Leads
                     </Button>
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell>
                     <Button variant="ghost" size="sm" onClick={() => setSelectedExistingICP(icp)} className="text-primary hover:text-primary/80">
                       <Eye className="h-3.5 w-3.5 mr-1" />
                       View Report
+                    </Button>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setExistingICPs((prev) => prev.filter((e) => e.id !== icp.id));
+                        toast({ title: "ICP deleted", description: `"${icp.name}" removed from Current ICPs.` });
+                      }}
+                      className="text-destructive hover:text-destructive/80 hover:bg-destructive/10"
+                    >
+                      <X className="h-3.5 w-3.5" />
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -733,64 +747,30 @@ export const SuggestedICPCards = ({
         </Card>
       )}
 
-      {/* ═══ Section 3: Recommended ICPs — Scrollable Cards ═══ */}
+      {/* ═══ Section 3: Recommended ICPs — Single Scrollable Row ═══ */}
       {showRecommendations && (
-        <div className="space-y-6 animate-fade-in">
-          {/* Refined ICPs */}
-          {refinedICPs.length > 0 && (
-            <div className="space-y-3">
-              <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-2">
-                <RefreshCw className="h-3.5 w-3.5 text-amber-600" />
-                Refined ICPs
-              </h3>
-              <ScrollArea className="w-full">
-                <div className="flex gap-4 pb-4">
-                  {refinedICPs.map((icp) => (
-                    <RecommendedICPCard
-                      key={icp.id}
-                      icp={icp}
-                      status={cardStatuses[icp.id] || { status: "suggested" }}
-                      isExpanded={expandedReportId === icp.id}
-                      onAccept={() => handleAcceptClick(icp)}
-                      onReject={() => handleRejectICP(icp)}
-                      onUndo={() => handleUndoAction(icp.id)}
-                      onToggleReport={() => setExpandedReportId(expandedReportId === icp.id ? null : icp.id)}
-                      onViewProspects={() => handleViewProspects(icp.type === "refined" ? "Refined ICP" : "New ICP")}
-                    />
-                  ))}
-                </div>
-                <ScrollBar orientation="horizontal" />
-              </ScrollArea>
+        <div className="space-y-3 animate-fade-in">
+          <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+            Recommended ICPs
+          </h3>
+          <ScrollArea className="w-full">
+            <div className="flex gap-4 pb-4">
+              {allSuggestions.map((icp) => (
+                <RecommendedICPCard
+                  key={icp.id}
+                  icp={icp}
+                  status={cardStatuses[icp.id] || { status: "suggested" }}
+                  isExpanded={expandedReportId === icp.id}
+                  onAccept={() => handleAcceptClick(icp)}
+                  onReject={() => handleRejectICP(icp)}
+                  onUndo={() => handleUndoAction(icp.id)}
+                  onToggleReport={() => setExpandedReportId(expandedReportId === icp.id ? null : icp.id)}
+                  onViewProspects={() => handleViewProspects(icp.type === "refined" ? "Refined ICP" : "New ICP")}
+                />
+              ))}
             </div>
-          )}
-
-          {/* New ICPs */}
-          {newICPs.length > 0 && (
-            <div className="space-y-3">
-              <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-2">
-                <Plus className="h-3.5 w-3.5 text-primary" />
-                New ICPs
-              </h3>
-              <ScrollArea className="w-full">
-                <div className="flex gap-4 pb-4">
-                  {newICPs.map((icp) => (
-                    <RecommendedICPCard
-                      key={icp.id}
-                      icp={icp}
-                      status={cardStatuses[icp.id] || { status: "suggested" }}
-                      isExpanded={expandedReportId === icp.id}
-                      onAccept={() => handleAcceptClick(icp)}
-                      onReject={() => handleRejectICP(icp)}
-                      onUndo={() => handleUndoAction(icp.id)}
-                      onToggleReport={() => setExpandedReportId(expandedReportId === icp.id ? null : icp.id)}
-                      onViewProspects={() => handleViewProspects(icp.type === "refined" ? "Refined ICP" : "New ICP")}
-                    />
-                  ))}
-                </div>
-                <ScrollBar orientation="horizontal" />
-              </ScrollArea>
-            </div>
-          )}
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
         </div>
       )}
 
