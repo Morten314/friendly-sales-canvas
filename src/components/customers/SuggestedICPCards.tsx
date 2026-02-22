@@ -590,13 +590,23 @@ export const SuggestedICPCards = ({
                         <Button
                           variant="ghost"
                           size="sm"
+                          onClick={() => handleUndoAction(icp.id)}
+                          className="text-muted-foreground hover:text-foreground"
+                          title="Undo — return to recommendations"
+                        >
+                          <Undo2 className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => {
                             setAcceptedICPs((prev) => prev.filter((a) => a.id !== icp.id));
-                            setCardStatuses((prev) => ({
-                              ...prev,
-                              [icp.id]: { status: "suggested" },
-                            }));
-                            toast({ title: "ICP deleted", description: `"${icp.name}" removed from Accepted ICPs.` });
+                            setCardStatuses((prev) => {
+                              const next = { ...prev };
+                              delete next[icp.id];
+                              return next;
+                            });
+                            toast({ title: "ICP deleted", description: `"${icp.name}" permanently removed.` });
                           }}
                           className="text-destructive hover:text-destructive/80 hover:bg-destructive/10"
                         >
