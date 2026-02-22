@@ -872,42 +872,9 @@ export const SuggestedICPCards = ({
         })()}
       </Sheet>
 
-      {/* ═══ Section 2: Profiler Work Announcement ═══ */}
-      {showAnnouncement && (
-        <Card className="border-primary/20 bg-primary/[0.03]">
-          <CardContent className="py-6">
-            <div className="flex items-start gap-4">
-              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <Lightbulb className="h-5 w-5 text-primary" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-foreground">
-                  I reviewed your ICPs and found opportunities to tighten targeting.
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {refinedICPs.length} refinement{refinedICPs.length !== 1 ? "s" : ""} to existing ICPs and{" "}
-                  {newICPs.length} new segment{newICPs.length !== 1 ? "s" : ""} identified.
-                </p>
-                {!showRecommendations ? (
-                  <Button size="sm" className="mt-3 gap-1.5" onClick={() => setShowRecommendations(true)}>
-                    <Sparkles className="h-3.5 w-3.5" />
-                    Show me the recommended ICPs
-                    <ArrowRight className="h-3.5 w-3.5" />
-                  </Button>
-                ) : (
-                  <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
-                    <Check className="h-3 w-3 text-emerald-600" />
-                    Recommended ICPs shown below
-                  </p>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* ═══ Section 3: Recommended ICPs — Single Scrollable Row ═══ */}
-      {showRecommendations && (
+      {(
         <div className="space-y-3 animate-fade-in">
           <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
             Recommended ICPs
