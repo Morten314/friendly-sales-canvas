@@ -408,8 +408,6 @@ export const SuggestedICPCards = ({
       description: `"${icp.name}" has been saved to your Customer Profile and Accepted ICPs.`,
     });
     setConfirmAcceptICP(null);
-    // Auto-expand the report
-    setExpandedReportId(icp.id);
   };
 
   const handleRejectICP = (icp: SuggestedICP) => {
