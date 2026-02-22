@@ -36,10 +36,12 @@ const mockLeads: Lead[] = [
   { id: "4", name: "Marcus Liu", company: "DataDriven AI", title: "CRO", source: "ICP 2", intentLevel: "Medium", reason: "Right buyer role + region match. Recent funding round signals growth phase." },
   { id: "5", name: "Elena Vasquez", company: "CloudFirst Systems", title: "VP Sales", source: "ICP 1", intentLevel: "High", reason: "Matches ICP + active job postings for sales leadership + competitor tool churn." },
   { id: "6", name: "David Park", company: "Momentum Labs", title: "Head of Partnerships", source: "ICP 2", intentLevel: "Medium", reason: "Strong ICP alignment. Partnership-led growth model fits your offering." },
-  { id: "7", name: "Amara Johnson", company: "RevStack AI", title: "VP of RevOps", source: "Refined ICP", intentLevel: "High", reason: "Matches refined ICP targeting RevOps teams. High engagement with your content." },
-  { id: "8", name: "Tobias Müller", company: "FinServ Digital", title: "Chief Digital Officer", source: "New ICP", intentLevel: "Medium", reason: "Matches new FinTech ICP segment. Digital transformation initiative underway." },
-  { id: "9", name: "Lily Tran", company: "ShopScale D2C", title: "Head of Growth", source: "New ICP", intentLevel: "High", reason: "Growth-stage e-commerce leader. Similar buying patterns to best customers." },
-  { id: "10", name: "Raj Patel", company: "OpsFlow SaaS", title: "Head of Sales Operations", source: "Refined ICP", intentLevel: "Medium", reason: "RevOps focus + Series B funding. Tech stack consolidation signals." },
+  { id: "7", name: "Amara Johnson", company: "RevStack AI", title: "VP of RevOps", source: "Mid-Market SaaS – RevOps Teams", intentLevel: "High", reason: "Matches refined ICP targeting RevOps teams. High engagement with your content." },
+  { id: "8", name: "Tobias Müller", company: "FinServ Digital", title: "Chief Digital Officer", source: "Enterprise FinTech Decision Makers", intentLevel: "Medium", reason: "Matches new FinTech ICP segment. Digital transformation initiative underway." },
+  { id: "9", name: "Lily Tran", company: "ShopScale D2C", title: "Head of Growth", source: "Growth-Stage E-commerce Leaders", intentLevel: "High", reason: "Growth-stage e-commerce leader. Similar buying patterns to best customers." },
+  { id: "10", name: "Raj Patel", company: "OpsFlow SaaS", title: "Head of Sales Operations", source: "Mid-Market SaaS – RevOps Teams", intentLevel: "Medium", reason: "RevOps focus + Series B funding. Tech stack consolidation signals." },
+  { id: "11", name: "Nina Kowalski", company: "PayTech Global", title: "VP of Innovation", source: "Enterprise FinTech Decision Makers", intentLevel: "High", reason: "FinTech digital transformation lead. Evaluating API-first partnerships." },
+  { id: "12", name: "Chris Andersen", company: "BrandBurst D2C", title: "COO", source: "Growth-Stage E-commerce Leaders", intentLevel: "Medium", reason: "Scaling e-commerce operations. Shopify Plus migration in progress." },
 ];
 
 const mockContextChips: ContextChip[] = [
