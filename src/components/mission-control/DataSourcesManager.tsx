@@ -18,10 +18,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  Dialog,
-  DialogContent,
-} from "@/components/ui/dialog";
-import {
   Table,
   TableBody,
   TableCell,
@@ -2120,40 +2116,17 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
   const showTable = dataSources.length > 0;
 
   return (
-    <div className="space-y-6">
-      {/* Loading Modal */}
-      <Dialog open={isLoading} onOpenChange={() => {}}>
-        <DialogContent className="sm:max-w-md border-0 bg-transparent shadow-none p-0">
-          <div className="flex flex-col items-center justify-center gap-6 p-8 bg-background rounded-lg border border-border shadow-2xl">
-            {/* Animated Brewra Logo */}
-            <div className="relative w-24 h-24 flex items-center justify-center">
-              <img 
-                src="/logo.png" 
-                alt="Brewra Logo" 
-                className="h-20 w-20 object-contain"
-                loading="eager"
-                style={{ 
-                  animation: 'logo-reveal 2.5s ease-in-out infinite',
-                  clipPath: 'inset(0% 0% 0% 0%)'
-                }}
-              />
-            </div>
-            {/* Loading Text */}
-            <div className="flex flex-col items-center gap-2">
-              <p className="text-lg font-semibold bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent">
-                Loading data sources
-              </p>
-              <p className="text-sm text-muted-foreground font-medium">Please wait while we fetch your data...</p>
-            </div>
-            {/* Animated Progress Dots */}
-            <div className="flex gap-2">
-              <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms', animationDuration: '1.4s' }}></div>
-              <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '200ms', animationDuration: '1.4s' }}></div>
-              <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '400ms', animationDuration: '1.4s' }}></div>
-            </div>
+    <div className="space-y-6 relative">
+      {/* Loading Overlay */}
+      {isLoading && (
+        <div className="absolute inset-0 bg-background/60 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="flex gap-2">
+            <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms', animationDuration: '1.4s' }}></div>
+            <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '200ms', animationDuration: '1.4s' }}></div>
+            <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '400ms', animationDuration: '1.4s' }}></div>
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
 
       {/* Company Context Bar */}
       <div className="flex items-center justify-between px-4 py-3 bg-muted/40 border rounded-lg">
