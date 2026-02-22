@@ -1,0 +1,128 @@
+{
+  "title": "Signals API Schema - Simplified",
+  "description": "Simplified schema for backend developer to create API endpoints for Signals page",
+  "endpoints": {
+    "POST /api/generate-signals-batch": {
+      "request": {
+        "user_id": "string (required)",
+        "component_name": "string (required)",
+        "data": {
+          "industry": "string (e.g., 'SaaS', 'FinTech')",
+          "companySize": "string (e.g., '50-200 employees')",
+          "companyUrl": "string (URL)",
+          "strategicGoals": "string",
+          "primaryGTMModel": "string (e.g., 'Direct sales')",
+          "revenueStage": "string (e.g., 'Growth')",
+          "keyBuyerPersona": "string (e.g., 'CTO')",
+          "targetMarkets": ["array of strings (e.g., ['North America', 'Europe'])"]
+        },
+        "refresh": "boolean (default: true)"
+      },
+      "response": {
+        "status": "success | error",
+        "message": "string",
+        "data": {
+          "signals_generated": "integer",
+          "timestamp": "ISO 8601 datetime"
+        }
+      }
+    },
+    "GET /api/fetch-signals": {
+      "queryParams": {
+        "user_id": "string (required)",
+        "limit": "integer (default: 10, max: 100)",
+        "agent": "string (optional: 'scout' | 'profiler' | 'all')",
+        "offset": "integer (default: 0, for pagination)"
+      },
+      "response": {
+        "status": "success | error",
+        "data": {
+          "signals": [
+            {
+              "id": "string (unique identifier)",
+              "agent": "string ('scout' | 'profiler')",
+              "timestamp": "string (ISO 8601 or relative like '1h ago', 'Today')",
+              "headline": "string (10-150 chars, brief summary)",
+              "snippet": "string (150-500 chars, brief summary)",
+              "description": "string (one full paragraph with detailed ICP/customer context)",
+              "sourceUrl": "string (URL to original source)",
+              "sourceLabel": "string (e.g., 'Press release link', 'LinkedIn post link', 'TechCrunch article')",
+              "nextBestMoves": ["array of strings (suggested actions)"],
+              "contextualSuggestions": [
+                {
+                  "icon": "string (emoji or icon identifier)",
+                  "text": "string (suggestion text)"
+                }
+              ]
+            }
+          ],
+          "total": "integer",
+          "limit": "integer",
+          "offset": "integer"
+        }
+      }
+    }
+  },
+  "criticalField": {
+    "snippet": {
+      "description": "This is the description field that needs RICH CONTENT (currently generating small contents)",
+      "requirements": {
+        "minLength": 150,
+        "maxLength": 500,
+        "mustInclude": [
+          "Actionable implications for the user's business",
+          "Relevance to ICP segments or target markets",
+          "Impact on competitive positioning",
+          "Specific context about why this signal matters",
+          "Potential opportunities or risks",
+          "Connection to strategic goals or buyer personas",
+          "Quantitative data when available",
+          "Next steps or recommended actions"
+        ],
+        "tone": "Professional, insightful, and actionable",
+        "structure": "Start with immediate impact → provide context → end with implications"
+      }
+    }
+  },
+  "keywordsForRichSnippets": {
+    "scoutAgent": [
+      "market impact",
+      "competitive positioning",
+      "industry trends",
+      "market opportunity",
+      "strategic implications",
+      "competitive landscape",
+      "market dynamics",
+      "growth trajectory"
+    ],
+    "profilerAgent": [
+      "ICP relevance",
+      "buyer persona",
+      "prospect engagement",
+      "outreach opportunity",
+      "target segment",
+      "decision maker",
+      "buying signals",
+      "engagement patterns"
+    ],
+    "signalTypes": {
+      "competitor": ["competitive move", "market positioning", "pricing strategy", "feature launch", "market share"],
+      "funding": ["market confidence", "growth trajectory", "competitive landscape", "market opportunity"],
+      "icp_segment": ["target segment", "ICP profile", "buyer persona", "market penetration"],
+      "social_signal": ["buyer engagement", "pain point", "buying signal", "outreach opportunity"],
+      "industry_trend": ["market trend", "industry shift", "market evolution", "strategic opportunity"]
+    }
+  },
+  "contextFieldsToUse": [
+    "industry",
+    "companySize",
+    "strategicGoals",
+    "primaryGTMModel",
+    "revenueStage",
+    "keyBuyerPersona",
+    "targetMarkets"
+  ],
+  "exampleRichSnippet": "This competitive pricing move by Company X directly impacts your SMB segment in the mid-market SaaS space. With 40% of your current pipeline falling into this category, this development could accelerate decision timelines or create pricing pressure. The launch targets companies with 50-200 employees—your core ICP—and includes features that overlap with your value proposition. Consider monitoring early adoption signals and preparing competitive differentiation messaging that emphasizes your unique ROI model and enterprise-grade capabilities."
+}
+
+

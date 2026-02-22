@@ -12,14 +12,22 @@ import { Layout } from '@/components/layout/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 type Agent = 'scout' | 'profiler';
 type ActionType = 'accept' | 'dismiss' | 'save' | 'ask';
+interface ContextualSuggestion {
+  icon: string;
+  text: string;
+}
+
 interface SignalCard {
   id: string;
   agent: Agent;
   timestamp: string;
   headline: string;
   snippet: string;
+  description: string; // NEW FIELD: One full paragraph with detailed ICP/customer context
   sourceUrl: string;
   sourceLabel: string;
+  nextBestMoves: string[]; // Array of suggested actions
+  contextualSuggestions: ContextualSuggestion[]; // Array of contextual suggestions with icon and text
 }
 // API functions
 const generateSignalsBatch = async (userId: string) => {
@@ -98,7 +106,7 @@ const fetchSignals = async (userId: string) => {
 
 // Helper function to generate a stable content-based ID for a signal
 const getSignalContentHash = (signal: SignalCard): string => {
-  const content = `${signal.headline}-${signal.snippet}-${signal.agent}`;
+  const content = `${signal.headline}-${signal.snippet}-${signal.description || ''}-${signal.agent}`;
   // Simple hash function
   let hash = 0;
   for (let i = 0; i < content.length; i++) {
@@ -128,6 +136,7 @@ const Index = () => {
   const [rejectedSignalHashes, setRejectedSignalHashes] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [expandedDescriptions, setExpandedDescriptions] = useState<Set<string>>(new Set());
   const {
     toast
   } = useToast();
@@ -173,6 +182,7 @@ const Index = () => {
     return () => {
       window.removeEventListener('signalsRefresh', handleSignalsRefresh);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadSignals = async () => {
@@ -203,7 +213,7 @@ const Index = () => {
       console.log('Raw signals from API:', rawSignals.map(s => ({ id: s.id, headline: s.headline })));
       console.log('Rejected signal hashes from localStorage:', Array.from(rejectedHashes));
       
-      const signalsWithIds = rawSignals.map((signal: SignalCard, index: number) => {
+      const signalsWithIds = rawSignals.map((signal: any, index: number) => {
         // Generate a truly unique ID for each signal
         // Use crypto.randomUUID if available, otherwise use a combination of timestamp, index, and random
         let uniqueId: string;
@@ -216,10 +226,14 @@ const Index = () => {
           uniqueId = `signal-${timestamp}-${index}-${randomStr}-${perfNow}`;
         }
         
+        // Ensure all required fields are present with defaults if missing
         return {
           ...signal,
-          id: uniqueId
-        };
+          id: signal.id || uniqueId,
+          description: signal.description || '',
+          nextBestMoves: signal.nextBestMoves || [],
+          contextualSuggestions: signal.contextualSuggestions || []
+        } as SignalCard;
       });
       
       // Verify all IDs are unique
@@ -261,32 +275,84 @@ const Index = () => {
         timestamp: '1h ago',
         headline: 'Competitor X launches SMB pricing tier.',
         snippet: 'Likely to impact your ICP accounts in mid-market SaaS segment.',
+        description: 'This competitive pricing move by Company X directly impacts your SMB segment in the mid-market SaaS space. With 40% of your current pipeline falling into this category, this development could accelerate decision timelines or create pricing pressure. The launch targets companies with 50-200 employees—your core ICP—and includes features that overlap with your value proposition. Consider monitoring early adoption signals and preparing competitive differentiation messaging that emphasizes your unique ROI model and enterprise-grade capabilities.',
         sourceUrl: '#',
-        sourceLabel: 'Press release link'
+        sourceLabel: 'Press release link',
+        nextBestMoves: [
+          'Would you like me to check how many of your target ICPs fall under the SMB segment and could be influenced by this move?',
+          'Do you want me to model a competitive bundle or ROI-driven value pitch against this pricing shift?',
+          'Should I track customer sentiment on LinkedIn, G2 reviews, or forums to see if it\'s gaining traction?'
+        ],
+        contextualSuggestions: [
+          { icon: '🔗', text: 'Get Company X\'s Website & Press Release' },
+          { icon: '🧑‍💼', text: 'Identify decision makers at Company X' },
+          { icon: '📊', text: 'Compare SMB pricing vs. our offering' },
+          { icon: '🚀', text: 'Monitor early adoption signals from Company X' },
+          { icon: '📅', text: 'Track mentions of SMB tier in LinkedIn updates' }
+        ]
       }, {
         id: '2',
         agent: 'profiler',
         timestamp: '3h ago',
         headline: 'ICP contact posted about cloud migration struggles.',
         snippet: 'John Doe, CTO @ Acme Corp, shared LinkedIn update relevant to DRaaS.',
+        description: 'John Doe, CTO at Acme Corp (a company matching your ICP profile with 150 employees in the FinTech sector), posted about challenges with cloud migration and data recovery strategies. This represents a strong buying signal as Acme Corp is actively evaluating solutions in your space. The post indicates urgency and budget allocation for DRaaS solutions, making this an ideal time for targeted outreach with relevant case studies and ROI messaging.',
         sourceUrl: '#',
-        sourceLabel: 'LinkedIn post link'
+        sourceLabel: 'LinkedIn post link',
+        nextBestMoves: [
+          'Should I draft a contextual comment or connection request for this post?',
+          'Want me to identify other prospects posting about similar challenges?',
+          'Do you want me to create a follow-up sequence based on this signal?'
+        ],
+        contextualSuggestions: [
+          { icon: '💬', text: 'Draft contextual comment for this post' },
+          { icon: '🤝', text: 'Prepare connection request message' },
+          { icon: '🔄', text: 'Find similar prospects with same challenges' },
+          { icon: '📊', text: 'Analyze engagement patterns' },
+          { icon: '📝', text: 'Create follow-up sequence' }
+        ]
       }, {
         id: '3',
         agent: 'scout',
         timestamp: '5h ago',
         headline: 'New funding round announced in AI automation space.',
         snippet: 'Series B round indicates growing market confidence in automation solutions.',
+        description: 'A Series B funding round of $25M was announced for a competitor in the AI automation space, signaling strong market confidence and potential for aggressive expansion. This development could impact your competitive positioning, especially in the enterprise segment where both companies target similar buyer personas. The funding suggests increased marketing spend and product development, which may accelerate market education but also intensify competition for your target accounts.',
         sourceUrl: '#',
-        sourceLabel: 'TechCrunch article'
+        sourceLabel: 'TechCrunch article',
+        nextBestMoves: [
+          'Want me to analyze how this affects your competitive positioning in the market?',
+          'Should I identify which of your prospects might be considering this competitor now?',
+          'Do you want me to draft messaging that highlights your differentiators against this move?'
+        ],
+        contextualSuggestions: [
+          { icon: '💰', text: 'Analyze funding impact on market positioning' },
+          { icon: '🏢', text: 'Identify potential acquisition targets' },
+          { icon: '📈', text: 'Map competitive landscape changes' },
+          { icon: '🎯', text: 'Find prospects considering this competitor' },
+          { icon: '📋', text: 'Draft competitive differentiation messaging' }
+        ]
       }, {
         id: '4',
         agent: 'profiler',
         timestamp: 'Today',
         headline: 'New ICP segment identified: FinTech startups (50–200 employees).',
         snippet: 'High engagement signals found in EU market; strong overlap with your existing SaaS ICP.',
+        description: 'Analysis of market signals reveals a new high-value ICP segment: FinTech startups with 50-200 employees, particularly in the EU market. This segment shows strong engagement patterns with solutions similar to yours, with 65% overlap in key buying criteria with your existing SaaS ICP. The segment demonstrates high growth potential and budget allocation for automation tools, making it an ideal expansion target for your sales efforts.',
         sourceUrl: '#',
-        sourceLabel: 'Profiler internal analysis'
+        sourceLabel: 'Profiler internal analysis',
+        nextBestMoves: [
+          'Should I prioritize outreach to decision makers in this new segment?',
+          'Want me to create a tailored value proposition for this ICP profile?',
+          'Do you want me to identify similar companies that match this profile?'
+        ],
+        contextualSuggestions: [
+          { icon: '🎯', text: 'Research FinTech segment decision makers' },
+          { icon: '📈', text: 'Analyze EU market penetration opportunities' },
+          { icon: '🔍', text: 'Find similar companies matching this profile' },
+          { icon: '📋', text: 'Create tailored value proposition' },
+          { icon: '📧', text: 'Draft outreach sequences for this segment' }
+        ]
       }];
       
       // Load rejected signals from localStorage for sample data too
@@ -558,13 +624,14 @@ const Index = () => {
     });
   };
 
-  const filteredSavedInsights = savedInsightsFilter === 'all' ? savedInsights : savedInsights.filter(insight => {
+  const filteredSavedInsights: SignalCard[] = savedInsightsFilter === 'all' ? savedInsights : savedInsights.filter(insight => {
     if (savedInsightsFilter === 'competitor') return insight.headline.toLowerCase().includes('competitor');
     if (savedInsightsFilter === 'icp') return insight.headline.toLowerCase().includes('icp');
     if (savedInsightsFilter === 'industry') return insight.headline.toLowerCase().includes('industry') || insight.headline.toLowerCase().includes('funding');
     if (savedInsightsFilter === 'linkedin') return insight.sourceLabel.toLowerCase().includes('linkedin');
     return true;
   });
+
   return (
     <Layout>
       <div className="p-6">
@@ -660,6 +727,47 @@ const Index = () => {
                       <p className="text-gray-600 text-sm leading-relaxed mb-2">
                         {signal.snippet}
                       </p>
+                      {/* Description field - detailed ICP/customer context with Read more/Show less */}
+                      {signal.description && (
+                        <div className="mt-2">
+                          {expandedDescriptions.has(signal.id) ? (
+                            <>
+                              <p className="text-gray-700 text-sm leading-relaxed mb-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                {signal.description}
+                              </p>
+                              <div className="flex justify-center">
+                                <Button
+                                  variant="outline"
+                                  size="default"
+                                  className="text-blue-600 border-blue-600 hover:text-blue-700 hover:bg-blue-50 text-sm"
+                                  onClick={() => {
+                                    setExpandedDescriptions(prev => {
+                                      const newSet = new Set(prev);
+                                      newSet.delete(signal.id);
+                                      return newSet;
+                                    });
+                                  }}
+                                >
+                                  Show less
+                                </Button>
+                              </div>
+                            </>
+                          ) : (
+                            <div className="flex justify-center">
+                              <Button
+                                variant="outline"
+                                size="default"
+                                className="text-blue-600 border-blue-600 hover:text-blue-700 hover:bg-blue-50 text-sm"
+                                onClick={() => {
+                                  setExpandedDescriptions(prev => new Set([...prev, signal.id]));
+                                }}
+                              >
+                                Read more
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <Tooltip>
                       <TooltipTrigger>
@@ -671,16 +779,17 @@ const Index = () => {
                     </Tooltip>
                   </div>
                   
-                  {/* Next Best Moves Section */}
-                  {/* <div className="mt-2 pt-2 border-t border-gray-100">
-                    <h4 className="text-sm font-medium text-gray-900 mb-2">Next Best Moves</h4>
-                    <div className="space-y-1">
-                      {getNextBestMoves(signal).map((move, index) => {
-                  const chatKey = `${signal.id}-${index}`;
-                  const isDismissed = dismissedSuggestions[signal.id]?.includes(index);
-                  const hasExpandedChat = expandedChats[chatKey];
-                  if (isDismissed) return null;
-                  return <div key={index}>
+                  {/* Next Best Moves Section - Commented out */}
+                  {/* {signal.nextBestMoves && signal.nextBestMoves.length > 0 && (
+                    <div className="mt-2 pt-2 border-t border-gray-100">
+                      <h4 className="text-sm font-medium text-gray-900 mb-2">Next Best Moves</h4>
+                      <div className="space-y-1">
+                        {signal.nextBestMoves.map((move, index) => {
+                          const chatKey = `${signal.id}-${index}`;
+                          const isDismissed = dismissedSuggestions[signal.id]?.includes(index);
+                          const hasExpandedChat = expandedChats[chatKey];
+                          if (isDismissed) return null;
+                          return <div key={index}>
                             <div className="group relative bg-gray-50 hover:bg-gray-100 p-2 rounded-lg transition-all duration-200 border border-transparent hover:border-gray-200">
                               <div className="flex items-center justify-between">
                                 <p className="text-sm text-gray-700 pr-4">{move}</p>
@@ -717,11 +826,12 @@ const Index = () => {
                                     <Send className="h-4 w-4" />
                                   </Button>
                                 </div>
-                              </div>}
-                          </div>;
-                })}
+                              </div>} */}
+                          {/* </div>
+                        })}
+                      </div>
                     </div>
-                  </div> */}
+                  )} */}
                 </div>
 
                 {/* Card Actions */}
@@ -731,7 +841,7 @@ const Index = () => {
                     Save for Later
                   </Button>
                 </div> */}
-              </div>;
+              </div>
               })
             )}
           </div>}
@@ -805,7 +915,10 @@ const Index = () => {
                 <div className="space-y-2">
                   <h4 className="text-sm font-medium text-gray-900">Quick Actions:</h4>
                   <div className="grid grid-cols-1 gap-1.5">
-                    {getContextualSuggestions(selectedSignal).map((suggestion, index) => (
+                    {(selectedSignal.contextualSuggestions && selectedSignal.contextualSuggestions.length > 0
+                      ? selectedSignal.contextualSuggestions
+                      : getContextualSuggestions(selectedSignal)
+                    ).map((suggestion, index) => (
                       <Button
                         key={index}
                         variant="outline"
