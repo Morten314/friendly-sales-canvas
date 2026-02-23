@@ -55,6 +55,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
 
 // Types
@@ -854,6 +857,10 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
       setExistingFileName(null);
     } else if (type === "file") {
       setSourceUrl("");
+    } else if (type === "system") {
+      setSelectedFile(null);
+      setExistingFileName(null);
+      setSourceUrl("");
     }
   };
 
@@ -883,6 +890,50 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
     if (e.key === "Enter") {
       e.preventDefault();
       handleAddCustomTag();
+    }
+  };
+
+  const handleSaveSystemSource = async (crmName: string) => {
+    const nameToUse = sourceName.trim() || crmName;
+    
+    try {
+      setIsSaving(true);
+      
+      // Create a system data source entry
+      const newSystemSource: DataSource = {
+        id: `system-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        type: "system",
+        name: nameToUse,
+        description: sourceDescription.trim() || undefined,
+        tags: selectedTags,
+        status: "processing",
+        createdAt: new Date(),
+      };
+
+      // Add to local state immediately
+      setDataSources((prev) => [...prev, newSystemSource]);
+      
+      // Close the form
+      resetInlineForm();
+      setIsAddingInline(false);
+      
+      toast({
+        title: "System connection initiated",
+        description: `${nameToUse} connection has been added. Complete the login process to finish setup.`,
+      });
+      
+      // Notify MissionControl that a data source was added
+      window.dispatchEvent(new CustomEvent('dataSourceAdded'));
+      
+    } catch (error) {
+      console.error("Error saving system source:", error);
+      toast({
+        title: "Error",
+        description: "Could not save system source. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -2769,13 +2820,14 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
 
   const canSave = 
     selectedType && 
-    selectedType !== "system" && 
     sourceName.trim() && 
-    (selectedType === "url" 
-      ? editingId ? true : sourceUrl.trim() // When editing URL, URL is optional; when adding new, URL is required
-      : editingId 
-        ? true // When editing, file is optional - can update metadata without new file
-        : selectedFile); // When adding new, file is required
+    (selectedType === "system"
+      ? true // System type only needs a name
+      : selectedType === "url" 
+        ? editingId ? true : sourceUrl.trim() // When editing URL, URL is optional; when adding new, URL is required
+        : editingId 
+          ? true // When editing, file is optional - can update metadata without new file
+          : selectedFile); // When adding new, file is required
 
   // Render the add/edit form
   const renderAddForm = () => {
@@ -2817,7 +2869,7 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
                     <SelectItem value="system" disabled>
                       <div className="flex items-center gap-2 opacity-50">
                         <Database className="h-4 w-4" />
-                        <span>Connect System (Coming soon)</span>
+                        <span>Connect System (Use dropdown)</span>
                       </div>
                     </SelectItem>
                   </SelectContent>
@@ -2884,6 +2936,7 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
                 <p className="text-xs text-muted-foreground">Supported formats: PDF, DOCX, PPTX, CSV, XLSX</p>
               </div>
             )}
+
 
             {/* Description */}
             <div className="space-y-2">
@@ -3018,13 +3071,68 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
         </div>
         <div className="flex gap-2">
           {dataSources.length > 0 && !isAddingInline && (
-            <Button 
-              onClick={handleStartAdd} 
-              className="gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              Add Data Source
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  className="gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Data Source
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>Add Data Source</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => {
+                  handleStartAdd();
+                  setSelectedType("url");
+                }}>
+                  <LinkIcon className="mr-2 h-4 w-4" />
+                  Add URL
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => {
+                  handleStartAdd();
+                  setSelectedType("file");
+                }}>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Upload File
+                </DropdownMenuItem>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <Plug className="mr-2 h-4 w-4" />
+                    Connect to Systems
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    <DropdownMenuLabel>Connect to CRM System</DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => handleConnectToCRM('HubSpot')}>
+                      <Plug className="mr-2 h-4 w-4" />
+                      HubSpot
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleConnectToCRM('Salesforce')}>
+                      <Plug className="mr-2 h-4 w-4" />
+                      Salesforce
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleConnectToCRM('Pipedrive')}>
+                      <Plug className="mr-2 h-4 w-4" />
+                      Pipedrive
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleConnectToCRM('Zoho')}>
+                      <Plug className="mr-2 h-4 w-4" />
+                      Zoho CRM
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleConnectToCRM('Monday')}>
+                      <Plug className="mr-2 h-4 w-4" />
+                      Monday.com
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleConnectToCRM('Asana')}>
+                      <Plug className="mr-2 h-4 w-4" />
+                      Asana
+                    </DropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
           {!showLeadUpload && !showLeadEditForm && (
             <DropdownMenu>
@@ -3045,32 +3153,6 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
                   <Upload className="mr-2 h-4 w-4" />
                   Upload CSV Manually
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuLabel>Connect to CRM System</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => handleConnectToCRM('HubSpot')}>
-                  <Plug className="mr-2 h-4 w-4" />
-                  HubSpot
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleConnectToCRM('Salesforce')}>
-                  <Plug className="mr-2 h-4 w-4" />
-                  Salesforce
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleConnectToCRM('Pipedrive')}>
-                  <Plug className="mr-2 h-4 w-4" />
-                  Pipedrive
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleConnectToCRM('Zoho')}>
-                  <Plug className="mr-2 h-4 w-4" />
-                  Zoho CRM
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleConnectToCRM('Monday')}>
-                  <Plug className="mr-2 h-4 w-4" />
-                  Monday.com
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleConnectToCRM('Asana')}>
-                  <Plug className="mr-2 h-4 w-4" />
-                  Asana
-                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           )}
@@ -3088,10 +3170,66 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
           <p className="text-sm text-muted-foreground text-center max-w-md mb-6">
             Add sources to help agents understand your business context.
           </p>
-          <Button onClick={handleStartAdd} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Add Data Source
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button className="gap-2">
+                <Plus className="h-4 w-4" />
+                Add Data Source
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="center" className="w-56">
+              <DropdownMenuLabel>Add Data Source</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => {
+                handleStartAdd();
+                setSelectedType("url");
+              }}>
+                <LinkIcon className="mr-2 h-4 w-4" />
+                Add URL
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => {
+                handleStartAdd();
+                setSelectedType("file");
+              }}>
+                <Upload className="mr-2 h-4 w-4" />
+                Upload File
+              </DropdownMenuItem>
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <Plug className="mr-2 h-4 w-4" />
+                  Connect to Systems
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent>
+                  <DropdownMenuLabel>Connect to CRM System</DropdownMenuLabel>
+                  <DropdownMenuItem onClick={() => handleConnectToCRM('HubSpot')}>
+                    <Plug className="mr-2 h-4 w-4" />
+                    HubSpot
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleConnectToCRM('Salesforce')}>
+                    <Plug className="mr-2 h-4 w-4" />
+                    Salesforce
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleConnectToCRM('Pipedrive')}>
+                    <Plug className="mr-2 h-4 w-4" />
+                    Pipedrive
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleConnectToCRM('Zoho')}>
+                    <Plug className="mr-2 h-4 w-4" />
+                    Zoho CRM
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleConnectToCRM('Monday')}>
+                    <Plug className="mr-2 h-4 w-4" />
+                    Monday.com
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleConnectToCRM('Asana')}>
+                    <Plug className="mr-2 h-4 w-4" />
+                    Asana
+                  </DropdownMenuItem>
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       )}
 
