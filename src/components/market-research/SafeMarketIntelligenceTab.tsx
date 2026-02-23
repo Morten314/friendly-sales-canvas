@@ -13,14 +13,23 @@ const SafeMarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = (props) 
 
   // Check for problematic objects before rendering
   const checkForObjects = (obj: any, path = '') => {
+    // Skip regionalHotspots - it's correctly an object from backend with region keys
+    if (path === 'industryTrendsRegionalHotspots') {
+      return; // This is expected to be an object, don't flag it
+    }
+    
     if (obj && typeof obj === 'object' && !React.isValidElement(obj) && !Array.isArray(obj)) {
       if (obj.channel || obj.channelMix || obj.trigger || obj.description) {
         console.error('🚨 FOUND PROBLEMATIC OBJECT:', path, obj);
       }
       // Check for targetMarkets object that might be rendered directly
-      if (obj['North America'] || obj['Europe'] || obj['Asia Pacific'] || obj['Latin America']) {
-        console.error('🚨 FOUND TARGET MARKETS OBJECT:', path, obj);
-        console.error('🚨 This object should be an array, not an object with region keys');
+      if (obj['North America'] || obj['Europe'] || obj['Asia Pacific'] || obj['Latin America'] || 
+          obj['US'] || obj['Canada'] || obj['Australia']) {
+        // Only flag if it's not regionalHotspots (which we already skipped above)
+        if (path !== 'industryTrendsRegionalHotspots') {
+          console.error('🚨 FOUND TARGET MARKETS OBJECT:', path, obj);
+          console.error('🚨 This object should be an array, not an object with region keys');
+        }
       }
     }
   };
@@ -40,9 +49,13 @@ const SafeMarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = (props) 
   }
 
   // Additional safety check: Ensure no objects are being passed that could be rendered directly
-  const sanitizeProps = (obj: any): any => {
+  const sanitizeProps = (obj: any, key?: string): any => {
     if (obj && typeof obj === 'object' && !React.isValidElement(obj) && !Array.isArray(obj)) {
-      // If it's an object with region keys, convert to array
+      // Preserve regionalHotspots as it's correctly an object from backend
+      if (key === 'industryTrendsRegionalHotspots') {
+        return obj; // Keep as-is, it's meant to be an object
+      }
+      // If it's an object with region keys, convert to array (but not regionalHotspots)
       if (obj['North America'] || obj['Europe'] || obj['Asia Pacific'] || obj['Latin America']) {
         console.warn('🔧 SANITIZING: Converting region object to array');
         return Object.keys(obj);
@@ -70,7 +83,11 @@ const SafeMarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = (props) 
     if (value instanceof Set) {
       return Array.from(value);
     }
-    return sanitizeProps(value);
+    // Preserve regionalHotspots as object (it's correctly structured from backend)
+    if (key === 'industryTrendsRegionalHotspots') {
+      return value; // Keep as-is
+    }
+    return sanitizeProps(value, key);
   }));
 
   // Restore function props after sanitization

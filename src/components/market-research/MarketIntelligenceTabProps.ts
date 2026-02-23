@@ -44,11 +44,7 @@ export interface MarketIntelligenceTabProps {
   industryTrendSnapshots: TrendSnapshot[];
   industryTrendsRecommendations: IndustryTrendsRecommendations;
   industryTrendsRisks: string[];
-  industryTrendsRegionalHotspots?: {
-    APAC: string;
-    Europe: string;
-    "North America": string;
-  };
+  industryTrendsRegionalHotspots?: Record<string, string>; // Accept any object structure from backend (e.g., { "US": "38%", "Europe": "28%", "Canada": "12%", "Australia": "9%" })
   industryTrendsVisualCharts?: {
     aiAdoptionTrends: string[];
     technologyBudgetAllocation: {
