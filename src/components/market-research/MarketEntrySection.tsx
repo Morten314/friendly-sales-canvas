@@ -209,8 +209,15 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
   };
 
   // Fetch data when component mounts if no data is available
+  // NOTE: Skip automatic fetch if parent is refreshing to prevent conflicts
   useEffect(() => {
     console.log('🚀 MarketEntrySection: Component mounted - checking for data');
+    
+    // Don't auto-fetch if parent is currently refreshing
+    if (isRefreshing) {
+      console.log('🚀 MarketEntrySection: Parent is refreshing, skipping auto-fetch');
+      return;
+    }
     
     // Check if we have any meaningful data in our local state OR props
     const hasLocalData = marketEntryData && (marketEntryData.executiveSummary || marketEntryData.entryBarriers?.length > 0);
@@ -224,14 +231,17 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
       console.log('🚀 MarketEntrySection: No data found or receiving fallback data, fetching fresh data');
       // Reduced delay for faster loading
       const timer = setTimeout(() => {
-        fetchMarketEntryData(false);
+        // Double-check isRefreshing hasn't changed during the delay
+        if (!isRefreshing) {
+          fetchMarketEntryData(false);
+        }
       }, 1500);
       
       return () => clearTimeout(timer);
     } else {
       console.log('🚀 MarketEntrySection: Data already available, skipping fetch');
     }
-  }, []);
+  }, [isRefreshing]); // Add isRefreshing as dependency to re-check when refresh state changes
   
   // Handle refresh when parent triggers it
   useEffect(() => {

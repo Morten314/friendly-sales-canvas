@@ -3147,8 +3147,6 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>Add Leads</DropdownMenuLabel>
-                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => setShowLeadUpload(true)}>
                   <Upload className="mr-2 h-4 w-4" />
                   Upload CSV

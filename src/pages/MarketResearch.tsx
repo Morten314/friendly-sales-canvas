@@ -1130,7 +1130,16 @@ const MarketResearch = React.memo(() => {
   const [validationAttempts, setValidationAttempts] = useState(0);
 
   const [consecutiveValidations, setConsecutiveValidations] = useState(0);
-
+  
+  // Track component failure counts to prevent infinite retry loops
+  const [componentFailureCounts, setComponentFailureCounts] = useState<Record<string, number>>({});
+  
+  // Track validation timeout IDs to clear them when validation completes
+  const validationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Flag to prevent multiple simultaneous validations
+  const isValidatingRef = useRef<boolean>(false);
+  
   const [globalTimeoutId, setGlobalTimeoutId] = useState<NodeJS.Timeout | null>(null);
 
 
@@ -1356,6 +1365,23 @@ const MarketResearch = React.memo(() => {
   // Function to validate that all components have fresh data
 
   const validateAllComponentsHaveFreshData = () => {
+    // Guard: Don't validate if not refreshing
+    if (!isRefreshing) {
+      // Clear any pending validation timeout
+      if (validationTimeoutRef.current) {
+        clearTimeout(validationTimeoutRef.current);
+        validationTimeoutRef.current = null;
+      }
+      isValidatingRef.current = false;
+      return;
+    }
+    
+    // Prevent multiple simultaneous validations
+    if (isValidatingRef.current) {
+      return;
+    }
+    
+    isValidatingRef.current = true;
 
     setValidationAttempts(prev => prev + 1);
 
@@ -1378,6 +1404,13 @@ const MarketResearch = React.memo(() => {
       setIsMarketEntryLoading(false);
       setIsCompetitorLoading(false);
       setIsRegulatoryLoading(false);
+      
+      // Clear any pending validation timeout
+      if (validationTimeoutRef.current) {
+        clearTimeout(validationTimeoutRef.current);
+        validationTimeoutRef.current = null;
+      }
+      isValidatingRef.current = false;
       
       setIsRefreshing(false);
       setLoadingPhase('complete');
@@ -1407,10 +1440,15 @@ const MarketResearch = React.memo(() => {
 
       console.log(`⏳ Waiting ${Math.ceil((minWaitTime - timeSinceRefresh) / 1000)}s more for components to process fresh data...`);
 
-      setTimeout(() => {
-
+      // Clear any existing timeout before setting a new one
+      if (validationTimeoutRef.current) {
+        clearTimeout(validationTimeoutRef.current);
+      }
+      
+      validationTimeoutRef.current = setTimeout(() => {
+        validationTimeoutRef.current = null;
+        isValidatingRef.current = false;
         validateAllComponentsHaveFreshData();
-
       }, 500);
 
       return;
@@ -1750,6 +1788,13 @@ const MarketResearch = React.memo(() => {
 
         
 
+        // Clear any pending validation timeout
+        if (validationTimeoutRef.current) {
+          clearTimeout(validationTimeoutRef.current);
+          validationTimeoutRef.current = null;
+        }
+        isValidatingRef.current = false;
+        
         // Start monitoring rendering completion
 
         startRenderingPhase();
@@ -1763,11 +1808,15 @@ const MarketResearch = React.memo(() => {
         
 
         // Continue validation to ensure consistency with much shorter interval
-
-        setTimeout(() => {
-
+        // Clear any existing timeout before setting a new one
+        if (validationTimeoutRef.current) {
+          clearTimeout(validationTimeoutRef.current);
+        }
+        
+        validationTimeoutRef.current = setTimeout(() => {
+          validationTimeoutRef.current = null;
+          isValidatingRef.current = false;
           validateAllComponentsHaveFreshData();
-
         }, 200); // Reduced to 200ms for faster processing
 
         return;
@@ -1790,6 +1839,13 @@ const MarketResearch = React.memo(() => {
         setIsMarketEntryLoading(false);
         setIsCompetitorLoading(false);
         setIsRegulatoryLoading(false);
+        
+        // Clear any pending validation timeout
+        if (validationTimeoutRef.current) {
+          clearTimeout(validationTimeoutRef.current);
+          validationTimeoutRef.current = null;
+        }
+        isValidatingRef.current = false;
         
         setIsRefreshing(false);
         setLoadingPhase('complete');
@@ -1908,11 +1964,15 @@ const MarketResearch = React.memo(() => {
           console.log('⏰ Still waiting for:', Object.entries(componentStatus).filter(([name, status]) => status !== 'success').map(([name]) => name));
 
           // Continue validation for remaining components
-
-          setTimeout(() => {
-
+          // Clear any existing timeout before setting a new one
+          if (validationTimeoutRef.current) {
+            clearTimeout(validationTimeoutRef.current);
+          }
+          
+          validationTimeoutRef.current = setTimeout(() => {
+            validationTimeoutRef.current = null;
+            isValidatingRef.current = false;
             validateAllComponentsHaveFreshData();
-
           }, 1500); // Reduced wait time (paid plan allows faster processing)
 
         }
@@ -1928,11 +1988,15 @@ const MarketResearch = React.memo(() => {
         
 
         // Wait a bit more and try again with much shorter interval
-
-        setTimeout(() => {
-
+        // Clear any existing timeout before setting a new one
+        if (validationTimeoutRef.current) {
+          clearTimeout(validationTimeoutRef.current);
+        }
+        
+        validationTimeoutRef.current = setTimeout(() => {
+          validationTimeoutRef.current = null;
+          isValidatingRef.current = false;
           validateAllComponentsHaveFreshData();
-
         }, 200); // Reduced to 200ms for faster processing
 
       }
@@ -4230,19 +4294,15 @@ const MarketResearch = React.memo(() => {
 
 
 
+  // NOTE: Auto-refresh removed to prevent automatic refreshes
   // Auto-refresh competitor data if it's null (fallback mechanism)
-
-  useEffect(() => {
-
-    if (!competitorData && !isRefreshing) {
-
-      console.log('🔄 COMPETITOR AUTO-REFRESH - competitorData is null, triggering automatic refresh...');
-
-      fetchCompetitorData(true, false); // Force refresh, don't show loading
-
-    }
-
-  }, [competitorData, isRefreshing]);
+  // DISABLED: This was causing automatic refreshes after components loaded
+  // useEffect(() => {
+  //   if (!competitorData && !isRefreshing) {
+  //     console.log('🔄 COMPETITOR AUTO-REFRESH - competitorData is null, triggering automatic refresh...');
+  //     fetchCompetitorData(true, false); // Force refresh, don't show loading
+  //   }
+  // }, [competitorData, isRefreshing]);
 
 
 
@@ -4302,11 +4362,12 @@ const MarketResearch = React.memo(() => {
 
         
 
+        // NOTE: Automatic refresh removed - refresh only happens when user clicks refresh button
         // Trigger refresh of all components with new profile
 
-        console.log('🔄 Triggering refresh of all components with updated company profile...');
+        // console.log('🔄 Triggering refresh of all components with updated company profile...');
 
-        triggerScoutAndRefresh();
+        // triggerScoutAndRefresh();
 
       }
 
@@ -4360,26 +4421,10 @@ const MarketResearch = React.memo(() => {
 
     
 
-    // Also clear any stale data that might be causing issues
-
-    console.log('🧹 Clearing potentially stale data for fresh fetch...');
-
-    if (!marketData?.executiveSummary) setMarketData(null);
-
-    if (!industryTrendsData?.executiveSummary) setIndustryTrendsData(null);
-
-    if (!marketEntryData?.executiveSummary) setMarketEntryData(null);
-
-    if (!competitorData?.executiveSummary) setCompetitorData(null);
-
-    // Only clear regulatory data if it doesn't have a timestamp (meaning it's fallback data)
-    // Don't clear fresh API data that has a timestamp
-    if (!regulatoryData?.timestamp) {
-      console.log('🧹 Clearing regulatory data - no timestamp found');
-      setRegulatoryData(getDefaultRegulatoryData());
-    } else {
-      console.log('🧹 Keeping regulatory data - has timestamp:', regulatoryData.timestamp);
-    }
+    // NOTE: Don't clear existing data during refresh to prevent "no data available" flash
+    // Data will be replaced when fresh data arrives from API
+    // Only clear data if explicitly needed (e.g., on explicit refresh button click)
+    console.log('🔄 Keeping existing data during refresh - will be replaced when fresh data arrives');
 
     
 
@@ -4451,6 +4496,9 @@ const MarketResearch = React.memo(() => {
         setValidationAttempts(0); // Reset validation attempts for new refresh
 
         setConsecutiveValidations(0); // Reset consecutive validations for new refresh
+        
+        // Reset component failure counts for new refresh
+        setComponentFailureCounts({});
 
         console.log('🔄 Starting first refresh - all components will be fetched');
 
@@ -4835,6 +4883,16 @@ const MarketResearch = React.memo(() => {
             console.log(`✅ ${component.name} direct API call completed successfully`);
           } catch (apiError) {
             console.error(`❌ ${component.name} direct API call failed:`, apiError);
+            
+            // DIAGNOSTIC: Log if this is a timeout (backend issue) or other error
+            if (apiError instanceof Error) {
+              if (apiError.message.includes('timeout')) {
+                console.error(`⏰ BACKEND TIMEOUT: ${component.name} timed out after 45 seconds - this indicates a backend performance issue`);
+              } else {
+                console.error(`❌ BACKEND ERROR: ${component.name} failed with error: ${apiError.message}`);
+              }
+            }
+            
             throw apiError;
           }
 
@@ -4901,6 +4959,21 @@ const MarketResearch = React.memo(() => {
           }
 
           // Update component status to failed
+          // Track failure count to prevent infinite retry loops
+          setComponentFailureCounts(prev => {
+            const currentCount = (prev[component.name] || 0) + 1;
+            const errorMsg = error instanceof Error ? error.message : String(error);
+            const isTimeout = errorMsg.includes('timeout');
+            
+            console.warn(`⚠️ ${component.name} failed (count: ${currentCount}). Max retries: 2`);
+            if (isTimeout) {
+              console.error(`⏰ BACKEND TIMEOUT DETECTED: ${component.name} is timing out - this is likely a backend performance issue`);
+            } else {
+              console.error(`❌ BACKEND ERROR: ${component.name} failed with: ${errorMsg}`);
+            }
+            
+            return { ...prev, [component.name]: currentCount };
+          });
 
           currentStatus[component.name] = 'failed';
 
@@ -5040,12 +5113,33 @@ const MarketResearch = React.memo(() => {
         
 
         // Implement immediate fallback for critical components
-
+        // Filter out components that have failed too many times (prevent infinite loops)
         const failedComponentNames = Object.entries(currentStatus)
-
-          .filter(([name, status]) => status === 'failed')
-
+          .filter(([name, status]) => {
+            if (status === 'failed') {
+              const failureCount = componentFailureCounts[name] || 0;
+              if (failureCount >= 2) {
+                console.warn(`🛑 ${name} has failed ${failureCount} times, skipping retry to prevent infinite loop`);
+                return false; // Skip components that have failed too many times
+              }
+              return true;
+            }
+            return false;
+          })
           .map(([name]) => name);
+        
+        // If all failed components have exceeded retry limit, stop refreshing
+        if (failedComponentNames.length === 0) {
+          console.log('🛑 All failed components have exceeded retry limit, stopping refresh');
+          setIsRefreshing(false);
+          setLoadingPhase('complete');
+          toast({
+            title: "Refresh Stopped",
+            description: "Some components failed repeatedly. Please try refreshing again later.",
+            duration: 5000,
+          });
+          return;
+        }
 
         
 
@@ -5126,6 +5220,12 @@ const MarketResearch = React.memo(() => {
                 
 
                 // Update component status to success
+                // Reset failure count on success
+                setComponentFailureCounts(prev => {
+                  const updated = { ...prev };
+                  delete updated[componentName];
+                  return updated;
+                });
 
                 setComponentStatus(prev => ({ ...prev, [componentName]: 'success' }));
 
@@ -5221,6 +5321,13 @@ const MarketResearch = React.memo(() => {
 
                 console.log(`✅ ${failedComponentNames[0]} immediate retry successful`);
 
+                // Reset failure count on success
+                setComponentFailureCounts(prev => {
+                  const updated = { ...prev };
+                  delete updated[failedComponentNames[0]];
+                  return updated;
+                });
+                
                 setComponentStatus(prev => ({ ...prev, [failedComponentNames[0]]: 'success' }));
 
                 
@@ -5260,12 +5367,34 @@ const MarketResearch = React.memo(() => {
         
 
         // Retry failed components immediately
-
-        setTimeout(() => {
-
-          smartRefresh(false);
-
-        }, 50); // Reduced to 50ms for fastest retry
+        // Add guard to prevent infinite loops
+        // Only retry if we haven't exceeded max attempts AND there are components that haven't exceeded their failure limit
+        const retryableComponents = Object.entries(currentStatus)
+          .filter(([name, status]) => {
+            if (status === 'failed') {
+              const failureCount = componentFailureCounts[name] || 0;
+              return failureCount < 2; // Only retry components that haven't failed 2+ times
+            }
+            return false;
+          });
+        
+        if (refreshAttempt < 3 && retryableComponents.length > 0) {
+          console.log(`🔄 Retrying ${retryableComponents.length} failed components (attempt ${refreshAttempt + 1}/3)`);
+          setTimeout(() => {
+            smartRefresh(false);
+          }, 2000); // Increased delay to 2 seconds to give backend time to recover
+        } else {
+          console.log('🛑 Maximum refresh attempts reached or no retryable components, stopping to prevent infinite loop');
+          setIsRefreshing(false);
+          setLoadingPhase('complete');
+          toast({
+            title: "Refresh Complete",
+            description: retryableComponents.length === 0 
+              ? "Some components failed repeatedly and were skipped."
+              : "Maximum retry attempts reached. Please try refreshing again later.",
+            duration: 5000,
+          });
+        }
 
       } else {
 
@@ -9306,7 +9435,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-      console.log('Company profile updated, reloading profile data and triggering Scout refresh...');
+      console.log('Company profile updated, reloading profile data...');
 
 
 
@@ -9314,7 +9443,8 @@ const MarketResearch = React.memo(() => {
 
 
 
-      triggerScoutAndRefresh();
+      // NOTE: Automatic refresh removed - refresh only happens when user clicks refresh button
+      // triggerScoutAndRefresh();
 
 
 
