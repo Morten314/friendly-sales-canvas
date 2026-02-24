@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { MapPin, Bot, Edit, Target, Clock, AlertTriangle, X, FileText, Save, Share, TrendingUp, ChevronDown, ChevronUp, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -93,6 +93,12 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [marketEntryData, setMarketEntryData] = useState<any>(null);
+  // Use ref to track if we have API data to prevent props from overwriting it
+  const hasApiDataRef = useRef(false);
+  const apiDataTimestampRef = useRef<number | null>(null);
+  // Use ref to prevent multiple simultaneous fetches
+  const isFetchingRef = useRef(false);
+  const hasFetchedRef = useRef(false);
   
   // Local edit state variables
   const [editExecutiveSummary, setEditExecutiveSummary] = useState('');
@@ -129,7 +135,14 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
 
   // Fetch Market Entry data from API
   const fetchMarketEntryData = async (refresh = false) => {
+    // Prevent multiple simultaneous fetches
+    if (isFetchingRef.current && !refresh) {
+      console.log('🚀 MarketEntrySection: Already fetching, skipping duplicate request');
+      return;
+    }
+    
     console.log('🚀 MarketEntrySection: Starting fetchMarketEntryData with refresh:', refresh);
+    isFetchingRef.current = true;
     try {
       setIsLoading(true);
       setError(null);
@@ -222,7 +235,8 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
           // Create mapped data with swotAnalysis
           const mappedApiData = {
             ...apiData,
-            swotAnalysis: swotData || null
+            swotAnalysis: swotData || null,
+            timestamp: apiData.timestamp || Date.now() // Ensure timestamp exists
           };
           
           // Remove the original swot key to avoid confusion (keep only swotAnalysis)
@@ -232,8 +246,25 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
           
           console.log('🔍 MarketEntrySection: Mapped swotAnalysis:', mappedApiData.swotAnalysis);
           console.log('🔍 MarketEntrySection: Setting marketEntryData with swotAnalysis:', mappedApiData.swotAnalysis);
-          setMarketEntryData(mappedApiData);
+          
+          // Mark that we have API data
+          hasApiDataRef.current = true;
+          apiDataTimestampRef.current = mappedApiData.timestamp;
+          
+          // Merge with existing marketEntryData to preserve any props data, but prioritize API data
+          setMarketEntryData(prev => {
+            const merged = {
+              ...prev, // Keep existing data
+              ...mappedApiData, // Overwrite with API data (which has swotAnalysis)
+              // Ensure swotAnalysis is set from API
+              swotAnalysis: mappedApiData.swotAnalysis || prev?.swotAnalysis || prev?.swot
+            };
+            console.log('✅ MarketEntrySection: Merged API data with existing data');
+            return merged;
+          });
           console.log('✅ MARKET ENTRY SECTION UPDATED - Component name:', apiData.component_name);
+          console.log('✅ MarketEntrySection: API data flag set to true, timestamp:', mappedApiData.timestamp);
+          hasFetchedRef.current = true;
         } else {
           console.log('ℹ️ MarketEntrySection: No Market Entry specific data found in response');
         }
@@ -243,12 +274,44 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
       setError('Failed to load market entry data');
     } finally {
       setIsLoading(false);
+      isFetchingRef.current = false;
     }
   };
+
+  // Initialize marketEntryData from props on mount if available (for page reload scenarios)
+  useEffect(() => {
+    // Only run once on mount if marketEntryData is null
+    if (!marketEntryData) {
+      const hasPropsData = executiveSummary || entryBarriers.length > 0 || recommendedChannel || timeToMarket || topBarrier || competitiveDifferentiation.length > 0 || strategicRecommendations.length > 0 || riskAssessment.length > 0;
+      
+      if (hasPropsData) {
+        console.log('🚀 MarketEntrySection: Initializing marketEntryData from props on mount');
+        // Note: We can't get swot from props directly, but we'll fetch it if needed
+        setMarketEntryData({
+          executiveSummary,
+          entryBarriers,
+          recommendedChannel,
+          timeToMarket,
+          topBarrier,
+          competitiveDifferentiation,
+          strategicRecommendations,
+          riskAssessment,
+          // swotAnalysis will be set when API data arrives
+          timestamp: null // No timestamp means it's from props, not API
+        });
+      }
+    }
+  }, []); // Run only once on mount
 
   // Fetch data when component mounts if no data is available
   // NOTE: Skip automatic fetch if parent is refreshing to prevent conflicts
   useEffect(() => {
+    // Prevent running if already fetched or currently fetching
+    if (hasFetchedRef.current || isFetchingRef.current) {
+      console.log('🚀 MarketEntrySection: Already fetched or fetching, skipping');
+      return;
+    }
+    
     console.log('🚀 MarketEntrySection: Component mounted - checking for data');
     
     // Don't auto-fetch if parent is currently refreshing
@@ -269,13 +332,14 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
     const isReceivingFallbackData = executiveSummary?.includes('being prepared') || 
                                    executiveSummary?.includes('Market entry analysis is being prepared');
     
+    // Only fetch if we truly need data
     if ((!hasLocalData && (!hasPropsData || isReceivingFallbackData)) || needsSwotData) {
       const reason = !hasLocalData ? 'No data found' : 'Missing SWOT data';
       console.log(`🚀 MarketEntrySection: ${reason}, fetching fresh data`);
       // Reduced delay for faster loading
       const timer = setTimeout(() => {
-        // Double-check isRefreshing hasn't changed during the delay
-        if (!isRefreshing) {
+        // Double-check conditions haven't changed
+        if (!isRefreshing && !hasFetchedRef.current && !isFetchingRef.current) {
           fetchMarketEntryData(false);
         }
       }, 1500);
@@ -285,12 +349,16 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
       console.log('🚀 MarketEntrySection: Data already available, skipping fetch');
       console.log('🚀 MarketEntrySection: Has local SWOT data:', hasLocalSwotData);
     }
-  }, [isRefreshing]); // Add isRefreshing as dependency to re-check when refresh state changes
+  }, [isRefreshing]); // Only depend on isRefreshing to avoid loops
   
   // Handle refresh when parent triggers it
   useEffect(() => {
-    if (isRefreshing) {
+    if (isRefreshing && !isFetchingRef.current) {
       console.log('🔄 Market Entry - Refresh triggered by parent');
+      // Reset API data flag when refreshing
+      hasApiDataRef.current = false;
+      apiDataTimestampRef.current = null;
+      hasFetchedRef.current = false; // Allow fetch on refresh
       // Don't clear data immediately - let fresh data replace it
       setError(null);
       setIsLoading(true);
@@ -300,30 +368,62 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
 
   // Sync with props when they change (similar to other components)
   // Only sync when not editing to avoid overwriting user's current edits
+  // IMPORTANT: Use ref to prevent overwriting API data - ref persists across renders
   useEffect(() => {
+    // Skip if currently fetching to avoid conflicts
+    if (isFetchingRef.current) {
+      return;
+    }
+    
     if (!isEditing) {
-      console.log('🔄 MarketEntrySection - Props changed, syncing with local state (not editing)');
+      console.log('🔄 MarketEntrySection - Props changed, checking if sync needed (not editing)');
+      console.log('🔄 MarketEntrySection - hasApiDataRef.current:', hasApiDataRef.current);
+      console.log('🔄 MarketEntrySection - apiDataTimestampRef.current:', apiDataTimestampRef.current);
       
-      // If we have fresh props data and no local data, or if props are more recent
+      // If we have fresh props data
       const hasPropsData = executiveSummary || entryBarriers.length > 0 || recommendedChannel || timeToMarket || topBarrier || competitiveDifferentiation.length > 0 || strategicRecommendations.length > 0 || riskAssessment.length > 0;
       
-      if (hasPropsData) {
-        // Always update local data with props when not editing to reflect parent state changes
-        console.log('🔄 MarketEntrySection - Updating local data with props');
-        // Preserve existing swotAnalysis from marketEntryData if it exists
-        const existingSwot = marketEntryData?.swotAnalysis || marketEntryData?.swot;
-        setMarketEntryData({
-          executiveSummary,
-          entryBarriers,
-          recommendedChannel,
-          timeToMarket,
-          topBarrier,
-          competitiveDifferentiation,
-          strategicRecommendations,
-          riskAssessment,
-          swotAnalysis: existingSwot, // Preserve existing SWOT data
-          timestamp: Date.now()
-        });
+      // Check if we have API data using ref (more reliable than checking marketEntryData state)
+      const hasApiData = hasApiDataRef.current && apiDataTimestampRef.current;
+      
+      // CRITICAL: If we have API data (from ref), NEVER overwrite it with props
+      if (hasApiData) {
+        console.log('🔄 MarketEntrySection - BLOCKING props sync: API data exists (ref check), preserving API data');
+        return; // Exit early - don't sync props if API data exists
+      }
+      
+      // Only sync from props if we don't have API data and props are different
+      if (hasPropsData && !hasApiData) {
+        // Check if props are actually different from current marketEntryData to avoid unnecessary updates
+        const propsChanged = 
+          marketEntryData?.executiveSummary !== executiveSummary ||
+          JSON.stringify(marketEntryData?.entryBarriers) !== JSON.stringify(entryBarriers) ||
+          marketEntryData?.recommendedChannel !== recommendedChannel ||
+          marketEntryData?.timeToMarket !== timeToMarket ||
+          marketEntryData?.topBarrier !== topBarrier ||
+          JSON.stringify(marketEntryData?.competitiveDifferentiation) !== JSON.stringify(competitiveDifferentiation) ||
+          JSON.stringify(marketEntryData?.strategicRecommendations) !== JSON.stringify(strategicRecommendations) ||
+          JSON.stringify(marketEntryData?.riskAssessment) !== JSON.stringify(riskAssessment);
+        
+        if (propsChanged) {
+          console.log('🔄 MarketEntrySection - Updating local data with props (no API data exists, props changed)');
+          // Preserve existing swotAnalysis from marketEntryData if it exists
+          const existingSwot = marketEntryData?.swotAnalysis || marketEntryData?.swot;
+          setMarketEntryData({
+            executiveSummary,
+            entryBarriers,
+            recommendedChannel,
+            timeToMarket,
+            topBarrier,
+            competitiveDifferentiation,
+            strategicRecommendations,
+            riskAssessment,
+            swotAnalysis: existingSwot, // Preserve existing SWOT data
+            timestamp: marketEntryData?.timestamp || Date.now()
+          });
+        } else {
+          console.log('🔄 MarketEntrySection - Props unchanged, skipping sync');
+        }
       }
     }
   }, [executiveSummary, entryBarriers, recommendedChannel, timeToMarket, topBarrier, competitiveDifferentiation, strategicRecommendations, riskAssessment, isEditing]);
@@ -622,7 +722,19 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
   );
 
   // Check if we have any meaningful data to display (prioritize local data over props)
-  const baseDisplayData = marketEntryData || {
+  // Always prioritize marketEntryData if it exists, as it contains API data
+  const baseDisplayData = marketEntryData ? {
+    ...marketEntryData,
+    // Ensure we use props only if marketEntryData doesn't have that field
+    executiveSummary: marketEntryData.executiveSummary || executiveSummary,
+    entryBarriers: marketEntryData.entryBarriers?.length > 0 ? marketEntryData.entryBarriers : entryBarriers,
+    recommendedChannel: marketEntryData.recommendedChannel || recommendedChannel,
+    timeToMarket: marketEntryData.timeToMarket || timeToMarket,
+    topBarrier: marketEntryData.topBarrier || topBarrier,
+    competitiveDifferentiation: marketEntryData.competitiveDifferentiation?.length > 0 ? marketEntryData.competitiveDifferentiation : competitiveDifferentiation,
+    strategicRecommendations: marketEntryData.strategicRecommendations?.length > 0 ? marketEntryData.strategicRecommendations : strategicRecommendations,
+    riskAssessment: marketEntryData.riskAssessment?.length > 0 ? marketEntryData.riskAssessment : riskAssessment
+  } : {
     executiveSummary,
     entryBarriers,
     recommendedChannel,
@@ -630,24 +742,22 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
     topBarrier,
     competitiveDifferentiation,
     strategicRecommendations,
-    riskAssessment,
-    // Include swot/swotAnalysis from marketEntryData if it exists, even when falling back to props
-    swot: marketEntryData?.swot,
-    swotAnalysis: marketEntryData?.swotAnalysis || marketEntryData?.swot
+    riskAssessment
   };
   
   // Map swot to swotAnalysis to match frontend structure
+  // Prioritize marketEntryData's swot/swotAnalysis since it comes from API
+  const swotData = marketEntryData?.swotAnalysis || marketEntryData?.swot || baseDisplayData.swot || baseDisplayData.swotAnalysis;
   const displayData = {
     ...baseDisplayData,
-    swotAnalysis: baseDisplayData.swot || baseDisplayData.swotAnalysis || marketEntryData?.swot || marketEntryData?.swotAnalysis
+    swotAnalysis: swotData
   };
   
   // Debug logging for SWOT data
   console.log('🔍 MarketEntrySection: marketEntryData:', marketEntryData);
   console.log('🔍 MarketEntrySection: marketEntryData?.swot:', marketEntryData?.swot);
   console.log('🔍 MarketEntrySection: marketEntryData?.swotAnalysis:', marketEntryData?.swotAnalysis);
-  console.log('🔍 MarketEntrySection: baseDisplayData.swot:', baseDisplayData.swot);
-  console.log('🔍 MarketEntrySection: baseDisplayData.swotAnalysis:', baseDisplayData.swotAnalysis);
+  console.log('🔍 MarketEntrySection: swotData (final):', swotData);
   console.log('🔍 MarketEntrySection: displayData.swotAnalysis:', displayData.swotAnalysis);
   
   // Check if we're showing fallback data (the "being prepared" message)

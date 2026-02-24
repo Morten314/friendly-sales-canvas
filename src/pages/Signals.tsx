@@ -117,6 +117,49 @@ const getSignalContentHash = (signal: SignalCard): string => {
   return `signal-${Math.abs(hash).toString(36)}`;
 };
 
+// Helper function to parse timestamp and return a comparable number (higher = newer)
+const parseTimestamp = (timestamp: string): number => {
+  // Try parsing as ISO 8601 date first
+  const isoDate = new Date(timestamp);
+  if (!isNaN(isoDate.getTime())) {
+    return isoDate.getTime();
+  }
+  
+  // Handle relative timestamps
+  const now = Date.now();
+  const lowerTimestamp = timestamp.toLowerCase().trim();
+  
+  // Handle "Today"
+  if (lowerTimestamp === 'today') {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return today.getTime();
+  }
+  
+  // Handle "Xh ago", "Xm ago", "Xd ago", etc.
+  const hourMatch = lowerTimestamp.match(/(\d+)\s*h\s*ago/);
+  if (hourMatch) {
+    const hours = parseInt(hourMatch[1], 10);
+    return now - (hours * 60 * 60 * 1000);
+  }
+  
+  const minuteMatch = lowerTimestamp.match(/(\d+)\s*m\s*ago/);
+  if (minuteMatch) {
+    const minutes = parseInt(minuteMatch[1], 10);
+    return now - (minutes * 60 * 1000);
+  }
+  
+  const dayMatch = lowerTimestamp.match(/(\d+)\s*d\s*ago/);
+  if (dayMatch) {
+    const days = parseInt(dayMatch[1], 10);
+    return now - (days * 24 * 60 * 60 * 1000);
+  }
+  
+  // If we can't parse it, return 0 (will be sorted to the end)
+  console.warn('Unable to parse timestamp:', timestamp);
+  return 0;
+};
+
 const Index = () => {
   const { currentUser } = useAuth();
   const [currentTab, setCurrentTab] = useState('signals');
@@ -263,8 +306,16 @@ const Index = () => {
         return !isRejected;
       });
       
+      // Sort signals by timestamp in descending order (newest first)
+      const sortedSignals = filteredSignals.sort((a, b) => {
+        const timestampA = parseTimestamp(a.timestamp);
+        const timestampB = parseTimestamp(b.timestamp);
+        return timestampB - timestampA; // Descending order (newest first)
+      });
+      
       console.log('Filtered signals count:', filteredSignals.length, 'out of', signalsWithIds.length);
-      setSignals(filteredSignals);
+      console.log('Signals sorted by timestamp (newest first):', sortedSignals.map(s => ({ timestamp: s.timestamp, headline: s.headline })));
+      setSignals(sortedSignals);
     } catch (error) {
       console.error('Error loading signals:', error);
       
@@ -374,7 +425,14 @@ const Index = () => {
         return !rejectedHashes.has(contentHash);
       });
       
-      setSignals(filteredSampleSignals);
+      // Sort sample signals by timestamp in descending order (newest first)
+      const sortedSampleSignals = filteredSampleSignals.sort((a, b) => {
+        const timestampA = parseTimestamp(a.timestamp);
+        const timestampB = parseTimestamp(b.timestamp);
+        return timestampB - timestampA; // Descending order (newest first)
+      });
+      
+      setSignals(sortedSampleSignals);
       
       toast({
         title: "API Not Available",
