@@ -301,13 +301,13 @@ You MUST use the WebSearch tool to find real, up-to-date market data. Based on t
 
 1. Market Size Research:
    - Search for market size (TAM/SAM) for the company's industry in their target markets/regions
-   - Include recent data (2024-2025) when available
-   - Example searches: "[industry] market size TAM SAM [regions] 2024 2025"
+   - Include recent data (2026-2027) when available
+   - Example searches: "[industry] market size TAM SAM [regions] 2026 2027"
 
 2. Growth Rate Research:
    - Search for growth rates in the company's primary target market/region
    - Find market growth projections for their target regions
-   - Example searches: "[industry] growth rate [primary region] 2024 2025"
+   - Example searches: "[industry] growth rate [primary region] 2026 2027"
 
 3. Market Segmentation:
    - Search for market segment breakdowns (Enterprise, Mid-Market, SMB)
@@ -322,7 +322,7 @@ You MUST use the WebSearch tool to find real, up-to-date market data. Based on t
 IMPORTANT RESEARCH GUIDELINES:
 - Perform at least 5-7 WebSearch queries to ensure comprehensive coverage
 - Cross-reference data from multiple sources for accuracy
-- Focus on recent data (2024-2025) when available
+- Focus on recent data (2026-2027) when available
 - Provide specific metrics with sources where possible
 - Extract industry and target markets/regions from the company profile - do NOT assume or hardcode regions
 - The GrowthRate field should reflect growth rate for the PRIMARY target market/region identified from the company profile
@@ -356,8 +356,8 @@ Return your findings in the following exact JSON format (use exact keys as shown
   }},
   "growthProjections": {{
     "2023": "[value or index]",
-    "2024": "[value or index]",
-    "2025": "[value or index]",
+    "2026": "[value or index]",
+    "2027": "[value or index]",
     "2026": "[value or index]"
   }}
 }}
@@ -421,31 +421,31 @@ You MUST use the WebSearch tool to find real, up-to-date industry trend data. Ba
 
 1. Technology Adoption Research:
    - Search for AI adoption rates, cloud migration percentages, and technology trends in the company's industry
-   - Include recent data (2024-2025) when available
-   - Example searches: "[industry] AI adoption rate 2024 2025"
+   - Include recent data (2026-2027) when available
+   - Example searches: "[industry] AI adoption rate 2026 2027"
    - Example searches: "[industry] cloud migration percentage [regions]"
 
 2. Regulatory Changes Research:
    - Search for recent regulatory changes and compliance updates in the company's industry and target regions
    - Find number of regulatory changes and their impact
-   - Example searches: "[industry] regulatory changes [regions] 2024 2025"
+   - Example searches: "[industry] regulatory changes [regions] 2026 2027"
 
 3. Regional Hotspots Research:
    - Search for regional market hotspots and growth areas in the company's target markets/regions
    - Find percentage values for different regions based on the company profile
-   - Example searches: "[industry] market growth [regions] 2024 2025"
+   - Example searches: "[industry] market growth [regions] 2026 2027"
    - Extract regions from company profile - do NOT use hardcoded regions like APAC, Europe, North America
 
 4. Industry Trends Research:
    - Search for current industry trends, adoption patterns, and performance metrics
    - Find technology budget allocation trends
-   - Example searches: "[industry] trends 2024 2025"
+   - Example searches: "[industry] trends 2026 2027"
    - Example searches: "[industry] technology budget allocation"
 
 IMPORTANT RESEARCH GUIDELINES:
 - Perform at least 5-7 WebSearch queries to ensure comprehensive coverage
 - Cross-reference data from multiple sources for accuracy
-- Focus on recent data (2024-2025) when available
+- Focus on recent data (2026-2027) when available
 - Provide specific metrics with sources where possible
 - Extract target markets/regions from the company profile - do NOT assume or hardcode regions
 - The regionalHotspots object should contain regions from the company profile, not hardcoded APAC/Europe/North America
@@ -559,21 +559,21 @@ You MUST use the WebSearch tool extensively to find real, up-to-date competitive
 1. Competitor Identification Research:
    - Search for real competitors operating in the company's industry and target markets/regions
    - Find actual competitor names, not generic examples
-   - Example searches: "[industry] competitors [regions] 2024"
+   - Example searches: "[industry] competitors [regions] 2026"
    - Example searches: "[industry] top companies [regions]"
 
 2. Market Share Research:
    - Search for market share data by region for the company's target markets
    - Find competitor market share percentages from industry reports
-   - Example searches: "[industry] market share [region] 2024"
+   - Example searches: "[industry] market share [region] 2026"
    - Example searches: "[industry] competitor market share [regions]"
    - Extract regions from company profile for marketShareCharts - do NOT use hardcoded regions
 
 3. Competitor News & Events Research:
    - Search for recent news, product launches, and events from competitors
    - Find M&A activity and strategic moves
-   - Example searches: "[competitor name] news 2024 2025"
-   - Example searches: "[industry] M&A activity [regions] 2024"
+   - Example searches: "[competitor name] news 2026 2027"
+   - Example searches: "[industry] M&A activity [regions] 2026"
 
 4. SWOT Analysis Research:
    - Search for competitor strengths and weaknesses from industry reports
@@ -590,12 +590,12 @@ You MUST use the WebSearch tool extensively to find real, up-to-date competitive
 6. Market Trends Research:
    - Search for current market trends and competitive dynamics
    - Find industry trend reports
-   - Example searches: "[industry] market trends 2024 2025"
+   - Example searches: "[industry] market trends 2026 2027"
 
 IMPORTANT RESEARCH GUIDELINES:
 - Perform at least 7-10 WebSearch queries to ensure comprehensive coverage
 - Cross-reference data from multiple sources for accuracy
-- Focus on recent data (2024-2025) when available
+- Focus on recent data (2026-2027) when available
 - Provide specific metrics, competitor names, and sources where possible
 - Extract target markets/regions from the company profile - do NOT assume or hardcode regions
 - The marketShareCharts regions array should use regions from the company profile
@@ -781,19 +781,19 @@ You MUST use the WebSearch tool extensively to find real, up-to-date regulatory 
 1. Regulatory Framework Research:
    - Search for region-specific regulatory frameworks for the company's target markets/regions
    - Find industry-specific compliance requirements
-   - Example searches: "[region] [industry] regulatory framework 2024 2025"
+   - Example searches: "[region] [industry] regulatory framework 2026 2027"
    - Example searches: "[region] [industry] compliance requirements"
 
 2. Regulatory Updates Research:
-   - Search for recent regulatory changes and updates (2024-2025) in the company's industry and target regions
+   - Search for recent regulatory changes and updates (2026-2027) in the company's industry and target regions
    - Find upcoming mandates and deadlines
-   - Example searches: "[industry] regulatory changes [regions] 2024 2025"
+   - Example searches: "[industry] regulatory changes [regions] 2026 2027"
    - Example searches: "[industry] upcoming regulations [regions]"
 
 3. Compliance Deadlines Research:
    - Search for specific compliance deadlines and timelines
    - Find mandatory requirements with dates
-   - Example searches: "[region] [industry] compliance deadlines 2024 2025"
+   - Example searches: "[region] [industry] compliance deadlines 2026 2027"
    - Example searches: "[industry] regulatory deadlines [regions]"
 
 4. Regional Compliance Research:
@@ -810,7 +810,7 @@ You MUST use the WebSearch tool extensively to find real, up-to-date regulatory 
 IMPORTANT RESEARCH GUIDELINES:
 - Perform at least 7-10 WebSearch queries to ensure comprehensive coverage
 - Cross-reference data from multiple sources for accuracy
-- Focus on recent data (2024-2025) when available
+- Focus on recent data (2026-2027) when available
 - Provide specific framework names, regulatory body names, and deadline dates
 - Extract target markets/regions from the company profile - do NOT assume or hardcode regions
 - The regionalData array should use regions from the company profile
@@ -996,7 +996,7 @@ You MUST use the WebSearch tool extensively to find real, up-to-date market entr
 1. Market Entry Barriers Research:
    - Search for market entry barriers and challenges in the company's industry and target regions
    - Find regulatory, competitive, and operational barriers
-   - Example searches: "[industry] market entry barriers [regions] 2024"
+   - Example searches: "[industry] market entry barriers [regions] 2026"
    - Example searches: "[industry] entry challenges [regions]"
 
 2. Channel Strategy Research:
@@ -1032,7 +1032,7 @@ You MUST use the WebSearch tool extensively to find real, up-to-date market entr
 IMPORTANT RESEARCH GUIDELINES:
 - Perform at least 7-10 WebSearch queries to ensure comprehensive coverage
 - Cross-reference data from multiple sources for accuracy
-- Focus on recent data (2024-2025) when available
+- Focus on recent data (2026-2027) when available
 - Provide specific examples, case studies, and sources where possible
 - Extract target markets/regions from the company profile - do NOT assume or hardcode regions
 - Entry barriers, channel strategies, and recommendations must be based on the company's actual industry and target markets
@@ -1080,20 +1080,20 @@ Return your findings in the following exact JSON format (use exact keys as shown
     {{
       "label": "[Timeline label]",
       "phase": "[Phase name]",
-      "quarter": "[Quarter, e.g., 'Q1 2025']",
-      "timestamp": "[ISO timestamp, e.g., '2025-01-01']"
+      "quarter": "[Quarter, e.g., 'Q1 2027']",
+      "timestamp": "[ISO timestamp, e.g., '2027-01-01']"
     }},
     {{
       "label": "[Timeline label]",
       "phase": "[Phase name]",
-      "quarter": "[Quarter, e.g., 'Q2 2025']",
-      "timestamp": "[ISO timestamp, e.g., '2025-04-01']"
+      "quarter": "[Quarter, e.g., 'Q2 2027']",
+      "timestamp": "[ISO timestamp, e.g., '2027-04-01']"
     }},
     {{
       "label": "[Timeline label]",
       "phase": "[Phase name]",
-      "quarter": "[Quarter, e.g., 'Q3 2025']",
-      "timestamp": "[ISO timestamp, e.g., '2025-07-01']"
+      "quarter": "[Quarter, e.g., 'Q3 2027']",
+      "timestamp": "[ISO timestamp, e.g., '2027-07-01']"
     }}
   ]
 }}
@@ -1134,39 +1134,64 @@ def ICP_generator(pre_data: str) -> dict:
     # Construct prompt by embedding the entire JSON string
     template = """Task: Based on the provided company_profile below, analyze the data and research the market to suggest the most relevant Ideal Customer Profiles (ICPs). Consider industry fit, strategic alignment, and known patterns of technology adoption.
 
-Use this data to do your research and reasoning — {pre_data}.
+CRITICAL INSTRUCTIONS:
+1. Extract the company's ACTUAL industry, target markets, regions, and business model from the company_profile data provided
+2. Use WebSearch to find real ICPs that match the company's ACTUAL industry and target markets
+3. DO NOT use the example values below - they are ONLY showing the JSON format/structure
+4. All ICPs must be based on the company profile's actual industry, regions, and business context
 
-Return your results strictly in the following JSON format — follow the field names and refer to the previous data to search the internet and find the ICPs for this particular company details.
+Company Profile Data:
+{pre_data}
+
+STEP 1 - EXTRACT COMPANY DETAILS:
+From the company_profile above, extract:
+- Company's actual industry and sub-industry
+- Actual target markets and regions (use specific countries/cities, not generic regions)
+- Company size and business model
+- Technology stack and focus areas
+- Any other relevant attributes
+
+STEP 2 - RESEARCH ICPs (USE WEB SEARCH):
+You MUST use the WebSearch tool to find real ICPs that match the company's actual industry and target markets:
+- Search for ICPs in the company's actual industry
+- Find ICPs that target the company's actual regions/markets
+- Research real customer segments, company sizes, and decision makers relevant to the company's industry
+- Example searches: "[company's actual industry] ideal customer profiles [company's actual regions]"
+- Example searches: "[company's actual industry] target customer segments [company's actual regions]"
+
+STEP 3 - OUTPUT FORMAT:
+Return your results in the following JSON format. The examples below show ONLY the structure - you MUST replace ALL values with data based on the company profile:
 
 {{"suggestedICPs": [
     {{
-      "id": "fintech-neobanks",
-      "industry": "Fintech",
-      "segment": "Neobanks",
-      "companySize": "50–200 employees",
-      "decisionMakers": ["CTO", "Head of Digital"],
-      "regions": ["North America", "DACH"],
-      "keyAttributes": ["High cloud adoption", "Regulatory compliance focus"],
-      "growthIndicator": "5.6% CAGR"
+      "id": "[create unique id based on company's industry, e.g., 'manufacturing-automation' if company is in manufacturing]",
+      "industry": "[company's ACTUAL industry from profile, NOT 'Fintech']",
+      "segment": "[specific segment relevant to company's industry, NOT 'Neobanks']",
+      "companySize": "[realistic company size range for this ICP, e.g., '50–200 employees']",
+      "decisionMakers": ["[actual decision maker roles for this industry]", "[another role]"],
+      "regions": ["[company's ACTUAL target regions from profile, NOT 'North America' or 'DACH' unless that's what's in the profile]"],
+      "keyAttributes": ["[attributes relevant to company's industry]", "[another attribute]"],
+      "growthIndicator": "[real growth rate found via research, e.g., '5.6% CAGR']"
     }},
     {{
-      "id": "healthcare-saas",
-      "industry": "Healthcare SaaS",
-      "segment": "Patient Data Analytics",
-      "companySize": "100–500 employees",
-      "decisionMakers": ["Chief Medical Officer", "IT Director"],
-      "regions": ["North America", "EU"],
-      "keyAttributes": ["HIPAA compliance", "AI/ML integration"],
-      "growthIndicator": "8.2% CAGR"
+      "id": "[another unique id based on company's industry]",
+      "industry": "[company's ACTUAL industry or related industry]",
+      "segment": "[another specific segment]",
+      "companySize": "[different company size range]",
+      "decisionMakers": ["[relevant decision makers]", "[another role]"],
+      "regions": ["[company's ACTUAL target regions]"],
+      "keyAttributes": ["[relevant attributes]", "[another attribute]"],
+      "growthIndicator": "[real growth rate]"
     }}
 ]}}
 
-⚠️ Notes:
-
-- Choose ICPs that are strategically relevant to the profile.
-- Use real-world signals from similar companies/markets.
-- Ensure consistency in field names and value types.
-- Only return JSON, nothing else.
+⚠️ CRITICAL NOTES:
+- DO NOT copy the example values (fintech-neobanks, Healthcare SaaS, etc.) - they are FORMAT examples only
+- Extract and use the company's ACTUAL industry, regions, and business context from the company_profile
+- Use WebSearch to find real ICPs that match the company's actual industry and markets
+- All industry, regions, segments, and attributes must be based on the company profile data
+- Return at least 2-3 ICPs, all relevant to the company's actual industry and target markets
+- Only return JSON, nothing else
 
 When you have reached the final answer, respond only with:
 Final Answer: <your answer here>
@@ -1260,8 +1285,8 @@ Return your findings in the following exact JSON format --  use this data to do 
         "units": "index(2023=100)",
         "points": [
           {{ "year": 2023, "index": 100 }},
-          {{ "year": 2024, "index": 103 }},
-          {{ "year": 2025, "index": 107 }},
+          {{ "year": 2026, "index": 103 }},
+          {{ "year": 2027, "index": 107 }},
           {{ "year": 2026, "index": 112 }}
         ]
       }},
@@ -1574,7 +1599,7 @@ Return your findings in the following exact JSON format:
       "[Framework name relevant to the industries mentioned]",
       "[Another framework]"
     ],
-    "upcomingMandates": "[Specific upcoming mandate with timeline, e.g., 'Q4 2025 GDPR Updates' or '2025 Industry Standard Changes']",
+    "upcomingMandates": "[Specific upcoming mandate with timeline, e.g., 'Q4 2027 GDPR Updates' or '2027 Industry Standard Changes']",
     "icpFitScore": "[Percentage match, e.g., '85% match' or '92% match']",
     "recommendationConfidence": "[High/Medium/Low]",
     "icpRefinementRecommendations": [
@@ -1707,7 +1732,7 @@ You MUST use the WebSearch tool to find a REAL, RECENT, and ACTIONABLE market si
 1. Market Opportunity Signals:
    - Search for recent market growth, trends, or opportunities in the company's industry
    - Find market size changes, adoption rates, or emerging segments
-   - Example searches: "[industry] market trends [regions] 2024 2025"
+   - Example searches: "[industry] market trends [regions] 2026 2027"
    - Example searches: "[industry] growth opportunities [recent]"
 
 2. Competitor Activity Signals:
