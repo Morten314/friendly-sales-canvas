@@ -174,6 +174,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
       if (result.status === 'success' && result.data) {
         const apiData = result.data;
         console.log('🎯 MarketEntrySection: Processing API data:', apiData);
+        console.log('🎯 MarketEntrySection: Full API response:', JSON.stringify(result, null, 2));
 
         // Check if we have the expected Market Entry data structure
         if (apiData.executiveSummary || apiData.entryBarriers) {
@@ -194,7 +195,44 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
           if (apiData.strategicRecommendations) onStrategicRecommendationsChange(apiData.strategicRecommendations);
           if (apiData.riskAssessment) onRiskAssessmentChange(apiData.riskAssessment);
           
-          setMarketEntryData(apiData);
+          // Map swot to swotAnalysis to match frontend structure
+          // Handle both swot and swotAnalysis from API, and ensure proper structure
+          const swotData = apiData.swot || apiData.swotAnalysis;
+          console.log('🔍 MarketEntrySection: Raw swot data from API:', swotData);
+          console.log('🔍 MarketEntrySection: swot data type:', typeof swotData);
+          console.log('🔍 MarketEntrySection: Full apiData keys:', Object.keys(apiData));
+          
+          if (swotData) {
+            console.log('🔍 MarketEntrySection: swot data structure:', {
+              hasStrengths: Array.isArray(swotData.strengths),
+              hasWeaknesses: Array.isArray(swotData.weaknesses),
+              hasOpportunities: Array.isArray(swotData.opportunities),
+              hasThreats: Array.isArray(swotData.threats),
+              strengthsLength: swotData.strengths?.length,
+              weaknessesLength: swotData.weaknesses?.length,
+              opportunitiesLength: swotData.opportunities?.length,
+              threatsLength: swotData.threats?.length,
+              fullSwotData: swotData
+            });
+          } else {
+            console.warn('⚠️ MarketEntrySection: No swot data found in API response!');
+            console.log('⚠️ MarketEntrySection: Available keys in apiData:', Object.keys(apiData));
+          }
+          
+          // Create mapped data with swotAnalysis
+          const mappedApiData = {
+            ...apiData,
+            swotAnalysis: swotData || null
+          };
+          
+          // Remove the original swot key to avoid confusion (keep only swotAnalysis)
+          if (mappedApiData.swot && mappedApiData.swotAnalysis) {
+            delete mappedApiData.swot;
+          }
+          
+          console.log('🔍 MarketEntrySection: Mapped swotAnalysis:', mappedApiData.swotAnalysis);
+          console.log('🔍 MarketEntrySection: Setting marketEntryData with swotAnalysis:', mappedApiData.swotAnalysis);
+          setMarketEntryData(mappedApiData);
           console.log('✅ MARKET ENTRY SECTION UPDATED - Component name:', apiData.component_name);
         } else {
           console.log('ℹ️ MarketEntrySection: No Market Entry specific data found in response');
@@ -221,14 +259,19 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
     
     // Check if we have any meaningful data in our local state OR props
     const hasLocalData = marketEntryData && (marketEntryData.executiveSummary || marketEntryData.entryBarriers?.length > 0);
+    const hasLocalSwotData = marketEntryData && (marketEntryData.swot || marketEntryData.swotAnalysis);
     const hasPropsData = executiveSummary || entryBarriers.length > 0 || recommendedChannel || timeToMarket || topBarrier || competitiveDifferentiation.length > 0 || strategicRecommendations.length > 0 || riskAssessment.length > 0;
+    
+    // If we have local data but no SWOT data, we should still fetch to get SWOT
+    const needsSwotData = hasLocalData && !hasLocalSwotData;
     
     // Check if we're receiving fallback data from parent (the "being prepared" message)
     const isReceivingFallbackData = executiveSummary?.includes('being prepared') || 
                                    executiveSummary?.includes('Market entry analysis is being prepared');
     
-    if (!hasLocalData && (!hasPropsData || isReceivingFallbackData)) {
-      console.log('🚀 MarketEntrySection: No data found or receiving fallback data, fetching fresh data');
+    if ((!hasLocalData && (!hasPropsData || isReceivingFallbackData)) || needsSwotData) {
+      const reason = !hasLocalData ? 'No data found' : 'Missing SWOT data';
+      console.log(`🚀 MarketEntrySection: ${reason}, fetching fresh data`);
       // Reduced delay for faster loading
       const timer = setTimeout(() => {
         // Double-check isRefreshing hasn't changed during the delay
@@ -240,6 +283,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
       return () => clearTimeout(timer);
     } else {
       console.log('🚀 MarketEntrySection: Data already available, skipping fetch');
+      console.log('🚀 MarketEntrySection: Has local SWOT data:', hasLocalSwotData);
     }
   }, [isRefreshing]); // Add isRefreshing as dependency to re-check when refresh state changes
   
@@ -266,6 +310,8 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
       if (hasPropsData) {
         // Always update local data with props when not editing to reflect parent state changes
         console.log('🔄 MarketEntrySection - Updating local data with props');
+        // Preserve existing swotAnalysis from marketEntryData if it exists
+        const existingSwot = marketEntryData?.swotAnalysis || marketEntryData?.swot;
         setMarketEntryData({
           executiveSummary,
           entryBarriers,
@@ -275,6 +321,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
           competitiveDifferentiation,
           strategicRecommendations,
           riskAssessment,
+          swotAnalysis: existingSwot, // Preserve existing SWOT data
           timestamp: Date.now()
         });
       }
@@ -489,6 +536,9 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
   };
 
   const SwotQuadrant = ({ swotData }: { swotData?: { strengths: string[]; weaknesses: string[]; opportunities: string[]; threats: string[] } }) => {
+    console.log('🔍 SwotQuadrant: Received swotData:', swotData);
+    console.log('🔍 SwotQuadrant: editSwotAnalysis:', editSwotAnalysis);
+    
     const swotToUse = swotData || editSwotAnalysis || {
       strengths: ['Strong tech platform'],
       weaknesses: ['Limited local presence'],
@@ -496,31 +546,59 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
       threats: ['Regulatory changes']
     };
     
+    console.log('🔍 SwotQuadrant: swotToUse:', swotToUse);
+    console.log('🔍 SwotQuadrant: strengths length:', swotToUse?.strengths?.length);
+    console.log('🔍 SwotQuadrant: weaknesses length:', swotToUse?.weaknesses?.length);
+    console.log('🔍 SwotQuadrant: opportunities length:', swotToUse?.opportunities?.length);
+    console.log('🔍 SwotQuadrant: threats length:', swotToUse?.threats?.length);
+    
+    // Ensure arrays exist and are not undefined
+    const strengths = Array.isArray(swotToUse?.strengths) ? swotToUse.strengths : [];
+    const weaknesses = Array.isArray(swotToUse?.weaknesses) ? swotToUse.weaknesses : [];
+    const opportunities = Array.isArray(swotToUse?.opportunities) ? swotToUse.opportunities : [];
+    const threats = Array.isArray(swotToUse?.threats) ? swotToUse.threats : [];
+    
     return (
       <div className="grid grid-cols-2 gap-2 text-xs">
         <div className="bg-green-50 p-2 rounded border">
           <div className="font-semibold text-green-700">Strengths</div>
-          {swotToUse.strengths.map((strength, index) => (
-            <div key={index} className="text-green-600">• {strength}</div>
-          ))}
+          {strengths.length > 0 ? (
+            strengths.map((strength, index) => (
+              <div key={index} className="text-green-600">• {strength}</div>
+            ))
+          ) : (
+            <div className="text-gray-400 text-xs italic">No data available</div>
+          )}
         </div>
         <div className="bg-blue-50 p-2 rounded border">
           <div className="font-semibold text-blue-700">Opportunities</div>
-          {swotToUse.opportunities.map((opportunity, index) => (
-            <div key={index} className="text-blue-600">• {opportunity}</div>
-          ))}
+          {opportunities.length > 0 ? (
+            opportunities.map((opportunity, index) => (
+              <div key={index} className="text-blue-600">• {opportunity}</div>
+            ))
+          ) : (
+            <div className="text-gray-400 text-xs italic">No data available</div>
+          )}
         </div>
         <div className="bg-orange-50 p-2 rounded border">
           <div className="font-semibold text-orange-700">Weaknesses</div>
-          {swotToUse.weaknesses.map((weakness, index) => (
-            <div key={index} className="text-orange-600">• {weakness}</div>
-          ))}
+          {weaknesses.length > 0 ? (
+            weaknesses.map((weakness, index) => (
+              <div key={index} className="text-orange-600">• {weakness}</div>
+            ))
+          ) : (
+            <div className="text-gray-400 text-xs italic">No data available</div>
+          )}
         </div>
         <div className="bg-red-50 p-2 rounded border">
           <div className="font-semibold text-red-700">Threats</div>
-          {swotToUse.threats.map((threat, index) => (
-            <div key={index} className="text-red-600">• {threat}</div>
-          ))}
+          {threats.length > 0 ? (
+            threats.map((threat, index) => (
+              <div key={index} className="text-red-600">• {threat}</div>
+            ))
+          ) : (
+            <div className="text-gray-400 text-xs italic">No data available</div>
+          )}
         </div>
       </div>
     );
@@ -544,7 +622,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
   );
 
   // Check if we have any meaningful data to display (prioritize local data over props)
-  const displayData = marketEntryData || {
+  const baseDisplayData = marketEntryData || {
     executiveSummary,
     entryBarriers,
     recommendedChannel,
@@ -552,8 +630,25 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
     topBarrier,
     competitiveDifferentiation,
     strategicRecommendations,
-    riskAssessment
+    riskAssessment,
+    // Include swot/swotAnalysis from marketEntryData if it exists, even when falling back to props
+    swot: marketEntryData?.swot,
+    swotAnalysis: marketEntryData?.swotAnalysis || marketEntryData?.swot
   };
+  
+  // Map swot to swotAnalysis to match frontend structure
+  const displayData = {
+    ...baseDisplayData,
+    swotAnalysis: baseDisplayData.swot || baseDisplayData.swotAnalysis || marketEntryData?.swot || marketEntryData?.swotAnalysis
+  };
+  
+  // Debug logging for SWOT data
+  console.log('🔍 MarketEntrySection: marketEntryData:', marketEntryData);
+  console.log('🔍 MarketEntrySection: marketEntryData?.swot:', marketEntryData?.swot);
+  console.log('🔍 MarketEntrySection: marketEntryData?.swotAnalysis:', marketEntryData?.swotAnalysis);
+  console.log('🔍 MarketEntrySection: baseDisplayData.swot:', baseDisplayData.swot);
+  console.log('🔍 MarketEntrySection: baseDisplayData.swotAnalysis:', baseDisplayData.swotAnalysis);
+  console.log('🔍 MarketEntrySection: displayData.swotAnalysis:', displayData.swotAnalysis);
   
   // Check if we're showing fallback data (the "being prepared" message)
   const isShowingFallbackData = displayData.executiveSummary?.includes('being prepared') || 
