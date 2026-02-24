@@ -16048,4 +16048,3 @@ const MarketResearch = React.memo(() => {
 export default MarketResearch;
 
 
-
