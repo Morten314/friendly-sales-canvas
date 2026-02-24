@@ -1140,6 +1140,9 @@ const MarketResearch = React.memo(() => {
   // Flag to prevent multiple simultaneous validations
   const isValidatingRef = useRef<boolean>(false);
   
+  // Track if retries are in progress to prevent premature loading screen dismissal
+  const isRetryingRef = useRef<boolean>(false);
+  
   const [globalTimeoutId, setGlobalTimeoutId] = useState<NodeJS.Timeout | null>(null);
 
 
@@ -1289,6 +1292,8 @@ const MarketResearch = React.memo(() => {
         
 
         // Wait a moment for smooth transition, then hide loading screen
+        // Clear retry flag since rendering is complete
+        isRetryingRef.current = false;
 
         setTimeout(() => {
 
@@ -1309,6 +1314,9 @@ const MarketResearch = React.memo(() => {
       } else if (attempt >= maxAttempts) {
 
         console.log('⏰ Rendering timeout reached, showing Scout page anyway');
+        
+        // Clear retry flag since we're completing
+        isRetryingRef.current = false;
 
         setLoadingPhase('complete');
 
@@ -1374,6 +1382,12 @@ const MarketResearch = React.memo(() => {
       }
       isValidatingRef.current = false;
       return;
+    }
+    
+    // CRITICAL: Don't hide loading screen if retries are in progress
+    if (isRetryingRef.current) {
+      console.log('🔄 Retries in progress - validation will wait before hiding loading screen');
+      // Continue validation but don't hide loading screen yet
     }
     
     // Prevent multiple simultaneous validations
@@ -1769,6 +1783,8 @@ const MarketResearch = React.memo(() => {
         
 
         // Transition to rendering phase
+        // Clear retry flag since we're transitioning to rendering (all API calls succeeded)
+        isRetryingRef.current = false;
 
         setLoadingPhase('rendering');
 
@@ -1828,8 +1844,9 @@ const MarketResearch = React.memo(() => {
       console.log('⚠️ Some components still missing fresh data:', missingDataComponents);
       
       // LENIENT APPROACH: If we have at least 3 components with data, proceed anyway
+      // BUT: Only if retries are not in progress
       const componentsWithData = Object.values(simplifiedChecks).filter(hasData => hasData).length;
-      if (componentsWithData >= 3 && currentAttempt >= 5) {
+      if (componentsWithData >= 3 && currentAttempt >= 5 && !isRetryingRef.current) {
         console.log(`🎯 LENIENT VALIDATION - ${componentsWithData}/5 components have data, proceeding anyway after ${currentAttempt} attempts`);
         
         // Stop any ongoing API calls
@@ -1854,6 +1871,21 @@ const MarketResearch = React.memo(() => {
           description: `${componentsWithData}/5 components loaded successfully.`,
           duration: 3000,
         });
+        return;
+      }
+      
+      // If retries are in progress, don't hide loading screen yet
+      if (isRetryingRef.current) {
+        console.log('🔄 Retries in progress - keeping loading screen visible');
+        // Continue validation but don't hide loading screen
+        if (validationTimeoutRef.current) {
+          clearTimeout(validationTimeoutRef.current);
+        }
+        validationTimeoutRef.current = setTimeout(() => {
+          validationTimeoutRef.current = null;
+          isValidatingRef.current = false;
+          validateAllComponentsHaveFreshData();
+        }, 1000); // Check again in 1 second
         return;
       }
 
@@ -1937,9 +1969,10 @@ const MarketResearch = React.memo(() => {
 
         // AGGRESSIVE FIX: Hide loading screen if 4+ components are successful
         // This prevents infinite loading if Competitor Landscape is stuck
+        // BUT: Only if retries are not in progress
         const requiredComponents = 4; // Allow loading screen to disappear with 4/5 components
 
-        if (successfulComponents.length >= requiredComponents) {
+        if (successfulComponents.length >= requiredComponents && !isRetryingRef.current) {
 
           console.log('✅ Sufficient components loaded, hiding loading screen');
 
@@ -1955,6 +1988,17 @@ const MarketResearch = React.memo(() => {
 
           });
 
+        } else if (isRetryingRef.current) {
+          console.log('🔄 Retries in progress - keeping loading screen visible until retries complete');
+          // Continue validation but don't hide loading screen
+          if (validationTimeoutRef.current) {
+            clearTimeout(validationTimeoutRef.current);
+          }
+          validationTimeoutRef.current = setTimeout(() => {
+            validationTimeoutRef.current = null;
+            isValidatingRef.current = false;
+            validateAllComponentsHaveFreshData();
+          }, 1000); // Check again in 1 second
         } else {
 
           console.log('⏰ Not enough components loaded yet, continuing validation...');
@@ -4499,6 +4543,9 @@ const MarketResearch = React.memo(() => {
         
         // Reset component failure counts for new refresh
         setComponentFailureCounts({});
+        
+        // Reset retry flag for new refresh
+        isRetryingRef.current = false;
 
         console.log('🔄 Starting first refresh - all components will be fetched');
 
@@ -4509,6 +4556,9 @@ const MarketResearch = React.memo(() => {
         setValidationAttempts(0); // Reset validation attempts for retry
 
         setConsecutiveValidations(0); // Reset consecutive validations for retry
+        
+        // Keep retry flag true since we're retrying
+        isRetryingRef.current = true;
 
         console.log(`🔄 Starting retry refresh (attempt ${refreshAttempt + 1}) - all components will be fetched`);
 
@@ -5092,7 +5142,9 @@ const MarketResearch = React.memo(() => {
 
         console.log('🎉 Current component status:', currentStatus);
 
-        
+        // Clear retry flag since all API calls completed successfully
+        isRetryingRef.current = false;
+        console.log('✅ All API calls successful - clearing retry flag');
 
         // Clear the refresh timeout since we're completing successfully
 
@@ -5110,7 +5162,9 @@ const MarketResearch = React.memo(() => {
 
         console.log(`⚠️ Failed components:`, Object.entries(currentStatus).filter(([name, status]) => status === 'failed').map(([name]) => name));
 
-        
+        // Mark that retries are in progress
+        isRetryingRef.current = true;
+        console.log('🔄 Setting isRetryingRef to true - loading screen will stay visible');
 
         // Implement immediate fallback for critical components
         // Filter out components that have failed too many times (prevent infinite loops)
@@ -5131,6 +5185,7 @@ const MarketResearch = React.memo(() => {
         // If all failed components have exceeded retry limit, stop refreshing
         if (failedComponentNames.length === 0) {
           console.log('🛑 All failed components have exceeded retry limit, stopping refresh');
+          isRetryingRef.current = false; // Clear retry flag
           setIsRefreshing(false);
           setLoadingPhase('complete');
           toast({
@@ -5227,7 +5282,18 @@ const MarketResearch = React.memo(() => {
                   return updated;
                 });
 
-                setComponentStatus(prev => ({ ...prev, [componentName]: 'success' }));
+                setComponentStatus(prev => {
+                  const newStatus: Record<string, 'success' | 'pending' | 'failed'> = { ...prev, [componentName]: 'success' };
+                  
+                  // Check if all components are now successful
+                  const allSuccessful = Object.values(newStatus).every(status => status === 'success');
+                  if (allSuccessful) {
+                    console.log('✅ All components successful after retry - clearing retry flag');
+                    isRetryingRef.current = false;
+                  }
+                  
+                  return newStatus;
+                });
 
                 
 
@@ -5328,7 +5394,18 @@ const MarketResearch = React.memo(() => {
                   return updated;
                 });
                 
-                setComponentStatus(prev => ({ ...prev, [failedComponentNames[0]]: 'success' }));
+                setComponentStatus(prev => {
+                  const newStatus: Record<string, 'success' | 'pending' | 'failed'> = { ...prev, [failedComponentNames[0]]: 'success' };
+                  
+                  // Check if all components are now successful
+                  const allSuccessful = Object.values(newStatus).every(status => status === 'success');
+                  if (allSuccessful) {
+                    console.log('✅ All components successful after immediate retry - clearing retry flag');
+                    isRetryingRef.current = false;
+                  }
+                  
+                  return newStatus;
+                });
 
                 
 
@@ -5380,11 +5457,13 @@ const MarketResearch = React.memo(() => {
         
         if (refreshAttempt < 3 && retryableComponents.length > 0) {
           console.log(`🔄 Retrying ${retryableComponents.length} failed components (attempt ${refreshAttempt + 1}/3)`);
+          // Keep retry flag true - it will be cleared when all components succeed or max attempts reached
           setTimeout(() => {
             smartRefresh(false);
           }, 2000); // Increased delay to 2 seconds to give backend time to recover
         } else {
           console.log('🛑 Maximum refresh attempts reached or no retryable components, stopping to prevent infinite loop');
+          isRetryingRef.current = false; // Clear retry flag since we're stopping retries
           setIsRefreshing(false);
           setLoadingPhase('complete');
           toast({
@@ -5400,6 +5479,8 @@ const MarketResearch = React.memo(() => {
 
         console.log('❌ Maximum retry attempts reached or all components failed');
 
+        // Clear retry flag since we're stopping
+        isRetryingRef.current = false;
         clearTimeout(refreshTimeout);
 
         setIsRefreshing(false);
@@ -5422,6 +5503,8 @@ const MarketResearch = React.memo(() => {
 
       console.error('❌ Smart refresh failed:', error);
 
+      // Clear retry flag on error
+      isRetryingRef.current = false;
       clearTimeout(refreshTimeout);
 
       setIsRefreshing(false);
