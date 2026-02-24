@@ -1836,6 +1836,51 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
     return normalizedColumns.join(',');
   };
 
+  // Helper: Parse CSV line respecting quoted fields
+  const parseCsvLine = (line: string, delimiter: string = ','): string[] => {
+    const fields: string[] = [];
+    let currentField = '';
+    let inQuotes = false;
+    
+    // Handle empty line
+    if (!line || line.trim().length === 0) {
+      return [];
+    }
+    
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      const nextChar = line[i + 1];
+      
+      if (char === '"') {
+        if (inQuotes && nextChar === '"') {
+          // Escaped quote (double quote)
+          currentField += '"';
+          i++;
+        } else {
+          // Toggle quote state
+          inQuotes = !inQuotes;
+          // Don't include the quote character in the field value
+        }
+      } else if (char === delimiter && !inQuotes) {
+        // Field separator - push current field and start new one
+        fields.push(currentField);
+        currentField = '';
+      } else {
+        currentField += char;
+      }
+    }
+    
+    // Add the last field (even if line ends without delimiter)
+    fields.push(currentField);
+    
+    // Handle trailing delimiter (creates empty field at end)
+    if (line.endsWith(delimiter) && !inQuotes) {
+      fields.push('');
+    }
+    
+    return fields;
+  };
+
   // Helper: Normalize CSV format
   const normalizeCsv = (text: string): string => {
     text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
@@ -1843,47 +1888,30 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
     let lines = text.split('\n').filter(line => line.trim().length > 0);
     if (lines.length === 0) return text;
     
-    if (delimiter !== ',') {
-      const normalizedLines = lines.map(line => {
-        if (line.trim() === '') return line;
-        if (line.includes('"')) {
-          const fields: string[] = [];
-          let currentField = '';
-          let inQuotes = false;
-          
-          for (let i = 0; i < line.length; i++) {
-            const char = line[i];
-            const nextChar = line[i + 1];
-            
-            if (char === '"') {
-              if (inQuotes && nextChar === '"') {
-                currentField += '"';
-                i++;
-              } else {
-                inQuotes = !inQuotes;
-              }
-            } else if ((char === delimiter || char === ',') && !inQuotes) {
-              fields.push(currentField);
-              currentField = '';
-            } else {
-              currentField += char;
-            }
-          }
-          fields.push(currentField);
-          
-          return fields.map(field => {
-            if (field.includes(',') || field.includes('"') || field.includes('\n')) {
-              return `"${field.replace(/"/g, '""')}"`;
-            }
-            return field;
-          }).join(',');
-        } else {
-          return line.split(delimiter).join(',');
+    // Normalize all lines to ensure consistent formatting
+    const normalizedLines = lines.map(line => {
+      if (line.trim() === '') return line;
+      
+      // Parse the line using the detected delimiter
+      const fields = parseCsvLine(line, delimiter);
+      
+      // Ensure fields with special characters are properly quoted
+      const normalizedFields = fields.map(field => {
+        const trimmedField = field.trim();
+        // Quote fields that contain commas, quotes, or newlines
+        if (trimmedField.includes(',') || trimmedField.includes('"') || trimmedField.includes('\n') || trimmedField.includes('\r')) {
+          // Escape existing quotes by doubling them
+          return `"${trimmedField.replace(/"/g, '""')}"`;
         }
+        return trimmedField;
       });
-      text = normalizedLines.join('\n');
-    }
+      
+      return normalizedFields.join(',');
+    });
     
+    text = normalizedLines.join('\n');
+    
+    // Normalize column names in header
     const finalLines = text.split('\n').filter(line => line.trim().length > 0);
     if (finalLines.length > 0) {
       finalLines[0] = normalizeColumnNames(finalLines[0]);
@@ -1893,24 +1921,194 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
     return text;
   };
 
+  // Helper: Check if file is binary (not a valid text file)
+  const isBinaryFile = (arrayBuffer: ArrayBuffer): boolean => {
+    const bytes = new Uint8Array(arrayBuffer);
+    const maxBytesToCheck = Math.min(512, bytes.length);
+    
+    // Check for common binary file signatures
+    // Excel files: PK (ZIP signature) at start
+    if (bytes.length >= 4 && bytes[0] === 0x50 && bytes[1] === 0x4B) {
+      return true; // ZIP/Excel file
+    }
+    
+    // Check for high percentage of non-printable characters
+    let nonPrintableCount = 0;
+    for (let i = 0; i < maxBytesToCheck; i++) {
+      const byte = bytes[i];
+      // Allow common text characters: 0x09 (tab), 0x0A (LF), 0x0D (CR), 0x20-0x7E (printable ASCII)
+      if (byte < 0x09 || (byte > 0x0D && byte < 0x20) || byte > 0x7E) {
+        nonPrintableCount++;
+      }
+    }
+    
+    // If more than 30% are non-printable, likely binary
+    return (nonPrintableCount / maxBytesToCheck) > 0.3;
+  };
+
   // Helper: Validate CSV format
   const validateCsvFormat = async (file: File): Promise<{ valid: boolean; error?: string }> => {
     return new Promise((resolve) => {
       const reader = new FileReader();
       
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         try {
-          const text = e.target?.result as string;
+          // Use the same encoding detection as uploadCsvBatch
+          const arrayBuffer = e.target?.result as ArrayBuffer;
+          
+          // Check if file is binary
+          if (isBinaryFile(arrayBuffer)) {
+            resolve({ 
+              valid: false, 
+              error: "Invalid file format: This appears to be a binary file (possibly an Excel file). Please save your file as a CSV file before uploading. In Excel: File > Save As > CSV (Comma delimited) (*.csv)" 
+            });
+            return;
+          }
+          
+          const encodings = ['windows-1252', 'iso-8859-1', 'utf-8'];
+          let text = '';
+          let decoded = false;
+          
+          for (const encoding of encodings) {
+            try {
+              const decoder = new TextDecoder(encoding, { fatal: false });
+              text = decoder.decode(arrayBuffer);
+              decoded = true;
+              break;
+            } catch {
+              continue;
+            }
+          }
+          
+          if (!decoded || !text) {
+            text = new TextDecoder('utf-8', { fatal: false }).decode(arrayBuffer);
+          }
+          
+          // Remove BOM if present
+          if (text.charCodeAt(0) === 0xFEFF) {
+            text = text.slice(1);
+          }
+          
+          // Check for binary content in decoded text
+          const binaryPattern = /[\x00-\x08\x0E-\x1F\x7F-\x9F]/g;
+          const binaryMatches = text.substring(0, 1000).match(binaryPattern);
+          if (binaryMatches && binaryMatches.length > 50) {
+            resolve({ 
+              valid: false, 
+              error: "Invalid file format: This file contains binary data and is not a valid CSV file. Please ensure you're uploading a plain text CSV file. If you're using Excel, save the file as 'CSV (Comma delimited) (*.csv)' format." 
+            });
+            return;
+          }
+          
           if (!text || text.trim().length === 0) {
             resolve({ valid: false, error: "CSV file is empty" });
             return;
           }
           
-          const lines = text.split(/\r?\n/).filter(line => line.trim().length > 0);
-          if (lines.length === 0) {
+          // First, validate the original file structure
+          const originalLines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n').filter(line => line.trim().length > 0);
+          if (originalLines.length === 0) {
             resolve({ valid: false, error: "CSV file appears to be empty" });
             return;
           }
+          
+          // Detect delimiter from original file
+          const originalDelimiter = detectDelimiter(text);
+          
+          // Validate original structure
+          const originalHeaderFields = parseCsvLine(originalLines[0], originalDelimiter);
+          const originalExpectedCount = originalHeaderFields.length;
+          
+          if (originalExpectedCount === 0) {
+            resolve({ valid: false, error: "CSV header is empty or invalid" });
+            return;
+          }
+          
+          // Check original file structure
+          for (let i = 1; i < originalLines.length; i++) {
+            const line = originalLines[i];
+            
+            // Check if line contains binary/control characters (indicates corrupted or wrong file type)
+            const binaryPattern = /[\x00-\x08\x0E-\x1F\x7F-\x9F]/;
+            if (binaryPattern.test(line)) {
+              console.error("❌ CSV Validation Error - Binary content detected:", {
+                lineNumber: i + 1,
+                linePreview: line.substring(0, 100)
+              });
+              
+              resolve({ 
+                valid: false, 
+                error: `Invalid file format detected on line ${i + 1}: This file appears to be a binary file (possibly an Excel .xlsx file) rather than a CSV file. Please save your file as CSV format: In Excel, go to File > Save As > Choose "CSV (Comma delimited) (*.csv)" format.` 
+              });
+              return;
+            }
+            
+            const rowFields = parseCsvLine(line, originalDelimiter);
+            if (rowFields.length !== originalExpectedCount) {
+              console.error("❌ CSV Validation Error (Original):", {
+                lineNumber: i + 1,
+                lineContent: line.substring(0, 200), // Only show first 200 chars
+                expectedColumns: originalExpectedCount,
+                actualColumns: rowFields.length,
+                delimiter: originalDelimiter
+              });
+              
+              resolve({ 
+                valid: false, 
+                error: `CSV format error on line ${i + 1}: Expected ${originalExpectedCount} column(s), but found ${rowFields.length}. Please ensure all rows have the same number of columns and that fields containing commas are enclosed in quotes.` 
+              });
+              return;
+            }
+          }
+          
+          // Now validate after normalization (what will be sent to backend)
+          const normalizedText = normalizeCsv(text);
+          const normalizedLines = normalizedText.split('\n').filter(line => line.trim().length > 0);
+          
+          if (normalizedLines.length === 0) {
+            resolve({ valid: false, error: "CSV file appears to be empty after normalization" });
+            return;
+          }
+          
+          // Use comma as delimiter after normalization
+          const delimiter = ',';
+          
+          // Parse normalized header
+          const headerFields = parseCsvLine(normalizedLines[0], delimiter);
+          const expectedColumnCount = headerFields.length;
+          
+          console.log("🔍 CSV Validation - Normalized Header:", {
+            headerLine: normalizedLines[0],
+            headerFields,
+            expectedColumnCount
+          });
+          
+          if (expectedColumnCount === 0) {
+            resolve({ valid: false, error: "CSV header is empty or invalid after normalization" });
+            return;
+          }
+          
+          // Validate normalized rows
+          for (let i = 1; i < normalizedLines.length; i++) {
+            const rowFields = parseCsvLine(normalizedLines[i], delimiter);
+            if (rowFields.length !== expectedColumnCount) {
+              console.error("❌ CSV Validation Error (Normalized):", {
+                lineNumber: i + 1,
+                lineContent: normalizedLines[i],
+                expectedColumns: expectedColumnCount,
+                actualColumns: rowFields.length,
+                parsedFields: rowFields
+              });
+              
+              resolve({ 
+                valid: false, 
+                error: `CSV format error on line ${i + 1}: Expected ${expectedColumnCount} column(s), but found ${rowFields.length}. Please ensure all rows have the same number of columns and that fields containing commas are enclosed in quotes.` 
+              });
+              return;
+            }
+          }
+          
+          console.log("✅ CSV Validation - All rows validated successfully (original and normalized)");
           
           resolve({ valid: true });
         } catch (error) {
@@ -1922,29 +2120,55 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
       };
       
       reader.onerror = () => resolve({ valid: false, error: "Failed to read file" });
-      reader.readAsText(file, 'UTF-8');
+      // Read as ArrayBuffer to match uploadCsvBatch encoding detection
+      reader.readAsArrayBuffer(file);
     });
   };
 
   // Helper: Parse error messages
   const parseErrorMessage = (errorMessage: string): string => {
-    if (errorMessage.includes('Expected') && errorMessage.includes('fields')) {
-      const match = errorMessage.match(/Expected (\d+) fields in line (\d+), saw (\d+)/);
+    // Extract error message from JSON format if present
+    let cleanMessage = errorMessage;
+    try {
+      const jsonMatch = errorMessage.match(/\{"detail":\s*"([^"]+)"\}/);
+      if (jsonMatch) {
+        cleanMessage = jsonMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
+      }
+    } catch {
+      // If parsing fails, use original message
+    }
+    
+    // Check for CSV format errors
+    if (cleanMessage.includes('Expected') && cleanMessage.includes('fields')) {
+      const match = cleanMessage.match(/Expected (\d+) fields? in line (\d+), saw (\d+)/);
       if (match) {
         const [, expected, lineNum, actual] = match;
         return `CSV format error on line ${lineNum}: Expected ${expected} column(s), but found ${actual}. Please ensure all rows have the same number of columns and that fields containing commas are enclosed in quotes.`;
       }
+      
+      // Alternative pattern
+      const match2 = cleanMessage.match(/Expected (\d+) fields? in line (\d+), saw (\d+)/);
+      if (match2) {
+        const [, expected, lineNum, actual] = match2;
+        return `CSV format error on line ${lineNum}: Expected ${expected} column(s), but found ${actual}. Please ensure all rows have the same number of columns and that fields containing commas are enclosed in quotes.`;
+      }
     }
     
-    if (errorMessage.includes('tokenizing data')) {
-      return `CSV parsing error: ${errorMessage}. Please check that your CSV file uses commas as delimiters and that fields with commas or special characters are enclosed in double quotes.`;
+    if (cleanMessage.includes('tokenizing data')) {
+      return `CSV parsing error: ${cleanMessage}. Please check that your CSV file uses commas as delimiters and that fields with commas or special characters are enclosed in double quotes.`;
     }
     
-    if (errorMessage.includes('codec') || errorMessage.includes('decode')) {
-      return `File encoding error: ${errorMessage}. The file has been converted to UTF-8, but please try saving your CSV file as UTF-8 format before uploading.`;
+    if (cleanMessage.includes('codec') || cleanMessage.includes('decode')) {
+      return `File encoding error: ${cleanMessage}. The file has been converted to UTF-8, but please try saving your CSV file as UTF-8 format before uploading.`;
     }
     
-    return errorMessage;
+    // Remove status code prefix if present
+    const statusMatch = cleanMessage.match(/^\d+\s*-\s*(.+)$/);
+    if (statusMatch) {
+      cleanMessage = statusMatch[1];
+    }
+    
+    return cleanMessage;
   };
 
   // API: Upload CSV batch
@@ -2034,11 +2258,26 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
+      let errorText = await response.text();
       console.error("❌ DataSourcesManager - Batch Upload Error:", {
         status: response.status,
         errorText,
       });
+      
+      // Try to parse JSON error response
+      try {
+        const errorJson = JSON.parse(errorText);
+        if (errorJson.detail) {
+          errorText = errorJson.detail;
+        } else if (errorJson.message) {
+          errorText = errorJson.message;
+        } else if (errorJson.error) {
+          errorText = errorJson.error;
+        }
+      } catch {
+        // If not JSON, use the text as is
+      }
+      
       throw new Error(`Failed to upload CSV: ${response.status} - ${errorText}`);
     }
 
@@ -2398,22 +2637,36 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
   }, [currentUser?.uid]);
 
   // Handlers for CSV upload
-  const handleLeadFileSelect = (file: File) => {
-    if (file.type !== "text/csv" && !file.name.endsWith(".csv")) {
+  const handleLeadFileSelect = async (file: File) => {
+    // Check file extension
+    if (file.type !== "text/csv" && !file.name.toLowerCase().endsWith(".csv")) {
       toast({
         title: "Invalid file type",
-        description: "Please upload a CSV file.",
+        description: "Please upload a CSV file. If you're using Excel, save the file as 'CSV (Comma delimited) (*.csv)' format.",
         variant: "destructive",
       });
       return;
     }
+    
+    // Quick check for Excel files (ZIP signature)
+    const firstBytes = await file.slice(0, 4).arrayBuffer();
+    const bytes = new Uint8Array(firstBytes);
+    if (bytes.length >= 2 && bytes[0] === 0x50 && bytes[1] === 0x4B) {
+      toast({
+        title: "Invalid file format",
+        description: "This appears to be an Excel file (.xlsx) rather than a CSV file. Please save your file as CSV format: In Excel, go to File > Save As > Choose 'CSV (Comma delimited) (*.csv)' format.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setSelectedLeadFile(file);
   };
 
-  const handleLeadFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLeadFileInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      handleLeadFileSelect(file);
+      await handleLeadFileSelect(file);
     }
   };
 
@@ -2427,12 +2680,12 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
     setIsDraggingLead(false);
   };
 
-  const handleLeadDrop = (e: React.DragEvent) => {
+  const handleLeadDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDraggingLead(false);
     const file = e.dataTransfer.files[0];
     if (file) {
-      handleLeadFileSelect(file);
+      await handleLeadFileSelect(file);
     }
   };
 
