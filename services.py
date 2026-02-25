@@ -1733,29 +1733,29 @@ You MUST use the WebSearch tool to find a REAL, RECENT, and ACTIONABLE market si
    - Search for recent market growth, trends, or opportunities in the company's industry
    - Find market size changes, adoption rates, or emerging segments
    - Example searches: "[industry] market trends [regions] 2026 2027"
-   - Example searches: "[industry] growth opportunities [recent]"
+   - Example searches: "[industry] growth opportunities 2026 2027"
 
 2. Competitor Activity Signals:
    - Search for competitor funding rounds, product launches, or strategic moves
    - Find market share changes or competitive landscape shifts
-   - Example searches: "[industry] competitor funding [recent]"
-   - Example searches: "[industry] competitor product launch [recent]"
+   - Example searches: "[industry] competitor funding 2026 2027"
+   - Example searches: "[industry] competitor product launch 2026 2027"
 
 3. Industry Trend Signals:
    - Search for technology adoption, regulatory changes, or industry shifts
    - Find emerging trends that could impact sales strategy
-   - Example searches: "[industry] technology adoption [recent]"
-   - Example searches: "[industry] regulatory changes [recent]"
+   - Example searches: "[industry] technology adoption 2026 2027"
+   - Example searches: "[industry] regulatory changes 2026 2027"
 
 4. Market Dynamics Signals:
    - Search for buying behavior changes, market disruptions, or new opportunities
    - Find signals that indicate market readiness or buying intent
-   - Example searches: "[industry] buying trends [regions]"
-   - Example searches: "[industry] market disruption [recent]"
+   - Example searches: "[industry] buying trends [regions] 2026 2027"
+   - Example searches: "[industry] market disruption 2026 2027"
 
 IMPORTANT RESEARCH GUIDELINES:
 - Perform at least 5-7 WebSearch queries to find the BEST signal
-- Focus on RECENT signals (within last 1-3 months when possible)
+- Focus on RECENT signals from 2026-2027 (within last 1-3 months when possible)
 - The signal must be REAL and ACTIONABLE - not generic
 - Extract industry and target markets from the company profile
 - Cross-reference multiple sources to verify signal accuracy
@@ -1886,36 +1886,36 @@ You MUST use the WebSearch tool to find a REAL, RECENT, and ACTIONABLE ICP/custo
 1. ICP Buying Behavior Signals:
    - Search for buying trends, purchase patterns, or buying signals in the company's ICP segments
    - Find customer acquisition trends or buying committee changes
-   - Example searches: "[industry] [ICP segment] buying trends [recent]"
-   - Example searches: "[industry] customer acquisition [ICP segment] [recent]"
+   - Example searches: "[industry] [ICP segment] buying trends 2026 2027"
+   - Example searches: "[industry] customer acquisition [ICP segment] 2026 2027"
 
 2. Customer Spending Signals:
    - Search for tech spending, budget allocation, or investment trends in target ICP segments
    - Find customer spending patterns or budget increases
-   - Example searches: "[industry] tech spending [company size] [recent]"
-   - Example searches: "[industry] budget allocation [ICP segment]"
+   - Example searches: "[industry] tech spending [company size] 2026 2027"
+   - Example searches: "[industry] budget allocation [ICP segment] 2026 2027"
 
 3. ICP Market Dynamics Signals:
    - Search for ICP segment growth, market expansion, or customer behavior changes
    - Find signals about target customer needs or pain points
-   - Example searches: "[industry] [ICP segment] market trends [recent]"
-   - Example searches: "[industry] customer needs [ICP segment]"
+   - Example searches: "[industry] [ICP segment] market trends 2026 2027"
+   - Example searches: "[industry] customer needs [ICP segment] 2026 2027"
 
 4. Customer Success Signals:
    - Search for customer success metrics, retention trends, or customer satisfaction in ICP segments
    - Find signals about customer lifecycle or engagement patterns
-   - Example searches: "[industry] customer success [ICP segment] [recent]"
-   - Example searches: "[industry] customer retention [company size]"
+   - Example searches: "[industry] customer success [ICP segment] 2026 2027"
+   - Example searches: "[industry] customer retention [company size] 2026 2027"
 
 5. Buyer Persona Signals:
    - Search for decision maker trends, buying committee changes, or buyer behavior in target segments
    - Find signals about how target customers make purchasing decisions
-   - Example searches: "[industry] buying committee [ICP segment] [recent]"
-   - Example searches: "[industry] decision maker trends [recent]"
+   - Example searches: "[industry] buying committee [ICP segment] 2026 2027"
+   - Example searches: "[industry] decision maker trends 2026 2027"
 
 IMPORTANT RESEARCH GUIDELINES:
 - Perform at least 5-7 WebSearch queries to find the BEST signal
-- Focus on RECENT signals (within last 1-3 months when possible)
+- Focus on RECENT signals from 2026-2027 (within last 1-3 months when possible)
 - The signal must be REAL and ACTIONABLE - not generic
 - Extract industry, ICP segments, and target markets from the provided data
 - Cross-reference multiple sources to verify signal accuracy

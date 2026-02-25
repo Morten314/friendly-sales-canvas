@@ -295,7 +295,7 @@ tools = [
     Tool(
         name="WebSearch",
         func=search_tool.run,
-        description="Use this to gather up-to-date market data, TAM, competition, rankings, submarkets, industry trends, growth rates, market segments, regulatory information, and strategic insights. Perform multiple searches to cross-reference data from different sources for accuracy. Focus on recent data (2024-2025) when available."
+        description="Use this to gather up-to-date market data, TAM, competition, rankings, submarkets, industry trends, growth rates, market segments, regulatory information, and strategic insights. Perform multiple searches to cross-reference data from different sources for accuracy. Focus on recent data (2026-2027) when available."
     )
 ]
 
