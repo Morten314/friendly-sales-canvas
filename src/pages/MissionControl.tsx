@@ -3194,22 +3194,41 @@ const MissionControl = () => {
   };
 
   // Calculate overall completeness based on completed sections
-  const calculateOverallCompleteness = () => {
+  // Use useMemo to make it reactive to state changes
+  const overallCompleteness = React.useMemo(() => {
     // Check both local dataSources state and the hasDataSources flag
     const hasLocalDataSources = dataSources.length > 0;
     const hasAnyDataSources = hasLocalDataSources || hasDataSources;
     
+    // Debug logging
+    console.log("MissionControl: Calculating profile completeness", {
+      isCompanyProfileSaved,
+      isCustomerProfileSaved,
+      hasDataSources,
+      hasLocalDataSources,
+      hasAnyDataSources,
+      dataSourcesLength: dataSources.length
+    });
+    
+    // All 3 completed: company + customer + data sources = 100%
     if (hasAnyDataSources && isCustomerProfileSaved && isCompanyProfileSaved) {
+      console.log("MissionControl: Profile completeness = 100% (all 3 completed)");
       return 100;
-    } else if (isCustomerProfileSaved && isCompanyProfileSaved) {
+    } 
+    // Company + customer = 55%
+    else if (isCustomerProfileSaved && isCompanyProfileSaved) {
+      console.log("MissionControl: Profile completeness = 55% (company + customer)");
       return 55;
-    } else if (isCompanyProfileSaved) {
+    } 
+    // Only company = 30%
+    else if (isCompanyProfileSaved) {
+      console.log("MissionControl: Profile completeness = 30% (company only)");
       return 30;
     }
+    // Nothing completed = 0%
+    console.log("MissionControl: Profile completeness = 0% (nothing completed)");
     return 0;
-  };
-
-  const overallCompleteness = calculateOverallCompleteness();
+  }, [isCompanyProfileSaved, isCustomerProfileSaved, hasDataSources, dataSources.length]);
 
   // Listen for customer profile save events from ICPManager
   useEffect(() => {
@@ -3311,20 +3330,6 @@ const MissionControl = () => {
     }
   }, [currentUser?.uid]);
 
-  // Listen for data source added events from DataSourcesManager
-  useEffect(() => {
-    const handleDataSourceAdded = () => {
-      // Data source was added in DataSourcesManager
-      setHasDataSources(true);
-    };
-
-    window.addEventListener('dataSourceAdded', handleDataSourceAdded);
-    
-    return () => {
-      window.removeEventListener('dataSourceAdded', handleDataSourceAdded);
-    };
-  }, []);
-
   // Also update hasDataSources when local dataSources state changes
   useEffect(() => {
     if (dataSources.length > 0) {
@@ -3332,40 +3337,94 @@ const MissionControl = () => {
     }
   }, [dataSources.length]);
 
-  // Check if data sources exist in backend on mount
-  useEffect(() => {
-    const checkDataSourcesInBackend = async () => {
-      if (!currentUser?.uid) {
-        return;
+  // Check if data sources exist in backend on mount and when data source is added
+  const checkDataSourcesInBackend = React.useCallback(async () => {
+    if (!currentUser?.uid) {
+      return;
+    }
+
+    try {
+      // Check company profile endpoint for data sources
+      const apiUrl = `/api/profile/company?org_id=${orgIdToUse}`;
+      const response = await fetch(apiUrl, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Check if data_sources exists in the response
+        if (data.data_sources && data.data_sources.sources && Array.isArray(data.data_sources.sources) && data.data_sources.sources.length > 0) {
+          console.log("MissionControl: Data sources found in backend (company profile endpoint):", data.data_sources.sources.length);
+          setHasDataSources(true);
+          return;
+        }
       }
 
+      // Also check user-documents endpoint (used by DataSourcesManager)
       try {
-        const apiUrl = `/api/profile/company?org_id=${orgIdToUse}`;
-        const response = await fetch(apiUrl, {
+        const { buildApiUrl } = await import("@/lib/api");
+        const { getAuthHeader } = await import("@/lib/jwt");
+        const authHeader = await getAuthHeader();
+        const documentsUrl = buildApiUrl(`user-documents?org_id=${orgIdToUse}`);
+        const documentsResponse = await fetch(documentsUrl, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
+            ...(authHeader && { Authorization: authHeader }),
           },
         });
 
-        if (response.ok) {
-          const data = await response.json();
+        if (documentsResponse.ok) {
+          const documentsData = await documentsResponse.json();
+          const documents = Array.isArray(documentsData)
+            ? documentsData
+            : documentsData.documents || documentsData.files || documentsData.data || [];
           
-          // Check if data_sources exists in the response
-          if (data.data_sources && data.data_sources.sources && Array.isArray(data.data_sources.sources) && data.data_sources.sources.length > 0) {
-            console.log("MissionControl: Data sources found in backend");
+          if (Array.isArray(documents) && documents.length > 0) {
+            console.log("MissionControl: Data sources found in backend (user-documents endpoint):", documents.length);
             setHasDataSources(true);
+            return;
           }
         }
-      } catch (error) {
-        console.error("Error checking data sources:", error);
+      } catch (docError) {
+        console.warn("MissionControl: Could not check user-documents endpoint:", docError);
       }
-    };
 
+      // If no data sources found, set to false
+      console.log("MissionControl: No data sources found in backend");
+    } catch (error) {
+      console.error("Error checking data sources:", error);
+    }
+  }, [currentUser?.uid, orgIdToUse]);
+
+  useEffect(() => {
     if (currentUser?.uid) {
       checkDataSourcesInBackend();
     }
-  }, [currentUser?.uid]);
+  }, [currentUser?.uid, checkDataSourcesInBackend]);
+
+  // Listen for data source added events from DataSourcesManager and re-check backend
+  useEffect(() => {
+    const handleDataSourceAdded = () => {
+      console.log("MissionControl: Data source added event received");
+      // Immediately set flag to true (optimistic update)
+      setHasDataSources(true);
+      // Also re-check backend after a short delay to allow backend to process
+      setTimeout(() => {
+        checkDataSourcesInBackend();
+      }, 1000);
+    };
+
+    window.addEventListener('dataSourceAdded', handleDataSourceAdded);
+    
+    return () => {
+      window.removeEventListener('dataSourceAdded', handleDataSourceAdded);
+    };
+  }, [checkDataSourcesInBackend]);
 
   // Preload logo image to prevent delay when loading modal appears
   useEffect(() => {
@@ -5665,3 +5724,4 @@ const MissionControl = () => {
 };
 
 export default MissionControl;
+
