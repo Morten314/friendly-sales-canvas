@@ -104,6 +104,42 @@ const fetchSignals = async (userId: string) => {
   }
 };
 
+const signalAction = async (orgId: string, signalId: string, action: 'accept' | 'reject') => {
+  try {
+    const response = await fetch('/api/signal_action', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        org_id: orgId,
+        signal_id: signalId,
+        action: action
+      })
+    });
+    
+    console.log('Signal action response status:', response.status);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Signal action error response:', errorText);
+      throw new Error(`Failed to ${action} signal: ${response.status} ${response.statusText}`);
+    }
+    
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await response.text();
+      console.error('Non-JSON response:', text);
+      throw new Error('Server returned non-JSON response');
+    }
+    
+    return response.json();
+  } catch (error) {
+    console.error('Signal action API error:', error);
+    throw error;
+  }
+};
+
 // Helper function to generate a stable content-based ID for a signal
 const getSignalContentHash = (signal: SignalCard): string => {
   const content = `${signal.headline}-${signal.snippet}-${signal.description || ''}-${signal.agent}`;
@@ -161,7 +197,7 @@ const parseTimestamp = (timestamp: string): number => {
 };
 
 const Index = () => {
-  const { currentUser } = useAuth();
+  const { currentUser, orgId } = useAuth();
   const [currentTab, setCurrentTab] = useState('signals');
   const [signals, setSignals] = useState<SignalCard[]>([]);
   const [savedInsights, setSavedInsights] = useState<SignalCard[]>([]);
@@ -180,6 +216,12 @@ const Index = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [expandedDescriptions, setExpandedDescriptions] = useState<Set<string>>(new Set());
+  // Track pending rejections for undo functionality
+  const [pendingRejections, setPendingRejections] = useState<Map<string, {
+    signal: SignalCard;
+    originalIndex: number;
+    timer: NodeJS.Timeout;
+  }>>(new Map());
   const {
     toast
   } = useToast();
@@ -253,26 +295,40 @@ const Index = () => {
       const data = await fetchSignals(currentUser.uid);
       // Ensure all signals have unique IDs - always generate new unique IDs
       const rawSignals = data.signals || [];
-      console.log('Raw signals from API:', rawSignals.map(s => ({ id: s.id, headline: s.headline })));
+      console.log('Raw signals from API:', rawSignals.map(s => ({ 
+        signal_id: s.signal_id, 
+        id: s.id, 
+        headline: s.headline 
+      })));
       console.log('Rejected signal hashes from localStorage:', Array.from(rejectedHashes));
       
       const signalsWithIds = rawSignals.map((signal: any, index: number) => {
-        // Generate a truly unique ID for each signal
-        // Use crypto.randomUUID if available, otherwise use a combination of timestamp, index, and random
-        let uniqueId: string;
-        if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-          uniqueId = crypto.randomUUID();
+        // Use signal_id from API if available, otherwise fall back to id or generate unique ID
+        // The API should return signal_id field - use it as the primary identifier for API calls
+        let signalId: string;
+        if (signal.signal_id) {
+          signalId = signal.signal_id;
+          console.log(`Using signal_id from API for signal ${index}:`, signalId);
+        } else if (signal.id) {
+          signalId = signal.id;
+          console.warn(`Signal ${index} missing signal_id, using id field instead:`, signalId);
         } else {
-          const timestamp = Date.now();
-          const randomStr = Math.random().toString(36).substring(2, 11);
-          const perfNow = (performance?.now() || Math.random() * 1000).toString().replace('.', '');
-          uniqueId = `signal-${timestamp}-${index}-${randomStr}-${perfNow}`;
+          // Generate a truly unique ID for each signal as fallback
+          if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+            signalId = crypto.randomUUID();
+          } else {
+            const timestamp = Date.now();
+            const randomStr = Math.random().toString(36).substring(2, 11);
+            const perfNow = (performance?.now() || Math.random() * 1000).toString().replace('.', '');
+            signalId = `signal-${timestamp}-${index}-${randomStr}-${perfNow}`;
+          }
+          console.warn(`Signal ${index} missing both signal_id and id, generated fallback ID:`, signalId);
         }
         
         // Ensure all required fields are present with defaults if missing
         return {
           ...signal,
-          id: signal.id || uniqueId,
+          id: signalId, // Store signal_id (or fallback) as id for use in API calls
           description: signal.description || '',
           nextBestMoves: signal.nextBestMoves || [],
           contextualSuggestions: signal.contextualSuggestions || []
@@ -608,8 +664,8 @@ const Index = () => {
     }
     return ["Should I analyze the broader implications of this development for your market?", "Want me to identify opportunities this creates for your sales approach?", "Do you want me to monitor for similar signals in your industry?"];
   };
-  const handleAcceptSignal = (signalId: string) => {
-    if (!currentUser?.uid) return;
+  const handleAcceptSignal = async (signalId: string) => {
+    if (!currentUser?.uid || !orgId) return;
     
     // Find the signal to get its content hash
     const signal = signals.find(s => s.id === signalId);
@@ -632,6 +688,14 @@ const Index = () => {
         console.error('Error saving accepted signals to localStorage:', error);
       }
       
+      // Call API to unaccept (action: reject)
+      try {
+        await signalAction(orgId, signalId, 'reject');
+      } catch (error) {
+        console.error('Error calling signal action API:', error);
+        // Still update UI even if API fails
+      }
+      
       toast({
         title: "Signal unaccepted",
         description: "This signal has been unaccepted.",
@@ -649,15 +713,34 @@ const Index = () => {
         console.error('Error saving accepted signals to localStorage:', error);
       }
       
-      toast({
-        title: "Signal accepted",
-        description: "This signal has been marked as accepted.",
-      });
+      // Call API to accept
+      try {
+        await signalAction(orgId, signalId, 'accept');
+        toast({
+          title: "Signal accepted",
+          description: "This signal has been marked as accepted.",
+        });
+      } catch (error) {
+        console.error('Error calling signal action API:', error);
+        toast({
+          title: "Error",
+          description: "Failed to accept signal. Please try again.",
+          variant: "destructive",
+        });
+        // Revert UI state on error
+        const revertedAccepted = new Set(acceptedSignals);
+        setAcceptedSignals(revertedAccepted);
+        try {
+          localStorage.setItem(`${storageKey}_accepted`, JSON.stringify(Array.from(revertedAccepted)));
+        } catch (e) {
+          console.error('Error reverting accepted signals:', e);
+        }
+      }
     }
   };
 
   const handleRejectSignal = (signalId: string) => {
-    if (!currentUser?.uid) return;
+    if (!currentUser?.uid || !orgId) return;
     
     // Find the signal and its index to get its content hash
     const signalIndex = signals.findIndex(s => s.id === signalId);
@@ -671,7 +754,7 @@ const Index = () => {
     const signalToRestore = signal;
     const originalIndex = signalIndex;
     
-    // Remove from signals list
+    // Remove from signals list immediately (UI update)
     setSignals(prev => prev.filter(s => s.id !== signalId));
     
     // Remove from accepted if it was accepted (using content hash)
@@ -689,7 +772,7 @@ const Index = () => {
       return newSet;
     });
     
-    // Add to rejected list (using content hash)
+    // Add to rejected list (using content hash) - for UI filtering
     const newRejected = new Set([...rejectedSignalHashes, contentHash]);
     setRejectedSignalHashes(newRejected);
     
@@ -700,6 +783,59 @@ const Index = () => {
       console.error('Error saving rejected signals to localStorage:', error);
     }
     
+    // Set up 5-second timer to call API
+    const timer = setTimeout(async () => {
+      // Remove from pending rejections
+      setPendingRejections(prev => {
+        const updated = new Map(prev);
+        updated.delete(signalId);
+        return updated;
+      });
+      
+      // Call API to reject
+      try {
+        await signalAction(orgId, signalId, 'reject');
+        console.log('Signal rejected via API:', signalId);
+      } catch (error) {
+        console.error('Error calling signal action API for reject:', error);
+        // If API fails, restore the signal
+        setSignals(prev => {
+          const exists = prev.find(s => s.id === signalToRestore.id);
+          if (exists) return prev;
+          const insertIndex = Math.min(originalIndex, prev.length);
+          const newSignals = [...prev];
+          newSignals.splice(insertIndex, 0, signalToRestore);
+          return newSignals;
+        });
+        setRejectedSignalHashes(prev => {
+          const updatedRejected = new Set(prev);
+          updatedRejected.delete(contentHash);
+          try {
+            localStorage.setItem(`${storageKey}_rejected`, JSON.stringify(Array.from(updatedRejected)));
+          } catch (e) {
+            console.error('Error updating rejected signals in localStorage:', e);
+          }
+          return updatedRejected;
+        });
+        toast({
+          title: "Error",
+          description: "Failed to reject signal. It has been restored.",
+          variant: "destructive",
+        });
+      }
+    }, 5000); // 5 seconds delay
+    
+    // Store pending rejection for undo
+    setPendingRejections(prev => {
+      const updated = new Map(prev);
+      updated.set(signalId, {
+        signal: signalToRestore,
+        originalIndex,
+        timer
+      });
+      return updated;
+    });
+    
     // Show toast with undo option
     toast({
       title: "Signal removed",
@@ -709,6 +845,19 @@ const Index = () => {
           variant="outline"
           size="sm"
           onClick={() => {
+            // Clear the timer and remove from pending rejections
+            setPendingRejections(prev => {
+              const updated = new Map(prev);
+              const pendingRejection = updated.get(signalId);
+              if (pendingRejection) {
+                // Clear the timer
+                clearTimeout(pendingRejection.timer);
+                // Remove from map
+                updated.delete(signalId);
+              }
+              return updated;
+            });
+            
             // Restore the signal to its original position
             setSignals(prev => {
               // Check if signal already exists (shouldn't, but be safe)
@@ -748,6 +897,15 @@ const Index = () => {
       ),
     });
   };
+  
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      pendingRejections.forEach(({ timer }) => {
+        clearTimeout(timer);
+      });
+    };
+  }, [pendingRejections]);
 
   const filteredSavedInsights: SignalCard[] = savedInsightsFilter === 'all' ? savedInsights : savedInsights.filter(insight => {
     if (savedInsightsFilter === 'competitor') return insight.headline.toLowerCase().includes('competitor');
