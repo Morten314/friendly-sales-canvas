@@ -1710,18 +1710,40 @@ COMPONENT_FUNCTIONS = {
 def search_signals_scout(pre_data) -> dict:
     """Search for market, competitor, and industry trend signals for Scout agent using WebSearch"""
     
-    # Convert company profile to JSON string (handle both dict and string inputs)
+    # Extract existing headlines if present
+    existing_headlines = []
+    company_profile_data = pre_data
+    
     if isinstance(pre_data, dict):
-        company_profile_json = json.dumps(pre_data, indent=2)
+        existing_headlines = pre_data.get("existing_headlines", [])
+        # Remove existing_headlines from dict for company profile
+        company_profile_data = {k: v for k, v in pre_data.items() if k != "existing_headlines"}
+        company_profile_json = json.dumps(company_profile_data, indent=2)
     elif isinstance(pre_data, str):
         # If it's already a string, try to parse and reformat for better readability
         try:
             parsed = json.loads(pre_data)
-            company_profile_json = json.dumps(parsed, indent=2)
+            existing_headlines = parsed.get("existing_headlines", [])
+            company_profile_data = {k: v for k, v in parsed.items() if k != "existing_headlines"}
+            company_profile_json = json.dumps(company_profile_data, indent=2)
         except:
             company_profile_json = pre_data
     else:
         company_profile_json = str(pre_data)
+    
+    # Format existing headlines for prompt
+    existing_headlines_text = ""
+    if existing_headlines:
+        headlines_list = "\n".join([f"- {h}" for h in existing_headlines[:30]])  # Limit to 30 for prompt size
+        existing_headlines_text = f"""
+STEP 1.5 - EXISTING SIGNALS (CRITICAL - AVOID DUPLICATES):
+You MUST avoid generating signals similar to these existing signal headlines. Review them carefully and ensure your new signal is completely different and unique:
+
+Existing Signal Headlines:
+{headlines_list}
+
+IMPORTANT: Your new signal headline must be about a DIFFERENT news story, market development, or industry trend. Do NOT generate a signal about the same event, company news, or market development as any of the above headlines, even if worded differently. Search for NEW and UNIQUE signals that haven't been covered yet.
+"""
     
     # Construct prompt with full company profile and WebSearch instructions
     template = """Task: Research and identify a high-quality, actionable market signal for a sales scout agent. This signal should help the sales team understand market opportunities, competitor movements, or industry trends that could impact their sales strategy.
@@ -1731,6 +1753,7 @@ Review the complete company profile data below. Extract all relevant information
 
 Company Profile Data:
 {company_profile_json}
+{existing_headlines_section}
 
 STEP 2 - RESEARCH REQUIREMENTS (CRITICAL):
 You MUST use the WebSearch tool to find a REAL, RECENT, and ACTIONABLE market signal. Based on the company profile above, perform comprehensive research to identify:
@@ -1801,7 +1824,10 @@ Final Answer: <your JSON answer here>
 Do not include any additional reasoning, thoughts, or steps after that.
 """
 
-    prompt = template.format(company_profile_json=company_profile_json)
+    prompt = template.format(
+        company_profile_json=company_profile_json,
+        existing_headlines_section=existing_headlines_text
+    )
     
     # Get LLM response with WebSearch
     raw_response = agent_chain.invoke({'input': prompt})
@@ -1849,23 +1875,30 @@ Do not include any additional reasoning, thoughts, or steps after that.
 def search_signals_profiler(pre_data) -> dict:
     """Search for ICP and customer-related signals for Profiler agent using WebSearch"""
     
-    # Extract company profile and ICP data
+    # Extract existing headlines if present
+    existing_headlines = []
+    company_profile = {}
+    icp_data = {}
+    
     if isinstance(pre_data, dict):
+        existing_headlines = pre_data.get("existing_headlines", [])
         if "company_profile" in pre_data:
             company_profile = pre_data["company_profile"]
             icp_data = pre_data.get("icp_data", {})
         else:
-            company_profile = pre_data
+            # Remove existing_headlines from dict
+            company_profile = {k: v for k, v in pre_data.items() if k != "existing_headlines"}
             icp_data = {}
     else:
         try:
             parsed = json.loads(pre_data) if isinstance(pre_data, str) else {}
+            existing_headlines = parsed.get("existing_headlines", [])
             if "company_profile" in parsed:
                 company_profile = parsed["company_profile"]
                 icp_data = parsed.get("icp_data", {})
             else:
-                company_profile = parsed
-                icp_data = {}
+                company_profile = {k: v for k, v in parsed.items() if k not in ["existing_headlines", "icp_data"]}
+                icp_data = parsed.get("icp_data", {})
         except:
             company_profile = {}
             icp_data = {}
@@ -1877,6 +1910,20 @@ def search_signals_profiler(pre_data) -> dict:
     }
     context_json = json.dumps(context_data, indent=2)
     
+    # Format existing headlines for prompt
+    existing_headlines_text = ""
+    if existing_headlines:
+        headlines_list = "\n".join([f"- {h}" for h in existing_headlines[:30]])  # Limit to 30 for prompt size
+        existing_headlines_text = f"""
+STEP 1.5 - EXISTING SIGNALS (CRITICAL - AVOID DUPLICATES):
+You MUST avoid generating signals similar to these existing signal headlines. Review them carefully and ensure your new signal is completely different and unique:
+
+Existing Signal Headlines:
+{headlines_list}
+
+IMPORTANT: Your new signal headline must be about a DIFFERENT news story, market development, or industry trend. Do NOT generate a signal about the same event, company news, or market development as any of the above headlines, even if worded differently. Search for NEW and UNIQUE signals that haven't been covered yet.
+"""
+    
     # Construct prompt with full company profile/ICP data and WebSearch instructions
     template = """Task: Research and identify a high-quality, actionable ICP/customer signal for a profiler agent. This signal should help the sales team understand customer buying behavior, ICP trends, or customer acquisition opportunities.
 
@@ -1885,6 +1932,7 @@ Review the complete company profile and ICP data below. Extract all relevant inf
 
 Company Profile and ICP Data:
 {context_json}
+{existing_headlines_section}
 
 STEP 2 - RESEARCH REQUIREMENTS (CRITICAL):
 You MUST use the WebSearch tool to find a REAL, RECENT, and ACTIONABLE ICP/customer signal. Based on the company profile and ICP data above, perform comprehensive research to identify:
@@ -1962,7 +2010,10 @@ Final Answer: <your JSON answer here>
 Do not include any additional reasoning, thoughts, or steps after that.
 """
 
-    prompt = template.format(context_json=context_json)
+    prompt = template.format(
+        context_json=context_json,
+        existing_headlines_section=existing_headlines_text
+    )
     
     # Get LLM response with WebSearch
     raw_response = agent_chain.invoke({'input': prompt})

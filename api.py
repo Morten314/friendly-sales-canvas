@@ -1049,45 +1049,6 @@ async def icp_research(request: MarketRequest):
     finally:
         client.close()
 
-async def check_headline_duplicate(new_headline: str, existing_headlines: list) -> bool:
-    """
-    Use AI to check if new headline is similar to any existing headlines.
-    Returns True if duplicate/similar, False if unique.
-    """
-    if not existing_headlines or not new_headline:
-        return False
-    
-    # Create prompt for AI comparison
-    headlines_list = "\n".join([f"- {h}" for h in existing_headlines[:20]])  # Limit to 20 for prompt size
-    prompt = f"""Compare this new headline with the existing headlines below. Determine if the new headline is about the same news/story/signal as any of the existing ones.
-
-Existing headlines:
-{headlines_list}
-
-New headline: "{new_headline}"
-
-Are they about the same news/story/signal? Consider:
-- Same event, company, or development
-- Same market trend or opportunity
-- Same industry development
-- Even if worded differently, if it's the same underlying story, it's a duplicate
-
-Respond with ONLY "YES" if it's a duplicate/similar, or "NO" if it's unique and different. No other text."""
-
-    try:
-        message = HumanMessage(content=prompt)
-        response = await asyncio.to_thread(llm2.invoke, [message])
-        result = response.content.strip().upper()
-        return result.startswith("YES")
-    except Exception as e:
-        logger.error(f"Error checking headline duplicate: {e}")
-        # If AI check fails, fall back to basic string similarity
-        new_lower = new_headline.lower()
-        for existing in existing_headlines:
-            if existing and new_lower in existing.lower() or existing.lower() in new_lower:
-                return True
-        return False
-
 @app.post("/signals-research")
 async def signals_research(request: MarketRequest):
     """Research web signals for specific agents (scout/profiler)"""
@@ -1128,6 +1089,33 @@ async def signals_research(request: MarketRequest):
         # Prepare data for the signals function
         pre_data = request.data
         
+        # Fetch existing headlines from signal_track collection
+        existing_headlines = []
+        if request.org_id or request.user_id:
+            track_db = client["Signals"]
+            track_collection = track_db["signal_track"]
+            track_key = request.org_id if request.org_id else f"user_{request.user_id}"
+            
+            def fetch_existing_headlines():
+                track_doc = track_collection.find_one({"_id": track_key})
+                if track_doc and track_doc.get("headlines"):
+                    return track_doc.get("headlines", [])
+                return []
+            
+            existing_headlines = await asyncio.to_thread(fetch_existing_headlines)
+        
+        # Add existing headlines to pre_data for prompt injection
+        if isinstance(pre_data, dict):
+            pre_data["existing_headlines"] = existing_headlines
+        else:
+            # If pre_data is a string, convert to dict
+            try:
+                pre_data_dict = json.loads(pre_data) if isinstance(pre_data, str) else {}
+                pre_data_dict["existing_headlines"] = existing_headlines
+                pre_data = pre_data_dict
+            except:
+                pre_data = {"company_profile": pre_data, "existing_headlines": existing_headlines}
+        
         # For profiler agent, also include ICP data if available - filter by user_id
         if agent_name == "profiler":
             # Try to get ICP data from Profiler database
@@ -1137,10 +1125,16 @@ async def signals_research(request: MarketRequest):
                 icp_collection = profiler_db["ICP_config"]
                 icp_data = icp_collection.find_one({"user_id": request.user_id})
                 if icp_data:
-                    pre_data = {
-                        "company_profile": request.data,
-                        "icp_data": icp_data.get("icps", {})
-                    }
+                    if isinstance(pre_data, dict):
+                        pre_data["icp_data"] = icp_data.get("icps", {})
+                        if "company_profile" not in pre_data:
+                            pre_data["company_profile"] = request.data
+                    else:
+                        pre_data = {
+                            "company_profile": request.data,
+                            "icp_data": icp_data.get("icps", {}),
+                            "existing_headlines": existing_headlines
+                        }
                 profiler_client.close()
             except Exception as e:
                 print(f"Warning: Could not fetch ICP data: {e}")
@@ -1173,38 +1167,26 @@ async def signals_research(request: MarketRequest):
         if request.org_id:
             signals_result["org_id"] = request.org_id
 
-        # Check for duplicate signal by headline similarity (if org_id and headline exist)
-        if request.org_id and signals_result.get("headline"):
-            # Fetch existing headlines for this org_id and agent
-            def fetch_existing_headlines():
-                cursor = collection.find(
-                    {
-                        "org_id": request.org_id,
-                        "agent": agent_name,
-                        "headline": {"$exists": True, "$ne": ""}
-                    },
-                    {"headline": 1}
-                ).limit(50)  # Limit to last 50 signals for performance
-                return [s.get("headline", "") for s in cursor if s.get("headline")]
-            
-            existing_headlines = await asyncio.to_thread(fetch_existing_headlines)
-            
-            if existing_headlines:
-                is_duplicate = await check_headline_duplicate(
-                    signals_result.get("headline", ""),
-                    existing_headlines
-                )
-                if is_duplicate:
-                    # Signal already exists, skip saving
-                    signals_result.pop("_id", None)
-                    return {
-                        "status": "duplicate",
-                        "message": "Signal with similar headline already exists",
-                        "data": signals_result
-                    }
-
         # Save to Signals DB
         await asyncio.to_thread(collection.insert_one, signals_result)
+        
+        # Store headline in signal_track collection
+        if signals_result.get("headline") and (request.org_id or request.user_id):
+            track_db = client["Signals"]
+            track_collection = track_db["signal_track"]
+            track_key = request.org_id if request.org_id else f"user_{request.user_id}"
+            
+            def update_signal_track():
+                track_collection.update_one(
+                    {"_id": track_key},
+                    {
+                        "$addToSet": {"headlines": signals_result.get("headline")},
+                        "$set": {"last_updated": datetime.utcnow()}
+                    },
+                    upsert=True
+                )
+            
+            await asyncio.to_thread(update_signal_track)
 
         signals_result.pop("_id", None)
         return {"status": "success", "data": signals_result}
@@ -1227,18 +1209,50 @@ async def generate_signals_batch(request: MarketRequest):
         # Prepare data for the signals functions
         pre_data = request.data
         
+        # Fetch existing headlines from signal_track collection
+        existing_headlines = []
+        if request.org_id or request.user_id:
+            track_db = client["Signals"]
+            track_collection = track_db["signal_track"]
+            track_key = request.org_id if request.org_id else f"user_{request.user_id}"
+            
+            def fetch_existing_headlines():
+                track_doc = track_collection.find_one({"_id": track_key})
+                if track_doc and track_doc.get("headlines"):
+                    return track_doc.get("headlines", [])
+                return []
+            
+            existing_headlines = await asyncio.to_thread(fetch_existing_headlines)
+        
+        # Add existing headlines to pre_data
+        if isinstance(pre_data, dict):
+            pre_data["existing_headlines"] = existing_headlines
+        else:
+            try:
+                pre_data_dict = json.loads(pre_data) if isinstance(pre_data, str) else {}
+                pre_data_dict["existing_headlines"] = existing_headlines
+                pre_data = pre_data_dict
+            except:
+                pre_data = {"company_profile": pre_data, "existing_headlines": existing_headlines}
+        
         # For profiler agent, also include ICP data if available - filter by user_id
-        profiler_pre_data = pre_data
+        profiler_pre_data = pre_data.copy() if isinstance(pre_data, dict) else pre_data
         try:
             profiler_client = MongoClient(mongo_uri)
             profiler_db = profiler_client["Profiler"]
             icp_collection = profiler_db["ICP_config"]
             icp_data = icp_collection.find_one({"user_id": request.user_id})
             if icp_data:
-                profiler_pre_data = {
-                    "company_profile": request.data,
-                    "icp_data": icp_data.get("icps", {})
-                }
+                if isinstance(profiler_pre_data, dict):
+                    profiler_pre_data["icp_data"] = icp_data.get("icps", {})
+                    if "company_profile" not in profiler_pre_data:
+                        profiler_pre_data["company_profile"] = request.data
+                else:
+                    profiler_pre_data = {
+                        "company_profile": request.data,
+                        "icp_data": icp_data.get("icps", {}),
+                        "existing_headlines": existing_headlines
+                    }
             profiler_client.close()
         except Exception as e:
             print(f"Warning: Could not fetch ICP data: {e}")
@@ -1263,33 +1277,30 @@ async def generate_signals_batch(request: MarketRequest):
                 if request.org_id:
                     signals_result["org_id"] = request.org_id
                 
-                # Check for duplicate signal by headline similarity (if org_id and headline exist)
-                if request.org_id and signals_result.get("headline"):
-                    # Fetch existing headlines for this org_id and agent
-                    def fetch_existing_headlines():
-                        cursor = collection.find(
-                            {
-                                "org_id": request.org_id,
-                                "agent": "scout",
-                                "headline": {"$exists": True, "$ne": ""}
-                            },
-                            {"headline": 1}
-                        ).limit(50)  # Limit to last 50 signals for performance
-                        return [s.get("headline", "") for s in cursor if s.get("headline")]
-                    
-                    existing_headlines = await asyncio.to_thread(fetch_existing_headlines)
-                    
-                    if existing_headlines:
-                        is_duplicate = await check_headline_duplicate(
-                            signals_result.get("headline", ""),
-                            existing_headlines
-                        )
-                        if is_duplicate:
-                            print(f"Skipping duplicate scout signal {i+1} (similar headline already exists)")
-                            continue  # Skip this signal and continue to next
-                
                 # Save to Signals DB
                 await asyncio.to_thread(collection.insert_one, signals_result)
+                
+                # Store headline in signal_track collection
+                if signals_result.get("headline") and (request.org_id or request.user_id):
+                    track_db = client["Signals"]
+                    track_collection = track_db["signal_track"]
+                    track_key = request.org_id if request.org_id else f"user_{request.user_id}"
+                    
+                    def update_signal_track():
+                        track_collection.update_one(
+                            {"_id": track_key},
+                            {
+                                "$addToSet": {"headlines": signals_result.get("headline")},
+                                "$set": {"last_updated": datetime.utcnow()}
+                            },
+                            upsert=True
+                        )
+                    
+                    await asyncio.to_thread(update_signal_track)
+                    
+                    # Update existing_headlines list for next iteration
+                    if isinstance(pre_data, dict):
+                        pre_data["existing_headlines"].append(signals_result.get("headline"))
                 signals_result.pop("_id", None)
                 generated_signals.append(signals_result)
                 print(f"Successfully generated scout signal {i+1}")
@@ -1318,33 +1329,30 @@ async def generate_signals_batch(request: MarketRequest):
                 if request.org_id:
                     signals_result["org_id"] = request.org_id
                 
-                # Check for duplicate signal by headline similarity (if org_id and headline exist)
-                if request.org_id and signals_result.get("headline"):
-                    # Fetch existing headlines for this org_id and agent
-                    def fetch_existing_headlines():
-                        cursor = collection.find(
-                            {
-                                "org_id": request.org_id,
-                                "agent": "profiler",
-                                "headline": {"$exists": True, "$ne": ""}
-                            },
-                            {"headline": 1}
-                        ).limit(50)  # Limit to last 50 signals for performance
-                        return [s.get("headline", "") for s in cursor if s.get("headline")]
-                    
-                    existing_headlines = await asyncio.to_thread(fetch_existing_headlines)
-                    
-                    if existing_headlines:
-                        is_duplicate = await check_headline_duplicate(
-                            signals_result.get("headline", ""),
-                            existing_headlines
-                        )
-                        if is_duplicate:
-                            print(f"Skipping duplicate profiler signal {i+1} (similar headline already exists)")
-                            continue  # Skip this signal and continue to next
-                
                 # Save to Signals DB
                 await asyncio.to_thread(collection.insert_one, signals_result)
+                
+                # Store headline in signal_track collection
+                if signals_result.get("headline") and (request.org_id or request.user_id):
+                    track_db = client["Signals"]
+                    track_collection = track_db["signal_track"]
+                    track_key = request.org_id if request.org_id else f"user_{request.user_id}"
+                    
+                    def update_signal_track():
+                        track_collection.update_one(
+                            {"_id": track_key},
+                            {
+                                "$addToSet": {"headlines": signals_result.get("headline")},
+                                "$set": {"last_updated": datetime.utcnow()}
+                            },
+                            upsert=True
+                        )
+                    
+                    await asyncio.to_thread(update_signal_track)
+                    
+                    # Update existing_headlines list for next iteration
+                    if isinstance(profiler_pre_data, dict):
+                        profiler_pre_data["existing_headlines"].append(signals_result.get("headline"))
                 signals_result.pop("_id", None)
                 generated_signals.append(signals_result)
                 print(f"Successfully generated profiler signal {i+1}")
