@@ -124,3 +124,9 @@ class CustomerProfileRequest(BaseModel):
     profile_type: Literal["customer"] = "customer"
     org_id: str  # Required for multi-org support
     icps: List[CustomerProfileICP] = Field(..., min_items=1)
+
+# Signal Action Request model
+class SignalActionRequest(BaseModel):
+    org_id: str
+    signal_id: str
+    action: Literal["accept", "reject"]

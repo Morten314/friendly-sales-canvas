@@ -25,7 +25,8 @@ from config import origins, STAGE_ORDER, STAGE_MAPPING, s3_bucket, aws_region, a
 from models import (
     ProspectData, Lead, Contact, SalesPipelineResponse, TimeframeResponse, StageStats,
     CompanyProfile, UserProfile, ScoutProfile, MarketRequest, EditRequest,
-    CustomerProfileRequest, CustomerProfileICP, LeadCreateRequest, LeadUpdateRequest
+    CustomerProfileRequest, CustomerProfileICP, LeadCreateRequest, LeadUpdateRequest,
+    SignalActionRequest
 )
 from database import driver, graph, client, upsert_node
 from llm_config import chain, chain2
@@ -1124,6 +1125,7 @@ async def signals_research(request: MarketRequest):
         # Add metadata - filter by user_id only
         signals_result.update({
             "id": signal_id,
+            "signal_id": signal_id,  # Ensure signal_id is also present
             "user_id": request.user_id,
             "agent": agent_name,
             "timestamp": datetime.utcnow()
@@ -1182,6 +1184,7 @@ async def generate_signals_batch(request: MarketRequest):
                 signal_id = str(uuid.uuid4())
                 signals_result.update({
                     "id": signal_id,
+                    "signal_id": signal_id,  # Ensure signal_id is also present
                     "user_id": request.user_id,
                     "agent": "scout",
                     "timestamp": datetime.utcnow(),
@@ -1211,6 +1214,7 @@ async def generate_signals_batch(request: MarketRequest):
                 signal_id = str(uuid.uuid4())
                 signals_result.update({
                     "id": signal_id,
+                    "signal_id": signal_id,  # Ensure signal_id is also present
                     "user_id": request.user_id,
                     "agent": "profiler",
                     "timestamp": datetime.utcnow(),
@@ -1276,6 +1280,11 @@ async def fetch_signals(user_id: str = Query(...), limit: int = Query(10)):
         for signal in signals_cursor:
             # Remove MongoDB _id and format for simple list
             signal.pop("_id", None)
+            # Ensure signal_id is present (use "id" if signal_id doesn't exist)
+            if "signal_id" not in signal and "id" in signal:
+                signal["signal_id"] = signal["id"]
+            elif "id" not in signal and "signal_id" in signal:
+                signal["id"] = signal["signal_id"]
             signals_list.append(signal)
 
         return {
@@ -1286,6 +1295,97 @@ async def fetch_signals(user_id: str = Query(...), limit: int = Query(10)):
 
     finally:
         client.close()
+
+@app.post("/signal_action")
+async def signal_action(request: SignalActionRequest):
+    """
+    Accept or reject a signal.
+    - If action is "accept": Keep the signal under the org_id (ensure org_id is set)
+    - If action is "reject": Delete the signal
+    """
+    try:
+        # MongoDB connection for Signals DB
+        username = urllib.parse.quote_plus("techbrewra")
+        password = urllib.parse.quote_plus("Brewra@Best09")
+        mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
+        client = MongoClient(mongo_uri)
+        db = client["Signals"]
+        collection = db["signals"]
+
+        # Find the signal by signal_id (check both "id" and "signal_id" fields)
+        signal = collection.find_one({
+            "$or": [
+                {"id": request.signal_id},
+                {"signal_id": request.signal_id}
+            ]
+        })
+
+        if not signal:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Signal with signal_id {request.signal_id} not found"
+            )
+
+        if request.action == "accept":
+            # Update the signal to ensure it has the org_id
+            update_result = collection.update_one(
+                {"_id": signal["_id"]},
+                {
+                    "$set": {
+                        "org_id": request.org_id,
+                        "status": "accepted",
+                        "actioned_at": datetime.utcnow()
+                    }
+                }
+            )
+
+            if update_result.modified_count > 0:
+                return {
+                    "status": "success",
+                    "message": f"Signal {request.signal_id} accepted and assigned to org {request.org_id}",
+                    "signal_id": request.signal_id,
+                    "org_id": request.org_id,
+                    "action": "accept"
+                }
+            else:
+                return {
+                    "status": "success",
+                    "message": f"Signal {request.signal_id} already has org_id {request.org_id}",
+                    "signal_id": request.signal_id,
+                    "org_id": request.org_id,
+                    "action": "accept"
+                }
+
+        elif request.action == "reject":
+            # Delete the signal
+            delete_result = collection.delete_one({"_id": signal["_id"]})
+
+            if delete_result.deleted_count > 0:
+                return {
+                    "status": "success",
+                    "message": f"Signal {request.signal_id} rejected and deleted",
+                    "signal_id": request.signal_id,
+                    "action": "reject"
+                }
+            else:
+                raise HTTPException(
+                    status_code=500,
+                    detail="Failed to delete signal"
+                )
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid action: {request.action}. Must be 'accept' or 'reject'"
+            )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error processing signal action: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to process signal action: {str(e)}")
+    finally:
+        if 'client' in locals():
+            client.close()
 
 @app.post("/edit")
 def process_edit(request: EditRequest):
