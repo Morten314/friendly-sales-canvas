@@ -29,7 +29,8 @@ from models import (
     SignalActionRequest
 )
 from database import driver, graph, client, upsert_node
-from llm_config import chain, chain2
+from llm_config import chain, chain2, llm2
+from langchain_core.messages import HumanMessage
 from services import (
     grapher, create_prospect_node, convert_audio_to_text, process_prospect_list,
     ICP_FUNCTIONS, COMPONENT_FUNCTIONS, ICP_generator, SIGNALS_FUNCTIONS,
@@ -1048,6 +1049,45 @@ async def icp_research(request: MarketRequest):
     finally:
         client.close()
 
+async def check_headline_duplicate(new_headline: str, existing_headlines: list) -> bool:
+    """
+    Use AI to check if new headline is similar to any existing headlines.
+    Returns True if duplicate/similar, False if unique.
+    """
+    if not existing_headlines or not new_headline:
+        return False
+    
+    # Create prompt for AI comparison
+    headlines_list = "\n".join([f"- {h}" for h in existing_headlines[:20]])  # Limit to 20 for prompt size
+    prompt = f"""Compare this new headline with the existing headlines below. Determine if the new headline is about the same news/story/signal as any of the existing ones.
+
+Existing headlines:
+{headlines_list}
+
+New headline: "{new_headline}"
+
+Are they about the same news/story/signal? Consider:
+- Same event, company, or development
+- Same market trend or opportunity
+- Same industry development
+- Even if worded differently, if it's the same underlying story, it's a duplicate
+
+Respond with ONLY "YES" if it's a duplicate/similar, or "NO" if it's unique and different. No other text."""
+
+    try:
+        message = HumanMessage(content=prompt)
+        response = await asyncio.to_thread(llm2.invoke, [message])
+        result = response.content.strip().upper()
+        return result.startswith("YES")
+    except Exception as e:
+        logger.error(f"Error checking headline duplicate: {e}")
+        # If AI check fails, fall back to basic string similarity
+        new_lower = new_headline.lower()
+        for existing in existing_headlines:
+            if existing and new_lower in existing.lower() or existing.lower() in new_lower:
+                return True
+        return False
+
 @app.post("/signals-research")
 async def signals_research(request: MarketRequest):
     """Research web signals for specific agents (scout/profiler)"""
@@ -1133,6 +1173,36 @@ async def signals_research(request: MarketRequest):
         if request.org_id:
             signals_result["org_id"] = request.org_id
 
+        # Check for duplicate signal by headline similarity (if org_id and headline exist)
+        if request.org_id and signals_result.get("headline"):
+            # Fetch existing headlines for this org_id and agent
+            def fetch_existing_headlines():
+                cursor = collection.find(
+                    {
+                        "org_id": request.org_id,
+                        "agent": agent_name,
+                        "headline": {"$exists": True, "$ne": ""}
+                    },
+                    {"headline": 1}
+                ).limit(50)  # Limit to last 50 signals for performance
+                return [s.get("headline", "") for s in cursor if s.get("headline")]
+            
+            existing_headlines = await asyncio.to_thread(fetch_existing_headlines)
+            
+            if existing_headlines:
+                is_duplicate = await check_headline_duplicate(
+                    signals_result.get("headline", ""),
+                    existing_headlines
+                )
+                if is_duplicate:
+                    # Signal already exists, skip saving
+                    signals_result.pop("_id", None)
+                    return {
+                        "status": "duplicate",
+                        "message": "Signal with similar headline already exists",
+                        "data": signals_result
+                    }
+
         # Save to Signals DB
         await asyncio.to_thread(collection.insert_one, signals_result)
 
@@ -1193,6 +1263,31 @@ async def generate_signals_batch(request: MarketRequest):
                 if request.org_id:
                     signals_result["org_id"] = request.org_id
                 
+                # Check for duplicate signal by headline similarity (if org_id and headline exist)
+                if request.org_id and signals_result.get("headline"):
+                    # Fetch existing headlines for this org_id and agent
+                    def fetch_existing_headlines():
+                        cursor = collection.find(
+                            {
+                                "org_id": request.org_id,
+                                "agent": "scout",
+                                "headline": {"$exists": True, "$ne": ""}
+                            },
+                            {"headline": 1}
+                        ).limit(50)  # Limit to last 50 signals for performance
+                        return [s.get("headline", "") for s in cursor if s.get("headline")]
+                    
+                    existing_headlines = await asyncio.to_thread(fetch_existing_headlines)
+                    
+                    if existing_headlines:
+                        is_duplicate = await check_headline_duplicate(
+                            signals_result.get("headline", ""),
+                            existing_headlines
+                        )
+                        if is_duplicate:
+                            print(f"Skipping duplicate scout signal {i+1} (similar headline already exists)")
+                            continue  # Skip this signal and continue to next
+                
                 # Save to Signals DB
                 await asyncio.to_thread(collection.insert_one, signals_result)
                 signals_result.pop("_id", None)
@@ -1222,6 +1317,31 @@ async def generate_signals_batch(request: MarketRequest):
                 })
                 if request.org_id:
                     signals_result["org_id"] = request.org_id
+                
+                # Check for duplicate signal by headline similarity (if org_id and headline exist)
+                if request.org_id and signals_result.get("headline"):
+                    # Fetch existing headlines for this org_id and agent
+                    def fetch_existing_headlines():
+                        cursor = collection.find(
+                            {
+                                "org_id": request.org_id,
+                                "agent": "profiler",
+                                "headline": {"$exists": True, "$ne": ""}
+                            },
+                            {"headline": 1}
+                        ).limit(50)  # Limit to last 50 signals for performance
+                        return [s.get("headline", "") for s in cursor if s.get("headline")]
+                    
+                    existing_headlines = await asyncio.to_thread(fetch_existing_headlines)
+                    
+                    if existing_headlines:
+                        is_duplicate = await check_headline_duplicate(
+                            signals_result.get("headline", ""),
+                            existing_headlines
+                        )
+                        if is_duplicate:
+                            print(f"Skipping duplicate profiler signal {i+1} (similar headline already exists)")
+                            continue  # Skip this signal and continue to next
                 
                 # Save to Signals DB
                 await asyncio.to_thread(collection.insert_one, signals_result)

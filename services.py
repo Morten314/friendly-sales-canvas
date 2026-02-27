@@ -576,10 +576,12 @@ You MUST use the WebSearch tool extensively to find real, up-to-date competitive
    - Example searches: "[industry] M&A activity [regions] 2026"
 
 4. SWOT Analysis Research:
-   - Search for competitor strengths and weaknesses from industry reports
-   - Find competitive positioning data
+   - Search for competitor strengths, weaknesses, opportunities, and threats from industry reports
+   - Find competitive positioning data and market opportunities
+   - Find competitive threats and risks
    - Example searches: "[competitor name] SWOT analysis"
    - Example searches: "[industry] competitive analysis [regions]"
+   - Example searches: "[competitor name] opportunities threats [regions]"
 
 5. Feature Comparison Research:
    - Search for product/feature comparisons in the industry
@@ -643,12 +645,16 @@ Return your findings in the following exact JSON format (use exact keys as shown
         {{
           "name": "[Real Competitor name]",
           "strengths": ["[Strength]", "[Strength]"],
-          "weaknesses": ["[Weakness]", "[Weakness]"]
+          "weaknesses": ["[Weakness]", "[Weakness]"],
+          "opportunities": ["[Opportunity]", "[Opportunity]"],
+          "threats": ["[Threat]", "[Threat]"]
         }},
         {{
           "name": "[Real Competitor name]",
           "strengths": ["[Strength]", "[Strength]"],
-          "weaknesses": ["[Weakness]", "[Weakness]"]
+          "weaknesses": ["[Weakness]", "[Weakness]"],
+          "opportunities": ["[Opportunity]", "[Opportunity]"],
+          "threats": ["[Threat]", "[Threat]"]
         }}
       ]
     }},
