@@ -3280,6 +3280,19 @@ const MarketResearch = React.memo(() => {
 
 
           console.log('✅ Found persisted Market Entry data with timestamp:', parsedData.timestamp);
+          console.log('🔍 MarketResearch: Loaded SWOT data from localStorage:', parsedData.swot || parsedData.swotAnalysis);
+
+
+
+          // Ensure SWOT data is preserved - check both swot and swotAnalysis fields
+          const loadedSwot = parsedData.swotAnalysis || parsedData.swot;
+          if (loadedSwot) {
+            // Also set swotAnalysis if only swot exists, for consistency
+            if (parsedData.swot && !parsedData.swotAnalysis) {
+              parsedData.swotAnalysis = parsedData.swot;
+            }
+            console.log('✅ MarketResearch: Preserving SWOT data from localStorage');
+          }
 
 
 
@@ -8928,8 +8941,43 @@ const MarketResearch = React.memo(() => {
 
 
           // Update market entry data with API response - mapping all the swagger fields
+          // Helper function to validate SWOT data structure (check structure, not content length)
+          const isValidSwotStructure = (swot: any): boolean => {
+            if (!swot || typeof swot !== 'object') return false;
+            // Check that it has the expected structure with arrays (even if empty)
+            return (
+              Array.isArray(swot.strengths) &&
+              Array.isArray(swot.weaknesses) &&
+              Array.isArray(swot.opportunities) &&
+              Array.isArray(swot.threats)
+            );
+          };
 
+          // Determine SWOT data: use API data if it has valid structure, otherwise preserve existing
+          // Match the pattern used by other fields: apiData.swot || existing
+          const swotData = (apiData.swot && isValidSwotStructure(apiData.swot))
+            ? apiData.swot 
+            : (marketEntryData?.swot && isValidSwotStructure(marketEntryData.swot))
+              ? marketEntryData.swot
+              : apiData.swot || marketEntryData?.swot || null; // Fallback to simple check
 
+          console.log('🔍 MarketResearch: API swot data:', apiData.swot);
+          console.log('🔍 MarketResearch: API swot data (stringified):', JSON.stringify(apiData.swot, null, 2));
+          if (apiData.swot) {
+            console.log('🔍 MarketResearch: API swot.strengths:', apiData.swot.strengths);
+            console.log('🔍 MarketResearch: API swot.strengths length:', apiData.swot.strengths?.length);
+            console.log('🔍 MarketResearch: API swot.weaknesses:', apiData.swot.weaknesses);
+            console.log('🔍 MarketResearch: API swot.opportunities:', apiData.swot.opportunities);
+            console.log('🔍 MarketResearch: API swot.threats:', apiData.swot.threats);
+          }
+          console.log('🔍 MarketResearch: API swot structure valid:', apiData.swot ? isValidSwotStructure(apiData.swot) : false);
+          console.log('🔍 MarketResearch: Existing swot data:', marketEntryData?.swot);
+          console.log('🔍 MarketResearch: Final swot data to use:', swotData);
+          console.log('🔍 MarketResearch: Final swot data (stringified):', JSON.stringify(swotData, null, 2));
+          if (swotData) {
+            console.log('🔍 MarketResearch: Final swot.strengths length:', swotData.strengths?.length);
+            console.log('🔍 MarketResearch: Final swot.strengths content:', swotData.strengths);
+          }
 
           const updatedData = {
 
@@ -8967,7 +9015,9 @@ const MarketResearch = React.memo(() => {
 
 
 
-            swot: apiData.swot || marketEntryData?.swot,
+            swot: swotData,
+            // Also set swotAnalysis for consistency with component expectations
+            swotAnalysis: swotData,
 
 
 
