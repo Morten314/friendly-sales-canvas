@@ -645,34 +645,38 @@ const Index = () => {
                       </TooltipTrigger>
                       <TooltipContent side="bottom"><p className="text-xs">Chat with Agent</p></TooltipContent>
                     </Tooltip>
-                    <span className="w-px h-5 bg-gray-200 mx-0.5" />
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className={`h-8 w-8 p-0 ${
-                        isAccepted
-                          ? 'text-green-600 bg-green-50'
-                          : 'text-gray-500 hover:text-green-600 hover:bg-green-50'
-                      }`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleAcceptSignal(signal.id);
-                      }}
-                      disabled={isAccepted}
-                    >
-                      <ThumbsUp className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0 text-gray-500 hover:text-red-600 hover:bg-red-50"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRejectSignal(signal.id);
-                      }}
-                    >
-                      <ThumbsDown className="h-4 w-4" />
-                    </Button>
+                    {!isChatOpen && (
+                      <>
+                        <span className="w-px h-5 bg-gray-200 mx-0.5" />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className={`h-8 w-8 p-0 ${
+                            isAccepted
+                              ? 'text-green-600 bg-green-50'
+                              : 'text-gray-500 hover:text-green-600 hover:bg-green-50'
+                          }`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAcceptSignal(signal.id);
+                          }}
+                          disabled={isAccepted}
+                        >
+                          <ThumbsUp className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 text-gray-500 hover:text-red-600 hover:bg-red-50"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRejectSignal(signal.id);
+                          }}
+                        >
+                          <ThumbsDown className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </div>
 

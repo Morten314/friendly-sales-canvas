@@ -133,7 +133,7 @@ export function SignalAgentChat({ signal, isAccepted, onAccept, onReject, onClos
   const [showValidation, setShowValidation] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const facts = getSignalFacts(signal);
+  const facts = getSignalFacts(signal).slice(0, 3);
   const targetGroups = getTargetGroups(signal);
 
   useEffect(() => {
@@ -295,40 +295,6 @@ export function SignalAgentChat({ signal, isAccepted, onAccept, onReject, onClos
         </div>
       </ScrollArea>
 
-      {/* Accept / Reject bar */}
-      <div className="px-4 py-2.5 border-t border-blue-100 bg-gradient-to-r from-blue-50/50 to-indigo-50/50">
-        <div className="flex items-center justify-between">
-          <p className="text-[10px] text-gray-400 italic">
-            Actions execute when you accept this signal.
-          </p>
-          <div className="flex items-center gap-1.5">
-            <Button
-              size="sm"
-              className={`text-xs h-7 px-3 gap-1 ${
-                isAccepted
-                  ? "bg-green-100 text-green-700 border border-green-200 hover:bg-green-100 cursor-default"
-                  : "bg-green-600 hover:bg-green-700 text-white"
-              }`}
-              onClick={onAccept}
-              disabled={isAccepted}
-            >
-              <ThumbsUp className="h-3 w-3" />
-              {isAccepted ? "Accepted" : "Accept"}
-            </Button>
-            {!isAccepted && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="border-red-200 text-red-600 hover:bg-red-50 text-xs h-7 px-3 gap-1"
-                onClick={onReject}
-              >
-                <ThumbsDown className="h-3 w-3" />
-                Reject
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
 
       {/* Free-form input */}
       <div className="px-4 pb-3 border-t border-blue-100 pt-3">
