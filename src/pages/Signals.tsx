@@ -1,4 +1,4 @@
-import { Filter, Check, X, Bookmark, MessageCircle, Info, Share2, Download, Bot, Send, RefreshCw, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { Filter, Check, X, Bookmark, MessageCircle, Info, Share2, Download, Bot, Send, RefreshCw, ThumbsUp, ThumbsDown, ChevronDown, ChevronUp, Pencil, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +11,7 @@ import { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import { buildApiUrl } from '@/lib/api';
+import { SignalAgentChat } from '@/components/signals/SignalAgentChat';
 type Agent = 'scout' | 'profiler';
 type ActionType = 'accept' | 'dismiss' | 'save' | 'ask';
 interface SignalCard {
@@ -129,6 +130,8 @@ const Index = () => {
   const [rejectedSignalHashes, setRejectedSignalHashes] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [expandedSignalId, setExpandedSignalId] = useState<string | null>(null);
+  const [chatOpenSignalId, setChatOpenSignalId] = useState<string | null>(null);
   const {
     toast
   } = useToast();
@@ -585,12 +588,13 @@ const Index = () => {
               signals.map(signal => {
                 const contentHash = getSignalContentHash(signal);
                 const isAccepted = acceptedSignals.has(contentHash);
+                const isExpanded = expandedSignalId === signal.id;
+                const isChatOpen = chatOpenSignalId === signal.id;
                 
                 return <div key={signal.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-lg transition-all duration-200">
                 {/* Card Header */}
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-3">
-                    
                     {getAgentBadge(signal.agent)}
                     <span className="text-sm text-gray-500">•</span>
                     <span className="text-sm text-gray-500">{signal.timestamp}</span>
@@ -635,30 +639,10 @@ const Index = () => {
                 <div className="mb-2">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
-                      <div className="flex items-center justify-between mb-1">
-                        <h3 className="text-lg font-semibold text-gray-900">
-                          {signal.headline}
-                        </h3>
-                         {/* <div className="flex items-center gap-3">
-                           <button 
-                             className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
-                             onClick={() => toast({
-                               title: "Added",
-                               description: "This insight will be included in your weekly digest and sent to your registered email.",
-                               duration: 3000,
-                             })}
-                           >
-                             ➕ Add to my Weekly Digest
-                           </button>
-                           <button 
-                             className="text-sm bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-md text-gray-700 flex items-center gap-1"
-                             onClick={() => handleAction(signal.id, 'ask')}
-                           >
-                             💬 Discuss with Agent
-                           </button>
-                         </div> */}
-                      </div>
-                      <p className="text-gray-600 text-sm leading-relaxed mb-2">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                        {signal.headline}
+                      </h3>
+                      <p className="text-gray-600 text-sm leading-relaxed">
                         {signal.snippet}
                       </p>
                     </div>
@@ -671,67 +655,85 @@ const Index = () => {
                       </TooltipContent>
                     </Tooltip>
                   </div>
-                  
-                  {/* Next Best Moves Section */}
-                  {/* <div className="mt-2 pt-2 border-t border-gray-100">
-                    <h4 className="text-sm font-medium text-gray-900 mb-2">Next Best Moves</h4>
-                    <div className="space-y-1">
-                      {getNextBestMoves(signal).map((move, index) => {
-                  const chatKey = `${signal.id}-${index}`;
-                  const isDismissed = dismissedSuggestions[signal.id]?.includes(index);
-                  const hasExpandedChat = expandedChats[chatKey];
-                  if (isDismissed) return null;
-                  return <div key={index}>
-                            <div className="group relative bg-gray-50 hover:bg-gray-100 p-2 rounded-lg transition-all duration-200 border border-transparent hover:border-gray-200">
-                              <div className="flex items-center justify-between">
-                                <p className="text-sm text-gray-700 pr-4">{move}</p>
-                                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center gap-2">
-                                  <Button size="sm" variant="outline" className="h-7 px-3 text-xs bg-green-50 border-green-200 text-green-700 hover:bg-green-100" onClick={() => handleSuggestionAccept(signal.id, index)}>
-                                    ✅ Accept
-                                  </Button>
-                                  <Button size="sm" variant="outline" className="h-7 px-3 text-xs bg-red-50 border-red-200 text-red-700 hover:bg-red-100" onClick={() => handleSuggestionDismiss(signal.id, index)}>
-                                    ❌ Dismiss
-                                  </Button>
-                                </div>
-                              </div>
-                            </div>
-                            
-                            {/* Inline Chat Expansion */}
-                            {/* {hasExpandedChat && <div className="mt-2 bg-white border border-gray-200 rounded-lg p-3 animate-fade-in shadow-sm">
-                                <div className="flex items-start gap-3 mb-2">
-                                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
-                                    <Bot className="h-4 w-4 text-white" />
-                                  </div>
-                                  <div className="flex-1">
-                                    <p className="text-sm text-gray-700 mb-2">
-                                      {getContextualChatMessage(signal.id, index)}
-                                    </p>
-                                  </div>
-                                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-gray-400 hover:text-gray-600" onClick={() => handleChatClose(signal.id, index)}>
-                                    <X className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                                
-                                <div className="flex gap-2 ml-11">
-                                  <Input placeholder="Any specific notes or comments you'd like to capture..." className="flex-1 text-sm" />
-                                  <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
-                                    <Send className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </div>}
-                          </div>;
-                })}
-                    </div>
-                  </div> */}
-                </div>
 
-                {/* Card Actions */}
-                {/* <div className="flex items-center gap-3 pt-2 border-t border-gray-100">
-                  <Button size="sm" variant="outline" className="text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-300" onClick={() => handleAction(signal.id, 'save')}>
-                    <Bookmark className="h-4 w-4 mr-1" />
-                    Save for Later
-                  </Button>
-                </div> */}
+                  {/* Read More / Collapse toggle */}
+                  <button
+                    className="mt-2 flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors"
+                    onClick={() => {
+                      setExpandedSignalId(isExpanded ? null : signal.id);
+                      if (isExpanded) setChatOpenSignalId(null);
+                    }}
+                  >
+                    {isExpanded ? (
+                      <>
+                        <ChevronUp className="h-3.5 w-3.5" /> Show Less
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown className="h-3.5 w-3.5" /> Read More
+                      </>
+                    )}
+                  </button>
+
+                  {/* Expanded section */}
+                  {isExpanded && (
+                    <div className="mt-3 pt-3 border-t border-gray-100 animate-in slide-in-from-top-1 duration-200">
+                      {/* Source detail */}
+                      <div className="flex items-center gap-2 mb-3">
+                        <a
+                          href={signal.sourceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-blue-600 hover:underline"
+                        >
+                          📎 {signal.sourceLabel}
+                        </a>
+                      </div>
+
+                      {/* Edit + Chat with Agent buttons */}
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-xs h-8 gap-1.5 text-gray-600 border-gray-200 hover:bg-gray-50"
+                          onClick={() => {
+                            toast({
+                              title: "Edit Signal",
+                              description: "Signal editing panel coming soon.",
+                            });
+                          }}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                          Edit
+                        </Button>
+                        <Button
+                          variant={isChatOpen ? "default" : "outline"}
+                          size="sm"
+                          className={`text-xs h-8 gap-1.5 ${
+                            isChatOpen
+                              ? "bg-blue-600 hover:bg-blue-700 text-white"
+                              : "text-blue-600 border-blue-200 hover:bg-blue-50"
+                          }`}
+                          onClick={() => setChatOpenSignalId(isChatOpen ? null : signal.id)}
+                        >
+                          <MessageSquare className="h-3.5 w-3.5" />
+                          Chat with Agent
+                        </Button>
+                      </div>
+
+                      {/* Agent Chat Panel */}
+                      {isChatOpen && (
+                        <SignalAgentChat
+                          signal={signal}
+                          isAccepted={isAccepted}
+                          onAccept={() => handleAcceptSignal(signal.id)}
+                          onReject={() => handleRejectSignal(signal.id)}
+                          onClose={() => setChatOpenSignalId(null)}
+                        />
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>;
               })
             )}
