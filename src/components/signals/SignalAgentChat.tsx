@@ -41,33 +41,33 @@ const getSignalFacts = (signal: SignalCard): SignalFact[] => {
 
   if (headline.includes("competitor") || headline.includes("pricing")) {
     return [
-    { source: "LinkedIn", icon: "💼", title: "42 conversations trending", detail: "Mid-market SaaS leaders discussing competitor pricing shifts. Key personas: VP Sales, CROs at 200-500 employee companies.", url: "#" },
-    { source: "Reddit r/SaaS", icon: "🟠", title: "Thread with 180+ upvotes", detail: "\"Has anyone switched to Competitor X's new SMB tier?\" — strong sentiment around value vs. feature gaps.", url: "#" },
-    { source: "Forrester", icon: "📊", title: "Analyst brief published", detail: "Forrester notes this signals a broader mid-market compression trend across 14 SaaS categories.", url: "#" }];
+    { source: "LinkedIn", icon: "💼", title: "CRO at Datadog commented", detail: "\"We lost 3 mid-market deals last week to Competitor X's new $29/seat tier\" — 42 VP Sales & CROs engaged in thread.", url: "#" },
+    { source: "Reddit r/SaaS", icon: "🟠", title: "180+ upvotes in 24hrs", detail: "\"Has anyone switched to Competitor X's SMB tier?\" — top reply: \"Missing SSO & audit logs killed it for us.\"", url: "#" },
+    { source: "Forrester", icon: "📊", title: "Feb 2025 SaaS Pricing Brief", detail: "Mid-market SaaS pricing compressed 18% YoY across 14 categories. Forrester predicts 30% vendor consolidation by Q3.", url: "#" }];
 
   }
 
   if (headline.includes("funding")) {
     return [
-    { source: "TechCrunch", icon: "📰", title: "Series B deep-dive", detail: "Funding round led by Tier-1 VC, signaling strong confidence in AI automation space.", url: "#" },
-    { source: "LinkedIn", icon: "💼", title: "87 industry reactions", detail: "CTOs and VPs of Engineering sharing takes on what this means for the competitive landscape.", url: "#" },
-    { source: "Forbes", icon: "📈", title: "Sector analysis", detail: "Forbes highlights this as part of a $2.3B funding wave in automation this quarter.", url: "#" }];
+    { source: "TechCrunch", icon: "📰", title: "$48M Series B closed Feb 18", detail: "Led by Sequoia Capital. CEO quoted: \"We're hiring 120 engineers to build AI-first workflow automation.\"", url: "#" },
+    { source: "LinkedIn", icon: "💼", title: "CTO of Snowflake reacted", detail: "87 C-suite leaders commented — consensus: this validates the AI ops category. 12 tagged their procurement teams.", url: "#" },
+    { source: "Forbes", icon: "📈", title: "Forbes Q1 Funding Tracker", detail: "Part of $2.3B raised in AI automation this quarter — highest since 2021. 6 of top 10 rounds target enterprise buyers.", url: "#" }];
 
   }
 
   if (headline.includes("icp") || headline.includes("segment")) {
     return [
-    { source: "LinkedIn", icon: "💼", title: "FinTech decision-makers active", detail: "34 CTOs/CPOs at 50-200 employee FinTech firms posted about cloud migration in the last 7 days.", url: "#" },
-    { source: "Reddit r/fintech", icon: "🟠", title: "Emerging pain points", detail: "Recurring themes: compliance burden, integration complexity, vendor lock-in fears.", url: "#" },
-    { source: "Forrester", icon: "📊", title: "Segment growth forecast", detail: "FinTech infrastructure spend projected to grow 28% YoY in EU markets.", url: "#" }];
+    { source: "LinkedIn", icon: "💼", title: "CPO at Revolut posted today", detail: "\"Migrating our compliance stack to cloud-native — evaluating 4 vendors this month.\" 34 similar posts from FinTech leaders this week.", url: "#" },
+    { source: "Reddit r/fintech", icon: "🟠", title: "Top thread: vendor lock-in fears", detail: "\"Our PCI-DSS audit failed because of legacy integrations\" — 89 upvotes, 31 comments. 60% mention switching vendors in 2025.", url: "#" },
+    { source: "Forrester", icon: "📊", title: "EU FinTech Infra Report, Mar 2025", detail: "FinTech cloud infrastructure spend growing 28% YoY in EU. Top driver: MiCA regulation compliance deadline in Q4 2025.", url: "#" }];
 
   }
 
   // LinkedIn/default signals
   return [
-  { source: "LinkedIn", icon: "💼", title: "Engagement spike detected", detail: "Post reached 3.2K impressions with 85% from target ICP personas.", url: "#" },
-  { source: "Reddit", icon: "🟠", title: "Related discussions found", detail: "Similar topics trending across 3 relevant subreddits this week.", url: "#" },
-  { source: "Forrester", icon: "📊", title: "Analyst perspective", detail: "Aligns with Forrester's predicted shift in buyer behavior for 2025.", url: "#" }];
+  { source: "LinkedIn", icon: "💼", title: "VP Sales at Acme Inc. reshared", detail: "Post gained 3.2K impressions — 85% from Director+ roles at 100-500 emp SaaS companies in your ICP.", url: "#" },
+  { source: "Reddit r/sales", icon: "🟠", title: "142 upvotes on pain-point thread", detail: "\"Our current vendor can't handle multi-region compliance\" — 23 comments from verified SaaS buyers in last 48hrs.", url: "#" },
+  { source: "Forrester", icon: "📊", title: "Q1 2025 Buyer Behavior Report", detail: "68% of mid-market buyers now require vendor compliance certification before shortlisting — up from 41% in Q4 2024.", url: "#" }];
 
 };
 
