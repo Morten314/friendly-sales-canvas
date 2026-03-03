@@ -604,7 +604,48 @@ const Index = () => {
                       </Badge>
                     )}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 text-gray-400 hover:text-gray-700 hover:bg-gray-100"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toast({
+                              title: "Edit Signal",
+                              description: "Signal editing panel coming soon.",
+                            });
+                          }}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom"><p className="text-xs">Edit</p></TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className={`h-8 w-8 p-0 ${
+                            isChatOpen
+                              ? "text-blue-600 bg-blue-50"
+                              : "text-gray-400 hover:text-blue-600 hover:bg-blue-50"
+                          }`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (!isExpanded) setExpandedSignalId(signal.id);
+                            setChatOpenSignalId(isChatOpen ? null : signal.id);
+                          }}
+                        >
+                          <Bot className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom"><p className="text-xs">Chat with Agent</p></TooltipContent>
+                    </Tooltip>
+                    <span className="w-px h-5 bg-gray-200 mx-0.5" />
                     <Button
                       variant="ghost"
                       size="sm"
@@ -678,57 +719,6 @@ const Index = () => {
                   {/* Expanded section */}
                   {isExpanded && (
                     <div className="mt-3 pt-3 border-t border-gray-100 animate-in slide-in-from-top-1 duration-200">
-                      {/* Source + action icons row */}
-                      <div className="flex items-center justify-between">
-                        <a
-                          href={signal.sourceUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-blue-600 hover:underline"
-                        >
-                          📎 {signal.sourceLabel}
-                        </a>
-
-                        {/* Edit + Chat icons on the right */}
-                        <div className="flex items-center gap-1">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 w-8 p-0 text-gray-400 hover:text-gray-700 hover:bg-gray-100"
-                                onClick={() => {
-                                  toast({
-                                    title: "Edit Signal",
-                                    description: "Signal editing panel coming soon.",
-                                  });
-                                }}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent side="bottom"><p className="text-xs">Edit</p></TooltipContent>
-                          </Tooltip>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className={`h-8 w-8 p-0 ${
-                                  isChatOpen
-                                    ? "text-blue-600 bg-blue-50"
-                                    : "text-gray-400 hover:text-blue-600 hover:bg-blue-50"
-                                }`}
-                                onClick={() => setChatOpenSignalId(isChatOpen ? null : signal.id)}
-                              >
-                                <MessageSquare className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent side="bottom"><p className="text-xs">Chat with Agent</p></TooltipContent>
-                          </Tooltip>
-                        </div>
-                      </div>
-
                       {/* Agent Chat Panel */}
                       {isChatOpen && (
                         <SignalAgentChat
