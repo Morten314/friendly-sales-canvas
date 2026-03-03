@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, X, Bot, Check, XCircle } from "lucide-react";
+import { Send, X, Bot, ThumbsUp, ThumbsDown, ExternalLink, TrendingUp, Users, MessageSquare } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface SignalCard {
   id: string;
@@ -16,13 +17,15 @@ interface SignalCard {
 interface ChatMessage {
   role: "agent" | "user";
   content: string;
-  type?: "text" | "actions";
-  category?: string;
+  type?: "text" | "facts" | "validation";
 }
 
-interface ActionPrompt {
-  text: string;
-  category: string;
+interface SignalFact {
+  source: string;
+  icon: string;
+  title: string;
+  detail: string;
+  url?: string;
 }
 
 interface SignalAgentChatProps {
@@ -33,113 +36,92 @@ interface SignalAgentChatProps {
   onClose: () => void;
 }
 
-const getNextBestMoves = (signal: SignalCard): { category: string; label: string; actions: ActionPrompt[] }[] => {
-  const isCompetitor = signal.headline.toLowerCase().includes("competitor") || signal.headline.toLowerCase().includes("pricing");
-  const isFunding = signal.headline.toLowerCase().includes("funding");
-  const isICP = signal.headline.toLowerCase().includes("icp") || signal.headline.toLowerCase().includes("segment");
-  const isLinkedIn = signal.sourceLabel.toLowerCase().includes("linkedin");
+const getSignalFacts = (signal: SignalCard): SignalFact[] => {
+  const headline = signal.headline.toLowerCase();
 
+  if (headline.includes("competitor") || headline.includes("pricing")) {
+    return [
+      { source: "LinkedIn", icon: "💼", title: "42 conversations trending", detail: "Mid-market SaaS leaders discussing competitor pricing shifts. Key personas: VP Sales, CROs at 200-500 employee companies.", url: "#" },
+      { source: "Reddit r/SaaS", icon: "🟠", title: "Thread with 180+ upvotes", detail: "\"Has anyone switched to Competitor X's new SMB tier?\" — strong sentiment around value vs. feature gaps.", url: "#" },
+      { source: "TechCrunch", icon: "📰", title: "Featured in weekly roundup", detail: "Competitor X's pricing move cited as \"most aggressive SaaS repositioning of Q1.\"", url: "#" },
+      { source: "Forrester", icon: "📊", title: "Analyst brief published", detail: "Forrester notes this signals a broader mid-market compression trend across 14 SaaS categories.", url: "#" },
+      { source: "Forbes", icon: "📈", title: "Market impact analysis", detail: "Forbes estimates 15-20% of mid-market accounts may re-evaluate vendors within 90 days.", url: "#" },
+    ];
+  }
+
+  if (headline.includes("funding")) {
+    return [
+      { source: "TechCrunch", icon: "📰", title: "Series B deep-dive", detail: "Funding round led by Tier-1 VC, signaling strong confidence in AI automation space.", url: "#" },
+      { source: "LinkedIn", icon: "💼", title: "87 industry reactions", detail: "CTOs and VPs of Engineering sharing takes on what this means for the competitive landscape.", url: "#" },
+      { source: "Reddit r/startups", icon: "🟠", title: "Active discussion thread", detail: "\"Will this change the competitive dynamics?\" — 60+ comments debating market impact.", url: "#" },
+      { source: "Forbes", icon: "📈", title: "Sector analysis", detail: "Forbes highlights this as part of a $2.3B funding wave in automation this quarter.", url: "#" },
+      { source: "Forrester", icon: "📊", title: "Wave report update", detail: "Company now positioned as a Strong Performer in latest Forrester Wave.", url: "#" },
+    ];
+  }
+
+  if (headline.includes("icp") || headline.includes("segment")) {
+    return [
+      { source: "LinkedIn", icon: "💼", title: "FinTech decision-makers active", detail: "34 CTOs/CPOs at 50-200 employee FinTech firms posted about cloud migration in the last 7 days.", url: "#" },
+      { source: "Reddit r/fintech", icon: "🟠", title: "Emerging pain points", detail: "Recurring themes: compliance burden, integration complexity, vendor lock-in fears.", url: "#" },
+      { source: "Forrester", icon: "📊", title: "Segment growth forecast", detail: "FinTech infrastructure spend projected to grow 28% YoY in EU markets.", url: "#" },
+      { source: "TechCrunch", icon: "📰", title: "EU FinTech spotlight", detail: "3 FinTech startups in this segment raised seed rounds this month.", url: "#" },
+      { source: "Forbes", icon: "📈", title: "Target group profile", detail: "Average deal size for this segment: $45K ARR. Decision cycle: 45-60 days.", url: "#" },
+    ];
+  }
+
+  // LinkedIn/default signals
   return [
-    {
-      category: "Strategic Moves",
-      label: "🎯",
-      actions: isCompetitor
-        ? [
-            { text: "Reposition messaging against new pricing tier", category: "Strategic Moves" },
-            { text: "Adjust ICP targeting for mid-market segment", category: "Strategic Moves" },
-            { text: "Explore SMB segment further", category: "Strategic Moves" },
-            { text: "Set up ongoing competitor monitoring", category: "Strategic Moves" },
-          ]
-        : isICP
-        ? [
-            { text: "Explore this new segment further", category: "Strategic Moves" },
-            { text: "Adjust ICP targeting for this profile", category: "Strategic Moves" },
-            { text: "Reposition messaging for this audience", category: "Strategic Moves" },
-            { text: "Monitor this segment's growth trajectory", category: "Strategic Moves" },
-          ]
-        : [
-            { text: "Reposition messaging based on this signal", category: "Strategic Moves" },
-            { text: "Adjust ICP targeting accordingly", category: "Strategic Moves" },
-            { text: "Explore this segment further", category: "Strategic Moves" },
-            { text: "Monitor for follow-up developments", category: "Strategic Moves" },
-          ],
-    },
-    {
-      category: "GTM Execution",
-      label: "🚀",
-      actions: isCompetitor
-        ? [
-            { text: "Analyze pricing gap vs your positioning", category: "GTM Execution" },
-            { text: "Generate counter-positioning messaging", category: "GTM Execution" },
-            { text: "Create competitor comparison sheet", category: "GTM Execution" },
-            { text: "Adjust landing page messaging", category: "GTM Execution" },
-          ]
-        : isLinkedIn
-        ? [
-            { text: "Draft contextual LinkedIn post", category: "GTM Execution" },
-            { text: "Create outreach angle from this signal", category: "GTM Execution" },
-            { text: "Draft email to relevant ICP contacts", category: "GTM Execution" },
-            { text: "Adjust landing page messaging", category: "GTM Execution" },
-          ]
-        : [
-            { text: "Create LinkedIn post about this development", category: "GTM Execution" },
-            { text: "Draft email to ICP contacts", category: "GTM Execution" },
-            { text: "Create outreach angle", category: "GTM Execution" },
-            { text: "Adjust landing page messaging", category: "GTM Execution" },
-          ],
-    },
-    {
-      category: "Content & Thought Leadership",
-      label: "✍️",
-      actions: isCompetitor
-        ? [
-            { text: "Draft LinkedIn post reacting to this move", category: "Content & Thought Leadership" },
-            { text: "Create blog post on competitive landscape", category: "Content & Thought Leadership" },
-            { text: "Generate founder POV post", category: "Content & Thought Leadership" },
-            { text: "Create talking points for next webinar", category: "Content & Thought Leadership" },
-          ]
-        : isFunding
-        ? [
-            { text: "Draft blog post on market funding trends", category: "Content & Thought Leadership" },
-            { text: "Create newsletter snippet", category: "Content & Thought Leadership" },
-            { text: "Generate founder POV post", category: "Content & Thought Leadership" },
-            { text: "Create talking points for industry analysis", category: "Content & Thought Leadership" },
-          ]
-        : [
-            { text: "Draft blog post on this topic", category: "Content & Thought Leadership" },
-            { text: "Create newsletter snippet", category: "Content & Thought Leadership" },
-            { text: "Generate founder POV post", category: "Content & Thought Leadership" },
-            { text: "Create talking points for webinar", category: "Content & Thought Leadership" },
-          ],
-    },
-    {
-      category: "Internal Action",
-      label: "📋",
-      actions: [
-        { text: "Create internal sales briefing", category: "Internal Action" },
-        { text: "Add to weekly digest", category: "Internal Action" },
-        { text: "Add to watchlist", category: "Internal Action" },
-        { text: "Assign to a teammate", category: "Internal Action" },
-      ],
-    },
+    { source: "LinkedIn", icon: "💼", title: "Engagement spike detected", detail: "Post reached 3.2K impressions with 85% from target ICP personas.", url: "#" },
+    { source: "Reddit", icon: "🟠", title: "Related discussions found", detail: "Similar topics trending across 3 relevant subreddits this week.", url: "#" },
+    { source: "TechCrunch", icon: "📰", title: "Industry context", detail: "This trend mentioned in 2 recent articles on enterprise adoption.", url: "#" },
+    { source: "Forrester", icon: "📊", title: "Analyst perspective", detail: "Aligns with Forrester's predicted shift in buyer behavior for 2025.", url: "#" },
+    { source: "Forbes", icon: "📈", title: "Market validation", detail: "Forbes contributors have highlighted this trend 4 times this quarter.", url: "#" },
   ];
 };
 
-const getAgentGreeting = (signal: SignalCard): string => {
-  const isCompetitor = signal.headline.toLowerCase().includes("competitor") || signal.headline.toLowerCase().includes("pricing");
-  const isFunding = signal.headline.toLowerCase().includes("funding");
-  const isICP = signal.headline.toLowerCase().includes("icp") || signal.headline.toLowerCase().includes("segment");
+const getTargetGroups = (signal: SignalCard): string[] => {
+  const headline = signal.headline.toLowerCase();
+  if (headline.includes("competitor") || headline.includes("pricing")) {
+    return ["Mid-Market SaaS (200-500 emp)", "VP Sales & CROs", "Existing pipeline at risk"];
+  }
+  if (headline.includes("funding")) {
+    return ["AI Automation buyers", "Enterprise CTOs", "Competitive deal cycles"];
+  }
+  if (headline.includes("icp") || headline.includes("segment")) {
+    return ["FinTech startups (50-200 emp)", "EU-based CPOs/CTOs", "Cloud migration prospects"];
+  }
+  return ["ICP decision-makers", "Industry influencers", "Active pipeline contacts"];
+};
 
-  if (isCompetitor) {
-    return `Hi Alex — this competitor has launched a new pricing tier.\n\nThis may impact your mid-market positioning. Would you like to act on it?`;
+const getAgentGreeting = (signal: SignalCard): string => {
+  const headline = signal.headline.toLowerCase();
+  if (headline.includes("competitor") || headline.includes("pricing")) {
+    return `Here's what I found about this competitor move across the web:`;
   }
-  if (isFunding) {
-    return `Hi Alex — this signal indicates a significant funding event in your space.\n\nThis could shift competitive dynamics. Would you like to act on it?`;
+  if (headline.includes("funding")) {
+    return `I've gathered intelligence on this funding event from multiple sources:`;
   }
-  if (isICP) {
-    return `Hi Alex — a new ICP segment has been identified with strong overlap to your existing profiles.\n\nThis could open new pipeline opportunities. Would you like to act on it?`;
+  if (headline.includes("icp") || headline.includes("segment")) {
+    return `Here's the deep-dive on this new segment opportunity:`;
   }
-  return `Hi Alex — this signal indicates ${signal.headline.toLowerCase()}.\n\nWould you like to act on it?`;
+  return `Here's the intelligence I've gathered on this signal:`;
+};
+
+const getAgentResponse = (signal: SignalCard, userMessage: string): string => {
+  const msg = userMessage.toLowerCase();
+  if (msg.includes("pricing") || msg.includes("compare")) {
+    return "Based on my analysis, Competitor X's new tier is priced 20-30% below your mid-market offering but lacks 3 key features: advanced analytics, SSO, and priority support. This creates a strong counter-positioning angle around enterprise-readiness.";
+  }
+  if (msg.includes("outreach") || msg.includes("email") || msg.includes("draft")) {
+    return "I can draft a targeted outreach sequence highlighting your differentiation. The messaging should focus on total cost of ownership and feature completeness rather than matching on price point.";
+  }
+  if (msg.includes("linkedin") || msg.includes("post") || msg.includes("content")) {
+    return "I see high engagement from your ICP on LinkedIn around this topic. A thought leadership post positioning your take on value-based selling vs. race-to-bottom pricing would likely generate strong traction with your target audience.";
+  }
+  if (msg.includes("monitor") || msg.includes("track") || msg.includes("watch")) {
+    return "I'll set up continuous monitoring across LinkedIn, Reddit, and industry publications. You'll get alerts when key conversations or sentiment shifts are detected in real-time.";
+  }
+  return `Good question. Based on the signal "${signal.headline}", I've analyzed the broader context. The key takeaway is that this development affects your target accounts in the mid-market segment. I recommend prioritizing outreach to at-risk accounts and adjusting your positioning accordingly.`;
 };
 
 export function SignalAgentChat({ signal, isAccepted, onAccept, onReject, onClose }: SignalAgentChatProps) {
@@ -147,45 +129,37 @@ export function SignalAgentChat({ signal, isAccepted, onAccept, onReject, onClos
     { role: "agent", content: getAgentGreeting(signal), type: "text" },
   ]);
   const [inputValue, setInputValue] = useState("");
-  const [selectedActions, setSelectedActions] = useState<string[]>([]);
+  const [isTyping, setIsTyping] = useState(false);
+  const [showValidation, setShowValidation] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const facts = getSignalFacts(signal);
+  const targetGroups = getTargetGroups(signal);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  const categories = getNextBestMoves(signal);
-
-  const handleActionClick = (action: ActionPrompt) => {
-    setSelectedActions((prev) =>
-      prev.includes(action.text) ? prev.filter((a) => a !== action.text) : [...prev, action.text]
-    );
-
-    // Add as user message + agent response
-    setMessages((prev) => [
-      ...prev,
-      { role: "user", content: action.text, type: "text" },
-      {
-        role: "agent",
-        content: `Got it! I'll "${action.text.toLowerCase()}" right away. This will be executed once you accept this signal.`,
-        type: "text",
-      },
-    ]);
-  };
+  }, [messages, showValidation]);
 
   const handleSendMessage = () => {
     if (!inputValue.trim()) return;
 
-    setMessages((prev) => [
-      ...prev,
-      { role: "user", content: inputValue, type: "text" },
-      {
-        role: "agent",
-        content: "Understood — I'll factor that into the action plan. Anything else you'd like me to do with this signal?",
-        type: "text",
-      },
-    ]);
+    const userMsg = inputValue;
+    setMessages((prev) => [...prev, { role: "user", content: userMsg, type: "text" }]);
     setInputValue("");
+    setIsTyping(true);
+    setShowValidation(false);
+
+    // Simulate agent response
+    setTimeout(() => {
+      const response = getAgentResponse(signal, userMsg);
+      setMessages((prev) => [...prev, { role: "agent", content: response, type: "text" }]);
+      setIsTyping(false);
+
+      // After responding, show validation prompt
+      setTimeout(() => {
+        setShowValidation(true);
+      }, 600);
+    }, 1200);
   };
 
   return (
@@ -205,77 +179,154 @@ export function SignalAgentChat({ signal, isAccepted, onAccept, onReject, onClos
         </Button>
       </div>
 
-      {/* Messages */}
-      <div className="max-h-[350px] overflow-y-auto p-4 space-y-3">
-        {messages.map((msg, i) => (
-          <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-            <div
-              className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
-                msg.role === "user"
-                  ? "bg-blue-600 text-white"
-                  : "bg-white border border-gray-200 text-gray-700"
-              }`}
-            >
-              <p className="whitespace-pre-line leading-relaxed">{msg.content}</p>
+      <ScrollArea className="max-h-[500px]">
+        <div className="p-4 space-y-4">
+          {/* Agent greeting */}
+          <div className="flex justify-start">
+            <div className="max-w-[90%] rounded-lg px-3 py-2 text-sm bg-white border border-gray-200 text-gray-700">
+              <p className="leading-relaxed">{messages[0].content}</p>
             </div>
           </div>
-        ))}
-        <div ref={messagesEndRef} />
-      </div>
 
-      {/* Next Best Moves — 4 categories */}
-      <div className="px-4 pb-3 space-y-3">
-        {categories.map((cat) => (
-          <div key={cat.category}>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
-              {cat.label} {cat.category}
-            </p>
+          {/* Target Groups */}
+          <div className="px-1">
+            <div className="flex items-center gap-1.5 mb-2">
+              <Users className="h-3.5 w-3.5 text-indigo-500" />
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Target Groups</span>
+            </div>
             <div className="flex flex-wrap gap-1.5">
-              {cat.actions.map((action) => {
-                const isSelected = selectedActions.includes(action.text);
-                return (
-                  <button
-                    key={action.text}
-                    onClick={() => handleActionClick(action)}
-                    className={`text-xs px-2.5 py-1.5 rounded-md border transition-all ${
-                      isSelected
-                        ? "bg-blue-100 border-blue-300 text-blue-700 font-medium"
-                        : "bg-white border-gray-200 text-gray-600 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700"
-                    }`}
-                  >
-                    {action.text}
-                  </button>
-                );
-              })}
+              {targetGroups.map((group) => (
+                <span key={group} className="text-xs px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100 font-medium">
+                  {group}
+                </span>
+              ))}
             </div>
           </div>
-        ))}
-      </div>
 
-      {/* Accept / Reject — faded hint */}
-      <div className="px-4 pb-3">
-        <p className="text-[10px] text-gray-400 mb-2 italic">
-          These actions will be performed when you accept this signal.
-        </p>
-        <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            className="bg-green-600 hover:bg-green-700 text-white text-xs h-8 px-4"
-            onClick={onAccept}
-            disabled={isAccepted}
-          >
-            <Check className="h-3.5 w-3.5 mr-1" />
-            {isAccepted ? "Accepted" : "Accept Signal"}
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            className="border-red-200 text-red-600 hover:bg-red-50 text-xs h-8 px-4"
-            onClick={onReject}
-          >
-            <XCircle className="h-3.5 w-3.5 mr-1" />
-            Reject
-          </Button>
+          {/* Wow Facts from sources */}
+          <div className="px-1">
+            <div className="flex items-center gap-1.5 mb-2">
+              <TrendingUp className="h-3.5 w-3.5 text-blue-500" />
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Intelligence from the Web</span>
+            </div>
+            <div className="space-y-2">
+              {facts.map((fact, i) => (
+                <div
+                  key={i}
+                  className="bg-white rounded-lg border border-gray-100 p-3 hover:border-blue-200 hover:shadow-sm transition-all cursor-default"
+                >
+                  <div className="flex items-start gap-2.5">
+                    <span className="text-base leading-none mt-0.5">{fact.icon}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="text-xs font-semibold text-gray-800">{fact.title}</span>
+                        <span className="text-[10px] text-gray-400 font-medium px-1.5 py-0.5 rounded bg-gray-50 border border-gray-100">
+                          {fact.source}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500 leading-relaxed">{fact.detail}</p>
+                    </div>
+                    {fact.url && (
+                      <ExternalLink className="h-3 w-3 text-gray-300 hover:text-blue-500 flex-shrink-0 mt-1 cursor-pointer" />
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Subsequent messages (user + agent responses) */}
+          {messages.slice(1).map((msg, i) => (
+            <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+              <div
+                className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
+                  msg.role === "user"
+                    ? "bg-blue-600 text-white"
+                    : "bg-white border border-gray-200 text-gray-700"
+                }`}
+              >
+                <p className="whitespace-pre-line leading-relaxed">{msg.content}</p>
+              </div>
+            </div>
+          ))}
+
+          {/* Typing indicator */}
+          {isTyping && (
+            <div className="flex justify-start">
+              <div className="bg-white border border-gray-200 rounded-lg px-3 py-2">
+                <div className="flex gap-1">
+                  <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Validation prompt after agent response */}
+          {showValidation && !isAccepted && (
+            <div className="flex justify-start animate-in fade-in duration-300">
+              <div className="bg-white border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 space-y-2">
+                <p className="text-gray-600">Do you want to accept or reject this signal?</p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    className="bg-green-600 hover:bg-green-700 text-white text-xs h-7 px-3 gap-1"
+                    onClick={onAccept}
+                  >
+                    <ThumbsUp className="h-3 w-3" />
+                    Accept
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-red-200 text-red-600 hover:bg-red-50 text-xs h-7 px-3 gap-1"
+                    onClick={onReject}
+                  >
+                    <ThumbsDown className="h-3 w-3" />
+                    Reject
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div ref={messagesEndRef} />
+        </div>
+      </ScrollArea>
+
+      {/* Accept / Reject bar */}
+      <div className="px-4 py-2.5 border-t border-blue-100 bg-gradient-to-r from-blue-50/50 to-indigo-50/50">
+        <div className="flex items-center justify-between">
+          <p className="text-[10px] text-gray-400 italic">
+            Actions execute when you accept this signal.
+          </p>
+          <div className="flex items-center gap-1.5">
+            <Button
+              size="sm"
+              className={`text-xs h-7 px-3 gap-1 ${
+                isAccepted
+                  ? "bg-green-100 text-green-700 border border-green-200 hover:bg-green-100 cursor-default"
+                  : "bg-green-600 hover:bg-green-700 text-white"
+              }`}
+              onClick={onAccept}
+              disabled={isAccepted}
+            >
+              <ThumbsUp className="h-3 w-3" />
+              {isAccepted ? "Accepted" : "Accept"}
+            </Button>
+            {!isAccepted && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-red-200 text-red-600 hover:bg-red-50 text-xs h-7 px-3 gap-1"
+                onClick={onReject}
+              >
+                <ThumbsDown className="h-3 w-3" />
+                Reject
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -286,10 +337,10 @@ export function SignalAgentChat({ signal, isAccepted, onAccept, onReject, onClos
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
-            placeholder="Type your own instructions to the agent..."
+            placeholder="Ask the agent anything about this signal..."
             className="flex-1 text-sm h-9 bg-white"
           />
-          <Button size="sm" className="bg-blue-600 hover:bg-blue-700 h-9" onClick={handleSendMessage} disabled={!inputValue.trim()}>
+          <Button size="sm" className="bg-blue-600 hover:bg-blue-700 h-9" onClick={handleSendMessage} disabled={!inputValue.trim() || isTyping}>
             <Send className="h-3.5 w-3.5" />
           </Button>
         </div>
