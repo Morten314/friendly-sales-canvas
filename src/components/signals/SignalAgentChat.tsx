@@ -26,6 +26,8 @@ interface SignalFact {
   title: string;
   detail: string;
   url?: string;
+  sourceUrl: string;
+  sourceLabel: string;
 }
 
 interface SignalAgentChatProps {
@@ -41,33 +43,33 @@ const getSignalFacts = (signal: SignalCard): SignalFact[] => {
 
   if (headline.includes("competitor") || headline.includes("pricing")) {
     return [
-    { source: "LinkedIn", icon: "💼", title: "CRO at Datadog commented", detail: "\"We lost 3 mid-market deals last week to Competitor X's new $29/seat tier\" — 42 VP Sales & CROs engaged in thread.", url: "#" },
-    { source: "Reddit r/SaaS", icon: "🟠", title: "180+ upvotes in 24hrs", detail: "\"Has anyone switched to Competitor X's SMB tier?\" — top reply: \"Missing SSO & audit logs killed it for us.\"", url: "#" },
-    { source: "Forrester", icon: "📊", title: "Feb 2025 SaaS Pricing Brief", detail: "Mid-market SaaS pricing compressed 18% YoY across 14 categories. Forrester predicts 30% vendor consolidation by Q3.", url: "#" }];
+    { source: "LinkedIn", icon: "💼", title: "CRO at Datadog commented", detail: "\"We lost 3 mid-market deals last week to Competitor X's new $29/seat tier\" — 42 VP Sales & CROs engaged in thread.", url: "#", sourceUrl: "https://linkedin.com/feed", sourceLabel: "View LinkedIn Post" },
+    { source: "Reddit r/SaaS", icon: "🟠", title: "180+ upvotes in 24hrs", detail: "\"Has anyone switched to Competitor X's SMB tier?\" — top reply: \"Missing SSO & audit logs killed it for us.\"", url: "#", sourceUrl: "https://reddit.com/r/SaaS", sourceLabel: "View Reddit Thread" },
+    { source: "Forrester", icon: "📊", title: "Feb 2025 SaaS Pricing Brief", detail: "Mid-market SaaS pricing compressed 18% YoY across 14 categories. Forrester predicts 30% vendor consolidation by Q3.", url: "#", sourceUrl: "https://forrester.com/research", sourceLabel: "View Forrester Report" }];
 
   }
 
   if (headline.includes("funding")) {
     return [
-    { source: "TechCrunch", icon: "📰", title: "$48M Series B closed Feb 18", detail: "Led by Sequoia Capital. CEO quoted: \"We're hiring 120 engineers to build AI-first workflow automation.\"", url: "#" },
-    { source: "LinkedIn", icon: "💼", title: "CTO of Snowflake reacted", detail: "87 C-suite leaders commented — consensus: this validates the AI ops category. 12 tagged their procurement teams.", url: "#" },
-    { source: "Forbes", icon: "📈", title: "Forbes Q1 Funding Tracker", detail: "Part of $2.3B raised in AI automation this quarter — highest since 2021. 6 of top 10 rounds target enterprise buyers.", url: "#" }];
+    { source: "TechCrunch", icon: "📰", title: "$48M Series B closed Feb 18", detail: "Led by Sequoia Capital. CEO quoted: \"We're hiring 120 engineers to build AI-first workflow automation.\"", url: "#", sourceUrl: "https://techcrunch.com", sourceLabel: "View TechCrunch Article" },
+    { source: "LinkedIn", icon: "💼", title: "CTO of Snowflake reacted", detail: "87 C-suite leaders commented — consensus: this validates the AI ops category. 12 tagged their procurement teams.", url: "#", sourceUrl: "https://linkedin.com/feed", sourceLabel: "View LinkedIn Thread" },
+    { source: "Forbes", icon: "📈", title: "Forbes Q1 Funding Tracker", detail: "Part of $2.3B raised in AI automation this quarter — highest since 2021. 6 of top 10 rounds target enterprise buyers.", url: "#", sourceUrl: "https://forbes.com/lists/ai-funding", sourceLabel: "View Forbes Report" }];
 
   }
 
   if (headline.includes("icp") || headline.includes("segment")) {
     return [
-    { source: "LinkedIn", icon: "💼", title: "CPO at Revolut posted today", detail: "\"Migrating our compliance stack to cloud-native — evaluating 4 vendors this month.\" 34 similar posts from FinTech leaders this week.", url: "#" },
-    { source: "Reddit r/fintech", icon: "🟠", title: "Top thread: vendor lock-in fears", detail: "\"Our PCI-DSS audit failed because of legacy integrations\" — 89 upvotes, 31 comments. 60% mention switching vendors in 2025.", url: "#" },
-    { source: "Forrester", icon: "📊", title: "EU FinTech Infra Report, Mar 2025", detail: "FinTech cloud infrastructure spend growing 28% YoY in EU. Top driver: MiCA regulation compliance deadline in Q4 2025.", url: "#" }];
+    { source: "LinkedIn", icon: "💼", title: "CPO at Revolut posted today", detail: "\"Migrating our compliance stack to cloud-native — evaluating 4 vendors this month.\" 34 similar posts from FinTech leaders this week.", url: "#", sourceUrl: "https://linkedin.com/feed", sourceLabel: "View LinkedIn Post" },
+    { source: "Reddit r/fintech", icon: "🟠", title: "Top thread: vendor lock-in fears", detail: "\"Our PCI-DSS audit failed because of legacy integrations\" — 89 upvotes, 31 comments. 60% mention switching vendors in 2025.", url: "#", sourceUrl: "https://reddit.com/r/fintech", sourceLabel: "View Reddit Thread" },
+    { source: "Forrester", icon: "📊", title: "EU FinTech Infra Report, Mar 2025", detail: "FinTech cloud infrastructure spend growing 28% YoY in EU. Top driver: MiCA regulation compliance deadline in Q4 2025.", url: "#", sourceUrl: "https://forrester.com/research", sourceLabel: "View Forrester Report" }];
 
   }
 
   // LinkedIn/default signals
   return [
-  { source: "LinkedIn", icon: "💼", title: "VP Sales at Acme Inc. reshared", detail: "Post gained 3.2K impressions — 85% from Director+ roles at 100-500 emp SaaS companies in your ICP.", url: "#" },
-  { source: "Reddit r/sales", icon: "🟠", title: "142 upvotes on pain-point thread", detail: "\"Our current vendor can't handle multi-region compliance\" — 23 comments from verified SaaS buyers in last 48hrs.", url: "#" },
-  { source: "Forrester", icon: "📊", title: "Q1 2025 Buyer Behavior Report", detail: "68% of mid-market buyers now require vendor compliance certification before shortlisting — up from 41% in Q4 2024.", url: "#" }];
+  { source: "LinkedIn", icon: "💼", title: "VP Sales at Acme Inc. reshared", detail: "Post gained 3.2K impressions — 85% from Director+ roles at 100-500 emp SaaS companies in your ICP.", url: "#", sourceUrl: "https://linkedin.com/feed", sourceLabel: "View LinkedIn Post" },
+  { source: "Reddit r/sales", icon: "🟠", title: "142 upvotes on pain-point thread", detail: "\"Our current vendor can't handle multi-region compliance\" — 23 comments from verified SaaS buyers in last 48hrs.", url: "#", sourceUrl: "https://reddit.com/r/sales", sourceLabel: "View Reddit Thread" },
+  { source: "Forrester", icon: "📊", title: "Q1 2025 Buyer Behavior Report", detail: "68% of mid-market buyers now require vendor compliance certification before shortlisting — up from 41% in Q4 2024.", url: "#", sourceUrl: "https://forrester.com/research", sourceLabel: "View Forrester Report" }];
 
 };
 
@@ -123,6 +125,7 @@ export function SignalAgentChat({ signal, isAccepted, onAccept, onReject, onClos
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [showValidation, setShowValidation] = useState(false);
+  const [selectedFact, setSelectedFact] = useState<SignalFact | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const facts = getSignalFacts(signal);
@@ -205,7 +208,10 @@ export function SignalAgentChat({ signal, isAccepted, onAccept, onReject, onClos
               {facts.map((fact, i) =>
               <div
                 key={i}
-                className="bg-white rounded-lg border border-gray-100 p-3 hover:border-blue-200 hover:shadow-sm transition-all cursor-default">
+                onClick={() => setSelectedFact(selectedFact?.title === fact.title ? null : fact)}
+                className={`bg-white rounded-lg border p-3 hover:shadow-sm transition-all cursor-pointer ${
+                  selectedFact?.title === fact.title ? "border-blue-300 ring-1 ring-blue-100" : "border-gray-100 hover:border-blue-200"
+                }`}>
                 
                   <div className="flex items-start gap-2.5">
                     <span className="text-base leading-none mt-0.5">{fact.icon}</span>
@@ -218,10 +224,33 @@ export function SignalAgentChat({ signal, isAccepted, onAccept, onReject, onClos
                       </div>
                       <p className="text-xs text-gray-500 leading-relaxed">{fact.detail}</p>
                     </div>
-                    {fact.url &&
-                  <ExternalLink className="h-3 w-3 text-gray-300 hover:text-blue-500 flex-shrink-0 mt-1 cursor-pointer" />
-                  }
+                    <ExternalLink className="h-3 w-3 text-gray-300 hover:text-blue-500 flex-shrink-0 mt-1" />
                   </div>
+                </div>
+              )}
+
+              {/* Source detail panel */}
+              {selectedFact && (
+                <div className="bg-white rounded-lg border border-blue-200 p-3 animate-in slide-in-from-top-1 duration-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-base">{selectedFact.icon}</span>
+                      <span className="text-xs font-semibold text-gray-800">Source: {selectedFact.source}</span>
+                    </div>
+                    <Button variant="ghost" size="sm" className="h-5 w-5 p-0 text-gray-400 hover:text-gray-600" onClick={(e) => { e.stopPropagation(); setSelectedFact(null); }}>
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                  <p className="text-xs text-gray-600 leading-relaxed mb-3">{selectedFact.detail}</p>
+                  <a
+                    href={selectedFact.sourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-700 hover:underline"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                    {selectedFact.sourceLabel}
+                  </a>
                 </div>
               )}
             </div>
