@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, X, Bot, ThumbsUp, ThumbsDown, ExternalLink, TrendingUp, Users, MessageSquare } from "lucide-react";
+import { Send, X, Bot, ThumbsUp, ThumbsDown, ExternalLink, Users, MessageSquare } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface SignalCard {
@@ -206,7 +206,7 @@ export function SignalAgentChat({ signal, isAccepted, onAccept, onReject, onClos
           {/* Wow Facts from sources */}
           <div className="px-1">
             <div className="flex items-center gap-1.5 mb-2">
-              <TrendingUp className="h-3.5 w-3.5 text-blue-500" />
+              
               
             </div>
             <div className="space-y-2">
