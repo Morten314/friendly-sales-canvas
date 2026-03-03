@@ -171,7 +171,7 @@ export function SignalAgentChat({ signal, isAccepted, onAccept, onReject, onClos
         </Button>
       </div>
 
-      <ScrollArea className="max-h-[500px]">
+      <ScrollArea className="h-[400px] overflow-auto">
         <div className="p-4 space-y-4">
           {/* Agent greeting */}
           <div className="flex justify-start">
