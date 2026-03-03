@@ -43,9 +43,7 @@ const getSignalFacts = (signal: SignalCard): SignalFact[] => {
     return [
     { source: "LinkedIn", icon: "💼", title: "42 conversations trending", detail: "Mid-market SaaS leaders discussing competitor pricing shifts. Key personas: VP Sales, CROs at 200-500 employee companies.", url: "#" },
     { source: "Reddit r/SaaS", icon: "🟠", title: "Thread with 180+ upvotes", detail: "\"Has anyone switched to Competitor X's new SMB tier?\" — strong sentiment around value vs. feature gaps.", url: "#" },
-    { source: "TechCrunch", icon: "📰", title: "Featured in weekly roundup", detail: "Competitor X's pricing move cited as \"most aggressive SaaS repositioning of Q1.\"", url: "#" },
-    { source: "Forrester", icon: "📊", title: "Analyst brief published", detail: "Forrester notes this signals a broader mid-market compression trend across 14 SaaS categories.", url: "#" },
-    { source: "Forbes", icon: "📈", title: "Market impact analysis", detail: "Forbes estimates 15-20% of mid-market accounts may re-evaluate vendors within 90 days.", url: "#" }];
+    { source: "Forrester", icon: "📊", title: "Analyst brief published", detail: "Forrester notes this signals a broader mid-market compression trend across 14 SaaS categories.", url: "#" }];
 
   }
 
@@ -53,9 +51,7 @@ const getSignalFacts = (signal: SignalCard): SignalFact[] => {
     return [
     { source: "TechCrunch", icon: "📰", title: "Series B deep-dive", detail: "Funding round led by Tier-1 VC, signaling strong confidence in AI automation space.", url: "#" },
     { source: "LinkedIn", icon: "💼", title: "87 industry reactions", detail: "CTOs and VPs of Engineering sharing takes on what this means for the competitive landscape.", url: "#" },
-    { source: "Reddit r/startups", icon: "🟠", title: "Active discussion thread", detail: "\"Will this change the competitive dynamics?\" — 60+ comments debating market impact.", url: "#" },
-    { source: "Forbes", icon: "📈", title: "Sector analysis", detail: "Forbes highlights this as part of a $2.3B funding wave in automation this quarter.", url: "#" },
-    { source: "Forrester", icon: "📊", title: "Wave report update", detail: "Company now positioned as a Strong Performer in latest Forrester Wave.", url: "#" }];
+    { source: "Forbes", icon: "📈", title: "Sector analysis", detail: "Forbes highlights this as part of a $2.3B funding wave in automation this quarter.", url: "#" }];
 
   }
 
@@ -63,9 +59,7 @@ const getSignalFacts = (signal: SignalCard): SignalFact[] => {
     return [
     { source: "LinkedIn", icon: "💼", title: "FinTech decision-makers active", detail: "34 CTOs/CPOs at 50-200 employee FinTech firms posted about cloud migration in the last 7 days.", url: "#" },
     { source: "Reddit r/fintech", icon: "🟠", title: "Emerging pain points", detail: "Recurring themes: compliance burden, integration complexity, vendor lock-in fears.", url: "#" },
-    { source: "Forrester", icon: "📊", title: "Segment growth forecast", detail: "FinTech infrastructure spend projected to grow 28% YoY in EU markets.", url: "#" },
-    { source: "TechCrunch", icon: "📰", title: "EU FinTech spotlight", detail: "3 FinTech startups in this segment raised seed rounds this month.", url: "#" },
-    { source: "Forbes", icon: "📈", title: "Target group profile", detail: "Average deal size for this segment: $45K ARR. Decision cycle: 45-60 days.", url: "#" }];
+    { source: "Forrester", icon: "📊", title: "Segment growth forecast", detail: "FinTech infrastructure spend projected to grow 28% YoY in EU markets.", url: "#" }];
 
   }
 
@@ -73,9 +67,7 @@ const getSignalFacts = (signal: SignalCard): SignalFact[] => {
   return [
   { source: "LinkedIn", icon: "💼", title: "Engagement spike detected", detail: "Post reached 3.2K impressions with 85% from target ICP personas.", url: "#" },
   { source: "Reddit", icon: "🟠", title: "Related discussions found", detail: "Similar topics trending across 3 relevant subreddits this week.", url: "#" },
-  { source: "TechCrunch", icon: "📰", title: "Industry context", detail: "This trend mentioned in 2 recent articles on enterprise adoption.", url: "#" },
-  { source: "Forrester", icon: "📊", title: "Analyst perspective", detail: "Aligns with Forrester's predicted shift in buyer behavior for 2025.", url: "#" },
-  { source: "Forbes", icon: "📈", title: "Market validation", detail: "Forbes contributors have highlighted this trend 4 times this quarter.", url: "#" }];
+  { source: "Forrester", icon: "📊", title: "Analyst perspective", detail: "Aligns with Forrester's predicted shift in buyer behavior for 2025.", url: "#" }];
 
 };
 
