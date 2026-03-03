@@ -678,8 +678,8 @@ const Index = () => {
                   {/* Expanded section */}
                   {isExpanded && (
                     <div className="mt-3 pt-3 border-t border-gray-100 animate-in slide-in-from-top-1 duration-200">
-                      {/* Source detail */}
-                      <div className="flex items-center gap-2 mb-3">
+                      {/* Source + action icons row */}
+                      <div className="flex items-center justify-between">
                         <a
                           href={signal.sourceUrl}
                           target="_blank"
@@ -688,37 +688,45 @@ const Index = () => {
                         >
                           📎 {signal.sourceLabel}
                         </a>
-                      </div>
 
-                      {/* Edit + Chat with Agent buttons */}
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-xs h-8 gap-1.5 text-gray-600 border-gray-200 hover:bg-gray-50"
-                          onClick={() => {
-                            toast({
-                              title: "Edit Signal",
-                              description: "Signal editing panel coming soon.",
-                            });
-                          }}
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                          Edit
-                        </Button>
-                        <Button
-                          variant={isChatOpen ? "default" : "outline"}
-                          size="sm"
-                          className={`text-xs h-8 gap-1.5 ${
-                            isChatOpen
-                              ? "bg-blue-600 hover:bg-blue-700 text-white"
-                              : "text-blue-600 border-blue-200 hover:bg-blue-50"
-                          }`}
-                          onClick={() => setChatOpenSignalId(isChatOpen ? null : signal.id)}
-                        >
-                          <MessageSquare className="h-3.5 w-3.5" />
-                          Chat with Agent
-                        </Button>
+                        {/* Edit + Chat icons on the right */}
+                        <div className="flex items-center gap-1">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 text-gray-400 hover:text-gray-700 hover:bg-gray-100"
+                                onClick={() => {
+                                  toast({
+                                    title: "Edit Signal",
+                                    description: "Signal editing panel coming soon.",
+                                  });
+                                }}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom"><p className="text-xs">Edit</p></TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className={`h-8 w-8 p-0 ${
+                                  isChatOpen
+                                    ? "text-blue-600 bg-blue-50"
+                                    : "text-gray-400 hover:text-blue-600 hover:bg-blue-50"
+                                }`}
+                                onClick={() => setChatOpenSignalId(isChatOpen ? null : signal.id)}
+                              >
+                                <MessageSquare className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom"><p className="text-xs">Chat with Agent</p></TooltipContent>
+                          </Tooltip>
+                        </div>
                       </div>
 
                       {/* Agent Chat Panel */}
