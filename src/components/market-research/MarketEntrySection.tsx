@@ -2936,8 +2936,8 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
       {/* Collapsed View */}
       {!isExpanded && !isEditing && (
         <div className="space-y-4">
-          <div className="text-gray-700 leading-relaxed">
-            {displayData.executiveSummary?.slice(0, 200)}...
+          <div className="text-gray-700 leading-relaxed whitespace-pre-line">
+            {displayData.executiveSummary}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

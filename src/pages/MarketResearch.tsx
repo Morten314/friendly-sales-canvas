@@ -4244,7 +4244,7 @@ const MarketResearch = React.memo(() => {
       setLoadingPhase('complete');
       toast({
         title: "Refresh Complete",
-        description: "Loading completed. Some components may still be processing.",
+        description: "Maximum loading time reached.",
         duration: 3000,
       });
     }, 180000); // 3 minutes for first run; extended when we schedule smartRefresh(false) retry
@@ -4700,11 +4700,19 @@ const MarketResearch = React.memo(() => {
         console.log(`📋 [CASCADE] All 5 components completed; context was passed in order.`);
         isRetryingRef.current = false;
         clearTimeout(refreshTimeout);
+        refreshTimeout = null;
         // Clear global loading timeout so "Maximum time reached" does not show when all 5 components have already loaded
         if (globalTimeoutId) {
           clearTimeout(globalTimeoutId);
           setGlobalTimeoutId(null);
         }
+        setIsRefreshing(false);
+        setLoadingPhase('complete');
+        toast({
+          title: "Refresh Complete",
+          description: "All components loaded successfully.",
+          duration: 3000,
+        });
         validateAllComponentsHaveFreshData();
 
       } else if (hasFailures && refreshAttempt < 3) {
@@ -4995,7 +5003,7 @@ const MarketResearch = React.memo(() => {
           refreshTimeout = setTimeout(() => {
             setIsRefreshing(false);
             setLoadingPhase('complete');
-            toast({ title: "Refresh Complete", description: "Loading completed. Some components may still be processing.", duration: 3000 });
+            toast({ title: "Refresh Complete", description: "Refresh cycle finished.", duration: 3000 });
           }, 180000);
           setTimeout(() => {
             smartRefresh(false);

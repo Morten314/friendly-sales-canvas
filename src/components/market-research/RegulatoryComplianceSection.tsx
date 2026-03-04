@@ -699,13 +699,14 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     };
   }, []);
 
-  // Also listen for companyProfile prop changes (skip if parent is refreshing – parent cascade will provide data)
+  // Also listen for companyProfile prop changes (skip if parent is refreshing – parent cascade will provide data).
+  // Only depend on companyProfile so we don't refetch when isRefreshing flips to false (cascade just finished), which would overwrite fresh data and cause flicker.
   useEffect(() => {
     if (isRefreshing || !companyProfile) return;
     setError(null);
     setIsLoading(true);
     fetchRegulatoryComplianceData(true);
-  }, [companyProfile, isRefreshing]);
+  }, [companyProfile]);
 
   if (normalizedDeletedSections.has('regulatory-compliance')) {
     return null;
