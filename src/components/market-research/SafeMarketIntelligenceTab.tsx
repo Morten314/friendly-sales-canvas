@@ -5,11 +5,6 @@ import MarketIntelligenceTab from './MarketIntelligenceTab';
 import { MarketIntelligenceTabProps } from './MarketIntelligenceTabProps';
 
 const SafeMarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = (props) => {
-  console.log('🔍 SafeMarketIntelligenceTab - Rendering with props:', {
-    isSplitView: props.isSplitView,
-    isRefreshing: props.isRefreshing,
-    propsKeys: Object.keys(props)
-  });
 
   // Check for problematic objects before rendering
   const checkForObjects = (obj: any, path = '') => {
@@ -44,7 +39,6 @@ const SafeMarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = (props) 
   if (fixedProps.companyProfile?.targetMarkets && 
       typeof fixedProps.companyProfile.targetMarkets === 'object' && 
       !Array.isArray(fixedProps.companyProfile.targetMarkets)) {
-    console.warn('🔧 FIXING targetMarkets: Converting object to array');
     fixedProps.companyProfile.targetMarkets = Object.keys(fixedProps.companyProfile.targetMarkets);
   }
 
@@ -57,12 +51,11 @@ const SafeMarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = (props) 
       }
       // If it's an object with region keys, convert to array (but not regionalHotspots)
       if (obj['North America'] || obj['Europe'] || obj['Asia Pacific'] || obj['Latin America']) {
-        console.warn('🔧 SANITIZING: Converting region object to array');
         return Object.keys(obj);
       }
       // If it's an object that might be rendered, convert to string representation
       if (obj.channel || obj.channelMix || obj.trigger || obj.description) {
-        console.warn('🔧 SANITIZING: Converting problematic object to string');
+        // Sanitizing: Converting problematic object to string
         return JSON.stringify(obj);
       }
     }
@@ -105,13 +98,13 @@ const SafeMarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = (props) 
   
   deletedSectionsKeys.forEach(key => {
     if (sanitizedProps[key] && Array.isArray(sanitizedProps[key])) {
-      console.warn(`🔧 CONVERTING ${key} from array back to Set`);
+      // Converting array back to Set
       sanitizedProps[key] = new Set(sanitizedProps[key]);
     } else if (sanitizedProps[key] && typeof sanitizedProps[key] === 'object' && !(sanitizedProps[key] instanceof Set)) {
-      console.warn(`🔧 CONVERTING ${key} from object to Set`);
+        // Converting object to Set
       sanitizedProps[key] = new Set(Object.keys(sanitizedProps[key]));
     } else if (!sanitizedProps[key]) {
-      console.warn(`🔧 CREATING empty Set for ${key}`);
+      // Creating empty Set
       sanitizedProps[key] = new Set();
     }
   });

@@ -1061,8 +1061,8 @@ const Index = () => {
                     </Tooltip>
                   </div>
                   
-                  {/* Next Best Moves Section - Commented out */}
-                  {/* {signal.nextBestMoves && signal.nextBestMoves.length > 0 && (
+                  {/* Next Best Moves Section */}
+                  {signal.nextBestMoves && signal.nextBestMoves.length > 0 && (
                     <div className="mt-2 pt-2 border-t border-gray-100">
                       <h4 className="text-sm font-medium text-gray-900 mb-2">Next Best Moves</h4>
                       <div className="space-y-1">
@@ -1087,7 +1087,7 @@ const Index = () => {
                             </div>
                             
                             {/* Inline Chat Expansion */}
-                            {/* {hasExpandedChat && <div className="mt-2 bg-white border border-gray-200 rounded-lg p-3 animate-fade-in shadow-sm">
+                            {hasExpandedChat && <div className="mt-2 bg-white border border-gray-200 rounded-lg p-3 animate-fade-in shadow-sm">
                                 <div className="flex items-start gap-3 mb-2">
                                   <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
                                     <Bot className="h-4 w-4 text-white" />
@@ -1108,12 +1108,12 @@ const Index = () => {
                                     <Send className="h-4 w-4" />
                                   </Button>
                                 </div>
-                              </div>} */}
-                          {/* </div>
+                              </div>}
+                          </div>
                         })}
                       </div>
                     </div>
-                  )} */}
+                  )}
                 </div>
 
                 {/* Card Actions */}

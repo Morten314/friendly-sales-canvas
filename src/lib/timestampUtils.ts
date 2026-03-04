@@ -58,27 +58,12 @@ export function getCurrentUTCTimestamp(): string {
 }
 
 /**
- * Logs timestamp comparison for debugging
+ * Timestamp comparison (no-op in production; kept for API compatibility)
  */
 export function logTimestampComparison(
-  currentTimestamp: string | number | Date | null | undefined,
-  newTimestamp: string | number | Date | null | undefined,
-  componentName: string
+  _currentTimestamp: string | number | Date | null | undefined,
+  _newTimestamp: string | number | Date | null | undefined,
+  _componentName: string
 ) {
-  const currentUTC = toUTCTimestamp(currentTimestamp);
-  const newUTC = toUTCTimestamp(newTimestamp);
-  const requestUTC = getCurrentUTCTimestamp();
-  
-  console.log(`🔍 ${componentName.toUpperCase()} TIMESTAMP ANALYSIS (UTC):`);
-  console.log('  - Current request time (UTC):', requestUTC);
-  console.log('  - Frontend data time (UTC):', currentUTC || 'NO_TIMESTAMP');
-  console.log('  - Swagger data time (UTC):', newUTC || 'NO_TIMESTAMP');
-  console.log('  - Raw current timestamp:', currentTimestamp);
-  console.log('  - Raw new timestamp:', newTimestamp);
-  
-  if (currentUTC && newUTC) {
-    const isNewer = newUTC > currentUTC;
-    console.log('  - Is new data newer?:', isNewer);
-    console.log('  - UTC comparison:', newUTC, '>', currentUTC, '=', isNewer);
-  }
+  // Debug logging disabled; request/response bodies are logged on refresh only
 }

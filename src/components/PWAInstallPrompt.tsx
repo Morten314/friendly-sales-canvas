@@ -110,7 +110,6 @@ const PWAInstallPrompt = ({ variant = 'header' }: PWAInstallPromptProps) => {
         setDeferredPrompt(promptEvent);
         setIsInstalled(false);
         setShowInstallButton(true);
-        console.log('✅ beforeinstallprompt fired - app is not installed');
       };
       
       window.addEventListener('beforeinstallprompt', checkHandler);
@@ -134,11 +133,9 @@ const PWAInstallPrompt = ({ variant = 'header' }: PWAInstallPromptProps) => {
       setDeferredPrompt(promptEvent);
       setShowInstallButton(true);
       setIsLikelyInstallable(true); // If beforeinstallprompt fires, definitely installable
-      console.log('✅ beforeinstallprompt event fired!');
     };
 
     window.addEventListener('beforeinstallprompt', handler);
-    console.log('📡 Listening for beforeinstallprompt event...');
 
     // Show install button immediately - it will update when beforeinstallprompt fires
     // This gives better UX as the button appears right away
@@ -161,7 +158,6 @@ const PWAInstallPrompt = ({ variant = 'header' }: PWAInstallPromptProps) => {
       setDeferredPrompt(null);
       // Save installation status to localStorage
       localStorage.setItem('pwa-installed', 'true');
-      console.log('✅ App installed - saved to localStorage');
     };
     window.addEventListener('appinstalled', installedHandler);
 

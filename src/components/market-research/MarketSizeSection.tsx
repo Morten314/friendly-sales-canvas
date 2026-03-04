@@ -135,17 +135,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
     marketDrivers: string[];
   } | null>(null);
 
-  // Debug logging for state changes
-  useEffect(() => {
-    console.log('🔍 Market Size - State Debug:', {
-      isEditing,
-      localExecutiveSummary: localExecutiveSummary.substring(0, 50) + '...',
-      propExecutiveSummary: (executiveSummary || '').substring(0, 50) + '...',
-      localTamValue,
-      propTamValue: tamValue,
-      timestamp: Date.now()
-    });
-  }, [isEditing, localExecutiveSummary, executiveSummary, localTamValue, tamValue]);
+  // Debug logging for state changes removed
 
   const { toast } = useToast();
 
@@ -192,7 +182,6 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
     if (!isEditing && currentUser?.uid) {
       // Skip syncing if we just cleared due to user switch (prevent syncing with stale props)
       if (justClearedRef.current) {
-        console.log('🔄 [MARKET SIZE] Skipping sync - data was just cleared due to user switch, waiting for new user data');
         return;
       }
       
@@ -207,27 +196,15 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
         
         if (propsMatchSaved) {
           // Props have caught up - safe to reset flag and allow normal syncing
-          console.log('✅ Market Size - Props caught up with saved state, resetting flag');
           justSavedRef.current = false;
           savedLocalStateRef.current = null;
         } else {
           // Props haven't caught up yet - DO NOT overwrite local state
-          console.log('🛡️ Market Size - Preserving local state, props not caught up yet');
           return; // Exit early, don't overwrite
         }
       }
       
-      console.log('🔄 MarketSizeSection: Syncing with props (not editing):', {
-        executiveSummary,
-        tamValue,
-        samValue,
-        GrowthRate,
-        marketEntry,
-        strategicRecommendations: strategicRecommendations?.length || 0,
-        marketDrivers: marketDrivers?.length || 0,
-        currentUserId: currentUser.uid,
-        justSaved: justSavedRef.current
-      });
+      // Syncing with props
       
       // Only sync with props when they change (if not editing and not just saved)
       // This ensures we get fresh data from parent/API, but preserves our edits
@@ -251,12 +228,10 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
         const currentStr = JSON.stringify(localStrategicRecommendations);
         const newStr = JSON.stringify(strategicRecommendations);
         if (currentStr !== newStr) {
-          console.log('🔄 Updating localStrategicRecommendations from props:', strategicRecommendations);
           setLocalStrategicRecommendations(strategicRecommendations.length > 0 ? [...strategicRecommendations] : []);
         }
       } else if (localStrategicRecommendations.length > 0) {
         // Clear if props are not an array but local has data
-        console.log('🔄 Clearing localStrategicRecommendations - props not array');
         setLocalStrategicRecommendations([]);
       }
       
@@ -264,12 +239,10 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
         const currentStr = JSON.stringify(localMarketDrivers);
         const newStr = JSON.stringify(marketDrivers);
         if (currentStr !== newStr) {
-          console.log('🔄 Updating localMarketDrivers from props:', marketDrivers);
           setLocalMarketDrivers(marketDrivers.length > 0 ? [...marketDrivers] : []);
         }
       } else if (localMarketDrivers.length > 0) {
         // Clear if props are not an array but local has data
-        console.log('🔄 Clearing localMarketDrivers - props not array');
         setLocalMarketDrivers([]);
       }
     }
@@ -411,7 +384,6 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
       onStrategicRecommendationsChange(localStrategicRecommendations);
       onMarketDriversChange(localMarketDrivers);
       
-      console.log('✅ Market Size - Parent state updated with local edits');
       console.log('✅ Market Size - Local state preserved for immediate UI refresh:', {
         exec: localExecutiveSummary.substring(0, 30),
         tam: localTamValue,
@@ -446,7 +418,6 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
       onStrategicRecommendationsChange(localStrategicRecommendations);
       onMarketDriversChange(localMarketDrivers);
       
-      console.log('✅ Market Size - Parent state updated even after API error');
       
       // Still call the original save function even if API fails
       onSaveChanges();
@@ -466,7 +437,6 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
         }),
         'Market Size Update'
       );
-      console.log('Updated data fetched:', data);
       // The parent component should handle updating the data
       if (onRefresh) {
         onRefresh();
@@ -478,7 +448,6 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
 
   // Fetch Market Size data from API
   const fetchMarketSizeData = async (refresh = false) => {
-    console.log('🚀 MarketSizeSection: Starting fetchMarketSizeData with refresh:', refresh);
     try {
       setIsLoadingData(true);
       setErrorData(null);
@@ -506,9 +475,6 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
         data: {}
       };
 
-      console.log('🔧 MARKET SIZE SECTION CALL: Sending API request with payload:', payload);
-      console.log('🔧 MARKET SIZE SECTION CALL: Component name:', payload.component_name);
-      console.log('⏰ MARKET SIZE REQUEST TIMESTAMP:', payload.request_timestamp);
 
       const result = await executeWithRateLimit(
         () => apiFetchJson('market-research', {
@@ -518,17 +484,9 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
         'Market Size'
       );
 
-      console.log('✅ Market Size API response:', result);
-      console.log('🔍 MarketSizeSection: Full API response structure:', JSON.stringify(result, null, 2));
       
       if (result.status === 'success' && result.data) {
         const apiData = result.data;
-        console.log('🎯 MarketSizeSection: Processing API data:', apiData);
-        console.log('🎯 MarketSizeSection: API data keys:', Object.keys(apiData));
-        console.log('🔍 MarketSizeSection: strategicRecommendations type:', typeof apiData.strategicRecommendations);
-        console.log('🔍 MarketSizeSection: strategicRecommendations value:', apiData.strategicRecommendations);
-        console.log('🔍 MarketSizeSection: marketDrivers type:', typeof apiData.marketDrivers);
-        console.log('🔍 MarketSizeSection: marketDrivers value:', apiData.marketDrivers);
         
         // Check if we have the expected Market Size data structure
         // Also check for nested data structures that might be in the API response
@@ -536,7 +494,6 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
         const hasNestedData = apiData.market_size_data || apiData.marketSizeData || apiData.marketSize;
         
         if (hasDirectData || hasNestedData) {
-          console.log('✅ MarketSizeSection: Found Market Size data - updating component');
           
           // Use nested data if available, otherwise use direct data
           const dataToUse = apiData.market_size_data || apiData.marketSizeData || apiData.marketSize || apiData;
@@ -554,13 +511,11 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
           // Handle strategic recommendations - check if it's an array or needs to be converted
           if (dataToUse.strategicRecommendations) {
             let recommendations = dataToUse.strategicRecommendations;
-            console.log('🎯 Processing strategicRecommendations:', recommendations);
             if (typeof recommendations === 'string') {
               // If it's a string, try to split it or convert to array
               recommendations = recommendations.split('\n').filter(r => r.trim());
             }
             if (Array.isArray(recommendations)) {
-              console.log('✅ Calling onStrategicRecommendationsChange with:', recommendations);
               onStrategicRecommendationsChange(recommendations);
             }
           }
@@ -568,24 +523,18 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
           // Handle market drivers - check if it's an array or needs to be converted
           if (dataToUse.marketDrivers) {
             let drivers = dataToUse.marketDrivers;
-            console.log('🎯 Processing marketDrivers:', drivers);
             if (typeof drivers === 'string') {
               // If it's a string, try to split it or convert to array
               drivers = drivers.split('\n').filter(d => d.trim());
             }
             if (Array.isArray(drivers)) {
-              console.log('✅ Calling onMarketDriversChange with:', drivers);
               onMarketDriversChange(drivers);
             }
           }
           
-          console.log('✅ Market Size - State updated with API response data');
         } else {
-          console.log('ℹ️ MarketSizeSection: No Market Size specific data found in response');
-          console.log('🔍 MarketSizeSection: Available keys in response:', Object.keys(apiData));
         }
       } else {
-        console.warn('⚠️ Market Size - No data in API response');
       }
       
     } catch (error) {
@@ -603,7 +552,6 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
     
     // Only clear if user actually changed (not on initial mount)
     if (previousUserId !== undefined && previousUserId !== currentUserId) {
-      console.log('🔄 [MARKET SIZE] User changed from', previousUserId, 'to', currentUserId, '- clearing all local state');
       setMarketSizeData(null);
       setErrorData(null);
       setIsLoadingData(false);
@@ -619,7 +567,6 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
       justClearedRef.current = true;
       // Force a small delay to ensure state is cleared before any sync happens
       const clearTimer = setTimeout(() => {
-        console.log('✅ [MARKET SIZE] State cleared, ready for new user data');
         // Reset the flag after a delay to allow new data to come in
         setTimeout(() => {
           justClearedRef.current = false;
@@ -642,28 +589,23 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
       return; // Don't fetch if user is not authenticated
     }
     
-    console.log('🚀 MarketSizeSection: User authenticated, checking for data');
     
     // Always check if we have fresh data for this user
     // The parent component should pass fresh data, but if not, we fetch
     const hasData = executiveSummary || tamValue || samValue || GrowthRate || strategicRecommendations.length > 0 || marketEntry || marketDrivers.length > 0;
     
     if (!hasData && !isLoadingData) {
-      console.log('🚀 MarketSizeSection: No data found for current user, fetching fresh data');
       const timer = setTimeout(() => {
         fetchMarketSizeData(false);
       }, 1000);
       
       return () => clearTimeout(timer);
-    } else if (hasData) {
-      console.log('🚀 MarketSizeSection: Data already available for current user, skipping fetch');
     }
   }, [currentUser?.uid, executiveSummary, tamValue, samValue, GrowthRate, strategicRecommendations.length, marketEntry, marketDrivers.length]);
   
   // Handle refresh when parent triggers it
   useEffect(() => {
     if (isRefreshing) {
-      console.log('🔄 Market Size - Refresh triggered by parent');
       // Clear old data immediately to prevent showing stale data
       setMarketSizeData(null);
       setErrorData(null);
@@ -1341,10 +1283,6 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                    <div className="bg-green-50 p-4 rounded-lg border border-green-200">
                      <ul className="space-y-2 text-gray-700">
                        {(() => {
-                         console.log('🎯 RENDER CHECK - strategicRecommendations in MarketSizeSection:', strategicRecommendations);
-                         console.log('🎯 RENDER CHECK - Type:', typeof strategicRecommendations);
-                         console.log('🎯 RENDER CHECK - Is Array:', Array.isArray(strategicRecommendations));
-                         console.log('🎯 RENDER CHECK - Length:', strategicRecommendations?.length);
                          return null;
                        })()}
                          {Array.isArray(localStrategicRecommendations) && localStrategicRecommendations.length > 0 ? (
@@ -1393,11 +1331,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                      <div className="bg-white border border-gray-200 rounded-lg p-4">
                        <h4 className="font-medium text-gray-900 mb-3">Market Size by Segment</h4>
                        {(() => {
-                         console.log('🔍 MarketSizeSection - marketSizeBySegment:', marketSizeBySegment);
-                         console.log('🔍 MarketSizeSection - marketSizeBySegment type:', typeof marketSizeBySegment);
-                         console.log('🔍 MarketSizeSection - marketSizeBySegment exists:', !!marketSizeBySegment);
                          if (typeof marketSizeBySegment === 'string') {
-                           console.log('🔍 MarketSizeSection - marketSizeBySegment string content:', marketSizeBySegment);
                          }
                          return null;
                        })()}
@@ -1414,11 +1348,9 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                            
                            // If marketSizeBySegment is a string, try to parse it as JSON first
                            if (typeof segmentsToUse === 'string') {
-                             console.log('🔧 marketSizeBySegment is string, attempting to parse:', segmentsToUse);
                              try {
                                const parsedSegments = JSON.parse(segmentsToUse);
                                if (parsedSegments && typeof parsedSegments === 'object') {
-                                 console.log('✅ Successfully parsed marketSizeBySegment from string to object');
                                  return Object.entries(parsedSegments).map(([name, value], index) => ({
                                    name,
                                    value: parseInt(value.toString().replace('%', '')),
@@ -1426,11 +1358,9 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                                  }));
                                }
                              } catch (parseError) {
-                               console.log('❌ Failed to parse marketSizeBySegment string as JSON:', parseError);
                              }
                              
                              // Only use fallback data if parsing fails
-                             console.log('🔧 marketSizeBySegment string parsing failed, using fallback data');
                              return [
                                { name: "Enterprise", value: 45, color: "#3B82F6" },
                                { name: "Mid-Market", value: 35, color: "#10B981" },
@@ -1451,11 +1381,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                      <div className="bg-white border border-gray-200 rounded-lg p-4">
                        <h4 className="font-medium text-gray-900 mb-3">Growth Projections</h4>
                        {(() => {
-                         console.log('🔍 MarketSizeSection - growthProjections:', growthProjections);
-                         console.log('🔍 MarketSizeSection - growthProjections type:', typeof growthProjections);
-                         console.log('🔍 MarketSizeSection - growthProjections exists:', !!growthProjections);
                          if (typeof growthProjections === 'string') {
-                           console.log('🔍 MarketSizeSection - growthProjections string content:', growthProjections);
                          }
                          return null;
                        })()}
@@ -1473,14 +1399,11 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                             
                             // If growthProjections is a string, try to parse it as JSON first
                             if (typeof projectionsToUse === 'string') {
-                              console.log('🔧 growthProjections is string, attempting to parse:', projectionsToUse);
                               try {
                                 const parsedProjections = JSON.parse(projectionsToUse);
                                 if (parsedProjections && typeof parsedProjections === 'object') {
-                                  console.log('✅ Successfully parsed growthProjections from string to object');
                                   return Object.entries(parsedProjections).map(([year, value]) => {
                                     const numericValue = parseFloat(value.toString());
-                                    console.log(`🔧 Converting ${year}: ${value} -> ${numericValue}`);
                                     return {
                                       name: year,
                                       value: isNaN(numericValue) ? 100 : numericValue * 100
@@ -1488,11 +1411,9 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                                   });
                                 }
                               } catch (parseError) {
-                                console.log('❌ Failed to parse growthProjections string as JSON:', parseError);
                               }
                               
                               // Only use fallback data if parsing fails
-                              console.log('🔧 growthProjections string parsing failed, using fallback data');
                               return [
                                 { name: "2023", value: 100 },
                                 { name: "2024", value: 120 },
@@ -1504,7 +1425,6 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
                             // If it's an object, transform it safely
                             return Object.entries(projectionsToUse).map(([year, value]) => {
                               const numericValue = parseFloat(value.toString());
-                              console.log(`🔧 Converting ${year}: ${value} -> ${numericValue}`);
                               return {
                                 name: year,
                                 value: isNaN(numericValue) ? 100 : numericValue * 100

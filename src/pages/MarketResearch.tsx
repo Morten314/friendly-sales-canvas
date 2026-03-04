@@ -4,11 +4,6 @@ import { getUserCacheKey, getUserLocalStorage, setUserLocalStorage, removeUserLo
 
 
 
-console.log('🚨🚨🚨 MARKETRESEARCH FILE IS DEFINITELY LOADING 🚨🚨🚨');
-
-
-
-console.log('📁 MarketResearch.tsx file is loading!');
 
 
 
@@ -629,7 +624,6 @@ const clearUserCache = (userId: string | null | undefined) => {
 // Helper function to validate API response belongs to current user
 const validateApiResponseUserId = (apiResponse: any, currentUserId: string | null | undefined, componentName: string): boolean => {
   if (!currentUserId) {
-    console.warn(`⚠️ [MULTI-TENANCY] No current user ID for ${componentName} validation`);
     return false;
   }
 
@@ -649,7 +643,6 @@ const validateApiResponseUserId = (apiResponse: any, currentUserId: string | nul
 
   // If no user_id in response, log warning but allow (backend should handle this)
   if (!responseUserId) {
-    console.warn(`⚠️ [MULTI-TENANCY] ${componentName} API response has no user_id field - backend should include this`);
   }
 
   return true;
@@ -678,8 +671,6 @@ const clearMarketDataCache = (userId?: string | null) => {
     localStorage.removeItem('marketEntryData');
   }
   
-  console.log('🧹 Market data cache cleared due to company profile update');
-  console.log('🧹 All component localStorage caches cleared (competitor, market, regulatory, industry, entry)');
 };
 
 
@@ -736,7 +727,6 @@ const MarketResearch = React.memo(() => {
   const orgIdToUse = orgId || 'brewra'; // Fallback to 'brewra' for backward compatibility
   const previousUserIdRef = useRef<string | null | undefined>(currentUser?.uid);
 
-  console.log('🔥 MarketResearch component is mounting!');
 
 
 
@@ -874,7 +864,6 @@ const MarketResearch = React.memo(() => {
 
   const [marketData, setMarketData] = useState<MarketIntelligenceData | null>(() => {
     const cached = getCachedData(currentUser?.uid);
-    console.log('Initial marketData state - cached data exists:', !!cached);
     return cached;
   });
   
@@ -912,7 +901,6 @@ const MarketResearch = React.memo(() => {
     
     // Only clear if user actually changed (not on initial mount)
     if (previousUserId !== undefined && previousUserId !== currentUserId) {
-      console.log('🔄 User changed from', previousUserId, 'to', currentUserId, '- clearing all component data');
       setMarketData(null);
       setMarketIntelligenceData({
         executiveSummary: "",
@@ -938,7 +926,6 @@ const MarketResearch = React.memo(() => {
     
     // If user logged out, clear all data
     if (!currentUserId && previousUserId) {
-      console.log('🔄 User logged out - clearing all component data');
       setMarketData(null);
       setMarketIntelligenceData({
         executiveSummary: "",
@@ -974,7 +961,6 @@ const MarketResearch = React.memo(() => {
   useEffect(() => {
     if (!currentUser?.uid) return;
     
-    console.log('🔄 [USER SWITCH] Loading marketIntelligenceData for user:', currentUser.uid);
     
     // Small delay to ensure clear effect has finished
     const timer = setTimeout(() => {
@@ -990,7 +976,6 @@ const MarketResearch = React.memo(() => {
               return;
             }
             
-            console.log('✅ [USER SWITCH] Found stored marketIntelligenceData for user, loading:', parsedData.timestamp);
             setMarketIntelligenceData(parsedData);
             // Also update marketData for consistency
             setMarketData(parsedData);
@@ -998,7 +983,6 @@ const MarketResearch = React.memo(() => {
             setIsMarketSizeLoading(false);
             setIsInitialLoading(false);
           } else {
-            console.log('⚠️ [USER SWITCH] Stored data exists but no timestamp, will fetch');
             // Trigger fetch if no valid data
             setIsMarketSizeLoading(true);
             fetchMarketSizeData(false, true).catch(err => {
@@ -1016,7 +1000,6 @@ const MarketResearch = React.memo(() => {
           });
         }
       } else {
-        console.log('📝 [USER SWITCH] No stored marketIntelligenceData found for user, fetching from API');
         // Trigger fetch if no stored data
         setIsMarketSizeLoading(true);
         fetchMarketSizeData(false, true).catch(err => {
@@ -1047,7 +1030,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-    console.log('Initial loading state - has cached data:', hasData);
 
 
 
@@ -1181,11 +1163,8 @@ const MarketResearch = React.memo(() => {
 
     const timeoutId = setTimeout(() => {
 
-      console.log('⏰ GLOBAL TIMEOUT: 2 minutes reached, forcing loading screen to disappear');
 
-      console.log('⏰ Current component status:', componentStatus);
 
-      console.log('⏰ Current loading phase:', loadingPhase);
 
       
 
@@ -1201,7 +1180,7 @@ const MarketResearch = React.memo(() => {
 
       });
 
-    }, 120000); // 2 minutes
+    }, 180000); // 3 minutes (align with cascading refresh)
 
     
 
@@ -1215,7 +1194,6 @@ const MarketResearch = React.memo(() => {
 
   const startRenderingPhase = () => {
 
-    console.log('🎨 Starting rendering phase monitoring...');
 
     
 
@@ -1227,7 +1205,6 @@ const MarketResearch = React.memo(() => {
 
       
 
-      console.log(`🎨 Rendering check attempt ${attempt}/${maxAttempts}`);
 
       
 
@@ -1263,15 +1240,12 @@ const MarketResearch = React.memo(() => {
 
       
 
-      console.log(`🎨 Rendering status: ${renderedComponents.length}/5 components rendered`);
 
-      console.log(`🎨 Rendered components:`, renderedComponents);
 
       
 
       if (allRendered) {
 
-        console.log('🎨 All components fully rendered! Completing loading...');
 
         setLoadingPhase('complete');
 
@@ -1313,7 +1287,6 @@ const MarketResearch = React.memo(() => {
 
       } else if (attempt >= maxAttempts) {
 
-        console.log('⏰ Rendering timeout reached, showing Scout page anyway');
         
         // Clear retry flag since we're completing
         isRetryingRef.current = false;
@@ -1386,7 +1359,6 @@ const MarketResearch = React.memo(() => {
     
     // CRITICAL: Don't hide loading screen if retries are in progress
     if (isRetryingRef.current) {
-      console.log('🔄 Retries in progress - validation will wait before hiding loading screen');
       // Continue validation but don't hide loading screen yet
     }
     
@@ -1405,14 +1377,11 @@ const MarketResearch = React.memo(() => {
 
     
 
-    console.log(`🔍 VALIDATION FUNCTION CALLED - Attempt ${currentAttempt}/${maxValidationAttempts}`);
 
     // TIMEOUT CHECK - Force completion if we've exceeded max attempts
     if (currentAttempt > maxValidationAttempts) {
-      console.log('⏰ VALIDATION TIMEOUT - Force completing after max attempts');
       
       // Stop any ongoing API calls
-      console.log('🛑 Stopping all ongoing API calls and loading states due to timeout');
       setIsMarketSizeLoading(false);
       setIsIndustryTrendsLoading(false);
       setIsMarketEntryLoading(false);
@@ -1436,9 +1405,7 @@ const MarketResearch = React.memo(() => {
       return;
     }
 
-    console.log('🔍 Validating all components have fresh data...');
 
-    console.log('🔍 Current isRefreshing state:', isRefreshing);
 
     
 
@@ -1452,7 +1419,6 @@ const MarketResearch = React.memo(() => {
 
     if (timeSinceRefresh < minWaitTime) {
 
-      console.log(`⏳ Waiting ${Math.ceil((minWaitTime - timeSinceRefresh) / 1000)}s more for components to process fresh data...`);
 
       // Clear any existing timeout before setting a new one
       if (validationTimeoutRef.current) {
@@ -1515,108 +1481,43 @@ const MarketResearch = React.memo(() => {
 
     // Debug: Check each component's data structure in detail
 
-    console.log('🔍 DETAILED DATA STRUCTURE CHECK:');
-    console.log('🔍 Company Profile Context:', companyProfile?.industry, companyProfile?.companySize);
 
-    console.log('🔍 Refresh start time:', new Date(refreshStartTime).toISOString());
 
-    console.log('🔍 API CALL STATUS CHECK:');
-    console.log('🔍 Component Status:', componentStatus);
-    console.log('🔍 Loading States:', {
-      isMarketSizeLoading,
-      isIndustryTrendsLoading, 
-      isMarketEntryLoading,
-      isCompetitorLoading,
-      isRegulatoryLoading
-    });
 
-    console.log('  - Market Size - executiveSummary:', marketData?.executiveSummary);
 
-    console.log('  - Market Size - tamValue:', marketData?.tamValue);
 
-    console.log('  - Market Size - GrowthRate:', marketData?.GrowthRate);
 
-    console.log('  - Market Size - timestamp:', marketData?.timestamp);
 
-    console.log('  - Market Size - isFresh:', isDataFresh(marketData?.timestamp));
 
-    console.log('  - Market Size - isMarketSizeLoading:', isMarketSizeLoading);
 
-    console.log('  - Industry Trends - executiveSummary:', industryTrendsData?.executiveSummary);
 
-    console.log('  - Industry Trends - aiAdoption:', industryTrendsData?.aiAdoption);
 
-    console.log('  - Industry Trends - timestamp:', industryTrendsData?.timestamp);
 
-    console.log('  - Industry Trends - isFresh:', isDataFresh(industryTrendsData?.timestamp));
 
-    console.log('  - Industry Trends - isIndustryTrendsLoading:', isIndustryTrendsLoading);
 
-    console.log('  - Market Entry - executiveSummary:', marketEntryData?.executiveSummary);
 
-    console.log('  - Market Entry - entryBarriers:', marketEntryData?.entryBarriers);
 
-    console.log('  - Market Entry - timestamp:', marketEntryData?.timestamp);
 
-    console.log('  - Market Entry - isFresh:', isDataFresh(marketEntryData?.timestamp));
 
-    console.log('  - Market Entry - isMarketEntryLoading:', isMarketEntryLoading);
 
-    console.log('  - Competitor Landscape - executiveSummary:', competitorData?.executiveSummary);
 
-    console.log('  - Competitor Landscape - topPlayerShare:', competitorData?.topPlayerShare);
 
-    console.log('  - Competitor Landscape - emergingPlayers:', competitorData?.emergingPlayers);
 
-    console.log('  - Competitor Landscape - timestamp:', competitorData?.timestamp);
 
-    console.log('  - Competitor Landscape - isFresh:', isDataFresh(competitorData?.timestamp));
 
-    console.log('  - Competitor Landscape - isCompetitorLoading:', isCompetitorLoading);
 
-    console.log('  - Regulatory Compliance - executiveSummary:', regulatoryData?.executiveSummary);
 
-    console.log('  - Regulatory Compliance - euAiActDeadline:', regulatoryData?.euAiActDeadline);
-
-    console.log('  - Regulatory Compliance - timestamp:', regulatoryData?.timestamp);
-
-    console.log('  - Regulatory Compliance - isFresh:', isDataFresh(regulatoryData?.timestamp));
-
-    console.log('  - Regulatory Compliance - isRegulatoryLoading:', isRegulatoryLoading);
 
     
 
-    console.log('🔍 Component data validation results:', componentDataChecks);
-
-    console.log('🔍 Component loading states:', {
-
-      'Market Size': isMarketSizeLoading,
-
-      'Industry Trends': isIndustryTrendsLoading,
-
-      'Market Entry': isMarketEntryLoading,
-
-      'Competitor Landscape': isCompetitorLoading,
-
-      'Regulatory Compliance': isRegulatoryLoading
-
-    });
-
-    
 
     // Debug: Log actual data to see what we have
 
-    console.log('🔍 DEBUG - Actual component data:');
 
-    console.log('  - marketData:', marketData);
 
-    console.log('  - industryTrendsData:', industryTrendsData);
 
-    console.log('  - marketEntryData:', marketEntryData);
 
-    console.log('  - competitorData:', competitorData);
 
-    console.log('  - regulatoryData:', regulatoryData);
 
     
 
@@ -1629,44 +1530,17 @@ const MarketResearch = React.memo(() => {
       'Regulatory Compliance': regulatoryData?.executiveSummary && !isRegulatoryLoading
     };
     
-    console.log('🔍 Simplified validation results:', simplifiedChecks);
     
     // Debug Market Entry specifically
-    console.log('🔍 MARKET ENTRY DEBUG:');
-    console.log('  - marketEntryData:', marketEntryData);
-    console.log('  - marketEntryData?.executiveSummary:', marketEntryData?.executiveSummary);
-    console.log('  - isMarketEntryLoading:', isMarketEntryLoading);
-    console.log('  - Market Entry validation result:', simplifiedChecks['Market Entry']);
     
     // Debug Industry Trends specifically
-    console.log('🔍 INDUSTRY TRENDS DEBUG:');
-    console.log('  - industryTrendsData:', industryTrendsData);
-    console.log('  - industryTrendsData?.executiveSummary:', industryTrendsData?.executiveSummary);
-    console.log('  - isIndustryTrendsLoading:', isIndustryTrendsLoading);
-    console.log('  - Industry Trends validation result:', simplifiedChecks['Industry Trends']);
     
     // Debug all components comprehensively
-    console.log('🔍 ALL COMPONENTS DEBUG:');
-    console.log('  - Market Size:', { data: !!marketData, summary: !!marketData?.executiveSummary, loading: isMarketSizeLoading });
-    console.log('  - Industry Trends:', { data: !!industryTrendsData, summary: !!industryTrendsData?.executiveSummary, loading: isIndustryTrendsLoading });
-    console.log('  - Market Entry:', { data: !!marketEntryData, summary: !!marketEntryData?.executiveSummary, loading: isMarketEntryLoading });
-    console.log('  - Competitor Landscape:', { data: !!competitorData, summary: !!competitorData?.executiveSummary, loading: isCompetitorLoading });
-    console.log('  - Regulatory Compliance:', { data: !!regulatoryData, summary: !!regulatoryData?.executiveSummary, loading: isRegulatoryLoading });
     
     // Debug Competitor Landscape specifically
-    console.log('🔍 COMPETITOR LANDSCAPE DETAILED DEBUG:');
-    console.log('  - competitorData:', competitorData);
-    console.log('  - competitorData?.executiveSummary:', competitorData?.executiveSummary);
-    console.log('  - competitorData?.topPlayerShare:', competitorData?.topPlayerShare);
-    console.log('  - competitorData?.emergingPlayers:', competitorData?.emergingPlayers);
-    console.log('  - competitorData?.fundingNews:', competitorData?.fundingNews);
-    console.log('  - isCompetitorLoading:', isCompetitorLoading);
-    console.log('  - competitorError:', competitorError);
     
     // AGGRESSIVE FIX: Force Competitor Landscape to refresh if it's stuck
     if (competitorData && (!competitorData.executiveSummary || !competitorData.topPlayerShare)) {
-      console.log('🚨 COMPETITOR LANDSCAPE IS STUCK - FORCING REFRESH');
-      console.log('🚨 This component will be force refreshed on next validation cycle');
       // Mark for force refresh
       setCompetitorData(null);
       if (currentUser?.uid) {
@@ -1678,8 +1552,6 @@ const MarketResearch = React.memo(() => {
     
     // AGGRESSIVE FIX: Handle Competitor Landscape infinite loading
     if (isCompetitorLoading && competitorData === null) {
-      console.log('🚨 COMPETITOR LANDSCAPE INFINITE LOADING DETECTED');
-      console.log('🚨 Forcing Competitor Landscape to stop loading to prevent infinite loading');
       setIsCompetitorLoading(false);
       setCompetitorError('Component timed out - please try refreshing');
     }
@@ -1696,7 +1568,6 @@ const MarketResearch = React.memo(() => {
 
     if (allComponentsHaveData) {
 
-      console.log('✅ All components have fresh data! Incrementing consecutive validations...');
 
       
 
@@ -1708,7 +1579,6 @@ const MarketResearch = React.memo(() => {
 
       
 
-      console.log(`✅ Consecutive validations: ${newConsecutiveValidations}/2`);
 
       
 
@@ -1716,7 +1586,6 @@ const MarketResearch = React.memo(() => {
 
       if (newConsecutiveValidations >= 1) {
 
-        console.log('🎉 Consecutive validation achieved! Setting components to success and transitioning to rendering phase...');
 
         
 
@@ -1762,7 +1631,6 @@ const MarketResearch = React.memo(() => {
 
           
 
-          console.log('🎯 Component status updated based on actual data availability:', newStatus);
 
           return newStatus;
 
@@ -1819,7 +1687,6 @@ const MarketResearch = React.memo(() => {
 
       } else {
 
-        console.log(`⏳ Need ${2 - newConsecutiveValidations} more consecutive validations. Continuing validation...`);
 
         
 
@@ -1841,16 +1708,13 @@ const MarketResearch = React.memo(() => {
 
     } else {
 
-      console.log('⚠️ Some components still missing fresh data:', missingDataComponents);
       
       // LENIENT APPROACH: If we have at least 3 components with data, proceed anyway
       // BUT: Only if retries are not in progress
       const componentsWithData = Object.values(simplifiedChecks).filter(hasData => hasData).length;
       if (componentsWithData >= 3 && currentAttempt >= 5 && !isRetryingRef.current) {
-        console.log(`🎯 LENIENT VALIDATION - ${componentsWithData}/5 components have data, proceeding anyway after ${currentAttempt} attempts`);
         
         // Stop any ongoing API calls
-        console.log('🛑 Stopping all ongoing API calls and loading states');
         setIsMarketSizeLoading(false);
         setIsIndustryTrendsLoading(false);
         setIsMarketEntryLoading(false);
@@ -1876,7 +1740,6 @@ const MarketResearch = React.memo(() => {
       
       // If retries are in progress, don't hide loading screen yet
       if (isRetryingRef.current) {
-        console.log('🔄 Retries in progress - keeping loading screen visible');
         // Continue validation but don't hide loading screen
         if (validationTimeoutRef.current) {
           clearTimeout(validationTimeoutRef.current);
@@ -1889,7 +1752,6 @@ const MarketResearch = React.memo(() => {
         return;
       }
 
-      console.log('⚠️ Resetting consecutive validations to 0');
 
       
 
@@ -1899,36 +1761,11 @@ const MarketResearch = React.memo(() => {
 
       
 
-      console.log('⚠️ Detailed missing data analysis:');
 
       Object.entries(componentDataChecks).forEach(([name, hasData]) => {
 
         if (!hasData) {
-
-          console.log(`  - ${name}: Missing data -`, {
-
-            hasExecutiveSummary: name === 'Market Size' ? !!marketData?.executiveSummary : 
-
-                               name === 'Industry Trends' ? !!industryTrendsData?.executiveSummary :
-
-                               name === 'Market Entry' ? !!marketEntryData?.executiveSummary :
-
-                               name === 'Competitor Landscape' ? !!competitorData?.executiveSummary :
-
-                               !!regulatoryData?.executiveSummary,
-
-            isLoading: name === 'Market Size' ? isMarketSizeLoading :
-
-                      name === 'Industry Trends' ? isIndustryTrendsLoading :
-
-                      name === 'Market Entry' ? isMarketEntryLoading :
-
-                      name === 'Competitor Landscape' ? isCompetitorLoading :
-
-                      isRegulatoryLoading
-
-          });
-
+          // Component missing data - validation will handle
         }
 
       });
@@ -1937,13 +1774,9 @@ const MarketResearch = React.memo(() => {
 
       if (currentAttempt >= maxValidationAttempts) {
 
-        console.log('⏰ Maximum validation attempts reached, showing Scout page anyway');
 
-        console.log('⏰ Final validation results:', componentDataChecks);
 
-        console.log('⏰ Component status:', componentStatus);
 
-        console.log('⏰ Current loading phase:', loadingPhase);
 
         
 
@@ -1951,7 +1784,6 @@ const MarketResearch = React.memo(() => {
 
         const successfulComponents = Object.entries(componentStatus).filter(([name, status]) => status === 'success');
 
-        console.log('⏰ Successful components:', successfulComponents.map(([name]) => name));
 
         
 
@@ -1974,7 +1806,6 @@ const MarketResearch = React.memo(() => {
 
         if (successfulComponents.length >= requiredComponents && !isRetryingRef.current) {
 
-          console.log('✅ Sufficient components loaded, hiding loading screen');
 
           setIsRefreshing(false);
 
@@ -1989,7 +1820,6 @@ const MarketResearch = React.memo(() => {
           });
 
         } else if (isRetryingRef.current) {
-          console.log('🔄 Retries in progress - keeping loading screen visible until retries complete');
           // Continue validation but don't hide loading screen
           if (validationTimeoutRef.current) {
             clearTimeout(validationTimeoutRef.current);
@@ -2001,11 +1831,8 @@ const MarketResearch = React.memo(() => {
           }, 1000); // Check again in 1 second
         } else {
 
-          console.log('⏰ Not enough components loaded yet, continuing validation...');
 
-          console.log('⏰ Current successful components:', successfulComponents.map(([name]) => name));
 
-          console.log('⏰ Still waiting for:', Object.entries(componentStatus).filter(([name, status]) => status !== 'success').map(([name]) => name));
 
           // Continue validation for remaining components
           // Clear any existing timeout before setting a new one
@@ -2023,11 +1850,8 @@ const MarketResearch = React.memo(() => {
 
       } else {
 
-        console.log('⏳ Waiting 3 more seconds for components to process data...');
 
-        console.log('⏳ Missing components:', missingDataComponents);
 
-        console.log('⏳ Current component status:', componentStatus);
 
         
 
@@ -2063,7 +1887,6 @@ const MarketResearch = React.memo(() => {
 
   const markFreshData = (componentName: string) => {
 
-    console.log(`🔄 FRESH DATA FLAG - Marking ${componentName} as having fresh data`);
 
     setFreshDataFlags(prev => ({ ...prev, [componentName]: true }));
 
@@ -2077,7 +1900,6 @@ const MarketResearch = React.memo(() => {
 
     const isFresh = freshDataFlags[componentName];
 
-    console.log(`🔍 FRESH DATA CHECK - ${componentName}: ${isFresh ? 'FRESH - will replace' : 'STALE - will keep existing'}`);
 
     return isFresh;
 
@@ -2125,16 +1947,13 @@ const MarketResearch = React.memo(() => {
 
 
 
-        console.log('📦 [INIT] Loading Market Intelligence data from localStorage:', parsedData);
 
         // CRITICAL: Verify this data belongs to the current user
         if (parsedData.user_id && parsedData.user_id !== currentUser.uid) {
-          console.warn('⚠️ [INIT] Market Intelligence data user_id mismatch! Stored:', parsedData.user_id, 'Current:', currentUser.uid);
           removeUserLocalStorage('marketIntelligenceData', currentUser.uid);
           // Don't return - will fall through to empty state
         } else if (parsedData.timestamp) {
           // Only return stored data if it has a timestamp AND belongs to current user
-          console.log('✅ [INIT] Found persisted data with timestamp:', parsedData.timestamp, 'for user:', currentUser.uid);
           return parsedData;
         }
 
@@ -2148,7 +1967,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-          console.log('✅ Found persisted swagger data with timestamp:', parsedData.timestamp);
 
 
 
@@ -2160,7 +1978,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-          console.log('⚠️ Found localStorage data but no timestamp - this is default data, clearing...');
 
 
 
@@ -2204,7 +2021,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-    console.log('📝 No stored data found - returning empty state, will load from API');
 
 
 
@@ -2294,7 +2110,6 @@ const MarketResearch = React.memo(() => {
 
       // CRITICAL: Always use current user's ID - check first
       if (!currentUser?.uid) {
-        console.warn('⚠️ [SAVE] Cannot save Market Intelligence data - no user logged in');
         return;
       }
       // Ensure user_id is included in the data for verification
@@ -2306,7 +2121,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-      console.log('💾 Market Intelligence data saved to localStorage');
 
 
 
@@ -2360,7 +2174,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-      console.log('💾 Competitor data saved to localStorage');
 
 
 
@@ -2404,7 +2217,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-      console.log('💾 Regulatory data saved to localStorage');
 
 
 
@@ -2457,7 +2269,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-      console.log('💾 Industry Trends data saved to localStorage');
 
 
 
@@ -2510,7 +2321,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-      console.log('💾 Market Entry data saved to localStorage');
 
 
 
@@ -2654,13 +2464,11 @@ const MarketResearch = React.memo(() => {
 
         const parsedData = JSON.parse(stored);
 
-        console.log('📦 Loading Industry Trends data from localStorage:', parsedData);
 
         // Only return stored data if it has a timestamp (meaning it came from API)
 
         if (parsedData.timestamp) {
 
-          console.log('✅ Found persisted Industry Trends data with timestamp:', parsedData.timestamp);
 
           // Ensure visualCharts structure exists (for backward compatibility with old localStorage data)
           const dataWithDefaults = {
@@ -2676,7 +2484,6 @@ const MarketResearch = React.memo(() => {
 
         } else {
 
-          console.log('⚠️ Found localStorage data but no timestamp - this is default data, clearing...');
 
           if (currentUser?.uid) {
         removeUserLocalStorage('industryTrendsData', currentUser.uid);
@@ -2859,7 +2666,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-        console.log('📦 Loading Regulatory data from localStorage:', parsedData);
 
 
 
@@ -2871,7 +2677,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-          console.log('✅ Found persisted Regulatory data with timestamp:', parsedData.timestamp);
 
           // Ensure all required fields exist (for backward compatibility with old localStorage data)
           const dataWithDefaults = {
@@ -2990,7 +2795,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-        console.log('📦 Loading Competitor data from localStorage:', parsedData);
 
 
 
@@ -3002,7 +2806,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-          console.log('✅ Found persisted Competitor data with timestamp:', parsedData.timestamp);
 
 
 
@@ -3038,7 +2841,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-    console.log('📝 No stored Competitor data found - returning default state, will load from API');
 
 
 
@@ -3098,15 +2900,12 @@ const MarketResearch = React.memo(() => {
 
 
 
-    console.log('🔄🏆 PARENT - competitorData changed:', competitorData);
 
 
 
-    console.log('🔄🏆 PARENT - competitorData.timestamp:', competitorData?.timestamp);
 
 
 
-    console.log('🔄🏆 PARENT - competitorData.executiveSummary:', competitorData?.executiveSummary);
 
 
 
@@ -3267,7 +3066,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-        console.log('📦 Loading Market Entry data from localStorage:', parsedData);
 
 
 
@@ -3279,8 +3077,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-          console.log('✅ Found persisted Market Entry data with timestamp:', parsedData.timestamp);
-          console.log('🔍 MarketResearch: Loaded SWOT data from localStorage:', parsedData.swot || parsedData.swotAnalysis);
 
 
 
@@ -3291,7 +3087,6 @@ const MarketResearch = React.memo(() => {
             if (parsedData.swot && !parsedData.swotAnalysis) {
               parsedData.swotAnalysis = parsedData.swot;
             }
-            console.log('✅ MarketResearch: Preserving SWOT data from localStorage');
           }
 
 
@@ -3542,20 +3337,13 @@ const MarketResearch = React.memo(() => {
   useEffect(() => {
     // Expose the function globally so it can be called from browser console
     (window as any).getAllScoutComponentResponses = async (refresh = false) => {
-      console.log('🔍 Fetching all 5 Scout component response bodies...');
       const result = await getAllScoutComponentResponses(refresh);
       
       // Log summary to console
-      console.log('📊 ===== SCOUT COMPONENTS SUMMARY =====');
-      console.log(`Total: ${result.summary.total}, Successful: ${result.summary.successful}, Failed: ${result.summary.failed}`);
-      console.log('========================================');
       
       // Log each component's response body
       result.results.forEach((componentResult, index) => {
-        console.log(`\n${index + 1}. ${componentResult.component} (${componentResult.component_name})`);
         if (componentResult.success) {
-          console.log('✅ Status:', componentResult.status);
-          console.log('📦 Response Body:', componentResult.responseBody);
         } else {
           console.error('❌ Error:', componentResult.error);
           console.error('Status:', componentResult.status);
@@ -3563,7 +3351,6 @@ const MarketResearch = React.memo(() => {
       });
       
       // Also log the full result object
-      console.log('\n📋 Full Result Object:', result);
       
       return result;
     };
@@ -3588,7 +3375,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-    console.log('🔄 TRANSFORM: Input reportData for historical:', JSON.stringify(reportData, null, 2));
 
 
 
@@ -3712,7 +3498,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-    console.log('✅ TRANSFORM: Output transformed historical data:', JSON.stringify(transformed, null, 2));
 
 
 
@@ -3736,7 +3521,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-    console.log('Historical report selected:', reportData);
 
 
 
@@ -3836,15 +3620,12 @@ const MarketResearch = React.memo(() => {
 
 
 
-      console.log('fetchMarketData called with isRefresh:', isRefresh);
 
 
 
-      console.log('Current marketData exists:', !!marketData);
 
 
 
-      console.log('Cached data exists:', !!getCachedData(currentUser?.uid));
 
 
 
@@ -3932,7 +3713,6 @@ const MarketResearch = React.memo(() => {
 
       if (isRefresh) {
 
-        console.log('🧹 Clearing localStorage cache for fresh data...');
 
         // Clear user-specific cache
         if (currentUser?.uid) {
@@ -3980,7 +3760,6 @@ const MarketResearch = React.memo(() => {
 
       // Try to get existing market intelligence data first with cache busting
 
-      console.log('🔧 MAIN MARKET SIZE & OPPORTUNITY CALL: Using direct fetch with JSON.stringify to bypass apiFetch issues');
 
       
 
@@ -4012,11 +3791,8 @@ const MarketResearch = React.memo(() => {
 
       
 
-      console.log('🔧 MAIN MARKET SIZE & OPPORTUNITY CALL: Payload being sent:', payload);
 
-      console.log('🔧 MAIN MARKET SIZE & OPPORTUNITY CALL: Payload type:', typeof payload);
 
-      console.log('🔧 MAIN MARKET SIZE & OPPORTUNITY CALL: JSON.stringify(payload):', JSON.stringify(payload));
 
       
 
@@ -4064,15 +3840,12 @@ const MarketResearch = React.memo(() => {
         return;
       }
 
-      console.log('📊 Market intelligence data:', apiResponse);
 
 
 
-      console.log('🔍 DEBUGGING: Raw API response structure:', JSON.stringify(apiResponse, null, 2));
 
 
 
-      console.log('🔍 DEBUGGING: Response timestamp or ID:', apiResponse.timestamp || apiResponse.id || apiResponse.created_at || 'NO_TIMESTAMP');
 
 
 
@@ -4088,7 +3861,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-      console.log('🔍 DEBUGGING: Extracted report data:', JSON.stringify(reportData, null, 2));
 
 
 
@@ -4108,27 +3880,21 @@ const MarketResearch = React.memo(() => {
 
 
 
-      console.log('✅ Transformed data:', transformedData);
 
 
 
-      console.log('🔍 DEBUGGING: Key fields from transformed data:');
 
 
 
-      console.log('- Executive Summary:', transformedData.executiveSummary?.substring(0, 100) + '...');
 
 
 
-      console.log('- TAM Value:', transformedData.tamValue);
 
 
 
-      console.log('- SAM Value:', transformedData.samValue);
 
 
 
-      console.log('- Market Entry:', transformedData.marketEntry?.substring(0, 100) + '...');
 
 
 
@@ -4165,7 +3931,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-        console.log('💾 Market data saved to localStorage for persistence');
 
 
 
@@ -4217,7 +3982,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-        console.log('Using cached data as fallback after error');
 
 
 
@@ -4263,7 +4027,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-    console.log('🚀 MarketResearch component mounted - loading initial data');
 
 
 
@@ -4283,7 +4046,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-        console.log('🔄 Loading initial data for all components...');
 
 
 
@@ -4309,7 +4071,6 @@ const MarketResearch = React.memo(() => {
 
           if (!competitorData) {
 
-            console.log('🔄 COMPETITOR FALLBACK - competitorData still null after initial load, forcing refresh...');
 
             fetchCompetitorData(true, false);
 
@@ -4319,7 +4080,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-        console.log('✅ Initial data loading completed');
 
 
 
@@ -4369,7 +4129,6 @@ const MarketResearch = React.memo(() => {
 
     const handleCompanyProfileUpdate = (event: CustomEvent) => {
 
-      console.log('🔄 MarketResearch - Company profile updated, clearing cache and refreshing data');
 
       if (event.detail?.clearCaches) {
 
@@ -4385,10 +4144,8 @@ const MarketResearch = React.memo(() => {
 
         // Only clear regulatory data if it doesn't have a timestamp (meaning it's fallback data)
         if (!regulatoryData?.timestamp) {
-          console.log('🧹 Company profile update - clearing regulatory data (no timestamp)');
           setRegulatoryData(getDefaultRegulatoryData());
         } else {
-          console.log('🧹 Company profile update - keeping regulatory data (has timestamp):', regulatoryData.timestamp);
         }
 
         setIndustryTrendsData(null);
@@ -4415,7 +4172,6 @@ const MarketResearch = React.memo(() => {
 
         
 
-        console.log('🧹 Cleared all React state and reset fresh data flags for fresh data');
 
         
 
@@ -4454,13 +4210,11 @@ const MarketResearch = React.memo(() => {
 
   const smartRefresh = async (isFirstRefresh = false) => {
 
-    console.log('🔄 smartRefresh called with isFirstRefresh:', isFirstRefresh);
 
     
 
     // Reset all component status to pending to ensure all components are fetched
 
-    console.log('🔄 Resetting all component status to pending for fresh fetch...');
 
     setComponentStatus({
 
@@ -4481,30 +4235,19 @@ const MarketResearch = React.memo(() => {
     // NOTE: Don't clear existing data during refresh to prevent "no data available" flash
     // Data will be replaced when fresh data arrives from API
     // Only clear data if explicitly needed (e.g., on explicit refresh button click)
-    console.log('🔄 Keeping existing data during refresh - will be replaced when fresh data arrives');
 
     
 
-    // Add a safety timeout to prevent infinite loading (reduced to 15 seconds for 10-second target)
-
-    const refreshTimeout = setTimeout(() => {
-
-      console.log('⏰ REFRESH TIMEOUT - Force stopping refresh after 90 seconds');
-
+    // Safety timeout; can be extended when scheduling a retry run so loading stays visible
+    let refreshTimeout = setTimeout(() => {
       setIsRefreshing(false);
       setLoadingPhase('complete');
-
       toast({
-
         title: "Refresh Complete",
-
         description: "Loading completed. Some components may still be processing.",
-
         duration: 3000,
-
       });
-
-    }, 90000); // Increased to 90 seconds to allow all components to load
+    }, 180000); // 3 minutes for first run; extended when we schedule smartRefresh(false) retry
 
     
 
@@ -4560,7 +4303,6 @@ const MarketResearch = React.memo(() => {
         // Reset retry flag for new refresh
         isRetryingRef.current = false;
 
-        console.log('🔄 Starting first refresh - all components will be fetched');
 
       } else {
 
@@ -4573,15 +4315,12 @@ const MarketResearch = React.memo(() => {
         // Keep retry flag true since we're retrying
         isRetryingRef.current = true;
 
-        console.log(`🔄 Starting retry refresh (attempt ${refreshAttempt + 1}) - all components will be fetched`);
 
-        console.log(`🔄 Current component status before retry:`, componentStatus);
 
       }
 
 
 
-      console.log('🔄 Setting isRefreshing to true');
 
       setIsRefreshing(true);
       setIsInitialLoading(false); // Ensure initial loading is false for refresh
@@ -4594,16 +4333,13 @@ const MarketResearch = React.memo(() => {
       const isCompanyProfileUpdate = (window as any).companyProfileUpdated || false;
       
       // Always clear data for fresh fetch to ensure all components get updated data
-      console.log('🧹 Clearing all component data for fresh fetch');
       
         setMarketData(null);
         setCompetitorData(null);
         // Only clear regulatory data if it doesn't have a timestamp (meaning it's fallback data)
         if (!regulatoryData?.timestamp) {
-          console.log('🧹 Fresh fetch - clearing regulatory data (no timestamp)');
           setRegulatoryData(getDefaultRegulatoryData());
         } else {
-          console.log('🧹 Fresh fetch - keeping regulatory data (has timestamp):', regulatoryData.timestamp);
         }
         setIndustryTrendsData(null);
         setMarketEntryData(null);
@@ -4651,14 +4387,12 @@ const MarketResearch = React.memo(() => {
         localStorage.removeItem('companyProfileForRefresh');
       }
       
-      console.log('🧹 All component data and cache cleared for fresh fetch');
       
 
       // Set refresh start time for minimum wait validation
 
       (window as any).refreshStartTime = Date.now();
 
-      console.log('🕐 Refresh start time set:', new Date().toISOString());
 
       
 
@@ -4680,13 +4414,10 @@ const MarketResearch = React.memo(() => {
             companyProfileData = JSON.parse(cachedProfile);
             // Verify this profile belongs to the current user
             if (companyProfileData.user_id && companyProfileData.user_id !== currentUser.uid) {
-              console.warn('⚠️ [SMART REFRESH] Company profile user_id mismatch, ignoring');
               companyProfileData = null;
             } else {
-              console.log('📋 [SMART REFRESH] Using cached company profile for context:', companyProfileData);
             }
           } catch (error) {
-            console.warn('⚠️ Could not parse cached profile, fetching fresh:', error);
           }
         }
       }
@@ -4710,18 +4441,15 @@ const MarketResearch = React.memo(() => {
           companyProfileData = await profileResponse.json();
           // Verify the profile belongs to the current user
           if (companyProfileData.user_id && companyProfileData.user_id !== currentUser.uid) {
-            console.warn('⚠️ [SMART REFRESH] Retrieved profile user_id mismatch, ignoring');
             companyProfileData = null;
           } else {
             // Store in user-specific localStorage
             setUserLocalStorage('companyProfile', JSON.stringify(companyProfileData), currentUser.uid);
-            console.log('📋 [SMART REFRESH] Retrieved fresh company profile for context:', companyProfileData);
           }
         }
 
       } catch (error) {
 
-        console.warn('⚠️ Could not retrieve company profile, proceeding without context:', error);
 
         }
 
@@ -4733,7 +4461,6 @@ const MarketResearch = React.memo(() => {
       if (companyProfileData && currentUser?.uid) {
         // Final verification that the profile belongs to current user
         if (companyProfileData.user_id && companyProfileData.user_id !== currentUser.uid) {
-          console.warn('⚠️ [SMART REFRESH] Company profile user_id mismatch in final check, ignoring');
           companyProfileData = null;
         }
       }
@@ -4742,7 +4469,6 @@ const MarketResearch = React.memo(() => {
 
         setUserLocalStorage('companyProfileForRefresh', JSON.stringify(companyProfileData), currentUser.uid);
 
-        console.log('📋 Company profile data set for all components to use consistently (user-specific)');
 
       }
 
@@ -4750,118 +4476,86 @@ const MarketResearch = React.memo(() => {
 
       // DO NOT show cached data during refresh - this causes components to switch to previous data
       // The loading screen should mask the entire process until fresh data is ready
-      console.log('🔄 Refresh in progress - loading screen will mask the process until fresh data is ready');
       
 
       // No delay needed for parallel execution
 
 
 
-      // Define all components
-
+      // Define all components in UI display order
+      // UI Order: Market Size → Industry Trends → Competitor Landscape → Regulatory → Market Entry
       const allComponents = [
 
         { name: 'Market Size', fetchFn: fetchMarketSizeData, priority: 1 },
 
-        { name: 'Competitor Landscape', fetchFn: fetchCompetitorData, priority: 2 },
+        { name: 'Industry Trends', fetchFn: fetchIndustryTrendsData, priority: 2 },
 
-        { name: 'Industry Trends', fetchFn: fetchIndustryTrendsData, priority: 3 },
+        { name: 'Competitor Landscape', fetchFn: fetchCompetitorData, priority: 3 },
 
-        { name: 'Market Entry', fetchFn: fetchMarketEntryData, priority: 4 },
+        { name: 'Regulatory Compliance', fetchFn: fetchRegulatoryData, priority: 4 },
 
-        { name: 'Regulatory Compliance', fetchFn: fetchRegulatoryData, priority: 5 }
+        { name: 'Market Entry', fetchFn: fetchMarketEntryData, priority: 5 },
 
       ];
 
       
 
-      console.log('📋 COMPONENT ORDER - Processing components in this order:');
 
       allComponents.forEach((component, index) => {
 
-        console.log(`  ${index + 1}. ${component.name} (priority: ${component.priority})`);
 
       });
 
       
 
-      // AGGRESSIVE FIX: Always fetch all components and force refresh
       const componentsToFetch = allComponents;
-      
-      console.log('🔄 AGGRESSIVE FIX - FORCING ALL COMPONENTS TO REFRESH');
-      console.log('🔄 This will clear all data and force fresh API calls for all components');
-      console.log('🔄 Using direct API calls to bypass rate limiting issues');
-      
-      // Force clear all component data states
-      console.log('🧹 FORCE CLEARING ALL COMPONENT DATA STATES');
-      setMarketData(null);
-      setCompetitorData(null);
-      // Only clear regulatory data if it doesn't have a timestamp (meaning it's fallback data)
-      if (!regulatoryData?.timestamp) {
-        console.log('🧹 Force clear - clearing regulatory data (no timestamp)');
-        setRegulatoryData(getDefaultRegulatoryData());
-      } else {
-        console.log('🧹 Force clear - keeping regulatory data (has timestamp):', regulatoryData.timestamp);
-      }
-      setIndustryTrendsData(null);
-      setMarketEntryData(null);
-      // Preserve existing marketIntelligenceData structure - don't clear important fields
-      setMarketIntelligenceData(prev => ({
-        executiveSummary: prev?.executiveSummary || '',
-        tamValue: prev?.tamValue || '',
-        samValue: prev?.samValue || '',
-        GrowthRate: prev?.GrowthRate || '',
-        strategicRecommendations: prev?.strategicRecommendations || [],
-        marketEntry: prev?.marketEntry || '',
-        marketDrivers: prev?.marketDrivers || [],
-        marketSizeBySegment: prev?.marketSizeBySegment || {},
-        growthProjections: prev?.growthProjections || {},
-        timestamp: prev?.timestamp || null,
-        user_id: currentUser?.uid || prev?.user_id
-      }));
-      
-      // Force clear all localStorage caches
-      console.log('🧹 FORCE CLEARING ALL LOCALSTORAGE CACHES');
-      localStorage.removeItem('marketSizeData');
-      if (currentUser?.uid) {
-        removeUserLocalStorage('industryTrendsData', currentUser.uid);
-      } else {
-        localStorage.removeItem('industryTrendsData');
-      }
-      if (currentUser?.uid) {
-        removeUserLocalStorage('marketEntryData', currentUser.uid);
-      } else {
-        localStorage.removeItem('marketEntryData');
-      }
-      if (currentUser?.uid) {
-        removeUserLocalStorage('competitorData', currentUser.uid);
-      } else {
-        localStorage.removeItem('competitorData');
-      }
-      if (currentUser?.uid) {
-        removeUserLocalStorage('regulatoryData', currentUser.uid);
-      } else {
-        localStorage.removeItem('regulatoryData');
-      }
-      if (currentUser?.uid) {
-        removeUserLocalStorage('companyProfileForRefresh', currentUser.uid);
-      } else {
-        localStorage.removeItem('companyProfileForRefresh');
+
+      // Only clear component data and caches on first refresh; on retry runs keep existing data so UI doesn't flash and we only overwrite when a component succeeds
+      if (isFirstRefresh) {
+        setMarketData(null);
+        setCompetitorData(null);
+        if (!regulatoryData?.timestamp) {
+          setRegulatoryData(getDefaultRegulatoryData());
+        }
+        setIndustryTrendsData(null);
+        setMarketEntryData(null);
+        setMarketIntelligenceData(prev => ({
+          executiveSummary: prev?.executiveSummary || '',
+          tamValue: prev?.tamValue || '',
+          samValue: prev?.samValue || '',
+          GrowthRate: prev?.GrowthRate || '',
+          strategicRecommendations: prev?.strategicRecommendations || [],
+          marketEntry: prev?.marketEntry || '',
+          marketDrivers: prev?.marketDrivers || [],
+          marketSizeBySegment: prev?.marketSizeBySegment || {},
+          growthProjections: prev?.growthProjections || {},
+          timestamp: prev?.timestamp || null,
+          user_id: currentUser?.uid || prev?.user_id
+        }));
+        localStorage.removeItem('marketSizeData');
+        if (currentUser?.uid) {
+          removeUserLocalStorage('industryTrendsData', currentUser.uid);
+          removeUserLocalStorage('marketEntryData', currentUser.uid);
+          removeUserLocalStorage('competitorData', currentUser.uid);
+          removeUserLocalStorage('regulatoryData', currentUser.uid);
+          removeUserLocalStorage('companyProfileForRefresh', currentUser.uid);
+        } else {
+          localStorage.removeItem('industryTrendsData');
+          localStorage.removeItem('marketEntryData');
+          localStorage.removeItem('competitorData');
+          localStorage.removeItem('regulatoryData');
+          localStorage.removeItem('companyProfileForRefresh');
+        }
       }
       
       allComponents.forEach((component, index) => {
-        console.log(`  ${index + 1}. ${component.name} - WILL BE FORCE REFRESHED`);
       });
 
       
 
-      console.log(`🔄 Processing ${componentsToFetch.length} components (${isFirstRefresh ? 'first refresh - all' : 'manual refresh - all'})...`);
 
-      console.log(`🔄 Current component status:`, componentStatus);
 
-      console.log(`🔄 Components to fetch:`, componentsToFetch.map(c => c.name));
 
-      console.log(`🔄 Components NOT being fetched:`, allComponents.filter(c => !componentsToFetch.includes(c)).map(c => c.name));
 
       
 
@@ -4870,258 +4564,114 @@ const MarketResearch = React.memo(() => {
       
 
       const currentStatus = { ...componentStatus }; // Local copy to track status
-
       
+      // Build context object to accumulate data from previous components for cascading refresh
+      const accumulatedContext: any = {};
 
-      // Process all components in parallel with rate limiting
+      // Process components sequentially (cascading) with context passing
 
-      console.log(`🚀 Starting parallel API calls for ${componentsToFetch.length} components...`);
+      // Process components sequentially (cascading: each request body includes previous responses as context)
+      const componentResults: any[] = [];
+      console.log(`📋 [CASCADE] Refresh started – components in order: ${componentsToFetch.map(c => c.name).join(' → ')}`);
 
-      
-
-      // Create promises for all components
-
-      // Process components sequentially with proper delays to prevent rate limiting
-      const componentPromises = componentsToFetch.map(async (component, index) => {
-
-        console.log(`🔄 Processing ${component.name} (${index + 1}/${componentsToFetch.length})...`);
-
+      for (let index = 0; index < componentsToFetch.length; index++) {
+        const component = componentsToFetch[index];
         
-
         try {
-
-          // Add staggered delay to prevent rate limiting
-          const staggerDelay = index * 100; // 100ms delay between each component (reduced for faster refresh)
-          if (staggerDelay > 0) {
-            console.log(`⏳ Waiting ${staggerDelay}ms before calling ${component.name} to prevent rate limiting...`);
-            await new Promise(resolve => setTimeout(resolve, staggerDelay));
-          }
-
           // Update component status to pending
-
           currentStatus[component.name] = 'pending';
-
           setComponentStatus(prev => ({ ...prev, [component.name]: 'pending' }));
 
-          
-
-          console.log(`🚀 Calling API for ${component.name} with rate limiting...`);
-
-          
-
-          // Special monitoring for Competitor Landscape
-
-          if (component.name === 'Competitor Landscape') {
-
-            console.log(`🏆 COMPETITOR LANDSCAPE - Starting API call...`);
-
-            console.log(`🏆 COMPETITOR LANDSCAPE - Current competitorData:`, !!competitorData);
-
-            console.log(`🏆 COMPETITOR LANDSCAPE - Current timestamp:`, competitorData?.timestamp);
-
-          }
-
-          
-
           const startTime = Date.now();
-
-          // ROBUST API CALL HANDLING - Add timeout and fallback for all components
-          let result;
-          const timeoutDuration = 45000; // 45 seconds timeout for all components (increased from 20s)
-          
-          console.log(`🔄 ${component.name} - Starting API call with ${timeoutDuration}ms timeout`);
+          const timeoutDuration = 60000; // 60 seconds per component (reduced partial failures for last components)
           
           const timeoutPromise = new Promise((_, reject) => {
             setTimeout(() => reject(new Error(`${component.name} API call timeout after ${timeoutDuration/1000} seconds`)), timeoutDuration);
           });
           
-          // BYPASS RATE LIMITER - Use direct API calls to avoid rate limiting issues
-          console.log(`🔄 ${component.name} - Using direct API call (bypassing rate limiter)`);
-          
+          // Make API call with context
+          // Request and response bodies will be logged inside fetch function
+          let result;
           try {
             result = await Promise.race([
-              component.fetchFn(true, false), // Direct API call
+              component.fetchFn(true, false, accumulatedContext), // Pass context to fetch function
               timeoutPromise
             ]);
-            console.log(`✅ ${component.name} direct API call completed successfully`);
-          } catch (apiError) {
-            console.error(`❌ ${component.name} direct API call failed:`, apiError);
             
-            // DIAGNOSTIC: Log if this is a timeout (backend issue) or other error
-            if (apiError instanceof Error) {
-              if (apiError.message.includes('timeout')) {
-                console.error(`⏰ BACKEND TIMEOUT: ${component.name} timed out after 45 seconds - this indicates a backend performance issue`);
-              } else {
-                console.error(`❌ BACKEND ERROR: ${component.name} failed with error: ${apiError.message}`);
+            // Extract data from result and add to accumulated context for next component
+            if (result && typeof result === 'object') {
+              const contextKeyMap: { [key: string]: string } = {
+                'Market Size': 'marketSize',
+                'Industry Trends': 'industryTrends',
+                'Competitor Landscape': 'competitorLandscape',
+                'Regulatory Compliance': 'regulatoryCompliance',
+                'Market Entry': 'marketEntry'
+              };
+              
+              const contextKey = contextKeyMap[component.name];
+              if (contextKey) {
+                accumulatedContext[contextKey] = result;
+                // Log context cascaded so next request body will include these keys
+                const nextIndex = index + 1;
+                if (nextIndex < componentsToFetch.length) {
+                  console.log(`📋 [CONTEXT CASCADE] After ${component.name} → next request (${componentsToFetch[nextIndex].name}) will include context:`, Object.keys(accumulatedContext));
+                }
               }
             }
             
-            throw apiError;
+            currentStatus[component.name] = 'success';
+            setComponentStatus(prev => ({ ...prev, [component.name]: 'success' }));
+            componentResults.push({ status: 'fulfilled', value: result });
+            
+          } catch (apiError) {
+            // Component failed - add error stub to context so next components still receive "this one failed" and backend can use fallback
+            const reason = apiError instanceof Error ? apiError.message : String(apiError);
+            console.error(`❌ ${component.name} failed:`, reason);
+            const contextKeyMap: { [key: string]: string } = {
+              'Market Size': 'marketSize',
+              'Industry Trends': 'industryTrends',
+              'Competitor Landscape': 'competitorLandscape',
+              'Regulatory Compliance': 'regulatoryCompliance',
+              'Market Entry': 'marketEntry'
+            };
+            const contextKey = contextKeyMap[component.name];
+            if (contextKey) {
+              accumulatedContext[contextKey] = { _error: true, _message: reason, _status: 'failed' };
+              const nextIndex = index + 1;
+              if (nextIndex < componentsToFetch.length) {
+                console.log(`📋 [CONTEXT CASCADE] After ${component.name} (failed) → next request will include error stub. Context keys:`, Object.keys(accumulatedContext));
+              }
+            }
+            currentStatus[component.name] = 'failed';
+            setComponentStatus(prev => ({ ...prev, [component.name]: 'failed' }));
+            componentResults.push({ status: 'rejected', value: null, reason });
           }
-
-          const endTime = Date.now();
-
-          const duration = endTime - startTime;
-
-          console.log(`⏱️ ${component.name} API call took ${duration}ms`);
-
-          
-
-          // Special monitoring for Competitor Landscape
-
-          if (component.name === 'Competitor Landscape') {
-
-            console.log(`🏆 COMPETITOR LANDSCAPE - API call completed in ${duration}ms`);
-
-            console.log(`🏆 COMPETITOR LANDSCAPE - Result status:`, (result as any)?.status || 'unknown');
-
-          }
-
-          
-
-          // Mark component as API complete (but not yet validated)
-
-          currentStatus[component.name] = 'pending'; // Keep as pending until validation
-
-          setComponentStatus(prev => ({ ...prev, [component.name]: 'pending' }));
-
-          console.log(`✅ ${component.name} API call completed successfully in ${duration}ms - awaiting validation`);
-
-          
-
-          return { status: 'fulfilled', value: result };
 
           
 
         } catch (error) {
-
-          console.error(`❌ ${component.name} fetch failed:`, error);
-
-          // AGGRESSIVE ERROR HANDLING - Try direct API call for all failed components
-          if (error.message?.includes('timeout') || error.message?.includes('rate limit') || error.message?.includes('failed')) {
-            console.log(`🔄 ${component.name} - API failed, trying direct call as fallback...`);
-            
-            try {
-              // Try direct API call with shorter timeout (30 seconds)
-              const fallbackTimeoutPromise = new Promise((_, reject) => {
-                setTimeout(() => reject(new Error(`${component.name} fallback API call timeout after 30 seconds`)), 30000);
-              });
-              
-              const directResult = await Promise.race([
-                component.fetchFn(true, false),
-                fallbackTimeoutPromise
-              ]);
-              console.log(`✅ ${component.name} direct API call succeeded after failure`);
-              
-              // Process the successful result
-              return { status: 'fulfilled', value: directResult };
-            } catch (directError) {
-              console.error(`❌ ${component.name} direct API call also failed:`, directError);
-              // Continue with normal error handling
-            }
-          }
-
+          console.error(`❌ ${component.name} failed:`, error instanceof Error ? error.message : String(error));
+          
           // Update component status to failed
-          // Track failure count to prevent infinite retry loops
           setComponentFailureCounts(prev => {
             const currentCount = (prev[component.name] || 0) + 1;
-            const errorMsg = error instanceof Error ? error.message : String(error);
-            const isTimeout = errorMsg.includes('timeout');
-            
-            console.warn(`⚠️ ${component.name} failed (count: ${currentCount}). Max retries: 2`);
-            if (isTimeout) {
-              console.error(`⏰ BACKEND TIMEOUT DETECTED: ${component.name} is timing out - this is likely a backend performance issue`);
-            } else {
-              console.error(`❌ BACKEND ERROR: ${component.name} failed with: ${errorMsg}`);
-            }
-            
             return { ...prev, [component.name]: currentCount };
           });
 
           currentStatus[component.name] = 'failed';
-
           setComponentStatus(prev => ({ ...prev, [component.name]: 'failed' }));
           
-          // Log the failure but don't throw - allow other components to continue
-          console.warn(`⚠️ ${component.name} failed to load, but continuing with other components`);
-
-          
-
-          // Add immediate retry for failed components (especially Competitor Landscape)
-
-          if (component.name === 'Competitor Landscape') {
-
-            console.log(`🔄 COMPETITOR FALLBACK - Immediate retry for failed ${component.name}...`);
-
-            setTimeout(async () => {
-
-              try {
-
-                await component.fetchFn(true, false);
-
-                console.log(`✅ COMPETITOR FALLBACK - ${component.name} retry successful`);
-
-              } catch (retryError) {
-
-                console.error(`❌ COMPETITOR FALLBACK - ${component.name} retry failed:`, retryError);
-
-              }
-
-            }, 2000); // Retry after 2 seconds
-
-          }
-
-          
-
-          return { 
-
+          componentResults.push({ 
             status: 'rejected', 
-
-            reason: { 
-
-              status: 'error', 
-
-              component: component.name.toLowerCase().replace(' ', '-'), 
-
-              error: error instanceof Error ? error.message : 'Unknown error' 
-
-            } 
-
-          };
-
+            value: null,
+            reason: error instanceof Error ? error.message : 'Unknown error'
+          });
+          // Continue to next component even on outer catch
+          continue;
         }
-
-      });
-
+      }
       
-
-      // Wait for all components to complete with proper error handling
-
-      console.log(`⏳ Waiting for all ${componentsToFetch.length} components to complete with staggered timing...`);
-
-      const results = await Promise.allSettled(componentPromises);
-
-      console.log(`✅ All ${componentsToFetch.length} components completed with staggered timing`);
-
-      
-
-      // Log detailed results for debugging
-
-      results.forEach((result, index) => {
-
-        const component = componentsToFetch[index];
-
-        if (result.status === 'fulfilled') {
-
-          console.log(`✅ ${component.name} completed successfully`);
-
-        } else {
-
-          console.error(`❌ ${component.name} failed:`, result.reason);
-
-        }
-
-      });
+      const results = componentResults;
 
       
 
@@ -5139,25 +4689,18 @@ const MarketResearch = React.memo(() => {
 
       
 
-      console.log('📊 Final component status after processing:', currentStatus);
 
-      console.log('📊 All API calls complete:', allApiCallsComplete);
 
-      console.log('📊 Has failures:', hasFailures);
 
       
 
       if (allApiCallsComplete) {
 
-        console.log('🎉 All API calls completed! Starting validation...');
 
-        console.log('🎉 About to call validateAllComponentsHaveFreshData...');
 
-        console.log('🎉 Current component status:', currentStatus);
 
         // Clear retry flag since all API calls completed successfully
         isRetryingRef.current = false;
-        console.log('✅ All API calls successful - clearing retry flag');
 
         // Clear the refresh timeout since we're completing successfully
 
@@ -5171,13 +4714,10 @@ const MarketResearch = React.memo(() => {
 
       } else if (hasFailures && refreshAttempt < 3) {
 
-        console.log(`⚠️ Some components failed. Will retry failed components (attempt ${refreshAttempt + 1}/3)`);
 
-        console.log(`⚠️ Failed components:`, Object.entries(currentStatus).filter(([name, status]) => status === 'failed').map(([name]) => name));
 
         // Mark that retries are in progress
         isRetryingRef.current = true;
-        console.log('🔄 Setting isRetryingRef to true - loading screen will stay visible');
 
         // Implement immediate fallback for critical components
         // Filter out components that have failed too many times (prevent infinite loops)
@@ -5186,7 +4726,6 @@ const MarketResearch = React.memo(() => {
             if (status === 'failed') {
               const failureCount = componentFailureCounts[name] || 0;
               if (failureCount >= 2) {
-                console.warn(`🛑 ${name} has failed ${failureCount} times, skipping retry to prevent infinite loop`);
                 return false; // Skip components that have failed too many times
               }
               return true;
@@ -5197,7 +4736,6 @@ const MarketResearch = React.memo(() => {
         
         // If all failed components have exceeded retry limit, stop refreshing
         if (failedComponentNames.length === 0) {
-          console.log('🛑 All failed components have exceeded retry limit, stopping refresh');
           isRetryingRef.current = false; // Clear retry flag
           setIsRefreshing(false);
           setLoadingPhase('complete');
@@ -5211,7 +4749,6 @@ const MarketResearch = React.memo(() => {
 
         
 
-        console.log('🔄 Implementing immediate fallback for failed components...');
 
         
 
@@ -5225,7 +4762,6 @@ const MarketResearch = React.memo(() => {
 
             const retryDelay = 1000 + (index * 500); // 1s, 1.5s, 2s delays (paid plan allows faster)
 
-            console.log(`🔄 Scheduling retry for ${componentName} in ${retryDelay}ms...`);
 
             
 
@@ -5233,7 +4769,6 @@ const MarketResearch = React.memo(() => {
 
               try {
 
-                console.log(`🔄 Retrying ${componentName}...`);
 
                 
 
@@ -5247,7 +4782,6 @@ const MarketResearch = React.memo(() => {
         localStorage.removeItem('competitorData');
       }
 
-                  console.log('🧹 Cleared competitor data cache for retry');
 
                 } else if (componentName === 'Market Entry') {
 
@@ -5257,7 +4791,6 @@ const MarketResearch = React.memo(() => {
         localStorage.removeItem('marketEntryData');
       }
 
-                  console.log('🧹 Cleared market entry data cache for retry');
 
                 } else if (componentName === 'Industry Trends') {
 
@@ -5267,7 +4800,6 @@ const MarketResearch = React.memo(() => {
         localStorage.removeItem('industryTrendsData');
       }
 
-                  console.log('🧹 Cleared industry trends data cache for retry');
 
                 }
 
@@ -5275,7 +4807,7 @@ const MarketResearch = React.memo(() => {
 
                 const result = await executeWithRateLimit(
 
-                  () => component.fetchFn(true, false), // FORCE refresh=true for retries
+                  () => component.fetchFn(true, false, accumulatedContext), // Pass context so backend can use previous components' data
 
                   `${componentName} (Fallback)`
 
@@ -5283,7 +4815,6 @@ const MarketResearch = React.memo(() => {
 
                 
 
-                console.log(`✅ ${componentName} fallback retry successful`);
 
                 
 
@@ -5301,7 +4832,6 @@ const MarketResearch = React.memo(() => {
                   // Check if all components are now successful
                   const allSuccessful = Object.values(newStatus).every(status => status === 'success');
                   if (allSuccessful) {
-                    console.log('✅ All components successful after retry - clearing retry flag');
                     isRetryingRef.current = false;
                   }
                   
@@ -5348,13 +4878,11 @@ const MarketResearch = React.memo(() => {
 
           if (firstFailedComponent) {
 
-            console.log(`🔄 Immediate retry for ${failedComponentNames[0]}...`);
 
             setTimeout(async () => {
 
               try {
 
-                console.log(`🔄 Immediate retry for ${failedComponentNames[0]}...`);
 
                 
 
@@ -5390,7 +4918,7 @@ const MarketResearch = React.memo(() => {
 
                 await executeWithRateLimit(
 
-                  () => firstFailedComponent.fetchFn(true, false), // FORCE refresh=true for immediate retry
+                  () => firstFailedComponent.fetchFn(true, false, accumulatedContext), // Pass context for retry
 
                   `${failedComponentNames[0]} (Immediate)`
 
@@ -5398,7 +4926,6 @@ const MarketResearch = React.memo(() => {
 
                 
 
-                console.log(`✅ ${failedComponentNames[0]} immediate retry successful`);
 
                 // Reset failure count on success
                 setComponentFailureCounts(prev => {
@@ -5413,7 +4940,6 @@ const MarketResearch = React.memo(() => {
                   // Check if all components are now successful
                   const allSuccessful = Object.values(newStatus).every(status => status === 'success');
                   if (allSuccessful) {
-                    console.log('✅ All components successful after immediate retry - clearing retry flag');
                     isRetryingRef.current = false;
                   }
                   
@@ -5469,13 +4995,17 @@ const MarketResearch = React.memo(() => {
           });
         
         if (refreshAttempt < 3 && retryableComponents.length > 0) {
-          console.log(`🔄 Retrying ${retryableComponents.length} failed components (attempt ${refreshAttempt + 1}/3)`);
-          // Keep retry flag true - it will be cleared when all components succeed or max attempts reached
+          // Extend loading window so the retry run has time to complete (another 3 min)
+          clearTimeout(refreshTimeout);
+          refreshTimeout = setTimeout(() => {
+            setIsRefreshing(false);
+            setLoadingPhase('complete');
+            toast({ title: "Refresh Complete", description: "Loading completed. Some components may still be processing.", duration: 3000 });
+          }, 180000);
           setTimeout(() => {
             smartRefresh(false);
-          }, 2000); // Increased delay to 2 seconds to give backend time to recover
+          }, 2000); // Give backend time to recover before full cascade retry
         } else {
-          console.log('🛑 Maximum refresh attempts reached or no retryable components, stopping to prevent infinite loop');
           isRetryingRef.current = false; // Clear retry flag since we're stopping retries
           setIsRefreshing(false);
           setLoadingPhase('complete');
@@ -5490,7 +5020,6 @@ const MarketResearch = React.memo(() => {
 
       } else {
 
-        console.log('❌ Maximum retry attempts reached or all components failed');
 
         // Clear retry flag since we're stopping
         isRetryingRef.current = false;
@@ -5534,7 +5063,6 @@ const MarketResearch = React.memo(() => {
 
   const triggerScoutAndRefresh = async () => {
 
-    console.log('🔄🔄🔄 REFRESH TRIGGER - Starting smart refresh system...');
 
     await smartRefresh(true); // Start with first refresh
 
@@ -5542,7 +5070,6 @@ const MarketResearch = React.memo(() => {
 
   // Fetch all 5 Scout components and return their response bodies
   const getAllScoutComponentResponses = async (refresh = false) => {
-    console.log('🔍 Fetching all 5 Scout component response bodies...');
     
     if (!currentUser?.uid) {
       console.error('User not authenticated, cannot fetch Scout components');
@@ -5573,10 +5100,6 @@ const MarketResearch = React.memo(() => {
     ];
 
     // Build and log all request bodies before making API calls
-    console.log('');
-    console.log('═══════════════════════════════════════════════════════════════');
-    console.log('📋 SCOUT PAGE LOAD - ALL 5 COMPONENT REQUEST BODIES');
-    console.log('═══════════════════════════════════════════════════════════════');
     const allRequestBodies: { [key: string]: any } = {};
     
     components.forEach((component, index) => {
@@ -5592,16 +5115,9 @@ const MarketResearch = React.memo(() => {
 
       allRequestBodies[component.displayName] = payload;
       
-      // Log each component individually for clarity
-      console.log(`\n📤 Component ${index + 1}/5: ${component.displayName}`);
-      console.log(JSON.stringify(payload, null, 2));
     });
 
     // Log all request bodies together in JSON format
-    console.log('\n📋 ALL 5 COMPONENTS REQUEST BODIES (COMBINED JSON):');
-    console.log(JSON.stringify(allRequestBodies, null, 2));
-    console.log('═══════════════════════════════════════════════════════════════');
-    console.log('');
 
     const fetchComponent = async (component: { name: string; displayName: string }) => {
       try {
@@ -5614,9 +5130,6 @@ const MarketResearch = React.memo(() => {
           refresh: refresh
         };
 
-        // Log request body in JSON format (before sending to API)
-        console.log(`📤 [SCOUT REQUEST BODY] ${component.displayName}:`, JSON.stringify(payload, null, 2));
-        console.log(`📤 Fetching ${component.displayName}...`);
         const response = await fetch('/api/market-research', {
           method: 'POST',
           headers: {
@@ -5639,7 +5152,6 @@ const MarketResearch = React.memo(() => {
         }
 
         const responseBody = await response.json();
-        console.log(`✅ Successfully fetched ${component.displayName}`);
         
         return {
           component: component.displayName,
@@ -5668,7 +5180,6 @@ const MarketResearch = React.memo(() => {
     // Log summary
     const successful = results.filter(r => r.success).length;
     const failed = results.filter(r => !r.success).length;
-    console.log(`📊 Scout Components Summary: ${successful} successful, ${failed} failed`);
 
     return {
       results: results,
@@ -5690,11 +5201,10 @@ const MarketResearch = React.memo(() => {
 
 
 
-  const fetchMarketSizeData = async (refresh = true, showLoading = true) => {
+  const fetchMarketSizeData = async (refresh = true, showLoading = true, previousContext: any = {}) => {
 
 
 
-    console.log('🚀 Starting fetchMarketSizeData with refresh:', refresh, 'showLoading:', showLoading);
 
 
 
@@ -5702,7 +5212,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-      console.log('📍 Fetching market size data without config dependency');
 
 
 
@@ -5756,10 +5265,8 @@ const MarketResearch = React.memo(() => {
 
           // Verify this profile belongs to the current user
           if (companyData.user_id && companyData.user_id !== currentUser.uid) {
-            console.warn('⚠️ [FETCH MARKET SIZE] Company profile user_id mismatch, ignoring');
             companyData = null;
           } else {
-            console.log('📋 [FETCH MARKET SIZE] Using company profile data for market size request:', companyData);
           }
 
 
@@ -5772,7 +5279,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-        console.warn('⚠️ Could not get company profile data:', error);
 
 
 
@@ -5794,9 +5300,7 @@ const MarketResearch = React.memo(() => {
       }
 
       // Build payload based on the API structure shown in the image
-
-
-
+      // Include previous component context in data field for cascading refresh
       const payload = {
 
 
@@ -5810,11 +5314,14 @@ const MarketResearch = React.memo(() => {
 
 
 
-        data: {},
+        data: previousContext, // Pass previous component context for cascading
 
 
 
-        refresh: refresh // Use the refresh parameter passed to function
+        refresh: refresh, // Use the refresh parameter passed to function
+        _forceRefresh: true,
+        _timestamp: Date.now(),
+        _cacheBust: Math.random().toString(36).substring(7)
 
 
 
@@ -5826,47 +5333,14 @@ const MarketResearch = React.memo(() => {
 
 
 
-              console.log('📤 Sending API request to:', '/api/market-research');
-
-
-
-      console.log('📦 Market Size Complete Payload:', JSON.stringify(payload, null, 2));
-
-
-
-      console.log('📦 Market Size Payload component_name:', payload.component_name);
-
-
-
-      console.log('📦 Market Size Payload keys:', Object.keys(payload));
-
-
-
-      console.log('📦 Market Size Data keys:', Object.keys(payload.data));
-
-
-
-
-
-
-
-      // Add debugging to track data freshness
-
-
+      if (refresh) {
+        console.log(`📤 [REQUEST] Market Size & Opportunity:`);
+        console.log(JSON.stringify(payload, null, 2));
+      }
 
       const requestTimestamp = Date.now();
 
 
-
-      console.log('⏰ REQUEST TIMESTAMP:', requestTimestamp);
-
-
-
-      console.log('🔄 FORCE_REFRESH in payload:', payload.refresh);
-
-
-
-      
 
 
 
@@ -5902,18 +5376,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-      console.log('📊 MARKET SIZE - API response status:', response.status);
-      if (response.status === 500) {
-        console.error('❌📊 MARKET SIZE - Got 500 error from API!');
-      }
-
-
-
-      console.log('📨 Competitor API response headers:', Object.fromEntries(response.headers.entries()));
-
-
-
-      console.log('📨 Competitor API response ok:', response.ok);
 
 
 
@@ -5922,22 +5384,8 @@ const MarketResearch = React.memo(() => {
 
 
       if (!response.ok) {
-
-
-
         const errorText = await response.text();
-
-
-
-        console.error('❌🏆 API Error Response:', errorText);
-
-
-
-        console.error('❌🏆 API Error Status:', response.status);
-
-
-
-        console.error('❌🏆 API Error Headers:', Object.fromEntries(response.headers.entries()));
+        console.error(`❌ [ERROR] Market Size & Opportunity:`, errorText);
 
 
 
@@ -5953,7 +5401,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-          console.log('🔄 Trying alternative component names...');
 
 
 
@@ -5997,7 +5444,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-            console.log(`🔄 Trying component name: "${altName}"`);
 
 
 
@@ -6041,7 +5487,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-                console.log(`✅ Success with component name: "${altName}"`);
 
 
 
@@ -6069,7 +5514,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-                  console.log('✅ Alternative component name worked, processing data...');
 
 
 
@@ -6093,7 +5537,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-                console.log(`❌ Alternative name "${altName}" failed:`, altErrorText);
 
 
 
@@ -6105,7 +5548,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-              console.log(`❌ Alternative name "${altName}" failed:`, altError);
 
 
 
@@ -6137,20 +5579,11 @@ const MarketResearch = React.memo(() => {
 
 
 
-      console.log('✅🏆 API request successful, parsing response...');
-
-
-
       const apiResponse = await response.json();
-
-
-
-      console.log('📥 Market Size API response:', apiResponse);
-
-
-
-      console.log('🔍 API Response structure:', JSON.stringify(apiResponse, null, 2));
-      console.log('🔥📊 RAW Market Size API Response:', JSON.stringify(apiResponse, null, 2));
+      if (refresh) {
+        console.log(`📥 [RESPONSE] Market Size & Opportunity:`);
+        console.log(JSON.stringify(apiResponse, null, 2));
+      }
 
       // CRITICAL: Validate that the API response belongs to the current user
       if (!validateApiResponseUserId(apiResponse, currentUser?.uid, 'Market Size')) {
@@ -6208,7 +5641,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-        console.log('🔄 No existing data - will update');
 
 
 
@@ -6224,7 +5656,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-        console.log('🔄 Timestamp comparison result:', shouldUpdateData ? 'Update needed' : 'Data is current');
 
 
 
@@ -6236,35 +5667,27 @@ const MarketResearch = React.memo(() => {
 
 
 
-      console.log('🔄 MARKET SIZE UPDATE DECISION:');
 
 
 
-      console.log('  - Should update data:', shouldUpdateData);
 
 
 
-      console.log('  - Current data timestamp (RAW):', currentDataTimestamp);
 
 
 
-      console.log('  - New data timestamp (RAW):', newDataTimestamp);
 
 
 
-      console.log('  - Current data timestamp (UTC):', toUTCTimestamp(currentDataTimestamp));
 
 
 
-      console.log('  - New data timestamp (UTC):', toUTCTimestamp(newDataTimestamp));
 
 
 
-      console.log('  - Reason for update:', !currentDataTimestamp ? 'No existing data' : shouldUpdateData ? 'Swagger data is newer' : 'Current data is up to date');
 
 
 
-      console.log('  - Reason for update:', !currentDataTimestamp ? 'No existing data' : shouldUpdateData ? 'Swagger data is newer' : 'Current data is up to date');
 
 
 
@@ -6272,7 +5695,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-      console.log('🔍 DEBUGGING: Current marketIntelligenceData before update:', JSON.stringify(marketIntelligenceData, null, 2));
 
 
 
@@ -6288,7 +5710,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-        console.log('✅ Found data in API response and data is newer - updating');
 
 
 
@@ -6296,11 +5717,9 @@ const MarketResearch = React.memo(() => {
 
 
 
-        console.log('📊 Report data:', JSON.stringify(report, null, 2));
 
 
 
-        console.log('🔄 Updating marketIntelligenceData with report:', report);
 
 
 
@@ -6312,47 +5731,36 @@ const MarketResearch = React.memo(() => {
 
 
 
-        console.log('🔍 FIELD CHECK - executiveSummary:', report.executiveSummary);
 
 
 
-        console.log('🔍 FIELD CHECK - tamValue:', report.tamValue);
 
 
 
-        console.log('🔍 FIELD CHECK - samValue:', report.samValue);
 
 
 
-        console.log('🔍 FIELD CHECK - GrowthRate:', report.GrowthRate);
 
 
 
-        console.log('🔍 FIELD CHECK - strategicRecommendations:', report.strategicRecommendations);
 
 
 
-        console.log('🔍 TYPE CHECK - strategicRecommendations type:', typeof report.strategicRecommendations);
 
 
 
-        console.log('🔍 ARRAY CHECK - strategicRecommendations isArray:', Array.isArray(report.strategicRecommendations));
 
 
 
-        console.log('🔍 FIELD CHECK - marketEntry:', report.marketEntry);
 
 
 
-        console.log('🔍 FIELD CHECK - marketDrivers:', report.marketDrivers);
 
 
 
-        console.log('🔍 FIELD CHECK - marketSizeBySegment:', report.marketSizeBySegment);
 
 
 
-        console.log('🔍 FIELD CHECK - growthProjections:', report.growthProjections);
 
 
 
@@ -6433,39 +5841,30 @@ const MarketResearch = React.memo(() => {
 
 
 
-          console.log('🔍 DEBUGGING: NEW marketIntelligenceData after MARKET SIZE update:', JSON.stringify(newData, null, 2));
 
 
 
-          console.log('🔍 DEBUGGING: Market Size Data comparison:');
 
 
 
-          console.log('- OLD Executive Summary:', prev.executiveSummary?.substring(0, 100) + '...');
 
 
 
-          console.log('- NEW Executive Summary:', newData.executiveSummary?.substring(0, 100) + '...');
 
 
 
-          console.log('- OLD TAM Value:', prev.tamValue);
 
 
 
-          console.log('- NEW TAM Value:', newData.tamValue);
 
 
 
-          console.log('- OLD Timestamp:', prev.timestamp);
 
 
 
-          console.log('- NEW Timestamp:', newData.timestamp);
 
 
 
-          console.log('✅ MARKET SIZE DATA UPDATED - Component name: "Market Size & Opportunity"');
 
 
 
@@ -6563,7 +5962,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-          console.log('✅ Updated marketData with Market Size API data:', updated);
 
 
 
@@ -6601,7 +5999,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-        console.log('❌ No data found in Market Size API response - keeping existing data');
 
 
 
@@ -6673,9 +6070,9 @@ const MarketResearch = React.memo(() => {
 
 
 
-  const fetchIndustryTrendsData = async (refresh = false, showLoading = true) => {
+  const fetchIndustryTrendsData = async (refresh = false, showLoading = true, previousContext: any = {}) => {
 
-    console.log('🚀 Starting fetchIndustryTrendsData with refresh:', refresh, 'showLoading:', showLoading);
+    // Context will be visible in request body
 
     
 
@@ -6711,41 +6108,39 @@ const MarketResearch = React.memo(() => {
 
           companyData = JSON.parse(profileData);
 
-          console.log('📋 Using company profile data for industry trends request (user-specific):', companyData);
 
         }
 
       } catch (error) {
 
-        console.warn('⚠️ Could not get company profile data:', error);
 
       }
 
 
 
       // Payload specifically for Industry Trends using API structure
-
+      // Include previous component context in data field for cascading refresh
       const payload = {
         org_id: orgIdToUse,
         user_id: currentUser?.uid || "",
         component_name: "industry trends report",
-        data: {},
-        refresh: refresh
+        data: previousContext, // Pass previous component context for cascading
+        refresh: refresh,
+        _forceRefresh: true,
+        _timestamp: Date.now(),
+        _cacheBust: Math.random().toString(36).substring(7)
       };
 
 
 
-      console.log('📤 Sending Industry Trends API request with payload:', payload);
-      console.log('📤 [SCOUT REQUEST BODY] Industry Trends Report:', JSON.stringify(payload, null, 2));
-
-      console.log('🔄 Industry Trends refresh parameter:', refresh);
-
-
+      if (refresh) {
+        console.log(`📤 [REQUEST] Industry Trends Report:`);
+        console.log(JSON.stringify(payload, null, 2));
+      }
 
       // Note: Removed cache-busting fields (_timestamp, _cache_bust) as backend doesn't accept them
       // The backend expects only: org_id, user_id, component_name, data, refresh
 
-      console.log('📈 INDUSTRY TRENDS - Making API call to /api/market-research');
       const response = await fetch('/api/market-research', {
         method: 'POST',
         headers: {
@@ -6761,8 +6156,10 @@ const MarketResearch = React.memo(() => {
 
       const result = await response.json();
 
-      // Log full API response in JSON format (matching competitor landscape format)
-      console.log('🔥📈 RAW Industry Trends API Response:', JSON.stringify(result, null, 2));
+      if (refresh) {
+        console.log(`📥 [RESPONSE] Industry Trends Report:`);
+        console.log(JSON.stringify(result, null, 2));
+      }
 
       // CRITICAL: Validate that the API response belongs to the current user
       if (!validateApiResponseUserId(result, currentUser?.uid, 'Industry Trends')) {
@@ -6772,9 +6169,7 @@ const MarketResearch = React.memo(() => {
         return;
       }
 
-      // Log the result for debugging
-
-      logApiCallResult('Industry Trends', result, refresh);
+      if (!refresh) logApiCallResult('Industry Trends', result, refresh);
 
 
 
@@ -6782,17 +6177,8 @@ const MarketResearch = React.memo(() => {
 
         const apiData = result.data;
 
-        console.log('🎯 Processing API data for Industry Trends:', apiData);
 
-        console.log('🎯 Industry Trends API response structure:', JSON.stringify(apiData, null, 2));
         
-        console.log('🔍 Visual Charts Debug:', {
-          hasVisualCharts: !!apiData.visualCharts,
-          visualCharts: apiData.visualCharts,
-          hasAiAdoptionTrends: !!apiData.visualCharts?.aiAdoptionTrends,
-          aiAdoptionTrends: apiData.visualCharts?.aiAdoptionTrends,
-          aiAdoptionTrendsLength: apiData.visualCharts?.aiAdoptionTrends?.length
-        });
 
 
 
@@ -6804,11 +6190,8 @@ const MarketResearch = React.memo(() => {
 
         
 
-        console.log('🎯 Current industryTrendsData:', industryTrendsData);
 
-        console.log('🎯 New timestamp:', newTimestamp);
 
-        console.log('🎯 Current timestamp:', currentTimestamp);
 
         
 
@@ -6820,7 +6203,6 @@ const MarketResearch = React.memo(() => {
 
         if (refresh || !currentTimestamp || isTimestampNewer(newTimestamp, currentTimestamp)) {
 
-          console.log('✅ Industry Trends data update needed (refresh:', refresh, 'or newer data)');
 
           
 
@@ -6858,11 +6240,9 @@ const MarketResearch = React.memo(() => {
               ? {
                   aiAdoptionTrends: (apiData.visualCharts.aiAdoptionTrends !== undefined && Array.isArray(apiData.visualCharts.aiAdoptionTrends) && apiData.visualCharts.aiAdoptionTrends.length > 0)
                     ? (() => {
-                        console.log('✅ Using API aiAdoptionTrends:', apiData.visualCharts.aiAdoptionTrends);
                         return apiData.visualCharts.aiAdoptionTrends;
                       })()
                     : (() => {
-                        console.log('⚠️ API aiAdoptionTrends missing or empty, using existing:', industryTrendsData?.visualCharts?.aiAdoptionTrends);
                         return (industryTrendsData?.visualCharts?.aiAdoptionTrends || []);
                       })(),
                   technologyBudgetAllocation: (apiData.visualCharts.technologyBudgetAllocation !== undefined && apiData.visualCharts.technologyBudgetAllocation && typeof apiData.visualCharts.technologyBudgetAllocation === 'object' && Object.keys(apiData.visualCharts.technologyBudgetAllocation).length > 0)
@@ -6890,17 +6270,14 @@ const MarketResearch = React.memo(() => {
 
           markFreshData('Industry Trends');
 
-          console.log('✅ Industry Trends data updated successfully');
 
         } else {
 
-          console.log('ℹ️ Current Industry Trends data is up to date');
 
           // Force update on refresh even if timestamps are the same
 
           if (refresh) {
 
-            console.log('🔄 Forcing Industry Trends data update due to refresh request');
 
             const updatedData = {
 
@@ -6926,7 +6303,6 @@ const MarketResearch = React.memo(() => {
 
             markFreshData('Industry Trends');
 
-            console.log('✅ Industry Trends data force-updated on refresh');
 
           }
 
@@ -6934,11 +6310,9 @@ const MarketResearch = React.memo(() => {
 
       } else {
 
-        console.warn('⚠️ Industry Trends - API call succeeded but data structure is unexpected');
 
         if (refresh) {
 
-          console.log('🔄 Industry Trends - Will keep existing data due to unexpected response');
 
         }
 
@@ -6976,15 +6350,15 @@ const MarketResearch = React.memo(() => {
 
 
 
-  const fetchRegulatoryData = async (refresh = true, showLoading = true) => {
+  const fetchRegulatoryData = async (refresh = true, showLoading = true, previousContext: any = {}) => {
 
 
 
-    console.log('🚀🚀🚀 REGULATORY DATA FETCH CALLED - Starting fetchRegulatoryData with refresh:', refresh, 'showLoading:', showLoading);
+    if (Object.keys(previousContext).length > 0) {
+    }
 
 
 
-    console.log('🚀🚀🚀 REGULATORY - Current regulatoryData state:', regulatoryData);
 
 
 
@@ -6992,7 +6366,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-      console.log('📍 Fetching regulatory compliance data with correct component_name');
 
 
 
@@ -7042,11 +6415,9 @@ const MarketResearch = React.memo(() => {
 
       const profile = JSON.parse(getUserLocalStorage('companyProfileForRefresh', currentUser?.uid) || '{}');
 
-      console.log(`📋 REGULATORY COMPLIANCE - Reading company profile at ${new Date().toISOString()} (user-specific)`);
 
 
 
-      console.log('📋 Using company profile data for regulatory request:', profile);
 
 
 
@@ -7055,15 +6426,16 @@ const MarketResearch = React.memo(() => {
 
 
       // Payload specifically for Regulatory Compliance using API structure matching working components
-
-
-
+      // Include previous component context in data field for cascading refresh
       const payload = {
         org_id: orgIdToUse,
         user_id: currentUser?.uid || "",
         component_name: "regulatory & compliance highlights",
-        data: {},
-        refresh: refresh
+        data: previousContext, // Pass previous component context for cascading
+        refresh: refresh,
+        _forceRefresh: true,
+        _timestamp: Date.now(),
+        _cacheBust: Math.random().toString(36).substring(7)
       };
 
 
@@ -7072,8 +6444,10 @@ const MarketResearch = React.memo(() => {
 
 
 
-      console.log('📤 Sending Regulatory API request with payload:', payload);
-      console.log('📤 [SCOUT REQUEST BODY] Regulatory & Compliance Highlights:', JSON.stringify(payload, null, 2));
+      if (refresh) {
+        console.log(`📤 [REQUEST] Regulatory & Compliance Highlights:`);
+        console.log(JSON.stringify(payload, null, 2));
+      }
 
 
 
@@ -7113,7 +6487,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-      console.log('📨 Regulatory API response status:', response.status);
 
 
 
@@ -7139,8 +6512,10 @@ const MarketResearch = React.memo(() => {
 
       const result = await response.json();
 
-      // Log full API response in JSON format (matching competitor landscape format)
-      console.log('🔥🚀 RAW Regulatory Compliance API Response:', JSON.stringify(result, null, 2));
+      if (refresh) {
+        console.log(`📥 [RESPONSE] Regulatory & Compliance Highlights:`);
+        console.log(JSON.stringify(result, null, 2));
+      }
 
       // CRITICAL: Validate that the API response belongs to the current user
       if (!validateApiResponseUserId(result, currentUser?.uid, 'Regulatory Compliance')) {
@@ -7150,15 +6525,12 @@ const MarketResearch = React.memo(() => {
         return;
       }
 
-      console.log('📊🚀 Regulatory API result:', result);
 
 
 
-      console.log('📊🚀 Regulatory API result.status:', result.status);
 
 
 
-      console.log('📊🚀 Regulatory API result.data exists:', !!result.data);
 
 
 
@@ -7174,23 +6546,18 @@ const MarketResearch = React.memo(() => {
 
 
 
-        console.log('🎯🚀 Processing API data for Regulatory Compliance:', apiData);
 
 
 
-        console.log('🎯🚀 API Data Keys:', Object.keys(apiData));
 
 
 
-        console.log('🎯🚀 API Data executiveSummary:', apiData.executiveSummary);
 
 
 
-        console.log('🎯🚀 API Data euAiActDeadline:', apiData.euAiActDeadline);
 
 
 
-        console.log('🎯🚀 API Data gdprCompliance:', apiData.gdprCompliance);
 
 
 
@@ -7214,19 +6581,15 @@ const MarketResearch = React.memo(() => {
 
 
 
-        console.log('🔍 REGULATORY TIMESTAMP ANALYSIS (UTC):');
 
 
 
-        console.log('  - Current request time (UTC):', new Date().toISOString());
 
 
 
-        console.log('  - Frontend data time (UTC):', currentTimestamp ? new Date(currentTimestamp).toISOString() : 'NO_TIMESTAMP');
 
 
 
-        console.log('  - Swagger data time (UTC):', newTimestamp ? new Date(newTimestamp).toISOString() : 'NO_TIMESTAMP');
 
 
 
@@ -7247,35 +6610,27 @@ const MarketResearch = React.memo(() => {
 
 
 
-        console.log('🔍🚀 REGULATORY UPDATE DECISION:');
 
 
 
-        console.log('  - refresh param:', refresh);
 
 
 
-        console.log('  - hasNewData:', hasNewData);
 
 
 
-        console.log('  - shouldUpdate:', shouldUpdate);
 
 
 
-        console.log('  - !currentTimestamp:', !currentTimestamp);
 
 
 
-        console.log('  - !regulatoryData?.executiveSummary:', !regulatoryData?.executiveSummary);
 
 
 
-        console.log('  - Current regulatoryData timestamp:', regulatoryData?.timestamp);
 
 
 
-        console.log('  - New API timestamp:', newTimestamp);
 
 
 
@@ -7287,29 +6642,18 @@ const MarketResearch = React.memo(() => {
 
 
 
-          console.log('✅ Found data in API response and data is newer - updating regulatory data');
 
 
 
-          console.log('🔍🚀 REGULATORY API DATA EXTRACTED:');
 
-          console.log('  - apiData.executiveSummary:', apiData.executiveSummary);
 
-          console.log('  - apiData.euAiActDeadline:', apiData.euAiActDeadline);
 
-          console.log('  - apiData.gdprCompliance:', apiData.gdprCompliance);
 
-          console.log('  - apiData.potentialFines:', apiData.potentialFines);
 
-          console.log('  - apiData.dataLocalization:', apiData.dataLocalization);
 
-          console.log('  - apiData.keyUpdates:', apiData.keyUpdates);
 
-          console.log('  - apiData.visualDataCards:', apiData.visualDataCards);
 
-          console.log('  - apiData.regionalData:', apiData.regionalData);
 
-          console.log('  - apiData.strategicRecommendations:', apiData.strategicRecommendations);
 
           // Transform visualDataCards to match component expectations
           const transformVisualDataCards = (apiCards: any[]) => {
@@ -7356,15 +6700,10 @@ const MarketResearch = React.memo(() => {
             ? transformVisualDataCards(apiData.visualDataCards)
             : null;
 
-          console.log('🔍🚀 TRANSFORMED VISUAL DATA CARDS:', transformedVisualDataCards);
 
-          console.log('🔍🚀 CURRENT REGULATORY DATA:');
 
-          console.log('  - regulatoryData.executiveSummary:', regulatoryData.executiveSummary);
 
-          console.log('  - regulatoryData.euAiActDeadline:', regulatoryData.euAiActDeadline);
 
-          console.log('  - regulatoryData.gdprCompliance:', regulatoryData.gdprCompliance);
 
 
 
@@ -7441,25 +6780,13 @@ const MarketResearch = React.memo(() => {
 
 
 
-          console.log('🔍🚀 UPDATED REGULATORY DATA:');
 
-          console.log('  - updatedRegulatoryData.executiveSummary:', updatedRegulatoryData.executiveSummary);
 
-          console.log('  - updatedRegulatoryData.euAiActDeadline:', updatedRegulatoryData.euAiActDeadline);
 
-          console.log('  - updatedRegulatoryData.gdprCompliance:', updatedRegulatoryData.gdprCompliance);
           
-          console.log('  - updatedRegulatoryData.keyUpdates:', updatedRegulatoryData.keyUpdates);
-          console.log('  - updatedRegulatoryData.keyUpdates length:', updatedRegulatoryData.keyUpdates?.length);
           
-          console.log('  - updatedRegulatoryData.visualDataCards:', updatedRegulatoryData.visualDataCards);
-          console.log('  - updatedRegulatoryData.visualDataCards length:', updatedRegulatoryData.visualDataCards?.length);
           
-          console.log('  - updatedRegulatoryData.regionalData:', updatedRegulatoryData.regionalData);
-          console.log('  - updatedRegulatoryData.regionalData length:', updatedRegulatoryData.regionalData?.length);
           
-          console.log('  - updatedRegulatoryData.strategicRecommendations:', updatedRegulatoryData.strategicRecommendations);
-          console.log('  - Full updatedRegulatoryData object:', JSON.stringify(updatedRegulatoryData, null, 2));
 
 
 
@@ -7495,7 +6822,6 @@ const MarketResearch = React.memo(() => {
 
           setTimeout(() => {
 
-            console.log('✅🚀 REGULATORY DATA STATE UPDATE COMPLETED');
 
           }, 100);
 
@@ -7505,15 +6831,12 @@ const MarketResearch = React.memo(() => {
 
 
 
-          console.log('✅🚀🚀🚀 REGULATORY DATA STATE UPDATED:', updatedRegulatoryData);
 
 
 
-          console.log('✅🚀🚀🚀 REGULATORY - Old data:', regulatoryData);
 
 
 
-          console.log('✅🚀🚀🚀 REGULATORY - New data:', updatedRegulatoryData);
 
 
 
@@ -7521,7 +6844,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-          console.log('ℹ️🚀 Current regulatory data is already up to date - no update needed');
 
 
 
@@ -7533,11 +6855,9 @@ const MarketResearch = React.memo(() => {
 
 
 
-        console.log('⚠️🚀 No regulatory data in API response or API call failed');
 
 
 
-        console.log('⚠️🚀 result:', result);
 
 
 
@@ -7613,24 +6933,13 @@ const MarketResearch = React.memo(() => {
 
 
 
-  const fetchCompetitorData = async (refresh = false, showLoading = true) => {
+  const fetchCompetitorData = async (refresh = false, showLoading = true, previousContext: any = {}) => {
 
 
 
-    console.log('🏆🏆🏆 COMPETITOR DATA FETCH CALLED - Starting fetchCompetitorData with refresh:', refresh, 'showLoading:', showLoading);
-
-
-
-    console.log('🏆🏆🏆 COMPETITOR - Current competitorData state:', competitorData);
-
-
-
-    console.log('🏆🏆🏆 COMPETITOR - Current competitorData.timestamp:', competitorData?.timestamp);
-
-    
-    // Add debugging for refresh state
-    console.log('🏆🏆🏆 COMPETITOR - isRefreshing state:', isRefreshing);
-    console.log('🏆🏆🏆 COMPETITOR - showLoading parameter:', showLoading);
+    if (Object.keys(previousContext).length > 0) {
+      // Context will be visible in request body
+    }
     
 
     // Force clear cache for fresh data
@@ -7647,7 +6956,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-      console.log('📍 Fetching competitor landscape data with correct component_name');
 
 
 
@@ -7689,7 +6997,6 @@ const MarketResearch = React.memo(() => {
 
         const profileData = getUserLocalStorage('companyProfileForRefresh', currentUser?.uid);
 
-        console.log(`📋 COMPETITOR LANDSCAPE - Reading company profile at ${new Date().toISOString()} (user-specific)`);
 
 
 
@@ -7701,7 +7008,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-          console.log('📋 Using company profile data for competitor request:', companyData);
 
 
 
@@ -7713,7 +7019,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-        console.warn('⚠️ Could not get company profile data:', error);
 
 
 
@@ -7729,12 +7034,16 @@ const MarketResearch = React.memo(() => {
 
 
 
+      // Include previous component context in data field for cascading refresh
       const payload = {
         org_id: orgIdToUse,
         user_id: currentUser?.uid || "",
         component_name: "competitor landscape",
-        data: {},
-        refresh: refresh
+        data: previousContext, // Pass previous component context for cascading
+        refresh: refresh,
+        _forceRefresh: true,
+        _timestamp: Date.now(),
+        _cacheBust: Math.random().toString(36).substring(7)
       };
 
 
@@ -7743,31 +7052,10 @@ const MarketResearch = React.memo(() => {
 
 
 
-      console.log('📤 Sending Competitor API request with payload:', payload);
-
-      console.log('🔄 Competitor refresh parameter:', refresh);
-
-      console.log('📦 Competitor Complete Payload:', JSON.stringify(payload, null, 2));
-
-
-
-      console.log('📦 Competitor Payload component_name:', payload.component_name);
-
-
-
-      console.log('📦 Competitor Payload keys:', Object.keys(payload));
-
-
-
-      console.log('📦 Competitor Data keys:', Object.keys(payload.data));
-
-
-
-      console.log('📦 Competitor Payload Data:', payload.data);
-
-
-
-      console.log('📦 Competitor Refresh Flag:', payload.refresh);
+      if (refresh) {
+        console.log(`📤 [REQUEST] Competitor Landscape:`);
+        console.log(JSON.stringify(payload, null, 2));
+      }
 
 
 
@@ -7803,7 +7091,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-          console.log(`🔄🏆 COMPETITOR LANDSCAPE - Attempting API call (attempt ${retryCount + 1}/${maxRetries + 1})`);
 
           const response = await fetch('/api/market-research', {
 
@@ -7831,7 +7118,6 @@ const MarketResearch = React.memo(() => {
 
           });
 
-          console.log('🏆 COMPETITOR LANDSCAPE - API response status:', response.status);
           
           // Check if response is OK before parsing
           if (!response.ok) {
@@ -7860,13 +7146,7 @@ const MarketResearch = React.memo(() => {
             return;
           }
 
-          console.log('✅🏆 COMPETITOR LANDSCAPE - API call successful');
 
-          console.log('✅🏆 API response structure:', result);
-
-          console.log('✅🏆 API response status:', result?.status);
-
-          console.log('✅🏆 API response data exists:', !!result?.data);
 
 
 
@@ -7882,7 +7162,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-          console.error(`❌🏆 API call failed (attempt ${retryCount}/${maxRetries + 1}):`, apiError);
+          // Retry on error (silent)
 
 
 
@@ -7910,7 +7190,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-          console.log(`⏳🏆 Waiting 200ms before retry...`);
 
 
 
@@ -7928,57 +7207,16 @@ const MarketResearch = React.memo(() => {
 
       // Check if result exists (all retries may have failed)
       if (!result) {
-        console.error('❌🏆 All retry attempts failed - result is undefined');
+        console.error('❌ Competitor Landscape: All retry attempts failed');
         setCompetitorError('Failed to load competitor data after multiple attempts. The AI model service may be temporarily unavailable.');
         setIsCompetitorLoading(false);
         return;
       }
 
-      console.log('📊🏆 Competitor API result:', result);
-
-
-
-      console.log('📊🏆 Competitor API result.status:', result.status);
-
-
-
-      console.log('📊🏆 Competitor API result.data exists:', !!result.data);
-
-
-
-      console.log('📊🏆 Competitor API result.data:', result.data);
-
-
-
-      console.log('🔥🏆 RAW Competitor Swagger Data:', JSON.stringify(result, null, 2));
-      
-      // Add specific debugging for Competitor Landscape
-      console.log('🔍 COMPETITOR LANDSCAPE API DEBUG:');
-      console.log('  - API call successful:', result.status === 'success');
-      console.log('  - Has data:', !!result.data);
-      console.log('  - Data structure:', result.data ? Object.keys(result.data) : 'No data');
-      console.log('  - Has uiComponents:', !!result.data?.uiComponents);
-      console.log('  - uiComponents length:', result.data?.uiComponents?.length || 0);
-
-
-
-      console.log('🔍🏆 API CALL SUCCESS CHECK:');
-
-
-
-      console.log('  - result exists:', !!result);
-
-
-
-      console.log('  - result.status:', result?.status);
-
-
-
-      console.log('  - result.data exists:', !!result?.data);
-
-
-
-      console.log('  - result.error exists:', !!result?.error);
+      if (refresh) {
+        console.log(`📥 [RESPONSE] Competitor Landscape:`);
+        console.log(JSON.stringify(result, null, 2));
+      }
 
 
 
@@ -7994,15 +7232,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-        console.log('🎯🏆 Processing API data for Competitor Landscape:', apiData);
-
-
-
-        console.log('🎯🏆 API Data Keys:', Object.keys(apiData));
-
-
-
-        console.log('🎯🏆 API Data uiComponents:', apiData.uiComponents);
 
 
 
@@ -8058,19 +7287,12 @@ const MarketResearch = React.memo(() => {
 
 
 
-        console.log('🔍🏆 FULL API RESPONSE STRUCTURE:', JSON.stringify(apiData, null, 2));
 
-        console.log('🔍🏆 API RESPONSE SUMMARY:');
 
-        console.log('  - Has competitorLandscape:', !!apiData.competitorLandscape);
 
-        console.log('  - Has strategicRecommendations:', !!apiData.strategicRecommendations);
 
-        console.log('  - Has topPlayers:', !!apiData.competitorLandscape?.topPlayers);
 
-        console.log('  - Has emergingPlayers:', !!apiData.competitorLandscape?.emergingPlayers);
 
-        console.log('  - Has recentMoves:', !!apiData.competitorLandscape?.recentMoves);
 
 
 
@@ -8086,27 +7308,21 @@ const MarketResearch = React.memo(() => {
 
 
 
-        console.log('🔍🏆 Data extracted from API response:');
 
 
 
-          console.log('  - executiveSummary:', executiveSummary);
 
 
 
-          console.log('  - topPlayerShare:', topPlayerShare);
 
 
 
-          console.log('  - emergingPlayers:', emergingPlayers);
 
 
 
-          console.log('  - fundingNews:', fundingNews);
 
 
 
-        console.log('🔍🏆 Extraction method used: New structured format');
 
 
 
@@ -8166,33 +7382,26 @@ const MarketResearch = React.memo(() => {
 
         if (refresh) {
 
-          console.log('🔄 COMPETITOR - FORCING UPDATE due to refresh request');
 
         }
 
 
 
-        console.log('🔍🏆 COMPETITOR UPDATE DECISION:');
 
 
 
-        console.log('  - refresh param:', refresh);
 
 
 
-        console.log('  - hasNewData:', hasNewData);
 
 
 
-        console.log('  - shouldUpdate:', shouldUpdate);
 
 
 
-        console.log('  - !currentTimestamp:', !currentTimestamp);
 
 
 
-        console.log('  - !competitorData?.executiveSummary:', !competitorData?.executiveSummary);
 
 
 
@@ -8204,47 +7413,36 @@ const MarketResearch = React.memo(() => {
 
 
 
-          console.log('✅ New Competitor data is newer, updating UI');
 
 
 
-          console.log('🔍🏆 FINAL EXTRACTED DATA BEFORE UPDATE:');
 
 
 
-          console.log('  - executiveSummary:', executiveSummary, '(type:', typeof executiveSummary, ')');
 
 
 
-          console.log('  - topPlayerShare:', topPlayerShare, '(type:', typeof topPlayerShare, ')');
 
 
 
-          console.log('  - emergingPlayers:', emergingPlayers, '(type:', typeof emergingPlayers, ')');
 
 
 
-          console.log('  - fundingNews:', fundingNews, '(type:', typeof fundingNews, ')');
 
 
 
-          console.log('🔍🏆 DATA VALIDATION:');
 
 
 
-          console.log('  - executiveSummary is null:', executiveSummary === null);
 
 
 
-          console.log('  - topPlayerShare is null:', topPlayerShare === null);
 
 
 
-          console.log('  - emergingPlayers is null:', emergingPlayers === null);
 
 
 
-          console.log('  - fundingNews is null:', fundingNews === null);
 
 
 
@@ -8287,27 +7485,21 @@ const MarketResearch = React.memo(() => {
 
 
 
-          console.log('🔄🏆 UPDATING COMPETITOR DATA WITH FRESH API DATA:');
 
 
 
-          console.log('  - New executiveSummary:', executiveSummary);
 
 
 
-          console.log('  - New topPlayerShare:', topPlayerShare);
 
 
 
-          console.log('  - New emergingPlayers:', emergingPlayers);
 
 
 
-          console.log('  - New fundingNews:', fundingNews);
 
 
 
-          console.log('  - New timestamp (UTC):', toUTCTimestamp(newTimestamp));
 
 
 
@@ -8374,13 +7566,11 @@ const MarketResearch = React.memo(() => {
 
 
 
-              console.log('💾 Competitor data saved to localStorage');
 
               
 
           // State update completed immediately
 
-                console.log('✅🏆 COMPETITOR DATA STATE UPDATE COMPLETED');
 
           
 
@@ -8406,15 +7596,12 @@ const MarketResearch = React.memo(() => {
 
 
 
-            console.log('🔄🏆 COMPETITOR - State update callback executed');
 
 
 
-            console.log('🔄🏆 COMPETITOR - Previous data:', prevData);
 
 
 
-            console.log('🔄🏆 COMPETITOR - New data:', newData);
 
 
 
@@ -8430,27 +7617,21 @@ const MarketResearch = React.memo(() => {
 
 
 
-          console.log('✅🏆🏆🏆 COMPETITOR DATA STATE UPDATED:', updatedData);
 
 
 
-          console.log('✅🏆🏆🏆 COMPETITOR - Old data:', competitorData);
 
 
 
-          console.log('✅🏆🏆🏆 COMPETITOR - New data:', updatedData);
 
 
 
-          console.log('✅🏆🏆🏆 COMPETITOR - State update triggered with refresh:', refresh);
 
 
 
-          console.log('✅🏆🏆🏆 COMPETITOR - New timestamp:', updatedData.timestamp);
 
 
 
-          console.log('🔄🏆 COMPETITOR - Component will re-render with new data');
 
 
 
@@ -8458,7 +7639,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-          console.log('ℹ️🏆 Current Competitor data is up to date - no update needed');
 
           
 
@@ -8466,7 +7646,6 @@ const MarketResearch = React.memo(() => {
 
           if (refresh) {
 
-            console.log('🔄 COMPETITOR - FORCING UPDATE on refresh even though data appears current');
 
             const forceUpdatedData = {
 
@@ -8483,7 +7662,6 @@ const MarketResearch = React.memo(() => {
 
             saveCompetitorDataToLocalStorage(forceUpdatedData);
 
-            console.log('✅ COMPETITOR - Force updated with current timestamp');
 
           }
 
@@ -8497,27 +7675,21 @@ const MarketResearch = React.memo(() => {
 
 
 
-        console.log('⚠️🏆 No competitor data in API response or API call failed');
 
 
 
-        console.log('⚠️🏆 result:', result);
 
 
 
-        console.log('⚠️🏆 result.status:', result?.status);
 
 
 
-        console.log('⚠️🏆 result.error:', result?.error);
 
 
 
-        console.log('⚠️🏆 result.message:', result?.message);
 
 
 
-        console.log('⚠️🏆 Full result:', result);
         
         // If result is undefined, it means all retries failed
         if (!result) {
@@ -8587,7 +7759,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-        console.log('🔄🏆 API failed - updating timestamp to pass validation');
         
         // Update existing data with current timestamp to pass isDataFresh check
         setCompetitorData(prevData => ({
@@ -8595,14 +7766,11 @@ const MarketResearch = React.memo(() => {
           timestamp: Date.now().toString()
         }));
         
-        console.log('🔄🏆 Updated timestamp to:', Date.now());
 
 
 
-        console.log('🔄🏆 Existing data timestamp:', competitorData.timestamp);
       } else {
         // No existing data - set fallback data with current timestamp
-        console.log('🔄🏆 No existing data - setting fallback data with current timestamp');
         setCompetitorData({
           executiveSummary: 'Competitive landscape analysis completed.',
           topPlayerShare: 'Market share data available.',
@@ -8652,11 +7820,12 @@ const MarketResearch = React.memo(() => {
 
 
 
-  const fetchMarketEntryData = async (refresh = false, showLoading = true) => {
+  const fetchMarketEntryData = async (refresh = false, showLoading = true, previousContext: any = {}) => {
 
 
 
-    console.log('🚀 Starting fetchMarketEntryData with refresh:', refresh, 'showLoading:', showLoading);
+    if (Object.keys(previousContext).length > 0) {
+    }
 
 
 
@@ -8664,7 +7833,6 @@ const MarketResearch = React.memo(() => {
 
     if (refresh) {
 
-      console.log('🧹 MARKET ENTRY - Clearing localStorage cache for fresh data...');
 
       if (currentUser?.uid) {
         removeUserLocalStorage('marketEntryData', currentUser.uid);
@@ -8680,7 +7848,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-      console.log('📍 Fetching market entry data with correct component_name');
 
 
 
@@ -8732,7 +7899,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-          console.log('📋 Using company profile data for market entry request:', companyData);
 
 
 
@@ -8744,7 +7910,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-        console.warn('⚠️ Could not get company profile data:', error);
 
 
 
@@ -8760,15 +7925,16 @@ const MarketResearch = React.memo(() => {
 
 
 
+      // Include previous component context in data field for cascading refresh
       const payload = {
         org_id: orgIdToUse,
         user_id: currentUser?.uid || "",
         component_name: "market entry & growth strategy",
-        data: {},
-        refresh: refresh
-
-
-
+        data: previousContext, // Pass previous component context for cascading
+        refresh: refresh,
+        _forceRefresh: true,
+        _timestamp: Date.now(),
+        _cacheBust: Math.random().toString(36).substring(7)
       };
 
 
@@ -8777,12 +7943,10 @@ const MarketResearch = React.memo(() => {
 
 
 
-      console.log('📤 Sending Market Entry API request with payload:', payload);
-      console.log('📤 [SCOUT REQUEST BODY] Market Entry & Growth Strategy:', JSON.stringify(payload, null, 2));
-
-      console.log('🔄 Market Entry refresh parameter:', refresh);
-
-      console.log('🔄 REFRESH in payload:', payload.refresh);
+      if (refresh) {
+        console.log(`📤 [REQUEST] Market Entry & Growth Strategy:`);
+        console.log(JSON.stringify(payload, null, 2));
+      }
 
 
 
@@ -8812,21 +7976,14 @@ const MarketResearch = React.memo(() => {
         return;
       }
 
-      console.log('📨 Market Entry API result:', result);
+      if (refresh) {
+        console.log(`📥 [RESPONSE] Market Entry & Growth Strategy:`);
+        console.log(JSON.stringify(result, null, 2));
+      }
 
 
 
-      console.log('📊 Market Entry API result:', result);
-
-
-
-      console.log('📊 Full API Response Structure:', result);
-
-
-
-      // Log the result for debugging
-
-      logApiCallResult('Market Entry', result, refresh);
+      if (!refresh) logApiCallResult('Market Entry', result, refresh);
 
 
 
@@ -8838,9 +7995,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-        console.log('🎯 Processing API data for Market Entry:', apiData);
-        console.log('🎯 Market Entry API Data Keys:', Object.keys(apiData));
-        console.log('🎯 Market Entry API Data (Full):', JSON.stringify(apiData, null, 2));
 
 
 
@@ -8864,27 +8018,21 @@ const MarketResearch = React.memo(() => {
 
 
 
-        console.log('🔍 MARKET ENTRY TIMESTAMP ANALYSIS (UTC):');
 
 
 
-        console.log('  - Current request time (UTC):', new Date().toISOString());
 
 
 
-        console.log('  - Frontend data time (UTC):', currentTimestamp ? new Date(currentTimestamp).toISOString() : 'NO_TIMESTAMP');
 
 
 
-        console.log('  - Swagger data time (UTC):', newTimestamp ? new Date(newTimestamp).toISOString() : 'NO_TIMESTAMP');
 
 
 
-        console.log('  - Raw current timestamp:', currentTimestamp);
 
 
 
-        console.log('  - Raw new timestamp:', newTimestamp);
 
 
 
@@ -8900,23 +8048,18 @@ const MarketResearch = React.memo(() => {
 
 
 
-        console.log('🔄 MARKET ENTRY UPDATE DECISION:');
 
 
 
-        console.log('  - Should update data:', shouldUpdate);
 
 
 
-        console.log('  - Current data timestamp:', currentTimestamp ? new Date(currentTimestamp).toISOString() : 'NO_TIMESTAMP');
 
 
 
-        console.log('  - New data timestamp:', newTimestamp ? new Date(newTimestamp).toISOString() : 'NO_TIMESTAMP');
 
 
 
-        console.log('  - Reason for update:', !currentTimestamp ? 'No existing data - first load' : 'Newer data available');
 
 
 
@@ -8928,11 +8071,9 @@ const MarketResearch = React.memo(() => {
 
 
 
-          console.log('✅ Found data in API response and data is newer - updating');
 
 
 
-          console.log('🔄 Updating Market Entry data with newer report');
 
 
 
@@ -8961,22 +8102,9 @@ const MarketResearch = React.memo(() => {
               ? marketEntryData.swot
               : apiData.swot || marketEntryData?.swot || null; // Fallback to simple check
 
-          console.log('🔍 MarketResearch: API swot data:', apiData.swot);
-          console.log('🔍 MarketResearch: API swot data (stringified):', JSON.stringify(apiData.swot, null, 2));
           if (apiData.swot) {
-            console.log('🔍 MarketResearch: API swot.strengths:', apiData.swot.strengths);
-            console.log('🔍 MarketResearch: API swot.strengths length:', apiData.swot.strengths?.length);
-            console.log('🔍 MarketResearch: API swot.weaknesses:', apiData.swot.weaknesses);
-            console.log('🔍 MarketResearch: API swot.opportunities:', apiData.swot.opportunities);
-            console.log('🔍 MarketResearch: API swot.threats:', apiData.swot.threats);
           }
-          console.log('🔍 MarketResearch: API swot structure valid:', apiData.swot ? isValidSwotStructure(apiData.swot) : false);
-          console.log('🔍 MarketResearch: Existing swot data:', marketEntryData?.swot);
-          console.log('🔍 MarketResearch: Final swot data to use:', swotData);
-          console.log('🔍 MarketResearch: Final swot data (stringified):', JSON.stringify(swotData, null, 2));
           if (swotData) {
-            console.log('🔍 MarketResearch: Final swot.strengths length:', swotData.strengths?.length);
-            console.log('🔍 MarketResearch: Final swot.strengths content:', swotData.strengths);
           }
 
           const updatedData = {
@@ -9065,11 +8193,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-          console.log('✅ MARKET ENTRY DATA UPDATED - Component name:', apiData.component_name);
-          console.log('✅ MARKET ENTRY UPDATED DATA (Full):', JSON.stringify(updatedData, null, 2));
-          console.log('✅ MARKET ENTRY - executiveSummary:', updatedData.executiveSummary);
-          console.log('✅ MARKET ENTRY - entryBarriers:', updatedData.entryBarriers);
-          console.log('✅ MARKET ENTRY - strategicRecommendations:', updatedData.strategicRecommendations);
 
 
 
@@ -9077,7 +8200,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-          console.log('ℹ️ Current Market Entry data is up to date');
 
 
 
@@ -9141,7 +8263,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-    console.log('🔥 Setting up initial data load and sync');
 
 
 
@@ -9171,7 +8292,6 @@ const MarketResearch = React.memo(() => {
 
       // DO NOT restore data from localStorage during refresh - this causes components to switch to previous data
       if (isRefreshing) {
-        console.log('🔄 Refresh in progress - skipping localStorage data restoration to prevent data switching');
         return;
       }
 
@@ -9200,15 +8320,12 @@ const MarketResearch = React.memo(() => {
 
 
 
-            console.log('📦 Found persistent Market Size data from previous session - preserving it');
 
 
 
-            console.log('🔧 Not clearing data - user will see last Swagger data until new data arrives');
 
 
 
-            console.log('💾 Persistent data timestamp:', parsedData.timestamp);
 
 
 
@@ -9280,7 +8397,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-                console.log('🔄 Restored persistent data to marketData state:', restoredData);
 
 
 
@@ -9336,7 +8452,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-      console.log('🧹 No valid persistent data found - fetching fresh data from backend');
 
 
 
@@ -9372,7 +8487,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-        console.log('📊 No Market Entry data found, fetching from API...');
 
 
 
@@ -9384,7 +8498,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-        console.log('📊 Market Entry data already loaded from localStorage');
 
 
 
@@ -9408,7 +8521,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-      console.log('📊 Fetching Industry Trends data...');
 
 
 
@@ -9432,7 +8544,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-      console.log('📊 Fetching Competitor data...');
 
 
 
@@ -9454,10 +8565,8 @@ const MarketResearch = React.memo(() => {
 
       // Fetch Regulatory Compliance data only if we don't already have fresh data
       if (!regulatoryData?.timestamp) {
-        console.log('📊 Fetching Regulatory data...');
         await fetchRegulatoryData(false, true);
       } else {
-        console.log('📊 Regulatory data already has fresh timestamp, skipping fetch:', regulatoryData.timestamp);
       }
 
       // Log all 5 Scout component request bodies on page load
@@ -9540,7 +8649,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-        console.warn('Could not load company profile data:', error);
 
 
 
@@ -9568,7 +8676,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-      console.log('Company profile updated, reloading profile data...');
 
 
 
@@ -9629,7 +8736,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-      console.log('AI View changed to:', event.detail.isAIView);
 
 
 
@@ -9709,19 +8815,15 @@ const MarketResearch = React.memo(() => {
 
 
 
-      console.log('Selected Market Data:', marketData);
 
 
 
-      console.log('Sub-markets:', marketData.details.subMarkets);
 
 
 
-      console.log('Key Insights:', marketData.details.keyInsights);
 
 
 
-      console.log('Recommended Actions:', marketData.details.recommendedActions);
 
 
 
@@ -9741,7 +8843,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-      console.log('Market data not found');
 
 
 
@@ -9831,7 +8932,6 @@ const MarketResearch = React.memo(() => {
 
   const handleRefresh = () => {
 
-    console.log('🔄 Refresh button clicked!', { isShowingHistoricalData, isRefreshing });
 
 
 
@@ -9852,7 +8952,6 @@ const MarketResearch = React.memo(() => {
 
 
       // Always trigger full refresh to ensure all components get fresh data
-      console.log('🔄 Triggering full refresh to ensure all components get fresh data...');
       triggerScoutAndRefresh();
 
 
@@ -9961,7 +9060,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-    console.log('Market Size Scout clicked with context:', context, 'hasEdits:', hasEdits, 'customMessage:', customMessage);
 
 
 
@@ -10021,7 +9119,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-    console.log('🎯 Market Size Scout chat panel opened');
 
 
 
@@ -10041,7 +9138,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-    console.log('Industry Trends Scout clicked with context:', context, 'hasEdits:', hasEdits, 'customMessage:', customMessage);
 
 
 
@@ -10101,7 +9197,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-    console.log('🎯 Industry Trends Scout chat panel opened');
 
 
 
@@ -10121,7 +9216,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-    console.log('Competitor Scout clicked with context:', context, 'hasEdits:', hasEdits, 'customMessage:', customMessage);
 
 
 
@@ -10181,7 +9275,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-    console.log('🎯 Competitor Scout chat panel opened');
 
 
 
@@ -10362,11 +9455,9 @@ const MarketResearch = React.memo(() => {
 
 
 
-    console.log('🔄 Market Intelligence Expand Toggle called with:', expanded);
 
 
 
-    console.log('🔄 Current isMarketIntelligenceExpanded state:', isMarketIntelligenceExpanded);
 
 
 
@@ -10386,7 +9477,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-    console.log('Export PDF clicked');
 
 
 
@@ -10402,7 +9492,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-    console.log('Save to workspace clicked');
 
 
 
@@ -10418,7 +9507,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-    console.log('Generate shareable link clicked');
 
 
 
@@ -12068,7 +11156,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-      console.log('Adding edit record:', editRecord);
 
 
 
@@ -12316,7 +11403,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-    console.log('Regulatory scout clicked with context:', context, 'hasEdits:', hasEdits, 'customMessage:', customMessage);
 
 
 
@@ -12376,7 +11462,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-    console.log('🎯 Regulatory Scout chat panel opened');
 
 
 
@@ -12688,7 +11773,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-    console.log('Viewing Market Entry edit details:', editId);
 
 
 
@@ -13344,7 +12428,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-    console.log('Market Entry scout clicked with context:', context);
 
 
 
@@ -13412,7 +12495,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-    console.log('🎯 Market Entry Scout chat panel opened');
 
 
 
@@ -14028,7 +13110,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-    console.log('Viewing edit details:', editId);
 
 
 
@@ -14112,11 +13193,14 @@ const MarketResearch = React.memo(() => {
 
 
 
-  if (isInitialLoading && !marketData) {
+  // Check if any component has valid data (with timestamp)
+  const hasAnyValidData = marketData || 
+                     (industryTrendsData && industryTrendsData.timestamp) ||
+                     (competitorData && competitorData.timestamp) ||
+                     (marketEntryData && marketEntryData.timestamp) ||
+                     (regulatoryData && regulatoryData.timestamp);
 
-
-
-    console.log('Showing loading screen - no data exists anywhere');
+  if (isInitialLoading && !hasAnyValidData) {
 
 
 
@@ -14186,7 +13270,6 @@ const MarketResearch = React.memo(() => {
 
   const parallelRefresh = async () => {
 
-    console.log('🚀🚀🚀 PARALLEL REFRESH - Starting parallel API calls for faster loading...');
 
     
 
@@ -14224,7 +13307,6 @@ const MarketResearch = React.memo(() => {
 
         
 
-        console.log(`🚀 Starting ${component.name} API call...`);
 
         const result = await executeWithRateLimit(
 
@@ -14236,7 +13318,6 @@ const MarketResearch = React.memo(() => {
 
         
 
-        console.log(`✅ ${component.name} completed successfully`);
 
         return { status: 'fulfilled', value: result };
 
@@ -14272,7 +13353,6 @@ const MarketResearch = React.memo(() => {
 
     const results = await Promise.allSettled(promises);
 
-    console.log('🎉 All parallel API calls completed');
 
     
 

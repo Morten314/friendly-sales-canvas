@@ -203,17 +203,6 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
     }
   });
 
-  // Debug logging for state changes
-  useEffect(() => {
-    console.log('🔍 Industry Trends - State Debug:', {
-      isEditing: isIndustryTrendsEditing,
-      editExecutiveSummary: editExecutiveSummary.substring(0, 50) + '...',
-      propExecutiveSummary: (propExecutiveSummary || '').substring(0, 50) + '...',
-      industryTrendsData: industryTrendsData?.executiveSummary?.substring(0, 50) + '...',
-      timestamp: Date.now()
-    });
-  }, [isIndustryTrendsEditing, editExecutiveSummary, propExecutiveSummary, industryTrendsData]);
-
   // Save individual fields to localStorage whenever they change (user-specific)
   useEffect(() => {
     if (editExecutiveSummary && currentUser?.uid) {
@@ -439,44 +428,22 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
 
   // Component mounted - no need to fetch data, parent provides it via props
   useEffect(() => {
-    console.log('🔄 Industry Trends - Component mounted, waiting for props data');
     // Don't fetch data - parent provides it via props
   }, []);
   
-  // Handle refresh when isRefreshing prop changes
+  // When parent runs cascade refresh, show loading; parent will pass data via props (do NOT fetch here – avoids duplicate requests and multiple responses)
   useEffect(() => {
     if (isRefreshing) {
-      console.log('🔄 Industry Trends - Refresh triggered by parent');
-      // Clear old data immediately to prevent showing stale data
-      setIndustryTrendsData(null);
       setError(null);
       setIsLoading(true);
-      // Force fetch new data on refresh
-      fetchIndustryTrendsData(true);
+      // Do not call fetchIndustryTrendsData – parent MarketResearch cascade already calls the API for this component
     }
   }, [isRefreshing]);
-
-  // Debug: Log all props received
-  useEffect(() => {
-    console.log('🔍 Industry Trends - All props received:', {
-      propExecutiveSummary,
-      propAiAdoption,
-      propCloudMigration,
-      propRegulatory,
-      propTrendSnapshots,
-      propRecommendations,
-      propRisks,
-      isRefreshing,
-      companyProfile: !!companyProfile
-    });
-  }, [propExecutiveSummary, propAiAdoption, propCloudMigration, propRegulatory, propTrendSnapshots, propRecommendations, propRisks, isRefreshing, companyProfile]);
 
   // Sync with props when they change (for refresh scenarios)
   // Only sync when not editing to avoid overwriting user's current edits
   useEffect(() => {
     if (!isIndustryTrendsEditing && (propExecutiveSummary || propAiAdoption || propCloudMigration || propRegulatory)) {
-      console.log('🔄 Industry Trends - Props changed, syncing with local state (not editing)');
-      console.log('🔄 Props:', { propExecutiveSummary, propAiAdoption, propCloudMigration, propRegulatory });
       
       // Only update if current data is empty to avoid overwriting user edits
       setIndustryTrendsData(prevData => {
@@ -578,16 +545,11 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
         edit_type: "modification"
       };
 
-      console.log('📤 Industry Trends - original_json:', originalData);
-      console.log('📤 Industry Trends - modified_json:', modifiedData);
-
       // Store data for /ask API
       localStorage.setItem('industry-trends_original_json', JSON.stringify(originalData));
       localStorage.setItem('industry-trends_modified_json', JSON.stringify(modifiedData));
 
       // Skip the /ask endpoint for now and focus on updating the UI
-      console.log('📤 Industry Trends - Skipping /ask endpoint, updating UI directly');
-      
       // Immediately update the UI with the edited values
       setIndustryTrendsData(prev => {
         if (!prev) return prev;
@@ -607,7 +569,6 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
         };
       });
       
-      console.log('✅ Industry Trends - UI updated with edited values');
 
       // Update parent state with local values (trust the user's edits)
       if (onIndustryTrendsExecutiveSummaryChange) {
@@ -626,7 +587,6 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
         onIndustryTrendSnapshotsChange(editTrendSnapshots);
       }
       
-      console.log('✅ Industry Trends - Parent state updated with local edits');
       
       // Call the original save function to trigger chat panel
       onIndustryTrendsSaveChanges();
@@ -715,7 +675,6 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
       );
       if (response.ok) {
         const data = await response.json();
-        console.log('Updated data fetched:', data);
         // Refresh the data if needed
         fetchIndustryTrendsData(false);
       }
@@ -763,14 +722,6 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
       </div>
     );
   }
-
-  // Debug: Show what we're about to render
-  console.log('🔍 Industry Trends - About to render:', {
-    hasLocalData: !!industryTrendsData,
-    hasPropData: !!propExecutiveSummary,
-    propExecutiveSummary,
-    localExecutiveSummary: industryTrendsData?.executiveSummary
-  });
 
   // Show no data state only if we don't have props data and we're not refreshing
   if (!industryTrendsData && !propExecutiveSummary && !isRefreshing) {
@@ -1565,14 +1516,6 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
                           <h4 className="font-medium text-gray-900 mb-3">AI Adoption Trends</h4>
                           {(() => {
                             const trendsData = visualCharts?.aiAdoptionTrends;
-                            console.log('🔍 AI Adoption Trends Debug:', {
-                              hasVisualCharts: !!visualCharts,
-                              hasAiAdoptionTrends: !!visualCharts?.aiAdoptionTrends,
-                              trendsDataLength: trendsData?.length,
-                              trendsData: trendsData,
-                              propVisualCharts: propVisualCharts,
-                              industryTrendsDataVisualCharts: industryTrendsData?.visualCharts
-                            });
                             
                             if (trendsData && Array.isArray(trendsData) && trendsData.length > 0) {
                               return (
