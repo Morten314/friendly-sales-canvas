@@ -4576,7 +4576,9 @@ const MarketResearch = React.memo(() => {
 
       for (let index = 0; index < componentsToFetch.length; index++) {
         const component = componentsToFetch[index];
-        
+        const contextKeys = Object.keys(accumulatedContext);
+        console.log(`📋 [CASCADE] ${component.name} – request will include context from previous: ${contextKeys.length ? contextKeys.join(', ') : 'none (first component)'}`);
+
         try {
           // Update component status to pending
           currentStatus[component.name] = 'pending';
@@ -4695,21 +4697,14 @@ const MarketResearch = React.memo(() => {
       
 
       if (allApiCallsComplete) {
-
-
-
-
-        // Clear retry flag since all API calls completed successfully
+        console.log(`📋 [CASCADE] All 5 components completed; context was passed in order.`);
         isRetryingRef.current = false;
-
-        // Clear the refresh timeout since we're completing successfully
-
         clearTimeout(refreshTimeout);
-
-        
-
-        // Validate that all components have fresh data before showing success
-
+        // Clear global loading timeout so "Maximum time reached" does not show when all 5 components have already loaded
+        if (globalTimeoutId) {
+          clearTimeout(globalTimeoutId);
+          setGlobalTimeoutId(null);
+        }
         validateAllComponentsHaveFreshData();
 
       } else if (hasFailures && refreshAttempt < 3) {
@@ -6014,11 +6009,8 @@ const MarketResearch = React.memo(() => {
 
       }
 
-
-
-
-
-
+      // Return full API response so parent cascade can add to context for next component
+      return apiResponse;
 
     } catch (err) {
 
@@ -6318,7 +6310,8 @@ const MarketResearch = React.memo(() => {
 
       }
 
-      
+      // Return full API response so parent cascade can add to context for next component
+      return result;
 
     } catch (error) {
 
@@ -6863,7 +6856,8 @@ const MarketResearch = React.memo(() => {
 
       }
 
-
+      // Return full API response so parent cascade can add to context for next component
+      return result;
 
     } catch (error) {
 
@@ -7703,7 +7697,8 @@ const MarketResearch = React.memo(() => {
 
       }
 
-
+      // Return full API response so parent cascade can add to context for next component
+      return result;
 
     } catch (error) {
 
@@ -8209,7 +8204,8 @@ const MarketResearch = React.memo(() => {
 
       }
 
-
+      // Return full API response so parent cascade can add to context for next component
+      return result;
 
     } catch (error) {
 
