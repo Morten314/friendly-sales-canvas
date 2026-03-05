@@ -33,6 +33,8 @@ interface SignalCard {
   description: string; // One full paragraph with detailed ICP/customer context
   sourceUrl: string;
   sourceLabel: string;
+  /** Array of source URLs or citations from API */
+  source?: string[];
   nextBestMoves: string[]; // Array of suggested actions (legacy)
   /** Recommendations: nba shown to user, prompt for future API */
   NBAs?: NBAItem[];
@@ -346,6 +348,7 @@ const Index = () => {
           ...signal,
           id: signalId,
           description: signal.description || '',
+          source: Array.isArray(signal.source) ? signal.source : [],
           nextBestMoves,
           NBAs,
           contextualSuggestions: signal.contextualSuggestions || []
@@ -393,7 +396,7 @@ const Index = () => {
       if (rawSignals.length > 0) {
         const first = rawSignals[0];
         const hasNBAs = Array.isArray(first.NBAs) && first.NBAs.length > 0;
-        console.log('Recommendations source: API (fetch-signals). First signal NBAs from API:', hasNBAs, hasNBAs ? first.NBAs : 'using nextBestMoves');
+        console.log('Signals loaded:', { source: 'API (fetch-signals)', firstSignalNBAsFromApi: hasNBAs, firstSignalRecommendationCount: first.NBAs?.length ?? first.nextBestMoves?.length ?? 0 });
       }
     } catch (error) {
       console.error('Error loading signals:', error);
@@ -408,6 +411,7 @@ const Index = () => {
         description: 'This competitive pricing move by Company X directly impacts your SMB segment in the mid-market SaaS space. With 40% of your current pipeline falling into this category, this development could accelerate decision timelines or create pricing pressure. The launch targets companies with 50-200 employees—your core ICP—and includes features that overlap with your value proposition. Consider monitoring early adoption signals and preparing competitive differentiation messaging that emphasizes your unique ROI model and enterprise-grade capabilities.',
         sourceUrl: '#',
         sourceLabel: 'Press release link',
+        source: ['https://example.com/press-release', 'Industry report 2024'],
         nextBestMoves: [
           'Would you like me to check how many of your target ICPs fall under the SMB segment and could be influenced by this move?',
           'Do you want me to model a competitive bundle or ROI-driven value pitch against this pricing shift?',
@@ -434,6 +438,7 @@ const Index = () => {
         description: 'John Doe, CTO at Acme Corp (a company matching your ICP profile with 150 employees in the FinTech sector), posted about challenges with cloud migration and data recovery strategies. This represents a strong buying signal as Acme Corp is actively evaluating solutions in your space. The post indicates urgency and budget allocation for DRaaS solutions, making this an ideal time for targeted outreach with relevant case studies and ROI messaging.',
         sourceUrl: '#',
         sourceLabel: 'LinkedIn post link',
+        source: ['https://linkedin.com/post/example'],
         nextBestMoves: [
           'Should I draft a contextual comment or connection request for this post?',
           'Want me to identify other prospects posting about similar challenges?',
@@ -460,6 +465,7 @@ const Index = () => {
         description: 'A Series B funding round of $25M was announced for a competitor in the AI automation space, signaling strong market confidence and potential for aggressive expansion. This development could impact your competitive positioning, especially in the enterprise segment where both companies target similar buyer personas. The funding suggests increased marketing spend and product development, which may accelerate market education but also intensify competition for your target accounts.',
         sourceUrl: '#',
         sourceLabel: 'TechCrunch article',
+        source: ['https://techcrunch.com/article-example'],
         nextBestMoves: [
           'Want me to analyze how this affects your competitive positioning in the market?',
           'Should I identify which of your prospects might be considering this competitor now?',
@@ -486,6 +492,7 @@ const Index = () => {
         description: 'Analysis of market signals reveals a new high-value ICP segment: FinTech startups with 50-200 employees, particularly in the EU market. This segment shows strong engagement patterns with solutions similar to yours, with 65% overlap in key buying criteria with your existing SaaS ICP. The segment demonstrates high growth potential and budget allocation for automation tools, making it an ideal expansion target for your sales efforts.',
         sourceUrl: '#',
         sourceLabel: 'Profiler internal analysis',
+        source: ['Internal analysis', 'Research report'],
         nextBestMoves: [
           'Should I prioritize outreach to decision makers in this new segment?',
           'Want me to create a tailored value proposition for this ICP profile?',
@@ -1050,7 +1057,32 @@ const Index = () => {
                               <p className="text-gray-700 text-sm leading-relaxed mb-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
                                 {signal.description}
                               </p>
-                              <div className="flex justify-center">
+                              {/* Sources from API - bottom left of expanded description, one per line */}
+                              {Array.isArray(signal.source) && signal.source.length > 0 && (
+                                <div className="mt-2 flex flex-col gap-1.5 justify-start">
+                                  {signal.source.map((src, idx) => {
+                                    const isUrl = typeof src === 'string' && /^https?:\/\//i.test(src);
+                                    return isUrl ? (
+                                      <a
+                                        key={idx}
+                                        href={src}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="block w-fit"
+                                      >
+                                        <Badge variant="secondary" className="text-xs font-normal hover:bg-gray-300 cursor-pointer break-all max-w-full">
+                                          {src.length > 60 ? `${src.slice(0, 57)}…` : src}
+                                        </Badge>
+                                      </a>
+                                    ) : (
+                                      <Badge key={idx} variant="secondary" className="text-xs font-normal w-fit">
+                                        {src}
+                                      </Badge>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                              <div className="flex justify-center mt-3">
                                 <Button
                                   variant="outline"
                                   size="default"
