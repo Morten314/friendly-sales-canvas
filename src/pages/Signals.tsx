@@ -929,8 +929,7 @@ const Index = () => {
     <Layout>
       <div className="p-6">
         {currentTab === 'signals' && (
-          <div className={`flex gap-6 w-full ${recommendationsSignal ? 'max-w-[1400px]' : 'max-w-4xl'} mx-auto`}>
-            <div className={`space-y-4 ${recommendationsSignal ? 'flex-1 min-w-0' : 'w-full'}`}>
+          <div className="w-full max-w-5xl mx-auto space-y-4">
             {isLoading ? (
               <div className="text-center py-12">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
@@ -946,8 +945,10 @@ const Index = () => {
               signals.map(signal => {
                 const contentHash = getSignalContentHash(signal);
                 const isAccepted = acceptedSignals.has(contentHash);
-                
-                return <div key={signal.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-lg transition-all duration-200">
+                const isChatOpenForThis = recommendationsSignal?.id === signal.id;
+                return (
+                  <div key={signal.id} className="space-y-0">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-lg transition-all duration-200">
                 {/* Card Header */}
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-3">
@@ -1135,37 +1136,33 @@ const Index = () => {
                   </Button>
                 </div> */}
               </div>
-              })
-            )}
-            </div>
 
-            {/* Recommendations & Chat panel - right side */}
-            {recommendationsSignal && (
-              <aside className="flex-shrink-0 w-[400px] flex flex-col rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden h-fit max-h-[calc(100vh-8rem)] sticky top-24">
-                <div className="flex items-center justify-between p-3 border-b bg-gray-50">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
-                      <Bot className="h-4 w-4 text-white" />
+              {/* Recommendations & Chat - inline below this card when bot is clicked */}
+              {isChatOpenForThis && recommendationsSignal && (
+                <div className="mt-0 rounded-b-xl border border-t-0 border-gray-200 bg-gray-50 p-4 shadow-sm">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
+                        <Bot className="h-4 w-4 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-semibold text-gray-900">Recommendations & Chat</h3>
+                        <p className="text-xs text-gray-600 truncate max-w-md">{recommendationsSignal.headline}</p>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <h3 className="text-sm font-semibold text-gray-900 truncate">Recommendations & Chat</h3>
-                      <p className="text-xs text-gray-600 truncate">{recommendationsSignal.headline}</p>
-                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      onClick={() => {
+                        setRecommendationsSignal(null);
+                        setRecommendationsChatOpen(false);
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 w-8 p-0 flex-shrink-0"
-                    onClick={() => {
-                      setRecommendationsSignal(null);
-                      setRecommendationsChatOpen(false);
-                    }}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="flex-1 flex flex-col min-h-0 overflow-y-auto p-3">
-                  <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 mb-3">
+                  <div className="bg-white p-3 rounded-lg border border-gray-200 mb-3">
                     <p className="text-sm text-gray-700">{recommendationsSignal.snippet}</p>
                   </div>
                   {(() => {
@@ -1178,19 +1175,20 @@ const Index = () => {
                         <h4 className="text-sm font-medium text-gray-900">Recommendations</h4>
                         <div className="space-y-2">
                           {recommendationsList.map((item, index) => (
-                            <div
+                            <button
                               key={index}
-                              className="flex items-start gap-2 p-2.5 rounded-lg bg-white border border-gray-200 hover:border-blue-200 hover:bg-blue-50/50 transition-colors"
+                              type="button"
+                              onClick={() => setRecommendationsChatInput(item.nba)}
+                              className="w-full flex items-start gap-2 p-2.5 rounded-lg bg-white border border-gray-200 hover:border-blue-200 hover:bg-blue-50/50 transition-colors text-left cursor-pointer"
                             >
-                              <span className="text-blue-600 mt-0.5 flex-shrink-0">•</span>
                               <p className="text-sm text-gray-700">{item.nba}</p>
-                            </div>
+                            </button>
                           ))}
                         </div>
                       </div>
                     );
                   })()}
-                  <div className="pt-3 border-t border-gray-200 mt-auto">
+                  <div className="pt-3 border-t border-gray-200">
                     <label className="block text-xs font-medium text-gray-700 mb-2">Chat</label>
                     <div className="flex gap-2">
                       <Textarea
@@ -1219,7 +1217,10 @@ const Index = () => {
                     </div>
                   </div>
                 </div>
-              </aside>
+              )}
+                  </div>
+                );
+              })
             )}
           </div>
         )}
