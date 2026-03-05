@@ -1788,7 +1788,9 @@ IMPORTANT RESEARCH GUIDELINES:
 - The signal must be REAL and ACTIONABLE - not generic
 - Extract industry and target markets from the company profile
 - Cross-reference multiple sources to verify signal accuracy
+- Find 1-2 different source URLs for the signal (preferably from different publications/sources)
 - Prioritize signals that are relevant to the company's specific industry and target markets
+- Generate 3 thoughtful NBA questions that help users dive deeper into the signal's implications
 
 STEP 3 - OUTPUT FORMAT:
 Return your findings in the following exact JSON format (use exact keys as shown):
@@ -1799,9 +1801,27 @@ Return your findings in the following exact JSON format (use exact keys as shown
   "description": "[One full paragraph (4-6 sentences) providing detailed context about the signal. Explain what the signal means, why it matters for the company's sales strategy, what opportunities or challenges it presents, and how the sales team should respond. Make it descriptive and actionable.]",
   "sourceUrl": "[Real source URL where this signal was found]",
   "sourceLabel": "[Source type: Industry report, News article, Research report, Funding news, etc.]",
+  "source": [
+    "[First source URL where this signal was found]",
+    "[Second source URL (if available from different source)]"
+  ],
   "nextBestMoves": [
     "[Actionable question/suggestion #1 related to the signal]",
     "[Actionable question/suggestion #2 related to the signal]"
+  ],
+  "NBAs": [
+    {{
+      "nba": "[First suggested question the user should ask based on this signal]",
+      "prompt": "[Detailed prompt that includes the signal context, company profile information, and specific question to ask an LLM for a comprehensive answer. The prompt should be self-contained and provide all necessary context for the LLM to answer the question in detail.]"
+    }},
+    {{
+      "nba": "[Second suggested question the user should ask based on this signal]",
+      "prompt": "[Detailed prompt that includes the signal context, company profile information, and specific question to ask an LLM for a comprehensive answer. The prompt should be self-contained and provide all necessary context for the LLM to answer the question in detail.]"
+    }},
+    {{
+      "nba": "[Third suggested question the user should ask based on this signal]",
+      "prompt": "[Detailed prompt that includes the signal context, company profile information, and specific question to ask an LLM for a comprehensive answer. The prompt should be self-contained and provide all necessary context for the LLM to answer the question in detail.]"
+    }}
   ],
   "contextualSuggestions": [
     {{"icon": "[icon name]", "text": "[Suggestion text related to signal]"}},
@@ -1815,7 +1835,10 @@ Return your findings in the following exact JSON format (use exact keys as shown
 - description must be ONE FULL PARAGRAPH (4-6 sentences) with detailed context
 - sourceUrl must be a REAL, accessible URL
 - sourceLabel should accurately describe the source type
+- source must be an array with 1-2 REAL source URLs (use same URL as sourceUrl if only one source, or add second URL from different source if found)
 - nextBestMoves should be actionable questions related to the specific signal
+- NBAs must contain exactly 3 suggested questions with detailed prompts for LLM queries
+- Each NBA prompt should include: signal headline, signal description, company profile context, and the specific question to answer
 - contextualSuggestions should be relevant to the signal content
 - Return ONLY valid JSON, nothing else
 
@@ -1866,7 +1889,9 @@ Do not include any additional reasoning, thoughts, or steps after that.
         "description": parsed_json.get("description", ""),
         "sourceUrl": parsed_json.get("sourceUrl", ""),
         "sourceLabel": parsed_json.get("sourceLabel", ""),
+        "source": parsed_json.get("source", []),
         "nextBestMoves": parsed_json.get("nextBestMoves", []),
+        "NBAs": parsed_json.get("NBAs", []),
         "contextualSuggestions": parsed_json.get("contextualSuggestions", [])
     }
     
@@ -1973,8 +1998,10 @@ IMPORTANT RESEARCH GUIDELINES:
 - The signal must be REAL and ACTIONABLE - not generic
 - Extract industry, ICP segments, and target markets from the provided data
 - Cross-reference multiple sources to verify signal accuracy
+- Find 1-2 different source URLs for the signal (preferably from different publications/sources)
 - Prioritize signals that are relevant to the company's specific ICP segments and target customers
 - If ICP data is available, use it to make the signal more specific and relevant
+- Generate 3 thoughtful NBA questions that help users dive deeper into the signal's implications for their ICP and sales strategy
 
 STEP 3 - OUTPUT FORMAT:
 Return your findings in the following exact JSON format (use exact keys as shown):
@@ -1985,9 +2012,27 @@ Return your findings in the following exact JSON format (use exact keys as shown
   "description": "[One full paragraph (4-6 sentences) providing detailed context about the signal. Explain what the signal means for the company's ICP and target customers, why it matters for customer acquisition and sales strategy, what opportunities or challenges it presents for reaching the target ICP, and how the sales/profiling team should respond. Make it descriptive and actionable.]",
   "sourceUrl": "[Real source URL where this signal was found]",
   "sourceLabel": "[Source type: Market research, Customer research, Sales report, ICP analysis, etc.]",
+  "source": [
+    "[First source URL where this signal was found]",
+    "[Second source URL (if available from different source)]"
+  ],
   "nextBestMoves": [
     "[Actionable question/suggestion #1 related to the ICP signal]",
     "[Actionable question/suggestion #2 related to the ICP signal]"
+  ],
+  "NBAs": [
+    {{
+      "nba": "[First suggested question the user should ask based on this ICP signal]",
+      "prompt": "[Detailed prompt that includes the signal context, company profile information, ICP data, and specific question to ask an LLM for a comprehensive answer. The prompt should be self-contained and provide all necessary context for the LLM to answer the question in detail.]"
+    }},
+    {{
+      "nba": "[Second suggested question the user should ask based on this ICP signal]",
+      "prompt": "[Detailed prompt that includes the signal context, company profile information, ICP data, and specific question to ask an LLM for a comprehensive answer. The prompt should be self-contained and provide all necessary context for the LLM to answer the question in detail.]"
+    }},
+    {{
+      "nba": "[Third suggested question the user should ask based on this ICP signal]",
+      "prompt": "[Detailed prompt that includes the signal context, company profile information, ICP data, and specific question to ask an LLM for a comprehensive answer. The prompt should be self-contained and provide all necessary context for the LLM to answer the question in detail.]"
+    }}
   ],
   "contextualSuggestions": [
     {{"icon": "[icon name]", "text": "[Suggestion text related to ICP signal]"}},
@@ -2001,7 +2046,10 @@ Return your findings in the following exact JSON format (use exact keys as shown
 - description must be ONE FULL PARAGRAPH (4-6 sentences) with detailed context about ICP/customer implications
 - sourceUrl must be a REAL, accessible URL
 - sourceLabel should accurately describe the source type
+- source must be an array with 1-2 REAL source URLs (use same URL as sourceUrl if only one source, or add second URL from different source if found)
 - nextBestMoves should be actionable questions related to the specific ICP signal
+- NBAs must contain exactly 3 suggested questions with detailed prompts for LLM queries
+- Each NBA prompt should include: signal headline, signal description, company profile context, ICP data, and the specific question to answer
 - contextualSuggestions should be relevant to the ICP signal content
 - Return ONLY valid JSON, nothing else
 
@@ -2052,7 +2100,9 @@ Do not include any additional reasoning, thoughts, or steps after that.
         "description": parsed_json.get("description", ""),
         "sourceUrl": parsed_json.get("sourceUrl", ""),
         "sourceLabel": parsed_json.get("sourceLabel", ""),
+        "source": parsed_json.get("source", []),
         "nextBestMoves": parsed_json.get("nextBestMoves", []),
+        "NBAs": parsed_json.get("NBAs", []),
         "contextualSuggestions": parsed_json.get("contextualSuggestions", [])
     }
     
