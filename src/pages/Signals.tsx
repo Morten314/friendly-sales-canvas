@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerClose } from '@/components/ui/drawer';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
 import { useState, useEffect } from 'react';
@@ -17,17 +18,25 @@ interface ContextualSuggestion {
   text: string;
 }
 
+/** Recommendation from API: nba shown to user, prompt passed to future LLM API */
+interface NBAItem {
+  nba: string;
+  prompt: string;
+}
+
 interface SignalCard {
   id: string;
   agent: Agent;
   timestamp: string;
   headline: string;
   snippet: string;
-  description: string; // NEW FIELD: One full paragraph with detailed ICP/customer context
+  description: string; // One full paragraph with detailed ICP/customer context
   sourceUrl: string;
   sourceLabel: string;
-  nextBestMoves: string[]; // Array of suggested actions
-  contextualSuggestions: ContextualSuggestion[]; // Array of contextual suggestions with icon and text
+  nextBestMoves: string[]; // Array of suggested actions (legacy)
+  /** Recommendations: nba shown to user, prompt for future API */
+  NBAs?: NBAItem[];
+  contextualSuggestions: ContextualSuggestion[];
 }
 // API functions
 const generateSignalsBatch = async (userId: string) => {
@@ -204,13 +213,12 @@ const Index = () => {
   const [chatDrawerOpen, setChatDrawerOpen] = useState(false);
   const [selectedSignal, setSelectedSignal] = useState<SignalCard | null>(null);
   const [chatMessage, setChatMessage] = useState('');
+  const [recommendationsChatOpen, setRecommendationsChatOpen] = useState(false);
+  const [recommendationsSignal, setRecommendationsSignal] = useState<SignalCard | null>(null);
+  const [recommendationsChatInput, setRecommendationsChatInput] = useState('');
+  /** True when current signals (and recommendations) came from GET /api/fetch-signals; false when using sample fallback */
+  const [signalsFromApi, setSignalsFromApi] = useState(false);
   const [savedInsightsFilter, setSavedInsightsFilter] = useState('all');
-  const [expandedChats, setExpandedChats] = useState<{
-    [key: string]: boolean;
-  }>({});
-  const [dismissedSuggestions, setDismissedSuggestions] = useState<{
-    [key: string]: number[];
-  }>({});
   const [acceptedSignals, setAcceptedSignals] = useState<Set<string>>(new Set());
   const [rejectedSignalHashes, setRejectedSignalHashes] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
@@ -325,12 +333,21 @@ const Index = () => {
           console.warn(`Signal ${index} missing both signal_id and id, generated fallback ID:`, signalId);
         }
         
-        // Ensure all required fields are present with defaults if missing
+        // Support both schemas: NBAs (nba + prompt) or legacy nextBestMoves
+        const nextBestMoves = signal.nextBestMoves || [];
+        const NBAs: NBAItem[] = Array.isArray(signal.NBAs) && signal.NBAs.length > 0
+          ? signal.NBAs.map((n: { nba?: string; prompt?: string }) => ({
+              nba: n.nba ?? '',
+              prompt: n.prompt ?? ''
+            }))
+          : nextBestMoves.map((m: string) => ({ nba: m, prompt: '' }));
+
         return {
           ...signal,
-          id: signalId, // Store signal_id (or fallback) as id for use in API calls
+          id: signalId,
           description: signal.description || '',
-          nextBestMoves: signal.nextBestMoves || [],
+          nextBestMoves,
+          NBAs,
           contextualSuggestions: signal.contextualSuggestions || []
         } as SignalCard;
       });
@@ -372,6 +389,12 @@ const Index = () => {
       console.log('Filtered signals count:', filteredSignals.length, 'out of', signalsWithIds.length);
       console.log('Signals sorted by timestamp (newest first):', sortedSignals.map(s => ({ timestamp: s.timestamp, headline: s.headline })));
       setSignals(sortedSignals);
+      setSignalsFromApi(true);
+      if (rawSignals.length > 0) {
+        const first = rawSignals[0];
+        const hasNBAs = Array.isArray(first.NBAs) && first.NBAs.length > 0;
+        console.log('Recommendations source: API (fetch-signals). First signal NBAs from API:', hasNBAs, hasNBAs ? first.NBAs : 'using nextBestMoves');
+      }
     } catch (error) {
       console.error('Error loading signals:', error);
       
@@ -389,6 +412,11 @@ const Index = () => {
           'Would you like me to check how many of your target ICPs fall under the SMB segment and could be influenced by this move?',
           'Do you want me to model a competitive bundle or ROI-driven value pitch against this pricing shift?',
           'Should I track customer sentiment on LinkedIn, G2 reviews, or forums to see if it\'s gaining traction?'
+        ],
+        NBAs: [
+          { nba: 'Would you like me to check how many of your target ICPs fall under the SMB segment and could be influenced by this move?', prompt: '' },
+          { nba: 'Do you want me to model a competitive bundle or ROI-driven value pitch against this pricing shift?', prompt: '' },
+          { nba: 'Should I track customer sentiment on LinkedIn, G2 reviews, or forums to see if it\'s gaining traction?', prompt: '' }
         ],
         contextualSuggestions: [
           { icon: '🔗', text: 'Get Company X\'s Website & Press Release' },
@@ -411,6 +439,11 @@ const Index = () => {
           'Want me to identify other prospects posting about similar challenges?',
           'Do you want me to create a follow-up sequence based on this signal?'
         ],
+        NBAs: [
+          { nba: 'Should I draft a contextual comment or connection request for this post?', prompt: '' },
+          { nba: 'Want me to identify other prospects posting about similar challenges?', prompt: '' },
+          { nba: 'Do you want me to create a follow-up sequence based on this signal?', prompt: '' }
+        ],
         contextualSuggestions: [
           { icon: '💬', text: 'Draft contextual comment for this post' },
           { icon: '🤝', text: 'Prepare connection request message' },
@@ -432,6 +465,11 @@ const Index = () => {
           'Should I identify which of your prospects might be considering this competitor now?',
           'Do you want me to draft messaging that highlights your differentiators against this move?'
         ],
+        NBAs: [
+          { nba: 'Want me to analyze how this affects your competitive positioning in the market?', prompt: '' },
+          { nba: 'Should I identify which of your prospects might be considering this competitor now?', prompt: '' },
+          { nba: 'Do you want me to draft messaging that highlights your differentiators against this move?', prompt: '' }
+        ],
         contextualSuggestions: [
           { icon: '💰', text: 'Analyze funding impact on market positioning' },
           { icon: '🏢', text: 'Identify potential acquisition targets' },
@@ -452,6 +490,11 @@ const Index = () => {
           'Should I prioritize outreach to decision makers in this new segment?',
           'Want me to create a tailored value proposition for this ICP profile?',
           'Do you want me to identify similar companies that match this profile?'
+        ],
+        NBAs: [
+          { nba: 'Should I prioritize outreach to decision makers in this new segment?', prompt: '' },
+          { nba: 'Want me to create a tailored value proposition for this ICP profile?', prompt: '' },
+          { nba: 'Do you want me to identify similar companies that match this profile?', prompt: '' }
         ],
         contextualSuggestions: [
           { icon: '🎯', text: 'Research FinTech segment decision makers' },
@@ -489,7 +532,8 @@ const Index = () => {
       });
       
       setSignals(sortedSampleSignals);
-      
+      setSignalsFromApi(false);
+      console.log('Recommendations source: sample data (API failed or unavailable)');
       toast({
         title: "API Not Available",
         description: "Using sample data. Please ensure your backend API is running.",
@@ -530,47 +574,6 @@ const Index = () => {
     }
   };
 
-  const handleSuggestionAccept = (signalId: string, suggestionIndex: number) => {
-    const chatKey = `${signalId}-${suggestionIndex}`;
-    setExpandedChats(prev => ({
-      ...prev,
-      [chatKey]: true
-    }));
-  };
-  const handleSuggestionDismiss = (signalId: string, suggestionIndex: number) => {
-    setDismissedSuggestions(prev => ({
-      ...prev,
-      [signalId]: [...(prev[signalId] || []), suggestionIndex]
-    }));
-    toast({
-      title: "Dismissed",
-      description: "Suggestion removed from your list",
-      action: <Button variant="outline" size="sm" onClick={() => {
-        setDismissedSuggestions(prev => ({
-          ...prev,
-          [signalId]: (prev[signalId] || []).filter(idx => idx !== suggestionIndex)
-        }));
-      }}>
-          Undo
-        </Button>
-    });
-  };
-  const handleChatClose = (signalId: string, suggestionIndex: number) => {
-    const chatKey = `${signalId}-${suggestionIndex}`;
-    setExpandedChats(prev => ({
-      ...prev,
-      [chatKey]: false
-    }));
-  };
-  const getContextualChatMessage = (signalId: string, suggestionIndex: number) => {
-    const signal = signals.find(s => s.id === signalId);
-    if (!signal) return "";
-    if (signal.headline.toLowerCase().includes('competitor') && signal.headline.toLowerCase().includes('pricing')) {
-      const messages = ["Hi Alex, Noted. I'll adjust your competitor landscape and market size reports accordingly. Do you want me to also scan SMB prospects in your current pipeline?", "Perfect! I'll model competitive pricing scenarios for you. Should I also identify which of your current deals might be at risk?", "Great choice! I'll set up sentiment tracking across multiple platforms. Want me to create alerts for specific keywords or competitors?"];
-      return messages[suggestionIndex] || messages[0];
-    }
-    return "Hi Alex, Noted. I'll process this request and update your reports accordingly. Any specific notes or comments you'd like me to capture for this insight?";
-  };
   const handleAction = (cardId: string, action: ActionType) => {
     const signal = signals.find(s => s.id === cardId);
     if (!signal) return;
@@ -918,7 +921,9 @@ const Index = () => {
   return (
     <Layout>
       <div className="p-6">
-        {currentTab === 'signals' && <div className="max-w-4xl mx-auto space-y-4">
+        {currentTab === 'signals' && (
+          <div className={`flex gap-6 w-full ${recommendationsSignal ? 'max-w-[1400px]' : 'max-w-4xl'} mx-auto`}>
+            <div className={`space-y-4 ${recommendationsSignal ? 'flex-1 min-w-0' : 'w-full'}`}>
             {isLoading ? (
               <div className="text-center py-12">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
@@ -976,6 +981,34 @@ const Index = () => {
                     >
                       <ThumbsDown className="h-4 w-4" />
                     </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 text-gray-500 hover:text-blue-600 hover:bg-blue-50"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setRecommendationsSignal(signal);
+                            setRecommendationsChatOpen(true);
+                            setRecommendationsChatInput('');
+                            const hasNBAsWithPrompt = Array.isArray(signal.NBAs) && signal.NBAs.some((n) => n.prompt && String(n.prompt).trim() !== '');
+                            console.log('Recommendations opened:', {
+                              headline: signal.headline,
+                              signalId: signal.id,
+                              dataSource: signalsFromApi ? 'API (fetch-signals)' : 'Sample data',
+                              thisSignal: hasNBAsWithPrompt ? 'NBAs from API (nba+prompt)' : 'using nextBestMoves',
+                              count: (signal.NBAs?.length ?? signal.nextBestMoves?.length) ?? 0
+                            });
+                          }}
+                        >
+                          <Bot className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">Recommendations & chat</p>
+                      </TooltipContent>
+                    </Tooltip>
                   </div>
                 </div>
 
@@ -1060,60 +1093,6 @@ const Index = () => {
                       </TooltipContent>
                     </Tooltip>
                   </div>
-                  
-                  {/* Next Best Moves Section */}
-                  {signal.nextBestMoves && signal.nextBestMoves.length > 0 && (
-                    <div className="mt-2 pt-2 border-t border-gray-100">
-                      <h4 className="text-sm font-medium text-gray-900 mb-2">Next Best Moves</h4>
-                      <div className="space-y-1">
-                        {signal.nextBestMoves.map((move, index) => {
-                          const chatKey = `${signal.id}-${index}`;
-                          const isDismissed = dismissedSuggestions[signal.id]?.includes(index);
-                          const hasExpandedChat = expandedChats[chatKey];
-                          if (isDismissed) return null;
-                          return <div key={index}>
-                            <div className="group relative bg-gray-50 hover:bg-gray-100 p-2 rounded-lg transition-all duration-200 border border-transparent hover:border-gray-200">
-                              <div className="flex items-center justify-between">
-                                <p className="text-sm text-gray-700 pr-4">{move}</p>
-                                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center gap-2">
-                                  <Button size="sm" variant="outline" className="h-7 px-3 text-xs bg-green-50 border-green-200 text-green-700 hover:bg-green-100" onClick={() => handleSuggestionAccept(signal.id, index)}>
-                                    ✅ Accept
-                                  </Button>
-                                  <Button size="sm" variant="outline" className="h-7 px-3 text-xs bg-red-50 border-red-200 text-red-700 hover:bg-red-100" onClick={() => handleSuggestionDismiss(signal.id, index)}>
-                                    ❌ Dismiss
-                                  </Button>
-                                </div>
-                              </div>
-                            </div>
-                            
-                            {/* Inline Chat Expansion */}
-                            {hasExpandedChat && <div className="mt-2 bg-white border border-gray-200 rounded-lg p-3 animate-fade-in shadow-sm">
-                                <div className="flex items-start gap-3 mb-2">
-                                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
-                                    <Bot className="h-4 w-4 text-white" />
-                                  </div>
-                                  <div className="flex-1">
-                                    <p className="text-sm text-gray-700 mb-2">
-                                      {getContextualChatMessage(signal.id, index)}
-                                    </p>
-                                  </div>
-                                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-gray-400 hover:text-gray-600" onClick={() => handleChatClose(signal.id, index)}>
-                                    <X className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                                
-                                <div className="flex gap-2 ml-11">
-                                  <Input placeholder="Any specific notes or comments you'd like to capture..." className="flex-1 text-sm" />
-                                  <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
-                                    <Send className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </div>}
-                          </div>
-                        })}
-                      </div>
-                    </div>
-                  )}
                 </div>
 
                 {/* Card Actions */}
@@ -1126,7 +1105,92 @@ const Index = () => {
               </div>
               })
             )}
-          </div>}
+            </div>
+
+            {/* Recommendations & Chat panel - right side */}
+            {recommendationsSignal && (
+              <aside className="flex-shrink-0 w-[400px] flex flex-col rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden h-fit max-h-[calc(100vh-8rem)] sticky top-24">
+                <div className="flex items-center justify-between p-3 border-b bg-gray-50">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
+                      <Bot className="h-4 w-4 text-white" />
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="text-sm font-semibold text-gray-900 truncate">Recommendations & Chat</h3>
+                      <p className="text-xs text-gray-600 truncate">{recommendationsSignal.headline}</p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0 flex-shrink-0"
+                    onClick={() => {
+                      setRecommendationsSignal(null);
+                      setRecommendationsChatOpen(false);
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="flex-1 flex flex-col min-h-0 overflow-y-auto p-3">
+                  <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 mb-3">
+                    <p className="text-sm text-gray-700">{recommendationsSignal.snippet}</p>
+                  </div>
+                  {(() => {
+                    const recommendationsList: NBAItem[] = (recommendationsSignal.NBAs && recommendationsSignal.NBAs.length > 0)
+                      ? recommendationsSignal.NBAs
+                      : (recommendationsSignal.nextBestMoves || []).map((m) => ({ nba: m, prompt: '' }));
+                    if (recommendationsList.length === 0) return null;
+                    return (
+                      <div className="space-y-2 mb-3">
+                        <h4 className="text-sm font-medium text-gray-900">Recommendations</h4>
+                        <div className="space-y-2">
+                          {recommendationsList.map((item, index) => (
+                            <div
+                              key={index}
+                              className="flex items-start gap-2 p-2.5 rounded-lg bg-white border border-gray-200 hover:border-blue-200 hover:bg-blue-50/50 transition-colors"
+                            >
+                              <span className="text-blue-600 mt-0.5 flex-shrink-0">•</span>
+                              <p className="text-sm text-gray-700">{item.nba}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                  <div className="pt-3 border-t border-gray-200 mt-auto">
+                    <label className="block text-xs font-medium text-gray-700 mb-2">Chat</label>
+                    <div className="flex gap-2">
+                      <Textarea
+                        value={recommendationsChatInput}
+                        onChange={(e) => setRecommendationsChatInput(e.target.value)}
+                        placeholder="Type your message... (prompt will be sent to API later)"
+                        className="resize-none text-sm min-h-[80px]"
+                        rows={3}
+                      />
+                      <Button
+                        size="sm"
+                        className="self-end bg-blue-600 hover:bg-blue-700"
+                        disabled={!recommendationsChatInput.trim()}
+                        onClick={() => {
+                          if (recommendationsChatInput.trim()) {
+                            toast({
+                              title: "Message",
+                              description: "Chat API will be connected later. Your message was captured.",
+                            });
+                            setRecommendationsChatInput('');
+                          }
+                        }}
+                      >
+                        <Send className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </aside>
+            )}
+          </div>
+        )}
 
         {currentTab === 'saved' && <div className="max-w-4xl mx-auto">
             {filteredSavedInsights.length === 0 ? <div className="text-center py-12">
@@ -1254,7 +1318,7 @@ const Index = () => {
           </div>
         </DrawerContent>
        </Drawer>
-       
+
        <Toaster />
      </Layout>
    );
