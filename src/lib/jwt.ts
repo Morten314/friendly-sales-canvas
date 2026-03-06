@@ -1,5 +1,4 @@
 import { User } from 'firebase/auth';
-import { buildApiUrl } from './api';
 
 interface JWTPayload {
   userId: string;
@@ -30,7 +29,7 @@ class JWTManager {
       
       // In a real implementation, you would send this to your backend
       // which would generate a JWT with tenant context
-      const response = await fetch(buildApiUrl('auth/token'), {
+      const response = await fetch('/api/auth/token', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -112,7 +111,7 @@ class JWTManager {
     }
 
     try {
-      const response = await fetch(buildApiUrl('auth/refresh'), {
+      const response = await fetch('/api/auth/refresh', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
