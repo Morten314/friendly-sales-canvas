@@ -1135,89 +1135,77 @@ const Index = () => {
                     Save for Later
                   </Button>
                 </div> */}
-              </div>
 
-              {/* Recommendations & Chat - inline below this card when bot is clicked */}
-              {isChatOpenForThis && recommendationsSignal && (
-                <div className="mt-0 rounded-b-xl border border-t-0 border-gray-200 bg-gray-50 p-4 shadow-sm">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
-                        <Bot className="h-4 w-4 text-white" />
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-semibold text-gray-900">Recommendations & Chat</h3>
-                        <p className="text-xs text-gray-600 truncate max-w-md">{recommendationsSignal.headline}</p>
-                      </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      onClick={() => {
-                        setRecommendationsSignal(null);
-                        setRecommendationsChatOpen(false);
-                      }}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div className="bg-white p-3 rounded-lg border border-gray-200 mb-3">
-                    <p className="text-sm text-gray-700">{recommendationsSignal.snippet}</p>
-                  </div>
-                  {(() => {
-                    const recommendationsList: NBAItem[] = (recommendationsSignal.NBAs && recommendationsSignal.NBAs.length > 0)
-                      ? recommendationsSignal.NBAs
-                      : (recommendationsSignal.nextBestMoves || []).map((m) => ({ nba: m, prompt: '' }));
-                    if (recommendationsList.length === 0) return null;
-                    return (
-                      <div className="space-y-2 mb-3">
-                        <h4 className="text-sm font-medium text-gray-900">Recommendations</h4>
-                        <div className="space-y-2">
-                          {recommendationsList.map((item, index) => (
-                            <button
-                              key={index}
-                              type="button"
-                              onClick={() => setRecommendationsChatInput(item.nba)}
-                              className="w-full flex items-start gap-2 p-2.5 rounded-lg bg-white border border-gray-200 hover:border-blue-200 hover:bg-blue-50/50 transition-colors text-left cursor-pointer"
-                            >
-                              <p className="text-sm text-gray-700">{item.nba}</p>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })()}
-                  <div className="pt-3 border-t border-gray-200">
-                    <label className="block text-xs font-medium text-gray-700 mb-2">Chat</label>
-                    <div className="flex gap-2">
-                      <Textarea
-                        value={recommendationsChatInput}
-                        onChange={(e) => setRecommendationsChatInput(e.target.value)}
-                        placeholder="Type your message... (prompt will be sent to API later)"
-                        className="resize-none text-sm min-h-[80px]"
-                        rows={3}
-                      />
+                {/* Recommendations & Chat - inside same card when bot is clicked */}
+                {isChatOpenForThis && recommendationsSignal && (
+                  <div className="pt-4 mt-2">
+                    <div className="flex justify-end mb-2">
                       <Button
+                        variant="ghost"
                         size="sm"
-                        className="self-end bg-blue-600 hover:bg-blue-700"
-                        disabled={!recommendationsChatInput.trim()}
+                        className="h-8 w-8 p-0"
                         onClick={() => {
-                          if (recommendationsChatInput.trim()) {
-                            toast({
-                              title: "Message",
-                              description: "Chat API will be connected later. Your message was captured.",
-                            });
-                            setRecommendationsChatInput('');
-                          }
+                          setRecommendationsSignal(null);
+                          setRecommendationsChatOpen(false);
                         }}
                       >
-                        <Send className="h-4 w-4" />
+                        <X className="h-4 w-4" />
                       </Button>
                     </div>
+                    {(() => {
+                      const recommendationsList: NBAItem[] = (recommendationsSignal.NBAs && recommendationsSignal.NBAs.length > 0)
+                        ? recommendationsSignal.NBAs
+                        : (recommendationsSignal.nextBestMoves || []).map((m) => ({ nba: m, prompt: '' }));
+                      if (recommendationsList.length === 0) return null;
+                      return (
+                        <div className="space-y-2 mb-3">
+                          <h4 className="text-sm font-medium text-gray-900">Recommendations</h4>
+                          <div className="space-y-2">
+                            {recommendationsList.map((item, index) => (
+                              <button
+                                key={index}
+                                type="button"
+                                onClick={() => setRecommendationsChatInput(item.nba)}
+                                className="w-full flex items-start gap-2 p-2.5 rounded-lg bg-gray-50 border border-gray-100 hover:border-blue-200 hover:bg-blue-50/50 transition-colors text-left cursor-pointer"
+                              >
+                                <p className="text-sm text-gray-700">{item.nba}</p>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                    <div className="pt-3">
+                      <label className="block text-xs font-medium text-gray-700 mb-2">Chat</label>
+                      <div className="flex gap-2">
+                        <Textarea
+                          value={recommendationsChatInput}
+                          onChange={(e) => setRecommendationsChatInput(e.target.value)}
+                          placeholder="Type your message... "
+                          className="resize-none text-sm min-h-[80px]"
+                          rows={3}
+                        />
+                        <Button
+                          size="sm"
+                          className="self-end bg-blue-600 hover:bg-blue-700"
+                          disabled={!recommendationsChatInput.trim()}
+                          onClick={() => {
+                            if (recommendationsChatInput.trim()) {
+                              toast({
+                                title: "Message",
+                                description: "Chat API will be connected later. Your message was captured.",
+                              });
+                              setRecommendationsChatInput('');
+                            }
+                          }}
+                        >
+                          <Send className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
                   </div>
                 );
               })
