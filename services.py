@@ -1802,8 +1802,14 @@ Return your findings in the following exact JSON format (use exact keys as shown
   "sourceUrl": "[Real source URL where this signal was found]",
   "sourceLabel": "[Source type: Industry report, News article, Research report, Funding news, etc.]",
   "source": [
-    "[First source URL where this signal was found]",
-    "[Second source URL (if available from different source)]"
+    {{
+      "citation": "[Publication name - Article title - Date if available, e.g., 'TechCrunch - AI Market Growth Report 2026 - January 15, 2026']",
+      "url": "[First source URL where this signal was found]"
+    }},
+    {{
+      "citation": "[Publication name - Article title - Date if available, e.g., 'Industry Research Report - Market Trends Analysis - January 2026']",
+      "url": "[Second source URL (if available from different source)]"
+    }}
   ],
   "nextBestMoves": [
     "[Actionable question/suggestion #1 related to the signal]",
@@ -1835,7 +1841,10 @@ Return your findings in the following exact JSON format (use exact keys as shown
 - description must be ONE FULL PARAGRAPH (4-6 sentences) with detailed context
 - sourceUrl must be a REAL, accessible URL
 - sourceLabel should accurately describe the source type
-- source must be an array with 1-2 REAL source URLs (use same URL as sourceUrl if only one source, or add second URL from different source if found)
+- source must be an array with 1-2 objects, each containing "citation" and "url" fields
+- citation should include publication name, article title, and date if available (e.g., "TechCrunch - AI Market Growth Report 2026 - January 15, 2026")
+- url must be a REAL, accessible URL
+- If only one source found, include one object in the array; if two sources found, include both
 - nextBestMoves should be actionable questions related to the specific signal
 - NBAs must contain exactly 3 suggested questions with detailed prompts for LLM queries
 - Each NBA prompt should include: signal headline, signal description, company profile context, and the specific question to answer
@@ -2013,8 +2022,14 @@ Return your findings in the following exact JSON format (use exact keys as shown
   "sourceUrl": "[Real source URL where this signal was found]",
   "sourceLabel": "[Source type: Market research, Customer research, Sales report, ICP analysis, etc.]",
   "source": [
-    "[First source URL where this signal was found]",
-    "[Second source URL (if available from different source)]"
+    {{
+      "citation": "[Publication name - Article title - Date if available, e.g., 'Market Research Report - Customer Buying Trends 2026 - January 15, 2026']",
+      "url": "[First source URL where this signal was found]"
+    }},
+    {{
+      "citation": "[Publication name - Article title - Date if available, e.g., 'Sales Report - ICP Analysis - January 2026']",
+      "url": "[Second source URL (if available from different source)]"
+    }}
   ],
   "nextBestMoves": [
     "[Actionable question/suggestion #1 related to the ICP signal]",
@@ -2046,7 +2061,10 @@ Return your findings in the following exact JSON format (use exact keys as shown
 - description must be ONE FULL PARAGRAPH (4-6 sentences) with detailed context about ICP/customer implications
 - sourceUrl must be a REAL, accessible URL
 - sourceLabel should accurately describe the source type
-- source must be an array with 1-2 REAL source URLs (use same URL as sourceUrl if only one source, or add second URL from different source if found)
+- source must be an array with 1-2 objects, each containing "citation" and "url" fields
+- citation should include publication name, article title, and date if available (e.g., "Market Research Report - Customer Buying Trends 2026 - January 15, 2026")
+- url must be a REAL, accessible URL
+- If only one source found, include one object in the array; if two sources found, include both
 - nextBestMoves should be actionable questions related to the specific ICP signal
 - NBAs must contain exactly 3 suggested questions with detailed prompts for LLM queries
 - Each NBA prompt should include: signal headline, signal description, company profile context, ICP data, and the specific question to answer
