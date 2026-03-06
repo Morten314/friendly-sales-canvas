@@ -26,7 +26,7 @@ from models import (
     ProspectData, Lead, Contact, SalesPipelineResponse, TimeframeResponse, StageStats,
     CompanyProfile, UserProfile, ScoutProfile, MarketRequest, EditRequest,
     CustomerProfileRequest, CustomerProfileICP, LeadCreateRequest, LeadUpdateRequest,
-    SignalActionRequest
+    SignalActionRequest, SignalAskRequest
 )
 from database import driver, graph, client, upsert_node
 from llm_config import chain, chain2, llm2
@@ -1514,6 +1514,127 @@ async def signal_action(request: SignalActionRequest):
     finally:
         if 'client' in locals():
             client.close()
+
+@app.post("/signal_Ask")
+async def signal_ask(request: SignalAskRequest):
+    """
+    Answer a question about signals using company profile, customer profile, history, and WebSearch.
+    Fetches company profile and customer profile from org_id, includes conversation history,
+    and uses WebSearch tool to provide up-to-date answers.
+    """
+    try:
+        # Fetch company profile from Neo4j
+        company_profile = None
+        try:
+            with driver.session() as session:
+                result = session.run(
+                    "MATCH (p:CompanyProfile {org_id: $org_id}) RETURN p LIMIT 1",
+                    org_id=request.org_id
+                )
+                record = result.single()
+                if record:
+                    company_profile = dict(record["p"].items())
+        except Exception as e:
+            logger.warning(f"Could not fetch company profile: {e}")
+        
+        # Fetch customer profile from MongoDB
+        customer_profile = None
+        try:
+            username = urllib.parse.quote_plus("techbrewra")
+            password = urllib.parse.quote_plus("Brewra@Best09")
+            mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
+            mongo_client = MongoClient(mongo_uri)
+            db = mongo_client["Profiler"]
+            collection = db["Company_Profile"]
+            
+            filter_query = {"profile_type": "company", "org_id": request.org_id}
+            document = collection.find_one(filter_query)
+            
+            if document:
+                customer_profiles = document.get("customer_profiles", {})
+                icps = customer_profiles.get("icps", [])
+                # Remove MongoDB _id if present
+                for icp in icps:
+                    if "_id" in icp:
+                        del icp["_id"]
+                customer_profile = {"icps": icps}
+            
+            mongo_client.close()
+        except Exception as e:
+            logger.warning(f"Could not fetch customer profile: {e}")
+        
+        # Format history for prompt
+        history_text = ""
+        if request.history:
+            history_text = "\n\nCONVERSATION HISTORY:\n"
+            for i, entry in enumerate(request.history, 1):
+                if isinstance(entry, dict):
+                    user_msg = entry.get("user", entry.get("question", ""))
+                    assistant_msg = entry.get("assistant", entry.get("answer", ""))
+                    history_text += f"\nTurn {i}:\n"
+                    if user_msg:
+                        history_text += f"User: {user_msg}\n"
+                    if assistant_msg:
+                        history_text += f"Assistant: {assistant_msg}\n"
+                else:
+                    history_text += f"\nTurn {i}: {str(entry)}\n"
+        
+        # Build context for prompt
+        context_parts = []
+        
+        if company_profile:
+            company_profile_json = json.dumps(company_profile, indent=2)
+            context_parts.append(f"COMPANY PROFILE:\n{company_profile_json}")
+        
+        if customer_profile:
+            customer_profile_json = json.dumps(customer_profile, indent=2)
+            context_parts.append(f"CUSTOMER PROFILE (ICPs):\n{customer_profile_json}")
+        
+        context = "\n\n".join(context_parts)
+        
+        # Build prompt
+        prompt = f"""You are an intelligent assistant helping answer questions about market signals, company strategy, and customer insights.
+
+{context}
+{history_text}
+
+CURRENT QUESTION:
+{request.question}
+
+INSTRUCTIONS:
+1. Use the WebSearch tool to find the most up-to-date and accurate information to answer the question
+2. Consider the company profile and customer profile (ICPs) when providing context-specific answers
+3. Reference the conversation history to maintain context and continuity
+4. Provide a comprehensive, well-structured answer that directly addresses the question
+5. If the question relates to market signals, trends, or industry insights, use WebSearch to find recent data (2026-2027)
+6. Cite sources when using information from WebSearch
+7. Be specific and actionable in your response
+
+Please use the WebSearch tool to gather current information and provide a detailed answer."""
+
+        # Use agent_chain to answer with WebSearch
+        from llm_config import agent_chain
+        
+        raw_response = await asyncio.to_thread(
+            agent_chain.invoke,
+            {'input': prompt}
+        )
+        
+        answer = raw_response.get("output", "")
+        
+        return {
+            "status": "success",
+            "answer": answer,
+            "org_id": request.org_id,
+            "user_id": request.user_id,
+            "question": request.question
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in signal_Ask: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to answer question: {str(e)}")
 
 @app.post("/edit")
 def process_edit(request: EditRequest):
