@@ -167,23 +167,9 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     return regulatoryData?.dataLocalization || dataLocalization || getUserLocalStorage('regulatory_dataLocalization', currentUser?.uid) || '';
   });
 
-  // Debug: Log when regulatoryData prop changes
-  useEffect(() => {
-    console.log('🔍 Regulatory Compliance - regulatoryData prop changed:', {
-      hasRegulatoryData: !!regulatoryData,
-      executiveSummary: regulatoryData?.executiveSummary,
-      euAiActDeadline: regulatoryData?.euAiActDeadline,
-      gdprCompliance: regulatoryData?.gdprCompliance,
-      potentialFines: regulatoryData?.potentialFines,
-      dataLocalization: regulatoryData?.dataLocalization,
-      timestamp: regulatoryData?.timestamp
-    });
-  }, [regulatoryData]);
-
   // Update local state when regulatoryData prop changes (for API data updates)
   useEffect(() => {
     if (regulatoryData && !isEditing) {
-      console.log('🔄 Regulatory Compliance - Updating local state with new regulatoryData:', regulatoryData);
       
       // Update local state with new API data
       if (regulatoryData.executiveSummary) {
@@ -202,7 +188,6 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
         setLocalDataLocalization(regulatoryData.dataLocalization);
       }
       
-      console.log('✅ Regulatory Compliance - Local state updated with new data');
     }
   }, [regulatoryData, isEditing]);
   
@@ -256,57 +241,41 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   // Sync local state with centralized regulatoryData and props (only on initial load)
   useEffect(() => {
     if (!isEditing) {
-      console.log('🔄 Syncing Regulatory Compliance local state with props and data (initial load only):');
-      console.log('  - executiveSummary prop:', executiveSummary);
-      console.log('  - euAiActDeadline prop:', euAiActDeadline);
-      console.log('  - regulatoryData:', regulatoryData);
-      console.log('  - Current localExecutiveSummary:', localExecutiveSummary);
-      console.log('  - Current localEuAiActDeadline:', localEuAiActDeadline);
       
       // Only update if we have new data and current local state is empty (initial load only)
       if (executiveSummary && !localExecutiveSummary) {
         setLocalExecutiveSummary(executiveSummary);
-        console.log('📝 Updated localExecutiveSummary from prop (initial load):', executiveSummary);
       }
       if (regulatoryData?.executiveSummary && !localExecutiveSummary) {
         setLocalExecutiveSummary(regulatoryData.executiveSummary);
-        console.log('📝 Updated localExecutiveSummary from regulatoryData (initial load):', regulatoryData.executiveSummary);
       }
       
       if (euAiActDeadline && !localEuAiActDeadline) {
         setLocalEuAiActDeadline(euAiActDeadline);
-        console.log('📝 Updated localEuAiActDeadline from prop (initial load):', euAiActDeadline);
       }
       if (regulatoryData?.euAiActDeadline && !localEuAiActDeadline) {
         setLocalEuAiActDeadline(regulatoryData.euAiActDeadline);
-        console.log('📝 Updated localEuAiActDeadline from regulatoryData (initial load):', regulatoryData.euAiActDeadline);
       }
       
       if (gdprCompliance && !localGdprCompliance) {
         setLocalGdprCompliance(gdprCompliance);
-        console.log('📝 Updated localGdprCompliance from prop (initial load):', gdprCompliance);
       }
       if (regulatoryData?.gdprCompliance && !localGdprCompliance) {
         setLocalGdprCompliance(regulatoryData.gdprCompliance);
-        console.log('📝 Updated localGdprCompliance from regulatoryData (initial load):', regulatoryData.gdprCompliance);
       }
       
       if (potentialFines && !localPotentialFines) {
         setLocalPotentialFines(potentialFines);
-        console.log('📝 Updated localPotentialFines from prop (initial load):', potentialFines);
       }
       if (regulatoryData?.potentialFines && !localPotentialFines) {
         setLocalPotentialFines(regulatoryData.potentialFines);
-        console.log('📝 Updated localPotentialFines from regulatoryData (initial load):', regulatoryData.potentialFines);
       }
       
       if (dataLocalization && !localDataLocalization) {
         setLocalDataLocalization(dataLocalization);
-        console.log('📝 Updated localDataLocalization from prop (initial load):', dataLocalization);
       }
       if (regulatoryData?.dataLocalization && !localDataLocalization) {
         setLocalDataLocalization(regulatoryData.dataLocalization);
-        console.log('📝 Updated localDataLocalization from regulatoryData (initial load):', regulatoryData.dataLocalization);
       }
     }
   }, [isEditing]); // Removed dependencies that cause constant re-syncing
@@ -332,7 +301,6 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
             try {
               parsedUpdate = JSON.parse(update);
             } catch (e) {
-              console.warn(`⚠️ Failed to parse update[${index}] as JSON in useEffect:`, e);
               parsedUpdate = update;
             }
           }
@@ -371,7 +339,6 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
             try {
               parsedUpdate = JSON.parse(update);
             } catch (e) {
-              console.warn(`⚠️ Failed to parse update[${index}] as JSON in handleModify:`, e);
               parsedUpdate = update;
             }
           }
@@ -506,7 +473,6 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
   // Handle save changes
   const handleRegulatoryComplianceSaveChanges = async () => {
     try {
-      console.log('🚀 Regulatory Compliance - Starting save operation');
       
       // Apply local edits to props
       onExecutiveSummaryChange(localExecutiveSummary);
@@ -542,27 +508,12 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
         edit_type: "modification"
       };
 
-      console.log('📤 Regulatory Compliance - original_json:', originalData);
-      console.log('📤 Regulatory Compliance - modified_json:', modifiedData);
-
       // Store data for /ask API
       localStorage.setItem('regulatory-compliance_original_json', JSON.stringify(originalData));
       localStorage.setItem('regulatory-compliance_modified_json', JSON.stringify(modifiedData));
 
       // Skip the /ask endpoint for now and focus on updating the UI
-      console.log('📤 Regulatory Compliance - Skipping /ask endpoint, updating UI directly');
-      
       // The local state variables are already updated with the edited values
-      // The UI will automatically reflect these changes since it uses local state
-      console.log('✅ Regulatory Compliance - UI will reflect local state changes');
-      console.log('✅ Regulatory Compliance - Current local values:', {
-        localExecutiveSummary,
-        localEuAiActDeadline,
-        localGdprCompliance,
-        localPotentialFines,
-        localDataLocalization
-      });
-      
       // Call the original save function to trigger chat panel
       onSaveChanges();
     } catch (error) {
@@ -574,7 +525,6 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
 
   // Fetch Regulatory Compliance data from API (like working components do)
   const fetchRegulatoryComplianceData = async (refresh = false) => {
-    console.log('⚖️ RegulatoryComplianceSection: Starting fetchRegulatoryComplianceData with refresh:', refresh);
     try {
       setIsLoading(true);
       setError(null);
@@ -584,9 +534,6 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
       
       // Get company profile data for dynamic reports (user-specific)
       const profile = companyProfile || JSON.parse(getUserLocalStorage('companyProfile', currentUser?.uid) || '{}');
-      console.log('🔍 Regulatory Compliance - Company profile being used:', profile);
-      console.log('🔍 Regulatory Compliance - companyProfile prop:', companyProfile);
-      console.log('🔍 Regulatory Compliance - localStorage profile (user-specific):', JSON.parse(getUserLocalStorage('companyProfile', currentUser?.uid) || '{}'));
       
       if (!currentUser?.uid) {
         console.error('User not authenticated');
@@ -608,8 +555,6 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
         data: {}
       };
 
-      console.log('📤 RegulatoryComplianceSection: Sending API request with payload:', payload);
-
       const result = await executeWithRateLimit(
         () => apiFetchJson('market-research', {
           method: 'POST',
@@ -617,11 +562,9 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
         }),
         'Regulatory Compliance'
       );
-      console.log('📊 RegulatoryComplianceSection: API result:', result);
       
       if (result.status === 'success' && result.data) {
         const apiData = result.data;
-        console.log('✅ RegulatoryComplianceSection: Processing API data:', apiData);
         
         // Extract data from API response like working components do
         const executiveSummary = apiData.executiveSummary || '';
@@ -655,9 +598,7 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
           setLocalKeyDataValues(initialValues);
         }
         
-        console.log('✅ RegulatoryComplianceSection: Data updated from API');
       } else {
-        console.log('⚠️ RegulatoryComplianceSection: No data in API response, using fallback');
       }
     } catch (error) {
       console.error('❌ RegulatoryComplianceSection: Error fetching data:', error);
@@ -668,7 +609,6 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
       const isApiError = errorMessage.includes('API error');
       
       if (isTimeout || isApiError) {
-        console.log('🔄 Regulatory Compliance: API failed, using fallback data');
         
         // Set fallback data to prevent empty state
         const fallbackData = {
@@ -700,35 +640,29 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     }
   };
 
-  // Clear previous data and fetch fresh data on component mount
+  // Clear previous data and fetch fresh data on component mount (only when parent is not doing a cascade refresh)
   useEffect(() => {
-    // Clear any existing data immediately to prevent showing stale data
+    if (isRefreshing) return; // Parent is fetching; don't duplicate
     setIsLoading(true);
     setError(null);
-    
-    // Reduced delay for faster loading
     const timer = setTimeout(() => {
-      console.log('🚀 Regulatory Compliance Component mounted - fetching initial data');
-      fetchRegulatoryComplianceData(false); // refresh = false for initial load
+      if (!isRefreshing) fetchRegulatoryComplianceData(false);
     }, 1000);
-
     return () => clearTimeout(timer);
   }, []);
-  
-  // Handle refresh when isRefreshing prop changes
+
+  // When parent runs cascade refresh, only show loading; parent will pass data via props (do NOT fetch here – avoids duplicate requests and multiple responses)
   useEffect(() => {
     if (isRefreshing) {
-      console.log('🔄 Regulatory Compliance - Refresh triggered by parent, fetching fresh data');
       setError(null);
       setIsLoading(true);
-      fetchRegulatoryComplianceData(true); // refresh = true for forced refresh
+      // Do not call fetchRegulatoryComplianceData – parent MarketResearch cascade already calls the API for this component
     }
   }, [isRefreshing]);
 
   // Listen for company profile updates from settings
   useEffect(() => {
     const handleCompanyProfileUpdate = async () => {
-      console.log('🔄 Regulatory Compliance - Company profile updated, fetching latest profile and then fresh data');
       setError(null);
       setIsLoading(true);
       
@@ -744,18 +678,15 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
         });
         if (profileResponse.ok) {
           const latestProfile = await profileResponse.json();
-          console.log('📋 Regulatory Compliance - Retrieved latest company profile:', latestProfile);
           // Verify profile belongs to current user before storing
           if (latestProfile.user_id === currentUser?.uid || !latestProfile.user_id) {
             // Store in user-specific localStorage so the API call can use it
             setUserLocalStorage('companyProfile', JSON.stringify(latestProfile), currentUser?.uid);
             setUserLocalStorage('companyProfileForRefresh', JSON.stringify(latestProfile), currentUser?.uid);
           } else {
-            console.warn('⚠️ Regulatory Compliance - Profile user_id mismatch, not storing');
           }
         }
       } catch (error) {
-        console.warn('⚠️ Regulatory Compliance - Could not fetch latest profile:', error);
       }
       
       fetchRegulatoryComplianceData(true); // refresh = true for company profile changes
@@ -768,37 +699,20 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     };
   }, []);
 
-  // Also listen for companyProfile prop changes
+  // Also listen for companyProfile prop changes (skip if parent is refreshing – parent cascade will provide data).
+  // Only depend on companyProfile so we don't refetch when isRefreshing flips to false (cascade just finished), which would overwrite fresh data and cause flicker.
   useEffect(() => {
-    if (companyProfile) {
-      console.log('🔄 Regulatory Compliance - companyProfile prop changed:', companyProfile);
-      console.log('🔄 Regulatory Compliance - Fetching fresh data with new profile');
-      setError(null);
-      setIsLoading(true);
-      fetchRegulatoryComplianceData(true); // refresh = true for company profile prop changes
-    }
+    if (isRefreshing || !companyProfile) return;
+    setError(null);
+    setIsLoading(true);
+    fetchRegulatoryComplianceData(true);
   }, [companyProfile]);
-
-  console.log('🎨 RegulatoryComplianceSection RENDER DEBUG:');
-  console.log('  - isLoading:', isLoading);
-  console.log('  - error:', error);
-  console.log('  - regulatoryData exists:', !!regulatoryData);
-  console.log('  - propRegulatoryData exists:', !!propRegulatoryData);
-  console.log('  - regulatoryData content:', regulatoryData);
-  console.log('  - regulatoryExpanded:', regulatoryExpanded);
 
   if (normalizedDeletedSections.has('regulatory-compliance')) {
     return null;
   }
 
   // Always use regulatoryData when available
-  if (!regulatoryData) {
-    console.log('⚠️ No regulatoryData found - will use fallback props');
-    console.log('  - propRegulatoryData:', propRegulatoryData);
-    console.log('  - isRefreshing:', isRefreshing);
-    console.log('  - companyProfile:', companyProfile);
-    // Don't return null, let it continue with fallback props
-  }
 
   // Use API data if available, otherwise fall back to props
   const getIconByName = (iconName: string) => {
@@ -869,36 +783,6 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     }
   ];
 
-  // Debug logging for keyDataPoints
-  console.log('🔍 RegulatoryComplianceSection - regulatoryData:', regulatoryData);
-  console.log('🔍 RegulatoryComplianceSection - regulatoryData?.keyUpdates:', regulatoryData?.keyUpdates);
-  console.log('🔍 RegulatoryComplianceSection - regulatoryData?.keyUpdates type:', typeof regulatoryData?.keyUpdates);
-  console.log('🔍 RegulatoryComplianceSection - regulatoryData?.keyUpdates isArray:', Array.isArray(regulatoryData?.keyUpdates));
-  console.log('🔍 RegulatoryComplianceSection - regulatoryData?.keyUpdates length:', regulatoryData?.keyUpdates?.length);
-  
-  if (regulatoryData?.keyUpdates && Array.isArray(regulatoryData.keyUpdates)) {
-    console.log('🔍 RegulatoryComplianceSection - keyUpdates details:');
-    regulatoryData.keyUpdates.forEach((update: any, index: number) => {
-      if (update) {
-        console.log(`  [${index}] Full update object:`, JSON.stringify(update, null, 2));
-        console.log(`  [${index}] title: "${update.title}", description: "${update.description}", tag: "${update.tag}"`);
-        console.log(`  [${index}] Alternative fields - name: "${update.name}", label: "${update.label}", value: "${update.value}", content: "${update.content}"`);
-        console.log(`  [${index}] All keys:`, Object.keys(update));
-        console.log(`  [${index}] Type of update:`, typeof update);
-        console.log(`  [${index}] Is update truthy:`, !!update);
-      } else {
-        console.log(`  [${index}] Update is falsy/null/undefined`);
-      }
-    });
-  } else {
-    console.log('⚠️ RegulatoryComplianceSection - keyUpdates is not an array or does not exist');
-    console.log('  - regulatoryData?.keyUpdates:', regulatoryData?.keyUpdates);
-    console.log('  - Type:', typeof regulatoryData?.keyUpdates);
-  }
-  console.log('🔍 RegulatoryComplianceSection - euAiActDeadline:', euAiActDeadline);
-  console.log('🔍 RegulatoryComplianceSection - gdprCompliance:', gdprCompliance);
-  console.log('🔍 RegulatoryComplianceSection - potentialFines:', potentialFines);
-  console.log('🔍 RegulatoryComplianceSection - dataLocalization:', dataLocalization);
 
   const keyDataPoints = (regulatoryData?.keyUpdates && Array.isArray(regulatoryData.keyUpdates)) ? regulatoryData.keyUpdates.filter((update: any) => update).map((update: any, index: number) => {
     // Parse if update is a JSON string
@@ -907,7 +791,6 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
       try {
         parsedUpdate = JSON.parse(update);
       } catch (e) {
-        console.warn(`⚠️ Failed to parse update[${index}] as JSON:`, e);
         parsedUpdate = update;
       }
     }
@@ -964,14 +847,6 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
     }
   ];
 
-  console.log('🔍 RegulatoryComplianceSection - keyDataPoints:', keyDataPoints);
-  console.log('🔍 RegulatoryComplianceSection - keyDataPoints length:', keyDataPoints.length);
-  if (keyDataPoints.length > 0) {
-    console.log('🔍 RegulatoryComplianceSection - keyDataPoints details:');
-    keyDataPoints.forEach((point, index) => {
-      console.log(`  [${index}] id: "${point.id}", title: "${point.title}", value: "${point.value}"`);
-    });
-  }
 
   const visualDataCards = regulatoryData?.visualDataCards || [
     {
@@ -1283,33 +1158,25 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                                 localKeyDataValues[point.id] || point.value
                               }
                               onKeyDown={(e) => {
-                                console.log(`🔍 Key Regulatory Updates - Key pressed: ${e.key} for field: ${point.id}`);
                               }}
                               onInput={(e) => {
-                                console.log(`🔍 Key Regulatory Updates - Input event for field: ${point.id}, value: ${(e.target as HTMLInputElement).value}`);
                               }}
                               onChange={(e) => {
                                 const newValue = e.target.value;
-                                console.log(`🔍 Key Regulatory Updates - onChange for field: ${point.id}, newValue: ${newValue}`);
                                 if (point.id === 'eu-ai-act') {
-                                  console.log(`🔍 Setting localEuAiActDeadline to: ${newValue}`);
                                   setLocalEuAiActDeadline(newValue);
                                   onEuAiActDeadlineChange(newValue);
                                 } else if (point.id === 'gdpr-compliance') {
-                                  console.log(`🔍 Setting localGdprCompliance to: ${newValue}`);
                                   setLocalGdprCompliance(newValue);
                                   onGdprComplianceChange(newValue);
                                 } else if (point.id === 'potential-fines') {
-                                  console.log(`🔍 Setting localPotentialFines to: ${newValue}`);
                                   setLocalPotentialFines(newValue);
                                   onPotentialFinesChange(newValue);
                                 } else if (point.id === 'data-localization') {
-                                  console.log(`🔍 Setting localDataLocalization to: ${newValue}`);
                                   setLocalDataLocalization(newValue);
                                   onDataLocalizationChange(newValue);
                                 } else {
                                   // Handle dynamic fields
-                                  console.log(`🔍 Setting dynamic field ${point.id} to: ${newValue}`);
                                   setLocalKeyDataValues(prev => ({
                                     ...prev,
                                     [point.id]: newValue
@@ -2114,8 +1981,6 @@ const RegulatoryComplianceSection: React.FC<RegulatoryComplianceSectionProps> = 
                       }) || []
                     };
 
-                     console.log('⚖️ Regulatory Compliance Section - original_json:', JSON.stringify(originalJson, null, 2));
-                     console.log('⚖️ Regulatory Compliance Section - modified_json:', JSON.stringify(modifiedJson, null, 2));
 
                      // Store JSON data in localStorage for Scout API (user-specific)
                      setUserLocalStorage('regulatory-compliance_original_json', JSON.stringify(originalJson), currentUser?.uid);

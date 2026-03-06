@@ -32,10 +32,11 @@ interface MarketSizeOpportunityComponentProps {
   executiveSummary: string;
   tamValue: string;
   samValue: string;
-  apacGrowthRate: string;
+  GrowthRate: string;
   strategicRecommendations: string[];
   marketEntry: string;
   marketDrivers: string[];
+  marketSizeBySegment?: Record<string, string>;
   onToggleEdit: () => void;
   onScoutIconClick: (context?: 'market-size' | 'industry-trends' | 'competitor-landscape', hasEdits?: boolean, customMessage?: string) => void;
   onEditHistoryOpen: () => void;
@@ -46,7 +47,7 @@ interface MarketSizeOpportunityComponentProps {
   onExecutiveSummaryChange: (value: string) => void;
   onTamValueChange: (value: string) => void;
   onSamValueChange: (value: string) => void;
-  onApacGrowthRateChange: (value: string) => void;
+  onGrowthRateChange: (value: string) => void;
   onStrategicRecommendationsChange: (recommendations: string[]) => void;
   onMarketEntryChange: (value: string) => void;
   onMarketDriversChange: (drivers: string[]) => void;
@@ -68,10 +69,11 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
   executiveSummary,
   tamValue,
   samValue,
-  apacGrowthRate,
+  GrowthRate,
   strategicRecommendations,
   marketEntry,
   marketDrivers,
+  marketSizeBySegment,
   onToggleEdit,
   onScoutIconClick,
   onEditHistoryOpen,
@@ -82,7 +84,7 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
   onExecutiveSummaryChange,
   onTamValueChange,
   onSamValueChange,
-  onApacGrowthRateChange,
+  onGrowthRateChange,
   onStrategicRecommendationsChange,
   onMarketEntryChange,
   onMarketDriversChange,
@@ -98,7 +100,7 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
   const [localExecutiveSummary, setLocalExecutiveSummary] = React.useState(executiveSummary || '');
   const [localTamValue, setLocalTamValue] = React.useState(tamValue || '');
   const [localSamValue, setLocalSamValue] = React.useState(samValue || '');
-  const [localApacGrowthRate, setLocalApacGrowthRate] = React.useState(apacGrowthRate || '');
+  const [localGrowthRate, setLocalGrowthRate] = React.useState(GrowthRate || '');
   const [localMarketEntry, setLocalMarketEntry] = React.useState(marketEntry || '');
   const [localStrategicRecommendations, setLocalStrategicRecommendations] = React.useState([...strategicRecommendations]);
   const [localMarketDrivers, setLocalMarketDrivers] = React.useState([...marketDrivers]);
@@ -112,7 +114,7 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
     executiveSummary: string;
     tamValue: string;
     samValue: string;
-    apacGrowthRate: string;
+    GrowthRate: string;
     marketEntry: string;
     strategicRecommendations: string[];
     marketDrivers: string[];
@@ -127,7 +129,7 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
         (executiveSummary || '') === savedLocalStateRef.current.executiveSummary &&
         (tamValue || '') === savedLocalStateRef.current.tamValue &&
         (samValue || '') === savedLocalStateRef.current.samValue &&
-        (apacGrowthRate || '') === savedLocalStateRef.current.apacGrowthRate &&
+        (GrowthRate || '') === savedLocalStateRef.current.GrowthRate &&
         (marketEntry || '') === savedLocalStateRef.current.marketEntry;
       
       if (propsMatchSaved) {
@@ -148,7 +150,7 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
         localExecutiveSummary !== (executiveSummary || '') ||
         localTamValue !== (tamValue || '') ||
         localSamValue !== (samValue || '') ||
-        localApacGrowthRate !== (apacGrowthRate || '') ||
+        localGrowthRate !== (GrowthRate || '') ||
         localMarketEntry !== (marketEntry || '');
       
       // Only sync if local differs AND we're not in a "just saved" state
@@ -157,13 +159,13 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
         setLocalExecutiveSummary(executiveSummary || '');
         setLocalTamValue(tamValue || '');
         setLocalSamValue(samValue || '');
-        setLocalApacGrowthRate(apacGrowthRate || '');
+        setLocalGrowthRate(GrowthRate || '');
         setLocalMarketEntry(marketEntry || '');
         setLocalStrategicRecommendations([...strategicRecommendations]);
         setLocalMarketDrivers([...marketDrivers]);
       }
     }
-  }, [executiveSummary, tamValue, samValue, apacGrowthRate, marketEntry, strategicRecommendations, marketDrivers, isEditing, localExecutiveSummary, localTamValue, localSamValue, localApacGrowthRate, localMarketEntry]);
+  }, [executiveSummary, tamValue, samValue, GrowthRate, marketEntry, strategicRecommendations, marketDrivers, isEditing, localExecutiveSummary, localTamValue, localSamValue, localGrowthRate, localMarketEntry]);
 
   // Use local state for display to ensure immediate UI updates after save
   // Local state is synced with props when not editing, and updated immediately during editing
@@ -173,7 +175,7 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
   const displayExecutiveSummary = localExecutiveSummary || executiveSummary || '';
   const displayTamValue = localTamValue || tamValue || '';
   const displaySamValue = localSamValue || samValue || '';
-  const displayApacGrowthRate = localApacGrowthRate || apacGrowthRate || '';
+  const displayGrowthRate = localGrowthRate || GrowthRate || '';
   const displayMarketEntry = localMarketEntry || marketEntry || '';
   const displayStrategicRecommendations = localStrategicRecommendations.length > 0 ? localStrategicRecommendations : strategicRecommendations;
   const displayMarketDrivers = localMarketDrivers.length > 0 ? localMarketDrivers : marketDrivers;
@@ -212,7 +214,7 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
         executiveSummary: executiveSummary || '',
         tamValue: tamValue || '',
         samValue: samValue || '',
-        apacGrowthRate: apacGrowthRate || '',
+        GrowthRate: GrowthRate || '',
         strategicRecommendations: strategicRecommendations || [],
         marketEntry: marketEntry || '',
         marketDrivers: marketDrivers || []
@@ -224,7 +226,7 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
         executiveSummary: localExecutiveSummary,
         tamValue: localTamValue,
         samValue: localSamValue,
-        apacGrowthRate: localApacGrowthRate,
+        GrowthRate: localGrowthRate,
         strategicRecommendations: localStrategicRecommendations,
         marketEntry: localMarketEntry,
         marketDrivers: localMarketDrivers
@@ -266,7 +268,7 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
         executiveSummary: localExecutiveSummary,
         tamValue: localTamValue,
         samValue: localSamValue,
-        apacGrowthRate: localApacGrowthRate,
+        GrowthRate: localGrowthRate,
         marketEntry: localMarketEntry,
         strategicRecommendations: [...localStrategicRecommendations],
         marketDrivers: [...localMarketDrivers]
@@ -283,7 +285,7 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
       onExecutiveSummaryChange(localExecutiveSummary);
       onTamValueChange(localTamValue);
       onSamValueChange(localSamValue);
-      onApacGrowthRateChange(localApacGrowthRate);
+      onGrowthRateChange(localGrowthRate);
       onStrategicRecommendationsChange(localStrategicRecommendations);
       onMarketEntryChange(localMarketEntry);
       onMarketDriversChange(localMarketDrivers);
@@ -315,7 +317,7 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
         executiveSummary: localExecutiveSummary,
         tamValue: localTamValue,
         samValue: localSamValue,
-        apacGrowthRate: localApacGrowthRate,
+        GrowthRate: localGrowthRate,
         marketEntry: localMarketEntry,
         strategicRecommendations: [...localStrategicRecommendations],
         marketDrivers: [...localMarketDrivers]
@@ -324,7 +326,7 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
       onExecutiveSummaryChange(localExecutiveSummary);
       onTamValueChange(localTamValue);
       onSamValueChange(localSamValue);
-      onApacGrowthRateChange(localApacGrowthRate);
+      onGrowthRateChange(localGrowthRate);
       onStrategicRecommendationsChange(localStrategicRecommendations);
       onMarketEntryChange(localMarketEntry);
       onMarketDriversChange(localMarketDrivers);
@@ -337,13 +339,25 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
     }
   };
 
-  // Mock data for charts
-  const pieChartData = [
-    { name: 'North America', value: 40, color: '#3B82F6' },
-    { name: 'Europe', value: 30, color: '#10B981' },
-    { name: 'APAC', value: 25, color: '#8B5CF6' },
-    { name: 'Others', value: 5, color: '#F59E0B' }
-  ];
+  // Convert marketSizeBySegment from backend to chart format
+  // Backend format: { "Enterprise": "45%", "Mid-Market": "35%", "SMB": "20%" }
+  // Chart format: [{ name: "Enterprise", value: 45, color: "#..." }, ...]
+  const segmentChartData = React.useMemo(() => {
+    if (!marketSizeBySegment || Object.keys(marketSizeBySegment).length === 0) {
+      return [];
+    }
+    
+    const colors = ['#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EF4444', '#06B6D4'];
+    return Object.entries(marketSizeBySegment).map(([segment, percentage], index) => {
+      // Remove % sign and convert to number
+      const value = parseFloat(percentage.replace('%', ''));
+      return {
+        name: segment,
+        value: isNaN(value) ? 0 : value,
+        color: colors[index % colors.length]
+      };
+    });
+  }, [marketSizeBySegment]);
 
   const lineChartData = [
     { name: 'Jan', value: 2.1 },
@@ -481,16 +495,16 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
                     />
                   </div>
                   <div>
-                    <Label htmlFor="apacGrowthRate" className="text-sm font-medium text-gray-700 mb-2 block">
-                      APAC Growth Rate
+                    <Label htmlFor="GrowthRate" className="text-sm font-medium text-gray-700 mb-2 block">
+                      Growth Rate
                     </Label>
                     <Input 
-                      id="apacGrowthRate"
-                      value={localApacGrowthRate} 
+                      id="GrowthRate"
+                      value={localGrowthRate} 
                       onChange={(e) => {
-                        console.log('🔧 APAC Growth Rate onChange:', e.target.value);
-                        setLocalApacGrowthRate(e.target.value);
-                        onApacGrowthRateChange(e.target.value);
+                        console.log('🔧 Growth Rate onChange:', e.target.value);
+                        setLocalGrowthRate(e.target.value);
+                        onGrowthRateChange(e.target.value);
                       }}
                       className="text-2xl font-bold text-purple-600 border-purple-200 focus:border-purple-400"
                       placeholder="e.g., 25%"
@@ -685,8 +699,8 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
                 <div className="text-xs text-gray-600">Mid-market focus</div>
               </div>
               <div className="bg-purple-50 border-l-4 border-purple-500 p-4 rounded-r-lg">
-                <div className="text-2xl font-bold text-purple-600">{displayApacGrowthRate}</div>
-                <div className="text-sm font-medium text-gray-900">APAC Growth Rate</div>
+                <div className="text-2xl font-bold text-purple-600">{displayGrowthRate}</div>
+                <div className="text-sm font-medium text-gray-900">Growth Rate</div>
                 <div className="text-xs text-gray-600">Fastest growing region</div>
               </div>
             </div>
@@ -763,19 +777,21 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
                   </div>
                 </div>
 
-                {/* Regional Distribution Chart */}
-                <div className="mb-8">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                    <PieChart className="h-5 w-5 text-indigo-600" />
-                    Regional Market Distribution
-                  </h3>
-                  <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
-                    <MiniPieChart 
-                      data={pieChartData}
-                      title="Market Share by Region"
-                    />
+                {/* Market Size by Segment Chart */}
+                {segmentChartData.length > 0 && (
+                  <div className="mb-8">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <PieChart className="h-5 w-5 text-indigo-600" />
+                      Market Size by Segment
+                    </h3>
+                    <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                      <MiniPieChart 
+                        data={segmentChartData}
+                        title="Market Share by Segment"
+                      />
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Market Growth Trajectory */}
                 <div className="mb-8">

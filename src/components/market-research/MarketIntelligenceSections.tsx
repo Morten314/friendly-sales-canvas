@@ -14,23 +14,19 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
   // Trigger data refresh for all components when isRefreshing changes
   React.useEffect(() => {
     if (props.isRefreshing) {
-      console.log('🔄 MarketIntelligenceSections detected refresh state - triggering component refreshes');
       
       // Trigger refresh for Market Size if refresh handler exists
       if (props.onMarketSizeRefresh) {
-        console.log('🔄 Triggering Market Size refresh');
         props.onMarketSizeRefresh();
       }
       
       // Trigger refresh for Competitor Landscape if refresh handler exists
       if (props.onCompetitorRefresh) {
-        console.log('🔄 Triggering Competitor Landscape refresh');
         props.onCompetitorRefresh();
       }
       
       // Trigger refresh for Market Entry if refresh handler exists
       if (props.onMarketEntryRefresh) {
-        console.log('🔄 Triggering Market Entry refresh');
         props.onMarketEntryRefresh();
       }
       
@@ -111,10 +107,6 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
     />
   ) : undefined;
 
-  console.log('🔍 MarketIntelligenceSections - marketSizeBySegment from props:', props.marketSizeBySegment);
-  console.log('🔍 MarketIntelligenceSections - marketSizeBySegment type:', typeof props.marketSizeBySegment);
-  console.log('🔍 MarketIntelligenceSections - growthProjections from props:', props.growthProjections);
-  console.log('🔍 MarketIntelligenceSections - growthProjections type:', typeof props.growthProjections);
   
   return (
     <>
@@ -129,7 +121,7 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
         executiveSummary={props.executiveSummary}
         tamValue={props.tamValue}
         samValue={props.samValue}
-        apacGrowthRate={props.apacGrowthRate}
+        GrowthRate={props.GrowthRate}
         strategicRecommendations={props.strategicRecommendations}
         marketEntry={props.marketEntry}
         marketDrivers={props.marketDrivers}
@@ -145,7 +137,7 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
         onExecutiveSummaryChange={props.onExecutiveSummaryChange}
         onTamValueChange={props.onTamValueChange}
         onSamValueChange={props.onSamValueChange}
-        onApacGrowthRateChange={props.onApacGrowthRateChange}
+        onGrowthRateChange={props.onGrowthRateChange}
         onStrategicRecommendationsChange={props.onStrategicRecommendationsChange}
         onMarketEntryChange={props.onMarketEntryChange}
         onMarketDriversChange={props.onMarketDriversChange}

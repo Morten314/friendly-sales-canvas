@@ -44,6 +44,18 @@ const mockLeads: Lead[] = [
   { id: "12", name: "Chris Andersen", company: "BrandBurst D2C", title: "COO", source: "Growth-Stage E-commerce Leaders", intentLevel: "Medium", reason: "Scaling e-commerce operations. Shopify Plus migration in progress." },
 ];
 
+/** Count of leads in Lead Stream that match the given ICP name (same logic as filter). */
+export function getLeadCountForICP(icpName: string): number {
+  if (!icpName) return 0;
+  const lower = icpName.toLowerCase();
+  return mockLeads.filter(
+    (lead) =>
+      lead.source === icpName ||
+      lead.source.toLowerCase().includes(lower) ||
+      lower.includes(lead.source.toLowerCase())
+  ).length;
+}
+
 const mockContextChips: ContextChip[] = [
   { label: "Active ICPs", value: "3", icon: <Target className="h-3 w-3" /> },
   { label: "Regions", value: "North America, EMEA", icon: <MapPin className="h-3 w-3" /> },

@@ -40,11 +40,25 @@ import {
   Lock,
   Building2,
   ExternalLink,
+  Users,
+  ChevronDown,
+  Plug,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { buildApiUrl } from "@/lib/api";
 import jwtManager from "@/lib/jwt";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+} from "@/components/ui/dropdown-menu";
 
 // Types
 type SourceType = "url" | "file" | "system";
@@ -61,6 +75,22 @@ interface DataSource {
   tags: string[];
   status: SourceStatus;
   createdAt: Date;
+}
+
+interface Lead {
+  lead_id?: string;
+  id?: string;
+  fullName?: string;
+  email?: string;
+  mobile?: string;
+  companyName?: string;
+  companyWebsite?: string;
+  linkedInProfile?: string;
+  actions?: string;
+  company?: any;
+  contact?: any;
+  techStack?: any;
+  [key: string]: any;
 }
 
 interface CompanyProfile {
@@ -92,6 +122,26 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
   const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Lead Stream state
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [isLoadingLeads, setIsLoadingLeads] = useState(false);
+  const [isUploadingLeads, setIsUploadingLeads] = useState(false);
+  const [showLeadUpload, setShowLeadUpload] = useState(false);
+  const [selectedLeadFile, setSelectedLeadFile] = useState<File | null>(null);
+  const [isDraggingLead, setIsDraggingLead] = useState(false);
+  const leadFileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Lead edit state
+  const [editingLeadId, setEditingLeadId] = useState<string | null>(null);
+  const [showLeadEditForm, setShowLeadEditForm] = useState(false);
+  const [leadFullName, setLeadFullName] = useState("");
+  const [leadEmail, setLeadEmail] = useState("");
+  const [leadMobile, setLeadMobile] = useState("");
+  const [leadCompanyName, setLeadCompanyName] = useState("");
+  const [leadCompanyWebsite, setLeadCompanyWebsite] = useState("");
+  const [leadLinkedInProfile, setLeadLinkedInProfile] = useState("");
+  const [leadActions, setLeadActions] = useState("");
 
   // Load company profile from localStorage
   useEffect(() => {
@@ -807,6 +857,10 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
       setExistingFileName(null);
     } else if (type === "file") {
       setSourceUrl("");
+    } else if (type === "system") {
+      setSelectedFile(null);
+      setExistingFileName(null);
+      setSourceUrl("");
     }
   };
 
@@ -836,6 +890,50 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
     if (e.key === "Enter") {
       e.preventDefault();
       handleAddCustomTag();
+    }
+  };
+
+  const handleSaveSystemSource = async (crmName: string) => {
+    const nameToUse = sourceName.trim() || crmName;
+    
+    try {
+      setIsSaving(true);
+      
+      // Create a system data source entry
+      const newSystemSource: DataSource = {
+        id: `system-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        type: "system",
+        name: nameToUse,
+        description: sourceDescription.trim() || undefined,
+        tags: selectedTags,
+        status: "processing",
+        createdAt: new Date(),
+      };
+
+      // Add to local state immediately
+      setDataSources((prev) => [...prev, newSystemSource]);
+      
+      // Close the form
+      resetInlineForm();
+      setIsAddingInline(false);
+      
+      toast({
+        title: "System connection initiated",
+        description: `${nameToUse} connection has been added. Complete the login process to finish setup.`,
+      });
+      
+      // Notify MissionControl that a data source was added
+      window.dispatchEvent(new CustomEvent('dataSourceAdded'));
+      
+    } catch (error) {
+      console.error("Error saving system source:", error);
+      toast({
+        title: "Error",
+        description: "Could not save system source. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -1651,6 +1749,1066 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
     setIsAddingInline(true);
   };
 
+  // ==================== LEAD STREAM FUNCTIONS ====================
+  
+  // Helper: Detect CSV delimiter
+  const detectDelimiter = (text: string): string => {
+    const firstLine = text.split('\n')[0];
+    const delimiters = [',', ';', '\t'];
+    let maxCount = 0;
+    let detectedDelimiter = ',';
+    
+    for (const delimiter of delimiters) {
+      const count = (firstLine.match(new RegExp(`\\${delimiter}`, 'g')) || []).length;
+      if (count > maxCount) {
+        maxCount = count;
+        detectedDelimiter = delimiter;
+      }
+    }
+    
+    return detectedDelimiter;
+  };
+
+  // Helper: Normalize column names
+  const normalizeColumnNames = (headerLine: string): string => {
+    const columnMapping: Record<string, string> = {
+      'fullname': 'fullName',
+      'full_name': 'fullName',
+      'FullName': 'fullName',
+      'Full Name': 'fullName',
+      'full name': 'fullName',
+      'name': 'fullName',
+      'Name': 'fullName',
+      'email': 'email',
+      'Email': 'email',
+      'mobile': 'mobile',
+      'Mobile': 'mobile',
+      'phone': 'mobile',
+      'Phone': 'mobile',
+      'phone_number': 'mobile',
+      'Phone Number': 'mobile',
+      'phone number': 'mobile',
+      'companyname': 'companyName',
+      'company_name': 'companyName',
+      'CompanyName': 'companyName',
+      'Company Name': 'companyName',
+      'company name': 'companyName',
+      'company': 'companyName',
+      'Company': 'companyName',
+      'companywebsite': 'companyWebsite',
+      'company_website': 'companyWebsite',
+      'CompanyWebsite': 'companyWebsite',
+      'Company Website': 'companyWebsite',
+      'company website': 'companyWebsite',
+      'website': 'companyWebsite',
+      'Website': 'companyWebsite',
+      'linkedinprofile': 'linkedInProfile',
+      'linkedin_profile': 'linkedInProfile',
+      'LinkedInProfile': 'linkedInProfile',
+      'LinkedIn Profile': 'linkedInProfile',
+      'linkedin profile': 'linkedInProfile',
+      'linkedin': 'linkedInProfile',
+      'LinkedIn': 'linkedInProfile',
+      'actions': 'actions',
+      'Actions': 'actions',
+      'notes': 'actions',
+      'Notes': 'actions',
+    };
+
+    const columns = headerLine.split(',');
+    const normalizedColumns = columns.map(col => {
+      const trimmed = col.trim();
+      const lowerKey = trimmed.toLowerCase().replace(/\s+/g, '');
+      const lowerWithSpaces = trimmed.toLowerCase();
+      
+      if (columnMapping[trimmed]) {
+        return columnMapping[trimmed];
+      } else if (columnMapping[lowerKey]) {
+        return columnMapping[lowerKey];
+      } else if (columnMapping[lowerWithSpaces]) {
+        return columnMapping[lowerWithSpaces];
+      } else if (columnMapping[trimmed.toLowerCase()]) {
+        return columnMapping[trimmed.toLowerCase()];
+      }
+      return trimmed;
+    });
+
+    return normalizedColumns.join(',');
+  };
+
+  // Helper: Parse CSV line respecting quoted fields
+  const parseCsvLine = (line: string, delimiter: string = ','): string[] => {
+    const fields: string[] = [];
+    let currentField = '';
+    let inQuotes = false;
+    
+    // Handle empty line
+    if (!line || line.trim().length === 0) {
+      return [];
+    }
+    
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      const nextChar = line[i + 1];
+      
+      if (char === '"') {
+        if (inQuotes && nextChar === '"') {
+          // Escaped quote (double quote)
+          currentField += '"';
+          i++;
+        } else {
+          // Toggle quote state
+          inQuotes = !inQuotes;
+          // Don't include the quote character in the field value
+        }
+      } else if (char === delimiter && !inQuotes) {
+        // Field separator - push current field and start new one
+        fields.push(currentField);
+        currentField = '';
+      } else {
+        currentField += char;
+      }
+    }
+    
+    // Add the last field (even if line ends without delimiter)
+    fields.push(currentField);
+    
+    // Handle trailing delimiter (creates empty field at end)
+    if (line.endsWith(delimiter) && !inQuotes) {
+      fields.push('');
+    }
+    
+    return fields;
+  };
+
+  // Helper: Normalize CSV format
+  const normalizeCsv = (text: string): string => {
+    text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    const delimiter = detectDelimiter(text);
+    let lines = text.split('\n').filter(line => line.trim().length > 0);
+    if (lines.length === 0) return text;
+    
+    // Normalize all lines to ensure consistent formatting
+    const normalizedLines = lines.map(line => {
+      if (line.trim() === '') return line;
+      
+      // Parse the line using the detected delimiter
+      const fields = parseCsvLine(line, delimiter);
+      
+      // Ensure fields with special characters are properly quoted
+      const normalizedFields = fields.map(field => {
+        const trimmedField = field.trim();
+        // Quote fields that contain commas, quotes, or newlines
+        if (trimmedField.includes(',') || trimmedField.includes('"') || trimmedField.includes('\n') || trimmedField.includes('\r')) {
+          // Escape existing quotes by doubling them
+          return `"${trimmedField.replace(/"/g, '""')}"`;
+        }
+        return trimmedField;
+      });
+      
+      return normalizedFields.join(',');
+    });
+    
+    text = normalizedLines.join('\n');
+    
+    // Normalize column names in header
+    const finalLines = text.split('\n').filter(line => line.trim().length > 0);
+    if (finalLines.length > 0) {
+      finalLines[0] = normalizeColumnNames(finalLines[0]);
+      text = finalLines.join('\n');
+    }
+    
+    return text;
+  };
+
+  // Helper: Check if file is binary (not a valid text file)
+  const isBinaryFile = (arrayBuffer: ArrayBuffer): boolean => {
+    const bytes = new Uint8Array(arrayBuffer);
+    const maxBytesToCheck = Math.min(512, bytes.length);
+    
+    // Check for common binary file signatures
+    // Excel files: PK (ZIP signature) at start
+    if (bytes.length >= 4 && bytes[0] === 0x50 && bytes[1] === 0x4B) {
+      return true; // ZIP/Excel file
+    }
+    
+    // Check for high percentage of non-printable characters
+    let nonPrintableCount = 0;
+    for (let i = 0; i < maxBytesToCheck; i++) {
+      const byte = bytes[i];
+      // Allow common text characters: 0x09 (tab), 0x0A (LF), 0x0D (CR), 0x20-0x7E (printable ASCII)
+      if (byte < 0x09 || (byte > 0x0D && byte < 0x20) || byte > 0x7E) {
+        nonPrintableCount++;
+      }
+    }
+    
+    // If more than 30% are non-printable, likely binary
+    return (nonPrintableCount / maxBytesToCheck) > 0.3;
+  };
+
+  // Helper: Validate CSV format
+  const validateCsvFormat = async (file: File): Promise<{ valid: boolean; error?: string }> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      
+      reader.onload = async (e) => {
+        try {
+          // Use the same encoding detection as uploadCsvBatch
+          const arrayBuffer = e.target?.result as ArrayBuffer;
+          
+          // Check if file is binary
+          if (isBinaryFile(arrayBuffer)) {
+            resolve({ 
+              valid: false, 
+              error: "Invalid file format: This appears to be a binary file (possibly an Excel file). Please save your file as a CSV file before uploading. In Excel: File > Save As > CSV (Comma delimited) (*.csv)" 
+            });
+            return;
+          }
+          
+          const encodings = ['windows-1252', 'iso-8859-1', 'utf-8'];
+          let text = '';
+          let decoded = false;
+          
+          for (const encoding of encodings) {
+            try {
+              const decoder = new TextDecoder(encoding, { fatal: false });
+              text = decoder.decode(arrayBuffer);
+              decoded = true;
+              break;
+            } catch {
+              continue;
+            }
+          }
+          
+          if (!decoded || !text) {
+            text = new TextDecoder('utf-8', { fatal: false }).decode(arrayBuffer);
+          }
+          
+          // Remove BOM if present
+          if (text.charCodeAt(0) === 0xFEFF) {
+            text = text.slice(1);
+          }
+          
+          // Check for binary content in decoded text
+          const binaryPattern = /[\x00-\x08\x0E-\x1F\x7F-\x9F]/g;
+          const binaryMatches = text.substring(0, 1000).match(binaryPattern);
+          if (binaryMatches && binaryMatches.length > 50) {
+            resolve({ 
+              valid: false, 
+              error: "Invalid file format: This file contains binary data and is not a valid CSV file. Please ensure you're uploading a plain text CSV file. If you're using Excel, save the file as 'CSV (Comma delimited) (*.csv)' format." 
+            });
+            return;
+          }
+          
+          if (!text || text.trim().length === 0) {
+            resolve({ valid: false, error: "CSV file is empty" });
+            return;
+          }
+          
+          // First, validate the original file structure
+          const originalLines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n').filter(line => line.trim().length > 0);
+          if (originalLines.length === 0) {
+            resolve({ valid: false, error: "CSV file appears to be empty" });
+            return;
+          }
+          
+          // Detect delimiter from original file
+          const originalDelimiter = detectDelimiter(text);
+          
+          // Validate original structure
+          const originalHeaderFields = parseCsvLine(originalLines[0], originalDelimiter);
+          const originalExpectedCount = originalHeaderFields.length;
+          
+          if (originalExpectedCount === 0) {
+            resolve({ valid: false, error: "CSV header is empty or invalid" });
+            return;
+          }
+          
+          // Check original file structure
+          for (let i = 1; i < originalLines.length; i++) {
+            const line = originalLines[i];
+            
+            // Check if line contains binary/control characters (indicates corrupted or wrong file type)
+            const binaryPattern = /[\x00-\x08\x0E-\x1F\x7F-\x9F]/;
+            if (binaryPattern.test(line)) {
+              console.error("❌ CSV Validation Error - Binary content detected:", {
+                lineNumber: i + 1,
+                linePreview: line.substring(0, 100)
+              });
+              
+              resolve({ 
+                valid: false, 
+                error: `Invalid file format detected on line ${i + 1}: This file appears to be a binary file (possibly an Excel .xlsx file) rather than a CSV file. Please save your file as CSV format: In Excel, go to File > Save As > Choose "CSV (Comma delimited) (*.csv)" format.` 
+              });
+              return;
+            }
+            
+            const rowFields = parseCsvLine(line, originalDelimiter);
+            if (rowFields.length !== originalExpectedCount) {
+              console.error("❌ CSV Validation Error (Original):", {
+                lineNumber: i + 1,
+                lineContent: line.substring(0, 200), // Only show first 200 chars
+                expectedColumns: originalExpectedCount,
+                actualColumns: rowFields.length,
+                delimiter: originalDelimiter
+              });
+              
+              resolve({ 
+                valid: false, 
+                error: `CSV format error on line ${i + 1}: Expected ${originalExpectedCount} column(s), but found ${rowFields.length}. Please ensure all rows have the same number of columns and that fields containing commas are enclosed in quotes.` 
+              });
+              return;
+            }
+          }
+          
+          // Now validate after normalization (what will be sent to backend)
+          const normalizedText = normalizeCsv(text);
+          const normalizedLines = normalizedText.split('\n').filter(line => line.trim().length > 0);
+          
+          if (normalizedLines.length === 0) {
+            resolve({ valid: false, error: "CSV file appears to be empty after normalization" });
+            return;
+          }
+          
+          // Use comma as delimiter after normalization
+          const delimiter = ',';
+          
+          // Parse normalized header
+          const headerFields = parseCsvLine(normalizedLines[0], delimiter);
+          const expectedColumnCount = headerFields.length;
+          
+          console.log("🔍 CSV Validation - Normalized Header:", {
+            headerLine: normalizedLines[0],
+            headerFields,
+            expectedColumnCount
+          });
+          
+          if (expectedColumnCount === 0) {
+            resolve({ valid: false, error: "CSV header is empty or invalid after normalization" });
+            return;
+          }
+          
+          // Validate normalized rows
+          for (let i = 1; i < normalizedLines.length; i++) {
+            const rowFields = parseCsvLine(normalizedLines[i], delimiter);
+            if (rowFields.length !== expectedColumnCount) {
+              console.error("❌ CSV Validation Error (Normalized):", {
+                lineNumber: i + 1,
+                lineContent: normalizedLines[i],
+                expectedColumns: expectedColumnCount,
+                actualColumns: rowFields.length,
+                parsedFields: rowFields
+              });
+              
+              resolve({ 
+                valid: false, 
+                error: `CSV format error on line ${i + 1}: Expected ${expectedColumnCount} column(s), but found ${rowFields.length}. Please ensure all rows have the same number of columns and that fields containing commas are enclosed in quotes.` 
+              });
+              return;
+            }
+          }
+          
+          console.log("✅ CSV Validation - All rows validated successfully (original and normalized)");
+          
+          resolve({ valid: true });
+        } catch (error) {
+          resolve({ 
+            valid: false, 
+            error: `Failed to read CSV file: ${error instanceof Error ? error.message : 'Unknown error'}` 
+          });
+        }
+      };
+      
+      reader.onerror = () => resolve({ valid: false, error: "Failed to read file" });
+      // Read as ArrayBuffer to match uploadCsvBatch encoding detection
+      reader.readAsArrayBuffer(file);
+    });
+  };
+
+  // Helper: Parse error messages
+  const parseErrorMessage = (errorMessage: string): string => {
+    // Extract error message from JSON format if present
+    let cleanMessage = errorMessage;
+    try {
+      const jsonMatch = errorMessage.match(/\{"detail":\s*"([^"]+)"\}/);
+      if (jsonMatch) {
+        cleanMessage = jsonMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
+      }
+    } catch {
+      // If parsing fails, use original message
+    }
+    
+    // Check for CSV format errors
+    if (cleanMessage.includes('Expected') && cleanMessage.includes('fields')) {
+      const match = cleanMessage.match(/Expected (\d+) fields? in line (\d+), saw (\d+)/);
+      if (match) {
+        const [, expected, lineNum, actual] = match;
+        return `CSV format error on line ${lineNum}: Expected ${expected} column(s), but found ${actual}. Please ensure all rows have the same number of columns and that fields containing commas are enclosed in quotes.`;
+      }
+      
+      // Alternative pattern
+      const match2 = cleanMessage.match(/Expected (\d+) fields? in line (\d+), saw (\d+)/);
+      if (match2) {
+        const [, expected, lineNum, actual] = match2;
+        return `CSV format error on line ${lineNum}: Expected ${expected} column(s), but found ${actual}. Please ensure all rows have the same number of columns and that fields containing commas are enclosed in quotes.`;
+      }
+    }
+    
+    if (cleanMessage.includes('tokenizing data')) {
+      return `CSV parsing error: ${cleanMessage}. Please check that your CSV file uses commas as delimiters and that fields with commas or special characters are enclosed in double quotes.`;
+    }
+    
+    if (cleanMessage.includes('codec') || cleanMessage.includes('decode')) {
+      return `File encoding error: ${cleanMessage}. The file has been converted to UTF-8, but please try saving your CSV file as UTF-8 format before uploading.`;
+    }
+    
+    // Remove status code prefix if present
+    const statusMatch = cleanMessage.match(/^\d+\s*-\s*(.+)$/);
+    if (statusMatch) {
+      cleanMessage = statusMatch[1];
+    }
+    
+    return cleanMessage;
+  };
+
+  // API: Upload CSV batch
+  const uploadCsvBatch = async (file: File) => {
+    // For leads API, org_id should match user_id (backend requirement)
+    const userId = currentUser?.uid || "";
+    const leadOrgId = userId || ""; // Use user_id as org_id to ensure they match
+    
+    if (!userId || !leadOrgId) {
+      throw new Error("User ID and Org ID are required");
+    }
+
+    const convertToUtf8 = (file: File): Promise<File> => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        
+        reader.onload = (e) => {
+          try {
+            const arrayBuffer = e.target?.result as ArrayBuffer;
+            const encodings = ['windows-1252', 'iso-8859-1', 'utf-8'];
+            let text = '';
+            let decoded = false;
+            
+            for (const encoding of encodings) {
+              try {
+                const decoder = new TextDecoder(encoding, { fatal: false });
+                text = decoder.decode(arrayBuffer);
+                decoded = true;
+                break;
+              } catch {
+                continue;
+              }
+            }
+            
+            if (!decoded || !text) {
+              text = new TextDecoder('utf-8', { fatal: false }).decode(arrayBuffer);
+            }
+            
+            text = normalizeCsv(text);
+            const utf8Blob = new Blob([text], { type: 'text/csv;charset=utf-8' });
+            const utf8File = new File([utf8Blob], file.name, {
+              type: 'text/csv',
+              lastModified: file.lastModified,
+            });
+            
+            resolve(utf8File);
+          } catch (error) {
+            reject(new Error(`Failed to convert file encoding: ${error instanceof Error ? error.message : 'Unknown error'}`));
+          }
+        };
+        
+        reader.onerror = () => reject(new Error('Failed to read file'));
+        reader.readAsArrayBuffer(file);
+      });
+    };
+
+    let utf8File: File;
+    try {
+      utf8File = await convertToUtf8(file);
+    } catch (error) {
+      throw new Error(`Failed to process CSV file encoding: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+
+    const authHeader = await getAuthHeader();
+    const url = buildApiUrl("leads/batch-upload");
+    
+    const formData = new FormData();
+    formData.append("file", utf8File);
+    formData.append("user_id", userId);
+    formData.append("org_id", leadOrgId); // Use user_id as org_id for leads API
+
+    console.log("🚀 DataSourcesManager - Batch Upload Starting:", {
+      url,
+      userId,
+      orgId: leadOrgId,
+      fileName: utf8File.name,
+      fileSize: utf8File.size,
+      hasAuth: !!authHeader,
+    });
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        ...(authHeader && { Authorization: authHeader }),
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      let errorText = await response.text();
+      console.error("❌ DataSourcesManager - Batch Upload Error:", {
+        status: response.status,
+        errorText,
+      });
+      
+      // Try to parse JSON error response
+      try {
+        const errorJson = JSON.parse(errorText);
+        if (errorJson.detail) {
+          errorText = errorJson.detail;
+        } else if (errorJson.message) {
+          errorText = errorJson.message;
+        } else if (errorJson.error) {
+          errorText = errorJson.error;
+        }
+      } catch {
+        // If not JSON, use the text as is
+      }
+      
+      throw new Error(`Failed to upload CSV: ${response.status} - ${errorText}`);
+    }
+
+    const result = await response.json();
+    console.log("✅ DataSourcesManager - Batch Upload Success:", result);
+    
+    return result;
+  };
+
+  // API: Fetch leads
+  const fetchLeads = async () => {
+    // For leads API, org_id should match user_id (backend requirement)
+    const userId = currentUser?.uid || "";
+    const leadOrgId = userId || ""; // Use user_id as org_id to ensure they match
+    
+    if (!userId || !leadOrgId) {
+      setIsLoadingLeads(false);
+      return;
+    }
+
+    try {
+      setIsLoadingLeads(true);
+      const authHeader = await getAuthHeader();
+      const url = buildApiUrl(`leads?user_id=${userId}&org_id=${leadOrgId}`);
+      
+      console.log("🚀 DataSourcesManager - Fetching leads:", {
+        url,
+        userId,
+        orgId: leadOrgId,
+        hasAuth: !!authHeader,
+      });
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          ...(authHeader && { Authorization: authHeader }),
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("❌ DataSourcesManager - Fetch error:", errorText);
+        throw new Error(`Failed to fetch leads: ${response.status} - ${errorText}`);
+      }
+
+      const data = await response.json();
+      
+      let leadsArray: any[] = [];
+      if (Array.isArray(data)) {
+        leadsArray = data;
+      } else if (data && typeof data === 'object') {
+        leadsArray = data.leads || data.data || data.results || data.items || [];
+      }
+      
+      const transformedLeads = leadsArray.map((lead: any) => {
+        const getValue = (...values: any[]): string => {
+          for (const val of values) {
+            if (val !== null && val !== undefined && val !== "") {
+              const trimmed = String(val).trim();
+              if (trimmed !== "") return trimmed;
+            }
+          }
+          return "";
+        };
+        
+        return {
+          ...lead,
+          fullName: getValue(lead.fullName, lead.full_name, lead.contact?.name, lead.name),
+          email: getValue(lead.email, lead.contact?.email),
+          mobile: getValue(lead.mobile, lead.phone, lead.contact?.mobile, lead.contact?.phone),
+          companyName: getValue(lead.companyName, lead.company_name, lead.company),
+          companyWebsite: getValue(lead.companyWebsite, lead.company_website, lead.website, lead.company?.website),
+          linkedInProfile: getValue(lead.linkedInProfile, lead.linkedin_profile, lead.linkedIn, lead.contact?.linkedIn, lead.contact?.linkedin),
+          actions: getValue(lead.actions, lead.notes, lead.action),
+          contact: lead.contact || {},
+          company: lead.company || {},
+        };
+      });
+      
+      setLeads(transformedLeads);
+    } catch (error) {
+      console.error("Error fetching leads:", error);
+      toast({
+        title: "Failed to fetch leads",
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingLeads(false);
+    }
+  };
+
+  // API: Update lead
+  const updateLead = async (leadId: string, leadData: Record<string, any>) => {
+    // For leads API, org_id should match user_id (backend requirement)
+    const userId = currentUser?.uid || "";
+    const leadOrgId = userId || "";
+    
+    if (!userId || !leadOrgId) {
+      throw new Error("User ID and Org ID are required");
+    }
+
+    if (!leadId) {
+      throw new Error("Lead ID is required");
+    }
+
+    const authHeader = await getAuthHeader();
+    const url = buildApiUrl(`leads/${leadId}`);
+    
+    const payload = {
+      user_id: userId,
+      org_id: leadOrgId,
+      data: leadData,
+    };
+
+    console.log("🚀 DataSourcesManager - Updating lead:", {
+      url,
+      leadId,
+      userId,
+      orgId: leadOrgId,
+      payload,
+      hasAuth: !!authHeader,
+    });
+
+    const response = await fetch(url, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        ...(authHeader && { Authorization: authHeader }),
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("❌ DataSourcesManager - Update error:", {
+        status: response.status,
+        errorText,
+        leadId,
+      });
+      throw new Error(`Failed to update lead: ${response.status} - ${errorText}`);
+    }
+
+    const result = await response.json();
+    console.log("✅ DataSourcesManager - Update success:", result);
+    return result;
+  };
+
+  // API: Delete lead
+  const deleteLead = async (leadId: string) => {
+    // For leads API, org_id should match user_id (backend requirement)
+    const userId = currentUser?.uid || "";
+    const leadOrgId = userId || "";
+    
+    if (!userId || !leadOrgId) {
+      throw new Error("User ID and Org ID are required");
+    }
+
+    if (!leadId) {
+      throw new Error("Lead ID is required");
+    }
+
+    const authHeader = await getAuthHeader();
+    const url = buildApiUrl(`leads/${leadId}?user_id=${userId}&org_id=${leadOrgId}`);
+    
+    console.log("🚀 DataSourcesManager - Deleting lead:", {
+      url,
+      leadId,
+      userId,
+      orgId: leadOrgId,
+      hasAuth: !!authHeader,
+    });
+
+    const response = await fetch(url, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        ...(authHeader && { Authorization: authHeader }),
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("❌ DataSourcesManager - Delete error:", {
+        status: response.status,
+        errorText,
+        leadId,
+      });
+      throw new Error(`Failed to delete lead: ${response.status} - ${errorText}`);
+    }
+
+    const result = await response.json().catch(() => ({}));
+    console.log("✅ DataSourcesManager - Delete success:", result);
+    return result;
+  };
+
+  // Handlers for lead editing
+  const handleEditLead = (lead: Lead) => {
+    const leadId = lead.lead_id || lead.id || lead._id || "";
+    
+    if (!leadId) {
+      toast({
+        title: "Error",
+        description: "Cannot edit lead: Lead ID is missing.",
+        variant: "destructive",
+      });
+      console.error("❌ DataSourcesManager - Cannot edit lead without ID:", lead);
+      return;
+    }
+
+    console.log("✏️ DataSourcesManager - Editing lead:", {
+      leadId,
+      lead,
+    });
+
+    setEditingLeadId(leadId);
+    
+    // Populate form with lead data
+    setLeadFullName(lead.fullName || lead.full_name || lead.contact?.name || lead.name || "");
+    setLeadEmail(lead.email || lead.contact?.email || "");
+    setLeadMobile(lead.mobile || lead.phone || lead.contact?.mobile || lead.contact?.phone || "");
+    setLeadCompanyName(lead.companyName || lead.company_name || lead.company || lead.company?.name || "");
+    setLeadCompanyWebsite(lead.companyWebsite || lead.company_website || lead.website || lead.company?.website || "");
+    setLeadLinkedInProfile(lead.linkedInProfile || lead.linkedin_profile || lead.linkedIn || lead.contact?.linkedIn || lead.contact?.linkedin || "");
+    setLeadActions(lead.actions || lead.notes || lead.action || "");
+    
+    setShowLeadEditForm(true);
+  };
+
+  const handleCancelLeadEdit = () => {
+    setShowLeadEditForm(false);
+    setEditingLeadId(null);
+    setLeadFullName("");
+    setLeadEmail("");
+    setLeadMobile("");
+    setLeadCompanyName("");
+    setLeadCompanyWebsite("");
+    setLeadLinkedInProfile("");
+    setLeadActions("");
+  };
+
+  const handleSaveLead = async () => {
+    // Basic validation
+    if (!leadFullName.trim() || !leadEmail.trim()) {
+      toast({
+        title: "Required fields missing",
+        description: "Please fill in at least Full Name and Email.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(leadEmail)) {
+      toast({
+        title: "Invalid email",
+        description: "Please enter a valid email address.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      if (!editingLeadId) {
+        toast({
+          title: "Error",
+          description: "Please use CSV upload to add new leads.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Prepare lead data object
+      const leadData: Record<string, any> = {};
+      
+      if (leadFullName.trim()) leadData.fullName = leadFullName.trim();
+      if (leadEmail.trim()) leadData.email = leadEmail.trim();
+      if (leadMobile.trim()) leadData.mobile = leadMobile.trim();
+      if (leadCompanyName.trim()) leadData.companyName = leadCompanyName.trim();
+      if (leadCompanyWebsite.trim()) leadData.companyWebsite = leadCompanyWebsite.trim();
+      if (leadLinkedInProfile.trim()) leadData.linkedInProfile = leadLinkedInProfile.trim();
+      if (leadActions.trim()) leadData.actions = leadActions.trim();
+
+      console.log("💾 DataSourcesManager - Saving lead update:", {
+        leadId: editingLeadId,
+        leadData,
+      });
+
+      await updateLead(editingLeadId, leadData);
+      
+      toast({
+        title: "Lead updated",
+        description: `${leadFullName} has been updated successfully.`,
+      });
+      
+      setEditingLeadId(null);
+
+      // Refresh leads list
+      await fetchLeads();
+
+      // Reset form and close
+      handleCancelLeadEdit();
+    } catch (error) {
+      console.error("❌ DataSourcesManager - Save lead error:", error);
+      toast({
+        title: "Update failed",
+        description: error instanceof Error ? error.message : "An error occurred while updating the lead. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteLead = async (leadId: string) => {
+    if (!leadId) {
+      toast({
+        title: "Error",
+        description: "Lead ID is missing. Cannot delete lead.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Confirm deletion
+    if (!confirm("Are you sure you want to delete this lead? This action cannot be undone.")) {
+      return;
+    }
+
+    try {
+      console.log("🗑️ DataSourcesManager - Deleting lead:", leadId);
+      await deleteLead(leadId);
+      
+      toast({
+        title: "Lead deleted",
+        description: "The lead has been successfully removed.",
+      });
+      
+      // Refresh leads list
+      await fetchLeads();
+    } catch (error) {
+      console.error("❌ DataSourcesManager - Delete lead error:", error);
+      toast({
+        title: "Delete failed",
+        description: error instanceof Error ? error.message : "Failed to delete lead. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Load leads on mount
+  useEffect(() => {
+    if (currentUser?.uid) {
+      fetchLeads();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.uid]);
+
+  // Handlers for CSV upload
+  const handleLeadFileSelect = async (file: File) => {
+    // Check file extension
+    if (file.type !== "text/csv" && !file.name.toLowerCase().endsWith(".csv")) {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload a CSV file. If you're using Excel, save the file as 'CSV (Comma delimited) (*.csv)' format.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Quick check for Excel files (ZIP signature)
+    const firstBytes = await file.slice(0, 4).arrayBuffer();
+    const bytes = new Uint8Array(firstBytes);
+    if (bytes.length >= 2 && bytes[0] === 0x50 && bytes[1] === 0x4B) {
+      toast({
+        title: "Invalid file format",
+        description: "This appears to be an Excel file (.xlsx) rather than a CSV file. Please save your file as CSV format: In Excel, go to File > Save As > Choose 'CSV (Comma delimited) (*.csv)' format.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setSelectedLeadFile(file);
+  };
+
+  const handleLeadFileInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      await handleLeadFileSelect(file);
+    }
+  };
+
+  const handleLeadDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingLead(true);
+  };
+
+  const handleLeadDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingLead(false);
+  };
+
+  const handleLeadDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingLead(false);
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      await handleLeadFileSelect(file);
+    }
+  };
+
+  const handleRemoveLeadFile = () => {
+    setSelectedLeadFile(null);
+    if (leadFileInputRef.current) {
+      leadFileInputRef.current.value = '';
+    }
+  };
+
+  const handleConnectToCRM = (crmSystem: string) => {
+    // CRM system login URLs
+    const crmUrls: Record<string, string> = {
+      hubspot: 'https://app.hubspot.com/login',
+      salesforce: 'https://login.salesforce.com/',
+      pipedrive: 'https://www.pipedrive.com/login',
+      zoho: 'https://accounts.zoho.com/signin',
+      monday: 'https://auth.monday.com/users/sign_in',
+      asana: 'https://app.asana.com/-/login',
+    };
+
+    const url = crmUrls[crmSystem.toLowerCase()];
+    if (url) {
+      // Open in new tab
+      window.open(url, '_blank', 'noopener,noreferrer');
+      toast({
+        title: "Redirecting to CRM",
+        description: `Opening ${crmSystem} login page...`,
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: `Login URL for ${crmSystem} not configured.`,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUploadLeadCsv = async () => {
+    if (!selectedLeadFile) {
+      toast({
+        title: "No file selected",
+        description: "Please select a CSV file to upload.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUploadingLeads(true);
+    try {
+      const validation = await validateCsvFormat(selectedLeadFile);
+      if (!validation.valid) {
+        toast({
+          title: "CSV validation failed",
+          description: validation.error || "Invalid CSV format",
+          variant: "destructive",
+        });
+        setIsUploadingLeads(false);
+        return;
+      }
+    } catch (validationError) {
+      toast({
+        title: "Validation error",
+        description: "Failed to validate CSV file. Please check the file format.",
+        variant: "destructive",
+      });
+      setIsUploadingLeads(false);
+      return;
+    }
+
+    try {
+      const result = await uploadCsvBatch(selectedLeadFile);
+      
+      const createdCount = result.created_count || 0;
+      const errorCount = result.error_count || 0;
+      const errors = result.errors || [];
+      
+      if (errorCount > 0 && errors.length > 0) {
+        toast({
+          title: "CSV uploaded with some errors",
+          description: `Created ${createdCount} leads. ${errorCount} errors occurred.`,
+          variant: "default",
+        });
+      } else if (createdCount > 0) {
+        toast({
+          title: "CSV uploaded successfully",
+          description: `Successfully created ${createdCount} lead(s).`,
+        });
+      } else {
+        toast({
+          title: "Upload completed",
+          description: "No leads were created. Please check your CSV file format.",
+          variant: "default",
+        });
+      }
+      
+      setSelectedLeadFile(null);
+      setShowLeadUpload(false);
+      
+      // Refresh leads list after upload
+      setTimeout(async () => {
+        try {
+          await fetchLeads();
+        } catch (refreshError) {
+          console.error("Failed to refresh leads after upload:", refreshError);
+        }
+      }, 1500);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to upload CSV file. Please try again.";
+      const parsedMessage = parseErrorMessage(errorMessage);
+      
+      toast({
+        title: "Upload failed",
+        description: parsedMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploadingLeads(false);
+    }
+  };
+
+  // ==================== END LEAD STREAM FUNCTIONS ====================
+
   const handleDeleteSource = async (id: string) => {
     // Find the source to delete
     const sourceToDelete = dataSources.find((s) => s.id === id);
@@ -1915,13 +3073,14 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
 
   const canSave = 
     selectedType && 
-    selectedType !== "system" && 
     sourceName.trim() && 
-    (selectedType === "url" 
-      ? editingId ? true : sourceUrl.trim() // When editing URL, URL is optional; when adding new, URL is required
-      : editingId 
-        ? true // When editing, file is optional - can update metadata without new file
-        : selectedFile); // When adding new, file is required
+    (selectedType === "system"
+      ? true // System type only needs a name
+      : selectedType === "url" 
+        ? editingId ? true : sourceUrl.trim() // When editing URL, URL is optional; when adding new, URL is required
+        : editingId 
+          ? true // When editing, file is optional - can update metadata without new file
+          : selectedFile); // When adding new, file is required
 
   // Render the add/edit form
   const renderAddForm = () => {
@@ -1963,7 +3122,7 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
                     <SelectItem value="system" disabled>
                       <div className="flex items-center gap-2 opacity-50">
                         <Database className="h-4 w-4" />
-                        <span>Connect System (Coming soon)</span>
+                        <span>Connect System (Use dropdown)</span>
                       </div>
                     </SelectItem>
                   </SelectContent>
@@ -2030,6 +3189,7 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
                 <p className="text-xs text-muted-foreground">Supported formats: PDF, DOCX, PPTX, CSV, XLSX</p>
               </div>
             )}
+
 
             {/* Description */}
             <div className="space-y-2">
@@ -2162,15 +3322,92 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
             Manage sources that help agents understand your business context
           </p>
         </div>
-        {dataSources.length > 0 && !isAddingInline && (
-          <Button 
-            onClick={handleStartAdd} 
-            className="gap-2"
-          >
-            <Plus className="h-4 w-4" />
-            Add Data Source
-          </Button>
-        )}
+        <div className="flex gap-2">
+          {dataSources.length > 0 && !isAddingInline && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  className="gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Data Source
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>Add Data Source</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => {
+                  handleStartAdd();
+                  setSelectedType("url");
+                }}>
+                  <LinkIcon className="mr-2 h-4 w-4" />
+                  Add URL
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => {
+                  handleStartAdd();
+                  setSelectedType("file");
+                }}>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Upload File
+                </DropdownMenuItem>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <Plug className="mr-2 h-4 w-4" />
+                    Connect to Systems
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    <DropdownMenuLabel>Connect to CRM System</DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => handleConnectToCRM('HubSpot')}>
+                      <Plug className="mr-2 h-4 w-4" />
+                      HubSpot
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleConnectToCRM('Salesforce')}>
+                      <Plug className="mr-2 h-4 w-4" />
+                      Salesforce
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleConnectToCRM('Pipedrive')}>
+                      <Plug className="mr-2 h-4 w-4" />
+                      Pipedrive
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleConnectToCRM('Zoho')}>
+                      <Plug className="mr-2 h-4 w-4" />
+                      Zoho CRM
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleConnectToCRM('Monday')}>
+                      <Plug className="mr-2 h-4 w-4" />
+                      Monday.com
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleConnectToCRM('Asana')}>
+                      <Plug className="mr-2 h-4 w-4" />
+                      Asana
+                    </DropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+          {!showLeadUpload && !showLeadEditForm && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="outline"
+                  className="gap-2"
+                >
+                  <Users className="h-4 w-4" />
+                  Add Leads
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem onClick={() => setShowLeadUpload(true)}>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Upload CSV
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
       </div>
 
       {/* Add/Edit Form */}
@@ -2184,10 +3421,66 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
           <p className="text-sm text-muted-foreground text-center max-w-md mb-6">
             Add sources to help agents understand your business context.
           </p>
-          <Button onClick={handleStartAdd} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Add Data Source
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button className="gap-2">
+                <Plus className="h-4 w-4" />
+                Add Data Source
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="center" className="w-56">
+              <DropdownMenuLabel>Add Data Source</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => {
+                handleStartAdd();
+                setSelectedType("url");
+              }}>
+                <LinkIcon className="mr-2 h-4 w-4" />
+                Add URL
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => {
+                handleStartAdd();
+                setSelectedType("file");
+              }}>
+                <Upload className="mr-2 h-4 w-4" />
+                Upload File
+              </DropdownMenuItem>
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <Plug className="mr-2 h-4 w-4" />
+                  Connect to Systems
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent>
+                  <DropdownMenuLabel>Connect to CRM System</DropdownMenuLabel>
+                  <DropdownMenuItem onClick={() => handleConnectToCRM('HubSpot')}>
+                    <Plug className="mr-2 h-4 w-4" />
+                    HubSpot
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleConnectToCRM('Salesforce')}>
+                    <Plug className="mr-2 h-4 w-4" />
+                    Salesforce
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleConnectToCRM('Pipedrive')}>
+                    <Plug className="mr-2 h-4 w-4" />
+                    Pipedrive
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleConnectToCRM('Zoho')}>
+                    <Plug className="mr-2 h-4 w-4" />
+                    Zoho CRM
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleConnectToCRM('Monday')}>
+                    <Plug className="mr-2 h-4 w-4" />
+                    Monday.com
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleConnectToCRM('Asana')}>
+                    <Plug className="mr-2 h-4 w-4" />
+                    Asana
+                  </DropdownMenuItem>
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       )}
 
@@ -2279,6 +3572,373 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
             </TableBody>
           </Table>
         </div>
+      )}
+
+      {/* Lead Stream Section - Only shown when has leads OR is uploading OR is editing */}
+      {(leads.length > 0 || showLeadUpload || showLeadEditForm) && (
+        <>
+          {/* Visual separator - only when both sections exist */}
+          {dataSources.length > 0 && <div className="my-8 border-t" />}
+          
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <Users className="h-5 w-5 text-green-600" />
+                  Lead Stream
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Manage your prospect database and contact information
+                </p>
+              </div>
+              {leads.length > 0 && !showLeadUpload && !showLeadEditForm && (
+                <Button 
+                  onClick={() => setShowLeadUpload(true)} 
+                  variant="outline"
+                  className="gap-2"
+                >
+                  <Upload className="h-4 w-4" />
+                  Add More Leads
+                </Button>
+              )}
+            </div>
+
+            {/* Edit Lead Form */}
+            {showLeadEditForm && (
+              <Card className="mb-6">
+                <CardContent className="pt-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-semibold">Edit Lead</h3>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={handleCancelLeadEdit}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+
+                    {/* Form Fields */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {/* Full Name */}
+                      <div className="space-y-1.5">
+                        <Label htmlFor="lead-full-name">Full Name *</Label>
+                        <Input
+                          id="lead-full-name"
+                          placeholder="Enter full name..."
+                          value={leadFullName}
+                          onChange={(e) => setLeadFullName(e.target.value)}
+                          className="h-9 text-sm"
+                        />
+                      </div>
+
+                      {/* Email */}
+                      <div className="space-y-1.5">
+                        <Label htmlFor="lead-email">Email *</Label>
+                        <Input
+                          id="lead-email"
+                          type="email"
+                          placeholder="Enter email address..."
+                          value={leadEmail}
+                          onChange={(e) => setLeadEmail(e.target.value)}
+                          className="h-9 text-sm"
+                        />
+                      </div>
+
+                      {/* Mobile */}
+                      <div className="space-y-1.5">
+                        <Label htmlFor="lead-mobile">Mobile</Label>
+                        <Input
+                          id="lead-mobile"
+                          type="tel"
+                          placeholder="Enter mobile number..."
+                          value={leadMobile}
+                          onChange={(e) => setLeadMobile(e.target.value)}
+                          className="h-9 text-sm"
+                        />
+                      </div>
+
+                      {/* Company Name */}
+                      <div className="space-y-1.5">
+                        <Label htmlFor="lead-company-name">Company Name</Label>
+                        <Input
+                          id="lead-company-name"
+                          placeholder="Enter company name..."
+                          value={leadCompanyName}
+                          onChange={(e) => setLeadCompanyName(e.target.value)}
+                          className="h-9 text-sm"
+                        />
+                      </div>
+
+                      {/* Company Website */}
+                      <div className="space-y-1.5">
+                        <Label htmlFor="lead-company-website">Company Website</Label>
+                        <Input
+                          id="lead-company-website"
+                          type="url"
+                          placeholder="https://example.com"
+                          value={leadCompanyWebsite}
+                          onChange={(e) => setLeadCompanyWebsite(e.target.value)}
+                          className="h-9 text-sm"
+                        />
+                      </div>
+
+                      {/* LinkedIn Profile */}
+                      <div className="space-y-1.5">
+                        <Label htmlFor="lead-linkedin-profile">LinkedIn Profile</Label>
+                        <Input
+                          id="lead-linkedin-profile"
+                          type="url"
+                          placeholder="https://linkedin.com/in/..."
+                          value={leadLinkedInProfile}
+                          onChange={(e) => setLeadLinkedInProfile(e.target.value)}
+                          className="h-9 text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Actions - Full Width */}
+                    <div className="space-y-1.5">
+                      <Label htmlFor="lead-actions">Actions</Label>
+                      <Input
+                        id="lead-actions"
+                        placeholder="Enter actions or notes..."
+                        value={leadActions}
+                        onChange={(e) => setLeadActions(e.target.value)}
+                        className="h-9 text-sm"
+                      />
+                    </div>
+
+                    {/* Save Button */}
+                    <div className="flex justify-end gap-2 pt-2 border-t">
+                      <Button variant="outline" size="sm" onClick={handleCancelLeadEdit}>
+                        Cancel
+                      </Button>
+                      <Button size="sm" onClick={handleSaveLead} className="gap-1">
+                        <Check className="h-4 w-4" />
+                        Save Changes
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* CSV Upload Form */}
+            {showLeadUpload && (
+              <Card className="mb-6">
+                <CardContent className="pt-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-semibold">Upload CSV File</h3>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setShowLeadUpload(false);
+                          setSelectedLeadFile(null);
+                        }}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+
+                    {/* Drag and Drop Area */}
+                    <div
+                      onDragOver={handleLeadDragOver}
+                      onDragLeave={handleLeadDragLeave}
+                      onDrop={handleLeadDrop}
+                      className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                        isDraggingLead
+                          ? "border-primary bg-primary/5"
+                          : "border-muted-foreground/25 hover:border-primary/50"
+                      }`}
+                    >
+                      <input
+                        ref={leadFileInputRef}
+                        type="file"
+                        accept=".csv"
+                        onChange={handleLeadFileInputChange}
+                        className="hidden"
+                        id="lead-csv-upload"
+                      />
+                      <label htmlFor="lead-csv-upload" className="cursor-pointer">
+                        <Upload
+                          className={`h-12 w-12 mx-auto mb-4 ${
+                            isDraggingLead ? "text-primary" : "text-muted-foreground"
+                          }`}
+                        />
+                        <p className="text-sm font-medium mb-2">
+                          {selectedLeadFile
+                            ? selectedLeadFile.name
+                            : "Drag and drop your CSV file here, or click to browse"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Supported format: CSV files only
+                        </p>
+                        <div className="mt-4 p-3 bg-muted/50 rounded-md text-left text-xs">
+                          <p className="font-medium mb-1">CSV Format Requirements:</p>
+                          <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                            <li>All rows must have the same number of columns</li>
+                            <li>Fields containing commas must be enclosed in double quotes</li>
+                            <li>Use commas (,) as column separators (semicolons will be auto-converted)</li>
+                            <li>Recommended columns: Full Name, Email, Mobile, Company Name, Company Website, LinkedIn Profile, Actions</li>
+                          </ul>
+                          <p className="mt-2 text-xs text-muted-foreground">
+                            <strong>Note:</strong> Files from WPS Office, Excel, or Google Sheets are automatically converted to the correct format.
+                          </p>
+                        </div>
+                      </label>
+                    </div>
+
+                    {/* Selected File Display */}
+                    {selectedLeadFile && (
+                      <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <FileText className="h-5 w-5 text-muted-foreground" />
+                          <div>
+                            <p className="text-sm font-medium">{selectedLeadFile.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {(selectedLeadFile.size / 1024).toFixed(2)} KB
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={handleRemoveLeadFile}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Upload Button */}
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setShowLeadUpload(false);
+                          setSelectedLeadFile(null);
+                        }}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={handleUploadLeadCsv}
+                        disabled={!selectedLeadFile || isUploadingLeads}
+                      >
+                        {isUploadingLeads ? "Uploading..." : "Upload CSV"}
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Loading State for Leads */}
+            {isLoadingLeads && (
+              <div className="flex items-center justify-center py-8">
+                <div className="flex gap-2">
+                  <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms', animationDuration: '1.4s' }}></div>
+                  <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '200ms', animationDuration: '1.4s' }}></div>
+                  <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '400ms', animationDuration: '1.4s' }}></div>
+                </div>
+                <span className="ml-2 text-sm text-muted-foreground">Loading leads...</span>
+              </div>
+            )}
+
+            {/* Leads Table - Only when has leads */}
+            {!isLoadingLeads && leads.length > 0 && (
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead>Full Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead className="hidden md:table-cell">Mobile</TableHead>
+                      <TableHead className="hidden lg:table-cell">Company</TableHead>
+                      <TableHead className="hidden lg:table-cell">Website</TableHead>
+                      <TableHead className="hidden xl:table-cell">LinkedIn</TableHead>
+                      <TableHead className="hidden xl:table-cell">Actions</TableHead>
+                      <TableHead className="text-right w-[90px]">Operations</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {leads.map((lead, index) => {
+                      const leadId = lead.lead_id || lead.id || `lead-${index}`;
+                      const displayName = lead.fullName || lead.full_name || lead.name || lead.contact?.name || lead.contact?.fullName || "—";
+                      const displayEmail = lead.email || lead.contact?.email || "—";
+                      const displayMobile = lead.mobile || lead.phone || lead.contact?.mobile || lead.contact?.phone || "—";
+                      const displayCompany = lead.companyName || lead.company_name || lead.company?.name || "—";
+                      const displayWebsite = lead.companyWebsite || lead.company_website || lead.website || lead.company?.website || "—";
+                      const displayLinkedIn = lead.linkedInProfile || lead.linkedin_profile || lead.linkedIn || lead.contact?.linkedIn || lead.contact?.linkedin || "—";
+                      const displayActions = lead.actions || lead.notes || lead.action || "—";
+                      
+                      return (
+                        <TableRow key={leadId}>
+                          <TableCell className="font-medium">{displayName}</TableCell>
+                          <TableCell>{displayEmail}</TableCell>
+                          <TableCell className="hidden md:table-cell">{displayMobile}</TableCell>
+                          <TableCell className="hidden lg:table-cell">{displayCompany}</TableCell>
+                          <TableCell className="hidden lg:table-cell">
+                            {displayWebsite !== "—" ? (
+                              <a href={displayWebsite} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-sm">
+                                {displayWebsite}
+                              </a>
+                            ) : (
+                              "—"
+                            )}
+                          </TableCell>
+                          <TableCell className="hidden xl:table-cell">
+                            {displayLinkedIn !== "—" ? (
+                              <a href={displayLinkedIn} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-sm">
+                                {displayLinkedIn}
+                              </a>
+                            ) : (
+                              "—"
+                            )}
+                          </TableCell>
+                          <TableCell className="hidden xl:table-cell">{displayActions}</TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleEditLead(lead)}
+                                className="h-8 w-8"
+                                disabled={showLeadEditForm || showLeadUpload}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDeleteLead(leadId)}
+                                className="h-8 w-8 text-destructive hover:text-destructive"
+                                disabled={showLeadEditForm || showLeadUpload}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+
+            {/* Empty state for leads - only shown when uploading but no leads yet */}
+            {!isLoadingLeads && leads.length === 0 && showLeadUpload && !showLeadEditForm && (
+              <div className="text-center py-8 text-muted-foreground">
+                <p>Upload a CSV file to add leads</p>
+              </div>
+            )}
+          </div>
+        </>
       )}
     </div>
   );

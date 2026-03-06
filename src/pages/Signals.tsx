@@ -5,27 +5,45 @@ import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerClose } from '@/components/ui/drawer';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
 import { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { useAuth } from '@/contexts/AuthContext';
-import { buildApiUrl } from '@/lib/api';
 type Agent = 'scout' | 'profiler';
 type ActionType = 'accept' | 'dismiss' | 'save' | 'ask';
+interface ContextualSuggestion {
+  icon: string;
+  text: string;
+}
+
+/** Recommendation from API: nba shown to user, prompt passed to future LLM API */
+interface NBAItem {
+  nba: string;
+  prompt: string;
+}
+
 interface SignalCard {
   id: string;
   agent: Agent;
   timestamp: string;
   headline: string;
   snippet: string;
+  description: string; // One full paragraph with detailed ICP/customer context
   sourceUrl: string;
   sourceLabel: string;
+  /** Array of source URLs or citations from API */
+  source?: string[];
+  nextBestMoves: string[]; // Array of suggested actions (legacy)
+  /** Recommendations: nba shown to user, prompt for future API */
+  NBAs?: NBAItem[];
+  contextualSuggestions: ContextualSuggestion[];
 }
 // API functions
 const generateSignalsBatch = async (userId: string) => {
   try {
-    const response = await fetch(buildApiUrl('generate-signals-batch'), {
+    const response = await fetch('/api/generate-signals-batch', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -72,7 +90,7 @@ const generateSignalsBatch = async (userId: string) => {
 
 const fetchSignals = async (userId: string) => {
   try {
-    const response = await fetch(`${buildApiUrl('fetch-signals')}?user_id=${userId}&limit=10`);
+    const response = await fetch(`/api/fetch-signals?user_id=${userId}&limit=10`);
     
     console.log('Fetch signals response status:', response.status);
     console.log('Fetch signals response headers:', response.headers);
@@ -97,9 +115,45 @@ const fetchSignals = async (userId: string) => {
   }
 };
 
+const signalAction = async (orgId: string, signalId: string, action: 'accept' | 'reject') => {
+  try {
+    const response = await fetch('/api/signal_action', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        org_id: orgId,
+        signal_id: signalId,
+        action: action
+      })
+    });
+    
+    console.log('Signal action response status:', response.status);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Signal action error response:', errorText);
+      throw new Error(`Failed to ${action} signal: ${response.status} ${response.statusText}`);
+    }
+    
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await response.text();
+      console.error('Non-JSON response:', text);
+      throw new Error('Server returned non-JSON response');
+    }
+    
+    return response.json();
+  } catch (error) {
+    console.error('Signal action API error:', error);
+    throw error;
+  }
+};
+
 // Helper function to generate a stable content-based ID for a signal
 const getSignalContentHash = (signal: SignalCard): string => {
-  const content = `${signal.headline}-${signal.snippet}-${signal.agent}`;
+  const content = `${signal.headline}-${signal.snippet}-${signal.description || ''}-${signal.agent}`;
   // Simple hash function
   let hash = 0;
   for (let i = 0; i < content.length; i++) {
@@ -110,25 +164,74 @@ const getSignalContentHash = (signal: SignalCard): string => {
   return `signal-${Math.abs(hash).toString(36)}`;
 };
 
+// Helper function to parse timestamp and return a comparable number (higher = newer)
+const parseTimestamp = (timestamp: string): number => {
+  // Try parsing as ISO 8601 date first
+  const isoDate = new Date(timestamp);
+  if (!isNaN(isoDate.getTime())) {
+    return isoDate.getTime();
+  }
+  
+  // Handle relative timestamps
+  const now = Date.now();
+  const lowerTimestamp = timestamp.toLowerCase().trim();
+  
+  // Handle "Today"
+  if (lowerTimestamp === 'today') {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return today.getTime();
+  }
+  
+  // Handle "Xh ago", "Xm ago", "Xd ago", etc.
+  const hourMatch = lowerTimestamp.match(/(\d+)\s*h\s*ago/);
+  if (hourMatch) {
+    const hours = parseInt(hourMatch[1], 10);
+    return now - (hours * 60 * 60 * 1000);
+  }
+  
+  const minuteMatch = lowerTimestamp.match(/(\d+)\s*m\s*ago/);
+  if (minuteMatch) {
+    const minutes = parseInt(minuteMatch[1], 10);
+    return now - (minutes * 60 * 1000);
+  }
+  
+  const dayMatch = lowerTimestamp.match(/(\d+)\s*d\s*ago/);
+  if (dayMatch) {
+    const days = parseInt(dayMatch[1], 10);
+    return now - (days * 24 * 60 * 60 * 1000);
+  }
+  
+  // If we can't parse it, return 0 (will be sorted to the end)
+  console.warn('Unable to parse timestamp:', timestamp);
+  return 0;
+};
+
 const Index = () => {
-  const { currentUser } = useAuth();
+  const { currentUser, orgId } = useAuth();
   const [currentTab, setCurrentTab] = useState('signals');
   const [signals, setSignals] = useState<SignalCard[]>([]);
   const [savedInsights, setSavedInsights] = useState<SignalCard[]>([]);
   const [chatDrawerOpen, setChatDrawerOpen] = useState(false);
   const [selectedSignal, setSelectedSignal] = useState<SignalCard | null>(null);
   const [chatMessage, setChatMessage] = useState('');
+  const [recommendationsChatOpen, setRecommendationsChatOpen] = useState(false);
+  const [recommendationsSignal, setRecommendationsSignal] = useState<SignalCard | null>(null);
+  const [recommendationsChatInput, setRecommendationsChatInput] = useState('');
+  /** True when current signals (and recommendations) came from GET /api/fetch-signals; false when using sample fallback */
+  const [signalsFromApi, setSignalsFromApi] = useState(false);
   const [savedInsightsFilter, setSavedInsightsFilter] = useState('all');
-  const [expandedChats, setExpandedChats] = useState<{
-    [key: string]: boolean;
-  }>({});
-  const [dismissedSuggestions, setDismissedSuggestions] = useState<{
-    [key: string]: number[];
-  }>({});
   const [acceptedSignals, setAcceptedSignals] = useState<Set<string>>(new Set());
   const [rejectedSignalHashes, setRejectedSignalHashes] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [expandedDescriptions, setExpandedDescriptions] = useState<Set<string>>(new Set());
+  // Track pending rejections for undo functionality
+  const [pendingRejections, setPendingRejections] = useState<Map<string, {
+    signal: SignalCard;
+    originalIndex: number;
+    timer: NodeJS.Timeout;
+  }>>(new Map());
   const {
     toast
   } = useToast();
@@ -174,6 +277,7 @@ const Index = () => {
     return () => {
       window.removeEventListener('signalsRefresh', handleSignalsRefresh);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadSignals = async () => {
@@ -201,26 +305,54 @@ const Index = () => {
       const data = await fetchSignals(currentUser.uid);
       // Ensure all signals have unique IDs - always generate new unique IDs
       const rawSignals = data.signals || [];
-      console.log('Raw signals from API:', rawSignals.map(s => ({ id: s.id, headline: s.headline })));
+      console.log('Raw signals from API:', rawSignals.map(s => ({ 
+        signal_id: s.signal_id, 
+        id: s.id, 
+        headline: s.headline 
+      })));
       console.log('Rejected signal hashes from localStorage:', Array.from(rejectedHashes));
       
-      const signalsWithIds = rawSignals.map((signal: SignalCard, index: number) => {
-        // Generate a truly unique ID for each signal
-        // Use crypto.randomUUID if available, otherwise use a combination of timestamp, index, and random
-        let uniqueId: string;
-        if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-          uniqueId = crypto.randomUUID();
+      const signalsWithIds = rawSignals.map((signal: any, index: number) => {
+        // Use signal_id from API if available, otherwise fall back to id or generate unique ID
+        // The API should return signal_id field - use it as the primary identifier for API calls
+        let signalId: string;
+        if (signal.signal_id) {
+          signalId = signal.signal_id;
+          console.log(`Using signal_id from API for signal ${index}:`, signalId);
+        } else if (signal.id) {
+          signalId = signal.id;
+          console.warn(`Signal ${index} missing signal_id, using id field instead:`, signalId);
         } else {
-          const timestamp = Date.now();
-          const randomStr = Math.random().toString(36).substring(2, 11);
-          const perfNow = (performance?.now() || Math.random() * 1000).toString().replace('.', '');
-          uniqueId = `signal-${timestamp}-${index}-${randomStr}-${perfNow}`;
+          // Generate a truly unique ID for each signal as fallback
+          if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+            signalId = crypto.randomUUID();
+          } else {
+            const timestamp = Date.now();
+            const randomStr = Math.random().toString(36).substring(2, 11);
+            const perfNow = (performance?.now() || Math.random() * 1000).toString().replace('.', '');
+            signalId = `signal-${timestamp}-${index}-${randomStr}-${perfNow}`;
+          }
+          console.warn(`Signal ${index} missing both signal_id and id, generated fallback ID:`, signalId);
         }
         
+        // Support both schemas: NBAs (nba + prompt) or legacy nextBestMoves
+        const nextBestMoves = signal.nextBestMoves || [];
+        const NBAs: NBAItem[] = Array.isArray(signal.NBAs) && signal.NBAs.length > 0
+          ? signal.NBAs.map((n: { nba?: string; prompt?: string }) => ({
+              nba: n.nba ?? '',
+              prompt: n.prompt ?? ''
+            }))
+          : nextBestMoves.map((m: string) => ({ nba: m, prompt: '' }));
+
         return {
           ...signal,
-          id: uniqueId
-        };
+          id: signalId,
+          description: signal.description || '',
+          source: Array.isArray(signal.source) ? signal.source : [],
+          nextBestMoves,
+          NBAs,
+          contextualSuggestions: signal.contextualSuggestions || []
+        } as SignalCard;
       });
       
       // Verify all IDs are unique
@@ -250,8 +382,22 @@ const Index = () => {
         return !isRejected;
       });
       
+      // Sort signals by timestamp in descending order (newest first)
+      const sortedSignals = filteredSignals.sort((a, b) => {
+        const timestampA = parseTimestamp(a.timestamp);
+        const timestampB = parseTimestamp(b.timestamp);
+        return timestampB - timestampA; // Descending order (newest first)
+      });
+      
       console.log('Filtered signals count:', filteredSignals.length, 'out of', signalsWithIds.length);
-      setSignals(filteredSignals);
+      console.log('Signals sorted by timestamp (newest first):', sortedSignals.map(s => ({ timestamp: s.timestamp, headline: s.headline })));
+      setSignals(sortedSignals);
+      setSignalsFromApi(true);
+      if (rawSignals.length > 0) {
+        const first = rawSignals[0];
+        const hasNBAs = Array.isArray(first.NBAs) && first.NBAs.length > 0;
+        console.log('Signals loaded:', { source: 'API (fetch-signals)', firstSignalNBAsFromApi: hasNBAs, firstSignalRecommendationCount: first.NBAs?.length ?? first.nextBestMoves?.length ?? 0 });
+      }
     } catch (error) {
       console.error('Error loading signals:', error);
       
@@ -262,32 +408,108 @@ const Index = () => {
         timestamp: '1h ago',
         headline: 'Competitor X launches SMB pricing tier.',
         snippet: 'Likely to impact your ICP accounts in mid-market SaaS segment.',
+        description: 'This competitive pricing move by Company X directly impacts your SMB segment in the mid-market SaaS space. With 40% of your current pipeline falling into this category, this development could accelerate decision timelines or create pricing pressure. The launch targets companies with 50-200 employees—your core ICP—and includes features that overlap with your value proposition. Consider monitoring early adoption signals and preparing competitive differentiation messaging that emphasizes your unique ROI model and enterprise-grade capabilities.',
         sourceUrl: '#',
-        sourceLabel: 'Press release link'
+        sourceLabel: 'Press release link',
+        source: ['https://example.com/press-release', 'Industry report 2024'],
+        nextBestMoves: [
+          'Would you like me to check how many of your target ICPs fall under the SMB segment and could be influenced by this move?',
+          'Do you want me to model a competitive bundle or ROI-driven value pitch against this pricing shift?',
+          'Should I track customer sentiment on LinkedIn, G2 reviews, or forums to see if it\'s gaining traction?'
+        ],
+        NBAs: [
+          { nba: 'Would you like me to check how many of your target ICPs fall under the SMB segment and could be influenced by this move?', prompt: '' },
+          { nba: 'Do you want me to model a competitive bundle or ROI-driven value pitch against this pricing shift?', prompt: '' },
+          { nba: 'Should I track customer sentiment on LinkedIn, G2 reviews, or forums to see if it\'s gaining traction?', prompt: '' }
+        ],
+        contextualSuggestions: [
+          { icon: '🔗', text: 'Get Company X\'s Website & Press Release' },
+          { icon: '🧑‍💼', text: 'Identify decision makers at Company X' },
+          { icon: '📊', text: 'Compare SMB pricing vs. our offering' },
+          { icon: '🚀', text: 'Monitor early adoption signals from Company X' },
+          { icon: '📅', text: 'Track mentions of SMB tier in LinkedIn updates' }
+        ]
       }, {
         id: '2',
         agent: 'profiler',
         timestamp: '3h ago',
         headline: 'ICP contact posted about cloud migration struggles.',
         snippet: 'John Doe, CTO @ Acme Corp, shared LinkedIn update relevant to DRaaS.',
+        description: 'John Doe, CTO at Acme Corp (a company matching your ICP profile with 150 employees in the FinTech sector), posted about challenges with cloud migration and data recovery strategies. This represents a strong buying signal as Acme Corp is actively evaluating solutions in your space. The post indicates urgency and budget allocation for DRaaS solutions, making this an ideal time for targeted outreach with relevant case studies and ROI messaging.',
         sourceUrl: '#',
-        sourceLabel: 'LinkedIn post link'
+        sourceLabel: 'LinkedIn post link',
+        source: ['https://linkedin.com/post/example'],
+        nextBestMoves: [
+          'Should I draft a contextual comment or connection request for this post?',
+          'Want me to identify other prospects posting about similar challenges?',
+          'Do you want me to create a follow-up sequence based on this signal?'
+        ],
+        NBAs: [
+          { nba: 'Should I draft a contextual comment or connection request for this post?', prompt: '' },
+          { nba: 'Want me to identify other prospects posting about similar challenges?', prompt: '' },
+          { nba: 'Do you want me to create a follow-up sequence based on this signal?', prompt: '' }
+        ],
+        contextualSuggestions: [
+          { icon: '💬', text: 'Draft contextual comment for this post' },
+          { icon: '🤝', text: 'Prepare connection request message' },
+          { icon: '🔄', text: 'Find similar prospects with same challenges' },
+          { icon: '📊', text: 'Analyze engagement patterns' },
+          { icon: '📝', text: 'Create follow-up sequence' }
+        ]
       }, {
         id: '3',
         agent: 'scout',
         timestamp: '5h ago',
         headline: 'New funding round announced in AI automation space.',
         snippet: 'Series B round indicates growing market confidence in automation solutions.',
+        description: 'A Series B funding round of $25M was announced for a competitor in the AI automation space, signaling strong market confidence and potential for aggressive expansion. This development could impact your competitive positioning, especially in the enterprise segment where both companies target similar buyer personas. The funding suggests increased marketing spend and product development, which may accelerate market education but also intensify competition for your target accounts.',
         sourceUrl: '#',
-        sourceLabel: 'TechCrunch article'
+        sourceLabel: 'TechCrunch article',
+        source: ['https://techcrunch.com/article-example'],
+        nextBestMoves: [
+          'Want me to analyze how this affects your competitive positioning in the market?',
+          'Should I identify which of your prospects might be considering this competitor now?',
+          'Do you want me to draft messaging that highlights your differentiators against this move?'
+        ],
+        NBAs: [
+          { nba: 'Want me to analyze how this affects your competitive positioning in the market?', prompt: '' },
+          { nba: 'Should I identify which of your prospects might be considering this competitor now?', prompt: '' },
+          { nba: 'Do you want me to draft messaging that highlights your differentiators against this move?', prompt: '' }
+        ],
+        contextualSuggestions: [
+          { icon: '💰', text: 'Analyze funding impact on market positioning' },
+          { icon: '🏢', text: 'Identify potential acquisition targets' },
+          { icon: '📈', text: 'Map competitive landscape changes' },
+          { icon: '🎯', text: 'Find prospects considering this competitor' },
+          { icon: '📋', text: 'Draft competitive differentiation messaging' }
+        ]
       }, {
         id: '4',
         agent: 'profiler',
         timestamp: 'Today',
         headline: 'New ICP segment identified: FinTech startups (50–200 employees).',
         snippet: 'High engagement signals found in EU market; strong overlap with your existing SaaS ICP.',
+        description: 'Analysis of market signals reveals a new high-value ICP segment: FinTech startups with 50-200 employees, particularly in the EU market. This segment shows strong engagement patterns with solutions similar to yours, with 65% overlap in key buying criteria with your existing SaaS ICP. The segment demonstrates high growth potential and budget allocation for automation tools, making it an ideal expansion target for your sales efforts.',
         sourceUrl: '#',
-        sourceLabel: 'Profiler internal analysis'
+        sourceLabel: 'Profiler internal analysis',
+        source: ['Internal analysis', 'Research report'],
+        nextBestMoves: [
+          'Should I prioritize outreach to decision makers in this new segment?',
+          'Want me to create a tailored value proposition for this ICP profile?',
+          'Do you want me to identify similar companies that match this profile?'
+        ],
+        NBAs: [
+          { nba: 'Should I prioritize outreach to decision makers in this new segment?', prompt: '' },
+          { nba: 'Want me to create a tailored value proposition for this ICP profile?', prompt: '' },
+          { nba: 'Do you want me to identify similar companies that match this profile?', prompt: '' }
+        ],
+        contextualSuggestions: [
+          { icon: '🎯', text: 'Research FinTech segment decision makers' },
+          { icon: '📈', text: 'Analyze EU market penetration opportunities' },
+          { icon: '🔍', text: 'Find similar companies matching this profile' },
+          { icon: '📋', text: 'Create tailored value proposition' },
+          { icon: '📧', text: 'Draft outreach sequences for this segment' }
+        ]
       }];
       
       // Load rejected signals from localStorage for sample data too
@@ -309,8 +531,16 @@ const Index = () => {
         return !rejectedHashes.has(contentHash);
       });
       
-      setSignals(filteredSampleSignals);
+      // Sort sample signals by timestamp in descending order (newest first)
+      const sortedSampleSignals = filteredSampleSignals.sort((a, b) => {
+        const timestampA = parseTimestamp(a.timestamp);
+        const timestampB = parseTimestamp(b.timestamp);
+        return timestampB - timestampA; // Descending order (newest first)
+      });
       
+      setSignals(sortedSampleSignals);
+      setSignalsFromApi(false);
+      console.log('Recommendations source: sample data (API failed or unavailable)');
       toast({
         title: "API Not Available",
         description: "Using sample data. Please ensure your backend API is running.",
@@ -351,47 +581,6 @@ const Index = () => {
     }
   };
 
-  const handleSuggestionAccept = (signalId: string, suggestionIndex: number) => {
-    const chatKey = `${signalId}-${suggestionIndex}`;
-    setExpandedChats(prev => ({
-      ...prev,
-      [chatKey]: true
-    }));
-  };
-  const handleSuggestionDismiss = (signalId: string, suggestionIndex: number) => {
-    setDismissedSuggestions(prev => ({
-      ...prev,
-      [signalId]: [...(prev[signalId] || []), suggestionIndex]
-    }));
-    toast({
-      title: "Dismissed",
-      description: "Suggestion removed from your list",
-      action: <Button variant="outline" size="sm" onClick={() => {
-        setDismissedSuggestions(prev => ({
-          ...prev,
-          [signalId]: (prev[signalId] || []).filter(idx => idx !== suggestionIndex)
-        }));
-      }}>
-          Undo
-        </Button>
-    });
-  };
-  const handleChatClose = (signalId: string, suggestionIndex: number) => {
-    const chatKey = `${signalId}-${suggestionIndex}`;
-    setExpandedChats(prev => ({
-      ...prev,
-      [chatKey]: false
-    }));
-  };
-  const getContextualChatMessage = (signalId: string, suggestionIndex: number) => {
-    const signal = signals.find(s => s.id === signalId);
-    if (!signal) return "";
-    if (signal.headline.toLowerCase().includes('competitor') && signal.headline.toLowerCase().includes('pricing')) {
-      const messages = ["Hi Alex, Noted. I'll adjust your competitor landscape and market size reports accordingly. Do you want me to also scan SMB prospects in your current pipeline?", "Perfect! I'll model competitive pricing scenarios for you. Should I also identify which of your current deals might be at risk?", "Great choice! I'll set up sentiment tracking across multiple platforms. Want me to create alerts for specific keywords or competitors?"];
-      return messages[suggestionIndex] || messages[0];
-    }
-    return "Hi Alex, Noted. I'll process this request and update your reports accordingly. Any specific notes or comments you'd like me to capture for this insight?";
-  };
   const handleAction = (cardId: string, action: ActionType) => {
     const signal = signals.find(s => s.id === cardId);
     if (!signal) return;
@@ -485,8 +674,8 @@ const Index = () => {
     }
     return ["Should I analyze the broader implications of this development for your market?", "Want me to identify opportunities this creates for your sales approach?", "Do you want me to monitor for similar signals in your industry?"];
   };
-  const handleAcceptSignal = (signalId: string) => {
-    if (!currentUser?.uid) return;
+  const handleAcceptSignal = async (signalId: string) => {
+    if (!currentUser?.uid || !orgId) return;
     
     // Find the signal to get its content hash
     const signal = signals.find(s => s.id === signalId);
@@ -494,7 +683,35 @@ const Index = () => {
     
     const contentHash = getSignalContentHash(signal);
     
-    if (!acceptedSignals.has(contentHash)) {
+    // Toggle accept state - if already accepted, unaccept it
+    if (acceptedSignals.has(contentHash)) {
+      // Unaccept the signal
+      const newAccepted = new Set(acceptedSignals);
+      newAccepted.delete(contentHash);
+      setAcceptedSignals(newAccepted);
+      
+      // Save to localStorage
+      const storageKey = `signals_${currentUser.uid}`;
+      try {
+        localStorage.setItem(`${storageKey}_accepted`, JSON.stringify(Array.from(newAccepted)));
+      } catch (error) {
+        console.error('Error saving accepted signals to localStorage:', error);
+      }
+      
+      // Call API to unaccept (action: reject)
+      try {
+        await signalAction(orgId, signalId, 'reject');
+      } catch (error) {
+        console.error('Error calling signal action API:', error);
+        // Still update UI even if API fails
+      }
+      
+      toast({
+        title: "Signal unaccepted",
+        description: "This signal has been unaccepted.",
+      });
+    } else {
+      // Accept the signal
       const newAccepted = new Set([...acceptedSignals, contentHash]);
       setAcceptedSignals(newAccepted);
       
@@ -506,23 +723,48 @@ const Index = () => {
         console.error('Error saving accepted signals to localStorage:', error);
       }
       
-      toast({
-        title: "Signal accepted",
-        description: "This signal has been marked as accepted.",
-      });
+      // Call API to accept
+      try {
+        await signalAction(orgId, signalId, 'accept');
+        toast({
+          title: "Signal accepted",
+          description: "This signal has been marked as accepted.",
+        });
+      } catch (error) {
+        console.error('Error calling signal action API:', error);
+        toast({
+          title: "Error",
+          description: "Failed to accept signal. Please try again.",
+          variant: "destructive",
+        });
+        // Revert UI state on error
+        const revertedAccepted = new Set(acceptedSignals);
+        setAcceptedSignals(revertedAccepted);
+        try {
+          localStorage.setItem(`${storageKey}_accepted`, JSON.stringify(Array.from(revertedAccepted)));
+        } catch (e) {
+          console.error('Error reverting accepted signals:', e);
+        }
+      }
     }
   };
 
   const handleRejectSignal = (signalId: string) => {
-    if (!currentUser?.uid) return;
+    if (!currentUser?.uid || !orgId) return;
     
-    // Find the signal to get its content hash
-    const signal = signals.find(s => s.id === signalId);
+    // Find the signal and its index to get its content hash
+    const signalIndex = signals.findIndex(s => s.id === signalId);
+    const signal = signals[signalIndex];
     if (!signal) return;
     
     const contentHash = getSignalContentHash(signal);
+    const storageKey = `signals_${currentUser.uid}`;
     
-    // Remove from signals list
+    // Store the signal and its original index for undo
+    const signalToRestore = signal;
+    const originalIndex = signalIndex;
+    
+    // Remove from signals list immediately (UI update)
     setSignals(prev => prev.filter(s => s.id !== signalId));
     
     // Remove from accepted if it was accepted (using content hash)
@@ -531,7 +773,6 @@ const Index = () => {
       newSet.delete(contentHash);
       
       // Update localStorage
-      const storageKey = `signals_${currentUser.uid}`;
       try {
         localStorage.setItem(`${storageKey}_accepted`, JSON.stringify(Array.from(newSet)));
       } catch (error) {
@@ -541,35 +782,154 @@ const Index = () => {
       return newSet;
     });
     
-    // Add to rejected list (using content hash)
+    // Add to rejected list (using content hash) - for UI filtering
     const newRejected = new Set([...rejectedSignalHashes, contentHash]);
     setRejectedSignalHashes(newRejected);
     
     // Save rejected signals to localStorage
-    const storageKey = `signals_${currentUser.uid}`;
     try {
       localStorage.setItem(`${storageKey}_rejected`, JSON.stringify(Array.from(newRejected)));
     } catch (error) {
       console.error('Error saving rejected signals to localStorage:', error);
     }
     
+    // Set up 5-second timer to call API
+    const timer = setTimeout(async () => {
+      // Remove from pending rejections
+      setPendingRejections(prev => {
+        const updated = new Map(prev);
+        updated.delete(signalId);
+        return updated;
+      });
+      
+      // Call API to reject
+      try {
+        await signalAction(orgId, signalId, 'reject');
+        console.log('Signal rejected via API:', signalId);
+      } catch (error) {
+        console.error('Error calling signal action API for reject:', error);
+        // If API fails, restore the signal
+        setSignals(prev => {
+          const exists = prev.find(s => s.id === signalToRestore.id);
+          if (exists) return prev;
+          const insertIndex = Math.min(originalIndex, prev.length);
+          const newSignals = [...prev];
+          newSignals.splice(insertIndex, 0, signalToRestore);
+          return newSignals;
+        });
+        setRejectedSignalHashes(prev => {
+          const updatedRejected = new Set(prev);
+          updatedRejected.delete(contentHash);
+          try {
+            localStorage.setItem(`${storageKey}_rejected`, JSON.stringify(Array.from(updatedRejected)));
+          } catch (e) {
+            console.error('Error updating rejected signals in localStorage:', e);
+          }
+          return updatedRejected;
+        });
+        toast({
+          title: "Error",
+          description: "Failed to reject signal. It has been restored.",
+          variant: "destructive",
+        });
+      }
+    }, 5000); // 5 seconds delay
+    
+    // Store pending rejection for undo
+    setPendingRejections(prev => {
+      const updated = new Map(prev);
+      updated.set(signalId, {
+        signal: signalToRestore,
+        originalIndex,
+        timer
+      });
+      return updated;
+    });
+    
+    // Show toast with undo option
     toast({
       title: "Signal removed",
       description: "This signal has been removed from your list.",
+      action: (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            // Clear the timer and remove from pending rejections
+            setPendingRejections(prev => {
+              const updated = new Map(prev);
+              const pendingRejection = updated.get(signalId);
+              if (pendingRejection) {
+                // Clear the timer
+                clearTimeout(pendingRejection.timer);
+                // Remove from map
+                updated.delete(signalId);
+              }
+              return updated;
+            });
+            
+            // Restore the signal to its original position
+            setSignals(prev => {
+              // Check if signal already exists (shouldn't, but be safe)
+              const exists = prev.find(s => s.id === signalToRestore.id);
+              if (exists) return prev;
+              
+              // Insert at original position, or at the end if original position is beyond current length
+              const insertIndex = Math.min(originalIndex, prev.length);
+              const newSignals = [...prev];
+              newSignals.splice(insertIndex, 0, signalToRestore);
+              return newSignals;
+            });
+            
+            // Remove from rejected list
+            setRejectedSignalHashes(prev => {
+              const updatedRejected = new Set(prev);
+              updatedRejected.delete(contentHash);
+              
+              // Update localStorage
+              try {
+                localStorage.setItem(`${storageKey}_rejected`, JSON.stringify(Array.from(updatedRejected)));
+              } catch (error) {
+                console.error('Error updating rejected signals in localStorage:', error);
+              }
+              
+              return updatedRejected;
+            });
+            
+            toast({
+              title: "Signal restored",
+              description: "The signal has been restored to your list.",
+            });
+          }}
+        >
+          Undo
+        </Button>
+      ),
     });
   };
+  
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      pendingRejections.forEach(({ timer }) => {
+        clearTimeout(timer);
+      });
+    };
+  }, [pendingRejections]);
 
-  const filteredSavedInsights = savedInsightsFilter === 'all' ? savedInsights : savedInsights.filter(insight => {
+  const filteredSavedInsights: SignalCard[] = savedInsightsFilter === 'all' ? savedInsights : savedInsights.filter(insight => {
     if (savedInsightsFilter === 'competitor') return insight.headline.toLowerCase().includes('competitor');
     if (savedInsightsFilter === 'icp') return insight.headline.toLowerCase().includes('icp');
     if (savedInsightsFilter === 'industry') return insight.headline.toLowerCase().includes('industry') || insight.headline.toLowerCase().includes('funding');
     if (savedInsightsFilter === 'linkedin') return insight.sourceLabel.toLowerCase().includes('linkedin');
     return true;
   });
+
   return (
     <Layout>
       <div className="p-6">
-        {currentTab === 'signals' && <div className="max-w-4xl mx-auto space-y-4">
+        {currentTab === 'signals' && (
+          <div className="w-full max-w-5xl mx-auto space-y-4">
             {isLoading ? (
               <div className="text-center py-12">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
@@ -585,8 +945,10 @@ const Index = () => {
               signals.map(signal => {
                 const contentHash = getSignalContentHash(signal);
                 const isAccepted = acceptedSignals.has(contentHash);
-                
-                return <div key={signal.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-lg transition-all duration-200">
+                const isChatOpenForThis = recommendationsSignal?.id === signal.id;
+                return (
+                  <div key={signal.id} className="space-y-0">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-lg transition-all duration-200">
                 {/* Card Header */}
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-3">
@@ -613,7 +975,6 @@ const Index = () => {
                         e.stopPropagation();
                         handleAcceptSignal(signal.id);
                       }}
-                      disabled={isAccepted}
                     >
                       <ThumbsUp className="h-4 w-4" />
                     </Button>
@@ -628,6 +989,34 @@ const Index = () => {
                     >
                       <ThumbsDown className="h-4 w-4" />
                     </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 text-gray-500 hover:text-blue-600 hover:bg-blue-50"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setRecommendationsSignal(signal);
+                            setRecommendationsChatOpen(true);
+                            setRecommendationsChatInput('');
+                            const hasNBAsWithPrompt = Array.isArray(signal.NBAs) && signal.NBAs.some((n) => n.prompt && String(n.prompt).trim() !== '');
+                            console.log('Recommendations opened:', {
+                              headline: signal.headline,
+                              signalId: signal.id,
+                              dataSource: signalsFromApi ? 'API (fetch-signals)' : 'Sample data',
+                              thisSignal: hasNBAsWithPrompt ? 'NBAs from API (nba+prompt)' : 'using nextBestMoves',
+                              count: (signal.NBAs?.length ?? signal.nextBestMoves?.length) ?? 0
+                            });
+                          }}
+                        >
+                          <Bot className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">Recommendations & chat</p>
+                      </TooltipContent>
+                    </Tooltip>
                   </div>
                 </div>
 
@@ -661,6 +1050,72 @@ const Index = () => {
                       <p className="text-gray-600 text-sm leading-relaxed mb-2">
                         {signal.snippet}
                       </p>
+                      {/* Description field - detailed ICP/customer context with Read more/Show less */}
+                      {signal.description && (
+                        <div className="mt-2">
+                          {expandedDescriptions.has(signal.id) ? (
+                            <>
+                              <p className="text-gray-700 text-sm leading-relaxed mb-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                {signal.description}
+                              </p>
+                              {/* Sources from API - bottom left of expanded description, one per line */}
+                              {Array.isArray(signal.source) && signal.source.length > 0 && (
+                                <div className="mt-2 flex flex-col gap-1.5 justify-start">
+                                  {signal.source.map((src, idx) => {
+                                    const isUrl = typeof src === 'string' && /^https?:\/\//i.test(src);
+                                    return isUrl ? (
+                                      <a
+                                        key={idx}
+                                        href={src}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="block w-fit"
+                                      >
+                                        <Badge variant="secondary" className="text-xs font-normal hover:bg-gray-300 cursor-pointer break-all max-w-full">
+                                          {src.length > 60 ? `${src.slice(0, 57)}…` : src}
+                                        </Badge>
+                                      </a>
+                                    ) : (
+                                      <Badge key={idx} variant="secondary" className="text-xs font-normal w-fit">
+                                        {src}
+                                      </Badge>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                              <div className="flex justify-center mt-3">
+                                <Button
+                                  variant="outline"
+                                  size="default"
+                                  className="text-blue-600 border-blue-600 hover:text-blue-700 hover:bg-blue-50 text-sm"
+                                  onClick={() => {
+                                    setExpandedDescriptions(prev => {
+                                      const newSet = new Set(prev);
+                                      newSet.delete(signal.id);
+                                      return newSet;
+                                    });
+                                  }}
+                                >
+                                  Show less
+                                </Button>
+                              </div>
+                            </>
+                          ) : (
+                            <div className="flex justify-center">
+                              <Button
+                                variant="outline"
+                                size="default"
+                                className="text-blue-600 border-blue-600 hover:text-blue-700 hover:bg-blue-50 text-sm"
+                                onClick={() => {
+                                  setExpandedDescriptions(prev => new Set([...prev, signal.id]));
+                                }}
+                              >
+                                Read more
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <Tooltip>
                       <TooltipTrigger>
@@ -671,58 +1126,6 @@ const Index = () => {
                       </TooltipContent>
                     </Tooltip>
                   </div>
-                  
-                  {/* Next Best Moves Section */}
-                  {/* <div className="mt-2 pt-2 border-t border-gray-100">
-                    <h4 className="text-sm font-medium text-gray-900 mb-2">Next Best Moves</h4>
-                    <div className="space-y-1">
-                      {getNextBestMoves(signal).map((move, index) => {
-                  const chatKey = `${signal.id}-${index}`;
-                  const isDismissed = dismissedSuggestions[signal.id]?.includes(index);
-                  const hasExpandedChat = expandedChats[chatKey];
-                  if (isDismissed) return null;
-                  return <div key={index}>
-                            <div className="group relative bg-gray-50 hover:bg-gray-100 p-2 rounded-lg transition-all duration-200 border border-transparent hover:border-gray-200">
-                              <div className="flex items-center justify-between">
-                                <p className="text-sm text-gray-700 pr-4">{move}</p>
-                                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center gap-2">
-                                  <Button size="sm" variant="outline" className="h-7 px-3 text-xs bg-green-50 border-green-200 text-green-700 hover:bg-green-100" onClick={() => handleSuggestionAccept(signal.id, index)}>
-                                    ✅ Accept
-                                  </Button>
-                                  <Button size="sm" variant="outline" className="h-7 px-3 text-xs bg-red-50 border-red-200 text-red-700 hover:bg-red-100" onClick={() => handleSuggestionDismiss(signal.id, index)}>
-                                    ❌ Dismiss
-                                  </Button>
-                                </div>
-                              </div>
-                            </div>
-                            
-                            {/* Inline Chat Expansion */}
-                            {/* {hasExpandedChat && <div className="mt-2 bg-white border border-gray-200 rounded-lg p-3 animate-fade-in shadow-sm">
-                                <div className="flex items-start gap-3 mb-2">
-                                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
-                                    <Bot className="h-4 w-4 text-white" />
-                                  </div>
-                                  <div className="flex-1">
-                                    <p className="text-sm text-gray-700 mb-2">
-                                      {getContextualChatMessage(signal.id, index)}
-                                    </p>
-                                  </div>
-                                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-gray-400 hover:text-gray-600" onClick={() => handleChatClose(signal.id, index)}>
-                                    <X className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                                
-                                <div className="flex gap-2 ml-11">
-                                  <Input placeholder="Any specific notes or comments you'd like to capture..." className="flex-1 text-sm" />
-                                  <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
-                                    <Send className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </div>}
-                          </div>;
-                })}
-                    </div>
-                  </div> */}
                 </div>
 
                 {/* Card Actions */}
@@ -732,10 +1135,83 @@ const Index = () => {
                     Save for Later
                   </Button>
                 </div> */}
-              </div>;
+
+                {/* Recommendations & Chat - inside same card when bot is clicked */}
+                {isChatOpenForThis && recommendationsSignal && (
+                  <div className="pt-4 mt-2">
+                    <div className="flex justify-end mb-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        onClick={() => {
+                          setRecommendationsSignal(null);
+                          setRecommendationsChatOpen(false);
+                        }}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    {(() => {
+                      const recommendationsList: NBAItem[] = (recommendationsSignal.NBAs && recommendationsSignal.NBAs.length > 0)
+                        ? recommendationsSignal.NBAs
+                        : (recommendationsSignal.nextBestMoves || []).map((m) => ({ nba: m, prompt: '' }));
+                      if (recommendationsList.length === 0) return null;
+                      return (
+                        <div className="space-y-2 mb-3">
+                          <h4 className="text-sm font-medium text-gray-900">Recommendations</h4>
+                          <div className="space-y-2">
+                            {recommendationsList.map((item, index) => (
+                              <button
+                                key={index}
+                                type="button"
+                                onClick={() => setRecommendationsChatInput(item.nba)}
+                                className="w-full flex items-start gap-2 p-2.5 rounded-lg bg-gray-50 border border-gray-100 hover:border-blue-200 hover:bg-blue-50/50 transition-colors text-left cursor-pointer"
+                              >
+                                <p className="text-sm text-gray-700">{item.nba}</p>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                    <div className="pt-3">
+                      <label className="block text-xs font-medium text-gray-700 mb-2">Chat</label>
+                      <div className="flex gap-2">
+                        <Textarea
+                          value={recommendationsChatInput}
+                          onChange={(e) => setRecommendationsChatInput(e.target.value)}
+                          placeholder="Type your message... "
+                          className="resize-none text-sm min-h-[80px]"
+                          rows={3}
+                        />
+                        <Button
+                          size="sm"
+                          className="self-end bg-blue-600 hover:bg-blue-700"
+                          disabled={!recommendationsChatInput.trim()}
+                          onClick={() => {
+                            if (recommendationsChatInput.trim()) {
+                              toast({
+                                title: "Message",
+                                description: "Chat API will be connected later. Your message was captured.",
+                              });
+                              setRecommendationsChatInput('');
+                            }
+                          }}
+                        >
+                          <Send className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+                  </div>
+                );
               })
             )}
-          </div>}
+          </div>
+        )}
 
         {currentTab === 'saved' && <div className="max-w-4xl mx-auto">
             {filteredSavedInsights.length === 0 ? <div className="text-center py-12">
@@ -806,7 +1282,10 @@ const Index = () => {
                 <div className="space-y-2">
                   <h4 className="text-sm font-medium text-gray-900">Quick Actions:</h4>
                   <div className="grid grid-cols-1 gap-1.5">
-                    {getContextualSuggestions(selectedSignal).map((suggestion, index) => (
+                    {(selectedSignal.contextualSuggestions && selectedSignal.contextualSuggestions.length > 0
+                      ? selectedSignal.contextualSuggestions
+                      : getContextualSuggestions(selectedSignal)
+                    ).map((suggestion, index) => (
                       <Button
                         key={index}
                         variant="outline"
@@ -860,7 +1339,7 @@ const Index = () => {
           </div>
         </DrawerContent>
        </Drawer>
-       
+
        <Toaster />
      </Layout>
    );
