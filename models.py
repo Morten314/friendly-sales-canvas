@@ -137,3 +137,15 @@ class SignalAskRequest(BaseModel):
     user_id: str
     question: str
     history: Optional[List[Dict[str, Any]]] = None  # Open-ended history format
+
+# Registration Request model
+class RegistrationRequest(BaseModel):
+    name: str
+    email: str
+
+# Registration Response model
+class RegistrationResponse(BaseModel):
+    id: str
+    name: str
+    email: str
+    timestamp: str

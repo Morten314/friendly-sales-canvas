@@ -26,7 +26,7 @@ from models import (
     ProspectData, Lead, Contact, SalesPipelineResponse, TimeframeResponse, StageStats,
     CompanyProfile, UserProfile, ScoutProfile, MarketRequest, EditRequest,
     CustomerProfileRequest, CustomerProfileICP, LeadCreateRequest, LeadUpdateRequest,
-    SignalActionRequest, SignalAskRequest
+    SignalActionRequest, SignalAskRequest, RegistrationRequest, RegistrationResponse
 )
 from database import driver, graph, client, upsert_node
 from llm_config import chain, chain2, llm2
@@ -2009,6 +2009,71 @@ async def connect_user_to_org(user_id: str = Body(...), org_id: str = Body(...))
     except Exception as e:
         logger.error(f"Error connecting user to org: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to connect user to org: {str(e)}")
+
+@app.post("/registration", response_model=RegistrationResponse)
+async def create_registration(registration: RegistrationRequest):
+    """
+    POST registration endpoint.
+    Creates a new registration entry in MongoDB.
+    Uses separate database 'Registration_DB' and collection 'registrations'.
+    """
+    try:
+        # Connect to separate registration database
+        db = client["Registration_DB"]
+        collection = db["registrations"]
+        
+        # Create registration document with timestamp
+        registration_doc = {
+            "name": registration.name,
+            "email": registration.email,
+            "timestamp": datetime.utcnow()
+        }
+        
+        # Insert the document
+        result = collection.insert_one(registration_doc)
+        
+        # Return the created registration
+        return RegistrationResponse(
+            id=str(result.inserted_id),
+            name=registration.name,
+            email=registration.email,
+            timestamp=registration_doc["timestamp"].isoformat()
+        )
+        
+    except Exception as e:
+        logger.error(f"Error creating registration: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to create registration: {str(e)}")
+
+@app.get("/registration", response_model=List[RegistrationResponse])
+async def get_registrations():
+    """
+    GET registration endpoint.
+    Fetches all registration entries ordered by recency (most recent first).
+    Uses separate database 'Registration_DB' and collection 'registrations'.
+    """
+    try:
+        # Connect to separate registration database
+        db = client["Registration_DB"]
+        collection = db["registrations"]
+        
+        # Fetch all registrations ordered by timestamp (descending - most recent first)
+        registrations = collection.find().sort("timestamp", -1)
+        
+        # Convert to response format
+        result = []
+        for reg in registrations:
+            result.append(RegistrationResponse(
+                id=str(reg["_id"]),
+                name=reg["name"],
+                email=reg["email"],
+                timestamp=reg["timestamp"].isoformat() if isinstance(reg["timestamp"], datetime) else reg["timestamp"]
+            ))
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"Error fetching registrations: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch registrations: {str(e)}")
 
 # Initialize S3 client
 s3_client = boto3.client(
