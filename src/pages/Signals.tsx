@@ -24,6 +24,12 @@ interface NBAItem {
   prompt: string;
 }
 
+/** Source citation: display text and link URL */
+interface SourceCitation {
+  citation: string;
+  url: string;
+}
+
 interface SignalCard {
   id: string;
   agent: Agent;
@@ -33,8 +39,8 @@ interface SignalCard {
   description: string; // One full paragraph with detailed ICP/customer context
   sourceUrl: string;
   sourceLabel: string;
-  /** Array of source URLs or citations from API */
-  source?: string[];
+  /** Citations from API: citation text + url (click opens url) */
+  source?: SourceCitation[];
   nextBestMoves: string[]; // Array of suggested actions (legacy)
   /** Recommendations: nba shown to user, prompt for future API */
   NBAs?: NBAItem[];
@@ -85,6 +91,25 @@ const generateSignalsBatch = async (userId: string) => {
   } catch (error) {
     console.error('Generate signals API error:', error);
     throw error;
+  }
+};
+
+const signalAsk = async (body: { org_id: string; user_id: string; question: string; history: { user: string; assistant: string }[] }) => {
+  try {
+    const response = await fetch('/api/signal_Ask', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`signal_Ask failed: ${response.status} ${text}`);
+    }
+    const data = await response.json();
+    return data;
+  } catch (err) {
+    console.error('signal_Ask error:', err);
+    throw err;
   }
 };
 
@@ -218,6 +243,11 @@ const Index = () => {
   const [recommendationsChatOpen, setRecommendationsChatOpen] = useState(false);
   const [recommendationsSignal, setRecommendationsSignal] = useState<SignalCard | null>(null);
   const [recommendationsChatInput, setRecommendationsChatInput] = useState('');
+  /** Prompt for the NBA that was sent – shown in UI after Send */
+  const [displayedPromptForChat, setDisplayedPromptForChat] = useState<string | null>(null);
+  /** History for POST /signal_Ask when user asks a free-form question */
+  const [signalAskHistory, setSignalAskHistory] = useState<{ user: string; assistant: string }[]>([]);
+  const [isSendingChat, setIsSendingChat] = useState(false);
   /** True when current signals (and recommendations) came from GET /api/fetch-signals; false when using sample fallback */
   const [signalsFromApi, setSignalsFromApi] = useState(false);
   const [savedInsightsFilter, setSavedInsightsFilter] = useState('all');
@@ -344,11 +374,20 @@ const Index = () => {
             }))
           : nextBestMoves.map((m: string) => ({ nba: m, prompt: '' }));
 
+        const sourceRaw = signal.source;
+        const source: SourceCitation[] = Array.isArray(sourceRaw)
+          ? sourceRaw.map((s: SourceCitation | string) =>
+              typeof s === 'object' && s !== null && 'citation' in s && 'url' in s
+                ? { citation: (s as SourceCitation).citation ?? '', url: (s as SourceCitation).url ?? '' }
+                : { citation: typeof s === 'string' ? s : '', url: typeof s === 'string' && /^https?:\/\//i.test(s) ? s : '' }
+            ).filter((c) => c.citation || c.url)
+          : [];
+
         return {
           ...signal,
           id: signalId,
           description: signal.description || '',
-          source: Array.isArray(signal.source) ? signal.source : [],
+          source,
           nextBestMoves,
           NBAs,
           contextualSuggestions: signal.contextualSuggestions || []
@@ -411,7 +450,10 @@ const Index = () => {
         description: 'This competitive pricing move by Company X directly impacts your SMB segment in the mid-market SaaS space. With 40% of your current pipeline falling into this category, this development could accelerate decision timelines or create pricing pressure. The launch targets companies with 50-200 employees—your core ICP—and includes features that overlap with your value proposition. Consider monitoring early adoption signals and preparing competitive differentiation messaging that emphasizes your unique ROI model and enterprise-grade capabilities.',
         sourceUrl: '#',
         sourceLabel: 'Press release link',
-        source: ['https://example.com/press-release', 'Industry report 2024'],
+        source: [
+          { citation: 'Press Release - Company X SMB Tier', url: 'https://example.com/press-release' },
+          { citation: 'Industry report 2024', url: 'https://example.com/industry-report' },
+        ],
         nextBestMoves: [
           'Would you like me to check how many of your target ICPs fall under the SMB segment and could be influenced by this move?',
           'Do you want me to model a competitive bundle or ROI-driven value pitch against this pricing shift?',
@@ -438,7 +480,7 @@ const Index = () => {
         description: 'John Doe, CTO at Acme Corp (a company matching your ICP profile with 150 employees in the FinTech sector), posted about challenges with cloud migration and data recovery strategies. This represents a strong buying signal as Acme Corp is actively evaluating solutions in your space. The post indicates urgency and budget allocation for DRaaS solutions, making this an ideal time for targeted outreach with relevant case studies and ROI messaging.',
         sourceUrl: '#',
         sourceLabel: 'LinkedIn post link',
-        source: ['https://linkedin.com/post/example'],
+        source: [{ citation: 'LinkedIn post link', url: 'https://linkedin.com/post/example' }],
         nextBestMoves: [
           'Should I draft a contextual comment or connection request for this post?',
           'Want me to identify other prospects posting about similar challenges?',
@@ -465,7 +507,7 @@ const Index = () => {
         description: 'A Series B funding round of $25M was announced for a competitor in the AI automation space, signaling strong market confidence and potential for aggressive expansion. This development could impact your competitive positioning, especially in the enterprise segment where both companies target similar buyer personas. The funding suggests increased marketing spend and product development, which may accelerate market education but also intensify competition for your target accounts.',
         sourceUrl: '#',
         sourceLabel: 'TechCrunch article',
-        source: ['https://techcrunch.com/article-example'],
+        source: [{ citation: 'TechCrunch article', url: 'https://techcrunch.com/article-example' }],
         nextBestMoves: [
           'Want me to analyze how this affects your competitive positioning in the market?',
           'Should I identify which of your prospects might be considering this competitor now?',
@@ -492,7 +534,10 @@ const Index = () => {
         description: 'Analysis of market signals reveals a new high-value ICP segment: FinTech startups with 50-200 employees, particularly in the EU market. This segment shows strong engagement patterns with solutions similar to yours, with 65% overlap in key buying criteria with your existing SaaS ICP. The segment demonstrates high growth potential and budget allocation for automation tools, making it an ideal expansion target for your sales efforts.',
         sourceUrl: '#',
         sourceLabel: 'Profiler internal analysis',
-        source: ['Internal analysis', 'Research report'],
+        source: [
+          { citation: 'Internal analysis', url: 'https://example.com/internal' },
+          { citation: 'Research report', url: 'https://example.com/research' },
+        ],
         nextBestMoves: [
           'Should I prioritize outreach to decision makers in this new segment?',
           'Want me to create a tailored value proposition for this ICP profile?',
@@ -594,6 +639,90 @@ const Index = () => {
     }
     console.log(`Action ${action} on card ${cardId}`);
   };
+
+  const normalizedNba = (s: string) => s.replace(/\s+/g, ' ').trim();
+  const isSentTextARecommendation = (text: string) => {
+    if (!recommendationsSignal) return false;
+    const list: NBAItem[] = (recommendationsSignal.NBAs && recommendationsSignal.NBAs.length > 0)
+      ? recommendationsSignal.NBAs
+      : (recommendationsSignal.nextBestMoves || []).map((m) => ({ nba: m, prompt: '' }));
+    return list.some((item) => normalizedNba(item.nba) === normalizedNba(text));
+  };
+
+  const handleSendRecommendationChat = async () => {
+    const sentText = recommendationsChatInput.trim();
+    if (!sentText || !currentUser?.uid || !recommendationsSignal) return;
+    setIsSendingChat(true);
+    setDisplayedPromptForChat(null);
+
+    const isRecommendation = isSentTextARecommendation(sentText);
+
+    try {
+      if (isRecommendation) {
+        const data = await fetchSignals(currentUser.uid);
+        const rawSignals = data.signals || [];
+        let promptToShow = '';
+        const currentId = recommendationsSignal.id;
+        for (const s of rawSignals) {
+          const sid = s.signal_id ?? s.id;
+          if (sid !== currentId) continue;
+          const list: NBAItem[] = Array.isArray(s.NBAs) && s.NBAs.length > 0
+            ? s.NBAs.map((n: { nba?: string; prompt?: string }) => ({ nba: n.nba ?? '', prompt: n.prompt ?? '' }))
+            : (s.nextBestMoves || []).map((m: string) => ({ nba: m, prompt: '' }));
+          const match = list.find((item) => normalizedNba(item.nba) === normalizedNba(sentText));
+          if (match) {
+            promptToShow = match.prompt ?? '';
+            break;
+          }
+        }
+        if (!promptToShow && recommendationsSignal.NBAs?.length) {
+          const match = recommendationsSignal.NBAs.find((item) => normalizedNba(item.nba) === normalizedNba(sentText));
+          promptToShow = match?.prompt ?? '';
+        }
+        setDisplayedPromptForChat(promptToShow);
+        if (!promptToShow) {
+          toast({ title: 'No matching recommendation', description: 'Prompt not found for this text.', variant: 'destructive' });
+        }
+      } else {
+        const orgIdToUse = orgId ?? 'org-123';
+        const res = await signalAsk({
+          org_id: orgIdToUse,
+          user_id: currentUser.uid,
+          question: sentText,
+          history: signalAskHistory,
+        });
+        const assistantText = res?.answer ?? res?.response ?? res?.data ?? (typeof res === 'string' ? res : '');
+        setSignalAskHistory((prev) => [...prev, { user: sentText, assistant: assistantText }]);
+        setRecommendationsChatInput('');
+        if (!assistantText) {
+          toast({ title: 'No response', description: 'Agent did not return an answer.', variant: 'destructive' });
+        }
+      }
+    } catch (err) {
+      console.error('Send recommendation / fetch or signal_Ask error:', err);
+      toast({ title: 'Error', description: 'Something went wrong. Please try again.', variant: 'destructive' });
+    } finally {
+      setIsSendingChat(false);
+    }
+  };
+
+  /** Strip markdown and special characters from agent response for plain display */
+  const formatAgentResponse = (text: string) => {
+    if (!text || typeof text !== 'string') return null;
+    let out = text
+      .replace(/\*\*\*/g, '')
+      .replace(/\*\*/g, '')
+      .replace(/\*([^*]+)\*/g, '$1')
+      .replace(/\*$/gm, '')
+      .replace(/^#+\s*/gm, '')
+      .replace(/—/g, ' - ')
+      .replace(/[\u2013\u2014]/g, ' - ')
+      .replace(/[^\S\n]+/g, ' ')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+    return <span className="whitespace-pre-wrap">{out}</span>;
+  };
+
   const getAgentBadge = (agent: Agent) => {
     if (agent === 'scout') {
       return <Badge variant="secondary" className="bg-blue-100 text-blue-800 border-blue-200">
@@ -1000,6 +1129,7 @@ const Index = () => {
                             setRecommendationsSignal(signal);
                             setRecommendationsChatOpen(true);
                             setRecommendationsChatInput('');
+                            setDisplayedPromptForChat(null);
                             const hasNBAsWithPrompt = Array.isArray(signal.NBAs) && signal.NBAs.some((n) => n.prompt && String(n.prompt).trim() !== '');
                             console.log('Recommendations opened:', {
                               headline: signal.headline,
@@ -1058,26 +1188,27 @@ const Index = () => {
                               <p className="text-gray-700 text-sm leading-relaxed mb-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
                                 {signal.description}
                               </p>
-                              {/* Sources from API - bottom left of expanded description, one per line */}
+                              {/* Citations from API - bottom left of expanded description; click opens url */}
                               {Array.isArray(signal.source) && signal.source.length > 0 && (
                                 <div className="mt-2 flex flex-col gap-1.5 justify-start">
                                   {signal.source.map((src, idx) => {
-                                    const isUrl = typeof src === 'string' && /^https?:\/\//i.test(src);
-                                    return isUrl ? (
+                                    const label = src.citation || src.url || 'Source';
+                                    const hasUrl = src.url && /^https?:\/\//i.test(src.url);
+                                    return hasUrl ? (
                                       <a
                                         key={idx}
-                                        href={src}
+                                        href={src.url}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="block w-fit"
                                       >
-                                        <Badge variant="secondary" className="text-xs font-normal hover:bg-gray-300 cursor-pointer break-all max-w-full">
-                                          {src.length > 60 ? `${src.slice(0, 57)}…` : src}
+                                        <Badge variant="secondary" className="text-xs font-normal hover:bg-gray-300 cursor-pointer max-w-full text-left">
+                                          {label}
                                         </Badge>
                                       </a>
                                     ) : (
                                       <Badge key={idx} variant="secondary" className="text-xs font-normal w-fit">
-                                        {src}
+                                        {label}
                                       </Badge>
                                     );
                                   })}
@@ -1145,9 +1276,11 @@ const Index = () => {
                         size="sm"
                         className="h-8 w-8 p-0"
                         onClick={() => {
-                          setRecommendationsSignal(null);
-                          setRecommendationsChatOpen(false);
-                        }}
+                        setRecommendationsSignal(null);
+                        setRecommendationsChatOpen(false);
+                        setDisplayedPromptForChat(null);
+                        setSignalAskHistory([]);
+                      }}
                       >
                         <X className="h-4 w-4" />
                       </Button>
@@ -1165,7 +1298,10 @@ const Index = () => {
                               <button
                                 key={index}
                                 type="button"
-                                onClick={() => setRecommendationsChatInput(item.nba)}
+                                onClick={() => {
+                                  // When clicking a recommendation, show the corresponding prompt at the bottom
+                                  setDisplayedPromptForChat(item.prompt ?? '');
+                                }}
                                 className="w-full flex items-start gap-2 p-2.5 rounded-lg bg-gray-50 border border-gray-100 hover:border-blue-200 hover:bg-blue-50/50 transition-colors text-left cursor-pointer"
                               >
                                 <p className="text-sm text-gray-700">{item.nba}</p>
@@ -1175,33 +1311,55 @@ const Index = () => {
                         </div>
                       );
                     })()}
-                    <div className="pt-3">
+                    {/* Chat area and send button - commented off for this version; only recommendations + corresponding prompt */}
+                    {/* <div className="pt-3">
                       <label className="block text-xs font-medium text-gray-700 mb-2">Chat</label>
                       <div className="flex gap-2">
                         <Textarea
                           value={recommendationsChatInput}
                           onChange={(e) => setRecommendationsChatInput(e.target.value)}
-                          placeholder="Type your message... "
+                          placeholder="Click a recommendation to paste, then Send to run fetch and see its prompt"
                           className="resize-none text-sm min-h-[80px]"
                           rows={3}
+                          disabled={isSendingChat}
                         />
                         <Button
                           size="sm"
                           className="self-end bg-blue-600 hover:bg-blue-700"
-                          disabled={!recommendationsChatInput.trim()}
-                          onClick={() => {
-                            if (recommendationsChatInput.trim()) {
-                              toast({
-                                title: "Message",
-                                description: "Chat API will be connected later. Your message was captured.",
-                              });
-                              setRecommendationsChatInput('');
-                            }
-                          }}
+                          disabled={!recommendationsChatInput.trim() || isSendingChat}
+                          onClick={handleSendRecommendationChat}
                         >
-                          <Send className="h-4 w-4" />
+                          {isSendingChat ? (
+                            <span className="animate-pulse">...</span>
+                          ) : (
+                            <Send className="h-4 w-4" />
+                          )}
                         </Button>
                       </div>
+                      {signalAskHistory.length > 0 && (
+                        <div className="mt-3 space-y-2">
+                          {signalAskHistory.map((entry, idx) => (
+                            <div key={idx} className="p-3 rounded-lg bg-gray-50 border border-gray-200">
+                              <p className="text-xs font-medium text-gray-500 mb-1">You</p>
+                              <p className="text-sm text-gray-800 whitespace-pre-wrap">{entry.user}</p>
+                              <p className="text-xs font-medium text-gray-500 mt-2 mb-1">Agent</p>
+                              <p className="text-sm text-gray-800">{formatAgentResponse(entry.assistant)}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div> */}
+                    {/* Corresponding prompt - shown at bottom when recommendation is clicked */}
+                    <div className="pt-3">
+                      {displayedPromptForChat !== null && displayedPromptForChat !== '' && (
+                        <div className="p-3 rounded-lg bg-blue-50 border border-blue-100">
+                          <p className="text-xs font-medium text-blue-900 mb-1">Corresponding prompt</p>
+                          <p className="text-sm text-gray-800 whitespace-pre-wrap">{displayedPromptForChat}</p>
+                        </div>
+                      )}
+                      {displayedPromptForChat !== null && displayedPromptForChat === '' && (
+                        <p className="mt-2 text-xs text-amber-700">No prompt found for this recommendation.</p>
+                      )}
                     </div>
                   </div>
                 )}
