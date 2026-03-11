@@ -747,6 +747,18 @@ const Index = () => {
       navigate('/customers', { state: { tab: 'chat-profiler' } });
     }
   };
+
+  /** Navigate to Chat from bot icon (signal-level context, uses first recommendation if available) */
+  const handleBotIconClick = (signal: SignalCard) => {
+    const list: NBAItem[] = (signal.NBAs && signal.NBAs.length > 0)
+      ? signal.NBAs
+      : (signal.nextBestMoves || []).map((m) => ({ nba: m, prompt: '' }));
+    const first = list[0];
+    const recommendation = first?.nba ?? signal.headline;
+    const prompt = first?.prompt ?? '';
+    const answer = first ? recommendationAnswers[`${signal.id}-0`] : undefined;
+    handleNavigateToAgentChat(signal, recommendation, prompt, answer);
+  };
   const getContextualGreeting = (signal: SignalCard) => {
     const name = "Alex"; // This would come from user context in real app
     return `Hi ${name} 👋, I'm ready to delegate this insight for you. Please instruct.`;
@@ -1131,9 +1143,18 @@ const Index = () => {
                     >
                       <ThumbsDown className="h-4 w-4" />
                     </Button>
-                    <div className="h-8 w-8 flex items-center justify-center text-gray-500">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 text-gray-500 hover:text-blue-600 hover:bg-blue-50"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleBotIconClick(signal);
+                      }}
+                      title={signal.agent === 'scout' ? 'Chat with Scout' : 'Chat with Profiler'}
+                    >
                       <Bot className="h-4 w-4" />
-                    </div>
+                    </Button>
                   </div>
                 </div>
 
