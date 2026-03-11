@@ -130,6 +130,8 @@ import { marketResearchApiCall, logApiCallResult, shouldUseCachedData } from '@/
 
 
 import ScoutChatPanel from "@/components/market-research/ScoutChatPanel";
+import { SignalsContextChat, SignalsChatContext } from "@/components/signals/SignalsContextChat";
+import { ScoutChatWithHistory } from "@/components/signals/ScoutChatWithHistory";
 
 
 
@@ -815,6 +817,27 @@ const MarketResearch = React.memo(() => {
 
 
   const [activeTab, setActiveTab] = useState(getActiveTabFromPath());
+  const [signalsChatContext, setSignalsChatContext] = useState<SignalsChatContext | null>(null);
+
+  // When Chat with Scout tab is active, check for context from Signals page
+  useEffect(() => {
+    if (activeTab !== 'trends') return;
+    try {
+      const stored = sessionStorage.getItem('signalsChatContext');
+      if (stored) {
+        const parsed = JSON.parse(stored) as SignalsChatContext;
+        if (parsed?.agent === 'scout') {
+          setSignalsChatContext(parsed);
+        } else {
+          setSignalsChatContext(null);
+        }
+      } else {
+        setSignalsChatContext(null);
+      }
+    } catch {
+      setSignalsChatContext(null);
+    }
+  }, [activeTab]);
 
 
 
@@ -13959,6 +13982,19 @@ const MarketResearch = React.memo(() => {
 
 
 
+        {activeTab === "trends" ? (
+          <div className="flex-1 min-h-0 flex flex-col overflow-hidden -mx-3 md:-mx-4 lg:-mx-6 w-[calc(100%+1.5rem)] md:w-[calc(100%+2rem)] lg:w-[calc(100%+3rem)] max-w-none">
+            <ScoutChatWithHistory
+              initialContext={signalsChatContext}
+              onClearContext={() => {
+                sessionStorage.removeItem('signalsChatContext');
+                setSignalsChatContext(null);
+              }}
+              editHistory={editHistory}
+              onTabChange={setActiveTab}
+            />
+          </div>
+        ) : (
         <ScrollArea className="flex-1">
 
 
@@ -13971,7 +14007,7 @@ const MarketResearch = React.memo(() => {
 
             (isRefreshing || isInitialLoading) && marketData ? 'opacity-70' : 'opacity-100'
 
-          } relative`}>
+          } relative h-full min-h-0 flex flex-col`}>
 
 
 
@@ -13979,7 +14015,7 @@ const MarketResearch = React.memo(() => {
 
             {!isRefreshing ? (
 
-            <Tabs value={activeTab} onValueChange={handleTabChange} className="mt-0">
+            <Tabs value={activeTab} onValueChange={handleTabChange} className="mt-0 h-full min-h-0 flex flex-col">
 
 
 
@@ -15080,46 +15116,9 @@ const MarketResearch = React.memo(() => {
 
 
 
-              <TabsContent value="trends" className="mt-0">
-
-
-
-                <ScoutChatPanel 
-
-
-
-                  showScoutChat={true}
-
-
-
-                  isSplitView={false}
-
-
-
-                  hasEdits={false}
-
-
-
-                  showEditHistory={false}
-
-
-
-                  editHistory={editHistory}
-
-
-
-                  lastEditedField=""
-
-
-
-                  onClose={() => setActiveTab("intelligence")}
-
-
-
-                />
-
-
-
+              <TabsContent value="trends" className="mt-0 hidden">
+                {/* Chat tab content rendered above when activeTab === 'trends' */}
+                <div />
               </TabsContent>
 
 
@@ -15151,6 +15150,7 @@ const MarketResearch = React.memo(() => {
 
 
         </ScrollArea>
+        )}
 
 
 

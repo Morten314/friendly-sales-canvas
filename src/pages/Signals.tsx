@@ -1,4 +1,4 @@
-import { Filter, Check, X, Bookmark, MessageCircle, Info, Share2, Download, Bot, Send, RefreshCw, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { Filter, Check, X, Bookmark, MessageCircle, Info, Share2, Download, Bot, Send, RefreshCw, ThumbsUp, ThumbsDown, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +11,8 @@ import { Toaster } from '@/components/ui/toaster';
 import { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { sanitizeAnswerText } from '@/lib/utils';
 type Agent = 'scout' | 'profiler';
 type ActionType = 'accept' | 'dismiss' | 'save' | 'ask';
 interface ContextualSuggestion {
@@ -234,20 +236,28 @@ const parseTimestamp = (timestamp: string): number => {
 
 const Index = () => {
   const { currentUser, orgId } = useAuth();
+  const navigate = useNavigate();
   const [currentTab, setCurrentTab] = useState('signals');
   const [signals, setSignals] = useState<SignalCard[]>([]);
   const [savedInsights, setSavedInsights] = useState<SignalCard[]>([]);
   const [chatDrawerOpen, setChatDrawerOpen] = useState(false);
   const [selectedSignal, setSelectedSignal] = useState<SignalCard | null>(null);
   const [chatMessage, setChatMessage] = useState('');
-  const [recommendationsChatOpen, setRecommendationsChatOpen] = useState(false);
-  const [recommendationsSignal, setRecommendationsSignal] = useState<SignalCard | null>(null);
-  const [recommendationsChatInput, setRecommendationsChatInput] = useState('');
-  /** Prompt for the NBA that was sent – shown in UI after Send */
-  const [displayedPromptForChat, setDisplayedPromptForChat] = useState<string | null>(null);
-  /** History for POST /signal_Ask when user asks a free-form question */
-  const [signalAskHistory, setSignalAskHistory] = useState<{ user: string; assistant: string }[]>([]);
-  const [isSendingChat, setIsSendingChat] = useState(false);
+  /** Which recommendation's prompt is expanded: { signalId, index } */
+  const [expandedRecommendation, setExpandedRecommendation] = useState<{ signalId: string; index: number } | null>(null);
+  /** Cached answers from signal_Ask for each recommendation: key = `${signalId}-${index}` */
+  const [recommendationAnswers, setRecommendationAnswers] = useState<Record<string, string>>({});
+  /** Key of recommendation currently loading answer */
+  const [recommendationAnswerLoading, setRecommendationAnswerLoading] = useState<string | null>(null);
+  /** Keys of answers that are expanded (full view): `${signalId}-${index}` */
+  const [answerExpandedKeys, setAnswerExpandedKeys] = useState<Set<string>>(new Set());
+
+  // Reset answer expanded state when recommendation block is collapsed
+  useEffect(() => {
+    if (!expandedRecommendation) {
+      setAnswerExpandedKeys(new Set());
+    }
+  }, [expandedRecommendation]);
   /** True when current signals (and recommendations) came from GET /api/fetch-signals; false when using sample fallback */
   const [signalsFromApi, setSignalsFromApi] = useState(false);
   const [savedInsightsFilter, setSavedInsightsFilter] = useState('all');
@@ -301,14 +311,64 @@ const Index = () => {
     const handleSignalsRefresh = () => {
       handleRefresh();
     };
+    const handleSignalsStateChanged = () => {
+      if (currentUser?.uid) {
+        const storageKey = `signals_${currentUser.uid}`;
+        try {
+          const savedAccepted = localStorage.getItem(`${storageKey}_accepted`);
+          const savedRejected = localStorage.getItem(`${storageKey}_rejected`);
+          if (savedAccepted) setAcceptedSignals(new Set(JSON.parse(savedAccepted)));
+          if (savedRejected) setRejectedSignalHashes(new Set(JSON.parse(savedRejected)));
+          loadSignals();
+        } catch (e) {
+          console.error('Error syncing signals state:', e);
+        }
+      }
+    };
 
     window.addEventListener('signalsRefresh', handleSignalsRefresh);
-    
+    window.addEventListener('signalsStateChanged', handleSignalsStateChanged);
     return () => {
       window.removeEventListener('signalsRefresh', handleSignalsRefresh);
+      window.removeEventListener('signalsStateChanged', handleSignalsStateChanged);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [currentUser?.uid]);
+
+  // Fetch answer when recommendation is expanded (prompt sent to signal_Ask)
+  useEffect(() => {
+    if (!expandedRecommendation || !currentUser?.uid || !orgId) return;
+    const { signalId, index } = expandedRecommendation;
+    const signal = signals.find((s) => s.id === signalId);
+    if (!signal) return;
+    const list: NBAItem[] = (signal.NBAs && signal.NBAs.length > 0)
+      ? signal.NBAs
+      : (signal.nextBestMoves || []).map((m) => ({ nba: m, prompt: '' }));
+    const item = list[index];
+    if (!item || !(item.prompt ?? '').trim()) return;
+    const key = `${signalId}-${index}`;
+    if (recommendationAnswers[key]) return;
+    setRecommendationAnswerLoading(key);
+    signalAsk({
+      org_id: orgId,
+      user_id: currentUser.uid,
+      question: item.prompt,
+      history: [],
+    })
+      .then((res) => {
+        const answer = res?.answer ?? res?.response ?? (typeof res === 'string' ? res : '');
+        setRecommendationAnswers((prev) => ({ ...prev, [key]: String(answer) }));
+      })
+      .catch((err) => {
+        console.error('signal_Ask for recommendation error:', err);
+        toast({
+          title: 'Error',
+          description: 'Failed to load recommendation answer. Please try again.',
+          variant: 'destructive',
+        });
+      })
+      .finally(() => setRecommendationAnswerLoading(null));
+  }, [expandedRecommendation, signals, currentUser?.uid, orgId, recommendationAnswers, toast]);
 
   const loadSignals = async () => {
     if (!currentUser?.uid) {
@@ -640,72 +700,6 @@ const Index = () => {
     console.log(`Action ${action} on card ${cardId}`);
   };
 
-  const normalizedNba = (s: string) => s.replace(/\s+/g, ' ').trim();
-  const isSentTextARecommendation = (text: string) => {
-    if (!recommendationsSignal) return false;
-    const list: NBAItem[] = (recommendationsSignal.NBAs && recommendationsSignal.NBAs.length > 0)
-      ? recommendationsSignal.NBAs
-      : (recommendationsSignal.nextBestMoves || []).map((m) => ({ nba: m, prompt: '' }));
-    return list.some((item) => normalizedNba(item.nba) === normalizedNba(text));
-  };
-
-  const handleSendRecommendationChat = async () => {
-    const sentText = recommendationsChatInput.trim();
-    if (!sentText || !currentUser?.uid || !recommendationsSignal) return;
-    setIsSendingChat(true);
-    setDisplayedPromptForChat(null);
-
-    const isRecommendation = isSentTextARecommendation(sentText);
-
-    try {
-      if (isRecommendation) {
-        const data = await fetchSignals(currentUser.uid);
-        const rawSignals = data.signals || [];
-        let promptToShow = '';
-        const currentId = recommendationsSignal.id;
-        for (const s of rawSignals) {
-          const sid = s.signal_id ?? s.id;
-          if (sid !== currentId) continue;
-          const list: NBAItem[] = Array.isArray(s.NBAs) && s.NBAs.length > 0
-            ? s.NBAs.map((n: { nba?: string; prompt?: string }) => ({ nba: n.nba ?? '', prompt: n.prompt ?? '' }))
-            : (s.nextBestMoves || []).map((m: string) => ({ nba: m, prompt: '' }));
-          const match = list.find((item) => normalizedNba(item.nba) === normalizedNba(sentText));
-          if (match) {
-            promptToShow = match.prompt ?? '';
-            break;
-          }
-        }
-        if (!promptToShow && recommendationsSignal.NBAs?.length) {
-          const match = recommendationsSignal.NBAs.find((item) => normalizedNba(item.nba) === normalizedNba(sentText));
-          promptToShow = match?.prompt ?? '';
-        }
-        setDisplayedPromptForChat(promptToShow);
-        if (!promptToShow) {
-          toast({ title: 'No matching recommendation', description: 'Prompt not found for this text.', variant: 'destructive' });
-        }
-      } else {
-        const orgIdToUse = orgId ?? 'org-123';
-        const res = await signalAsk({
-          org_id: orgIdToUse,
-          user_id: currentUser.uid,
-          question: sentText,
-          history: signalAskHistory,
-        });
-        const assistantText = res?.answer ?? res?.response ?? res?.data ?? (typeof res === 'string' ? res : '');
-        setSignalAskHistory((prev) => [...prev, { user: sentText, assistant: assistantText }]);
-        setRecommendationsChatInput('');
-        if (!assistantText) {
-          toast({ title: 'No response', description: 'Agent did not return an answer.', variant: 'destructive' });
-        }
-      }
-    } catch (err) {
-      console.error('Send recommendation / fetch or signal_Ask error:', err);
-      toast({ title: 'Error', description: 'Something went wrong. Please try again.', variant: 'destructive' });
-    } finally {
-      setIsSendingChat(false);
-    }
-  };
-
   /** Strip markdown and special characters from agent response for plain display */
   const formatAgentResponse = (text: string) => {
     if (!text || typeof text !== 'string') return null;
@@ -732,6 +726,38 @@ const Index = () => {
     return <Badge variant="secondary" className="bg-purple-100 text-purple-800 border-purple-200">
         🟣 From Profiler
       </Badge>;
+  };
+
+  /** Navigate to Chat with Scout or Profiler, passing recommendation + prompt + answer as context */
+  const handleNavigateToAgentChat = (signal: SignalCard, recommendation: string, prompt: string, answer?: string) => {
+    const contentHash = getSignalContentHash(signal);
+    const context = {
+      agent: signal.agent,
+      signalId: signal.id,
+      contentHash,
+      signalHeading: signal.headline,
+      recommendation,
+      prompt,
+      answer: answer ?? undefined,
+    };
+    sessionStorage.setItem('signalsChatContext', JSON.stringify(context));
+    if (signal.agent === 'scout') {
+      navigate('/your-ai-team/scout/chatwithscout');
+    } else {
+      navigate('/customers', { state: { tab: 'chat-profiler' } });
+    }
+  };
+
+  /** Navigate to Chat from bot icon (signal-level context, uses first recommendation if available) */
+  const handleBotIconClick = (signal: SignalCard) => {
+    const list: NBAItem[] = (signal.NBAs && signal.NBAs.length > 0)
+      ? signal.NBAs
+      : (signal.nextBestMoves || []).map((m) => ({ nba: m, prompt: '' }));
+    const first = list[0];
+    const recommendation = first?.nba ?? signal.headline;
+    const prompt = first?.prompt ?? '';
+    const answer = first ? recommendationAnswers[`${signal.id}-0`] : undefined;
+    handleNavigateToAgentChat(signal, recommendation, prompt, answer);
   };
   const getContextualGreeting = (signal: SignalCard) => {
     const name = "Alex"; // This would come from user context in real app
@@ -1074,7 +1100,6 @@ const Index = () => {
               signals.map(signal => {
                 const contentHash = getSignalContentHash(signal);
                 const isAccepted = acceptedSignals.has(contentHash);
-                const isChatOpenForThis = recommendationsSignal?.id === signal.id;
                 return (
                   <div key={signal.id} className="space-y-0">
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-lg transition-all duration-200">
@@ -1118,35 +1143,18 @@ const Index = () => {
                     >
                       <ThumbsDown className="h-4 w-4" />
                     </Button>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0 text-gray-500 hover:text-blue-600 hover:bg-blue-50"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setRecommendationsSignal(signal);
-                            setRecommendationsChatOpen(true);
-                            setRecommendationsChatInput('');
-                            setDisplayedPromptForChat(null);
-                            const hasNBAsWithPrompt = Array.isArray(signal.NBAs) && signal.NBAs.some((n) => n.prompt && String(n.prompt).trim() !== '');
-                            console.log('Recommendations opened:', {
-                              headline: signal.headline,
-                              signalId: signal.id,
-                              dataSource: signalsFromApi ? 'API (fetch-signals)' : 'Sample data',
-                              thisSignal: hasNBAsWithPrompt ? 'NBAs from API (nba+prompt)' : 'using nextBestMoves',
-                              count: (signal.NBAs?.length ?? signal.nextBestMoves?.length) ?? 0
-                            });
-                          }}
-                        >
-                          <Bot className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p className="text-xs">Recommendations & chat</p>
-                      </TooltipContent>
-                    </Tooltip>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 text-gray-500 hover:text-blue-600 hover:bg-blue-50"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleBotIconClick(signal);
+                      }}
+                      title={signal.agent === 'scout' ? 'Chat with Scout' : 'Chat with Profiler'}
+                    >
+                      <Bot className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
 
@@ -1214,6 +1222,161 @@ const Index = () => {
                                   })}
                                 </div>
                               )}
+                              {/* Recommendations - click to show corresponding prompt */}
+                              {(() => {
+                                const recommendationsList: NBAItem[] = (signal.NBAs && signal.NBAs.length > 0)
+                                  ? signal.NBAs
+                                  : (signal.nextBestMoves || []).map((m) => ({ nba: m, prompt: '' }));
+                                if (recommendationsList.length === 0) return null;
+                                return (
+                                  <div className="mt-4 space-y-2">
+                                    <h4 className="text-sm font-medium text-gray-900">Recommendations</h4>
+                                    <div className="space-y-2">
+                                      {recommendationsList.map((item, index) => {
+                                        const isExpanded = expandedRecommendation?.signalId === signal.id && expandedRecommendation?.index === index;
+                                        const hasPrompt = (item.prompt ?? '').trim() !== '';
+                                        return (
+                                          <div key={index} className="rounded-lg border border-gray-100 overflow-hidden">
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                setExpandedRecommendation(isExpanded ? null : { signalId: signal.id, index });
+                                              }}
+                                              className={`w-full flex items-start gap-2 p-2.5 text-left cursor-pointer transition-colors ${
+                                                isExpanded ? 'bg-blue-50/50 border-blue-200' : 'bg-gray-50 hover:border-blue-200 hover:bg-blue-50/30'
+                                              }`}
+                                            >
+                                              <p className="text-sm text-gray-700 flex-1">{item.nba}</p>
+                                            </button>
+                                            {isExpanded && (
+                                              <div className="px-3 pb-3 pt-1 border-t border-gray-100">
+                                                <div className="p-3 rounded-lg bg-gradient-to-br from-slate-50 to-blue-50/50 border border-slate-200 space-y-3">
+                                                  <p className="text-sm text-slate-700 leading-relaxed font-semibold">
+                                                    {hasPrompt
+                                                      ? "Review the answer below. If this signal and its recommendations are relevant to you, accept it. Need more clarity? Chat with the agent to explore further."
+                                                      : "If this signal and its recommendations are relevant to you, accept it. Need more clarity? Chat with the agent to explore further."}
+                                                  </p>
+                                                  {hasPrompt && (
+                                                    <div className="rounded-md bg-white/80 border border-slate-200 p-2.5">
+                                                      <p className="text-xs font-medium text-slate-600 mb-1.5">Answer</p>
+                                                      {recommendationAnswerLoading === `${signal.id}-${index}` ? (
+                                                        <div className="flex items-center gap-2 py-4 text-slate-500">
+                                                          <Loader2 className="h-4 w-4 animate-spin" />
+                                                          <span className="text-sm">Loading answer...</span>
+                                                        </div>
+                                                      ) : (
+                                                        <>
+                                                          <div className="relative">
+                                                            <p
+                                                              className={`text-sm text-slate-800 whitespace-pre-wrap pr-1 ${
+                                                                answerExpandedKeys.has(`${signal.id}-${index}`)
+                                                                  ? ''
+                                                                  : 'max-h-24 overflow-hidden'
+                                                              }`}
+                                                            >
+                                                              {sanitizeAnswerText(recommendationAnswers[`${signal.id}-${index}`] ?? item.prompt)}
+                                                            </p>
+                                                            {!answerExpandedKeys.has(`${signal.id}-${index}`) && (
+                                                              <>
+                                                                <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-white via-white/80 to-transparent pointer-events-none" />
+                                                                <Button
+                                                                  variant="ghost"
+                                                                  size="sm"
+                                                                  className="mt-1.5 h-7 px-2 text-xs text-slate-600 hover:text-slate-800 hover:bg-slate-100 -ml-2"
+                                                                  onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setAnswerExpandedKeys((prev) => {
+                                                                      const next = new Set(prev);
+                                                                      next.add(`${signal.id}-${index}`);
+                                                                      return next;
+                                                                    });
+                                                                  }}
+                                                                >
+                                                                  Show more
+                                                                  <ChevronDown className="h-3.5 w-3.5 ml-0.5" />
+                                                                </Button>
+                                                              </>
+                                                            )}
+                                                          </div>
+                                                          {answerExpandedKeys.has(`${signal.id}-${index}`) && (
+                                                            <Button
+                                                              variant="ghost"
+                                                              size="sm"
+                                                              className="mt-1 h-7 px-2 text-xs text-slate-600 hover:text-slate-800 hover:bg-slate-100 -ml-2"
+                                                              onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setAnswerExpandedKeys((prev) => {
+                                                                  const next = new Set(prev);
+                                                                  next.delete(`${signal.id}-${index}`);
+                                                                  return next;
+                                                                });
+                                                              }}
+                                                            >
+                                                              Show less
+                                                              <ChevronUp className="h-3.5 w-3.5 ml-0.5" />
+                                                            </Button>
+                                                          )}
+                                                          <div className="flex items-center gap-2 mt-2 pt-2 border-t border-slate-200">
+                                                            <Button
+                                                              variant="ghost"
+                                                              size="sm"
+                                                              className={`h-8 w-8 p-0 ${
+                                                                isAccepted
+                                                                  ? 'text-green-600 bg-green-50'
+                                                                  : 'text-slate-500 hover:text-green-600 hover:bg-green-50'
+                                                              }`}
+                                                              onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleAcceptSignal(signal.id);
+                                                              }}
+                                                              title={isAccepted ? 'Accepted' : 'Accept signal'}
+                                                            >
+                                                              <ThumbsUp className="h-4 w-4" />
+                                                            </Button>
+                                                            <Button
+                                                              variant="ghost"
+                                                              size="sm"
+                                                              className="h-8 w-8 p-0 text-slate-500 hover:text-red-600 hover:bg-red-50"
+                                                              onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleRejectSignal(signal.id);
+                                                              }}
+                                                              title="Reject signal"
+                                                            >
+                                                              <ThumbsDown className="h-4 w-4" />
+                                                            </Button>
+                                                            <Button
+                                                              size="sm"
+                                                              variant="outline"
+                                                              className="text-xs font-medium h-8 border-blue-300 text-blue-700 hover:bg-blue-50 hover:border-blue-400"
+                                                              onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleNavigateToAgentChat(
+                                                                  signal,
+                                                                  item.nba,
+                                                                  item.prompt ?? '',
+                                                                  recommendationAnswers[`${signal.id}-${index}`]
+                                                                );
+                                                              }}
+                                                            >
+                                                              <MessageCircle className="h-3.5 w-3.5 mr-1.5" />
+                                                              {signal.agent === 'scout' ? 'Chat with Scout' : 'Chat with Profiler'}
+                                                            </Button>
+                                                          </div>
+                                                        </>
+                                                      )}
+                                                    </div>
+                                                  )}
+                                                </div>
+                                              </div>
+                                            )}
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                );
+                              })()}
                               <div className="flex justify-center mt-3">
                                 <Button
                                   variant="outline"
@@ -1267,102 +1430,6 @@ const Index = () => {
                   </Button>
                 </div> */}
 
-                {/* Recommendations & Chat - inside same card when bot is clicked */}
-                {isChatOpenForThis && recommendationsSignal && (
-                  <div className="pt-4 mt-2">
-                    <div className="flex justify-end mb-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0"
-                        onClick={() => {
-                        setRecommendationsSignal(null);
-                        setRecommendationsChatOpen(false);
-                        setDisplayedPromptForChat(null);
-                        setSignalAskHistory([]);
-                      }}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    {(() => {
-                      const recommendationsList: NBAItem[] = (recommendationsSignal.NBAs && recommendationsSignal.NBAs.length > 0)
-                        ? recommendationsSignal.NBAs
-                        : (recommendationsSignal.nextBestMoves || []).map((m) => ({ nba: m, prompt: '' }));
-                      if (recommendationsList.length === 0) return null;
-                      return (
-                        <div className="space-y-2 mb-3">
-                          <h4 className="text-sm font-medium text-gray-900">Recommendations</h4>
-                          <div className="space-y-2">
-                            {recommendationsList.map((item, index) => (
-                              <button
-                                key={index}
-                                type="button"
-                                onClick={() => {
-                                  // When clicking a recommendation, show the corresponding prompt at the bottom
-                                  setDisplayedPromptForChat(item.prompt ?? '');
-                                }}
-                                className="w-full flex items-start gap-2 p-2.5 rounded-lg bg-gray-50 border border-gray-100 hover:border-blue-200 hover:bg-blue-50/50 transition-colors text-left cursor-pointer"
-                              >
-                                <p className="text-sm text-gray-700">{item.nba}</p>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })()}
-                    {/* Chat area and send button - commented off for this version; only recommendations + corresponding prompt */}
-                    {/* <div className="pt-3">
-                      <label className="block text-xs font-medium text-gray-700 mb-2">Chat</label>
-                      <div className="flex gap-2">
-                        <Textarea
-                          value={recommendationsChatInput}
-                          onChange={(e) => setRecommendationsChatInput(e.target.value)}
-                          placeholder="Click a recommendation to paste, then Send to run fetch and see its prompt"
-                          className="resize-none text-sm min-h-[80px]"
-                          rows={3}
-                          disabled={isSendingChat}
-                        />
-                        <Button
-                          size="sm"
-                          className="self-end bg-blue-600 hover:bg-blue-700"
-                          disabled={!recommendationsChatInput.trim() || isSendingChat}
-                          onClick={handleSendRecommendationChat}
-                        >
-                          {isSendingChat ? (
-                            <span className="animate-pulse">...</span>
-                          ) : (
-                            <Send className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
-                      {signalAskHistory.length > 0 && (
-                        <div className="mt-3 space-y-2">
-                          {signalAskHistory.map((entry, idx) => (
-                            <div key={idx} className="p-3 rounded-lg bg-gray-50 border border-gray-200">
-                              <p className="text-xs font-medium text-gray-500 mb-1">You</p>
-                              <p className="text-sm text-gray-800 whitespace-pre-wrap">{entry.user}</p>
-                              <p className="text-xs font-medium text-gray-500 mt-2 mb-1">Agent</p>
-                              <p className="text-sm text-gray-800">{formatAgentResponse(entry.assistant)}</p>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div> */}
-                    {/* Corresponding prompt - shown at bottom when recommendation is clicked */}
-                    <div className="pt-3">
-                      {displayedPromptForChat !== null && displayedPromptForChat !== '' && (
-                        <div className="p-3 rounded-lg bg-blue-50 border border-blue-100">
-                          <p className="text-xs font-medium text-blue-900 mb-1">Corresponding prompt</p>
-                          <p className="text-sm text-gray-800 whitespace-pre-wrap">{displayedPromptForChat}</p>
-                        </div>
-                      )}
-                      {displayedPromptForChat !== null && displayedPromptForChat === '' && (
-                        <p className="mt-2 text-xs text-amber-700">No prompt found for this recommendation.</p>
-                      )}
-                    </div>
-                  </div>
-                )}
               </div>
                   </div>
                 );
