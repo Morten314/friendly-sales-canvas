@@ -552,12 +552,6 @@ const LeadTable = ({ leads, source }: { leads: ScoutLead[]; source: "crm" | "upl
                         </div>
                       </TableCell>
 
-                      {/* LinkedIn */}
-                      <TableCell>
-                        <a href={lead.linkedIn} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">
-                          <Linkedin className="h-4 w-4" />
-                        </a>
-                      </TableCell>
 
                       {/* Website */}
                       <TableCell>
