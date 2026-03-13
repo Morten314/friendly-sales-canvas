@@ -75,7 +75,7 @@ import { EmergingTrends } from "@/components/market-research/EmergingTrends";
 
 
 
-import LeadStream from "@/components/market-research/LeadStream";
+import ScoutLeadStream from "@/components/market-research/ScoutLeadStream";
 
 
 
@@ -15084,26 +15084,11 @@ const MarketResearch = React.memo(() => {
 
 
 
-                <LeadStream 
-
-
-
+                <ScoutLeadStream 
                   selectedIndustry={leadStreamFilters.selectedIndustry}
-
-
-
                   selectedSize={leadStreamFilters.selectedSize}
-
-
-
                   selectedRegion={leadStreamFilters.selectedRegion}
-
-
-
                   onFiltersChange={(filters) => setLeadStreamFilters(filters)}
-
-
-
                 />
 
 
