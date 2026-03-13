@@ -584,7 +584,7 @@ const LeadTable = ({ leads, source }: { leads: ScoutLead[]; source: "crm" | "upl
               </TableBody>
             </Table>
           </div>
-        </ScrollArea>
+        </div>
       </Card>
 
       <LeadDrawer lead={drawerLead} open={!!drawerLead} onClose={() => setDrawerLead(null)} />
