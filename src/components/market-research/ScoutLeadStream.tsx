@@ -453,8 +453,8 @@ const LeadTable = ({ leads, source }: { leads: ScoutLead[]; source: "crm" | "upl
       </div>
 
       {/* Table */}
-      <Card>
-        <ScrollArea className="w-full">
+      <Card className="overflow-hidden">
+        <div className="overflow-x-auto">
           <div className="min-w-[1200px]">
             <Table>
               <TableHeader>
