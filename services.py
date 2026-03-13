@@ -1706,30 +1706,100 @@ COMPONENT_FUNCTIONS = {
     "market entry & growth strategy" : Research_Market_5
 }
 
+# Helper function to fetch leads for org_id
+def fetch_leads_for_org(org_id: str, limit: int = 100) -> List[Dict[str, Any]]:
+    """Fetch leads from Neo4j filtered by org_id"""
+    try:
+        query_string = """
+        MATCH (l:Lead)
+        WHERE l.org_id = $org_id
+        RETURN l
+        ORDER BY l.created_at DESC
+        LIMIT $limit
+        """
+        with driver.session() as session:
+            results = session.run(query_string, org_id=org_id, limit=limit)
+            leads = []
+            for record in results:
+                lead_node = record["l"]
+                lead_dict = dict(lead_node.items())
+                # Convert JSON strings back to objects if needed
+                processed_lead = {}
+                for key, value in lead_dict.items():
+                    if isinstance(value, str) and value.strip().startswith(('{', '[')):
+                        try:
+                            processed_lead[key] = json.loads(value)
+                        except json.JSONDecodeError:
+                            processed_lead[key] = value
+                    else:
+                        processed_lead[key] = value
+                leads.append(processed_lead)
+        return leads
+    except Exception as e:
+        print(f"Warning: Could not fetch leads: {e}")
+        return []
+
 # Signals Research Functions
 def search_signals_scout(pre_data) -> dict:
     """Search for market, competitor, and industry trend signals for Scout agent using WebSearch"""
     
-    # Extract existing headlines if present
+    # Extract existing headlines and leads if present
     existing_headlines = []
+    leads_data = []
     company_profile_data = pre_data
     
     if isinstance(pre_data, dict):
         existing_headlines = pre_data.get("existing_headlines", [])
-        # Remove existing_headlines from dict for company profile
-        company_profile_data = {k: v for k, v in pre_data.items() if k != "existing_headlines"}
+        leads_data = pre_data.get("leads_data", [])
+        # Remove metadata fields from dict for company profile
+        company_profile_data = {k: v for k, v in pre_data.items() if k not in ["existing_headlines", "leads_data", "icp_data"]}
         company_profile_json = json.dumps(company_profile_data, indent=2)
     elif isinstance(pre_data, str):
         # If it's already a string, try to parse and reformat for better readability
         try:
             parsed = json.loads(pre_data)
             existing_headlines = parsed.get("existing_headlines", [])
-            company_profile_data = {k: v for k, v in parsed.items() if k != "existing_headlines"}
+            leads_data = parsed.get("leads_data", [])
+            company_profile_data = {k: v for k, v in parsed.items() if k not in ["existing_headlines", "leads_data", "icp_data"]}
             company_profile_json = json.dumps(company_profile_data, indent=2)
         except:
             company_profile_json = pre_data
     else:
         company_profile_json = str(pre_data)
+    
+    # Format leads data for prompt
+    leads_text = ""
+    if leads_data:
+        # Extract key info from leads: companies, industries, regions
+        companies = []
+        industries = set()
+        regions = set()
+        for lead in leads_data[:50]:  # Limit to 50 leads
+            if isinstance(lead, dict):
+                if lead.get("company"):
+                    companies.append(lead.get("company"))
+                if lead.get("industry"):
+                    industries.add(lead.get("industry"))
+                if lead.get("region"):
+                    regions.add(lead.get("region"))
+        
+        if companies or industries or regions:
+            leads_summary = {
+                "sample_companies": list(set(companies))[:20],  # Top 20 unique companies
+                "industries": list(industries),
+                "regions": list(regions),
+                "total_leads": len(leads_data)
+            }
+            leads_text = f"""
+STEP 1.2 - LEADS DATA (Use this to prioritize signal relevance):
+Your organization has {leads_summary['total_leads']} active leads. Use this information to prioritize signals that are relevant to your actual lead pipeline:
+
+Sample Companies in Pipeline: {', '.join(leads_summary['sample_companies'][:10])}
+Industries: {', '.join(leads_summary['industries'][:10])}
+Regions: {', '.join(leads_summary['regions'][:10])}
+
+IMPORTANT: When generating signals, prioritize signals that relate to these companies, industries, or regions. This will make the signals more actionable for your sales team.
+"""
     
     # Format existing headlines for prompt
     existing_headlines_text = ""
@@ -1753,6 +1823,7 @@ Review the complete company profile data below. Extract all relevant information
 
 Company Profile Data:
 {company_profile_json}
+{leads_section}
 {existing_headlines_section}
 
 STEP 2 - RESEARCH REQUIREMENTS (CRITICAL):
@@ -1858,12 +1929,31 @@ Do not include any additional reasoning, thoughts, or steps after that.
 
     prompt = template.format(
         company_profile_json=company_profile_json,
+        leads_section=leads_text,
         existing_headlines_section=existing_headlines_text
     )
     
     # Get LLM response with WebSearch
     raw_response = agent_chain.invoke({'input': prompt})
     response = raw_response["output"]
+    
+    # Extract URLs from Tavily search results if available
+    tavily_urls = []
+    try:
+        # Try to extract URLs from agent chain intermediate steps
+        if hasattr(raw_response, 'intermediate_steps'):
+            for step in raw_response.intermediate_steps:
+                if len(step) > 1 and isinstance(step[1], list):
+                    for result in step[1]:
+                        if isinstance(result, dict) and 'url' in result:
+                            tavily_urls.append(result['url'])
+        # Also try to extract URLs from response text as fallback
+        if not tavily_urls:
+            url_pattern = r'https?://[^\s<>"{}|\\^`\[\]]+'
+            found_urls = re.findall(url_pattern, response)
+            tavily_urls = list(set(found_urls))[:5]  # Limit to 5 unique URLs
+    except Exception as e:
+        pass
     
     # Extract JSON from response
     if "Final Answer:" in response:
@@ -1885,6 +1975,51 @@ Do not include any additional reasoning, thoughts, or steps after that.
     # Parse to JSON (Python dict)
     parsed_json = json.loads(cleaned_str)
     
+    # Validate and fix URLs using Tavily URLs if available
+    def validate_url(url, tavily_urls_list):
+        """Validate URL and replace with Tavily URL if invalid"""
+        if not url or not isinstance(url, str):
+            return tavily_urls_list[0] if tavily_urls_list else ""
+        
+        # Check if URL is valid format
+        if not url.startswith(('http://', 'https://')):
+            return tavily_urls_list[0] if tavily_urls_list else ""
+        
+        # If Tavily URLs available, try to match or use first one
+        if tavily_urls_list:
+            # Check if URL domain matches any Tavily URL
+            url_domain = url.split('/')[2] if len(url.split('/')) > 2 else ""
+            for tavily_url in tavily_urls_list:
+                tavily_domain = tavily_url.split('/')[2] if len(tavily_url.split('/')) > 2 else ""
+                if url_domain and url_domain == tavily_domain:
+                    return tavily_url
+            # If no match, use first Tavily URL
+            return tavily_urls_list[0]
+        
+        return url
+    
+    # Validate sourceUrl
+    source_url = validate_url(parsed_json.get("sourceUrl", ""), tavily_urls)
+    
+    # Validate source array URLs
+    validated_sources = []
+    source_array = parsed_json.get("source", [])
+    for i, src in enumerate(source_array[:2]):  # Max 2 sources
+        if isinstance(src, dict) and "url" in src:
+            validated_url = validate_url(src["url"], tavily_urls[i:] if i < len(tavily_urls) else tavily_urls)
+            validated_sources.append({
+                "citation": src.get("citation", ""),
+                "url": validated_url
+            })
+    
+    # If no sources validated, use Tavily URLs directly
+    if not validated_sources and tavily_urls:
+        for i, tavily_url in enumerate(tavily_urls[:2]):
+            validated_sources.append({
+                "citation": f"Source {i+1}",
+                "url": tavily_url
+            })
+    
     # Add metadata (ID will be generated in API layer to ensure uniqueness per org_id)
     from datetime import datetime
     hours_ago = 1  # Default, can be made dynamic based on signal recency
@@ -1896,9 +2031,9 @@ Do not include any additional reasoning, thoughts, or steps after that.
         "headline": parsed_json.get("headline", ""),
         "snippet": parsed_json.get("snippet", ""),
         "description": parsed_json.get("description", ""),
-        "sourceUrl": parsed_json.get("sourceUrl", ""),
+        "sourceUrl": source_url if source_url else (validated_sources[0]["url"] if validated_sources else ""),
         "sourceLabel": parsed_json.get("sourceLabel", ""),
-        "source": parsed_json.get("source", []),
+        "source": validated_sources if validated_sources else parsed_json.get("source", []),
         "nextBestMoves": parsed_json.get("nextBestMoves", []),
         "NBAs": parsed_json.get("NBAs", []),
         "contextualSuggestions": parsed_json.get("contextualSuggestions", [])
@@ -1909,33 +2044,75 @@ Do not include any additional reasoning, thoughts, or steps after that.
 def search_signals_profiler(pre_data) -> dict:
     """Search for ICP and customer-related signals for Profiler agent using WebSearch"""
     
-    # Extract existing headlines if present
+    # Extract existing headlines and leads if present
     existing_headlines = []
+    leads_data = []
     company_profile = {}
     icp_data = {}
     
     if isinstance(pre_data, dict):
         existing_headlines = pre_data.get("existing_headlines", [])
+        leads_data = pre_data.get("leads_data", [])
         if "company_profile" in pre_data:
             company_profile = pre_data["company_profile"]
             icp_data = pre_data.get("icp_data", {})
         else:
-            # Remove existing_headlines from dict
-            company_profile = {k: v for k, v in pre_data.items() if k != "existing_headlines"}
+            # Remove metadata fields from dict
+            company_profile = {k: v for k, v in pre_data.items() if k not in ["existing_headlines", "leads_data", "icp_data"]}
             icp_data = {}
     else:
         try:
             parsed = json.loads(pre_data) if isinstance(pre_data, str) else {}
             existing_headlines = parsed.get("existing_headlines", [])
+            leads_data = parsed.get("leads_data", [])
             if "company_profile" in parsed:
                 company_profile = parsed["company_profile"]
                 icp_data = parsed.get("icp_data", {})
             else:
-                company_profile = {k: v for k, v in parsed.items() if k not in ["existing_headlines", "icp_data"]}
+                company_profile = {k: v for k, v in parsed.items() if k not in ["existing_headlines", "leads_data", "icp_data"]}
                 icp_data = parsed.get("icp_data", {})
         except:
             company_profile = {}
             icp_data = {}
+    
+    # Format leads data for prompt
+    leads_text = ""
+    if leads_data:
+        # Extract key info from leads: companies, industries, regions, ICP segments
+        companies = []
+        industries = set()
+        regions = set()
+        company_sizes = set()
+        for lead in leads_data[:50]:  # Limit to 50 leads
+            if isinstance(lead, dict):
+                if lead.get("company"):
+                    companies.append(lead.get("company"))
+                if lead.get("industry"):
+                    industries.add(lead.get("industry"))
+                if lead.get("region"):
+                    regions.add(lead.get("region"))
+                if lead.get("size") or lead.get("companySize"):
+                    company_sizes.add(lead.get("size") or lead.get("companySize"))
+        
+        if companies or industries or regions or company_sizes:
+            leads_summary = {
+                "sample_companies": list(set(companies))[:20],
+                "industries": list(industries),
+                "regions": list(regions),
+                "company_sizes": list(company_sizes),
+                "total_leads": len(leads_data)
+            }
+            leads_text = f"""
+STEP 1.2 - LEADS DATA (Use this to prioritize ICP signal relevance):
+Your organization has {leads_summary['total_leads']} active leads. Use this information to prioritize ICP signals that match your actual lead pipeline:
+
+Sample Companies: {', '.join(leads_summary['sample_companies'][:10])}
+Industries: {', '.join(leads_summary['industries'][:10])}
+Regions: {', '.join(leads_summary['regions'][:10])}
+Company Sizes: {', '.join(leads_summary['company_sizes'][:10])}
+
+IMPORTANT: When generating ICP signals, prioritize signals that relate to these companies, industries, regions, or company sizes. This will make the signals more actionable for your sales/profiling team.
+"""
     
     # Convert to JSON string for prompt
     context_data = {
@@ -1966,6 +2143,7 @@ Review the complete company profile and ICP data below. Extract all relevant inf
 
 Company Profile and ICP Data:
 {context_json}
+{leads_section}
 {existing_headlines_section}
 
 STEP 2 - RESEARCH REQUIREMENTS (CRITICAL):
@@ -2078,12 +2256,31 @@ Do not include any additional reasoning, thoughts, or steps after that.
 
     prompt = template.format(
         context_json=context_json,
+        leads_section=leads_text,
         existing_headlines_section=existing_headlines_text
     )
     
     # Get LLM response with WebSearch
     raw_response = agent_chain.invoke({'input': prompt})
     response = raw_response["output"]
+    
+    # Extract URLs from Tavily search results if available
+    tavily_urls = []
+    try:
+        # Try to extract URLs from agent chain intermediate steps
+        if hasattr(raw_response, 'intermediate_steps'):
+            for step in raw_response.intermediate_steps:
+                if len(step) > 1 and isinstance(step[1], list):
+                    for result in step[1]:
+                        if isinstance(result, dict) and 'url' in result:
+                            tavily_urls.append(result['url'])
+        # Also try to extract URLs from response text as fallback
+        if not tavily_urls:
+            url_pattern = r'https?://[^\s<>"{}|\\^`\[\]]+'
+            found_urls = re.findall(url_pattern, response)
+            tavily_urls = list(set(found_urls))[:5]  # Limit to 5 unique URLs
+    except Exception as e:
+        pass
     
     # Extract JSON from response
     if "Final Answer:" in response:
@@ -2105,6 +2302,51 @@ Do not include any additional reasoning, thoughts, or steps after that.
     # Parse to JSON (Python dict)
     parsed_json = json.loads(cleaned_str)
     
+    # Validate and fix URLs using Tavily URLs if available
+    def validate_url(url, tavily_urls_list):
+        """Validate URL and replace with Tavily URL if invalid"""
+        if not url or not isinstance(url, str):
+            return tavily_urls_list[0] if tavily_urls_list else ""
+        
+        # Check if URL is valid format
+        if not url.startswith(('http://', 'https://')):
+            return tavily_urls_list[0] if tavily_urls_list else ""
+        
+        # If Tavily URLs available, try to match or use first one
+        if tavily_urls_list:
+            # Check if URL domain matches any Tavily URL
+            url_domain = url.split('/')[2] if len(url.split('/')) > 2 else ""
+            for tavily_url in tavily_urls_list:
+                tavily_domain = tavily_url.split('/')[2] if len(tavily_url.split('/')) > 2 else ""
+                if url_domain and url_domain == tavily_domain:
+                    return tavily_url
+            # If no match, use first Tavily URL
+            return tavily_urls_list[0]
+        
+        return url
+    
+    # Validate sourceUrl
+    source_url = validate_url(parsed_json.get("sourceUrl", ""), tavily_urls)
+    
+    # Validate source array URLs
+    validated_sources = []
+    source_array = parsed_json.get("source", [])
+    for i, src in enumerate(source_array[:2]):  # Max 2 sources
+        if isinstance(src, dict) and "url" in src:
+            validated_url = validate_url(src["url"], tavily_urls[i:] if i < len(tavily_urls) else tavily_urls)
+            validated_sources.append({
+                "citation": src.get("citation", ""),
+                "url": validated_url
+            })
+    
+    # If no sources validated, use Tavily URLs directly
+    if not validated_sources and tavily_urls:
+        for i, tavily_url in enumerate(tavily_urls[:2]):
+            validated_sources.append({
+                "citation": f"Source {i+1}",
+                "url": tavily_url
+            })
+    
     # Add metadata (ID will be generated in API layer to ensure uniqueness per org_id)
     from datetime import datetime
     hours_ago = 1  # Default, can be made dynamic based on signal recency
@@ -2116,9 +2358,9 @@ Do not include any additional reasoning, thoughts, or steps after that.
         "headline": parsed_json.get("headline", ""),
         "snippet": parsed_json.get("snippet", ""),
         "description": parsed_json.get("description", ""),
-        "sourceUrl": parsed_json.get("sourceUrl", ""),
+        "sourceUrl": source_url if source_url else (validated_sources[0]["url"] if validated_sources else ""),
         "sourceLabel": parsed_json.get("sourceLabel", ""),
-        "source": parsed_json.get("source", []),
+        "source": validated_sources if validated_sources else parsed_json.get("source", []),
         "nextBestMoves": parsed_json.get("nextBestMoves", []),
         "NBAs": parsed_json.get("NBAs", []),
         "contextualSuggestions": parsed_json.get("contextualSuggestions", [])

@@ -1116,6 +1116,26 @@ async def signals_research(request: MarketRequest):
             except:
                 pre_data = {"company_profile": pre_data, "existing_headlines": existing_headlines}
         
+        # Fetch leads for org_id if available
+        leads_data = []
+        if request.org_id:
+            try:
+                from services import fetch_leads_for_org
+                leads_data = fetch_leads_for_org(request.org_id, limit=100)
+                if isinstance(pre_data, dict):
+                    pre_data["leads_data"] = leads_data
+                else:
+                    if not isinstance(pre_data, dict):
+                        try:
+                            pre_data = json.loads(pre_data) if isinstance(pre_data, str) else {}
+                        except:
+                            pre_data = {}
+                    pre_data["leads_data"] = leads_data
+                    if "company_profile" not in pre_data:
+                        pre_data["company_profile"] = request.data
+            except Exception as e:
+                logger.warning(f"Could not fetch leads: {e}")
+        
         # For profiler agent, also include ICP data if available - filter by user_id
         if agent_name == "profiler":
             # Try to get ICP data from Profiler database
@@ -1133,11 +1153,12 @@ async def signals_research(request: MarketRequest):
                         pre_data = {
                             "company_profile": request.data,
                             "icp_data": icp_data.get("icps", {}),
-                            "existing_headlines": existing_headlines
+                            "existing_headlines": existing_headlines,
+                            "leads_data": leads_data
                         }
                 profiler_client.close()
             except Exception as e:
-                print(f"Warning: Could not fetch ICP data: {e}")
+                logger.warning(f"Could not fetch ICP data: {e}")
 
         # Run signals research with retries (max 2 attempts)
         max_retries = 2
@@ -1235,6 +1256,26 @@ async def generate_signals_batch(request: MarketRequest):
             except:
                 pre_data = {"company_profile": pre_data, "existing_headlines": existing_headlines}
         
+        # Fetch leads for org_id if available
+        leads_data = []
+        if request.org_id:
+            try:
+                from services import fetch_leads_for_org
+                leads_data = fetch_leads_for_org(request.org_id, limit=100)
+                if isinstance(pre_data, dict):
+                    pre_data["leads_data"] = leads_data
+                else:
+                    if not isinstance(pre_data, dict):
+                        try:
+                            pre_data = json.loads(pre_data) if isinstance(pre_data, str) else {}
+                        except:
+                            pre_data = {}
+                    pre_data["leads_data"] = leads_data
+                    if "company_profile" not in pre_data:
+                        pre_data["company_profile"] = request.data
+            except Exception as e:
+                logger.warning(f"Could not fetch leads: {e}")
+        
         # For profiler agent, also include ICP data if available - filter by user_id
         profiler_pre_data = pre_data.copy() if isinstance(pre_data, dict) else pre_data
         try:
@@ -1247,15 +1288,23 @@ async def generate_signals_batch(request: MarketRequest):
                     profiler_pre_data["icp_data"] = icp_data.get("icps", {})
                     if "company_profile" not in profiler_pre_data:
                         profiler_pre_data["company_profile"] = request.data
+                    # Ensure leads_data is included
+                    if leads_data and "leads_data" not in profiler_pre_data:
+                        profiler_pre_data["leads_data"] = leads_data
                 else:
                     profiler_pre_data = {
                         "company_profile": request.data,
                         "icp_data": icp_data.get("icps", {}),
-                        "existing_headlines": existing_headlines
+                        "existing_headlines": existing_headlines,
+                        "leads_data": leads_data
                     }
+            else:
+                # Even if no ICP data, ensure leads_data is included
+                if isinstance(profiler_pre_data, dict) and leads_data and "leads_data" not in profiler_pre_data:
+                    profiler_pre_data["leads_data"] = leads_data
             profiler_client.close()
         except Exception as e:
-            print(f"Warning: Could not fetch ICP data: {e}")
+            logger.warning(f"Could not fetch ICP data: {e}")
 
         generated_signals = []
         batch_id = f"batch_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
