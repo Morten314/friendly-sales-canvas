@@ -75,7 +75,7 @@ import { EmergingTrends } from "@/components/market-research/EmergingTrends";
 
 
 
-import LeadStream from "@/components/market-research/LeadStream";
+import ScoutLeadStream from "@/components/market-research/ScoutLeadStream";
 
 
 
