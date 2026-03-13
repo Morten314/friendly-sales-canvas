@@ -467,9 +467,6 @@ const LeadTable = ({ leads, source }: { leads: ScoutLead[]; source: "crm" | "upl
                   <TableHead className="w-[100px]">Lead Score</TableHead>
                   <TableHead className="w-[200px]">Market Signals</TableHead>
                   <TableHead className="w-[36px]">
-                    <Linkedin className="h-3.5 w-3.5 text-muted-foreground" />
-                  </TableHead>
-                  <TableHead className="w-[36px]">
                     <Globe className="h-3.5 w-3.5 text-muted-foreground" />
                   </TableHead>
                   <TableHead className="w-[180px]">Intent Signals</TableHead>
