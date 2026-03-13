@@ -15084,26 +15084,11 @@ const MarketResearch = React.memo(() => {
 
 
 
-                <LeadStream 
-
-
-
+                <ScoutLeadStream 
                   selectedIndustry={leadStreamFilters.selectedIndustry}
-
-
-
                   selectedSize={leadStreamFilters.selectedSize}
-
-
-
                   selectedRegion={leadStreamFilters.selectedRegion}
-
-
-
                   onFiltersChange={(filters) => setLeadStreamFilters(filters)}
-
-
-
                 />
 
 
