@@ -1,16 +1,27 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { MessageSquarePlus, PanelLeftClose, PanelLeft, MessageCircle, Trash2 } from 'lucide-react';
+import { MessageSquarePlus, PanelLeftClose, PanelLeft, MessageCircle, Trash2, Users } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { SignalsContextChat, SignalsChatContext, ChatMessage } from './SignalsContextChat';
 import ScoutChatPanel from '@/components/market-research/ScoutChatPanel';
+import { SuggestedCompaniesSection } from '@/components/market-research/SuggestedCompaniesSection';
+import { AddLeadModal } from '@/components/market-research/AddLeadModal';
 
 const STORAGE_KEY_PREFIX = 'scout_chat_sessions';
+const LEAD_STREAM_CHAT_CONTEXT_KEY = 'leadStreamChatContext';
+
+export interface LeadStreamChatContext {
+  company?: string;
+  industry?: string;
+  customMessage?: string;
+}
 
 export interface ChatSession {
   id: string;
   title: string;
   context: SignalsChatContext | null;
+  /** Context from Lead Stream when user clicks "Research with Scout" on a lead */
+  leadContext?: LeadStreamChatContext;
   messages: ChatMessage[];
   createdAt: number;
 }
@@ -58,10 +69,12 @@ export function ScoutChatWithHistory({
         const parsed = JSON.parse(stored) as ChatSession[];
         if (Array.isArray(parsed) && parsed.length > 0) {
           const migrated = parsed.map((s) => {
-            if (s.context && (s.title.endsWith('…') || s.title.length < 50)) {
-              return { ...s, title: getSessionTitle(s.context) };
+            const { leadContext, ...rest } = s;
+            const session = { ...rest };
+            if (session.context && (session.title.endsWith('…') || session.title.length < 50)) {
+              session.title = getSessionTitle(session.context);
             }
-            return s;
+            return session as ChatSession;
           });
           setSessions(migrated);
           if (!activeSessionId && migrated.length > 0) {
@@ -74,14 +87,15 @@ export function ScoutChatWithHistory({
     }
   }, [storageKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Persist sessions to localStorage
+  // Persist sessions to localStorage (strip leadContext so Suggested companies only show when coming from Lead Stream)
   useEffect(() => {
     if (!storageKey) return;
     try {
       if (sessions.length === 0) {
         localStorage.removeItem(storageKey);
       } else {
-        localStorage.setItem(storageKey, JSON.stringify(sessions));
+        const toSave = sessions.map(({ leadContext, ...rest }) => rest);
+        localStorage.setItem(storageKey, JSON.stringify(toSave));
       }
     } catch {
       // ignore
@@ -130,6 +144,33 @@ export function ScoutChatWithHistory({
     });
   }, [initialContext?.contentHash, initialContext?.signalHeading, initialContext?.recommendation]);
 
+  // When user clicks "Ask Scout" or "Research with Scout" from Lead Stream, create session with lead context
+  const processedLeadContextRef = useRef(false);
+  useEffect(() => {
+    try {
+      const stored = sessionStorage.getItem(LEAD_STREAM_CHAT_CONTEXT_KEY);
+      if (!stored) return;
+      const ctx = JSON.parse(stored) as LeadStreamChatContext;
+      sessionStorage.removeItem(LEAD_STREAM_CHAT_CONTEXT_KEY);
+      if (processedLeadContextRef.current) return;
+      processedLeadContextRef.current = true;
+
+      const title = ctx.company ? `Research: ${ctx.company}` : 'Ask Scout about leads';
+      const newSession: ChatSession = {
+        id: generateId(),
+        title,
+        context: null,
+        leadContext: ctx,
+        messages: [],
+        createdAt: Date.now(),
+      };
+      setSessions((prev) => [newSession, ...prev]);
+      setActiveSessionId(newSession.id);
+    } catch {
+      sessionStorage.removeItem(LEAD_STREAM_CHAT_CONTEXT_KEY);
+    }
+  }, []);
+
   const handleNewChat = useCallback(() => {
     const newSession: ChatSession = {
       id: generateId(),
@@ -142,6 +183,7 @@ export function ScoutChatWithHistory({
     setActiveSessionId(newSession.id);
     onClearContext?.();
     sessionStorage.removeItem('signalsChatContext');
+    sessionStorage.removeItem(LEAD_STREAM_CHAT_CONTEXT_KEY);
   }, [onClearContext]);
 
   const handleSelectSession = useCallback((id: string) => {
@@ -184,6 +226,17 @@ export function ScoutChatWithHistory({
   );
 
   const activeSession = sessions.find((s) => s.id === activeSessionId);
+  const [addLeadModalOpen, setAddLeadModalOpen] = useState(false);
+  const [addLeadInitialData, setAddLeadInitialData] = useState<{ companyName?: string; companyWebsite?: string } | undefined>();
+
+  const handleAddToLeadStream = useCallback((company: { companyName?: string; companyWebsite?: string }) => {
+    setAddLeadInitialData(company);
+    setAddLeadModalOpen(true);
+  }, []);
+
+  const handleLeadAdded = useCallback(() => {
+    window.dispatchEvent(new CustomEvent('leadStreamRefresh'));
+  }, []);
 
   return (
     <div className="flex h-full min-h-0 w-full overflow-hidden">
@@ -285,15 +338,22 @@ export function ScoutChatWithHistory({
               }}
             />
           ) : (
-            <ScoutChatPanel
-              showScoutChat={true}
-              isSplitView={false}
-              hasEdits={false}
-              showEditHistory={false}
-              editHistory={editHistory}
-              lastEditedField=""
-              onClose={handleCloseChat}
-            />
+            <div className="flex flex-col gap-4 h-full overflow-y-auto">
+              <ScoutChatPanel
+                key={activeSession.id}
+                showScoutChat={true}
+                isSplitView={false}
+                hasEdits={false}
+                showEditHistory={false}
+                editHistory={editHistory}
+                lastEditedField=""
+                customMessage={activeSession.leadContext?.customMessage}
+                onClose={handleCloseChat}
+              />
+              {activeSession.leadContext && (
+                <SuggestedCompaniesSection onAddToLeadStream={handleAddToLeadStream} />
+              )}
+            </div>
           )
         ) : (
           <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-center">
@@ -303,14 +363,32 @@ export function ScoutChatWithHistory({
               <p className="text-sm text-muted-foreground mb-4 max-w-sm">
                 Start a new conversation or select a signal from the Signals page to discuss it with Scout.
               </p>
-              <Button onClick={handleNewChat} className="flex items-center gap-2">
-                <MessageSquarePlus className="h-4 w-4" />
-                New chat
-              </Button>
+              <div className="flex flex-wrap gap-2 justify-center">
+                <Button onClick={handleNewChat} className="flex items-center gap-2">
+                  <MessageSquarePlus className="h-4 w-4" />
+                  New chat
+                </Button>
+                {onTabChange && (
+                  <Button
+                    variant="outline"
+                    onClick={() => onTabChange('analysis')}
+                    className="flex items-center gap-2 border-blue-200 bg-blue-50/50 hover:bg-blue-100"
+                  >
+                    <Users className="h-4 w-4" />
+                    See leads in Lead Stream
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         )}
       </div>
+      <AddLeadModal
+        open={addLeadModalOpen}
+        onOpenChange={setAddLeadModalOpen}
+        initialData={addLeadInitialData}
+        onSuccess={handleLeadAdded}
+      />
     </div>
   );
 }

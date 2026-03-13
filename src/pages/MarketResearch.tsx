@@ -23,7 +23,7 @@ import { Button } from "@/components/ui/button";
 
 
 
-import { Search, MessageSquare, Users, Settings, RefreshCw, AlertCircle, History, Calendar, Info, Loader2 } from "lucide-react";
+import { Search, MessageSquare, Users, Settings, RefreshCw, AlertCircle, History, Calendar, Info, Loader2, SplitSquareHorizontal } from "lucide-react";
 
 
 
@@ -76,6 +76,9 @@ import { EmergingTrends } from "@/components/market-research/EmergingTrends";
 
 
 import LeadStream from "@/components/market-research/LeadStream";
+import { LeadStreamScoutSplitView } from "@/components/market-research/LeadStreamScoutSplitView";
+import { LeadStreamFilterBar } from "@/components/market-research/LeadStreamFilterBar";
+import { AddLeadModal } from "@/components/market-research/AddLeadModal";
 
 
 
@@ -84,10 +87,6 @@ import { TechnologyDrivers } from "@/components/market-research/TechnologyDriver
 
 
 import { MarketDetailDrawer } from "@/components/market-research/MarketDetailDrawer";
-
-
-
-import { ScoutDeploymentDetails } from "@/components/market-research/ScoutDeploymentDetails";
 
 
 
@@ -108,10 +107,6 @@ import {
 import SafeMarketIntelligenceTab from "@/components/market-research/SafeMarketIntelligenceTab";
 
 import EditHistoryPanel from "@/components/market-research/EditHistoryPanel";
-
-
-
-import { DeploymentData } from "@/components/layout/Header";
 
 
 
@@ -850,10 +845,6 @@ const MarketResearch = React.memo(() => {
 
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-
-
-
-  const [scoutDeploymentData, setScoutDeploymentData] = useState<DeploymentData | null>(null);
 
 
 
@@ -2615,6 +2606,18 @@ const MarketResearch = React.memo(() => {
 
 
   });
+
+
+
+  const [isLeadStreamSplitView, setIsLeadStreamSplitView] = useState(false);
+
+
+
+  const [addLeadModalOpen, setAddLeadModalOpen] = useState(false);
+
+
+
+  const [addLeadInitialData, setAddLeadInitialData] = useState<{ companyName?: string; companyWebsite?: string } | undefined>();
 
 
 
@@ -8941,20 +8944,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-  const handleDeployScout = () => {
-
-
-
-    navigate('/scout-deployment');
-
-
-
-  };
-
-
-
-
-
 
 
   const handleRefresh = () => {
@@ -13991,7 +13980,7 @@ const MarketResearch = React.memo(() => {
                 setSignalsChatContext(null);
               }}
               editHistory={editHistory}
-              onTabChange={setActiveTab}
+              onTabChange={handleTabChange}
             />
           </div>
         ) : (
@@ -14028,26 +14017,6 @@ const MarketResearch = React.memo(() => {
 
 
                   <div className="space-y-6">
-
-
-
-                    {/* Display deployment details if Scout has been deployed */}
-
-
-
-                    {scoutDeploymentData && (
-
-
-
-                      <ScoutDeploymentDetails deploymentData={scoutDeploymentData} />
-
-
-
-                    )}
-
-
-
-                    
 
 
 
@@ -15084,27 +15053,42 @@ const MarketResearch = React.memo(() => {
 
 
 
-                <LeadStream 
-
-
-
-                  selectedIndustry={leadStreamFilters.selectedIndustry}
-
-
-
-                  selectedSize={leadStreamFilters.selectedSize}
-
-
-
-                  selectedRegion={leadStreamFilters.selectedRegion}
-
-
-
-                  onFiltersChange={(filters) => setLeadStreamFilters(filters)}
-
-
-
-                />
+                {isLeadStreamSplitView ? (
+                  <div className="h-[calc(100vh-280px)] min-h-[400px]">
+                    <LeadStreamScoutSplitView
+                      filters={leadStreamFilters}
+                      onFiltersChange={setLeadStreamFilters}
+                      editHistory={editHistory}
+                      onTabChange={(tab) => { setActiveTab(tab); setIsLeadStreamSplitView(false); }}
+                      onExitSplitView={() => setIsLeadStreamSplitView(false)}
+                    />
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between mb-4">
+                      <LeadStreamFilterBar filters={leadStreamFilters} onFiltersChange={setLeadStreamFilters} />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-2 shrink-0"
+                        onClick={() => setIsLeadStreamSplitView(true)}
+                      >
+                        <SplitSquareHorizontal className="h-4 w-4" />
+                        Split view
+                      </Button>
+                    </div>
+                    <LeadStream
+                      selectedIndustry={leadStreamFilters.selectedIndustry}
+                      selectedSize={leadStreamFilters.selectedSize}
+                      selectedRegion={leadStreamFilters.selectedRegion}
+                      onFiltersChange={setLeadStreamFilters}
+                      onAskScout={(ctx) => {
+                        sessionStorage.setItem('leadStreamChatContext', JSON.stringify(ctx));
+                        handleTabChange('trends');
+                      }}
+                    />
+                  </>
+                )}
 
 
 
@@ -15210,6 +15194,13 @@ const MarketResearch = React.memo(() => {
 
 
 
+      />
+
+      <AddLeadModal
+        open={addLeadModalOpen}
+        onOpenChange={setAddLeadModalOpen}
+        initialData={addLeadInitialData}
+        onSuccess={() => window.dispatchEvent(new CustomEvent('leadStreamRefresh'))}
       />
 
       {/* Loading Modal for Scout Refresh */}

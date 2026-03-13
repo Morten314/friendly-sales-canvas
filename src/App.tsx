@@ -19,7 +19,6 @@ import NotFound from "./pages/NotFound";
 import MarketResearch from "./pages/MarketResearch";
 import Insights from "./pages/Insights";
 import AgentHub from "./pages/AgentHub";
-import ScoutDeploymentPage from "./pages/ScoutDeployment";
 import Signals from "./pages/Signals";
 import MissionControl from "./pages/MissionControl";
 import Artifacts from "./pages/Artifacts";
@@ -103,11 +102,6 @@ const App = () => (
               <Route path="/artifacts" element={
                 <ProtectedRoute requireTenant>
                   <Artifacts />
-                </ProtectedRoute>
-              } />
-              <Route path="/scout-deployment" element={
-                <ProtectedRoute requireTenant>
-                  <ScoutDeploymentPage />
                 </ProtectedRoute>
               } />
               <Route path="*" element={<NotFound />} />

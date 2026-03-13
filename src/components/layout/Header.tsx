@@ -129,10 +129,6 @@ export function Header() {
   //   }));
   // };
 
-  const handleDeployScout = () => {
-    navigate('/scout-deployment');
-  };
-
   const isMarketResearchPage = window.location.pathname === '/market-research';
 
   return (
@@ -457,17 +453,6 @@ export function Header() {
             )}
           </>
         )}
-
-         {/* Market Research specific buttons */}
-         {isMarketResearchPage && (
-           <Button 
-             size={isMobile ? "sm" : "default"}
-             className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
-             onClick={handleDeployScout}
-           >
-             {isMobile ? <PlusCircle className="h-4 w-4" /> : "Deploy Scout"}
-           </Button>
-         )}
 
          {/* Signals page controls */}
          {window.location.pathname === '/signals' && !isMobile && (

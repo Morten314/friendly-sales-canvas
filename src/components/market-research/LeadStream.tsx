@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Upload, Users, X, Check, Edit, Trash2, Loader2, FileText, RefreshCw } from "lucide-react";
+import { Upload, Users, X, Check, Edit, Trash2, Loader2, FileText, RefreshCw, MessageCircle, Bot, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useTenant } from "@/contexts/TenantContext";
@@ -35,11 +35,28 @@ interface Lead {
   [key: string]: any;
 }
 
+/** Dummy leads for UI when API returns empty (dev only) */
+const DUMMY_LEADS: Lead[] = [
+  { lead_id: "demo-1", fullName: "Sarah Chen", email: "sarah.chen@techcorp.io", mobile: "+1 415 555 0101", companyName: "TechCorp Solutions", companyWebsite: "https://techcorp.io", linkedInProfile: "https://linkedin.com/in/sarahchen", actions: "Follow up on pricing" },
+  { lead_id: "demo-2", fullName: "Marcus Johnson", email: "marcus.j@innovate.co", mobile: "+1 212 555 0202", companyName: "Innovate Labs", companyWebsite: "https://innovate.co", linkedInProfile: "https://linkedin.com/in/marcusjohnson", actions: "Schedule demo" },
+  { lead_id: "demo-3", fullName: "Elena Rodriguez", email: "elena.r@cloudbase.com", mobile: "+1 650 555 0303", companyName: "CloudBase Systems", companyWebsite: "https://cloudbase.com", linkedInProfile: "https://linkedin.com/in/elenarodriguez", actions: "Send case study" },
+  { lead_id: "demo-4", fullName: "David Park", email: "d.park@nexus.ai", mobile: "+1 408 555 0404", companyName: "Nexus AI", companyWebsite: "https://nexus.ai", linkedInProfile: "https://linkedin.com/in/davidpark", actions: "Review proposal" },
+  { lead_id: "demo-5", fullName: "Priya Sharma", email: "priya@datastream.io", mobile: "+1 617 555 0505", companyName: "DataStream Analytics", companyWebsite: "https://datastream.io", linkedInProfile: "https://linkedin.com/in/priyasharma", actions: "Technical discovery call" },
+];
+
+export interface LeadStreamScoutContext {
+  company?: string;
+  industry?: string;
+  customMessage?: string;
+}
+
 interface LeadStreamProps {
   selectedIndustry?: string;
   selectedSize?: string;
   selectedRegion?: string;
   onFiltersChange?: (filters: { selectedIndustry: string; selectedSize: string; selectedRegion: string }) => void;
+  /** When provided, enables "Ask Scout" and "Research with Scout" actions to connect Lead Stream with Scout */
+  onAskScout?: (context: LeadStreamScoutContext) => void;
 }
 
 const LeadStream = ({
@@ -47,6 +64,7 @@ const LeadStream = ({
   selectedSize,
   selectedRegion,
   onFiltersChange,
+  onAskScout,
 }: LeadStreamProps) => {
   const { toast } = useToast();
   const { currentUser } = useAuth();
@@ -75,9 +93,19 @@ const LeadStream = ({
   const userId = currentUser?.uid || "";
   const orgId = userId || ""; // Use user_id as org_id to ensure they match
 
+  // Listen for refresh when leads are added from Scout (Add to Lead Stream)
+  useEffect(() => {
+    const handler = () => fetchLeads();
+    window.addEventListener("leadStreamRefresh", handler);
+    return () => window.removeEventListener("leadStreamRefresh", handler);
+  }, [userId, orgId]);
+
   // API Functions
   const fetchLeads = async () => {
     if (!userId || !orgId) {
+      if (import.meta.env.DEV) {
+        setLeads(DUMMY_LEADS);
+      }
       setIsLoading(false);
       return;
     }
@@ -187,15 +215,28 @@ const LeadStream = ({
       if (transformedLeads.length > 0) {
         console.log("✅ LeadStream - First transformed lead:", transformedLeads[0]);
       }
-      
-      setLeads(transformedLeads);
+
+      // Use dummy leads for UI when API returns empty (dev only)
+      const finalLeads =
+        transformedLeads.length > 0
+          ? transformedLeads
+          : import.meta.env.DEV
+            ? DUMMY_LEADS
+            : transformedLeads;
+
+      setLeads(finalLeads);
     } catch (error) {
       console.error("Error fetching leads:", error);
-      toast({
-        title: "Failed to fetch leads",
-        description: error instanceof Error ? error.message : "Unknown error",
-        variant: "destructive",
-      });
+      if (import.meta.env.DEV) {
+        // Show dummy leads in dev when API fails so UI can be tested
+        setLeads(DUMMY_LEADS);
+      } else {
+        toast({
+          title: "Failed to fetch leads",
+          description: error instanceof Error ? error.message : "Unknown error",
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -1158,6 +1199,17 @@ const LeadStream = ({
             </p>
           </div>
           <div className="flex items-center gap-2">
+            {onAskScout && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 border-blue-200 bg-blue-50/50 hover:bg-blue-100 hover:border-blue-300 text-blue-700"
+                onClick={() => onAskScout({})}
+              >
+                <Bot className="h-4 w-4" />
+                Ask Scout
+              </Button>
+            )}
             <Button 
               variant="outline"
               size="sm"
@@ -1413,15 +1465,27 @@ const LeadStream = ({
           <Users className="h-12 w-12 text-muted-foreground mb-4" />
           <h3 className="text-lg font-medium mb-2">No leads added yet</h3>
           <p className="text-sm text-muted-foreground text-center max-w-md mb-6">
-            Upload a CSV file to add leads and start tracking your pipeline.
+            Upload a CSV file to add leads and start tracking your pipeline. Or ask Scout to help find leads based on your market research.
           </p>
-          <Button 
-            className="gap-2"
-            onClick={() => setShowCsvUpload(true)}
-          >
-            <Upload className="h-4 w-4" />
-            Upload CSV
-          </Button>
+          <div className="flex flex-wrap gap-2 justify-center">
+            <Button 
+              className="gap-2"
+              onClick={() => setShowCsvUpload(true)}
+            >
+              <Upload className="h-4 w-4" />
+              Upload CSV
+            </Button>
+            {onAskScout && (
+              <Button
+                variant="outline"
+                className="gap-2 border-blue-200 bg-blue-50/50 hover:bg-blue-100"
+                onClick={() => onAskScout({})}
+              >
+                <Bot className="h-4 w-4" />
+                Ask Scout to find leads
+              </Button>
+            )}
+          </div>
         </div>
       )}
 
@@ -1494,6 +1558,38 @@ const LeadStream = ({
                         <TableCell>{displayActions}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
+                            {onAskScout && (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => onAskScout({
+                                    company: displayCompany !== "—" ? displayCompany : undefined,
+                                    customMessage: displayCompany !== "—"
+                                      ? `I'd like to research ${displayCompany} - their market position, competitors, and growth opportunities.`
+                                      : undefined,
+                                  })}
+                                  className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                  title="Research with Scout"
+                                >
+                                  <MessageCircle className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => onAskScout({
+                                    company: displayCompany !== "—" ? displayCompany : undefined,
+                                    customMessage: displayCompany !== "—"
+                                      ? `Deep dive into ${displayCompany}: market position, competitive landscape, funding, and growth potential.`
+                                      : undefined,
+                                  })}
+                                  className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                  title="Deep dive with Scout"
+                                >
+                                  <Search className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
                             <Button
                               variant="ghost"
                               size="icon"
