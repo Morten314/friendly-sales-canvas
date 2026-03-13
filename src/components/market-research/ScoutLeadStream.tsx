@@ -467,9 +467,6 @@ const LeadTable = ({ leads, source }: { leads: ScoutLead[]; source: "crm" | "upl
                   <TableHead className="w-[100px]">Lead Score</TableHead>
                   <TableHead className="w-[200px]">Market Signals</TableHead>
                   <TableHead className="w-[36px]">
-                    <Linkedin className="h-3.5 w-3.5 text-muted-foreground" />
-                  </TableHead>
-                  <TableHead className="w-[36px]">
                     <Globe className="h-3.5 w-3.5 text-muted-foreground" />
                   </TableHead>
                   <TableHead className="w-[180px]">Intent Signals</TableHead>
@@ -479,7 +476,7 @@ const LeadTable = ({ leads, source }: { leads: ScoutLead[]; source: "crm" | "upl
               <TableBody>
                 {filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={11} className="text-center py-12 text-sm text-muted-foreground">
+                    <TableCell colSpan={10} className="text-center py-12 text-sm text-muted-foreground">
                       No leads match the current filters.
                     </TableCell>
                   </TableRow>
@@ -555,12 +552,6 @@ const LeadTable = ({ leads, source }: { leads: ScoutLead[]; source: "crm" | "upl
                         </div>
                       </TableCell>
 
-                      {/* LinkedIn */}
-                      <TableCell>
-                        <a href={lead.linkedIn} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">
-                          <Linkedin className="h-4 w-4" />
-                        </a>
-                      </TableCell>
 
                       {/* Website */}
                       <TableCell>
