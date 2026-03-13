@@ -476,7 +476,7 @@ const LeadTable = ({ leads, source }: { leads: ScoutLead[]; source: "crm" | "upl
               <TableBody>
                 {filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={11} className="text-center py-12 text-sm text-muted-foreground">
+                    <TableCell colSpan={10} className="text-center py-12 text-sm text-muted-foreground">
                       No leads match the current filters.
                     </TableCell>
                   </TableRow>
