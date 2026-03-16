@@ -598,10 +598,21 @@ interface ScoutLeadStreamProps {
   selectedIndustry?: string;
   selectedSize?: string;
   selectedRegion?: string;
+  opportunityFilter?: string | null;
   onFiltersChange?: (filters: { selectedIndustry: string; selectedSize: string; selectedRegion: string }) => void;
+  onClearOpportunityFilter?: () => void;
 }
 
-const ScoutLeadStream = ({ selectedIndustry, selectedSize, selectedRegion, onFiltersChange }: ScoutLeadStreamProps) => {
+// Map opportunity filter context to descriptive labels
+const opportunityFilterLabels: Record<string, string> = {
+  'market-size': 'Market Size & Opportunity',
+  'industry-trends': 'Industry Trends',
+  'competitor-landscape': 'Competitor Landscape',
+  'regulatory-compliance': 'Regulatory Compliance',
+  'market-entry': 'Market Entry & Growth',
+};
+
+const ScoutLeadStream = ({ selectedIndustry, selectedSize, selectedRegion, opportunityFilter, onFiltersChange, onClearOpportunityFilter }: ScoutLeadStreamProps) => {
   const [activeTab, setActiveTab] = useState<"crm" | "uploaded">("crm");
 
   return (
@@ -618,6 +629,23 @@ const ScoutLeadStream = ({ selectedIndustry, selectedSize, selectedRegion, onFil
           <RefreshCw className="h-3.5 w-3.5" /> Refresh
         </Button>
       </div>
+
+      {/* Opportunity Filter Banner */}
+      {opportunityFilter && opportunityFilterLabels[opportunityFilter] && (
+        <div className="flex items-center justify-between bg-primary/5 border border-primary/20 rounded-lg px-4 py-2.5">
+          <div className="flex items-center gap-2">
+            <Zap className="h-4 w-4 text-primary" />
+            <span className="text-sm font-medium text-foreground">
+              Showing leads matching: <span className="text-primary">{opportunityFilterLabels[opportunityFilter]}</span>
+            </span>
+          </div>
+          {onClearOpportunityFilter && (
+            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={onClearOpportunityFilter}>
+              Clear filter
+            </Button>
+          )}
+        </div>
+      )}
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "crm" | "uploaded")}>
