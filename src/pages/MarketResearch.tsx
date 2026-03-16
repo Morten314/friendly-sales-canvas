@@ -14759,6 +14759,7 @@ const MarketResearch = React.memo(() => {
 
 
                       onGenerateShareableLink={handleMarketIntelligenceGenerateShareableLink}
+                      onViewOpportunityLeads={handleViewOpportunityLeads}
 
 
 
