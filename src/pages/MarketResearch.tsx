@@ -5479,7 +5479,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-              const altResponse = await fetch('/api/market-research', {
+              const altResponse = await fetch(buildApiUrl('market-research'), {
 
 
 
