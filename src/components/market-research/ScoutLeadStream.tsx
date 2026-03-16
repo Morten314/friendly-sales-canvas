@@ -13,7 +13,7 @@ import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
-  Search, Linkedin, Target, Filter, RefreshCw, Zap, Sparkles, Bot,
+  Search, Linkedin, Target, Filter, RefreshCw, Zap, Sparkles, Bot, MessageSquare,
 } from "lucide-react";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
