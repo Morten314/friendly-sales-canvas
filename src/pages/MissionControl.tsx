@@ -2525,7 +2525,7 @@ const MissionControl = () => {
 
     const uploadName = customFileUploadName.trim();
     let fileKey: string | undefined;
-    let uploadStatus: 'processing' | 'uploaded' | 'failed' = 'processing';
+    let uploadStatus: 'processing' | 'uploaded' | 'error' = 'processing';
 
     // If a file is provided, upload it to backend
     if (customFileUploadFile) {
