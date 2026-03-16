@@ -15083,7 +15083,9 @@ const MarketResearch = React.memo(() => {
                   selectedIndustry={leadStreamFilters.selectedIndustry}
                   selectedSize={leadStreamFilters.selectedSize}
                   selectedRegion={leadStreamFilters.selectedRegion}
+                  opportunityFilter={opportunityFilter}
                   onFiltersChange={(filters) => setLeadStreamFilters(filters)}
+                  onClearOpportunityFilter={() => setOpportunityFilter(null)}
                 />
 
 
