@@ -2607,7 +2607,7 @@ const MarketResearch = React.memo(() => {
 
   const handleViewOpportunityLeads = (sectionContext: string) => {
     setOpportunityFilter(sectionContext);
-    setActiveTab('analysis');
+    handleTabChange('analysis');
   };
 
 
