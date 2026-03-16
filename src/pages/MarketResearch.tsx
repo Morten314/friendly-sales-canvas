@@ -5150,7 +5150,7 @@ const MarketResearch = React.memo(() => {
           refresh: refresh
         };
 
-        const response = await fetch('/api/market-research', {
+        const response = await fetch(buildApiUrl('market-research'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
