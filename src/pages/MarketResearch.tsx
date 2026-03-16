@@ -2596,25 +2596,19 @@ const MarketResearch = React.memo(() => {
 
   // ConsumerTrends (Your Lead Stream) filter state - persist across tab switches
 
-
-
   const [leadStreamFilters, setLeadStreamFilters] = useState({
-
-
-
     selectedIndustry: "all",
-
-
-
     selectedSize: "all", 
-
-
-
     selectedRegion: "all"
-
-
-
   });
+
+  // Opportunity filter from intelligence sections
+  const [opportunityFilter, setOpportunityFilter] = useState<string | null>(null);
+
+  const handleViewOpportunityLeads = (sectionContext: string) => {
+    setOpportunityFilter(sectionContext);
+    setActiveTab('analysis');
+  };
 
 
 
@@ -14765,6 +14759,7 @@ const MarketResearch = React.memo(() => {
 
 
                       onGenerateShareableLink={handleMarketIntelligenceGenerateShareableLink}
+                      onViewOpportunityLeads={handleViewOpportunityLeads}
 
 
 
@@ -15088,7 +15083,9 @@ const MarketResearch = React.memo(() => {
                   selectedIndustry={leadStreamFilters.selectedIndustry}
                   selectedSize={leadStreamFilters.selectedSize}
                   selectedRegion={leadStreamFilters.selectedRegion}
+                  opportunityFilter={opportunityFilter}
                   onFiltersChange={(filters) => setLeadStreamFilters(filters)}
+                  onClearOpportunityFilter={() => setOpportunityFilter(null)}
                 />
 
 

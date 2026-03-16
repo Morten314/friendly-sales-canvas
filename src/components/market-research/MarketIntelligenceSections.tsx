@@ -6,6 +6,7 @@ import CompetitorLandscapeSection from './CompetitorLandscapeSection';
 import RegulatoryComplianceSection from './RegulatoryComplianceSection';
 import MarketEntrySection from './MarketEntrySection';
 import ScoutChatPanel from './ScoutChatPanel';
+import OpportunityMatchCard from './OpportunityMatchCard';
 import { MarketIntelligenceTabProps } from './MarketIntelligenceTabProps';
 
 interface MarketIntelligenceSectionsProps extends MarketIntelligenceTabProps {}
@@ -107,6 +108,35 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
     />
   ) : undefined;
 
+  // Mock opportunity match data per section
+  const opportunityMatches: Record<string, { pattern: string; crm: number; uploaded: number; total: number }> = {
+    'market-size': {
+      pattern: 'Companies in high-growth TAM segments matching your ICP',
+      crm: 12, uploaded: 8, total: 20,
+    },
+    'industry-trends': {
+      pattern: 'Accounts showing AI adoption & cloud migration signals',
+      crm: 9, uploaded: 5, total: 14,
+    },
+    'competitor-landscape': {
+      pattern: 'Prospects using competitor products with switching signals',
+      crm: 7, uploaded: 11, total: 18,
+    },
+    'regulatory-compliance': {
+      pattern: 'Companies impacted by upcoming regulatory deadlines',
+      crm: 4, uploaded: 3, total: 7,
+    },
+    'market-entry': {
+      pattern: 'Accounts in recommended entry channels & regions',
+      crm: 6, uploaded: 9, total: 15,
+    },
+  };
+
+  const handleViewLeads = (sectionContext: string) => {
+    if (props.onViewOpportunityLeads) {
+      props.onViewOpportunityLeads(sectionContext);
+    }
+  };
   
   return (
     <>
@@ -151,6 +181,14 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
         onRefresh={props.onMarketSizeRefresh}
         isRefreshing={props.isRefreshing}
         companyProfile={props.companyProfile}
+      />
+      <OpportunityMatchCard
+        sectionName="Market Size"
+        opportunityPattern={opportunityMatches['market-size'].pattern}
+        crmAccountsCount={opportunityMatches['market-size'].crm}
+        uploadedAccountsCount={opportunityMatches['market-size'].uploaded}
+        totalLeadsCount={opportunityMatches['market-size'].total}
+        onViewLeads={() => handleViewLeads('market-size')}
       />
 
       {/* Industry Trends Section */}
@@ -199,6 +237,14 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
           </div>
         )}
       </div>
+      <OpportunityMatchCard
+        sectionName="Industry Trends"
+        opportunityPattern={opportunityMatches['industry-trends'].pattern}
+        crmAccountsCount={opportunityMatches['industry-trends'].crm}
+        uploadedAccountsCount={opportunityMatches['industry-trends'].uploaded}
+        totalLeadsCount={opportunityMatches['industry-trends'].total}
+        onViewLeads={() => handleViewLeads('industry-trends')}
+      />
 
       {/* Competitor Landscape Section */}
       <div className={`${props.showCompetitorScoutChat ? 'flex gap-6' : ''}`}>
@@ -241,6 +287,14 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
           </div>
         )}
       </div>
+      <OpportunityMatchCard
+        sectionName="Competitor Landscape"
+        opportunityPattern={opportunityMatches['competitor-landscape'].pattern}
+        crmAccountsCount={opportunityMatches['competitor-landscape'].crm}
+        uploadedAccountsCount={opportunityMatches['competitor-landscape'].uploaded}
+        totalLeadsCount={opportunityMatches['competitor-landscape'].total}
+        onViewLeads={() => handleViewLeads('competitor-landscape')}
+      />
 
       {/* Regulatory & Compliance Highlights Section */}
       <div className={`${props.showRegulatoryScoutChat ? 'flex gap-6' : ''}`}>
@@ -283,6 +337,14 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
           </div>
         )}
       </div>
+      <OpportunityMatchCard
+        sectionName="Regulatory Compliance"
+        opportunityPattern={opportunityMatches['regulatory-compliance'].pattern}
+        crmAccountsCount={opportunityMatches['regulatory-compliance'].crm}
+        uploadedAccountsCount={opportunityMatches['regulatory-compliance'].uploaded}
+        totalLeadsCount={opportunityMatches['regulatory-compliance'].total}
+        onViewLeads={() => handleViewLeads('regulatory-compliance')}
+      />
 
       {/* Market Entry & Growth Strategy Section */}
       <div className={`${props.showMarketEntryScoutChat ? 'flex gap-6' : ''}`}>
@@ -330,6 +392,14 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
           </div>
         )}
       </div>
+      <OpportunityMatchCard
+        sectionName="Market Entry"
+        opportunityPattern={opportunityMatches['market-entry'].pattern}
+        crmAccountsCount={opportunityMatches['market-entry'].crm}
+        uploadedAccountsCount={opportunityMatches['market-entry'].uploaded}
+        totalLeadsCount={opportunityMatches['market-entry'].total}
+        onViewLeads={() => handleViewLeads('market-entry')}
+      />
     </>
   );
 };
