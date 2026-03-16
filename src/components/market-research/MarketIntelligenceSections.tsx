@@ -6,6 +6,7 @@ import CompetitorLandscapeSection from './CompetitorLandscapeSection';
 import RegulatoryComplianceSection from './RegulatoryComplianceSection';
 import MarketEntrySection from './MarketEntrySection';
 import ScoutChatPanel from './ScoutChatPanel';
+import OpportunityMatchCard from './OpportunityMatchCard';
 import { MarketIntelligenceTabProps } from './MarketIntelligenceTabProps';
 
 interface MarketIntelligenceSectionsProps extends MarketIntelligenceTabProps {}
