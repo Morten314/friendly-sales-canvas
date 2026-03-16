@@ -73,7 +73,7 @@ interface SuggestedAction {
   icon: React.ReactNode;
 }
 
-const primaryActions: SuggestedAction[] = [
+const leadPrimaryActions: SuggestedAction[] = [
   { label: "Research these companies", prompt: "Research these companies and give me a summary of what each one does, their recent news, and their market position.", icon: <Search className="h-3.5 w-3.5" /> },
   { label: "Find buying signals", prompt: "Find buying signals for these leads. Look for recent funding, hiring surges, technology changes, and expansion plans.", icon: <TrendingUp className="h-3.5 w-3.5" /> },
   { label: "Identify decision makers", prompt: "Identify the key decision makers at these companies. Who are the budget holders and influencers?", icon: <Users className="h-3.5 w-3.5" /> },
@@ -82,11 +82,27 @@ const primaryActions: SuggestedAction[] = [
   { label: "Write outreach strategy", prompt: "Write a personalized outreach strategy for these leads based on their company context and buying signals.", icon: <FileText className="h-3.5 w-3.5" /> },
 ];
 
-const secondaryActions: SuggestedAction[] = [
+const leadSecondaryActions: SuggestedAction[] = [
   { label: "Enrich LinkedIn profiles", prompt: "Enrich LinkedIn profiles for these leads. Pull their recent activity, shared content, and career history.", icon: <Users className="h-3.5 w-3.5" /> },
   { label: "Find company tech stack", prompt: "Find the technology stack used by these companies. What tools and platforms are they running?", icon: <Target className="h-3.5 w-3.5" /> },
   { label: "Analyze hiring trends", prompt: "Analyze hiring trends at these companies. What roles are they hiring for and what does it signal?", icon: <TrendingUp className="h-3.5 w-3.5" /> },
   { label: "Check funding activity", prompt: "Check funding activity for these companies. Any recent rounds, acquisitions, or financial events?", icon: <Sparkles className="h-3.5 w-3.5" /> },
+];
+
+const listPrimaryActions: SuggestedAction[] = [
+  { label: "Analyze full prospect list", prompt: "Analyze my entire prospect list. Give me a summary of the industries, company sizes, and roles represented.", icon: <Search className="h-3.5 w-3.5" /> },
+  { label: "Score & prioritize all leads", prompt: "Score and prioritize all leads in my list. Rank them by likelihood to convert in the next 30 days.", icon: <Zap className="h-3.5 w-3.5" /> },
+  { label: "Find common patterns", prompt: "Find common patterns across my prospect list. What industries, roles, and company sizes appear most often?", icon: <TrendingUp className="h-3.5 w-3.5" /> },
+  { label: "Build outreach sequences", prompt: "Build personalized outreach sequences for my entire prospect list, grouped by ICP match and lead score.", icon: <FileText className="h-3.5 w-3.5" /> },
+  { label: "Identify top 10 accounts", prompt: "Identify the top 10 accounts from my full list that I should focus on this week and explain why.", icon: <Target className="h-3.5 w-3.5" /> },
+  { label: "Map buying committees", prompt: "Map the buying committees across all companies in my prospect list. Who are the decision makers, champions, and influencers?", icon: <Users className="h-3.5 w-3.5" /> },
+];
+
+const listSecondaryActions: SuggestedAction[] = [
+  { label: "Segment by ICP fit", prompt: "Segment my entire prospect list by ICP fit. Group them into High, Medium, and Low tiers with reasoning.", icon: <Target className="h-3.5 w-3.5" /> },
+  { label: "Batch enrich all leads", prompt: "Batch enrich all leads in my list. Pull LinkedIn data, company info, and recent activity for everyone.", icon: <Users className="h-3.5 w-3.5" /> },
+  { label: "Competitive displacement opps", prompt: "Find competitive displacement opportunities across my prospect list. Which companies are using competitor products that we can win?", icon: <Sparkles className="h-3.5 w-3.5" /> },
+  { label: "Weekly pipeline summary", prompt: "Generate a weekly pipeline summary for my full prospect list. What changed, who moved stages, and where should I focus?", icon: <Newspaper className="h-3.5 w-3.5" /> },
 ];
 
 // ─── Clean Response Helper ───────────────────────────────────────────────────
