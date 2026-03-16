@@ -3813,7 +3813,7 @@ const MarketResearch = React.memo(() => {
 
       
 
-      const response = await fetch(`/api/market-research?_cb=${Date.now()}&_r=${Math.random()}`, {
+      const response = await fetch(`${buildApiUrl('market-research')}?_cb=${Date.now()}&_r=${Math.random()}`, {
 
         method: 'POST',
 
