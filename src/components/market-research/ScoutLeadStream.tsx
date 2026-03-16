@@ -13,7 +13,7 @@ import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
-  Search, Linkedin, Target, Filter, RefreshCw, Zap, Sparkles, Bot,
+  Search, Linkedin, Target, Filter, RefreshCw, Zap, Sparkles, Bot, MessageSquare,
 } from "lucide-react";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -99,9 +99,10 @@ interface ScoutLeadStreamProps {
   onFiltersChange?: (filters: { selectedIndustry: string; selectedSize: string; selectedRegion: string }) => void;
   onClearOpportunityFilter?: () => void;
   onResearchWithScout?: (leads: ScoutLead[], context?: string) => void;
+  onChatWithScout?: (leads: ScoutLead[]) => void;
 }
 
-const ScoutLeadStream = ({ opportunityFilter, onClearOpportunityFilter, onResearchWithScout }: ScoutLeadStreamProps) => {
+const ScoutLeadStream = ({ opportunityFilter, onClearOpportunityFilter, onResearchWithScout, onChatWithScout }: ScoutLeadStreamProps) => {
   const [search, setSearch] = useState("");
   const [icpFilter, setIcpFilter] = useState("All");
   const [scoreFilter, setScoreFilter] = useState("All");
@@ -168,6 +169,13 @@ const ScoutLeadStream = ({ opportunityFilter, onClearOpportunityFilter, onResear
             <span className="text-xs font-medium text-foreground">{filtered.length} Leads</span>
             <span className="text-xs text-primary">Scout Insights Available</span>
           </div>
+          <Button
+            size="sm"
+            className="gap-1.5 text-xs"
+            onClick={() => onChatWithScout?.(filtered)}
+          >
+            <MessageSquare className="h-3.5 w-3.5" /> Chat with Scout
+          </Button>
           <Button variant="outline" size="sm" className="gap-1.5 text-xs">
             <RefreshCw className="h-3.5 w-3.5" /> Refresh
           </Button>
