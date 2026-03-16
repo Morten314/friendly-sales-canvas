@@ -1,4 +1,5 @@
 // API utility functions for improved error handling and retry logic
+import { buildApiUrl } from '@/lib/api';
 
 interface ApiCallOptions {
   maxRetries?: number;
