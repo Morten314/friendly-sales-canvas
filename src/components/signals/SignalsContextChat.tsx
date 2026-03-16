@@ -28,7 +28,7 @@ const signalAsk = async (body: {
   question: string;
   history: { user: string; assistant: string }[];
 }) => {
-  const response = await fetch('/api/signal_Ask', {
+  const response = await fetch(buildApiUrl('signal_Ask'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),

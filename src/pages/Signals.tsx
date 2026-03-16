@@ -145,7 +145,7 @@ const fetchSignals = async (userId: string) => {
 
 const signalAction = async (orgId: string, signalId: string, action: 'accept' | 'reject') => {
   try {
-    const response = await fetch('/api/signal_action', {
+    const response = await fetch(buildApiUrl('signal_action'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

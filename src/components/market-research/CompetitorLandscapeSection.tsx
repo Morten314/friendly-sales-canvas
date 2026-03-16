@@ -625,7 +625,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
       let getData = null;
       if (response && response.ok) {
         try {
-          const getResponse = await fetch('/api/market_intelligence', {
+          const getResponse = await fetch(buildApiUrl('market_intelligence'), {
             method: 'GET',
             headers: {
               'Content-Type': 'application/json',

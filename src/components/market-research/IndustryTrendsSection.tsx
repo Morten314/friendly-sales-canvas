@@ -666,7 +666,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
   const fetchUpdatedData = async () => {
     try {
       const response = await executeWithRateLimit(
-        () => fetch('/api/market-research', {
+        () => fetch(buildApiUrl('market-research'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ component_name: "industry_trends", org_id: orgIdToUse })
