@@ -99,7 +99,7 @@ const generateSignalsBatch = async (userId: string) => {
 
 const signalAsk = async (body: { org_id: string; user_id: string; question: string; history: { user: string; assistant: string }[] }) => {
   try {
-    const response = await fetch('/api/signal_Ask', {
+    const response = await fetch(buildApiUrl('signal_Ask'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
