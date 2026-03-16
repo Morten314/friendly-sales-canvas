@@ -1140,7 +1140,7 @@ const MarketResearch = React.memo(() => {
   const [componentFailureCounts, setComponentFailureCounts] = useState<Record<string, number>>({});
   
   // Track validation timeout IDs to clear them when validation completes
-  const validationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const validationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Flag to prevent multiple simultaneous validations
   const isValidatingRef = useRef<boolean>(false);
