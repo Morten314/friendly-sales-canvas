@@ -76,6 +76,7 @@ import { EmergingTrends } from "@/components/market-research/EmergingTrends";
 
 
 import ScoutLeadStream from "@/components/market-research/ScoutLeadStream";
+import { ChatWithScout } from "@/components/market-research/ChatWithScout";
 
 
 
@@ -818,6 +819,23 @@ const MarketResearch = React.memo(() => {
 
   const [activeTab, setActiveTab] = useState(getActiveTabFromPath());
   const [signalsChatContext, setSignalsChatContext] = useState<SignalsChatContext | null>(null);
+  const [scoutResearchContext, setScoutResearchContext] = useState<{ leads: { name: string; company: string; jobTitle: string }[]; opportunity?: string; icp?: string } | null>(null);
+
+  const handleResearchWithScout = (leads: any[], context?: string) => {
+    const opportunityLabels: Record<string, string> = {
+      'market-size': 'Market Size & Opportunity',
+      'industry-trends': 'Industry Trends',
+      'competitor-landscape': 'Competitor Landscape',
+      'regulatory-compliance': 'Regulatory Compliance',
+      'market-entry': 'Market Entry & Growth',
+    };
+    setScoutResearchContext({
+      leads: leads.map(l => ({ name: l.name, company: l.company, jobTitle: l.jobTitle })),
+      opportunity: context ? opportunityLabels[context] || context : undefined,
+      icp: 'Mid-Market SaaS',
+    });
+    handleTabChange('trends');
+  };
 
   // When Chat with Scout tab is active, check for context from Signals page
   useEffect(() => {
@@ -3215,6 +3233,7 @@ const MarketResearch = React.memo(() => {
 
 
     setActiveTab(tabValue);
+    if (tabValue !== 'trends') setScoutResearchContext(null);
 
 
 
@@ -13978,15 +13997,21 @@ const MarketResearch = React.memo(() => {
 
         {activeTab === "trends" ? (
           <div className="flex-1 min-h-0 flex flex-col overflow-hidden -mx-3 md:-mx-4 lg:-mx-6 w-[calc(100%+1.5rem)] md:w-[calc(100%+2rem)] lg:w-[calc(100%+3rem)] max-w-none">
-            <ScoutChatWithHistory
-              initialContext={signalsChatContext}
-              onClearContext={() => {
-                sessionStorage.removeItem('signalsChatContext');
-                setSignalsChatContext(null);
-              }}
-              editHistory={editHistory}
-              onTabChange={setActiveTab}
-            />
+            {scoutResearchContext ? (
+              <div className="px-3 md:px-4 lg:px-6 py-4 h-full">
+                <ChatWithScout fullPage researchContext={scoutResearchContext} />
+              </div>
+            ) : (
+              <ScoutChatWithHistory
+                initialContext={signalsChatContext}
+                onClearContext={() => {
+                  sessionStorage.removeItem('signalsChatContext');
+                  setSignalsChatContext(null);
+                }}
+                editHistory={editHistory}
+                onTabChange={setActiveTab}
+              />
+            )}
           </div>
         ) : (
         <ScrollArea className="flex-1">
@@ -15086,6 +15111,7 @@ const MarketResearch = React.memo(() => {
                   opportunityFilter={opportunityFilter}
                   onFiltersChange={(filters) => setLeadStreamFilters(filters)}
                   onClearOpportunityFilter={() => setOpportunityFilter(null)}
+                  onResearchWithScout={handleResearchWithScout}
                 />
 
 
