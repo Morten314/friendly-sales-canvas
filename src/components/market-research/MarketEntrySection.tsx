@@ -2588,7 +2588,7 @@ const MarketEntrySection: React.FC<MarketEntrySectionProps> = ({
         section: "market_entry"
       });
       
-      const response = await fetch(`/api/ask?${queryParams}`, {
+      const response = await fetch(`${buildApiUrl('ask')}?${queryParams}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

@@ -4445,7 +4445,7 @@ const MarketResearch = React.memo(() => {
 
       try {
         // Include org_id in API call
-        const profileResponse = await fetch(`/api/profile/company?org_id=${orgIdToUse}`, {
+        const profileResponse = await fetch(`${buildApiUrl('profile/company')}?org_id=${orgIdToUse}`, {
 
           method: 'GET',
 

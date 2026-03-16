@@ -596,7 +596,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
       
       let response;
       try {
-        response = await fetch(`/api/ask?${queryParams}`, {
+        response = await fetch(`${buildApiUrl('ask')}?${queryParams}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',

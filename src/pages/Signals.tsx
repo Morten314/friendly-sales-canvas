@@ -118,7 +118,7 @@ const signalAsk = async (body: { org_id: string; user_id: string; question: stri
 
 const fetchSignals = async (userId: string) => {
   try {
-    const response = await fetch(`/api/fetch-signals?user_id=${userId}&limit=10`);
+    const response = await fetch(`${buildApiUrl('fetch-signals')}?user_id=${userId}&limit=10`);
     
     console.log('Fetch signals response status:', response.status);
     console.log('Fetch signals response headers:', response.headers);

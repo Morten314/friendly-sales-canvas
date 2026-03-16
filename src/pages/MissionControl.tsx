@@ -2195,7 +2195,7 @@ const MissionControl = () => {
       // First, fetch existing company profile data to preserve it
       let existingCompanyData = {};
       try {
-        const getResponse = await fetch(`/api/profile/company?org_id=${orgIdToUse}`, {
+        const getResponse = await fetch(`${buildApiUrl('profile/company')}?org_id=${orgIdToUse}`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
