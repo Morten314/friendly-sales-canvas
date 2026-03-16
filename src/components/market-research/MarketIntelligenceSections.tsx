@@ -237,6 +237,14 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
           </div>
         )}
       </div>
+      <OpportunityMatchCard
+        sectionName="Industry Trends"
+        opportunityPattern={opportunityMatches['industry-trends'].pattern}
+        crmAccountsCount={opportunityMatches['industry-trends'].crm}
+        uploadedAccountsCount={opportunityMatches['industry-trends'].uploaded}
+        totalLeadsCount={opportunityMatches['industry-trends'].total}
+        onViewLeads={() => handleViewLeads('industry-trends')}
+      />
 
       {/* Competitor Landscape Section */}
       <div className={`${props.showCompetitorScoutChat ? 'flex gap-6' : ''}`}>
