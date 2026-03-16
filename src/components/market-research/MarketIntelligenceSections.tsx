@@ -337,6 +337,14 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
           </div>
         )}
       </div>
+      <OpportunityMatchCard
+        sectionName="Regulatory Compliance"
+        opportunityPattern={opportunityMatches['regulatory-compliance'].pattern}
+        crmAccountsCount={opportunityMatches['regulatory-compliance'].crm}
+        uploadedAccountsCount={opportunityMatches['regulatory-compliance'].uploaded}
+        totalLeadsCount={opportunityMatches['regulatory-compliance'].total}
+        onViewLeads={() => handleViewLeads('regulatory-compliance')}
+      />
 
       {/* Market Entry & Growth Strategy Section */}
       <div className={`${props.showMarketEntryScoutChat ? 'flex gap-6' : ''}`}>
