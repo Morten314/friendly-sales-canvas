@@ -543,7 +543,7 @@ const getContextualScoutMessage = () => {
     if (!container) return;
     
     let isScrolling = true; // Flag to control persistent scrolling
-    let scrollInterval: NodeJS.Timeout | null = null;
+    let scrollInterval: ReturnType<typeof setInterval> | null = null;
     let scrollListener: ((e: Event) => void) | null = null;
     
     const scrollToTop = () => {
