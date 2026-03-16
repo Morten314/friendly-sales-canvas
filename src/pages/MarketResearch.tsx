@@ -123,7 +123,7 @@ import { toUTCTimestamp, isTimestampNewer, logTimestampComparison } from '@/lib/
 
 
 
-import { apiFetchJson } from '@/lib/api';
+import { apiFetchJson, buildApiUrl } from '@/lib/api';
 
 import { marketResearchApiCall, logApiCallResult, shouldUseCachedData } from '@/utils/apiUtils';
 
