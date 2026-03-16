@@ -35,7 +35,7 @@ class JWTManager {
       
       // In a real implementation, you would send this to your backend
       // which would generate a JWT with tenant context
-      const response = await fetch('/api/auth/token', {
+      const response = await fetch(`${getApiBaseUrl()}/auth/token`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
