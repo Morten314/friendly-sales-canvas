@@ -15110,6 +15110,7 @@ const MarketResearch = React.memo(() => {
                   opportunityFilter={opportunityFilter}
                   onFiltersChange={(filters) => setLeadStreamFilters(filters)}
                   onClearOpportunityFilter={() => setOpportunityFilter(null)}
+                  onResearchWithScout={handleResearchWithScout}
                 />
 
 
