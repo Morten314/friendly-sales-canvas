@@ -99,6 +99,7 @@ interface ScoutLeadStreamProps {
   onFiltersChange?: (filters: { selectedIndustry: string; selectedSize: string; selectedRegion: string }) => void;
   onClearOpportunityFilter?: () => void;
   onResearchWithScout?: (leads: ScoutLead[], context?: string) => void;
+  onChatWithScout?: (leads: ScoutLead[]) => void;
 }
 
 const ScoutLeadStream = ({ opportunityFilter, onClearOpportunityFilter, onResearchWithScout }: ScoutLeadStreamProps) => {
