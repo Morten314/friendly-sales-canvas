@@ -239,7 +239,7 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
   const hasContext = researchContext && researchContext.leads.length > 0;
 
   return (
-    <div className={`bg-background border rounded-lg overflow-hidden flex flex-col ${fullPage ? 'flex-1 min-h-0' : 'h-[80vh]'}`}>
+    <div className={`bg-background border rounded-lg overflow-hidden flex flex-col ${fullPage ? 'flex-1 h-full min-h-[28rem]' : 'h-[80vh]'}`}>
       {/* Header */}
       <div className="bg-muted/30 p-3 border-b flex items-center gap-2 shrink-0">
         <div className="p-1.5 rounded-full bg-primary/10">
@@ -281,7 +281,7 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
 
       {/* Suggested Actions */}
       {messages.length <= 1 && (
-        <div className="p-4 border-b shrink-0 space-y-3">
+        <div className="p-4 border-b shrink-0 space-y-3 max-h-[220px] overflow-y-auto">
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Agent Workflows</p>
           <div className="flex flex-wrap gap-2">
             {primaryActions.map((action) => (
@@ -317,7 +317,7 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
       )}
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-[200px]">
         {messages.map((message, index) => (
           <div key={index} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
             <div className={`max-w-[85%] rounded-lg p-3 ${
