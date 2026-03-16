@@ -543,7 +543,7 @@ const getContextualScoutMessage = () => {
     if (!container) return;
     
     let isScrolling = true; // Flag to control persistent scrolling
-    let scrollInterval: NodeJS.Timeout | null = null;
+    let scrollInterval: ReturnType<typeof setInterval> | null = null;
     let scrollListener: ((e: Event) => void) | null = null;
     
     const scrollToTop = () => {
@@ -596,7 +596,7 @@ const getContextualScoutMessage = () => {
     
     // Multiple timeouts with increasing delays to catch all render phases
     // Focus on earlier delays to prevent any bottom-scrolling from taking effect
-    const timeouts: NodeJS.Timeout[] = [];
+    const timeouts: ReturnType<typeof setTimeout>[] = [];
     [0, 10, 25, 50, 100, 150, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1200, 1500, 2000].forEach(delay => {
       const timeoutId = setTimeout(() => {
         scrollToTop();

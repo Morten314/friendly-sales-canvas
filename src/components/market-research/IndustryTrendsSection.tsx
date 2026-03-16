@@ -248,7 +248,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
       Europe: '',
       "North America": ''
     };
-    setEditRegionalHotspots(regionalHotspotsToUse);
+    setEditRegionalHotspots(regionalHotspotsToUse as { APAC: string; Europe: string; "North America": string });
     
     // Initialize strategic recommendations
     const recommendationsToUse = propRecommendations || industryTrendsData?.strategicRecommendations || industryTrendsData?.recommendations || {
@@ -269,7 +269,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
         Security: ''
       }
     };
-    setEditVisualCharts(visualChartsToUse);
+    setEditVisualCharts(visualChartsToUse as { aiAdoptionTrends: string[]; technologyBudgetAllocation: { "AI/ML": string; Cloud: string; Security: string } });
     
     onIndustryTrendsToggleEdit();
   };

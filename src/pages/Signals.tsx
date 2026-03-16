@@ -270,7 +270,7 @@ const Index = () => {
   const [pendingRejections, setPendingRejections] = useState<Map<string, {
     signal: SignalCard;
     originalIndex: number;
-    timer: NodeJS.Timeout;
+    timer: ReturnType<typeof setTimeout>;
   }>>(new Map());
   const {
     toast
