@@ -1,5 +1,11 @@
 import { User } from 'firebase/auth';
 
+const getApiBaseUrl = () => {
+  const isDev = import.meta.env.DEV;
+  const isVercel = import.meta.env.VITE_VERCEL || (typeof window !== 'undefined' && window.location.hostname.includes('vercel.app'));
+  return (isDev || isVercel) ? '/api' : 'https://backend-11kr.onrender.com';
+};
+
 interface JWTPayload {
   userId: string;
   email: string;
