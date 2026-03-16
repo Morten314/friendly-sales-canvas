@@ -820,6 +820,7 @@ const MarketResearch = React.memo(() => {
   const [activeTab, setActiveTab] = useState(getActiveTabFromPath());
   const [signalsChatContext, setSignalsChatContext] = useState<SignalsChatContext | null>(null);
   const [scoutResearchContext, setScoutResearchContext] = useState<{ leads: { name: string; company: string; jobTitle: string }[]; opportunity?: string; icp?: string } | null>(null);
+  const [scoutMode, setScoutMode] = useState<"selected-leads" | "full-list">("selected-leads");
 
   const handleResearchWithScout = (leads: any[], context?: string) => {
     const opportunityLabels: Record<string, string> = {
@@ -829,9 +830,19 @@ const MarketResearch = React.memo(() => {
       'regulatory-compliance': 'Regulatory Compliance',
       'market-entry': 'Market Entry & Growth',
     };
+    setScoutMode("selected-leads");
     setScoutResearchContext({
       leads: leads.map(l => ({ name: l.name, company: l.company, jobTitle: l.jobTitle })),
       opportunity: context ? opportunityLabels[context] || context : undefined,
+      icp: 'Mid-Market SaaS',
+    });
+    handleTabChange('trends');
+  };
+
+  const handleChatWithScout = (leads: any[]) => {
+    setScoutMode("full-list");
+    setScoutResearchContext({
+      leads: leads.map(l => ({ name: l.name, company: l.company, jobTitle: l.jobTitle })),
       icp: 'Mid-Market SaaS',
     });
     handleTabChange('trends');
