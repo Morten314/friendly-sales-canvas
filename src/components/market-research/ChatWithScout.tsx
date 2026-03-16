@@ -140,7 +140,7 @@ export function ChatWithScout({ fullPage = false, researchContext }: ChatWithSco
   useEffect(() => {
     if (!isLoading) { setAgentStep(-1); return; }
     setAgentStep(0);
-    const intervals: NodeJS.Timeout[] = [];
+    const intervals: ReturnType<typeof setTimeout>[] = [];
     agentSteps.forEach((_, i) => {
       if (i > 0) {
         intervals.push(setTimeout(() => setAgentStep(i), i * 1200));
