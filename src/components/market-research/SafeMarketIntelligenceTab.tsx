@@ -90,7 +90,9 @@ const SafeMarketIntelligenceTab: React.FC<MarketIntelligenceTabProps> = (props) 
 
   // Convert arrays back to Sets for deletedSections properties
   const deletedSectionsKeys = [
+    'deletedSections',
     'marketSizeDeletedSections',
+    'industryTrendsDeletedSections',
     'competitorDeletedSections', 
     'regulatoryDeletedSections',
     'marketEntryDeletedSections'
