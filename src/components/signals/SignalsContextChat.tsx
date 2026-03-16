@@ -7,6 +7,7 @@ import { Bot, Send, Loader2, RotateCcw, Lightbulb, ChevronDown, ChevronUp, Thumb
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { sanitizeAnswerText } from '@/lib/utils';
+import { buildApiUrl } from '@/lib/api';
 
 const signalAction = async (orgId: string, signalId: string, action: 'accept' | 'reject') => {
   const response = await fetch('/api/signal_action', {

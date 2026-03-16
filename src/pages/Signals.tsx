@@ -13,6 +13,7 @@ import { Layout } from '@/components/layout/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { sanitizeAnswerText } from '@/lib/utils';
+import { buildApiUrl } from '@/lib/api';
 type Agent = 'scout' | 'profiler';
 type ActionType = 'accept' | 'dismiss' | 'save' | 'ask';
 interface ContextualSuggestion {

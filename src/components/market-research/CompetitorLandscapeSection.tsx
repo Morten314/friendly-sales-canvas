@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import MiniPieChart from '@/components/ui/MiniPieChart';
 import MiniLineChart from '@/components/ui/MiniLineChart';
 import { toUTCTimestamp, isTimestampNewer, getCurrentUTCTimestamp, logTimestampComparison } from '@/lib/timestampUtils';
-import { apiFetchJson } from '@/lib/api';
+import { apiFetchJson, buildApiUrl } from '@/lib/api';
 import { executeWithRateLimit } from '@/lib/rateLimitManager';
 import { useAuth } from '@/contexts/AuthContext';
 import { getUserLocalStorage, setUserLocalStorage } from '@/utils/cacheUtils';
