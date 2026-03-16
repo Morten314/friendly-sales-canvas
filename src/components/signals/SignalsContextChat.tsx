@@ -10,7 +10,7 @@ import { sanitizeAnswerText } from '@/lib/utils';
 import { buildApiUrl } from '@/lib/api';
 
 const signalAction = async (orgId: string, signalId: string, action: 'accept' | 'reject') => {
-  const response = await fetch('/api/signal_action', {
+  const response = await fetch(buildApiUrl('signal_action'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ org_id: orgId, signal_id: signalId, action }),
