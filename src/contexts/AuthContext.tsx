@@ -193,6 +193,7 @@ import {
   createUserWithEmailAndPassword 
 } from 'firebase/auth';
 import { auth } from '../lib/firebase';
+import { buildApiUrl } from '../lib/api';
 
 interface AuthContextType {
   currentUser: User | null;
