@@ -52,7 +52,7 @@ interface SignalCard {
 // API functions
 const generateSignalsBatch = async (userId: string) => {
   try {
-    const response = await fetch('/api/generate-signals-batch', {
+    const response = await fetch(buildApiUrl('generate-signals-batch'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
