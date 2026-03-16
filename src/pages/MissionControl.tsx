@@ -688,7 +688,7 @@ const MissionControl = () => {
       console.log("MissionControl: Verifying data persistence by fetching saved profile...");
       setTimeout(async () => {
         try {
-          const verifyResponse = await fetch(`/api/profile/company?org_id=${orgIdToUse}`, {
+          const verifyResponse = await fetch(`${buildApiUrl('profile/company')}?org_id=${orgIdToUse}`, {
             method: "GET",
             headers: { "Content-Type": "application/json" },
           });
