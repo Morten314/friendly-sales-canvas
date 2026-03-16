@@ -14009,7 +14009,7 @@ const MarketResearch = React.memo(() => {
         {activeTab === "trends" ? (
           <div className="flex-1 min-h-0 flex flex-col overflow-hidden -mx-3 md:-mx-4 lg:-mx-6 w-[calc(100%+1.5rem)] md:w-[calc(100%+2rem)] lg:w-[calc(100%+3rem)] max-w-none">
             {scoutResearchContext ? (
-              <div className="px-3 md:px-4 lg:px-6 py-4 h-full">
+              <div className="px-3 md:px-4 lg:px-6 py-4 h-full flex flex-col min-h-0">
                 <ChatWithScout fullPage researchContext={scoutResearchContext} mode={scoutMode} />
               </div>
             ) : (
