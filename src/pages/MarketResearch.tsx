@@ -3233,6 +3233,7 @@ const MarketResearch = React.memo(() => {
 
 
     setActiveTab(tabValue);
+    if (tabValue !== 'trends') setScoutResearchContext(null);
 
 
 
