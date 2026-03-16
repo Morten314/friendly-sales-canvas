@@ -123,7 +123,7 @@ import { toUTCTimestamp, isTimestampNewer, logTimestampComparison } from '@/lib/
 
 
 
-import { apiFetchJson } from '@/lib/api';
+import { apiFetchJson, buildApiUrl } from '@/lib/api';
 
 import { marketResearchApiCall, logApiCallResult, shouldUseCachedData } from '@/utils/apiUtils';
 
@@ -3813,7 +3813,7 @@ const MarketResearch = React.memo(() => {
 
       
 
-      const response = await fetch(`/api/market-research?_cb=${Date.now()}&_r=${Math.random()}`, {
+      const response = await fetch(`${buildApiUrl('market-research')}?_cb=${Date.now()}&_r=${Math.random()}`, {
 
         method: 'POST',
 
@@ -4445,7 +4445,7 @@ const MarketResearch = React.memo(() => {
 
       try {
         // Include org_id in API call
-        const profileResponse = await fetch(`/api/profile/company?org_id=${orgIdToUse}`, {
+        const profileResponse = await fetch(`${buildApiUrl('profile/company')}?org_id=${orgIdToUse}`, {
 
           method: 'GET',
 
@@ -5150,7 +5150,7 @@ const MarketResearch = React.memo(() => {
           refresh: refresh
         };
 
-        const response = await fetch('/api/market-research', {
+        const response = await fetch(buildApiUrl('market-research'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -5364,7 +5364,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-      const response = await fetch('/api/market-research', {
+      const response = await fetch(buildApiUrl('market-research'), {
 
 
 
@@ -5479,7 +5479,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-              const altResponse = await fetch('/api/market-research', {
+              const altResponse = await fetch(buildApiUrl('market-research'), {
 
 
 
@@ -6158,7 +6158,7 @@ const MarketResearch = React.memo(() => {
       // Note: Removed cache-busting fields (_timestamp, _cache_bust) as backend doesn't accept them
       // The backend expects only: org_id, user_id, component_name, data, refresh
 
-      const response = await fetch('/api/market-research', {
+      const response = await fetch(buildApiUrl('market-research'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -6473,7 +6473,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-      const response = await fetch('/api/market-research', {
+      const response = await fetch(buildApiUrl('market-research'), {
 
 
 
@@ -7111,7 +7111,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-          const response = await fetch('/api/market-research', {
+          const response = await fetch(buildApiUrl('market-research'), {
 
 
 
@@ -7973,7 +7973,7 @@ const MarketResearch = React.memo(() => {
       // Note: Removed cache-busting fields (_timestamp, _cache_bust) as backend doesn't accept them
       // The backend expects only: org_id, user_id, component_name, data, refresh
 
-      const response = await fetch('/api/market-research', {
+      const response = await fetch(buildApiUrl('market-research'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

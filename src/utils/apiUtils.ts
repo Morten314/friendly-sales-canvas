@@ -1,4 +1,5 @@
 // API utility functions for improved error handling and retry logic
+import { buildApiUrl } from '@/lib/api';
 
 interface ApiCallOptions {
   maxRetries?: number;
@@ -37,7 +38,7 @@ export const simpleApiCall = async <T = any>(
     });
 
     // Create fetch promise
-    const fetchPromise = fetch(`/api/${endpoint}`, {
+    const fetchPromise = fetch(buildApiUrl(endpoint), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

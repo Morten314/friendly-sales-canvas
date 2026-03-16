@@ -193,6 +193,7 @@ import {
   createUserWithEmailAndPassword 
 } from 'firebase/auth';
 import { auth } from '../lib/firebase';
+import { buildApiUrl } from '../lib/api';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -256,7 +257,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       // Fetch from API
-      const response = await fetch(`/api/org?user_id=${userId}`, {
+      const response = await fetch(`${buildApiUrl('org')}?user_id=${userId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

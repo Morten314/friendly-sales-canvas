@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import MiniPieChart from '@/components/ui/MiniPieChart';
 import MiniLineChart from '@/components/ui/MiniLineChart';
 import { toUTCTimestamp, isTimestampNewer, getCurrentUTCTimestamp, logTimestampComparison } from '@/lib/timestampUtils';
-import { apiFetchJson } from '@/lib/api';
+import { apiFetchJson, buildApiUrl } from '@/lib/api';
 import { executeWithRateLimit } from '@/lib/rateLimitManager';
 import { useAuth } from '@/contexts/AuthContext';
 import { getUserLocalStorage, setUserLocalStorage } from '@/utils/cacheUtils';
@@ -596,7 +596,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
       
       let response;
       try {
-        response = await fetch(`/api/ask?${queryParams}`, {
+        response = await fetch(`${buildApiUrl('ask')}?${queryParams}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -625,7 +625,7 @@ const CompetitorLandscapeSection: React.FC<CompetitorLandscapeSectionProps> = ({
       let getData = null;
       if (response && response.ok) {
         try {
-          const getResponse = await fetch('/api/market_intelligence', {
+          const getResponse = await fetch(buildApiUrl('market_intelligence'), {
             method: 'GET',
             headers: {
               'Content-Type': 'application/json',

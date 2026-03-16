@@ -688,7 +688,7 @@ const MissionControl = () => {
       console.log("MissionControl: Verifying data persistence by fetching saved profile...");
       setTimeout(async () => {
         try {
-          const verifyResponse = await fetch(`/api/profile/company?org_id=${orgIdToUse}`, {
+          const verifyResponse = await fetch(`${buildApiUrl('profile/company')}?org_id=${orgIdToUse}`, {
             method: "GET",
             headers: { "Content-Type": "application/json" },
           });
@@ -876,7 +876,7 @@ const MissionControl = () => {
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
-          const response = await fetch(`/api/profile/company?org_id=${orgIdToUse}`, {
+          const response = await fetch(`${buildApiUrl('profile/company')}?org_id=${orgIdToUse}`, {
             method: "GET",
             headers: {
               "Content-Type": "application/json",
@@ -2195,7 +2195,7 @@ const MissionControl = () => {
       // First, fetch existing company profile data to preserve it
       let existingCompanyData = {};
       try {
-        const getResponse = await fetch(`/api/profile/company?org_id=${orgIdToUse}`, {
+        const getResponse = await fetch(`${buildApiUrl('profile/company')}?org_id=${orgIdToUse}`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",

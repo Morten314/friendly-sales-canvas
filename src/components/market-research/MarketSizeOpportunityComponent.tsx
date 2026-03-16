@@ -10,6 +10,7 @@ import MiniLineChart from '@/components/ui/MiniLineChart';
 import { useAuth } from '@/contexts/AuthContext';
 import { setUserLocalStorage } from '@/utils/cacheUtils';
 import { useToast } from '@/hooks/use-toast';
+import { buildApiUrl } from '@/lib/api';
 
 // Define the EditRecord interface within this file
 interface EditRecord {
@@ -249,7 +250,7 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
         section: "market_size"
       });
       
-      const response = await fetch(`/api/ask?${queryParams}`, {
+      const response = await fetch(`${buildApiUrl('ask')}?${queryParams}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

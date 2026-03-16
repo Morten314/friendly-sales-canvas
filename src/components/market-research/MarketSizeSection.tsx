@@ -10,7 +10,7 @@ import MiniPieChart from '@/components/ui/MiniPieChart';
 import MiniLineChart from '@/components/ui/MiniLineChart';
 import { EditRecord } from './types';
 import { executeWithRateLimit } from '@/lib/rateLimitManager';
-import { apiFetchJson } from '@/lib/api';
+import { apiFetchJson, buildApiUrl } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { getUserLocalStorage, setUserLocalStorage, removeUserLocalStorage } from '@/utils/cacheUtils';
 
@@ -350,7 +350,7 @@ const MarketSizeSection: React.FC<MarketSizeSectionProps> = ({
         section: "market_size"
       });
       
-      const response = await fetch(`/api/ask?${queryParams}`, {
+      const response = await fetch(`${buildApiUrl('ask')}?${queryParams}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

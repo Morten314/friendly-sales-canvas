@@ -1,5 +1,11 @@
 import { User } from 'firebase/auth';
 
+const getApiBaseUrl = () => {
+  const isDev = import.meta.env.DEV;
+  const isVercel = import.meta.env.VITE_VERCEL || (typeof window !== 'undefined' && window.location.hostname.includes('vercel.app'));
+  return (isDev || isVercel) ? '/api' : 'https://backend-11kr.onrender.com';
+};
+
 interface JWTPayload {
   userId: string;
   email: string;
@@ -29,7 +35,7 @@ class JWTManager {
       
       // In a real implementation, you would send this to your backend
       // which would generate a JWT with tenant context
-      const response = await fetch('/api/auth/token', {
+      const response = await fetch(`${getApiBaseUrl()}/auth/token`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -111,7 +117,7 @@ class JWTManager {
     }
 
     try {
-      const response = await fetch('/api/auth/refresh', {
+      const response = await fetch(`${getApiBaseUrl()}/auth/refresh`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

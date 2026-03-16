@@ -13,6 +13,7 @@ import { Layout } from '@/components/layout/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { sanitizeAnswerText } from '@/lib/utils';
+import { buildApiUrl } from '@/lib/api';
 type Agent = 'scout' | 'profiler';
 type ActionType = 'accept' | 'dismiss' | 'save' | 'ask';
 interface ContextualSuggestion {
@@ -51,7 +52,7 @@ interface SignalCard {
 // API functions
 const generateSignalsBatch = async (userId: string) => {
   try {
-    const response = await fetch('/api/generate-signals-batch', {
+    const response = await fetch(buildApiUrl('generate-signals-batch'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -98,7 +99,7 @@ const generateSignalsBatch = async (userId: string) => {
 
 const signalAsk = async (body: { org_id: string; user_id: string; question: string; history: { user: string; assistant: string }[] }) => {
   try {
-    const response = await fetch('/api/signal_Ask', {
+    const response = await fetch(buildApiUrl('signal_Ask'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -117,7 +118,7 @@ const signalAsk = async (body: { org_id: string; user_id: string; question: stri
 
 const fetchSignals = async (userId: string) => {
   try {
-    const response = await fetch(`/api/fetch-signals?user_id=${userId}&limit=10`);
+    const response = await fetch(`${buildApiUrl('fetch-signals')}?user_id=${userId}&limit=10`);
     
     console.log('Fetch signals response status:', response.status);
     console.log('Fetch signals response headers:', response.headers);
@@ -144,7 +145,7 @@ const fetchSignals = async (userId: string) => {
 
 const signalAction = async (orgId: string, signalId: string, action: 'accept' | 'reject') => {
   try {
-    const response = await fetch('/api/signal_action', {
+    const response = await fetch(buildApiUrl('signal_action'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

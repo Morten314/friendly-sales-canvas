@@ -7,9 +7,10 @@ import { Bot, Send, Loader2, RotateCcw, Lightbulb, ChevronDown, ChevronUp, Thumb
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { sanitizeAnswerText } from '@/lib/utils';
+import { buildApiUrl } from '@/lib/api';
 
 const signalAction = async (orgId: string, signalId: string, action: 'accept' | 'reject') => {
-  const response = await fetch('/api/signal_action', {
+  const response = await fetch(buildApiUrl('signal_action'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ org_id: orgId, signal_id: signalId, action }),
@@ -27,7 +28,7 @@ const signalAsk = async (body: {
   question: string;
   history: { user: string; assistant: string }[];
 }) => {
-  const response = await fetch('/api/signal_Ask', {
+  const response = await fetch(buildApiUrl('signal_Ask'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
