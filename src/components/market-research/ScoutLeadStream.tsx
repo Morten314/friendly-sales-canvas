@@ -102,7 +102,7 @@ interface ScoutLeadStreamProps {
   onChatWithScout?: (leads: ScoutLead[]) => void;
 }
 
-const ScoutLeadStream = ({ opportunityFilter, onClearOpportunityFilter, onResearchWithScout }: ScoutLeadStreamProps) => {
+const ScoutLeadStream = ({ opportunityFilter, onClearOpportunityFilter, onResearchWithScout, onChatWithScout }: ScoutLeadStreamProps) => {
   const [search, setSearch] = useState("");
   const [icpFilter, setIcpFilter] = useState("All");
   const [scoreFilter, setScoreFilter] = useState("All");
