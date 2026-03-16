@@ -2596,25 +2596,19 @@ const MarketResearch = React.memo(() => {
 
   // ConsumerTrends (Your Lead Stream) filter state - persist across tab switches
 
-
-
   const [leadStreamFilters, setLeadStreamFilters] = useState({
-
-
-
     selectedIndustry: "all",
-
-
-
     selectedSize: "all", 
-
-
-
     selectedRegion: "all"
-
-
-
   });
+
+  // Opportunity filter from intelligence sections
+  const [opportunityFilter, setOpportunityFilter] = useState<string | null>(null);
+
+  const handleViewOpportunityLeads = (sectionContext: string) => {
+    setOpportunityFilter(sectionContext);
+    setActiveTab('analysis');
+  };
 
 
 
