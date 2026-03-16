@@ -198,4 +198,7 @@ export interface MarketIntelligenceTabProps {
   onExportPDF: () => void;
   onSaveToWorkspace: () => void;
   onGenerateShareableLink: () => void;
+  
+  // Opportunity matching - navigate to Lead Stream filtered by section
+  onViewOpportunityLeads?: (sectionContext: string) => void;
 }

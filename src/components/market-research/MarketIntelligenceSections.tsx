@@ -392,6 +392,14 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
           </div>
         )}
       </div>
+      <OpportunityMatchCard
+        sectionName="Market Entry"
+        opportunityPattern={opportunityMatches['market-entry'].pattern}
+        crmAccountsCount={opportunityMatches['market-entry'].crm}
+        uploadedAccountsCount={opportunityMatches['market-entry'].uploaded}
+        totalLeadsCount={opportunityMatches['market-entry'].total}
+        onViewLeads={() => handleViewLeads('market-entry')}
+      />
     </>
   );
 };
