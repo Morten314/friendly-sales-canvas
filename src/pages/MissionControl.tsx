@@ -2547,7 +2547,7 @@ const MissionControl = () => {
             if (statusResult.status === 'processing') {
               uploadStatus = 'processing';
             } else if (statusResult.status === 'failed') {
-              uploadStatus = 'failed';
+              uploadStatus = 'error';
             }
           } catch (statusError) {
             console.warn("Could not check document status:", statusError);
