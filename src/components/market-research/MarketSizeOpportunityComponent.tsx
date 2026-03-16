@@ -10,6 +10,7 @@ import MiniLineChart from '@/components/ui/MiniLineChart';
 import { useAuth } from '@/contexts/AuthContext';
 import { setUserLocalStorage } from '@/utils/cacheUtils';
 import { useToast } from '@/hooks/use-toast';
+import { buildApiUrl } from '@/lib/api';
 
 // Define the EditRecord interface within this file
 interface EditRecord {
