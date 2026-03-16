@@ -239,7 +239,7 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
   const hasContext = researchContext && researchContext.leads.length > 0;
 
   return (
-    <div className={`bg-background border rounded-lg overflow-hidden flex flex-col ${fullPage ? 'h-[calc(100vh-220px)]' : 'h-[80vh]'}`}>
+    <div className={`bg-background border rounded-lg overflow-hidden flex flex-col ${fullPage ? 'flex-1 min-h-0' : 'h-[80vh]'}`}>
       {/* Header */}
       <div className="bg-muted/30 p-3 border-b flex items-center gap-2 shrink-0">
         <div className="p-1.5 rounded-full bg-primary/10">
