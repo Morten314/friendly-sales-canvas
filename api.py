@@ -1262,6 +1262,7 @@ async def generate_signals_batch(request: MarketRequest):
             try:
                 from services import fetch_leads_for_org
                 leads_data = fetch_leads_for_org(request.org_id, limit=100)
+                logger.info(f"[Batch Signals] Fetched {len(leads_data)} leads for org_id: {request.org_id}")
                 if isinstance(pre_data, dict):
                     pre_data["leads_data"] = leads_data
                 else:
@@ -1275,6 +1276,8 @@ async def generate_signals_batch(request: MarketRequest):
                         pre_data["company_profile"] = request.data
             except Exception as e:
                 logger.warning(f"Could not fetch leads: {e}")
+        else:
+            logger.warning(f"[Batch Signals] No org_id provided, skipping leads fetch for user_id: {request.user_id}")
         
         # For profiler agent, also include ICP data if available - filter by user_id
         profiler_pre_data = pre_data.copy() if isinstance(pre_data, dict) else pre_data

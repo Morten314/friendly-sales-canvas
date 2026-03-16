@@ -1767,38 +1767,38 @@ def search_signals_scout(pre_data) -> dict:
     else:
         company_profile_json = str(pre_data)
     
-    # Format leads data for prompt
+    # Format leads data for prompt - pass all data without field name assumptions
     leads_text = ""
-    if leads_data:
-        # Extract key info from leads: companies, industries, regions
-        companies = []
-        industries = set()
-        regions = set()
-        for lead in leads_data[:50]:  # Limit to 50 leads
-            if isinstance(lead, dict):
-                if lead.get("company"):
-                    companies.append(lead.get("company"))
-                if lead.get("industry"):
-                    industries.add(lead.get("industry"))
-                if lead.get("region"):
-                    regions.add(lead.get("region"))
-        
-        if companies or industries or regions:
-            leads_summary = {
-                "sample_companies": list(set(companies))[:20],  # Top 20 unique companies
-                "industries": list(industries),
-                "regions": list(regions),
-                "total_leads": len(leads_data)
-            }
+    if leads_data and len(leads_data) > 0:
+        print(f"[DEBUG Scout] Processing {len(leads_data)} leads for signal generation")
+        # Convert all leads to JSON string - no field name assumptions, pass everything
+        try:
+            # Limit to 50 leads to avoid prompt size issues, but include all fields
+            leads_for_context = leads_data[:50]
+            leads_json = json.dumps(leads_for_context, indent=2, default=str)
+            
             leads_text = f"""
-STEP 1.2 - LEADS DATA (Use this to prioritize signal relevance):
-Your organization has {leads_summary['total_leads']} active leads. Use this information to prioritize signals that are relevant to your actual lead pipeline:
+STEP 1.2 - LEADS DATA (CRITICAL - Use this to prioritize signal relevance):
+Your organization has {len(leads_data)} active leads in your pipeline. Below is the complete lead data with all available fields. You MUST analyze this data and use it when generating signals.
 
-Sample Companies in Pipeline: {', '.join(leads_summary['sample_companies'][:10])}
-Industries: {', '.join(leads_summary['industries'][:10])}
-Regions: {', '.join(leads_summary['regions'][:10])}
+Complete Leads Data (showing up to 50 most recent leads):
+{leads_json}
 
-IMPORTANT: When generating signals, prioritize signals that relate to these companies, industries, or regions. This will make the signals more actionable for your sales team.
+CRITICAL INSTRUCTIONS:
+- Analyze ALL fields in the leads data above - do not assume any specific field names
+- Extract any company names, industries, regions, technologies, or other relevant information from whatever fields exist
+- Prioritize signals that relate to companies, industries, regions, or any other attributes found in your leads pipeline
+- If a signal mentions a company or organization, check if it matches any entity in your leads data
+- Focus on signals that would be relevant to your actual sales pipeline based on the lead data structure
+- Use the lead data to understand your target market, customer segments, and sales priorities
+- This will make the signals more actionable for your sales team
+"""
+        except Exception as e:
+            print(f"[ERROR] Failed to format leads data: {e}")
+            # Fallback: just mention leads exist
+            leads_text = f"""
+STEP 1.2 - LEADS DATA:
+Your organization has {len(leads_data)} active leads in your pipeline. Use this information to prioritize signals relevant to your actual sales pipeline.
 """
     
     # Format existing headlines for prompt
@@ -1832,30 +1832,31 @@ You MUST use the WebSearch tool to find a REAL, RECENT, and ACTIONABLE market si
 1. Market Opportunity Signals:
    - Search for recent market growth, trends, or opportunities in the company's industry
    - Find market size changes, adoption rates, or emerging segments
-   - Example searches: "[industry] market trends [regions] 2026 2027"
-   - Example searches: "[industry] growth opportunities 2026 2027"
+   - Example searches: "[industry] market trends [regions] 2026"
+   - Example searches: "[industry] growth opportunities 2026"
 
 2. Competitor Activity Signals:
    - Search for competitor funding rounds, product launches, or strategic moves
    - Find market share changes or competitive landscape shifts
-   - Example searches: "[industry] competitor funding 2026 2027"
-   - Example searches: "[industry] competitor product launch 2026 2027"
+   - Example searches: "[industry] competitor funding 2026"
+   - Example searches: "[industry] competitor product launch 2026"
 
 3. Industry Trend Signals:
    - Search for technology adoption, regulatory changes, or industry shifts
    - Find emerging trends that could impact sales strategy
-   - Example searches: "[industry] technology adoption 2026 2027"
-   - Example searches: "[industry] regulatory changes 2026 2027"
+   - Example searches: "[industry] technology adoption 2026"
+   - Example searches: "[industry] regulatory changes 2026"
 
 4. Market Dynamics Signals:
    - Search for buying behavior changes, market disruptions, or new opportunities
    - Find signals that indicate market readiness or buying intent
-   - Example searches: "[industry] buying trends [regions] 2026 2027"
-   - Example searches: "[industry] market disruption 2026 2027"
+   - Example searches: "[industry] buying trends [regions] 2026"
+   - Example searches: "[industry] market disruption 2026"
 
 IMPORTANT RESEARCH GUIDELINES:
 - Perform at least 5-7 WebSearch queries to find the BEST signal
-- Focus on RECENT signals from 2026-2027 (within last 1-3 months when possible)
+- Focus on RECENT signals from 2026 and recent past (within last 1-3 months when possible)
+- CURRENT YEAR IS 2026 - Do NOT use future dates like 2027 in signals. Use actual current dates from 2026 or recent past dates.
 - The signal must be REAL and ACTIONABLE - not generic
 - Extract industry and target markets from the company profile
 - Cross-reference multiple sources to verify signal accuracy
@@ -1874,7 +1875,7 @@ Return your findings in the following exact JSON format (use exact keys as shown
   "sourceLabel": "[Source type: Industry report, News article, Research report, Funding news, etc.]",
   "source": [
     {{
-      "citation": "[Publication name - Article title - Date if available, e.g., 'TechCrunch - AI Market Growth Report 2026 - January 15, 2026']",
+      "citation": "[Publication name - Article title - Date if available, e.g., 'TechCrunch - AI Market Growth Report - January 15, 2026']. Use actual dates from 2026 or recent past, NOT future dates.",
       "url": "[First source URL where this signal was found]"
     }},
     {{
@@ -1913,7 +1914,8 @@ Return your findings in the following exact JSON format (use exact keys as shown
 - sourceUrl must be a REAL, accessible URL
 - sourceLabel should accurately describe the source type
 - source must be an array with 1-2 objects, each containing "citation" and "url" fields
-- citation should include publication name, article title, and date if available (e.g., "TechCrunch - AI Market Growth Report 2026 - January 15, 2026")
+- citation should include publication name, article title, and date if available (e.g., "TechCrunch - AI Market Growth Report - January 15, 2026")
+- IMPORTANT: Use actual dates from 2026 or recent past. Do NOT use future dates like 2027. Current year is 2026.
 - url must be a REAL, accessible URL
 - If only one source found, include one object in the array; if two sources found, include both
 - nextBestMoves should be actionable questions related to the specific signal
@@ -2075,43 +2077,38 @@ def search_signals_profiler(pre_data) -> dict:
             company_profile = {}
             icp_data = {}
     
-    # Format leads data for prompt
+    # Format leads data for prompt - pass all data without field name assumptions
     leads_text = ""
-    if leads_data:
-        # Extract key info from leads: companies, industries, regions, ICP segments
-        companies = []
-        industries = set()
-        regions = set()
-        company_sizes = set()
-        for lead in leads_data[:50]:  # Limit to 50 leads
-            if isinstance(lead, dict):
-                if lead.get("company"):
-                    companies.append(lead.get("company"))
-                if lead.get("industry"):
-                    industries.add(lead.get("industry"))
-                if lead.get("region"):
-                    regions.add(lead.get("region"))
-                if lead.get("size") or lead.get("companySize"):
-                    company_sizes.add(lead.get("size") or lead.get("companySize"))
-        
-        if companies or industries or regions or company_sizes:
-            leads_summary = {
-                "sample_companies": list(set(companies))[:20],
-                "industries": list(industries),
-                "regions": list(regions),
-                "company_sizes": list(company_sizes),
-                "total_leads": len(leads_data)
-            }
+    if leads_data and len(leads_data) > 0:
+        print(f"[DEBUG Profiler] Processing {len(leads_data)} leads for signal generation")
+        # Convert all leads to JSON string - no field name assumptions, pass everything
+        try:
+            # Limit to 50 leads to avoid prompt size issues, but include all fields
+            leads_for_context = leads_data[:50]
+            leads_json = json.dumps(leads_for_context, indent=2, default=str)
+            
             leads_text = f"""
-STEP 1.2 - LEADS DATA (Use this to prioritize ICP signal relevance):
-Your organization has {leads_summary['total_leads']} active leads. Use this information to prioritize ICP signals that match your actual lead pipeline:
+STEP 1.2 - LEADS DATA (CRITICAL - Use this to prioritize ICP signal relevance):
+Your organization has {len(leads_data)} active leads in your pipeline. Below is the complete lead data with all available fields. You MUST analyze this data and use it when generating ICP signals.
 
-Sample Companies: {', '.join(leads_summary['sample_companies'][:10])}
-Industries: {', '.join(leads_summary['industries'][:10])}
-Regions: {', '.join(leads_summary['regions'][:10])}
-Company Sizes: {', '.join(leads_summary['company_sizes'][:10])}
+Complete Leads Data (showing up to 50 most recent leads):
+{leads_json}
 
-IMPORTANT: When generating ICP signals, prioritize signals that relate to these companies, industries, regions, or company sizes. This will make the signals more actionable for your sales/profiling team.
+CRITICAL INSTRUCTIONS:
+- Analyze ALL fields in the leads data above - do not assume any specific field names
+- Extract any company names, industries, regions, company sizes, technologies, buyer personas, or other relevant ICP information from whatever fields exist
+- Prioritize ICP signals that relate to companies, industries, regions, company sizes, or any other attributes found in your leads pipeline
+- If a signal mentions a company or organization, check if it matches any entity in your leads data
+- Focus on ICP signals that would be relevant to your actual sales/profiling pipeline based on the lead data structure
+- Use the lead data to understand your target ICP segments, customer profiles, and sales priorities
+- This will make the ICP signals more actionable for your sales/profiling team
+"""
+        except Exception as e:
+            print(f"[ERROR] Failed to format leads data: {e}")
+            # Fallback: just mention leads exist
+            leads_text = f"""
+STEP 1.2 - LEADS DATA:
+Your organization has {len(leads_data)} active leads in your pipeline. Use this information to prioritize ICP signals relevant to your actual sales pipeline.
 """
     
     # Convert to JSON string for prompt
@@ -2152,36 +2149,37 @@ You MUST use the WebSearch tool to find a REAL, RECENT, and ACTIONABLE ICP/custo
 1. ICP Buying Behavior Signals:
    - Search for buying trends, purchase patterns, or buying signals in the company's ICP segments
    - Find customer acquisition trends or buying committee changes
-   - Example searches: "[industry] [ICP segment] buying trends 2026 2027"
-   - Example searches: "[industry] customer acquisition [ICP segment] 2026 2027"
+   - Example searches: "[industry] [ICP segment] buying trends 2026"
+   - Example searches: "[industry] customer acquisition [ICP segment] 2026"
 
 2. Customer Spending Signals:
    - Search for tech spending, budget allocation, or investment trends in target ICP segments
    - Find customer spending patterns or budget increases
-   - Example searches: "[industry] tech spending [company size] 2026 2027"
-   - Example searches: "[industry] budget allocation [ICP segment] 2026 2027"
+   - Example searches: "[industry] tech spending [company size] 2026"
+   - Example searches: "[industry] budget allocation [ICP segment] 2026"
 
 3. ICP Market Dynamics Signals:
    - Search for ICP segment growth, market expansion, or customer behavior changes
    - Find signals about target customer needs or pain points
-   - Example searches: "[industry] [ICP segment] market trends 2026 2027"
-   - Example searches: "[industry] customer needs [ICP segment] 2026 2027"
+   - Example searches: "[industry] [ICP segment] market trends 2026"
+   - Example searches: "[industry] customer needs [ICP segment] 2026"
 
 4. Customer Success Signals:
    - Search for customer success metrics, retention trends, or customer satisfaction in ICP segments
    - Find signals about customer lifecycle or engagement patterns
-   - Example searches: "[industry] customer success [ICP segment] 2026 2027"
-   - Example searches: "[industry] customer retention [company size] 2026 2027"
+   - Example searches: "[industry] customer success [ICP segment] 2026"
+   - Example searches: "[industry] customer retention [company size] 2026"
 
 5. Buyer Persona Signals:
    - Search for decision maker trends, buying committee changes, or buyer behavior in target segments
    - Find signals about how target customers make purchasing decisions
-   - Example searches: "[industry] buying committee [ICP segment] 2026 2027"
-   - Example searches: "[industry] decision maker trends 2026 2027"
+   - Example searches: "[industry] buying committee [ICP segment] 2026"
+   - Example searches: "[industry] decision maker trends 2026"
 
 IMPORTANT RESEARCH GUIDELINES:
 - Perform at least 5-7 WebSearch queries to find the BEST signal
-- Focus on RECENT signals from 2026-2027 (within last 1-3 months when possible)
+- Focus on RECENT signals from 2026 and recent past (within last 1-3 months when possible)
+- CURRENT YEAR IS 2026 - Do NOT use future dates like 2027 in signals. Use actual current dates from 2026 or recent past dates.
 - The signal must be REAL and ACTIONABLE - not generic
 - Extract industry, ICP segments, and target markets from the provided data
 - Cross-reference multiple sources to verify signal accuracy
@@ -2201,7 +2199,7 @@ Return your findings in the following exact JSON format (use exact keys as shown
   "sourceLabel": "[Source type: Market research, Customer research, Sales report, ICP analysis, etc.]",
   "source": [
     {{
-      "citation": "[Publication name - Article title - Date if available, e.g., 'Market Research Report - Customer Buying Trends 2026 - January 15, 2026']",
+      "citation": "[Publication name - Article title - Date if available, e.g., 'Market Research Report - Customer Buying Trends - January 15, 2026']. Use actual dates from 2026 or recent past, NOT future dates.",
       "url": "[First source URL where this signal was found]"
     }},
     {{
@@ -2240,7 +2238,8 @@ Return your findings in the following exact JSON format (use exact keys as shown
 - sourceUrl must be a REAL, accessible URL
 - sourceLabel should accurately describe the source type
 - source must be an array with 1-2 objects, each containing "citation" and "url" fields
-- citation should include publication name, article title, and date if available (e.g., "Market Research Report - Customer Buying Trends 2026 - January 15, 2026")
+- citation should include publication name, article title, and date if available (e.g., "Market Research Report - Customer Buying Trends - January 15, 2026")
+- IMPORTANT: Use actual dates from 2026 or recent past. Do NOT use future dates like 2027. Current year is 2026.
 - url must be a REAL, accessible URL
 - If only one source found, include one object in the array; if two sources found, include both
 - nextBestMoves should be actionable questions related to the specific ICP signal
