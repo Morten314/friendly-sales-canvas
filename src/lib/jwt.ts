@@ -117,7 +117,7 @@ class JWTManager {
     }
 
     try {
-      const response = await fetch('/api/auth/refresh', {
+      const response = await fetch(`${getApiBaseUrl()}/auth/refresh`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
