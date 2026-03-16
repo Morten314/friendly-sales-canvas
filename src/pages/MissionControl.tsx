@@ -743,6 +743,12 @@ const MissionControl = () => {
             dealSize: localProfile.typical_deal_size || localProfile.dealSize || "",
             companyUrl: localProfile.company_url || localProfile.companyUrl || "",
             keyBuyerPersona: localProfile.key_buyer_persona || localProfile.keyBuyerPersona || "",
+            goals: localProfile.goals || "",
+            painPoints: localProfile.painPoints || localProfile.pain_points || "",
+            targetSegments: localProfile.targetSegments || localProfile.target_segments || "",
+            excludeSegments: localProfile.excludeSegments || localProfile.exclude_segments || "",
+            compliance: localProfile.compliance || "",
+            constraints: localProfile.constraints || "",
           };
           setCompanyProfile(profileData);
           if (localProfile.company_name || localProfile.companyName) {
