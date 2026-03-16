@@ -28,9 +28,12 @@ interface ScoutResearchContext {
   icp?: string;
 }
 
+type ScoutMode = "selected-leads" | "full-list";
+
 interface ChatWithScoutProps {
   fullPage?: boolean;
   researchContext?: ScoutResearchContext | null;
+  mode?: ScoutMode;
 }
 
 // ─── Agent Step Indicators ───────────────────────────────────────────────────
