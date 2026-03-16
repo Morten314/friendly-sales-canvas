@@ -1148,7 +1148,7 @@ const MarketResearch = React.memo(() => {
   // Track if retries are in progress to prevent premature loading screen dismissal
   const isRetryingRef = useRef<boolean>(false);
   
-  const [globalTimeoutId, setGlobalTimeoutId] = useState<NodeJS.Timeout | null>(null);
+  const [globalTimeoutId, setGlobalTimeoutId] = useState<ReturnType<typeof setTimeout> | null>(null);
 
 
 

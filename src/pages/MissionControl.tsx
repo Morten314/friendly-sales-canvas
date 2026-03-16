@@ -2556,7 +2556,7 @@ const MissionControl = () => {
         }
       } catch (error) {
         console.error("File upload failed:", error);
-        uploadStatus = 'failed';
+        uploadStatus = 'error';
         toast({
           title: "Upload failed",
           description: error instanceof Error ? error.message : "Failed to upload file. Please try again.",

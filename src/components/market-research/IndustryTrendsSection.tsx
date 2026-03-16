@@ -269,7 +269,7 @@ const IndustryTrendsSection: React.FC<IndustryTrendsSectionProps> = ({
         Security: ''
       }
     };
-    setEditVisualCharts(visualChartsToUse);
+    setEditVisualCharts(visualChartsToUse as { aiAdoptionTrends: string[]; technologyBudgetAllocation: { "AI/ML": string; Cloud: string; Security: string } });
     
     onIndustryTrendsToggleEdit();
   };
