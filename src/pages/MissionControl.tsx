@@ -876,7 +876,7 @@ const MissionControl = () => {
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
-          const response = await fetch(`/api/profile/company?org_id=${orgIdToUse}`, {
+          const response = await fetch(`${buildApiUrl('profile/company')}?org_id=${orgIdToUse}`, {
             method: "GET",
             headers: {
               "Content-Type": "application/json",
