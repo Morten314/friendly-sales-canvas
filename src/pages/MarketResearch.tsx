@@ -7973,7 +7973,7 @@ const MarketResearch = React.memo(() => {
       // Note: Removed cache-busting fields (_timestamp, _cache_bust) as backend doesn't accept them
       // The backend expects only: org_id, user_id, component_name, data, refresh
 
-      const response = await fetch('/api/market-research', {
+      const response = await fetch(buildApiUrl('market-research'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
