@@ -128,9 +128,20 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
   const [agentStep, setAgentStep] = useState(-1);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const primaryActions = mode === "full-list" ? listPrimaryActions : leadPrimaryActions;
+  const secondaryActions = mode === "full-list" ? listSecondaryActions : leadSecondaryActions;
+
   // Build initial message based on context
   useEffect(() => {
-    if (researchContext && researchContext.leads.length > 0) {
+    if (mode === "full-list" && researchContext && researchContext.leads.length > 0) {
+      const leadCount = researchContext.leads.length;
+      const icpText = researchContext.icp ? `\nICP: ${researchContext.icp}` : "";
+      setMessages([{
+        role: "assistant",
+        content: `You have ${leadCount} leads in your prospect list.${icpText}\n\nI can analyze your full list, prioritize accounts, build outreach sequences, and more. Choose an action above or ask me anything.`,
+        timestamp: new Date().toLocaleTimeString(),
+      }]);
+    } else if (researchContext && researchContext.leads.length > 0) {
       const leadCount = researchContext.leads.length;
       const leadNames = researchContext.leads.slice(0, 3).map(l => `${l.name} (${l.company})`).join(", ");
       const moreText = leadCount > 3 ? ` and ${leadCount - 3} more` : "";
@@ -149,7 +160,7 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
         timestamp: new Date().toLocaleTimeString(),
       }]);
     }
-  }, [researchContext]);
+  }, [researchContext, mode]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
