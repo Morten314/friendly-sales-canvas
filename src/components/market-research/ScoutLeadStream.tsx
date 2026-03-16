@@ -169,13 +169,21 @@ const ScoutLeadStream = ({ opportunityFilter, onClearOpportunityFilter, onResear
             <span className="text-xs font-medium text-foreground">{filtered.length} Leads</span>
             <span className="text-xs text-primary">Scout Insights Available</span>
           </div>
-          <Button
-            size="sm"
-            className="gap-1.5 text-xs"
-            onClick={() => onChatWithScout?.(filtered)}
-          >
-            <MessageSquare className="h-3.5 w-3.5" /> Chat with Scout
-          </Button>
+          <TooltipProvider delayDuration={200}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 w-8 p-0"
+                  onClick={() => onChatWithScout?.(filtered)}
+                >
+                  <Bot className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent className="text-xs">Chat with Scout Agent</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <Button variant="outline" size="sm" className="gap-1.5 text-xs">
             <RefreshCw className="h-3.5 w-3.5" /> Refresh
           </Button>
