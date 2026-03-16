@@ -250,7 +250,7 @@ const MarketSizeOpportunityComponent: React.FC<MarketSizeOpportunityComponentPro
         section: "market_size"
       });
       
-      const response = await fetch(`/api/ask?${queryParams}`, {
+      const response = await fetch(`${buildApiUrl('ask')}?${queryParams}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

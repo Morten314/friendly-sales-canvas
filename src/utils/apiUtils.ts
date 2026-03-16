@@ -38,7 +38,7 @@ export const simpleApiCall = async <T = any>(
     });
 
     // Create fetch promise
-    const fetchPromise = fetch(`/api/${endpoint}`, {
+    const fetchPromise = fetch(buildApiUrl(endpoint), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
