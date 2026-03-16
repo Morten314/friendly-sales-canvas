@@ -121,7 +121,7 @@ const cleanResponseContent = (content: string): string => {
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 
-export function ChatWithScout({ fullPage = false, researchContext }: ChatWithScoutProps) {
+export function ChatWithScout({ fullPage = false, researchContext, mode = "selected-leads" }: ChatWithScoutProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
