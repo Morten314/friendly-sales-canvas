@@ -549,25 +549,6 @@ const getContextualScoutMessage = () => {
     ];
   };
 
-  const getScoutTitle = () => {
-    switch (context) {
-      case 'lead-stream':
-        return 'Scout — Lead Stream';
-      case 'general':
-        return 'Scout — Explore';
-      case 'competitor-landscape':
-        return 'Scout — Competitor Landscape';
-      case 'industry-trends':
-        return 'Scout — Industry Trends';
-      case 'regulatory-compliance':
-        return 'Scout — Regulatory & Compliance Highlights';
-      case 'market-entry':
-        return 'Scout — Market Entry & Growth Strategy';
-      default:
-        return 'Scout — Market Size & Opportunity';
-    }
-  };
-
   // Auto-scroll to top when chat panel opens (only when showScoutChat becomes true)
   useEffect(() => {
     if (!showScoutChat) return;
@@ -676,24 +657,13 @@ const getContextualScoutMessage = () => {
 
   return (
     <div className="w-full bg-white rounded-lg border border-gray-200 p-6 transition-all duration-500 animate-slide-in-right h-[400px] flex flex-col">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-green-500 rounded-full flex items-center justify-center shadow-lg">
-              <Bot className="h-6 w-6 text-white" />
-            </div>
-            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-400/30 to-green-400/30 animate-pulse"></div>
-          </div>
-          <h3 className="text-lg font-semibold text-gray-900">
-            {getScoutTitle()}
-          </h3>
-        </div>
-        {!hideCloseButton && (
+      {!hideCloseButton && (
+        <div className="flex items-center justify-end mb-2">
           <Button variant="ghost" size="sm" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
-        )}
-      </div>
+        </div>
+      )}
 
       <div ref={chatContainerRef} className="space-y-4 mb-4 flex-1 overflow-y-auto">
         <div className="bg-gradient-to-r from-blue-50 to-green-50 p-4 rounded-lg border border-blue-200">

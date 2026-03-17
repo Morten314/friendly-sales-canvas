@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Bot, Send, Loader2, RotateCcw, Lightbulb, ChevronDown, ChevronUp, ThumbsUp, ThumbsDown, X } from 'lucide-react';
+import { Send, Loader2, RotateCcw, Lightbulb, ChevronDown, ChevronUp, ThumbsUp, ThumbsDown, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { sanitizeAnswerText } from '@/lib/utils';
@@ -246,72 +246,59 @@ export const SignalsContextChat = ({ context, onClearContext, onClose, initialMe
 
   return (
     <Card className="flex-1 min-h-0 flex flex-col shadow-sm border-0 overflow-hidden">
-      <CardHeader className={`pb-4 border-b bg-gradient-to-r ${isScout ? 'from-blue-50/80 to-transparent' : 'from-purple-50/80 to-transparent'}`}>
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg font-semibold flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-sm ${isScout ? 'bg-blue-600' : 'bg-purple-600'}`}>
-              <Bot className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <span>Chat with {agentName}</span>
-              <p className="text-sm font-normal text-muted-foreground mt-0.5">
-                Context from Signals · Ask follow-up questions
-              </p>
-            </div>
-          </CardTitle>
-          <div className="flex items-center gap-1">
+      <CardHeader className={`py-1.5 px-3 border-b bg-gradient-to-r ${isScout ? 'from-blue-50/80 to-transparent' : 'from-purple-50/80 to-transparent'}`}>
+        <div className="flex items-center justify-end gap-1">
             <Button variant="ghost" size="sm" onClick={handleReset} className="text-muted-foreground hover:text-foreground" title="Reset conversation">
               <RotateCcw className="h-4 w-4" />
             </Button>
-            {onClose && (
-              <Button variant="ghost" size="sm" onClick={onClose} className="text-muted-foreground hover:text-foreground" title="Close chat">
-                <X className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
+          {onClose && (
+            <Button variant="ghost" size="sm" onClick={onClose} className="text-muted-foreground hover:text-foreground" title="Close chat">
+              <X className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </CardHeader>
-      <CardContent className="flex-1 flex flex-col min-h-0 pt-4 gap-3 overflow-hidden">
+      <CardContent className="flex-1 flex flex-col min-h-0 pt-2 gap-2 overflow-hidden">
         {/* Context summary - collapsible to save space */}
         {(context.signalHeading ?? context.recommendation ?? context.recommendations?.[0]) || context.prompt || displayAnswer ? (
-          <div className={`rounded-xl border overflow-hidden shrink-0 ${isScout ? 'border-blue-100' : 'border-purple-100'}`}>
+          <div className={`rounded-lg border overflow-hidden shrink-0 flex flex-col ${isContextExpanded ? 'min-h-[320px] max-h-[55vh]' : ''} ${isScout ? 'border-blue-100' : 'border-purple-100'}`}>
             <button
               type="button"
               onClick={() => setIsContextExpanded((v) => !v)}
-              className={`w-full flex items-center justify-between gap-2 px-4 py-2.5 pr-3 text-left hover:bg-muted/30 transition-colors ${isScout ? 'bg-blue-50/50' : 'bg-purple-50/50'}`}
+              className={`w-full flex items-center justify-between gap-2 px-2.5 py-1.5 pr-2 text-left hover:bg-muted/30 transition-colors shrink-0 ${isScout ? 'bg-blue-50/50' : 'bg-purple-50/50'}`}
             >
-              <div className="flex items-center gap-2 min-w-0 flex-1">
-                <Lightbulb className={`h-4 w-4 shrink-0 ${isScout ? 'text-blue-600' : 'text-purple-600'}`} />
+              <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                <Lightbulb className={`h-3.5 w-3.5 shrink-0 ${isScout ? 'text-blue-600' : 'text-purple-600'}`} />
                 <span className="text-xs font-medium text-muted-foreground break-words text-left [overflow-wrap:anywhere] flex-1 min-w-0">
                   {isContextExpanded ? 'Hide context' : (context.signalHeading ?? context.recommendation ?? context.recommendations?.[0] ?? 'Context')}
                 </span>
               </div>
-              {isContextExpanded ? <ChevronUp className="h-4 w-4 shrink-0" /> : <ChevronDown className="h-4 w-4 shrink-0" />}
+              {isContextExpanded ? <ChevronUp className="h-3.5 w-3.5 shrink-0" /> : <ChevronDown className="h-3.5 w-3.5 shrink-0" />}
             </button>
             {isContextExpanded && (
-              <div className="px-4 pb-4 pt-1 space-y-2">
+              <div className="flex flex-col min-h-0 overflow-hidden px-2 pb-2 pt-0.5 flex-1">
                 {context.signalHeading && (
-                  <div className="p-3 rounded-lg bg-white/80">
-                    <p className="text-xs font-medium text-muted-foreground mb-1">Signal</p>
-                    <p className="text-sm font-bold text-foreground leading-relaxed break-words [overflow-wrap:anywhere]">{context.signalHeading}</p>
+                  <div className="py-1.5 px-2 rounded bg-white/80 shrink-0">
+                    <p className="text-[10px] font-medium text-muted-foreground mb-0.5">Signal</p>
+                    <p className="text-xs font-bold text-foreground leading-snug break-words [overflow-wrap:anywhere]">{context.signalHeading}</p>
                   </div>
                 )}
                 {(context.recommendation ?? (context.recommendations?.length ? context.recommendations[0] : '')) && (
-                  <div className="p-3 rounded-lg bg-white/80">
-                    <p className="text-xs font-medium text-muted-foreground mb-1">Recommendation</p>
-                    <p className="text-sm text-foreground leading-relaxed break-words [overflow-wrap:anywhere]">{context.recommendation ?? context.recommendations?.[0]}</p>
+                  <div className="py-1.5 px-2 rounded bg-white/80 shrink-0">
+                    <p className="text-[10px] font-medium text-muted-foreground mb-0.5">Recommendation</p>
+                    <p className="text-xs text-foreground leading-snug break-words [overflow-wrap:anywhere]">{context.recommendation ?? context.recommendations?.[0]}</p>
                   </div>
                 )}
                 {(context.prompt || displayAnswer) && (
-                  <div className="p-3 rounded-lg bg-white/80">
-                    <p className="text-xs font-medium text-muted-foreground mb-1">Answer</p>
+                  <div className="flex-1 min-h-0 flex flex-col rounded bg-white/80 overflow-hidden mt-1">
+                    <p className="text-[10px] font-medium text-muted-foreground mb-0.5 px-2 pt-1 shrink-0">Answer</p>
                     {isFetchingAnswer ? (
-                      <div className="flex items-center gap-2 py-4 text-muted-foreground">
+                      <div className="flex items-center gap-2 py-3 text-muted-foreground shrink-0">
                         <Loader2 className="h-4 w-4 animate-spin" />
                         <span className="text-sm">Loading answer...</span>
                       </div>
                     ) : (
-                      <div className="max-h-96 overflow-y-auto pr-1">
+                      <div className="flex-1 min-h-[200px] overflow-y-auto px-2 pb-2 pr-1">
                         <p className="text-sm text-foreground/90 leading-relaxed whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{sanitizeAnswerText(displayAnswer || context.prompt)}</p>
                       </div>
                     )}
@@ -323,9 +310,9 @@ export const SignalsContextChat = ({ context, onClearContext, onClose, initialMe
         ) : null}
 
         {/* Chat messages */}
-        <div className="flex-1 overflow-y-auto space-y-4 min-h-[140px] pr-4">
+        <div className="flex-1 overflow-y-auto space-y-3 min-h-[100px] pr-2">
           {messages.length === 0 && (
-            <div className="flex items-center justify-center py-8 text-center">
+            <div className="flex items-center justify-center py-4 text-center">
               <p className="text-sm text-muted-foreground max-w-xs">
                 Ask a question about the recommendation or answers above to get started.
               </p>
@@ -336,11 +323,11 @@ export const SignalsContextChat = ({ context, onClearContext, onClose, initialMe
               key={i}
               className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'}`}
             >
-              <p className="text-xs font-medium mb-1.5 text-muted-foreground">
+              <p className="text-xs font-medium mb-1 text-muted-foreground">
                 {m.role === 'user' ? 'You' : agentName}
               </p>
               <div
-                className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm shadow-sm ${
+                className={`max-w-[85%] rounded-xl px-3 py-2 text-sm shadow-sm ${
                   m.role === 'user'
                     ? 'bg-primary text-primary-foreground'
                     : `bg-muted/80 ${isScout ? 'border border-blue-100' : 'border border-purple-100'}`
@@ -354,8 +341,8 @@ export const SignalsContextChat = ({ context, onClearContext, onClose, initialMe
           ))}
           {isLoading && (
             <div className="flex flex-col items-start">
-              <p className="text-xs font-medium mb-1.5 text-muted-foreground">{agentName}</p>
-              <div className={`rounded-2xl px-4 py-3 flex items-center gap-2 shadow-sm ${isScout ? 'bg-blue-50 border border-blue-100' : 'bg-purple-50 border border-purple-100'}`}>
+              <p className="text-xs font-medium mb-1 text-muted-foreground">{agentName}</p>
+              <div className={`rounded-xl px-3 py-2 flex items-center gap-2 shadow-sm ${isScout ? 'bg-blue-50 border border-blue-100' : 'bg-purple-50 border border-purple-100'}`}>
                 <Loader2 className={`h-4 w-4 animate-spin ${isScout ? 'text-blue-600' : 'text-purple-600'}`} />
                 <span className="text-sm text-muted-foreground">Thinking...</span>
               </div>
@@ -366,7 +353,7 @@ export const SignalsContextChat = ({ context, onClearContext, onClose, initialMe
 
         {/* Accept / Reject decision bar - visible only after first interaction, then persistent until decision */}
         {canAcceptReject && messages.length >= 2 && (
-          <div className={`shrink-0 rounded-xl border px-3 py-2.5 flex items-center justify-between gap-3 ${isScout ? 'bg-blue-50/60 border-blue-100' : 'bg-purple-50/60 border-purple-100'}`}>
+          <div className={`shrink-0 rounded-lg border px-2 py-1.5 flex items-center justify-between gap-2 ${isScout ? 'bg-blue-50/60 border-blue-100' : 'bg-purple-50/60 border-purple-100'}`}>
             <p className="text-xs font-medium text-muted-foreground">
               {isAccepted ? 'Signal accepted' : 'Satisfied with this signal?'}
             </p>
@@ -400,7 +387,7 @@ export const SignalsContextChat = ({ context, onClearContext, onClose, initialMe
         )}
 
         {/* Input - always visible at bottom */}
-        <div className="flex gap-2 pt-2 shrink-0">
+        <div className="flex gap-2 pt-1.5 shrink-0">
           <Input
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
