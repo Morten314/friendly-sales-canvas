@@ -23,7 +23,7 @@ import { Button } from "@/components/ui/button";
 
 
 
-import { Search, MessageSquare, Users, Settings, RefreshCw, AlertCircle, History, Calendar, Info, Loader2, SplitSquareHorizontal } from "lucide-react";
+import { Search, MessageSquare, Users, Settings, RefreshCw, AlertCircle, History, Calendar, Info, Loader2 } from "lucide-react";
 
 
 
@@ -79,6 +79,7 @@ import LeadStream from "@/components/market-research/LeadStream";
 import { LeadStreamScoutSplitView } from "@/components/market-research/LeadStreamScoutSplitView";
 import { LeadStreamFilterBar } from "@/components/market-research/LeadStreamFilterBar";
 import { AddLeadModal } from "@/components/market-research/AddLeadModal";
+import type { LeadStreamScoutContext } from "@/components/market-research/LeadStream";
 
 
 
@@ -2609,15 +2610,12 @@ const MarketResearch = React.memo(() => {
 
 
 
-  const [isLeadStreamSplitView, setIsLeadStreamSplitView] = useState(false);
-
-
-
   const [addLeadModalOpen, setAddLeadModalOpen] = useState(false);
 
-
-
   const [addLeadInitialData, setAddLeadInitialData] = useState<{ companyName?: string; companyWebsite?: string } | undefined>();
+
+  /** Split view with Scout - opened when Research/Deep dive clicked on a lead */
+  const [leadStreamSplitContext, setLeadStreamSplitContext] = useState<LeadStreamScoutContext | null>(null);
 
 
 
@@ -15050,32 +15048,21 @@ const MarketResearch = React.memo(() => {
 
 
               <TabsContent value="analysis" className="mt-0">
-
-
-
-                {isLeadStreamSplitView ? (
+                {leadStreamSplitContext ? (
                   <div className="h-[calc(100vh-280px)] min-h-[400px]">
                     <LeadStreamScoutSplitView
                       filters={leadStreamFilters}
                       onFiltersChange={setLeadStreamFilters}
                       editHistory={editHistory}
-                      onTabChange={(tab) => { setActiveTab(tab); setIsLeadStreamSplitView(false); }}
-                      onExitSplitView={() => setIsLeadStreamSplitView(false)}
+                      onTabChange={(tab) => { setActiveTab(tab); setLeadStreamSplitContext(null); }}
+                      onExitSplitView={() => setLeadStreamSplitContext(null)}
+                      initialLeadContext={leadStreamSplitContext}
                     />
                   </div>
                 ) : (
                   <>
-                    <div className="flex items-center justify-between mb-4">
+                    <div className="mb-4">
                       <LeadStreamFilterBar filters={leadStreamFilters} onFiltersChange={setLeadStreamFilters} />
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-2 shrink-0"
-                        onClick={() => setIsLeadStreamSplitView(true)}
-                      >
-                        <SplitSquareHorizontal className="h-4 w-4" />
-                        Split view
-                      </Button>
                     </div>
                     <LeadStream
                       selectedIndustry={leadStreamFilters.selectedIndustry}
@@ -15083,15 +15070,17 @@ const MarketResearch = React.memo(() => {
                       selectedRegion={leadStreamFilters.selectedRegion}
                       onFiltersChange={setLeadStreamFilters}
                       onAskScout={(ctx) => {
-                        sessionStorage.setItem('leadStreamChatContext', JSON.stringify(ctx));
-                        handleTabChange('trends');
+                        const hasLeadContext = ctx.company || ctx.customMessage;
+                        if (hasLeadContext) {
+                          setLeadStreamSplitContext(ctx);
+                        } else {
+                          sessionStorage.setItem('leadStreamChatContext', JSON.stringify(ctx));
+                          handleTabChange('trends');
+                        }
                       }}
                     />
                   </>
                 )}
-
-
-
               </TabsContent>
 
 

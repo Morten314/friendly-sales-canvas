@@ -13,10 +13,12 @@ interface ScoutChatPanelProps {
   showEditHistory: boolean;
   editHistory: any[];
   lastEditedField: string;
-  context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance' | 'market-entry';
+  context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance' | 'market-entry' | 'lead-stream';
   isPostSave?: boolean;
   customMessage?: string;
   onClose: () => void;
+  /** Hide close button for simpler Lead Stream view */
+  hideCloseButton?: boolean;
 }
 
 const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
@@ -29,7 +31,8 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
   context = 'market-size',
   isPostSave = false,
   customMessage,
-  onClose
+  onClose,
+  hideCloseButton = false,
 }) => {
   const { currentUser } = useAuth();
   const [userInput, setUserInput] = useState('');
@@ -267,9 +270,13 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
 
   // Fixed ScoutChatPanel getContextualScoutMessage function
 const getContextualScoutMessage = () => {
-  // Use custom message if provided (for deletion scenarios)
+  // Use custom message if provided (for deletion scenarios or Lead Stream)
   if (customMessage) {
     return customMessage;
+  }
+  
+  if (context === 'lead-stream') {
+    return "Hi there! 👋 I'm Scout. Want to research leads or find companies that match your ICP? I can help with company research, market positioning, and discovering similar companies.";
   }
   
   if (context === 'competitor-landscape') {
@@ -393,6 +400,14 @@ const getContextualScoutMessage = () => {
 };
 
   const getContextualQuestions = () => {
+    if (context === 'lead-stream') {
+      return [
+        "Find similar companies",
+        "Research a company",
+        "Help me find leads matching my ICP"
+      ];
+    }
+
     if (context === 'competitor-landscape') {
       if (hasEdits) {
         return [
@@ -522,6 +537,8 @@ const getContextualScoutMessage = () => {
 
   const getScoutTitle = () => {
     switch (context) {
+      case 'lead-stream':
+        return 'Scout — Lead Stream';
       case 'competitor-landscape':
         return 'Scout — Competitor Landscape';
       case 'industry-trends':
@@ -655,13 +672,11 @@ const getContextualScoutMessage = () => {
             {getScoutTitle()}
           </h3>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onClose}
-        >
-          <X className="h-4 w-4" />
-        </Button>
+        {!hideCloseButton && (
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            <X className="h-4 w-4" />
+          </Button>
+        )}
       </div>
 
       <div ref={chatContainerRef} className="space-y-4 mb-4 flex-1 overflow-y-auto">

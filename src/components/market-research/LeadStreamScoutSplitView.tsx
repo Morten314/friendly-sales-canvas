@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { Button } from "@/components/ui/button";
-import { PanelRightClose } from "lucide-react";
 import LeadStream from "./LeadStream";
 import ScoutChatPanel from "./ScoutChatPanel";
 import { LeadStreamFilterBar, LeadStreamFilters } from "./LeadStreamFilterBar";
@@ -14,6 +13,8 @@ interface LeadStreamScoutSplitViewProps {
   editHistory?: any[];
   onTabChange?: (tab: string) => void;
   onExitSplitView?: () => void;
+  /** Pre-populate Scout with context when opened from Research/Deep dive on a lead */
+  initialLeadContext?: LeadStreamScoutContext | null;
 }
 
 export function LeadStreamScoutSplitView({
@@ -22,8 +23,9 @@ export function LeadStreamScoutSplitView({
   editHistory = [],
   onTabChange,
   onExitSplitView,
+  initialLeadContext = null,
 }: LeadStreamScoutSplitViewProps) {
-  const [selectedLeadContext, setSelectedLeadContext] = useState<LeadStreamScoutContext | null>(null);
+  const [selectedLeadContext, setSelectedLeadContext] = useState<LeadStreamScoutContext | null>(initialLeadContext ?? null);
 
   const handleAskScout = (ctx: LeadStreamScoutContext) => {
     setSelectedLeadContext(ctx);
@@ -31,17 +33,8 @@ export function LeadStreamScoutSplitView({
 
   return (
     <div className="flex flex-col h-full min-h-0">
-      {/* Shared filter bar + exit split view */}
-      <div className="shrink-0 mb-3 flex items-center gap-2">
-        <div className="flex-1">
-          <LeadStreamFilterBar filters={filters} onFiltersChange={onFiltersChange} />
-        </div>
-        {onExitSplitView && (
-          <Button variant="outline" size="sm" onClick={onExitSplitView} className="gap-1 shrink-0">
-            <PanelRightClose className="h-4 w-4" />
-            Exit split view
-          </Button>
-        )}
+      <div className="shrink-0 mb-3">
+        <LeadStreamFilterBar filters={filters} onFiltersChange={onFiltersChange} />
       </div>
 
       {/* Split view toggle hint - user can use Research/Deep dive to populate right panel */}
@@ -81,8 +74,9 @@ export function LeadStreamScoutSplitView({
                 showEditHistory={false}
                 editHistory={editHistory}
                 lastEditedField=""
+                context="lead-stream"
                 customMessage={selectedLeadContext?.customMessage}
-                onClose={() => setSelectedLeadContext(null)}
+                onClose={() => onExitSplitView?.()}
               />
             </div>
           </div>

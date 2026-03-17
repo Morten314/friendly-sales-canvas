@@ -173,6 +173,7 @@ export function ScoutChatWithHistory({
       };
       setSessions((prev) => [newSession, ...prev]);
       setActiveSessionId(newSession.id);
+      setSidebarOpen(false); // Simpler view: collapse sidebar when coming from Lead Stream
     } catch {
       sessionStorage.removeItem(LEAD_STREAM_CHAT_CONTEXT_KEY);
     }
@@ -346,6 +347,17 @@ export function ScoutChatWithHistory({
             />
           ) : (
             <div className="flex flex-col gap-4 h-full overflow-y-auto">
+              {onTabChange && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-fit -ml-1 text-muted-foreground hover:text-foreground"
+                  onClick={() => onTabChange('analysis')}
+                >
+                  <Users className="h-4 w-4 mr-1.5" />
+                  Back to Lead Stream
+                </Button>
+              )}
               <ScoutChatPanel
                 key={activeSession.id}
                 showScoutChat={true}
@@ -354,8 +366,10 @@ export function ScoutChatWithHistory({
                 showEditHistory={false}
                 editHistory={editHistory}
                 lastEditedField=""
+                context="lead-stream"
                 customMessage={activeSession.leadContext?.customMessage}
                 onClose={handleCloseChat}
+                hideCloseButton={true}
               />
               {activeSession.leadContext && (
                 <SuggestedCompaniesSection onAddToLeadStream={handleAddToLeadStream} />
