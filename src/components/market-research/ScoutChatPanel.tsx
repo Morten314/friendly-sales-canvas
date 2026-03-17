@@ -13,7 +13,7 @@ interface ScoutChatPanelProps {
   showEditHistory: boolean;
   editHistory: any[];
   lastEditedField: string;
-  context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance' | 'market-entry' | 'lead-stream';
+  context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance' | 'market-entry' | 'lead-stream' | 'general';
   isPostSave?: boolean;
   customMessage?: string;
   onClose: () => void;
@@ -278,6 +278,10 @@ const getContextualScoutMessage = () => {
   if (context === 'lead-stream') {
     return "Hi there! 👋 I'm Scout. Want to research leads or find companies that match your ICP? I can help with company research, market positioning, and discovering similar companies.";
   }
+
+  if (context === 'general') {
+    return "Hi there! 👋 I'm Scout. Want to explore something new? I can help with market research, market sizing, company analysis, industry trends, competitive landscape, and more. What would you like to investigate?";
+  }
   
   if (context === 'competitor-landscape') {
     if (showEditHistory && editHistory.length > 0) {
@@ -405,6 +409,16 @@ const getContextualScoutMessage = () => {
         "Find similar companies",
         "Research a company",
         "Help me find leads matching my ICP"
+      ];
+    }
+
+    if (context === 'general') {
+      return [
+        "Analyze a market or industry",
+        "Research a specific company",
+        "Compare competitors",
+        "Explore growth opportunities",
+        "Break down market size and TAM"
       ];
     }
 
@@ -539,6 +553,8 @@ const getContextualScoutMessage = () => {
     switch (context) {
       case 'lead-stream':
         return 'Scout — Lead Stream';
+      case 'general':
+        return 'Scout — Explore';
       case 'competitor-landscape':
         return 'Scout — Competitor Landscape';
       case 'industry-trends':
