@@ -101,6 +101,7 @@ export function ProfilerChatWithHistory({
       initialContext.contentHash,
       initialContext.signalHeading,
       initialContext.recommendation,
+      initialContext.answer ? 'a' : '',
     ].filter(Boolean).join('|');
 
     if (processedContextRef.current === contextKey) return;
@@ -118,7 +119,13 @@ export function ProfilerChatWithHistory({
       );
       if (existing) {
         setActiveSessionId(existing.id);
-        return prev;
+        // Update context with answer from Signals page so we don't re-fetch on Chat page
+        const mergedContext = initialContext.answer
+          ? { ...existing.context!, ...initialContext }
+          : existing.context!;
+        return prev.map((s) =>
+          s.id === existing.id ? { ...s, context: mergedContext } : s
+        );
       }
 
       const newSession: ProfilerChatSession = {
@@ -131,7 +138,7 @@ export function ProfilerChatWithHistory({
       setActiveSessionId(newSession.id);
       return [newSession, ...prev];
     });
-  }, [initialContext?.contentHash, initialContext?.signalHeading, initialContext?.recommendation, initialContext?.agent]);
+  }, [initialContext?.contentHash, initialContext?.signalHeading, initialContext?.recommendation, initialContext?.agent, initialContext?.answer]);
 
   const handleNewChat = useCallback(() => {
     const newSession: ProfilerChatSession = {

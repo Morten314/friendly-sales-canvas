@@ -311,7 +311,9 @@ export const SignalsContextChat = ({ context, onClearContext, onClose, initialMe
                         <span className="text-sm">Loading answer...</span>
                       </div>
                     ) : (
-                      <p className="text-sm text-foreground/90 leading-relaxed whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{sanitizeAnswerText(displayAnswer || context.prompt)}</p>
+                      <div className="max-h-96 overflow-y-auto pr-1">
+                        <p className="text-sm text-foreground/90 leading-relaxed whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{sanitizeAnswerText(displayAnswer || context.prompt)}</p>
+                      </div>
                     )}
                   </div>
                 )}

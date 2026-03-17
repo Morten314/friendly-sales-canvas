@@ -112,6 +112,7 @@ export function ScoutChatWithHistory({
       initialContext.contentHash,
       initialContext.signalHeading,
       initialContext.recommendation,
+      initialContext.answer ? 'a' : '',
     ].filter(Boolean).join('|');
 
     if (processedContextRef.current === contextKey) return;
@@ -129,7 +130,13 @@ export function ScoutChatWithHistory({
       );
       if (existing) {
         setActiveSessionId(existing.id);
-        return prev;
+        // Update context with answer from Signals page so we don't re-fetch on Chat page
+        const mergedContext = initialContext.answer
+          ? { ...existing.context!, ...initialContext }
+          : existing.context!;
+        return prev.map((s) =>
+          s.id === existing.id ? { ...s, context: mergedContext } : s
+        );
       }
 
       const newSession: ChatSession = {
@@ -142,7 +149,7 @@ export function ScoutChatWithHistory({
       setActiveSessionId(newSession.id);
       return [newSession, ...prev];
     });
-  }, [initialContext?.contentHash, initialContext?.signalHeading, initialContext?.recommendation]);
+  }, [initialContext?.contentHash, initialContext?.signalHeading, initialContext?.recommendation, initialContext?.answer]);
 
   // When user clicks "Ask Scout" or "Research with Scout" from Lead Stream, create session with lead context
   const processedLeadContextRef = useRef(false);
