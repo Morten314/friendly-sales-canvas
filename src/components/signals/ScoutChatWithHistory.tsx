@@ -97,7 +97,6 @@ export function ScoutChatWithHistory({
           };
           setSessions([newSession, ...loadedSessions]);
           setActiveSessionId(newSession.id);
-          setSidebarOpen(false);
           return;
         } catch {
           sessionStorage.removeItem(LEAD_STREAM_CHAT_CONTEXT_KEY);
@@ -379,25 +378,9 @@ export function ScoutChatWithHistory({
             <MessageCircle className="h-12 w-12 text-muted-foreground" />
             <div>
               <h3 className="text-lg font-semibold mb-2">Chat with Scout</h3>
-              <p className="text-sm text-muted-foreground mb-4 max-w-sm">
+              <p className="text-sm text-muted-foreground max-w-sm">
                 Start a new conversation or select a signal from the Signals page to discuss it with Scout.
               </p>
-              <div className="flex flex-wrap gap-2 justify-center">
-                <Button onClick={handleNewChat} className="flex items-center gap-2">
-                  <MessageSquarePlus className="h-4 w-4" />
-                  New chat
-                </Button>
-                {onTabChange && (
-                  <Button
-                    variant="outline"
-                    onClick={() => onTabChange('analysis')}
-                    className="flex items-center gap-2 border-blue-200 bg-blue-50/50 hover:bg-blue-100"
-                  >
-                    <Users className="h-4 w-4" />
-                    See leads in Lead Stream
-                  </Button>
-                )}
-              </div>
             </div>
           </div>
         )}
