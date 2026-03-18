@@ -340,12 +340,31 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
     const lead = researchContext.leads[0];
     return (
       <div className={`flex gap-4 ${fullPage ? 'flex-1 h-full min-h-[28rem]' : 'h-[80vh]'}`}>
-        {/* Left: Prospect Summary */}
-        <div className="w-[280px] shrink-0">
+        {/* Left: Prospect Summary + Suggested Questions */}
+        <div className="w-[300px] shrink-0 flex flex-col gap-3 overflow-hidden">
           <ProspectSummaryCard lead={lead} opportunity={researchContext.opportunity} />
+
+          {/* Suggested Questions */}
+          <Card className="p-3 space-y-2 flex-1 overflow-y-auto bg-muted/20 border-border">
+            <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider sticky top-0 bg-muted/20 pb-1">Ask Scout</p>
+            <div className="space-y-0.5">
+              {primaryActions.map((action) => (
+                <button
+                  key={action.label}
+                  className="w-full flex items-center gap-2.5 px-2.5 py-2 text-xs text-foreground rounded-md hover:bg-primary/5 hover:text-primary transition-colors text-left group disabled:opacity-50"
+                  onClick={() => handleSendMessage(action.prompt)}
+                  disabled={isLoading}
+                >
+                  <span className="text-muted-foreground group-hover:text-primary transition-colors shrink-0">{action.icon}</span>
+                  <span className="flex-1">{action.label}</span>
+                  <ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-100 text-primary transition-opacity shrink-0" />
+                </button>
+              ))}
+            </div>
+          </Card>
         </div>
 
-        {/* Right: Chat */}
+        {/* Right: Chat (full space) */}
         <div className="flex-1 bg-background border rounded-lg overflow-hidden flex flex-col">
           {/* Header */}
           <div className="bg-muted/30 p-3 border-b flex items-center gap-2 shrink-0">
@@ -364,27 +383,8 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
             )}
           </div>
 
-          {/* Suggested Questions - always visible in single-lead mode */}
-          <div className="p-3 border-b shrink-0 space-y-2 max-h-[240px] overflow-y-auto">
-            <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Ask Scout</p>
-            <div className="space-y-0.5">
-              {primaryActions.map((action) => (
-                <button
-                  key={action.label}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-foreground rounded-md hover:bg-primary/5 hover:text-primary transition-colors text-left group disabled:opacity-50"
-                  onClick={() => handleSendMessage(action.prompt)}
-                  disabled={isLoading}
-                >
-                  <span className="text-muted-foreground group-hover:text-primary transition-colors shrink-0">{action.icon}</span>
-                  {action.label}
-                  <ArrowRight className="h-3 w-3 ml-auto opacity-0 group-hover:opacity-100 text-primary transition-opacity shrink-0" />
-                </button>
-              ))}
-            </div>
-          </div>
-
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-[120px]">
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {messages.map((message, index) => (
               <div key={index} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
                 <div className={`max-w-[85%] rounded-lg p-3 ${
