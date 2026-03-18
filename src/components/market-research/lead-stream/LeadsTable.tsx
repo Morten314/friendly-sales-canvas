@@ -159,15 +159,6 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-3">
           <h3 className="text-sm font-semibold text-foreground">Matched Leads</h3>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 text-xs gap-1.5 text-primary hover:text-primary hover:bg-primary/10"
-            onClick={() => onResearchWithScout?.(filteredLeads[0])}
-          >
-            <Bot className="h-4 w-4" />
-            <span className="hidden sm:inline">Chat with Scout</span>
-          </Button>
           {reportFilter !== "all" && (
             <Badge variant="outline" className="text-xs bg-primary/5 text-primary border-primary/20 gap-1">
               From: {currentReportLabel}
