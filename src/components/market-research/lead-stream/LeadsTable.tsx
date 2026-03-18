@@ -75,16 +75,16 @@ const REPORT_SECTIONS = [
 ];
 
 const mockLeads: MatchedLead[] = [
-  { id: "1", name: "Sarah Chen", email: "s.chen@acme.com", company: "Acme Corp", source: "HubSpot", matchedReports: ["market-size", "industry-trends"] },
-  { id: "2", name: "James Okoro", email: "j.okoro@scaleup.io", company: "ScaleUp Inc", source: "HubSpot", matchedReports: ["market-size", "competitor-landscape"] },
-  { id: "3", name: "Priya Sharma", email: "p.sharma@novatech.com", company: "NovaTech Solutions", source: "Prospect List", matchedReports: ["industry-trends", "market-entry"] },
-  { id: "4", name: "Marcus Liu", email: "m.liu@datadriven.ai", company: "DataDriven AI", source: "HubSpot", matchedReports: ["competitor-landscape", "regulatory-compliance"] },
-  { id: "5", name: "Elena Vasquez", email: "e.vasquez@cloudfirst.io", company: "CloudFirst Systems", source: "Prospect List", matchedReports: ["market-size", "market-entry"] },
-  { id: "6", name: "David Park", email: "d.park@momentum.dev", company: "Momentum Labs", source: "HubSpot", matchedReports: ["regulatory-compliance"] },
-  { id: "7", name: "Amara Johnson", email: "a.johnson@revstack.ai", company: "RevStack AI", source: "Prospect List", matchedReports: ["market-size", "industry-trends", "competitor-landscape"] },
-  { id: "8", name: "Tobias Müller", email: "t.muller@finserv.digital", company: "FinServ Digital", source: "HubSpot", matchedReports: ["regulatory-compliance"] },
-  { id: "9", name: "Lily Tran", email: "l.tran@shopscale.com", company: "ShopScale D2C", source: "Prospect List", matchedReports: ["market-entry"] },
-  { id: "10", name: "Raj Patel", email: "r.patel@opsflow.io", company: "OpsFlow SaaS", source: "HubSpot", matchedReports: ["industry-trends", "market-entry"] },
+  { id: "1", name: "Sarah Chen", email: "s.chen@acme.com", company: "Acme Corp", jobTitle: "VP Revenue Operations", tenure: "1 year 3 months", source: "HubSpot", matchedReports: ["market-size", "industry-trends"], signals: ["Recently hired", "Company expanding GTM team", "Active on LinkedIn discussing RevOps automation"] },
+  { id: "2", name: "James Okoro", email: "j.okoro@scaleup.io", company: "ScaleUp Inc", jobTitle: "Head of Growth", tenure: "2 years 5 months", source: "HubSpot", matchedReports: ["market-size", "competitor-landscape"], signals: ["Recently promoted", "Company raised Series B", "Published article on scaling outbound"] },
+  { id: "3", name: "Priya Sharma", email: "p.sharma@novatech.com", company: "NovaTech Solutions", jobTitle: "Director of Sales", tenure: "8 months", source: "Prospect List", matchedReports: ["industry-trends", "market-entry"], signals: ["Newly hired", "Company entering new market", "Hiring 5 SDRs"] },
+  { id: "4", name: "Marcus Liu", email: "m.liu@datadriven.ai", company: "DataDriven AI", jobTitle: "CRO", tenure: "3 years 1 month", source: "HubSpot", matchedReports: ["competitor-landscape", "regulatory-compliance"], signals: ["Long tenure decision maker", "Company evaluating new tools", "Spoke at SaaStr Annual"] },
+  { id: "5", name: "Elena Vasquez", email: "e.vasquez@cloudfirst.io", company: "CloudFirst Systems", jobTitle: "VP Sales", tenure: "1 year 8 months", source: "Prospect List", matchedReports: ["market-size", "market-entry"], signals: ["Company doubled ARR", "Hiring across go-to-market", "Active on LinkedIn"] },
+  { id: "6", name: "David Park", email: "d.park@momentum.dev", company: "Momentum Labs", jobTitle: "Sales Operations Manager", tenure: "6 months", source: "HubSpot", matchedReports: ["regulatory-compliance"], signals: ["Newly hired", "Building sales ops function from scratch"] },
+  { id: "7", name: "Amara Johnson", email: "a.johnson@revstack.ai", company: "RevStack AI", jobTitle: "Chief Revenue Officer", tenure: "2 years", source: "Prospect List", matchedReports: ["market-size", "industry-trends", "competitor-landscape"], signals: ["Key decision maker", "Company in hyper-growth", "Engaged with competitor content"] },
+  { id: "8", name: "Tobias Müller", email: "t.muller@finserv.digital", company: "FinServ Digital", jobTitle: "Head of Business Development", tenure: "4 years 2 months", source: "HubSpot", matchedReports: ["regulatory-compliance"], signals: ["Long tenure", "Company navigating compliance changes"] },
+  { id: "9", name: "Lily Tran", email: "l.tran@shopscale.com", company: "ShopScale D2C", jobTitle: "Director of Partnerships", tenure: "1 year", source: "Prospect List", matchedReports: ["market-entry"], signals: ["Company expanding partnerships", "Recently posted about channel strategy"] },
+  { id: "10", name: "Raj Patel", email: "r.patel@opsflow.io", company: "OpsFlow SaaS", jobTitle: "VP Marketing", tenure: "9 months", source: "HubSpot", matchedReports: ["industry-trends", "market-entry"], signals: ["Recently hired", "Company rebranding", "Active thought leader on LinkedIn"] },
 ];
 
 // ─── Props ────────────────────────────────────────────────────────────────────
