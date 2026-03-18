@@ -287,7 +287,7 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
                     {/* Add Column spacer */}
                     <TableCell />
 
-                    {/* Research with Scout */}
+                    {/* Ask Scout */}
                     <TableCell className="text-right">
                       <Button
                         variant="ghost"
@@ -295,7 +295,7 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
                         className="h-7 text-xs gap-1.5 text-primary hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
                         onClick={() => onResearchWithScout?.(lead)}
                       >
-                        Research with Scout <ArrowRight className="h-3 w-3" />
+                        Ask Scout <ArrowRight className="h-3 w-3" />
                       </Button>
                     </TableCell>
                   </TableRow>
