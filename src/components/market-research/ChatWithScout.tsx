@@ -150,8 +150,9 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
   const [agentStep, setAgentStep] = useState(-1);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const primaryActions = mode === "full-list" ? listPrimaryActions : leadPrimaryActions;
-  const secondaryActions = mode === "full-list" ? listSecondaryActions : leadSecondaryActions;
+  const isSingleLead = mode === "selected-leads" && researchContext?.leads.length === 1;
+  const primaryActions = isSingleLead ? singleLeadActions : mode === "full-list" ? listPrimaryActions : leadPrimaryActions;
+  const secondaryActions = isSingleLead ? singleLeadSecondaryActions : mode === "full-list" ? listSecondaryActions : leadSecondaryActions;
 
   // Build initial message based on context
   useEffect(() => {
@@ -161,6 +162,19 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
       setMessages([{
         role: "assistant",
         content: `You have ${leadCount} leads in your prospect list.${icpText}\n\nI can analyze your full list, prioritize accounts, build outreach sequences, and more. Choose an action above or ask me anything.`,
+        timestamp: new Date().toLocaleTimeString(),
+      }]);
+    } else if (researchContext && researchContext.leads.length === 1) {
+      // Single lead: auto-generate prospect summary
+      const lead = researchContext.leads[0];
+      const signalsText = lead.signals && lead.signals.length > 0
+        ? `\n\nSignals\n${lead.signals.map(s => `• ${s}`).join('\n')}`
+        : "";
+      const opportunityText = researchContext.opportunity ? `\nMatched Report: ${researchContext.opportunity}` : "";
+
+      setMessages([{
+        role: "assistant",
+        content: `Prospect Summary\n\nName: ${lead.name}\nRole: ${lead.jobTitle}\nCompany: ${lead.company}${lead.tenure ? `\nTenure: ${lead.tenure}` : ""}${lead.source ? `\nSource: ${lead.source}` : ""}${opportunityText}${signalsText}\n\nI've loaded full context on this prospect. Choose an action below or ask me anything.`,
         timestamp: new Date().toLocaleTimeString(),
       }]);
     } else if (researchContext && researchContext.leads.length > 0) {
