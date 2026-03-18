@@ -345,8 +345,8 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
           <ProspectSummaryCard lead={lead} opportunity={researchContext.opportunity} />
 
           {/* Suggested Questions */}
-          <Card className="p-3 space-y-2 flex-1 overflow-y-auto bg-muted/20 border-border">
-            <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider sticky top-0 bg-muted/20 pb-1">Ask Scout</p>
+          <Card className="p-3 space-y-1.5 flex-1 overflow-y-auto bg-muted/20 border-border">
+            <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider pb-1">Suggested Questions</p>
             <div className="space-y-0.5">
               {primaryActions.map((action) => (
                 <button
