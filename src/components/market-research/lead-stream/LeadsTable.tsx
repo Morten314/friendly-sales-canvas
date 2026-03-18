@@ -159,15 +159,6 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-3">
           <h3 className="text-sm font-semibold text-foreground">Matched Leads</h3>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 text-xs gap-1.5 text-primary hover:text-primary hover:bg-primary/10"
-            onClick={() => onResearchWithScout?.(filteredLeads[0])}
-          >
-            <Bot className="h-4 w-4" />
-            <span className="hidden sm:inline">Chat with Scout</span>
-          </Button>
           {reportFilter !== "all" && (
             <Badge variant="outline" className="text-xs bg-primary/5 text-primary border-primary/20 gap-1">
               From: {currentReportLabel}
@@ -183,16 +174,26 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
             </Badge>
           )}
         </div>
-        <Select value={reportFilter} onValueChange={setReportFilter}>
-          <SelectTrigger className="h-8 text-xs w-[200px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {REPORT_SECTIONS.map((r) => (
-              <SelectItem key={r.value} value={r.value} className="text-xs">{r.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          <Select value={reportFilter} onValueChange={setReportFilter}>
+            <SelectTrigger className="h-8 text-xs w-[200px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {REPORT_SECTIONS.map((r) => (
+                <SelectItem key={r.value} value={r.value} className="text-xs">{r.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
+            onClick={() => onResearchWithScout?.(filteredLeads[0])}
+          >
+            <Bot className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       {/* Table */}
