@@ -91,36 +91,58 @@ const singleLeadActions: SuggestedAction[] = [
   { label: "Signals company needs our solution?", prompt: "What signals suggest this company might need our solution?", icon: <TrendingUp className="h-3.5 w-3.5" /> },
 ];
 
-const leadPrimaryActions: SuggestedAction[] = [
-  { label: "Research these companies", prompt: "Research these companies and give me a summary of what each one does, their recent news, and their market position.", icon: <Search className="h-3.5 w-3.5" /> },
-  { label: "Find buying signals", prompt: "Find buying signals for these leads. Look for recent funding, hiring surges, technology changes, and expansion plans.", icon: <TrendingUp className="h-3.5 w-3.5" /> },
-  { label: "Identify decision makers", prompt: "Identify the key decision makers at these companies. Who are the budget holders and influencers?", icon: <Users className="h-3.5 w-3.5" /> },
-  { label: "Check recent company news", prompt: "Check recent company news for these leads. Any press releases, product launches, or market moves?", icon: <Newspaper className="h-3.5 w-3.5" /> },
-  { label: "Score leads by urgency", prompt: "Score these leads by urgency. Which ones are most likely to buy in the next 30 days?", icon: <Zap className="h-3.5 w-3.5" /> },
-  { label: "Write outreach strategy", prompt: "Write a personalized outreach strategy for these leads based on their company context and buying signals.", icon: <FileText className="h-3.5 w-3.5" /> },
-];
+interface PromptCategory {
+  category: string;
+  icon: React.ReactNode;
+  actions: SuggestedAction[];
+}
 
-const leadSecondaryActions: SuggestedAction[] = [
-  { label: "Enrich LinkedIn profiles", prompt: "Enrich LinkedIn profiles for these leads. Pull their recent activity, shared content, and career history.", icon: <Users className="h-3.5 w-3.5" /> },
-  { label: "Find company tech stack", prompt: "Find the technology stack used by these companies. What tools and platforms are they running?", icon: <Target className="h-3.5 w-3.5" /> },
-  { label: "Analyze hiring trends", prompt: "Analyze hiring trends at these companies. What roles are they hiring for and what does it signal?", icon: <TrendingUp className="h-3.5 w-3.5" /> },
-  { label: "Check funding activity", prompt: "Check funding activity for these companies. Any recent rounds, acquisitions, or financial events?", icon: <Sparkles className="h-3.5 w-3.5" /> },
-];
-
-const listPrimaryActions: SuggestedAction[] = [
-  { label: "Analyze full prospect list", prompt: "Analyze my entire prospect list. Give me a summary of the industries, company sizes, and roles represented.", icon: <Search className="h-3.5 w-3.5" /> },
-  { label: "Score & prioritize all leads", prompt: "Score and prioritize all leads in my list. Rank them by likelihood to convert in the next 30 days.", icon: <Zap className="h-3.5 w-3.5" /> },
-  { label: "Find common patterns", prompt: "Find common patterns across my prospect list. What industries, roles, and company sizes appear most often?", icon: <TrendingUp className="h-3.5 w-3.5" /> },
-  { label: "Build outreach sequences", prompt: "Build personalized outreach sequences for my entire prospect list, grouped by ICP match and lead score.", icon: <FileText className="h-3.5 w-3.5" /> },
-  { label: "Identify top 10 accounts", prompt: "Identify the top 10 accounts from my full list that I should focus on this week and explain why.", icon: <Target className="h-3.5 w-3.5" /> },
-  { label: "Map buying committees", prompt: "Map the buying committees across all companies in my prospect list. Who are the decision makers, champions, and influencers?", icon: <Users className="h-3.5 w-3.5" /> },
-];
-
-const listSecondaryActions: SuggestedAction[] = [
-  { label: "Segment by ICP fit", prompt: "Segment my entire prospect list by ICP fit. Group them into High, Medium, and Low tiers with reasoning.", icon: <Target className="h-3.5 w-3.5" /> },
-  { label: "Batch enrich all leads", prompt: "Batch enrich all leads in my list. Pull LinkedIn data, company info, and recent activity for everyone.", icon: <Users className="h-3.5 w-3.5" /> },
-  { label: "Competitive displacement opps", prompt: "Find competitive displacement opportunities across my prospect list. Which companies are using competitor products that we can win?", icon: <Sparkles className="h-3.5 w-3.5" /> },
-  { label: "Weekly pipeline summary", prompt: "Generate a weekly pipeline summary for my full prospect list. What changed, who moved stages, and where should I focus?", icon: <Newspaper className="h-3.5 w-3.5" /> },
+const categorizedPrompts: PromptCategory[] = [
+  {
+    category: "Prioritize",
+    icon: <Zap className="h-3.5 w-3.5" />,
+    actions: [
+      { label: "Which leads should we prioritize first?", prompt: "Which leads should we prioritize first?", icon: <Zap className="h-3.5 w-3.5" /> },
+      { label: "Strongest buying signals?", prompt: "Which companies show the strongest buying signals?", icon: <TrendingUp className="h-3.5 w-3.5" /> },
+      { label: "Most likely to convert in 30–90 days?", prompt: "Which leads are most likely to convert in the next 30–90 days?", icon: <Target className="h-3.5 w-3.5" /> },
+    ],
+  },
+  {
+    category: "Understand Accounts",
+    icon: <Building2 className="h-3.5 w-3.5" />,
+    actions: [
+      { label: "What are these companies working on?", prompt: "Summarize what these companies are currently working on", icon: <Search className="h-3.5 w-3.5" /> },
+      { label: "What do they have in common?", prompt: "What do these companies have in common?", icon: <Users className="h-3.5 w-3.5" /> },
+      { label: "What growth stage are they in?", prompt: "What stage of growth are these companies in?", icon: <TrendingUp className="h-3.5 w-3.5" /> },
+    ],
+  },
+  {
+    category: "Detect Signals",
+    icon: <Activity className="h-3.5 w-3.5" />,
+    actions: [
+      { label: "Hiring for roles related to our product?", prompt: "Which companies are hiring for roles related to our product?", icon: <Users className="h-3.5 w-3.5" /> },
+      { label: "Recently raised funding or expanding?", prompt: "Which companies recently raised funding or are expanding?", icon: <Sparkles className="h-3.5 w-3.5" /> },
+      { label: "Signals indicating urgency?", prompt: "What signals indicate urgency across these accounts?", icon: <Zap className="h-3.5 w-3.5" /> },
+    ],
+  },
+  {
+    category: "Buyer & Competition",
+    icon: <Target className="h-3.5 w-3.5" />,
+    actions: [
+      { label: "Potential pain points?", prompt: "Identify potential pain points for these accounts", icon: <Search className="h-3.5 w-3.5" /> },
+      { label: "Competitors they're evaluating?", prompt: "Which competitors are these companies likely evaluating?", icon: <Newspaper className="h-3.5 w-3.5" /> },
+      { label: "Likely decision-makers?", prompt: "Who are the likely decision-makers across these companies?", icon: <Users className="h-3.5 w-3.5" /> },
+    ],
+  },
+  {
+    category: "Take Action",
+    icon: <FileText className="h-3.5 w-3.5" />,
+    actions: [
+      { label: "Create prioritized outreach list", prompt: "Create a prioritized outreach list", icon: <FileText className="h-3.5 w-3.5" /> },
+      { label: "Suggest outreach angles", prompt: "Suggest outreach angles for the top accounts", icon: <Target className="h-3.5 w-3.5" /> },
+      { label: "Segment by opportunity type", prompt: "Segment these leads based on opportunity type", icon: <Users className="h-3.5 w-3.5" /> },
+    ],
+  },
 ];
 
 // ─── Clean Response Helper ───────────────────────────────────────────────────
