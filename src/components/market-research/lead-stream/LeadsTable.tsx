@@ -93,6 +93,7 @@ interface LeadsTableProps {
   opportunityFilter?: string | null;
   onClearOpportunityFilter?: () => void;
   onResearchWithScout?: (lead: MatchedLead) => void;
+  onChatWithScout?: (leads: MatchedLead[]) => void;
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -101,6 +102,7 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
   opportunityFilter,
   onClearOpportunityFilter,
   onResearchWithScout,
+  onChatWithScout,
 }) => {
   const [reportFilter, setReportFilter] = useState<string>(opportunityFilter || "all");
   const [activeColumns, setActiveColumns] = useState<AgenticColumnId[]>([]);
@@ -189,7 +191,7 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
             variant="ghost"
             size="icon"
             className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
-            onClick={() => onResearchWithScout?.(filteredLeads[0])}
+            onClick={() => onChatWithScout?.(filteredLeads)}
           >
             <Bot className="h-4 w-4" />
           </Button>
