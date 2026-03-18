@@ -159,6 +159,15 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-3">
           <h3 className="text-sm font-semibold text-foreground">Matched Leads</h3>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 text-xs gap-1.5 text-primary hover:text-primary hover:bg-primary/10"
+            onClick={() => onResearchWithScout?.(filteredLeads[0])}
+          >
+            <Bot className="h-4 w-4" />
+            <span className="hidden sm:inline">Chat with Scout</span>
+          </Button>
           {reportFilter !== "all" && (
             <Badge variant="outline" className="text-xs bg-primary/5 text-primary border-primary/20 gap-1">
               From: {currentReportLabel}
@@ -247,7 +256,7 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
                   </Popover>
                 </TableHead>
 
-                {/* Research with Scout - persistent */}
+                {/* Ask Scout - persistent */}
                 <TableHead className="w-[160px] text-xs text-right">Action</TableHead>
               </TableRow>
             </TableHeader>
@@ -287,7 +296,7 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
                     {/* Add Column spacer */}
                     <TableCell />
 
-                    {/* Research with Scout */}
+                    {/* Ask Scout */}
                     <TableCell className="text-right">
                       <Button
                         variant="ghost"
@@ -295,7 +304,7 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
                         className="h-7 text-xs gap-1.5 text-primary hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
                         onClick={() => onResearchWithScout?.(lead)}
                       >
-                        Research with Scout <ArrowRight className="h-3 w-3" />
+                        Ask Scout <ArrowRight className="h-3 w-3" />
                       </Button>
                     </TableCell>
                   </TableRow>
