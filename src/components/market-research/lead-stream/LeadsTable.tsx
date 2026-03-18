@@ -102,6 +102,7 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
   opportunityFilter,
   onClearOpportunityFilter,
   onResearchWithScout,
+  onChatWithScout,
 }) => {
   const [reportFilter, setReportFilter] = useState<string>(opportunityFilter || "all");
   const [activeColumns, setActiveColumns] = useState<AgenticColumnId[]>([]);
