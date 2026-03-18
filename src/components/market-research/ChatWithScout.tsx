@@ -151,7 +151,7 @@ const ProspectSummaryCard = ({ lead, opportunity }: { lead: LeadContext; opportu
       </div>
     </div>
 
-    <div className="space-y-3">
+    <div className="space-y-1.5">
       <div className="flex items-center gap-2 text-xs">
         <Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
         <span className="text-muted-foreground">Company</span>
