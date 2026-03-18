@@ -247,7 +247,7 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
                   </Popover>
                 </TableHead>
 
-                {/* Research with Scout - persistent */}
+                {/* Ask Scout - persistent */}
                 <TableHead className="w-[160px] text-xs text-right">Action</TableHead>
               </TableRow>
             </TableHeader>
