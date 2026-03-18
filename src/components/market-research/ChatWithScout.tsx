@@ -493,7 +493,7 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
 
 
       {/* Suggested Actions - compact layout under header */}
-      {messages.length <= 1 && (
+      {
         <div className="px-4 py-3 border-b shrink-0 space-y-2.5">
           {useCategorized ? (
             <div className="space-y-2">
