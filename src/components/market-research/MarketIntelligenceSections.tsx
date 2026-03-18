@@ -141,55 +141,56 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
   return (
     <>
       {/* Market Size & Opportunity Section */}
-      <MarketSizeSection
-        isEditing={props.isEditing}
-        isSplitView={props.isSplitView}
-        isExpanded={props.isExpanded}
-        hasEdits={props.hasEdits}
-        deletedSections={props.marketSizeDeletedSections}
-        editHistory={props.editHistory}
-        executiveSummary={props.executiveSummary}
-        tamValue={props.tamValue}
-        samValue={props.samValue}
-        GrowthRate={props.GrowthRate}
-        strategicRecommendations={props.strategicRecommendations}
-        marketEntry={props.marketEntry}
-        marketDrivers={props.marketDrivers}
-        marketSizeBySegment={props.marketSizeBySegment}
-        growthProjections={props.growthProjections}
-        onToggleEdit={props.onToggleEdit}
-        onScoutIconClick={props.onMarketSizeScoutIconClick}
-        onEditHistoryOpen={props.onEditHistoryOpen}
-        onDeleteSection={props.onMarketSizeDeleteSection}
-        onSaveChanges={props.onSaveChanges}
-        onCancelEdit={props.onCancelEdit}
-        onExpandToggle={props.onExpandToggle}
-        onExecutiveSummaryChange={props.onExecutiveSummaryChange}
-        onTamValueChange={props.onTamValueChange}
-        onSamValueChange={props.onSamValueChange}
-        onGrowthRateChange={props.onGrowthRateChange}
-        onStrategicRecommendationsChange={props.onStrategicRecommendationsChange}
-        onMarketEntryChange={props.onMarketEntryChange}
-        onMarketDriversChange={props.onMarketDriversChange}
-        onExportPDF={props.onExportPDF}
-        onSaveToWorkspace={props.onSaveToWorkspace}
-        onGenerateShareableLink={props.onGenerateShareableLink}
-        showScoutChat={props.showMarketSizeScoutChat}
-        scoutChatPanel={marketSizeScoutChatPanel}
-        isLoading={props.isMarketSizeLoading}
-        error={props.marketSizeError}
-        onRefresh={props.onMarketSizeRefresh}
-        isRefreshing={props.isRefreshing}
-        companyProfile={props.companyProfile}
-      />
-      <OpportunityMatchCard
-        sectionName="Market Size"
-        opportunityPattern={opportunityMatches['market-size'].pattern}
-        crmAccountsCount={opportunityMatches['market-size'].crm}
-        uploadedAccountsCount={opportunityMatches['market-size'].uploaded}
-        totalLeadsCount={opportunityMatches['market-size'].total}
-        onViewLeads={() => handleViewLeads('market-size')}
-      />
+      <div className="relative">
+        <div className="absolute top-3 right-3 z-10">
+          <OpportunitySignalBadge
+            matchingLeads={opportunityMatches['market-size'].crm}
+            totalLeads={opportunityMatches['market-size'].total}
+            onViewLeads={() => handleViewLeads('market-size')}
+          />
+        </div>
+        <MarketSizeSection
+          isEditing={props.isEditing}
+          isSplitView={props.isSplitView}
+          isExpanded={props.isExpanded}
+          hasEdits={props.hasEdits}
+          deletedSections={props.marketSizeDeletedSections}
+          editHistory={props.editHistory}
+          executiveSummary={props.executiveSummary}
+          tamValue={props.tamValue}
+          samValue={props.samValue}
+          GrowthRate={props.GrowthRate}
+          strategicRecommendations={props.strategicRecommendations}
+          marketEntry={props.marketEntry}
+          marketDrivers={props.marketDrivers}
+          marketSizeBySegment={props.marketSizeBySegment}
+          growthProjections={props.growthProjections}
+          onToggleEdit={props.onToggleEdit}
+          onScoutIconClick={props.onMarketSizeScoutIconClick}
+          onEditHistoryOpen={props.onEditHistoryOpen}
+          onDeleteSection={props.onMarketSizeDeleteSection}
+          onSaveChanges={props.onSaveChanges}
+          onCancelEdit={props.onCancelEdit}
+          onExpandToggle={props.onExpandToggle}
+          onExecutiveSummaryChange={props.onExecutiveSummaryChange}
+          onTamValueChange={props.onTamValueChange}
+          onSamValueChange={props.onSamValueChange}
+          onGrowthRateChange={props.onGrowthRateChange}
+          onStrategicRecommendationsChange={props.onStrategicRecommendationsChange}
+          onMarketEntryChange={props.onMarketEntryChange}
+          onMarketDriversChange={props.onMarketDriversChange}
+          onExportPDF={props.onExportPDF}
+          onSaveToWorkspace={props.onSaveToWorkspace}
+          onGenerateShareableLink={props.onGenerateShareableLink}
+          showScoutChat={props.showMarketSizeScoutChat}
+          scoutChatPanel={marketSizeScoutChatPanel}
+          isLoading={props.isMarketSizeLoading}
+          error={props.marketSizeError}
+          onRefresh={props.onMarketSizeRefresh}
+          isRefreshing={props.isRefreshing}
+          companyProfile={props.companyProfile}
+        />
+      </div>
 
       {/* Industry Trends Section */}
       <div className={`${props.showIndustryTrendsScoutChat ? 'flex gap-6' : ''}`}>
