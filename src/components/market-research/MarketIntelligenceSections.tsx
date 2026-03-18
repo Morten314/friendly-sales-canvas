@@ -298,8 +298,8 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
       </div>
 
       {/* Regulatory & Compliance Highlights Section */}
-      <div className="relative">
-        <div className="absolute top-3 right-3 z-10">
+      <div>
+        <div className="flex justify-end mb-1.5">
           <OpportunitySignalBadge
             matchingLeads={opportunityMatches['regulatory-compliance'].crm}
             totalLeads={opportunityMatches['regulatory-compliance'].total}
