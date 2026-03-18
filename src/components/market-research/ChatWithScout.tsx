@@ -2,9 +2,11 @@ import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import {
   MessageSquare, Send, Loader2, Bot, Sparkles, Download, Upload, ArrowRight,
   Search, TrendingUp, Users, Newspaper, Zap, Target, FileText, CheckCircle2,
+  User, Building2, Clock, Activity,
 } from "lucide-react";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -77,22 +79,16 @@ interface SuggestedAction {
   icon: React.ReactNode;
 }
 
-// ─── Lead-specific prompts (shown when researching a single lead) ────────────
+// ─── Lead-specific prompts (exact questions) ─────────────────────────────────
 
 const singleLeadActions: SuggestedAction[] = [
-  { label: "Is this a decision maker?", prompt: "Is this prospect a decision maker in this company? What's their buying authority?", icon: <Users className="h-3.5 w-3.5" /> },
-  { label: "Best person to contact?", prompt: "Is this the best person to contact at this company, or should we reach someone else? Who else is in the buying committee?", icon: <Target className="h-3.5 w-3.5" /> },
-  { label: "Role tenure & history", prompt: "How long has this person been in their current role? What roles did they hold before this position?", icon: <FileText className="h-3.5 w-3.5" /> },
-  { label: "Recently promoted or hired?", prompt: "Was this prospect recently promoted or newly hired? What does that signal for our outreach timing?", icon: <Zap className="h-3.5 w-3.5" /> },
-  { label: "LinkedIn activity summary", prompt: "Summarize this prospect's recent LinkedIn activity. What topics are they engaging with?", icon: <Newspaper className="h-3.5 w-3.5" /> },
-  { label: "Company buying signals", prompt: "What signals suggest this company might need our solution right now?", icon: <TrendingUp className="h-3.5 w-3.5" /> },
-];
-
-const singleLeadSecondaryActions: SuggestedAction[] = [
-  { label: "Write personalized outreach", prompt: "Write a personalized outreach message for this prospect based on their role, company context, and recent signals.", icon: <FileText className="h-3.5 w-3.5" /> },
-  { label: "Find mutual connections", prompt: "Find any mutual connections or shared interests that could warm up this outreach.", icon: <Users className="h-3.5 w-3.5" /> },
-  { label: "Competitive tools they use", prompt: "What competitive tools or solutions is this company currently using that we could displace?", icon: <Search className="h-3.5 w-3.5" /> },
-  { label: "Meeting prep brief", prompt: "Create a meeting preparation brief for a call with this prospect. Include talking points, potential objections, and value props.", icon: <Sparkles className="h-3.5 w-3.5" /> },
+  { label: "Is this prospect a decision maker?", prompt: "Is this prospect a decision maker in this company?", icon: <Users className="h-3.5 w-3.5" /> },
+  { label: "Best person to contact, or reach someone else?", prompt: "Is this the best person to contact, or should we reach someone else?", icon: <Target className="h-3.5 w-3.5" /> },
+  { label: "How long in their current role?", prompt: "How long has this person been in their current role?", icon: <Clock className="h-3.5 w-3.5" /> },
+  { label: "Recently promoted or newly hired?", prompt: "Was this prospect recently promoted or newly hired?", icon: <Zap className="h-3.5 w-3.5" /> },
+  { label: "What roles before this position?", prompt: "What roles did they hold before this position?", icon: <FileText className="h-3.5 w-3.5" /> },
+  { label: "Summarize recent LinkedIn activity", prompt: "Summarize this prospect's recent LinkedIn activity.", icon: <Activity className="h-3.5 w-3.5" /> },
+  { label: "Signals company needs our solution?", prompt: "What signals suggest this company might need our solution?", icon: <TrendingUp className="h-3.5 w-3.5" /> },
 ];
 
 const leadPrimaryActions: SuggestedAction[] = [
@@ -141,6 +137,72 @@ const cleanResponseContent = (content: string): string => {
     .trim();
 };
 
+// ─── Prospect Summary Card (left panel for single lead) ─────────────────────
+
+const ProspectSummaryCard = ({ lead, opportunity }: { lead: LeadContext; opportunity?: string }) => (
+  <Card className="p-5 space-y-4 h-full overflow-y-auto bg-muted/20 border-border">
+    <div className="flex items-center gap-3 mb-1">
+      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+        <User className="h-5 w-5 text-primary" />
+      </div>
+      <div className="min-w-0">
+        <h3 className="text-sm font-semibold text-foreground leading-tight truncate">{lead.name}</h3>
+        <p className="text-xs text-muted-foreground truncate">{lead.jobTitle}</p>
+      </div>
+    </div>
+
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 text-xs">
+        <Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+        <span className="text-muted-foreground">Company</span>
+        <span className="ml-auto text-foreground font-medium">{lead.company}</span>
+      </div>
+      {lead.tenure && (
+        <div className="flex items-center gap-2 text-xs">
+          <Clock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+          <span className="text-muted-foreground">Tenure</span>
+          <span className="ml-auto text-foreground font-medium">{lead.tenure}</span>
+        </div>
+      )}
+      {lead.source && (
+        <div className="flex items-center gap-2 text-xs">
+          <FileText className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+          <span className="text-muted-foreground">Source</span>
+          <Badge variant="outline" className={`ml-auto text-[10px] font-medium ${lead.source === "HubSpot" ? "bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/30 dark:text-orange-400 dark:border-orange-800" : "bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-950/30 dark:text-violet-400 dark:border-violet-800"}`}>
+            {lead.source}
+          </Badge>
+        </div>
+      )}
+      {opportunity && (
+        <div className="flex items-center gap-2 text-xs">
+          <Target className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+          <span className="text-muted-foreground">Report</span>
+          <Badge variant="outline" className="ml-auto text-[10px] bg-primary/5 text-primary border-primary/20">
+            {opportunity}
+          </Badge>
+        </div>
+      )}
+    </div>
+
+    {lead.signals && lead.signals.length > 0 && (
+      <div className="pt-3 border-t border-border space-y-2">
+        <div className="flex items-center gap-1.5">
+          <Activity className="h-3.5 w-3.5 text-primary" />
+          <span className="text-xs font-semibold text-foreground">Signals</span>
+        </div>
+        <div className="space-y-1.5">
+          {lead.signals.map((signal, i) => (
+            <div key={i} className="flex items-start gap-2 text-xs text-muted-foreground">
+              <div className="h-1.5 w-1.5 rounded-full bg-primary/60 mt-1.5 shrink-0" />
+              {signal}
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
+  </Card>
+);
+
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 export function ChatWithScout({ fullPage = false, researchContext, mode = "selected-leads" }: ChatWithScoutProps) {
@@ -152,7 +214,7 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
 
   const isSingleLead = mode === "selected-leads" && researchContext?.leads.length === 1;
   const primaryActions = isSingleLead ? singleLeadActions : mode === "full-list" ? listPrimaryActions : leadPrimaryActions;
-  const secondaryActions = isSingleLead ? singleLeadSecondaryActions : mode === "full-list" ? listSecondaryActions : leadSecondaryActions;
+  const secondaryActions = isSingleLead ? [] : mode === "full-list" ? listSecondaryActions : leadSecondaryActions;
 
   // Build initial message based on context
   useEffect(() => {
@@ -165,16 +227,9 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
         timestamp: new Date().toLocaleTimeString(),
       }]);
     } else if (researchContext && researchContext.leads.length === 1) {
-      // Single lead: auto-generate prospect summary
-      const lead = researchContext.leads[0];
-      const signalsText = lead.signals && lead.signals.length > 0
-        ? `\n\nSignals\n${lead.signals.map(s => `• ${s}`).join('\n')}`
-        : "";
-      const opportunityText = researchContext.opportunity ? `\nMatched Report: ${researchContext.opportunity}` : "";
-
       setMessages([{
         role: "assistant",
-        content: `Prospect Summary\n\nName: ${lead.name}\nRole: ${lead.jobTitle}\nCompany: ${lead.company}${lead.tenure ? `\nTenure: ${lead.tenure}` : ""}${lead.source ? `\nSource: ${lead.source}` : ""}${opportunityText}${signalsText}\n\nI've loaded full context on this prospect. Choose an action below or ask me anything.`,
+        content: `I've loaded full context on ${researchContext.leads[0].name}. What would you like to know?`,
         timestamp: new Date().toLocaleTimeString(),
       }]);
     } else if (researchContext && researchContext.leads.length > 0) {
@@ -274,6 +329,125 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
 
   const hasContext = researchContext && researchContext.leads.length > 0;
 
+  // ─── Single Lead: Two-panel layout ─────────────────────────────────────────
+  if (isSingleLead && researchContext) {
+    const lead = researchContext.leads[0];
+    return (
+      <div className={`flex gap-4 ${fullPage ? 'flex-1 h-full min-h-[28rem]' : 'h-[80vh]'}`}>
+        {/* Left: Prospect Summary */}
+        <div className="w-[280px] shrink-0">
+          <ProspectSummaryCard lead={lead} opportunity={researchContext.opportunity} />
+        </div>
+
+        {/* Right: Chat */}
+        <div className="flex-1 bg-background border rounded-lg overflow-hidden flex flex-col">
+          {/* Header */}
+          <div className="bg-muted/30 p-3 border-b flex items-center gap-2 shrink-0">
+            <div className="p-1.5 rounded-full bg-primary/10">
+              <Bot className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-sm text-foreground">Scout Agent Workspace</h3>
+              <p className="text-[11px] text-muted-foreground">Researching {lead.name} · {lead.company}</p>
+            </div>
+            {isLoading && (
+              <div className="ml-auto flex items-center gap-1 text-primary text-xs">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Working...
+              </div>
+            )}
+          </div>
+
+          {/* Suggested Questions - vertical list style */}
+          {messages.length <= 1 && (
+            <div className="p-3 border-b shrink-0 space-y-2">
+              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Ask Scout</p>
+              <div className="space-y-0.5">
+                {primaryActions.map((action) => (
+                  <button
+                    key={action.label}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-foreground rounded-md hover:bg-primary/5 hover:text-primary transition-colors text-left group disabled:opacity-50"
+                    onClick={() => handleSendMessage(action.prompt)}
+                    disabled={isLoading}
+                  >
+                    <span className="text-muted-foreground group-hover:text-primary transition-colors shrink-0">{action.icon}</span>
+                    {action.label}
+                    <ArrowRight className="h-3 w-3 ml-auto opacity-0 group-hover:opacity-100 text-primary transition-opacity shrink-0" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-[120px]">
+            {messages.map((message, index) => (
+              <div key={index} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
+                <div className={`max-w-[85%] rounded-lg p-3 ${
+                  message.role === "user"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted/50 border border-border"
+                }`}>
+                  {message.role === "assistant" && (
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <Bot className="h-3.5 w-3.5 text-primary" />
+                      <span className="text-xs font-semibold text-primary">Scout</span>
+                    </div>
+                  )}
+                  <div className="text-sm whitespace-pre-line leading-relaxed">{message.content}</div>
+
+                  {message.structuredActions && (
+                    <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-border">
+                      {message.structuredActions.map((action, i) => (
+                        <Button key={i} variant="outline" size="sm" className="h-7 text-xs gap-1.5">
+                          {action.icon}
+                          {action.label}
+                        </Button>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="text-[10px] mt-1.5 opacity-60">{message.timestamp}</div>
+                </div>
+              </div>
+            ))}
+
+            {isLoading && agentStep >= 0 && (
+              <div className="flex justify-start">
+                <div className="max-w-[85%]">
+                  <AgentStepIndicator currentStep={agentStep} />
+                </div>
+              </div>
+            )}
+
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Input */}
+          <div className="border-t p-3 flex gap-2 shrink-0 bg-muted/10">
+            <Textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyPress}
+              placeholder={`Ask Scout about ${lead.name}...`}
+              className="resize-none text-sm min-h-[44px]"
+              rows={2}
+              disabled={isLoading}
+            />
+            <Button
+              onClick={() => handleSendMessage()}
+              className="self-end"
+              disabled={!input.trim() || isLoading}
+            >
+              {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Default layout (multi-lead or no context) ─────────────────────────────
   return (
     <div className={`bg-background border rounded-lg overflow-hidden flex flex-col ${fullPage ? 'flex-1 h-full min-h-[28rem]' : 'h-[80vh]'}`}>
       {/* Header */}
@@ -334,21 +508,23 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
               </Button>
             ))}
           </div>
-          <div className="flex flex-wrap gap-2">
-            {secondaryActions.map((action) => (
-              <Button
-                key={action.label}
-                variant="ghost"
-                size="sm"
-                className="h-7 text-[11px] gap-1.5 text-muted-foreground hover:text-primary"
-                onClick={() => handleSendMessage(action.prompt)}
-                disabled={isLoading}
-              >
-                {action.icon}
-                {action.label}
-              </Button>
-            ))}
-          </div>
+          {secondaryActions.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {secondaryActions.map((action) => (
+                <Button
+                  key={action.label}
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-[11px] gap-1.5 text-muted-foreground hover:text-primary"
+                  onClick={() => handleSendMessage(action.prompt)}
+                  disabled={isLoading}
+                >
+                  {action.icon}
+                  {action.label}
+                </Button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -365,13 +541,12 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
             }`}>
               {message.role === "assistant" && (
                 <div className="flex items-center gap-1.5 mb-1.5">
-                  <Bot className={`h-3.5 w-3.5 text-primary ${index === 0 ? '' : ''}`} />
+                  <Bot className="h-3.5 w-3.5 text-primary" />
                   <span className="text-xs font-semibold text-primary">Scout</span>
                 </div>
               )}
               <div className={`text-sm whitespace-pre-line leading-relaxed ${index === 0 && message.role === "assistant" ? "text-foreground font-medium" : ""}`}>{message.content}</div>
               
-              {/* Structured action buttons on assistant messages */}
               {message.structuredActions && (
                 <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-border">
                   {message.structuredActions.map((action, i) => (
@@ -388,7 +563,6 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
           </div>
         ))}
 
-        {/* Agent Step Indicator while loading */}
         {isLoading && agentStep >= 0 && (
           <div className="flex justify-start">
             <div className="max-w-[85%]">
