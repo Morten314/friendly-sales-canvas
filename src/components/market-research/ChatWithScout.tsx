@@ -241,11 +241,9 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
   // Build initial message based on context
   useEffect(() => {
     if (mode === "full-list" && researchContext && researchContext.leads.length > 0) {
-      const leadCount = researchContext.leads.length;
-      const icpText = researchContext.icp ? `\nICP: ${researchContext.icp}` : "";
       setMessages([{
         role: "assistant",
-        content: `You have ${leadCount} leads in your prospect list.${icpText}\n\nI can analyze your full list, prioritize accounts, build outreach sequences, and more. Choose an action above or ask me anything.`,
+        content: `Choose a prompt above or ask me anything about your leads.`,
         timestamp: new Date().toLocaleTimeString(),
       }]);
     } else if (researchContext && researchContext.leads.length === 1) {
