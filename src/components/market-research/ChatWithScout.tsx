@@ -77,6 +77,24 @@ interface SuggestedAction {
   icon: React.ReactNode;
 }
 
+// ─── Lead-specific prompts (shown when researching a single lead) ────────────
+
+const singleLeadActions: SuggestedAction[] = [
+  { label: "Is this a decision maker?", prompt: "Is this prospect a decision maker in this company? What's their buying authority?", icon: <Users className="h-3.5 w-3.5" /> },
+  { label: "Best person to contact?", prompt: "Is this the best person to contact at this company, or should we reach someone else? Who else is in the buying committee?", icon: <Target className="h-3.5 w-3.5" /> },
+  { label: "Role tenure & history", prompt: "How long has this person been in their current role? What roles did they hold before this position?", icon: <FileText className="h-3.5 w-3.5" /> },
+  { label: "Recently promoted or hired?", prompt: "Was this prospect recently promoted or newly hired? What does that signal for our outreach timing?", icon: <Zap className="h-3.5 w-3.5" /> },
+  { label: "LinkedIn activity summary", prompt: "Summarize this prospect's recent LinkedIn activity. What topics are they engaging with?", icon: <Newspaper className="h-3.5 w-3.5" /> },
+  { label: "Company buying signals", prompt: "What signals suggest this company might need our solution right now?", icon: <TrendingUp className="h-3.5 w-3.5" /> },
+];
+
+const singleLeadSecondaryActions: SuggestedAction[] = [
+  { label: "Write personalized outreach", prompt: "Write a personalized outreach message for this prospect based on their role, company context, and recent signals.", icon: <FileText className="h-3.5 w-3.5" /> },
+  { label: "Find mutual connections", prompt: "Find any mutual connections or shared interests that could warm up this outreach.", icon: <Users className="h-3.5 w-3.5" /> },
+  { label: "Competitive tools they use", prompt: "What competitive tools or solutions is this company currently using that we could displace?", icon: <Search className="h-3.5 w-3.5" /> },
+  { label: "Meeting prep brief", prompt: "Create a meeting preparation brief for a call with this prospect. Include talking points, potential objections, and value props.", icon: <Sparkles className="h-3.5 w-3.5" /> },
+];
+
 const leadPrimaryActions: SuggestedAction[] = [
   { label: "Research these companies", prompt: "Research these companies and give me a summary of what each one does, their recent news, and their market position.", icon: <Search className="h-3.5 w-3.5" /> },
   { label: "Find buying signals", prompt: "Find buying signals for these leads. Look for recent funding, hiring surges, technology changes, and expansion plans.", icon: <TrendingUp className="h-3.5 w-3.5" /> },
