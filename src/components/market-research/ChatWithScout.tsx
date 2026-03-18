@@ -141,13 +141,13 @@ const cleanResponseContent = (content: string): string => {
 
 const ProspectSummaryCard = ({ lead, opportunity }: { lead: LeadContext; opportunity?: string }) => (
   <Card className="p-3 space-y-2 bg-muted/20 border-border overflow-y-auto max-h-[180px] shrink-0">
-    <div className="flex items-center gap-3 mb-1">
-      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-        <User className="h-5 w-5 text-primary" />
+    <div className="flex items-center gap-2">
+      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+        <User className="h-4 w-4 text-primary" />
       </div>
       <div className="min-w-0">
-        <h3 className="text-sm font-semibold text-foreground leading-tight truncate">{lead.name}</h3>
-        <p className="text-xs text-muted-foreground truncate">{lead.jobTitle}</p>
+        <h3 className="text-xs font-semibold text-foreground leading-tight truncate">{lead.name}</h3>
+        <p className="text-[11px] text-muted-foreground truncate">{lead.jobTitle}</p>
       </div>
     </div>
 
