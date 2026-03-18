@@ -353,8 +353,8 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
       <div>
         <div className="flex justify-end mb-1.5">
           <OpportunitySignalBadge
-            matchingLeads={opportunityMatches['market-entry'].crm}
-            totalLeads={opportunityMatches['market-entry'].total}
+            matchingLeads={opportunityMatches['market-entry'].matching}
+            totalLeads={totalLeadPool}
             onViewLeads={() => handleViewLeads('market-entry')}
           />
         </div>
