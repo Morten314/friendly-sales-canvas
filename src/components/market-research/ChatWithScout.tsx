@@ -517,39 +517,49 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
 
       {/* Suggested Actions */}
       {messages.length <= 1 && (
-        <div className="p-4 border-b shrink-0 space-y-3 max-h-[220px] overflow-y-auto">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Agent Workflows</p>
-          <div className="flex flex-wrap gap-2">
-            {primaryActions.map((action) => (
-              <Button
-                key={action.label}
-                variant="outline"
-                size="sm"
-                className="h-8 text-xs gap-1.5 hover:bg-primary/5 hover:text-primary hover:border-primary/30 transition-colors"
-                onClick={() => handleSendMessage(action.prompt)}
-                disabled={isLoading}
-              >
-                {action.icon}
-                {action.label}
-              </Button>
-            ))}
-          </div>
-          {secondaryActions.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {secondaryActions.map((action) => (
-                <Button
-                  key={action.label}
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 text-[11px] gap-1.5 text-muted-foreground hover:text-primary"
-                  onClick={() => handleSendMessage(action.prompt)}
-                  disabled={isLoading}
-                >
-                  {action.icon}
-                  {action.label}
-                </Button>
-              ))}
-            </div>
+        <div className="p-4 border-b shrink-0 space-y-4 max-h-[320px] overflow-y-auto">
+          {useCategorized ? (
+            categorizedPrompts.map((cat) => (
+              <div key={cat.category} className="space-y-1.5">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-muted-foreground">{cat.icon}</span>
+                  <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">{cat.category}</p>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {cat.actions.map((action) => (
+                    <Button
+                      key={action.label}
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-[11px] gap-1.5 hover:bg-primary/5 hover:text-primary hover:border-primary/30 transition-colors"
+                      onClick={() => handleSendMessage(action.prompt)}
+                      disabled={isLoading}
+                    >
+                      {action.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            ))
+          ) : (
+            <>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Suggested Questions</p>
+              <div className="flex flex-wrap gap-2">
+                {primaryActions.map((action) => (
+                  <Button
+                    key={action.label}
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs gap-1.5 hover:bg-primary/5 hover:text-primary hover:border-primary/30 transition-colors"
+                    onClick={() => handleSendMessage(action.prompt)}
+                    disabled={isLoading}
+                  >
+                    {action.icon}
+                    {action.label}
+                  </Button>
+                ))}
+              </div>
+            </>
           )}
         </div>
       )}
