@@ -493,55 +493,53 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
 
 
       {/* Suggested Actions - compact layout under header */}
-      {messages.length <= 1 && (
-        <div className="px-4 py-3 border-b shrink-0 space-y-2.5">
-          {useCategorized ? (
-            <div className="space-y-2">
-              {categorizedPrompts.map((cat) => (
-                <div key={cat.category} className="flex items-start gap-2">
-                  <div className="flex items-center gap-1 shrink-0 pt-1">
-                    <span className="text-muted-foreground">{cat.icon}</span>
-                    <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider w-[90px]">{cat.category}</span>
-                  </div>
-                  <div className="flex flex-wrap gap-1">
-                    {cat.actions.map((action) => (
-                      <Button
-                        key={action.label}
-                        variant="outline"
-                        size="sm"
-                        className="h-6 text-[10px] px-2 gap-1 hover:bg-primary/5 hover:text-primary hover:border-primary/30 transition-colors"
-                        onClick={() => handleSendMessage(action.prompt)}
-                        disabled={isLoading}
-                      >
-                        {action.label}
-                      </Button>
-                    ))}
-                  </div>
+      <div className="px-4 py-3 border-b shrink-0 space-y-2.5">
+        {useCategorized ? (
+          <div className="space-y-2">
+            {categorizedPrompts.map((cat) => (
+              <div key={cat.category} className="flex items-start gap-2">
+                <div className="flex items-center gap-1 shrink-0 pt-1">
+                  <span className="text-muted-foreground">{cat.icon}</span>
+                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider w-[90px]">{cat.category}</span>
                 </div>
+                <div className="flex flex-wrap gap-1">
+                  {cat.actions.map((action) => (
+                    <Button
+                      key={action.label}
+                      variant="outline"
+                      size="sm"
+                      className="h-6 text-[10px] px-2 gap-1 hover:bg-primary/5 hover:text-primary hover:border-primary/30 transition-colors"
+                      onClick={() => handleSendMessage(action.prompt)}
+                      disabled={isLoading}
+                    >
+                      {action.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <>
+            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Suggested Questions</p>
+            <div className="flex flex-wrap gap-1.5">
+              {primaryActions.map((action) => (
+                <Button
+                  key={action.label}
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-[11px] gap-1.5 hover:bg-primary/5 hover:text-primary hover:border-primary/30 transition-colors"
+                  onClick={() => handleSendMessage(action.prompt)}
+                  disabled={isLoading}
+                >
+                  {action.icon}
+                  {action.label}
+                </Button>
               ))}
             </div>
-          ) : (
-            <>
-              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Suggested Questions</p>
-              <div className="flex flex-wrap gap-1.5">
-                {primaryActions.map((action) => (
-                  <Button
-                    key={action.label}
-                    variant="outline"
-                    size="sm"
-                    className="h-7 text-[11px] gap-1.5 hover:bg-primary/5 hover:text-primary hover:border-primary/30 transition-colors"
-                    onClick={() => handleSendMessage(action.prompt)}
-                    disabled={isLoading}
-                  >
-                    {action.icon}
-                    {action.label}
-                  </Button>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-      )}
+          </>
+        )}
+      </div>
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-[200px]">
