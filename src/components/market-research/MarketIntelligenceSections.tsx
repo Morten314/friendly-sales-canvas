@@ -193,59 +193,58 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
       </div>
 
       {/* Industry Trends Section */}
-      <div className={`${props.showIndustryTrendsScoutChat ? 'flex gap-6' : ''}`}>
-        <div className={`${props.showIndustryTrendsScoutChat ? 'w-1/2' : ''}`}>
-          <IndustryTrendsSection
-            isIndustryTrendsEditing={props.isIndustryTrendsEditing}
-            isSplitView={props.isSplitView}
-            industryTrendsExpanded={props.industryTrendsExpanded}
-            industryTrendsHasEdits={props.industryTrendsHasEdits}
-            industryTrendsDeletedSections={props.industryTrendsDeletedSections}
-            industryTrendsEditHistory={props.industryTrendsEditHistory}
-            onIndustryTrendsToggleEdit={props.onIndustryTrendsToggleEdit}
-            onIndustryTrendsSaveChanges={props.onIndustryTrendsSaveChanges}
-            onIndustryTrendsCancelEdit={props.onIndustryTrendsCancelEdit}
-            onIndustryTrendsDeleteSection={props.onIndustryTrendsDeleteSection}
-            onIndustryTrendsEditHistoryOpen={props.onIndustryTrendsEditHistoryOpen}
-            onIndustryTrendsExpandToggle={props.onIndustryTrendsExpandToggle}
-            onScoutIconClick={props.onIndustryTrendsScoutIconClick}
-            onExportPDF={props.onExportPDF}
-            onSaveToWorkspace={props.onSaveToWorkspace}
-            onGenerateShareableLink={props.onGenerateShareableLink}
-            isRefreshing={props.isRefreshing}
-            companyProfile={props.companyProfile}
-            // Pass Industry Trends data props
-            executiveSummary={props.industryTrendsExecutiveSummary}
-            aiAdoption={props.industryTrendsAiAdoption}
-            cloudMigration={props.industryTrendsCloudMigration}
-            regulatory={props.industryTrendsRegulatory}
-            trendSnapshots={props.industryTrendSnapshots}
-            recommendations={props.industryTrendsRecommendations}
-            risks={props.industryTrendsRisks}
-            regionalHotspots={props.industryTrendsRegionalHotspots}
-            visualCharts={props.industryTrendsVisualCharts}
-            // Pass individual field update functions
-            onIndustryTrendsExecutiveSummaryChange={props.onIndustryTrendsExecutiveSummaryChange}
-            onIndustryTrendsAiAdoptionChange={props.onIndustryTrendsAiAdoptionChange}
-            onIndustryTrendsCloudMigrationChange={props.onIndustryTrendsCloudMigrationChange}
-            onIndustryTrendsRegulatoryChange={props.onIndustryTrendsRegulatoryChange}
-            onIndustryTrendSnapshotsChange={props.onIndustryTrendSnapshotsChange}
+      <div className="relative">
+        <div className="absolute top-3 right-3 z-10">
+          <OpportunitySignalBadge
+            matchingLeads={opportunityMatches['industry-trends'].crm}
+            totalLeads={opportunityMatches['industry-trends'].total}
+            onViewLeads={() => handleViewLeads('industry-trends')}
           />
         </div>
-        {props.showIndustryTrendsScoutChat && industryTrendsScoutChatPanel && (
-          <div className="w-1/2">
-            {industryTrendsScoutChatPanel}
+        <div className={`${props.showIndustryTrendsScoutChat ? 'flex gap-6' : ''}`}>
+          <div className={`${props.showIndustryTrendsScoutChat ? 'w-1/2' : ''}`}>
+            <IndustryTrendsSection
+              isIndustryTrendsEditing={props.isIndustryTrendsEditing}
+              isSplitView={props.isSplitView}
+              industryTrendsExpanded={props.industryTrendsExpanded}
+              industryTrendsHasEdits={props.industryTrendsHasEdits}
+              industryTrendsDeletedSections={props.industryTrendsDeletedSections}
+              industryTrendsEditHistory={props.industryTrendsEditHistory}
+              onIndustryTrendsToggleEdit={props.onIndustryTrendsToggleEdit}
+              onIndustryTrendsSaveChanges={props.onIndustryTrendsSaveChanges}
+              onIndustryTrendsCancelEdit={props.onIndustryTrendsCancelEdit}
+              onIndustryTrendsDeleteSection={props.onIndustryTrendsDeleteSection}
+              onIndustryTrendsEditHistoryOpen={props.onIndustryTrendsEditHistoryOpen}
+              onIndustryTrendsExpandToggle={props.onIndustryTrendsExpandToggle}
+              onScoutIconClick={props.onIndustryTrendsScoutIconClick}
+              onExportPDF={props.onExportPDF}
+              onSaveToWorkspace={props.onSaveToWorkspace}
+              onGenerateShareableLink={props.onGenerateShareableLink}
+              isRefreshing={props.isRefreshing}
+              companyProfile={props.companyProfile}
+              executiveSummary={props.industryTrendsExecutiveSummary}
+              aiAdoption={props.industryTrendsAiAdoption}
+              cloudMigration={props.industryTrendsCloudMigration}
+              regulatory={props.industryTrendsRegulatory}
+              trendSnapshots={props.industryTrendSnapshots}
+              recommendations={props.industryTrendsRecommendations}
+              risks={props.industryTrendsRisks}
+              regionalHotspots={props.industryTrendsRegionalHotspots}
+              visualCharts={props.industryTrendsVisualCharts}
+              onIndustryTrendsExecutiveSummaryChange={props.onIndustryTrendsExecutiveSummaryChange}
+              onIndustryTrendsAiAdoptionChange={props.onIndustryTrendsAiAdoptionChange}
+              onIndustryTrendsCloudMigrationChange={props.onIndustryTrendsCloudMigrationChange}
+              onIndustryTrendsRegulatoryChange={props.onIndustryTrendsRegulatoryChange}
+              onIndustryTrendSnapshotsChange={props.onIndustryTrendSnapshotsChange}
+            />
           </div>
-        )}
+          {props.showIndustryTrendsScoutChat && industryTrendsScoutChatPanel && (
+            <div className="w-1/2">
+              {industryTrendsScoutChatPanel}
+            </div>
+          )}
+        </div>
       </div>
-      <OpportunityMatchCard
-        sectionName="Industry Trends"
-        opportunityPattern={opportunityMatches['industry-trends'].pattern}
-        crmAccountsCount={opportunityMatches['industry-trends'].crm}
-        uploadedAccountsCount={opportunityMatches['industry-trends'].uploaded}
-        totalLeadsCount={opportunityMatches['industry-trends'].total}
-        onViewLeads={() => handleViewLeads('industry-trends')}
-      />
 
       {/* Competitor Landscape Section */}
       <div className={`${props.showCompetitorScoutChat ? 'flex gap-6' : ''}`}>
