@@ -285,10 +285,16 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
     setIsLoading(true);
 
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+
       const response = await fetch(`https://backend-11kr.onrender.com/chat/?question=${encodeURIComponent(text)}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
