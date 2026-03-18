@@ -20,6 +20,10 @@ interface LeadContext {
   name: string;
   company: string;
   jobTitle: string;
+  email?: string;
+  tenure?: string;
+  source?: string;
+  signals?: string[];
 }
 
 interface ScoutResearchContext {
