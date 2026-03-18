@@ -141,8 +141,8 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
   return (
     <>
       {/* Market Size & Opportunity Section */}
-      <div className="relative">
-        <div className="absolute top-3 right-3 z-10">
+      <div>
+        <div className="flex justify-end mb-1.5">
           <OpportunitySignalBadge
             matchingLeads={opportunityMatches['market-size'].crm}
             totalLeads={opportunityMatches['market-size'].total}
