@@ -298,54 +298,55 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
       </div>
 
       {/* Regulatory & Compliance Highlights Section */}
-      <div className={`${props.showRegulatoryScoutChat ? 'flex gap-6' : ''}`}>
-        <div className={`${props.showRegulatoryScoutChat ? 'w-1/2' : ''}`}>
-          <RegulatoryComplianceSection
-        isEditing={props.isRegulatoryEditing || false}
-        isSplitView={props.isSplitView}
-        isExpanded={props.regulatoryExpanded || false}
-        hasEdits={props.regulatoryHasEdits || false}
-        deletedSections={props.regulatoryDeletedSections || new Set()}
-        editHistory={props.regulatoryEditHistory || []}
-         executiveSummary={props.regulatoryData?.executiveSummary || props.regulatoryExecutiveSummary || 'The regulatory landscape for SaaS companies continues to evolve rapidly, with new compliance requirements emerging across multiple jurisdictions. Organizations must navigate an increasingly complex web of data protection, AI governance, and industry-specific regulations.'}
-         euAiActDeadline={props.regulatoryData?.euAiActDeadline || props.regulatoryEuAiActDeadline || 'February 2, 2025'}
-         gdprCompliance={props.regulatoryData?.gdprCompliance || props.regulatoryGdprCompliance || '68%'}
-         potentialFines={props.regulatoryData?.potentialFines || props.regulatoryPotentialFines || 'Up to 6% of annual revenue'}
-         dataLocalization={props.regulatoryData?.dataLocalization || props.regulatoryDataLocalization || 'Mandatory for customer data'}
-        onToggleEdit={props.onRegulatoryToggleEdit || (() => {})}
-        onScoutIconClick={props.onRegulatoryScoutIconClick || props.onMarketSizeScoutIconClick}
-        onEditHistoryOpen={props.onRegulatoryEditHistoryOpen || (() => {})}
-        onDeleteSection={props.onRegulatoryDeleteSection || (() => {})}
-        onSaveChanges={props.onRegulatorySaveChanges || (() => {})}
-        onCancelEdit={props.onRegulatoryCancelEdit || (() => {})}
-        onExpandToggle={props.onRegulatoryExpandToggle || (() => {})}
-        onExecutiveSummaryChange={props.onRegulatoryExecutiveSummaryChange || (() => {})}
-        onEuAiActDeadlineChange={props.onRegulatoryEuAiActDeadlineChange || (() => {})}
-        onGdprComplianceChange={props.onRegulatoryGdprComplianceChange || (() => {})}
-        onPotentialFinesChange={props.onRegulatoryPotentialFinesChange || (() => {})}
-        onDataLocalizationChange={props.onRegulatoryDataLocalizationChange || (() => {})}
-        onExportPDF={props.onExportPDF}
-        onSaveToWorkspace={props.onSaveToWorkspace}
-        onGenerateShareableLink={props.onGenerateShareableLink}
-        isRefreshing={props.isRefreshing}
-        companyProfile={props.companyProfile}
-        regulatoryData={props.regulatoryData}
+      <div className="relative">
+        <div className="absolute top-3 right-3 z-10">
+          <OpportunitySignalBadge
+            matchingLeads={opportunityMatches['regulatory-compliance'].crm}
+            totalLeads={opportunityMatches['regulatory-compliance'].total}
+            onViewLeads={() => handleViewLeads('regulatory-compliance')}
           />
         </div>
-        {props.showRegulatoryScoutChat && regulatoryScoutChatPanel && (
-          <div className="w-1/2">
-            {regulatoryScoutChatPanel}
+        <div className={`${props.showRegulatoryScoutChat ? 'flex gap-6' : ''}`}>
+          <div className={`${props.showRegulatoryScoutChat ? 'w-1/2' : ''}`}>
+            <RegulatoryComplianceSection
+              isEditing={props.isRegulatoryEditing || false}
+              isSplitView={props.isSplitView}
+              isExpanded={props.regulatoryExpanded || false}
+              hasEdits={props.regulatoryHasEdits || false}
+              deletedSections={props.regulatoryDeletedSections || new Set()}
+              editHistory={props.regulatoryEditHistory || []}
+              executiveSummary={props.regulatoryData?.executiveSummary || props.regulatoryExecutiveSummary || 'The regulatory landscape for SaaS companies continues to evolve rapidly, with new compliance requirements emerging across multiple jurisdictions. Organizations must navigate an increasingly complex web of data protection, AI governance, and industry-specific regulations.'}
+              euAiActDeadline={props.regulatoryData?.euAiActDeadline || props.regulatoryEuAiActDeadline || 'February 2, 2025'}
+              gdprCompliance={props.regulatoryData?.gdprCompliance || props.regulatoryGdprCompliance || '68%'}
+              potentialFines={props.regulatoryData?.potentialFines || props.regulatoryPotentialFines || 'Up to 6% of annual revenue'}
+              dataLocalization={props.regulatoryData?.dataLocalization || props.regulatoryDataLocalization || 'Mandatory for customer data'}
+              onToggleEdit={props.onRegulatoryToggleEdit || (() => {})}
+              onScoutIconClick={props.onRegulatoryScoutIconClick || props.onMarketSizeScoutIconClick}
+              onEditHistoryOpen={props.onRegulatoryEditHistoryOpen || (() => {})}
+              onDeleteSection={props.onRegulatoryDeleteSection || (() => {})}
+              onSaveChanges={props.onRegulatorySaveChanges || (() => {})}
+              onCancelEdit={props.onRegulatoryCancelEdit || (() => {})}
+              onExpandToggle={props.onRegulatoryExpandToggle || (() => {})}
+              onExecutiveSummaryChange={props.onRegulatoryExecutiveSummaryChange || (() => {})}
+              onEuAiActDeadlineChange={props.onRegulatoryEuAiActDeadlineChange || (() => {})}
+              onGdprComplianceChange={props.onRegulatoryGdprComplianceChange || (() => {})}
+              onPotentialFinesChange={props.onRegulatoryPotentialFinesChange || (() => {})}
+              onDataLocalizationChange={props.onRegulatoryDataLocalizationChange || (() => {})}
+              onExportPDF={props.onExportPDF}
+              onSaveToWorkspace={props.onSaveToWorkspace}
+              onGenerateShareableLink={props.onGenerateShareableLink}
+              isRefreshing={props.isRefreshing}
+              companyProfile={props.companyProfile}
+              regulatoryData={props.regulatoryData}
+            />
           </div>
-        )}
+          {props.showRegulatoryScoutChat && regulatoryScoutChatPanel && (
+            <div className="w-1/2">
+              {regulatoryScoutChatPanel}
+            </div>
+          )}
+        </div>
       </div>
-      <OpportunityMatchCard
-        sectionName="Regulatory Compliance"
-        opportunityPattern={opportunityMatches['regulatory-compliance'].pattern}
-        crmAccountsCount={opportunityMatches['regulatory-compliance'].crm}
-        uploadedAccountsCount={opportunityMatches['regulatory-compliance'].uploaded}
-        totalLeadsCount={opportunityMatches['regulatory-compliance'].total}
-        onViewLeads={() => handleViewLeads('regulatory-compliance')}
-      />
 
       {/* Market Entry & Growth Strategy Section */}
       <div className={`${props.showMarketEntryScoutChat ? 'flex gap-6' : ''}`}>
