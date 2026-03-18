@@ -247,54 +247,55 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
       </div>
 
       {/* Competitor Landscape Section */}
-      <div className={`${props.showCompetitorScoutChat ? 'flex gap-6' : ''}`}>
-        <div className={`${props.showCompetitorScoutChat ? 'w-1/2' : ''}`}>
-          <CompetitorLandscapeSection
-        key={`competitor-${props.competitorData?.timestamp || Date.now()}-${props.isRefreshing ? 'refreshing' : 'stable'}`}
-        isEditing={props.isCompetitorEditing || false}
-        isSplitView={props.isSplitView}
-        isExpanded={props.competitorExpanded || false}
-        hasEdits={props.competitorHasEdits || false}
-        deletedSections={props.competitorDeletedSections || new Set()}
-        editHistory={props.competitorEditHistory || []}
-         executiveSummary={props.competitorData?.executiveSummary || props.competitorExecutiveSummary || ''}
-         topPlayerShare={props.competitorData?.topPlayerShare || props.competitorTopPlayerShare || ''}
-         emergingPlayers={props.competitorData?.emergingPlayers || props.competitorEmergingPlayers || ''}
-         fundingNews={props.competitorData?.fundingNews || props.competitorFundingNews || []}
-        onToggleEdit={props.onCompetitorToggleEdit || (() => {})}
-        onScoutIconClick={props.onCompetitorScoutIconClick}
-        onEditHistoryOpen={props.onCompetitorEditHistoryOpen || (() => {})}
-        onDeleteSection={props.onCompetitorDeleteSection || (() => {})}
-        onSaveChanges={props.onCompetitorSaveChanges || (() => {})}
-        onCancelEdit={props.onCompetitorCancelEdit || (() => {})}
-        onExpandToggle={props.onCompetitorExpandToggle || (() => {})}
-        onExecutiveSummaryChange={props.onCompetitorExecutiveSummaryChange || (() => {})}
-        onTopPlayerShareChange={props.onCompetitorTopPlayerShareChange || (() => {})}
-        onEmergingPlayersChange={props.onCompetitorEmergingPlayersChange || (() => {})}
-        onFundingNewsChange={props.onCompetitorFundingNewsChange || (() => {})}
-        onExportPDF={props.onExportPDF}
-        onSaveToWorkspace={props.onSaveToWorkspace}
-        onGenerateShareableLink={props.onGenerateShareableLink}
-        isRefreshing={props.isRefreshing}
-        companyProfile={props.companyProfile}
-        competitorData={props.competitorData}
-        error={props.competitorError}
+      <div className="relative">
+        <div className="absolute top-3 right-3 z-10">
+          <OpportunitySignalBadge
+            matchingLeads={opportunityMatches['competitor-landscape'].crm}
+            totalLeads={opportunityMatches['competitor-landscape'].total}
+            onViewLeads={() => handleViewLeads('competitor-landscape')}
           />
         </div>
-        {props.showCompetitorScoutChat && competitorScoutChatPanel && (
-          <div className="w-1/2">
-            {competitorScoutChatPanel}
+        <div className={`${props.showCompetitorScoutChat ? 'flex gap-6' : ''}`}>
+          <div className={`${props.showCompetitorScoutChat ? 'w-1/2' : ''}`}>
+            <CompetitorLandscapeSection
+              key={`competitor-${props.competitorData?.timestamp || Date.now()}-${props.isRefreshing ? 'refreshing' : 'stable'}`}
+              isEditing={props.isCompetitorEditing || false}
+              isSplitView={props.isSplitView}
+              isExpanded={props.competitorExpanded || false}
+              hasEdits={props.competitorHasEdits || false}
+              deletedSections={props.competitorDeletedSections || new Set()}
+              editHistory={props.competitorEditHistory || []}
+              executiveSummary={props.competitorData?.executiveSummary || props.competitorExecutiveSummary || ''}
+              topPlayerShare={props.competitorData?.topPlayerShare || props.competitorTopPlayerShare || ''}
+              emergingPlayers={props.competitorData?.emergingPlayers || props.competitorEmergingPlayers || ''}
+              fundingNews={props.competitorData?.fundingNews || props.competitorFundingNews || []}
+              onToggleEdit={props.onCompetitorToggleEdit || (() => {})}
+              onScoutIconClick={props.onCompetitorScoutIconClick}
+              onEditHistoryOpen={props.onCompetitorEditHistoryOpen || (() => {})}
+              onDeleteSection={props.onCompetitorDeleteSection || (() => {})}
+              onSaveChanges={props.onCompetitorSaveChanges || (() => {})}
+              onCancelEdit={props.onCompetitorCancelEdit || (() => {})}
+              onExpandToggle={props.onCompetitorExpandToggle || (() => {})}
+              onExecutiveSummaryChange={props.onCompetitorExecutiveSummaryChange || (() => {})}
+              onTopPlayerShareChange={props.onCompetitorTopPlayerShareChange || (() => {})}
+              onEmergingPlayersChange={props.onCompetitorEmergingPlayersChange || (() => {})}
+              onFundingNewsChange={props.onCompetitorFundingNewsChange || (() => {})}
+              onExportPDF={props.onExportPDF}
+              onSaveToWorkspace={props.onSaveToWorkspace}
+              onGenerateShareableLink={props.onGenerateShareableLink}
+              isRefreshing={props.isRefreshing}
+              companyProfile={props.companyProfile}
+              competitorData={props.competitorData}
+              error={props.competitorError}
+            />
           </div>
-        )}
+          {props.showCompetitorScoutChat && competitorScoutChatPanel && (
+            <div className="w-1/2">
+              {competitorScoutChatPanel}
+            </div>
+          )}
+        </div>
       </div>
-      <OpportunityMatchCard
-        sectionName="Competitor Landscape"
-        opportunityPattern={opportunityMatches['competitor-landscape'].pattern}
-        crmAccountsCount={opportunityMatches['competitor-landscape'].crm}
-        uploadedAccountsCount={opportunityMatches['competitor-landscape'].uploaded}
-        totalLeadsCount={opportunityMatches['competitor-landscape'].total}
-        onViewLeads={() => handleViewLeads('competitor-landscape')}
-      />
 
       {/* Regulatory & Compliance Highlights Section */}
       <div className={`${props.showRegulatoryScoutChat ? 'flex gap-6' : ''}`}>
