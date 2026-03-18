@@ -364,26 +364,24 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
             )}
           </div>
 
-          {/* Suggested Questions - vertical list style */}
-          {(
-            <div className="p-3 border-b shrink-0 space-y-2">
-              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Ask Scout</p>
-              <div className="space-y-0.5">
-                {primaryActions.map((action) => (
-                  <button
-                    key={action.label}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-foreground rounded-md hover:bg-primary/5 hover:text-primary transition-colors text-left group disabled:opacity-50"
-                    onClick={() => handleSendMessage(action.prompt)}
-                    disabled={isLoading}
-                  >
-                    <span className="text-muted-foreground group-hover:text-primary transition-colors shrink-0">{action.icon}</span>
-                    {action.label}
-                    <ArrowRight className="h-3 w-3 ml-auto opacity-0 group-hover:opacity-100 text-primary transition-opacity shrink-0" />
-                  </button>
-                ))}
-              </div>
+          {/* Suggested Questions - always visible in single-lead mode */}
+          <div className="p-3 border-b shrink-0 space-y-2 max-h-[240px] overflow-y-auto">
+            <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Ask Scout</p>
+            <div className="space-y-0.5">
+              {primaryActions.map((action) => (
+                <button
+                  key={action.label}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-foreground rounded-md hover:bg-primary/5 hover:text-primary transition-colors text-left group disabled:opacity-50"
+                  onClick={() => handleSendMessage(action.prompt)}
+                  disabled={isLoading}
+                >
+                  <span className="text-muted-foreground group-hover:text-primary transition-colors shrink-0">{action.icon}</span>
+                  {action.label}
+                  <ArrowRight className="h-3 w-3 ml-auto opacity-0 group-hover:opacity-100 text-primary transition-opacity shrink-0" />
+                </button>
+              ))}
             </div>
-          )}
+          </div>
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-[120px]">
