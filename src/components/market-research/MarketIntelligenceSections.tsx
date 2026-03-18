@@ -349,59 +349,60 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
       </div>
 
       {/* Market Entry & Growth Strategy Section */}
-      <div className={`${props.showMarketEntryScoutChat ? 'flex gap-6' : ''}`}>
-        <div className={`${props.showMarketEntryScoutChat ? 'w-1/2' : ''}`}>
-          <MarketEntrySection
-        isEditing={props.isMarketEntryEditing || false}
-        isSplitView={props.isSplitView}
-        isExpanded={props.marketEntryExpanded || false}
-        hasEdits={props.marketEntryHasEdits || false}
-        deletedSections={props.marketEntryDeletedSections || new Set()}
-        editHistory={props.marketEntryEditHistory || []}
-        executiveSummary={props.marketEntryExecutiveSummary || ''}
-        entryBarriers={props.marketEntryBarriers || []}
-        recommendedChannel={props.marketEntryRecommendedChannel || ''}
-        timeToMarket={props.marketEntryTimeToMarket || ''}
-        topBarrier={props.marketEntryTopBarrier || ''}
-        competitiveDifferentiation={props.marketEntryCompetitiveDifferentiation || []}
-        strategicRecommendations={props.marketEntryStrategicRecommendations || []}
-        riskAssessment={props.marketEntryRiskAssessment || []}
-        onToggleEdit={props.onMarketEntryToggleEdit || (() => {})}
-        onScoutIconClick={props.onMarketEntryScoutIconClick || props.onMarketSizeScoutIconClick}
-        onEditHistoryOpen={props.onMarketEntryEditHistoryOpen || (() => {})}
-        onDeleteSection={props.onMarketEntryDeleteSection || (() => {})}
-        onSaveChanges={props.onMarketEntrySaveChanges || (() => {})}
-        onCancelEdit={props.onMarketEntryCancelEdit || (() => {})}
-        onExpandToggle={props.onMarketEntryExpandToggle || (() => {})}
-        onExecutiveSummaryChange={props.onMarketEntryExecutiveSummaryChange || (() => {})}
-        onEntryBarriersChange={props.onMarketEntryBarriersChange || (() => {})}
-        onRecommendedChannelChange={props.onMarketEntryRecommendedChannelChange || (() => {})}
-        onTimeToMarketChange={props.onMarketEntryTimeToMarketChange || (() => {})}
-        onTopBarrierChange={props.onMarketEntryTopBarrierChange || (() => {})}
-        onCompetitiveDifferentiationChange={props.onMarketEntryCompetitiveDifferentiationChange || (() => {})}
-        onStrategicRecommendationsChange={props.onMarketEntryStrategicRecommendationsChange || (() => {})}
-        onRiskAssessmentChange={props.onMarketEntryRiskAssessmentChange || (() => {})}
-        onExportPDF={props.onExportPDF}
-        onSaveToWorkspace={props.onSaveToWorkspace}
-        onGenerateShareableLink={props.onGenerateShareableLink}
-        isRefreshing={props.isRefreshing}
-        companyProfile={props.companyProfile}
+      <div className="relative">
+        <div className="absolute top-3 right-3 z-10">
+          <OpportunitySignalBadge
+            matchingLeads={opportunityMatches['market-entry'].crm}
+            totalLeads={opportunityMatches['market-entry'].total}
+            onViewLeads={() => handleViewLeads('market-entry')}
           />
         </div>
-        {props.showMarketEntryScoutChat && marketEntryScoutChatPanel && (
-          <div className="w-1/2">
-            {marketEntryScoutChatPanel}
+        <div className={`${props.showMarketEntryScoutChat ? 'flex gap-6' : ''}`}>
+          <div className={`${props.showMarketEntryScoutChat ? 'w-1/2' : ''}`}>
+            <MarketEntrySection
+              isEditing={props.isMarketEntryEditing || false}
+              isSplitView={props.isSplitView}
+              isExpanded={props.marketEntryExpanded || false}
+              hasEdits={props.marketEntryHasEdits || false}
+              deletedSections={props.marketEntryDeletedSections || new Set()}
+              editHistory={props.marketEntryEditHistory || []}
+              executiveSummary={props.marketEntryExecutiveSummary || ''}
+              entryBarriers={props.marketEntryBarriers || []}
+              recommendedChannel={props.marketEntryRecommendedChannel || ''}
+              timeToMarket={props.marketEntryTimeToMarket || ''}
+              topBarrier={props.marketEntryTopBarrier || ''}
+              competitiveDifferentiation={props.marketEntryCompetitiveDifferentiation || []}
+              strategicRecommendations={props.marketEntryStrategicRecommendations || []}
+              riskAssessment={props.marketEntryRiskAssessment || []}
+              onToggleEdit={props.onMarketEntryToggleEdit || (() => {})}
+              onScoutIconClick={props.onMarketEntryScoutIconClick || props.onMarketSizeScoutIconClick}
+              onEditHistoryOpen={props.onMarketEntryEditHistoryOpen || (() => {})}
+              onDeleteSection={props.onMarketEntryDeleteSection || (() => {})}
+              onSaveChanges={props.onMarketEntrySaveChanges || (() => {})}
+              onCancelEdit={props.onMarketEntryCancelEdit || (() => {})}
+              onExpandToggle={props.onMarketEntryExpandToggle || (() => {})}
+              onExecutiveSummaryChange={props.onMarketEntryExecutiveSummaryChange || (() => {})}
+              onEntryBarriersChange={props.onMarketEntryBarriersChange || (() => {})}
+              onRecommendedChannelChange={props.onMarketEntryRecommendedChannelChange || (() => {})}
+              onTimeToMarketChange={props.onMarketEntryTimeToMarketChange || (() => {})}
+              onTopBarrierChange={props.onMarketEntryTopBarrierChange || (() => {})}
+              onCompetitiveDifferentiationChange={props.onMarketEntryCompetitiveDifferentiationChange || (() => {})}
+              onStrategicRecommendationsChange={props.onMarketEntryStrategicRecommendationsChange || (() => {})}
+              onRiskAssessmentChange={props.onMarketEntryRiskAssessmentChange || (() => {})}
+              onExportPDF={props.onExportPDF}
+              onSaveToWorkspace={props.onSaveToWorkspace}
+              onGenerateShareableLink={props.onGenerateShareableLink}
+              isRefreshing={props.isRefreshing}
+              companyProfile={props.companyProfile}
+            />
           </div>
-        )}
+          {props.showMarketEntryScoutChat && marketEntryScoutChatPanel && (
+            <div className="w-1/2">
+              {marketEntryScoutChatPanel}
+            </div>
+          )}
+        </div>
       </div>
-      <OpportunityMatchCard
-        sectionName="Market Entry"
-        opportunityPattern={opportunityMatches['market-entry'].pattern}
-        crmAccountsCount={opportunityMatches['market-entry'].crm}
-        uploadedAccountsCount={opportunityMatches['market-entry'].uploaded}
-        totalLeadsCount={opportunityMatches['market-entry'].total}
-        onViewLeads={() => handleViewLeads('market-entry')}
-      />
     </>
   );
 };
