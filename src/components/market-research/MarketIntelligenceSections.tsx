@@ -108,27 +108,28 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
     />
   ) : undefined;
 
-  // Mock opportunity match data per section
-  const opportunityMatches: Record<string, { pattern: string; crm: number; uploaded: number; total: number }> = {
+  // Mock opportunity match data per section — fixed total lead pool
+  const totalLeadPool = 85;
+  const opportunityMatches: Record<string, { pattern: string; crm: number; uploaded: number; matching: number }> = {
     'market-size': {
       pattern: 'Companies in high-growth TAM segments matching your ICP',
-      crm: 12, uploaded: 8, total: 20,
+      crm: 12, uploaded: 8, matching: 20,
     },
     'industry-trends': {
       pattern: 'Accounts showing AI adoption & cloud migration signals',
-      crm: 9, uploaded: 5, total: 14,
+      crm: 9, uploaded: 5, matching: 14,
     },
     'competitor-landscape': {
       pattern: 'Prospects using competitor products with switching signals',
-      crm: 7, uploaded: 11, total: 18,
+      crm: 7, uploaded: 11, matching: 18,
     },
     'regulatory-compliance': {
       pattern: 'Companies impacted by upcoming regulatory deadlines',
-      crm: 4, uploaded: 3, total: 7,
+      crm: 4, uploaded: 3, matching: 7,
     },
     'market-entry': {
       pattern: 'Accounts in recommended entry channels & regions',
-      crm: 6, uploaded: 9, total: 15,
+      crm: 6, uploaded: 9, matching: 15,
     },
   };
 
@@ -144,8 +145,8 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
       <div>
         <div className="flex justify-end mb-1.5">
           <OpportunitySignalBadge
-            matchingLeads={opportunityMatches['market-size'].crm}
-            totalLeads={opportunityMatches['market-size'].total}
+            matchingLeads={opportunityMatches['market-size'].matching}
+            totalLeads={totalLeadPool}
             onViewLeads={() => handleViewLeads('market-size')}
           />
         </div>
@@ -196,8 +197,8 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
       <div>
         <div className="flex justify-end mb-1.5">
           <OpportunitySignalBadge
-            matchingLeads={opportunityMatches['industry-trends'].crm}
-            totalLeads={opportunityMatches['industry-trends'].total}
+            matchingLeads={opportunityMatches['industry-trends'].matching}
+            totalLeads={totalLeadPool}
             onViewLeads={() => handleViewLeads('industry-trends')}
           />
         </div>
@@ -250,8 +251,8 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
       <div>
         <div className="flex justify-end mb-1.5">
           <OpportunitySignalBadge
-            matchingLeads={opportunityMatches['competitor-landscape'].crm}
-            totalLeads={opportunityMatches['competitor-landscape'].total}
+            matchingLeads={opportunityMatches['competitor-landscape'].matching}
+            totalLeads={totalLeadPool}
             onViewLeads={() => handleViewLeads('competitor-landscape')}
           />
         </div>
@@ -301,8 +302,8 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
       <div>
         <div className="flex justify-end mb-1.5">
           <OpportunitySignalBadge
-            matchingLeads={opportunityMatches['regulatory-compliance'].crm}
-            totalLeads={opportunityMatches['regulatory-compliance'].total}
+            matchingLeads={opportunityMatches['regulatory-compliance'].matching}
+            totalLeads={totalLeadPool}
             onViewLeads={() => handleViewLeads('regulatory-compliance')}
           />
         </div>
@@ -352,8 +353,8 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
       <div>
         <div className="flex justify-end mb-1.5">
           <OpportunitySignalBadge
-            matchingLeads={opportunityMatches['market-entry'].crm}
-            totalLeads={opportunityMatches['market-entry'].total}
+            matchingLeads={opportunityMatches['market-entry'].matching}
+            totalLeads={totalLeadPool}
             onViewLeads={() => handleViewLeads('market-entry')}
           />
         </div>
