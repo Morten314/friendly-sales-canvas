@@ -235,8 +235,8 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const isSingleLead = mode === "selected-leads" && researchContext?.leads.length === 1;
-  const primaryActions = isSingleLead ? singleLeadActions : mode === "full-list" ? listPrimaryActions : leadPrimaryActions;
-  const secondaryActions = isSingleLead ? [] : mode === "full-list" ? listSecondaryActions : leadSecondaryActions;
+  const primaryActions = isSingleLead ? singleLeadActions : categorizedPrompts.flatMap(c => c.actions);
+  const useCategorized = !isSingleLead;
 
   // Build initial message based on context
   useEffect(() => {
