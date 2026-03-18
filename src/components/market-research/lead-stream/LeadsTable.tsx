@@ -23,8 +23,11 @@ interface MatchedLead {
   name: string;
   email: string;
   company: string;
+  jobTitle: string;
+  tenure: string;
   source: "HubSpot" | "Prospect List";
   matchedReports: string[];
+  signals: string[];
   // Agentic enrichment columns (populated on demand)
   [key: string]: unknown;
 }
