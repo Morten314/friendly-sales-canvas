@@ -850,7 +850,15 @@ const MarketResearch = React.memo(() => {
   const handleChatWithScout = (leads: any[]) => {
     setScoutMode("full-list");
     setScoutResearchContext({
-      leads: leads.map(l => ({ name: l.name, company: l.company, jobTitle: l.jobTitle })),
+      leads: leads.map(l => ({
+        name: l.name,
+        company: l.company,
+        jobTitle: l.jobTitle || '',
+        email: l.email,
+        tenure: l.tenure,
+        source: l.source,
+        signals: l.signals || [],
+      })),
       icp: 'Mid-Market SaaS',
     });
     handleTabChange('trends');
