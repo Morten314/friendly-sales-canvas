@@ -365,7 +365,7 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
           </div>
 
           {/* Suggested Questions - vertical list style */}
-          {messages.length <= 1 && (
+          {(
             <div className="p-3 border-b shrink-0 space-y-2">
               <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Ask Scout</p>
               <div className="space-y-0.5">
