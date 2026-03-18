@@ -241,11 +241,9 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
   // Build initial message based on context
   useEffect(() => {
     if (mode === "full-list" && researchContext && researchContext.leads.length > 0) {
-      const leadCount = researchContext.leads.length;
-      const icpText = researchContext.icp ? `\nICP: ${researchContext.icp}` : "";
       setMessages([{
         role: "assistant",
-        content: `You have ${leadCount} leads in your prospect list.${icpText}\n\nI can analyze your full list, prioritize accounts, build outreach sequences, and more. Choose an action above or ask me anything.`,
+        content: `Choose a prompt above or ask me anything about your leads.`,
         timestamp: new Date().toLocaleTimeString(),
       }]);
     } else if (researchContext && researchContext.leads.length === 1) {
@@ -493,27 +491,6 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
         )}
       </div>
 
-      {/* Context Banner */}
-      {hasContext && (
-        <div className="bg-primary/5 border-b border-primary/10 px-4 py-2 shrink-0">
-          <div className="flex items-center gap-2 text-xs">
-            <Sparkles className="h-3.5 w-3.5 text-primary shrink-0" />
-            <span className="text-foreground font-medium">
-              {researchContext!.leads.length} leads loaded
-            </span>
-            {researchContext!.opportunity && (
-              <Badge variant="outline" className="text-[10px] bg-primary/5 text-primary border-primary/20">
-                {researchContext!.opportunity}
-              </Badge>
-            )}
-            {researchContext!.icp && (
-              <Badge variant="outline" className="text-[10px] bg-muted text-muted-foreground">
-                {researchContext!.icp}
-              </Badge>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Suggested Actions - compact layout under header */}
       {messages.length <= 1 && (
