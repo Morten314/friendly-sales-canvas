@@ -93,6 +93,7 @@ interface LeadsTableProps {
   opportunityFilter?: string | null;
   onClearOpportunityFilter?: () => void;
   onResearchWithScout?: (lead: MatchedLead) => void;
+  onChatWithScout?: (leads: MatchedLead[]) => void;
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
