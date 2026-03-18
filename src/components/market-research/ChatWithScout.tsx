@@ -140,7 +140,7 @@ const cleanResponseContent = (content: string): string => {
 // ─── Prospect Summary Card (left panel for single lead) ─────────────────────
 
 const ProspectSummaryCard = ({ lead, opportunity }: { lead: LeadContext; opportunity?: string }) => (
-  <Card className="p-5 space-y-4 bg-muted/20 border-border overflow-y-auto max-h-[320px]">
+  <Card className="p-3 space-y-2 bg-muted/20 border-border overflow-y-auto max-h-[180px] shrink-0">
     <div className="flex items-center gap-3 mb-1">
       <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
         <User className="h-5 w-5 text-primary" />
