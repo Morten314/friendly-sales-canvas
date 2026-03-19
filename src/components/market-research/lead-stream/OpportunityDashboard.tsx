@@ -11,12 +11,10 @@ const coverageData = [
   { name: "Unmatched", value: 82, color: "hsl(var(--muted))" },
 ];
 
-const opportunityData = [
-  { name: "Market Size", leads: 20 },
-  { name: "Industry Trends", leads: 14 },
-  { name: "Competitor", leads: 12 },
-  { name: "Regulatory", leads: 7 },
-  { name: "Market Entry", leads: 9 },
+const icpMatchData = [
+  { name: "Mid-Market SaaS", leads: 18 },
+  { name: "Enterprise FinTech", leads: 12 },
+  { name: "Growth E-commerce", leads: 8 },
 ];
 
 const sourceData = [
