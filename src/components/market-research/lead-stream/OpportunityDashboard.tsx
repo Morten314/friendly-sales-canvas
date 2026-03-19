@@ -11,12 +11,10 @@ const coverageData = [
   { name: "Unmatched", value: 82, color: "hsl(var(--muted))" },
 ];
 
-const opportunityData = [
-  { name: "Market Size", leads: 20 },
-  { name: "Industry Trends", leads: 14 },
-  { name: "Competitor", leads: 12 },
-  { name: "Regulatory", leads: 7 },
-  { name: "Market Entry", leads: 9 },
+const icpMatchData = [
+  { name: "Mid-Market SaaS", leads: 18 },
+  { name: "Enterprise FinTech", leads: 12 },
+  { name: "Growth E-commerce", leads: 8 },
 ];
 
 const sourceData = [
@@ -77,11 +75,11 @@ const OpportunityDashboard: React.FC = () => {
         <Card className="p-4">
           <div className="flex items-center gap-2 mb-3">
             <Target className="h-4 w-4 text-primary" />
-            <h3 className="text-sm font-semibold text-foreground">By Report Section</h3>
+            <h3 className="text-sm font-semibold text-foreground">By ICP Match</h3>
           </div>
           <div className="h-[80px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={opportunityData} layout="vertical" margin={{ left: 0, right: 8, top: 0, bottom: 0 }}>
+              <BarChart data={icpMatchData} layout="vertical" margin={{ left: 0, right: 8, top: 0, bottom: 0 }}>
                 <XAxis type="number" hide />
                 <YAxis type="category" dataKey="name" width={80} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} axisLine={false} tickLine={false} />
                 <RechartsTooltip contentStyle={{ fontSize: 11, borderRadius: 8, border: "1px solid hsl(var(--border))" }} />
