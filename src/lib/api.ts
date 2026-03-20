@@ -16,6 +16,10 @@ export const buildApiUrl = (endpoint: string): string => {
   return `${API_BASE_URL}/${cleanEndpoint}`;
 };
 
+// Backend uses /icp only (no /customer_profile endpoint)
+export const ICP_BACKEND_URL = 'https://backend-11kr.onrender.com';
+export const buildIcpUrl = (params: string): string => `${ICP_BACKEND_URL}/icp?${params}`;
+
 // Extended options type that allows object body (will be JSON stringified)
 export interface ApiFetchOptions extends Omit<RequestInit, 'body'> {
   body?: BodyInit | Record<string, any> | null;

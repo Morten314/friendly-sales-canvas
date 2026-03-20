@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { SuggestedICPCards } from "./SuggestedICPCards";
 import { useToast } from "@/hooks/use-toast";
 
@@ -13,6 +13,16 @@ export const ICPIntelligence = () => {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [acceptedICPs, setAcceptedICPs] = useState<SuggestedICP[]>([]);
   const { toast } = useToast();
+
+  // Listen for Refresh button click from header - triggers recommended ICP generation
+  useEffect(() => {
+    const handleProfilerRefresh = () => {
+      setRefreshTrigger((prev) => prev + 1);
+      toast({ title: "Refreshing", description: "Generating recommended ICPs..." });
+    };
+    window.addEventListener("profilerRefresh", handleProfilerRefresh);
+    return () => window.removeEventListener("profilerRefresh", handleProfilerRefresh);
+  }, [toast]);
 
   const handleICPAccepted = (icp: SuggestedICP) => {
     setAcceptedICPs(prev => [...prev, icp]);

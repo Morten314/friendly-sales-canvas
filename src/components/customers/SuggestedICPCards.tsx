@@ -55,6 +55,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { getLeadCountForICP } from "@/components/customers/LeadStream";
+import { buildIcpUrl } from "@/lib/api";
 
 // --- Types ---
 interface ExistingICP {
@@ -168,12 +169,46 @@ const confidenceColor = (c: string) => {
 };
 
 // ========== MAIN COMPONENT ==========
+// Map /icp API response item to SuggestedICP format
+// API returns: id, industry, segment, companySize, decisionMakers, regions, keyAttributes,
+// growthIndicator, whySuggested, confidenceScore, marketSize, growth, topPainPoint, buyingTriggers, competitors
+const mapApiICPToSuggested = (item: any, index: number, type: "refined" | "new" = "new"): SuggestedICP => ({
+  id: item.id || item._id || `icp-${Date.now()}-${index}`,
+  name: item.name || item.segment || item.Segment || item.market_segment || `Recommended ICP ${index + 1}`,
+  type,
+  industry: item.industry || item.Industry || "Unknown Industry",
+  segment: item.segment || item.Segment || item.market_segment || "Unknown Segment",
+  companySize: item.companySize || item.company_size || item.size || "Unknown Size",
+  decisionMakers: Array.isArray(item.decisionMakers) ? item.decisionMakers
+    : Array.isArray(item.decision_makers) ? item.decision_makers
+    : typeof item.decisionMakers === "string" ? item.decisionMakers.split(",").map((s: string) => s.trim())
+    : ["CTO", "Head of Engineering"],
+  regions: Array.isArray(item.regions) ? item.regions
+    : Array.isArray(item.target_markets) ? item.target_markets
+    : typeof item.regions === "string" ? item.regions.split(",").map((s: string) => s.trim())
+    : ["Unknown Region"],
+  keyAttributes: Array.isArray(item.keyAttributes) ? item.keyAttributes
+    : Array.isArray(item.key_attributes) ? item.key_attributes
+    : typeof item.keyAttributes === "string" ? item.keyAttributes.split(",").map((s: string) => s.trim())
+    : ["Scalability", "Performance"],
+  growthIndicator: item.growthIndicator || item.growth_indicator,
+  whySuggested: Array.isArray(item.whySuggested) ? item.whySuggested
+    : item.opportunityUnlocked ? [item.opportunityUnlocked] : ["AI-recommended based on your profile"],
+  confidenceScore: (item.confidenceScore || item.confidence_score || "Medium") as "High" | "Medium" | "Low",
+  marketSize: item.marketSize || item.market_size,
+  growth: item.growth,
+  topPainPoint: item.topPainPoint || item.top_pain_point,
+  buyingTriggers: item.buyingTriggers || item.buying_triggers,
+  competitors: item.competitors,
+});
+
 export const SuggestedICPCards = ({
   onICPAccepted,
   onICPRejected,
   refreshTrigger = 0,
 }: SuggestedICPCardsProps) => {
   const { toast } = useToast();
+  const { currentUser } = useAuth();
   const navigate = useNavigate();
 
   const [existingICPs, setExistingICPs] = useState<ExistingICP[]>(() => {
@@ -231,11 +266,12 @@ export const SuggestedICPCards = ({
     localStorage.setItem("profiler_showRecommendations", String(showRecommendations));
   }, [showRecommendations]);
 
-  // Load data
+  // Load data: Current ICPs from localStorage, Recommended ICPs from GET /icp (with refresh=true when Refresh clicked)
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
 
+      // 1. Load Current ICPs - backend only has /icp. Current ICPs come from localStorage (or mock).
       let icps: ExistingICP[] = [];
       try {
         const persistedExisting = localStorage.getItem("profiler_existingICPs");
@@ -244,131 +280,129 @@ export const SuggestedICPCards = ({
           if (parsed.length > 0) icps = parsed;
         }
       } catch {}
-
       if (icps.length === 0) {
         try {
           const stored = localStorage.getItem("customerICPs") || localStorage.getItem("missionControlICPs");
           if (stored) icps = JSON.parse(stored);
         } catch {}
-
-        if (icps.length === 0) {
-          icps = [
-            {
-              id: "existing-1",
-              name: "ICP 1",
-              geography: "North America",
-              industry: "Software & Technology",
-              companySize: "100-500 employees",
-              buyerRole: "CTO / VP Engineering",
-              fitConfidence: "High",
-              status: "active",
-            },
-            {
-              id: "existing-2",
-              name: "ICP 2",
-              geography: "US, UK",
-              industry: "Healthcare",
-              companySize: "200-1000 employees",
-              buyerRole: "CIO / Chief Digital Officer",
-              fitConfidence: "Medium",
-              status: "active",
-            },
-          ];
-        }
+      }
+      if (icps.length === 0) {
+        icps = [
+          { id: "existing-1", name: "ICP 1", geography: "North America", industry: "Software & Technology", companySize: "100-500 employees", buyerRole: "CTO / VP Engineering", fitConfidence: "High", status: "active" },
+          { id: "existing-2", name: "ICP 2", geography: "US, UK", industry: "Healthcare", companySize: "200-1000 employees", buyerRole: "CIO / Chief Digital Officer", fitConfidence: "Medium", status: "active" },
+        ];
       }
       setExistingICPs(icps);
 
-      await new Promise((r) => setTimeout(r, 500));
+      // 2. Load Recommended ICPs - GET /icp with user_id and refresh=true when Refresh clicked
+      let refined: SuggestedICP[] = [];
+      let newSuggestions: SuggestedICP[] = [];
+      const isRefresh = refreshTrigger > 0;
 
-      const refined: SuggestedICP[] = [
-        {
-          id: "refined-1",
-          name: "Mid-Market SaaS – RevOps Teams",
-          type: "refined",
-          sourceICPId: icps[0]?.id,
-          sourceICPName: icps[0]?.name || "ICP 1",
-          industry: "Software & Technology",
-          segment: "RevOps Focus",
-          companySize: "100-500 employees",
-          regions: ["North America", "UK"],
-          decisionMakers: ["VP of RevOps", "Head of Sales Operations", "CRO"],
-          keyAttributes: ["High growth stage", "Using Salesforce or HubSpot", "Series B+"],
-          whySuggested: [
-            "RevOps roles show 3x higher engagement with your content",
-            "Faster sales cycles when RevOps is involved early",
-            "Higher average deal size in this segment",
-          ],
-          whatChanged: [
-            "Added RevOps focus to buyer roles",
-            "Included UK in target regions",
-            "Added tech stack qualification criteria",
-          ],
-          confidenceScore: "High",
-          marketSize: "$45B",
-          growth: "+18% YoY",
-          topPainPoint: "Sales & marketing alignment",
-          buyingTriggers: ["New CRO hire", "Revenue target increase", "Tech stack consolidation"],
-          competitors: ["Clari", "Gong", "Outreach"],
-        },
-      ];
+      if (isRefresh && currentUser?.uid) {
+        try {
+          const icpParams = new URLSearchParams({
+            user_id: currentUser.uid,
+            refresh: "true",
+          });
+          // Backend expects https://backend-11kr.onrender.com/icp (not /api/icp)
+          const icpUrl = buildIcpUrl(icpParams.toString());
+          const icpRes = await fetch(icpUrl, { method: "GET", headers: { "Content-Type": "application/json" } });
+          if (icpRes.ok) {
+            const icpData = await icpRes.json();
+            // API returns { suggestedICPs: [...] }
+            const icpArray =
+              icpData?.suggestedICPs ?? icpData?.icps ?? (Array.isArray(icpData) ? icpData : icpData?.data ?? icpData?.profiles ?? []);
+            if (Array.isArray(icpArray) && icpArray.length > 0) {
+              const mapped = icpArray.map((item: any, i: number) => mapApiICPToSuggested(item, i, "new"));
+              newSuggestions = mapped;
+              refined = []; // API returns all as new recommendations
+              toast({ title: "ICPs refreshed", description: `${mapped.length} recommended ICPs generated.` });
+            }
+          } else {
+            console.warn("ICP API returned", icpRes.status, icpRes.statusText);
+            toast({ title: "Refresh failed", description: `API returned ${icpRes.status}. Using cached data.`, variant: "destructive" });
+          }
+        } catch (e) {
+          console.warn("Could not fetch recommended ICPs from API:", e);
+          toast({ title: "Refresh failed", description: "Using cached data. Please try again.", variant: "destructive" });
+        }
+      }
 
-      const newSuggestions: SuggestedICP[] = [
-        {
-          id: "new-1",
-          name: "Enterprise FinTech Decision Makers",
-          type: "new",
-          tag: "New ICP",
-          industry: "Financial Services",
-          segment: "FinTech",
-          companySize: "500-2000 employees",
-          regions: ["US", "EU"],
-          decisionMakers: ["Chief Digital Officer", "VP of Innovation", "Head of Partnerships"],
-          keyAttributes: ["Digital transformation focus", "API-first strategy", "Regulatory compliance needs"],
-          whySuggested: [
-            "High overlap with your current product capabilities",
-            "Growing market with 24% YoY expansion",
-            "Lower competition in this segment",
-          ],
-          opportunityUnlocked: "Access to $2.4B addressable market with strong product-market fit signals",
-          confidenceScore: "Medium",
-          marketSize: "$28B",
-          growth: "+24% YoY",
-          topPainPoint: "Legacy system modernization",
-          buyingTriggers: ["Regulatory changes", "Digital transformation initiative", "Competitor pressure"],
-          competitors: ["Stripe", "Plaid", "Marqeta"],
-        },
-        {
-          id: "new-2",
-          name: "Growth-Stage E-commerce Leaders",
-          type: "new",
-          sourceICPName: icps[0]?.name || "ICP 1",
-          tag: `Lookalike of ${icps[0]?.name || "ICP 1"}`,
-          industry: "E-commerce & Retail",
-          segment: "D2C Brands",
-          companySize: "50-200 employees",
-          regions: ["North America"],
-          decisionMakers: ["Head of Growth", "VP of Marketing", "COO"],
-          keyAttributes: ["Shopify Plus users", "High ad spend", "Scaling operations"],
-          whySuggested: [
-            "Similar buying patterns to your best customers",
-            "Strong intent signals detected in this segment",
-            "Complementary to existing ICP focus",
-          ],
-          opportunityUnlocked: "Expand into adjacent market with proven playbook from ICP 1",
-          confidenceScore: "High",
-          marketSize: "$18B",
-          growth: "+22% YoY",
-          topPainPoint: "Scaling customer acquisition",
-          buyingTriggers: ["Series A+ funding", "New market expansion", "Holiday season prep"],
-          competitors: ["Shopify", "Klaviyo", "Attentive"],
-        },
-      ];
+      // Use mock data when no API data (initial load or API failed)
+      if (newSuggestions.length === 0 && refined.length === 0) {
+        refined = [
+          {
+            id: "refined-1",
+            name: "Mid-Market SaaS – RevOps Teams",
+            type: "refined",
+            sourceICPId: icps[0]?.id,
+            sourceICPName: icps[0]?.name || "ICP 1",
+            industry: "Software & Technology",
+            segment: "RevOps Focus",
+            companySize: "100-500 employees",
+            regions: ["North America", "UK"],
+            decisionMakers: ["VP of RevOps", "Head of Sales Operations", "CRO"],
+            keyAttributes: ["High growth stage", "Using Salesforce or HubSpot", "Series B+"],
+            whySuggested: ["RevOps roles show 3x higher engagement with your content", "Faster sales cycles when RevOps is involved early", "Higher average deal size in this segment"],
+            confidenceScore: "High",
+            marketSize: "$45B",
+            growth: "+18% YoY",
+            topPainPoint: "Sales & marketing alignment",
+            buyingTriggers: ["New CRO hire", "Revenue target increase", "Tech stack consolidation"],
+            competitors: ["Clari", "Gong", "Outreach"],
+          },
+        ];
+        newSuggestions = [
+          {
+            id: "new-1",
+            name: "Enterprise FinTech Decision Makers",
+            type: "new",
+            tag: "New ICP",
+            industry: "Financial Services",
+            segment: "FinTech",
+            companySize: "500-2000 employees",
+            regions: ["US", "EU"],
+            decisionMakers: ["Chief Digital Officer", "VP of Innovation", "Head of Partnerships"],
+            keyAttributes: ["Digital transformation focus", "API-first strategy", "Regulatory compliance needs"],
+            whySuggested: ["High overlap with your current product capabilities", "Growing market with 24% YoY expansion", "Lower competition in this segment"],
+            opportunityUnlocked: "Access to $2.4B addressable market with strong product-market fit signals",
+            confidenceScore: "Medium",
+            marketSize: "$28B",
+            growth: "+24% YoY",
+            topPainPoint: "Legacy system modernization",
+            buyingTriggers: ["Regulatory changes", "Digital transformation initiative", "Competitor pressure"],
+            competitors: ["Stripe", "Plaid", "Marqeta"],
+          },
+          {
+            id: "new-2",
+            name: "Growth-Stage E-commerce Leaders",
+            type: "new",
+            sourceICPName: icps[0]?.name || "ICP 1",
+            tag: `Lookalike of ${icps[0]?.name || "ICP 1"}`,
+            industry: "E-commerce & Retail",
+            segment: "D2C Brands",
+            companySize: "50-200 employees",
+            regions: ["North America"],
+            decisionMakers: ["Head of Growth", "VP of Marketing", "COO"],
+            keyAttributes: ["Shopify Plus users", "High ad spend", "Scaling operations"],
+            whySuggested: ["Similar buying patterns to your best customers", "Strong intent signals detected in this segment", "Complementary to existing ICP focus"],
+            opportunityUnlocked: "Expand into adjacent market with proven playbook from ICP 1",
+            confidenceScore: "High",
+            marketSize: "$18B",
+            growth: "+22% YoY",
+            topPainPoint: "Scaling customer acquisition",
+            buyingTriggers: ["Series A+ funding", "New market expansion", "Holiday season prep"],
+            competitors: ["Shopify", "Klaviyo", "Attentive"],
+          },
+        ];
+      }
 
       setRefinedICPs(refined);
       setNewICPs(newSuggestions);
 
       const persistedStatuses = localStorage.getItem("profiler_cardStatuses");
-      if (!persistedStatuses || Object.keys(JSON.parse(persistedStatuses)).length === 0) {
+      if (!persistedStatuses || Object.keys(JSON.parse(persistedStatuses || "{}")).length === 0) {
         const initialStatuses: Record<string, ICPCardStatus> = {};
         [...refined, ...newSuggestions].forEach((icp) => {
           initialStatuses[icp.id] = { status: "suggested" };
@@ -378,7 +412,7 @@ export const SuggestedICPCards = ({
       setLoading(false);
     };
     loadData();
-  }, [refreshTrigger]);
+  }, [refreshTrigger, currentUser?.uid]);
 
   // --- Accept flow ---
   const handleAcceptClick = (icp: SuggestedICP) => {
