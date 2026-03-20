@@ -849,6 +849,46 @@ async def market_research(request: MarketRequest):
 async def get_or_create_icp_config(user_id: str = Query(...), refresh: bool = Query(False)):
     print(f"[ICP] Request - user_id: {user_id}, refresh: {refresh}")
     try:
+        def normalize_icp_response(payload: Any) -> Dict[str, Any]:
+            """
+            Normalize ICP payload to the required schema:
+            {"suggestedICPs": [{...required keys...}]}
+            """
+            if isinstance(payload, dict) and isinstance(payload.get("suggestedICPs"), list):
+                raw_icps = payload.get("suggestedICPs", [])
+            elif isinstance(payload, dict) and isinstance(payload.get("icps"), list):
+                raw_icps = payload.get("icps", [])
+            elif isinstance(payload, list):
+                raw_icps = payload
+            else:
+                raw_icps = []
+
+            normalized_icps = []
+            base_ts = int(datetime.utcnow().timestamp() * 1000)
+            for idx, icp in enumerate(raw_icps):
+                if not isinstance(icp, dict):
+                    icp = {}
+
+                normalized_icps.append({
+                    "id": str(icp.get("id") or f"icp-{base_ts}-{idx}"),
+                    "industry": str(icp.get("industry") or ""),
+                    "segment": str(icp.get("segment") or ""),
+                    "companySize": str(icp.get("companySize") or ""),
+                    "decisionMakers": icp.get("decisionMakers") if isinstance(icp.get("decisionMakers"), list) else [],
+                    "regions": icp.get("regions") if isinstance(icp.get("regions"), list) else [],
+                    "keyAttributes": icp.get("keyAttributes") if isinstance(icp.get("keyAttributes"), list) else [],
+                    "growthIndicator": str(icp.get("growthIndicator") or ""),
+                    "whySuggested": icp.get("whySuggested") if isinstance(icp.get("whySuggested"), list) else [],
+                    "confidenceScore": str(icp.get("confidenceScore") or ""),
+                    "marketSize": str(icp.get("marketSize") or ""),
+                    "growth": str(icp.get("growth") or ""),
+                    "topPainPoint": str(icp.get("topPainPoint") or ""),
+                    "buyingTriggers": icp.get("buyingTriggers") if isinstance(icp.get("buyingTriggers"), list) else [],
+                    "competitors": icp.get("competitors") if isinstance(icp.get("competitors"), list) else []
+                })
+
+            return {"suggestedICPs": normalized_icps}
+
         # MongoDB connection setup
         username = urllib.parse.quote_plus("techbrewra")
         password = urllib.parse.quote_plus("Brewra@Best09")
@@ -875,7 +915,7 @@ async def get_or_create_icp_config(user_id: str = Query(...), refresh: bool = Qu
         if existing_icp and not refresh:
             print(f"[ICP] Returning cached ICP for user_id: {user_id}")
             client.close()
-            return existing_icp.get("icps", {"icps": []})
+            return normalize_icp_response(existing_icp.get("icps", {"suggestedICPs": []}))
 
         print(f"[ICP] Generating new ICPs for user_id: {user_id}")
 
@@ -909,6 +949,7 @@ async def get_or_create_icp_config(user_id: str = Query(...), refresh: bool = Qu
                     print(f"[ICP] Generated {len(icp_result.get('suggestedICPs', []))} ICPs for user_id: {user_id}")
                 else:
                     print(f"[ICP] ICP_generator returned: {type(icp_result)}")
+                icp_result = normalize_icp_response(icp_result)
             except Exception as gen_error:
                 print(f"[ICP] ERROR in ICP_generator: {str(gen_error)}")
                 client.close()

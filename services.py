@@ -1177,7 +1177,20 @@ Return your results in the following JSON format. The examples below show ONLY t
       "decisionMakers": ["[actual decision maker roles for this industry]", "[another role]"],
       "regions": ["[company's ACTUAL target regions from profile, NOT 'North America' or 'DACH' unless that's what's in the profile]"],
       "keyAttributes": ["[attributes relevant to company's industry]", "[another attribute]"],
-      "growthIndicator": "[real growth rate found via research, e.g., '5.6% CAGR']"
+      "growthIndicator": "[High/Medium/Low based on research confidence and trend strength]",
+      "whySuggested": [
+        "[Reason 1 why this ICP aligns with company profile and strategy]",
+        "[Reason 2 with market evidence from WebSearch]"
+      ],
+      "confidenceScore": "[High/Medium/Low based on source quality and fit]",
+      "marketSize": "[Estimated market size, e.g., '$45B' or '€12B']",
+      "growth": "[Growth metric, e.g., '+18% YoY' or '7.2% CAGR']",
+      "topPainPoint": "[Most relevant pain point for this ICP segment]",
+      "buyingTriggers": [
+        "[Trigger 1 based on industry dynamics]",
+        "[Trigger 2 based on regulatory/technology/market shifts]"
+      ],
+      "competitors": ["[Competitor 1]", "[Competitor 2]", "[Competitor 3]"]
     }},
     {{
       "id": "[another unique id based on company's industry]",
@@ -1187,7 +1200,14 @@ Return your results in the following JSON format. The examples below show ONLY t
       "decisionMakers": ["[relevant decision makers]", "[another role]"],
       "regions": ["[company's ACTUAL target regions]"],
       "keyAttributes": ["[relevant attributes]", "[another attribute]"],
-      "growthIndicator": "[real growth rate]"
+      "growthIndicator": "[High/Medium/Low]",
+      "whySuggested": ["[Reason 1]", "[Reason 2]"],
+      "confidenceScore": "[High/Medium/Low]",
+      "marketSize": "[Market size]",
+      "growth": "[Growth metric]",
+      "topPainPoint": "[Top pain point]",
+      "buyingTriggers": ["[Trigger 1]", "[Trigger 2]"],
+      "competitors": ["[Competitor 1]", "[Competitor 2]", "[Competitor 3]"]
     }}
 ]}}
 
@@ -1196,6 +1216,8 @@ Return your results in the following JSON format. The examples below show ONLY t
 - Extract and use the company's ACTUAL industry, regions, and business context from the company_profile
 - Use WebSearch to find real ICPs that match the company's actual industry and markets
 - All industry, regions, segments, and attributes must be based on the company profile data
+- Use reasoning + WebSearch evidence to populate whySuggested, confidenceScore, marketSize, growth, topPainPoint, buyingTriggers, and competitors
+- Return realistic business values (no placeholders, no "TBD", no example text)
 - Return at least 2-3 ICPs, all relevant to the company's actual industry and target markets
 - Only return JSON, nothing else
 
