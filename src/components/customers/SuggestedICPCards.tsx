@@ -12,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -56,6 +57,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { getLeadCountForICP } from "@/components/customers/LeadStream";
 import { buildIcpUrl } from "@/lib/api";
+import { getUserLocalStorage } from "@/utils/cacheUtils";
 
 // --- Types ---
 interface ExistingICP {
@@ -168,7 +170,26 @@ const confidenceColor = (c: string) => {
   return "bg-muted text-muted-foreground border-border";
 };
 
-// ========== MAIN COMPONENT ==========
+// Map customer profile ICP (Mission Control) to ExistingICP format
+const mapCustomerProfileICPToExisting = (icp: any, index: number): ExistingICP => {
+  const industryArr = Array.isArray(icp.industry) ? icp.industry : [icp.industry].filter(Boolean);
+  const companySizeArr = Array.isArray(icp.company_size) ? icp.company_size : Array.isArray(icp.companySize) ? icp.companySize : [];
+  const buyerRoleArr = Array.isArray(icp.buyer_role) ? icp.buyer_role : Array.isArray(icp.buyerRole) ? icp.buyerRole : [];
+  const locationArr = Array.isArray(icp.location) ? icp.location : [];
+  const primaryRegion = icp.primary_region || icp.primaryRegion || "";
+  const name = icp.name || (industryArr[0] ? `${industryArr[0]} - ${primaryRegion || "Global"}` : `ICP ${index + 1}`);
+  return {
+    id: icp.id || `icp-${index + 1}`,
+    name,
+    geography: primaryRegion || (locationArr.length > 0 ? locationArr.join(", ") : undefined),
+    industry: industryArr.join(", ") || undefined,
+    companySize: companySizeArr.join(", ") || undefined,
+    buyerRole: buyerRoleArr.join(", ") || undefined,
+    fitConfidence: (icp.fit_confidence || icp.fitConfidence || "medium") as string,
+    status: (icp.status || "active") as "active" | "inactive",
+  };
+};
+
 // Map /icp API response item to SuggestedICP format
 // API returns: id, industry, segment, companySize, decisionMakers, regions, keyAttributes,
 // growthIndicator, whySuggested, confidenceScore, marketSize, growth, topPainPoint, buyingTriggers, competitors
@@ -271,15 +292,26 @@ export const SuggestedICPCards = ({
     const loadData = async () => {
       setLoading(true);
 
-      // 1. Load Current ICPs - backend only has /icp. Current ICPs come from localStorage (or mock).
+      // 1. Load Current ICPs - from customer profile (Mission Control) first, then localStorage fallbacks
       let icps: ExistingICP[] = [];
       try {
-        const persistedExisting = localStorage.getItem("profiler_existingICPs");
-        if (persistedExisting) {
-          const parsed = JSON.parse(persistedExisting);
-          if (parsed.length > 0) icps = parsed;
+        const customerProfileData = getUserLocalStorage("customerProfile", currentUser?.uid);
+        if (customerProfileData) {
+          const parsed = JSON.parse(customerProfileData);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            icps = parsed.map((icp: any, i: number) => mapCustomerProfileICPToExisting(icp, i));
+          }
         }
       } catch {}
+      if (icps.length === 0) {
+        try {
+          const persistedExisting = localStorage.getItem("profiler_existingICPs");
+          if (persistedExisting) {
+            const parsed = JSON.parse(persistedExisting);
+            if (parsed.length > 0) icps = parsed;
+          }
+        } catch {}
+      }
       if (icps.length === 0) {
         try {
           const stored = localStorage.getItem("customerICPs") || localStorage.getItem("missionControlICPs");
@@ -294,7 +326,7 @@ export const SuggestedICPCards = ({
       }
       setExistingICPs(icps);
 
-      // 2. Load Recommended ICPs - GET /icp with user_id and refresh=true when Refresh clicked
+      // 2. Load Recommended ICPs - GET /icp when Refresh clicked, or from localStorage when returning to page
       let refined: SuggestedICP[] = [];
       let newSuggestions: SuggestedICP[] = [];
       const isRefresh = refreshTrigger > 0;
@@ -305,18 +337,20 @@ export const SuggestedICPCards = ({
             user_id: currentUser.uid,
             refresh: "true",
           });
-          // Backend expects https://backend-11kr.onrender.com/icp (not /api/icp)
           const icpUrl = buildIcpUrl(icpParams.toString());
           const icpRes = await fetch(icpUrl, { method: "GET", headers: { "Content-Type": "application/json" } });
           if (icpRes.ok) {
             const icpData = await icpRes.json();
-            // API returns { suggestedICPs: [...] }
             const icpArray =
               icpData?.suggestedICPs ?? icpData?.icps ?? (Array.isArray(icpData) ? icpData : icpData?.data ?? icpData?.profiles ?? []);
             if (Array.isArray(icpArray) && icpArray.length > 0) {
               const mapped = icpArray.map((item: any, i: number) => mapApiICPToSuggested(item, i, "new"));
               newSuggestions = mapped;
-              refined = []; // API returns all as new recommendations
+              refined = [];
+              // Persist so recommended ICPs survive navigation
+              try {
+                localStorage.setItem("profiler_recommendedICPs", JSON.stringify(mapped));
+              } catch {}
               toast({ title: "ICPs refreshed", description: `${mapped.length} recommended ICPs generated.` });
             }
           } else {
@@ -329,7 +363,21 @@ export const SuggestedICPCards = ({
         }
       }
 
-      // Use mock data when no API data (initial load or API failed)
+      // Load from localStorage when not refreshing (e.g. returning to Profiler page)
+      if (newSuggestions.length === 0 && refined.length === 0) {
+        try {
+          const cached = localStorage.getItem("profiler_recommendedICPs");
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              newSuggestions = parsed;
+              refined = [];
+            }
+          }
+        } catch {}
+      }
+
+      // Use mock data only when no API data and no cached data
       if (newSuggestions.length === 0 && refined.length === 0) {
         refined = [
           {
@@ -469,21 +517,44 @@ export const SuggestedICPCards = ({
   };
 
   // --- Render ---
-  if (loading) {
-    return (
-      <div className="space-y-6 animate-pulse">
-        <div className="h-12 bg-muted rounded-lg" />
-        <div className="h-24 bg-muted rounded-lg" />
-        <div className="h-48 bg-muted rounded-lg" />
-      </div>
-    );
-  }
-
   const allSuggestions = [...refinedICPs, ...newICPs];
   const pendingCount = allSuggestions.filter((s) => cardStatuses[s.id]?.status === "suggested").length;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 relative">
+      {/* Loading Modal - same as Scout (Brewra logo) */}
+      <Dialog open={loading} onOpenChange={() => {}}>
+        <DialogContent className="sm:max-w-md border-0 bg-transparent shadow-none p-0">
+          <div className="flex flex-col items-center justify-center gap-6 p-8 bg-background rounded-lg border border-border shadow-2xl">
+            {/* Animated Brewra Logo */}
+            <div className="relative w-24 h-24 flex items-center justify-center">
+              <img
+                src="/logo.png"
+                alt="Brewra Logo"
+                className="h-20 w-20 object-contain"
+                loading="eager"
+                style={{
+                  animation: "logo-reveal 2.5s ease-in-out infinite",
+                  clipPath: "inset(0% 0% 0% 0%)",
+                }}
+              />
+            </div>
+            {/* Loading Text */}
+            <div className="flex flex-col items-center gap-2">
+              <p className="text-lg font-semibold bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent">
+                Generating ICPs
+              </p>
+              <p className="text-sm text-muted-foreground font-medium">Please wait while we fetch your recommended ICPs...</p>
+            </div>
+            {/* Animated Progress Dots */}
+            <div className="flex gap-2">
+              <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: "0ms", animationDuration: "1.4s" }} />
+              <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: "200ms", animationDuration: "1.4s" }} />
+              <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: "400ms", animationDuration: "1.4s" }} />
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
       {/* ═══ Section 1: Current ICPs (table) ═══ */}
       <div className="space-y-3">
         <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
