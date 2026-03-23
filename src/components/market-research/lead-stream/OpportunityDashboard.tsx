@@ -2,7 +2,7 @@ import React from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip } from "recharts";
-import { Users, Target, AlertTriangle, ArrowRight, Clock, Zap, Database } from "lucide-react";
+import { Users, Target, AlertTriangle, Clock, Zap, ArrowRight, DollarSign } from "lucide-react";
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 
@@ -17,10 +17,13 @@ const icpMatchData = [
   { name: "Growth E-commerce", leads: 8 },
 ];
 
-const sourceData = [
-  { name: "HubSpot", value: 74, color: "hsl(var(--primary))" },
-  { name: "Prospect List", value: 46, color: "hsl(var(--accent))" },
+const pipelineData = [
+  { segment: "Mid-Market SaaS", value: 245000, color: "hsl(var(--primary))" },
+  { segment: "Enterprise FinTech", value: 180000, color: "hsl(var(--accent))" },
+  { segment: "Growth E-commerce", value: 92000, color: "hsl(var(--muted-foreground))" },
 ];
+
+const totalPipeline = pipelineData.reduce((sum, d) => sum + d.value, 0);
 
 const urgencySignals = [
   { label: "Need outreach today", count: 8, icon: Zap, variant: "destructive" as const },
@@ -89,29 +92,22 @@ const OpportunityDashboard: React.FC = () => {
           </div>
         </Card>
 
-        {/* 3. Lead Source Breakdown */}
+        {/* 3. Pipeline Value Preview */}
         <Card className="p-4">
           <div className="flex items-center gap-2 mb-3">
-            <Database className="h-4 w-4 text-primary" />
-            <h3 className="text-sm font-semibold text-foreground">Lead Sources</h3>
+            <DollarSign className="h-4 w-4 text-primary" />
+            <h3 className="text-sm font-semibold text-foreground">Pipeline Value</h3>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="w-20 h-20">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={sourceData} cx="50%" cy="50%" innerRadius={22} outerRadius={36} paddingAngle={3} dataKey="value" strokeWidth={0}>
-                    {sourceData.map((entry, i) => (
-                      <Cell key={i} fill={entry.color} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="space-y-1.5 text-xs">
-              {sourceData.map((s, i) => (
-                <div key={i} className="flex items-center gap-1.5">
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
-                  <span className="text-muted-foreground">{s.name}: <span className="font-semibold text-foreground">{s.value}</span></span>
+          <div className="space-y-2">
+            <div className="text-lg font-bold text-foreground">${(totalPipeline / 1000).toFixed(0)}K</div>
+            <div className="space-y-1.5">
+              {pipelineData.map((seg, i) => (
+                <div key={i} className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: seg.color }} />
+                    <span className="text-muted-foreground truncate max-w-[90px]">{seg.segment}</span>
+                  </div>
+                  <span className="font-semibold text-foreground">${(seg.value / 1000).toFixed(0)}K</span>
                 </div>
               ))}
             </div>
