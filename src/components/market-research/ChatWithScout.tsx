@@ -252,6 +252,8 @@ const ProspectSummaryCard = ({ lead, opportunity }: { lead: LeadContext; opportu
 export function ChatWithScout({ fullPage = false, researchContext, mode = "selected-leads" }: ChatWithScoutProps) {
   const navigate = useNavigate();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [agentStep, setAgentStep] = useState(-1);
@@ -260,6 +262,13 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
   const isSingleLead = mode === "selected-leads" && researchContext?.leads.length === 1;
   const primaryActions = isSingleLead ? singleLeadActions : categorizedPrompts.flatMap(c => c.actions);
   const useCategorized = !isSingleLead;
+
+  const hasConversations = conversations.length > 0;
+
+  // Get messages for active conversation
+  const activeMessages = activeConversationId
+    ? conversations.find(c => c.id === activeConversationId)?.messages || []
+    : messages;
 
   // Build initial message based on context
   useEffect(() => {
@@ -270,14 +279,16 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
         timestamp: new Date().toLocaleTimeString(),
       }]);
     } else {
-      // For bulk leads or no context, start empty — context shown in the report context card
       setMessages([]);
     }
+    // Reset conversations when context changes
+    setConversations([]);
+    setActiveConversationId(null);
   }, [researchContext, mode]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, agentStep]);
+  }, [activeMessages, agentStep]);
 
   // Simulate agent steps during loading
   useEffect(() => {
@@ -292,6 +303,12 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
     return () => intervals.forEach(clearTimeout);
   }, [isLoading]);
 
+  const addMessageToConversation = (convId: string, message: ChatMessage) => {
+    setConversations(prev => prev.map(c =>
+      c.id === convId ? { ...c, messages: [...c.messages, message] } : c
+    ));
+  };
+
   const handleSendMessage = async (messageText?: string) => {
     const text = messageText || input;
     if (!text.trim() || isLoading) return;
@@ -302,7 +319,24 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
       timestamp: new Date().toLocaleTimeString(),
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    // If no active conversation, create one (for bulk mode)
+    let targetConvId = activeConversationId;
+    if (!isSingleLead && !targetConvId) {
+      const newConv: Conversation = {
+        id: `conv-${Date.now()}`,
+        title: text.length > 50 ? text.substring(0, 50) + '...' : text,
+        messages: [userMessage],
+        createdAt: new Date(),
+      };
+      setConversations(prev => [newConv, ...prev]);
+      setActiveConversationId(newConv.id);
+      targetConvId = newConv.id;
+    } else if (targetConvId) {
+      addMessageToConversation(targetConvId, userMessage);
+    } else {
+      setMessages(prev => [...prev, userMessage]);
+    }
+
     if (!messageText) setInput("");
     setIsLoading(true);
 
@@ -335,17 +369,30 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
         ],
       };
 
-      setMessages((prev) => [...prev, assistantMessage]);
+      if (targetConvId) {
+        addMessageToConversation(targetConvId, assistantMessage);
+      } else {
+        setMessages(prev => [...prev, assistantMessage]);
+      }
     } catch (error) {
       console.error('Error calling API:', error);
-      setMessages((prev) => [...prev, {
+      const errMsg: ChatMessage = {
         role: "assistant",
         content: "I'm sorry, I'm having trouble connecting right now. Please try again.",
         timestamp: new Date().toLocaleTimeString(),
-      }]);
+      };
+      if (targetConvId) {
+        addMessageToConversation(targetConvId, errMsg);
+      } else {
+        setMessages(prev => [...prev, errMsg]);
+      }
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const startNewConversation = () => {
+    setActiveConversationId(null);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
