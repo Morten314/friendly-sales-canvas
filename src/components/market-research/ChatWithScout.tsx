@@ -442,7 +442,7 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
   const leadCount = researchContext?.leads.length || 0;
 
   return (
-    <div className={`bg-background border rounded-lg overflow-hidden flex flex-col ${fullPage ? 'flex-1 h-full min-h-[28rem]' : 'h-[80vh]'}`}>
+    <div className={`bg-background border rounded-lg overflow-hidden flex flex-col ${fullPage ? 'flex-1 h-full min-h-0' : 'h-[80vh]'}`}>
       {/* Header */}
       <div className="bg-muted/30 p-3 border-b flex items-center gap-2 shrink-0">
         <div className="p-1.5 rounded-full bg-primary/10">
