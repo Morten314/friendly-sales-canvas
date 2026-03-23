@@ -50,6 +50,13 @@ interface ChatMessage {
   structuredActions?: { label: string; icon: React.ReactNode }[];
 }
 
+interface Conversation {
+  id: string;
+  title: string;
+  messages: ChatMessage[];
+  createdAt: Date;
+}
+
 interface LeadContext {
   name: string;
   company: string;
