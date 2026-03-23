@@ -105,7 +105,7 @@ const OpportunityDashboard: React.FC = () => {
                 <div key={i} className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-1.5">
                     <div className="w-2 h-2 rounded-full" style={{ backgroundColor: seg.color }} />
-                    <span className="text-muted-foreground truncate max-w-[90px]">{seg.segment}</span>
+                    <span className="text-muted-foreground">{seg.segment}</span>
                   </div>
                   <span className="font-semibold text-foreground">${(seg.value / 1000).toFixed(0)}K</span>
                 </div>
