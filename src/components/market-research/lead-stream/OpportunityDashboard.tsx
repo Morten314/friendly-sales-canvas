@@ -26,11 +26,10 @@ const pipelineData = [
 
 const totalPipeline = pipelineData.reduce((sum, d) => sum + d.value, 0);
 
-const topOpportunities = [
-  { name: "Sarah Chen", company: "Cloudflux", icp: "Mid-Market SaaS", score: 94 },
-  { name: "James Park", company: "PayStream", icp: "Enterprise FinTech", score: 91 },
-  { name: "Lisa Wang", company: "ShopNova", icp: "Growth E-commerce", score: 87 },
-  { name: "Mark Torres", company: "DataMesh", icp: "Mid-Market SaaS", score: 85 },
+const topICPOpportunities = [
+  { icp: "Mid-Market SaaS", leads: 18, avgScore: 91 },
+  { icp: "Enterprise FinTech", leads: 12, avgScore: 88 },
+  { icp: "Growth E-commerce", leads: 8, avgScore: 84 },
 ];
 
 // ─── Component ───────────────────────────────────────────────────────────────
