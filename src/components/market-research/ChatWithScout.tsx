@@ -625,12 +625,9 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
                   <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider w-[120px]">
                     {cat.category}
                     {cat.strategistLinked && (
-                      <button
-                        className="ml-1 text-primary hover:underline normal-case tracking-normal font-medium"
-                        onClick={() => navigate('/deals')}
-                      >
-                        (with Strategist)
-                      </button>
+                      <span className="ml-1 text-primary normal-case tracking-normal font-medium text-[10px]">
+                        → Strategist
+                      </span>
                     )}
                   </span>
                 </div>
