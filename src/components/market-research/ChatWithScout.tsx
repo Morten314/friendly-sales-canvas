@@ -8,7 +8,7 @@ import {
   MessageSquare, Send, Loader2, Bot, Sparkles, Download, Upload, ArrowRight,
   Search, TrendingUp, Users, Newspaper, Zap, Target, FileText, CheckCircle2,
   User, Building2, Clock, Activity, ChevronDown,
-};
+} from "lucide-react";
 
 // ─── Expandable Trait Item ──────────────────────────────────────────────────
 
