@@ -1,8 +1,9 @@
 import React from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip } from "recharts";
-import { Users, Target, Activity, DollarSign } from "lucide-react";
+import { Users, Target, DollarSign, Star, Mail, UserPlus } from "lucide-react";
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 
@@ -25,24 +26,11 @@ const pipelineData = [
 
 const totalPipeline = pipelineData.reduce((sum, d) => sum + d.value, 0);
 
-// Engagement heatmap: last 14 days of lead activity
-const today = new Date();
-const engagementData = Array.from({ length: 14 }, (_, i) => {
-  const date = new Date(today);
-  date.setDate(today.getDate() - (13 - i));
-  const day = date.toLocaleDateString("en-US", { weekday: "short" }).slice(0, 2);
-  const dayNum = date.getDate();
-  // Simulated activity levels 0-4
-  const levels = [2, 0, 3, 1, 4, 2, 0, 3, 1, 2, 4, 1, 3, 2];
-  return { day, dayNum, level: levels[i] };
-});
-
-const heatColors = [
-  "bg-muted",
-  "bg-primary/20",
-  "bg-primary/40",
-  "bg-primary/60",
-  "bg-primary",
+const topOpportunities = [
+  { name: "Sarah Chen", company: "Cloudflux", icp: "Mid-Market SaaS", score: 94 },
+  { name: "James Park", company: "PayStream", icp: "Enterprise FinTech", score: 91 },
+  { name: "Lisa Wang", company: "ShopNova", icp: "Growth E-commerce", score: 87 },
+  { name: "Mark Torres", company: "DataMesh", icp: "Mid-Market SaaS", score: 85 },
 ];
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -128,29 +116,30 @@ const OpportunityDashboard: React.FC = () => {
           </div>
         </Card>
 
-        {/* 4. Engagement Heatmap */}
+        {/* 4. Top Opportunities */}
         <Card className="p-4">
           <div className="flex items-center gap-2 mb-3">
-            <Activity className="h-4 w-4 text-primary" />
-            <h3 className="text-sm font-semibold text-foreground">Engagement (14d)</h3>
+            <Star className="h-4 w-4 text-primary" />
+            <h3 className="text-sm font-semibold text-foreground">Top Opportunities</h3>
           </div>
-          <div className="grid grid-cols-7 gap-1">
-            {engagementData.map((d, i) => (
-              <div key={i} className="flex flex-col items-center gap-0.5">
-                <div
-                  className={`w-5 h-5 rounded-sm ${heatColors[d.level]}`}
-                  title={`Day ${d.dayNum}: Level ${d.level}`}
-                />
-                <span className="text-[9px] text-muted-foreground leading-none">{d.day}</span>
+          <div className="space-y-2">
+            {topOpportunities.map((lead, i) => (
+              <div key={i} className="flex items-center justify-between gap-1">
+                <div className="min-w-0">
+                  <div className="text-xs font-medium text-foreground truncate">{lead.name}</div>
+                  <div className="text-[10px] text-muted-foreground truncate">{lead.company} · {lead.icp}</div>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 font-semibold">{lead.score}</Badge>
+                  <Button variant="ghost" size="icon" className="h-5 w-5" title="Send email">
+                    <Mail className="h-3 w-3" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-5 w-5" title="Add to CRM">
+                    <UserPlus className="h-3 w-3" />
+                  </Button>
+                </div>
               </div>
             ))}
-          </div>
-          <div className="flex items-center gap-1.5 mt-2.5">
-            <span className="text-[9px] text-muted-foreground">Less</span>
-            {heatColors.map((c, i) => (
-              <div key={i} className={`w-2.5 h-2.5 rounded-sm ${c}`} />
-            ))}
-            <span className="text-[9px] text-muted-foreground">More</span>
           </div>
         </Card>
       </div>
