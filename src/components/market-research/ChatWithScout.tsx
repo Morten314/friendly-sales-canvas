@@ -501,7 +501,7 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
       )}
 
       {/* Zone 2: Suggested Prompts */}
-      <div className="px-4 py-3 border-b shrink-0 space-y-2.5">
+      <div className="px-4 py-2 border-b shrink-0 space-y-2 max-h-[160px] overflow-y-auto">
         {useCategorized ? (
           <div className="space-y-2">
             {categorizedPrompts.map((cat) => (
