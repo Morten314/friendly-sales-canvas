@@ -5,7 +5,7 @@ import { ChatWithScout } from './ChatWithScout';
 
 interface SafeChatWithScoutProps {
   fullPage?: boolean;
-  researchContext?: { leads: { name: string; company: string; jobTitle: string; email?: string; tenure?: string; source?: string; signals?: string[] }[]; opportunity?: string; icp?: string } | null;
+  researchContext?: { leads: { name: string; company: string; jobTitle: string; email?: string; tenure?: string; source?: string; signals?: string[] }[]; opportunity?: string; icp?: string; reportTraits?: string[] } | null;
 }
 
 const SafeChatWithScout: React.FC<SafeChatWithScoutProps> = (props) => {

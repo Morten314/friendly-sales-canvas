@@ -13,7 +13,7 @@ interface ScoutLeadStreamProps {
   onFiltersChange?: (filters: { selectedIndustry: string; selectedSize: string; selectedRegion: string }) => void;
   onClearOpportunityFilter?: () => void;
   onResearchWithScout?: (leads: any[], context?: string) => void;
-  onChatWithScout?: (leads: any[]) => void;
+  onChatWithScout?: (leads: any[], reportFilter?: string) => void;
 }
 
 // ─── Main Component ──────────────────────────────────────────────────────────
@@ -40,7 +40,7 @@ const ScoutLeadStream: React.FC<ScoutLeadStreamProps> = ({
         opportunityFilter={opportunityFilter}
         onClearOpportunityFilter={onClearOpportunityFilter}
         onResearchWithScout={handleResearchLead}
-        onChatWithScout={(leads) => onChatWithScout?.(leads)}
+        onChatWithScout={(leads, reportFilter) => onChatWithScout?.(leads, reportFilter)}
       />
     </div>
   );
