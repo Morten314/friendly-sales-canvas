@@ -7,8 +7,38 @@ import { Card } from "@/components/ui/card";
 import {
   MessageSquare, Send, Loader2, Bot, Sparkles, Download, Upload, ArrowRight,
   Search, TrendingUp, Users, Newspaper, Zap, Target, FileText, CheckCircle2,
-  User, Building2, Clock, Activity,
+  User, Building2, Clock, Activity, ChevronDown,
 } from "lucide-react";
+
+// ─── Expandable Trait Item ──────────────────────────────────────────────────
+
+const ExpandableTraitItem: React.FC<{ label: string; value: string; isLong: boolean }> = ({ label, value, isLong }) => {
+  const [expanded, setExpanded] = useState(false);
+
+  if (!isLong) {
+    return (
+      <div className="flex items-baseline gap-1 text-[11px] min-w-0">
+        <span className="text-muted-foreground shrink-0 font-medium">{label}:</span>
+        <span className="text-foreground">{value}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="text-[11px] min-w-0">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="flex items-center gap-1 w-full text-left group"
+      >
+        <span className="text-muted-foreground shrink-0 font-medium">{label}:</span>
+        <span className={`text-foreground flex-1 ${expanded ? '' : 'line-clamp-1'}`}>
+          {value}
+        </span>
+        <ChevronDown className={`h-3 w-3 text-muted-foreground shrink-0 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} />
+      </button>
+    </div>
+  );
+};
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -483,15 +513,13 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
               </Badge>
             </div>
             {reportTraits.length > 0 && (
-              <div className="grid grid-cols-2 gap-x-3 gap-y-1 pt-1">
+              <div className="grid grid-cols-1 gap-y-1 pt-1">
                 {reportTraits.filter(t => !t.startsWith("Matched Report:")).map((trait, i) => {
                   const [label, ...rest] = trait.split(": ");
                   const value = rest.join(": ");
+                  const isLong = value.length > 60;
                   return (
-                    <div key={i} className="flex items-baseline gap-1 text-[11px] min-w-0">
-                      <span className="text-muted-foreground shrink-0">{label}:</span>
-                      <span className="text-foreground font-medium truncate">{value}</span>
-                    </div>
+                    <ExpandableTraitItem key={i} label={label} value={value} isLong={isLong} />
                   );
                 })}
               </div>

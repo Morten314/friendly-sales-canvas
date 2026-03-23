@@ -859,41 +859,34 @@ const MarketResearch = React.memo(() => {
     // Build report-level traits from current report state
     const reportTraits: string[] = [];
 
-    // Truncate to the first complete sentence (ending with . ! or ?)
-    const firstSentence = (text: string): string => {
-      if (!text) return '';
-      const match = text.match(/^.*?[.!?](?:\s|$)/);
-      return match ? match[0].trim() : text;
-    };
-    
     const addMarketSizeTraits = () => {
       if (!marketData) return;
-      if (marketData.executiveSummary) reportTraits.push(`Market Summary: ${firstSentence(marketData.executiveSummary)}`);
+      if (marketData.executiveSummary) reportTraits.push(`Market Summary: ${marketData.executiveSummary}`);
       if (marketData.tamValue) reportTraits.push(`TAM: ${marketData.tamValue}`);
       if (marketData.samValue) reportTraits.push(`SAM: ${marketData.samValue}`);
       if (marketData.GrowthRate) reportTraits.push(`Growth Rate: ${marketData.GrowthRate}`);
     };
     const addIndustryTraits = () => {
       if (!industryTrendsData) return;
-      if (industryTrendsData.executiveSummary) reportTraits.push(`Industry Summary: ${firstSentence(industryTrendsData.executiveSummary)}`);
+      if (industryTrendsData.executiveSummary) reportTraits.push(`Industry Summary: ${industryTrendsData.executiveSummary}`);
       if (industryTrendsData.aiAdoption) reportTraits.push(`AI Adoption: ${industryTrendsData.aiAdoption}`);
       if (industryTrendsData.cloudMigration) reportTraits.push(`Cloud Migration: ${industryTrendsData.cloudMigration}`);
     };
     const addCompetitorTraits = () => {
       if (!competitorData) return;
-      if (competitorData.executiveSummary) reportTraits.push(`Competitor Summary: ${firstSentence(competitorData.executiveSummary)}`);
+      if (competitorData.executiveSummary) reportTraits.push(`Competitor Summary: ${competitorData.executiveSummary}`);
       if (competitorData.topPlayerShare) reportTraits.push(`Top Player Share: ${competitorData.topPlayerShare}`);
       if (competitorData.emergingPlayers) reportTraits.push(`Emerging Players: ${competitorData.emergingPlayers}`);
     };
     const addRegulatoryTraits = () => {
       if (!regulatoryData) return;
-      if (regulatoryData.executiveSummary) reportTraits.push(`Regulatory Summary: ${firstSentence(regulatoryData.executiveSummary)}`);
+      if (regulatoryData.executiveSummary) reportTraits.push(`Regulatory Summary: ${regulatoryData.executiveSummary}`);
       if (regulatoryData.euAiActDeadline) reportTraits.push(`EU AI Act Deadline: ${regulatoryData.euAiActDeadline}`);
       if (regulatoryData.gdprCompliance) reportTraits.push(`GDPR Compliance: ${regulatoryData.gdprCompliance}`);
     };
     const addMarketEntryTraits = () => {
       if (!marketEntryData) return;
-      if (marketEntryData.executiveSummary) reportTraits.push(`Entry Summary: ${firstSentence(marketEntryData.executiveSummary)}`);
+      if (marketEntryData.executiveSummary) reportTraits.push(`Entry Summary: ${marketEntryData.executiveSummary}`);
       if (marketEntryData.recommendedChannel) reportTraits.push(`Recommended Channel: ${marketEntryData.recommendedChannel}`);
       if (marketEntryData.timeToMarket) reportTraits.push(`Time to Market: ${marketEntryData.timeToMarket}`);
     };
