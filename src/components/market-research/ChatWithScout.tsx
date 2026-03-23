@@ -420,6 +420,21 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
 
   const hasContext = researchContext && researchContext.leads.length > 0;
 
+  // ─── Strategist Mode ──────────────────────────────────────────────────────
+  if (strategistActive && researchContext) {
+    return (
+      <div className={`${fullPage ? 'flex-1 h-full min-h-0' : 'h-[80vh]'}`}>
+        <StrategistWorkspace
+          leads={researchContext.leads}
+          opportunity={researchContext.opportunity}
+          icp={researchContext.icp}
+          triggerPrompt={strategistPrompt}
+          onBack={() => setStrategistActive(false)}
+        />
+      </div>
+    );
+  }
+
   // ─── Single Lead: Two-panel layout ─────────────────────────────────────────
   if (isSingleLead && researchContext) {
     const lead = researchContext.leads[0];
