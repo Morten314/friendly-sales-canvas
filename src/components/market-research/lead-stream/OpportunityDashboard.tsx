@@ -25,10 +25,24 @@ const pipelineData = [
 
 const totalPipeline = pipelineData.reduce((sum, d) => sum + d.value, 0);
 
-const urgencySignals = [
-  { label: "Need outreach today", count: 8, icon: Zap, variant: "destructive" as const },
-  { label: "Stale > 7 days", count: 14, icon: Clock, variant: "secondary" as const },
-  { label: "Recently engaged", count: 6, icon: ArrowRight, variant: "default" as const },
+// Engagement heatmap: last 14 days of lead activity
+const today = new Date();
+const engagementData = Array.from({ length: 14 }, (_, i) => {
+  const date = new Date(today);
+  date.setDate(today.getDate() - (13 - i));
+  const day = date.toLocaleDateString("en-US", { weekday: "short" }).slice(0, 2);
+  const dayNum = date.getDate();
+  // Simulated activity levels 0-4
+  const levels = [2, 0, 3, 1, 4, 2, 0, 3, 1, 2, 4, 1, 3, 2];
+  return { day, dayNum, level: levels[i] };
+});
+
+const heatColors = [
+  "bg-muted",
+  "bg-primary/20",
+  "bg-primary/40",
+  "bg-primary/60",
+  "bg-primary",
 ];
 
 // ─── Component ───────────────────────────────────────────────────────────────
