@@ -2,7 +2,7 @@ import React from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip } from "recharts";
-import { Users, Target, AlertTriangle, Clock, Zap, ArrowRight, DollarSign } from "lucide-react";
+import { Users, Target, Activity, DollarSign } from "lucide-react";
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 
@@ -25,10 +25,24 @@ const pipelineData = [
 
 const totalPipeline = pipelineData.reduce((sum, d) => sum + d.value, 0);
 
-const urgencySignals = [
-  { label: "Need outreach today", count: 8, icon: Zap, variant: "destructive" as const },
-  { label: "Stale > 7 days", count: 14, icon: Clock, variant: "secondary" as const },
-  { label: "Recently engaged", count: 6, icon: ArrowRight, variant: "default" as const },
+// Engagement heatmap: last 14 days of lead activity
+const today = new Date();
+const engagementData = Array.from({ length: 14 }, (_, i) => {
+  const date = new Date(today);
+  date.setDate(today.getDate() - (13 - i));
+  const day = date.toLocaleDateString("en-US", { weekday: "short" }).slice(0, 2);
+  const dayNum = date.getDate();
+  // Simulated activity levels 0-4
+  const levels = [2, 0, 3, 1, 4, 2, 0, 3, 1, 2, 4, 1, 3, 2];
+  return { day, dayNum, level: levels[i] };
+});
+
+const heatColors = [
+  "bg-muted",
+  "bg-primary/20",
+  "bg-primary/40",
+  "bg-primary/60",
+  "bg-primary",
 ];
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -114,22 +128,29 @@ const OpportunityDashboard: React.FC = () => {
           </div>
         </Card>
 
-        {/* 4. Urgency Signals */}
+        {/* 4. Engagement Heatmap */}
         <Card className="p-4">
           <div className="flex items-center gap-2 mb-3">
-            <AlertTriangle className="h-4 w-4 text-primary" />
-            <h3 className="text-sm font-semibold text-foreground">Urgency Signals</h3>
+            <Activity className="h-4 w-4 text-primary" />
+            <h3 className="text-sm font-semibold text-foreground">Engagement (14d)</h3>
           </div>
-          <div className="space-y-2.5">
-            {urgencySignals.map((signal, i) => (
-              <div key={i} className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <signal.icon className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-xs text-muted-foreground">{signal.label}</span>
-                </div>
-                <Badge variant={signal.variant} className="text-[10px] h-5 px-1.5">{signal.count}</Badge>
+          <div className="grid grid-cols-7 gap-1">
+            {engagementData.map((d, i) => (
+              <div key={i} className="flex flex-col items-center gap-0.5">
+                <div
+                  className={`w-5 h-5 rounded-sm ${heatColors[d.level]}`}
+                  title={`Day ${d.dayNum}: Level ${d.level}`}
+                />
+                <span className="text-[9px] text-muted-foreground leading-none">{d.day}</span>
               </div>
             ))}
+          </div>
+          <div className="flex items-center gap-1.5 mt-2.5">
+            <span className="text-[9px] text-muted-foreground">Less</span>
+            {heatColors.map((c, i) => (
+              <div key={i} className={`w-2.5 h-2.5 rounded-sm ${c}`} />
+            ))}
+            <span className="text-[9px] text-muted-foreground">More</span>
           </div>
         </Card>
       </div>
