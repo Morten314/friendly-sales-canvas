@@ -128,22 +128,29 @@ const OpportunityDashboard: React.FC = () => {
           </div>
         </Card>
 
-        {/* 4. Urgency Signals */}
+        {/* 4. Engagement Heatmap */}
         <Card className="p-4">
           <div className="flex items-center gap-2 mb-3">
-            <AlertTriangle className="h-4 w-4 text-primary" />
-            <h3 className="text-sm font-semibold text-foreground">Urgency Signals</h3>
+            <Activity className="h-4 w-4 text-primary" />
+            <h3 className="text-sm font-semibold text-foreground">Engagement (14d)</h3>
           </div>
-          <div className="space-y-2.5">
-            {urgencySignals.map((signal, i) => (
-              <div key={i} className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <signal.icon className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-xs text-muted-foreground">{signal.label}</span>
-                </div>
-                <Badge variant={signal.variant} className="text-[10px] h-5 px-1.5">{signal.count}</Badge>
+          <div className="grid grid-cols-7 gap-1">
+            {engagementData.map((d, i) => (
+              <div key={i} className="flex flex-col items-center gap-0.5">
+                <div
+                  className={`w-5 h-5 rounded-sm ${heatColors[d.level]}`}
+                  title={`Day ${d.dayNum}: Level ${d.level}`}
+                />
+                <span className="text-[9px] text-muted-foreground leading-none">{d.day}</span>
               </div>
             ))}
+          </div>
+          <div className="flex items-center gap-1.5 mt-2.5">
+            <span className="text-[9px] text-muted-foreground">Less</span>
+            {heatColors.map((c, i) => (
+              <div key={i} className={`w-2.5 h-2.5 rounded-sm ${c}`} />
+            ))}
+            <span className="text-[9px] text-muted-foreground">More</span>
           </div>
         </Card>
       </div>
