@@ -254,21 +254,21 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
       const leadCount = researchContext.leads.length;
       const icpText = researchContext.icp ? `ICP Match: ${researchContext.icp}` : "";
       const opportunityText = researchContext.opportunity ? `Report: ${researchContext.opportunity}` : "";
-
-      // Build structured lead summary
-      const leadSummaries = researchContext.leads.map((l, i) => {
-        const parts = [`${i + 1}. ${l.name} — ${l.jobTitle} at ${l.company}`];
-        if (l.tenure) parts.push(`   Tenure: ${l.tenure}`);
-        if (l.source) parts.push(`   Source: ${l.source}`);
-        if (l.signals && l.signals.length > 0) parts.push(`   Signals: ${l.signals.join("; ")}`);
-        return parts.join("\n");
-      }).join("\n\n");
-
       const contextHeader = [icpText, opportunityText].filter(Boolean).join("  |  ");
+
+      // List leads concisely
+      const leadList = researchContext.leads.map((l, i) =>
+        `${i + 1}. ${l.name} — ${l.jobTitle} at ${l.company}`
+      ).join("\n");
+
+      // Show report-level traits if available
+      const reportTraitsBlock = researchContext.reportTraits && researchContext.reportTraits.length > 0
+        ? `\nReport Context:\n${researchContext.reportTraits.join("\n")}`
+        : "";
 
       setMessages([{
         role: "assistant",
-        content: `I've loaded ${leadCount} leads from your Lead Stream.\n${contextHeader ? contextHeader + "\n" : ""}\n${leadSummaries}\n\nI already have full context on these leads and their traits. Choose a prompt below or ask me anything.`,
+        content: `I've loaded ${leadCount} leads from your Lead Stream.\n${contextHeader ? contextHeader + "\n" : ""}${reportTraitsBlock}\n\nLeads:\n${leadList}\n\nThese leads share the traits of the matched report above. Choose a prompt below or ask me anything.`,
         timestamp: new Date().toLocaleTimeString(),
       }]);
     } else {
