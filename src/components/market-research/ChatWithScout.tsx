@@ -238,14 +238,23 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
       }]);
     } else if (researchContext && researchContext.leads.length > 0) {
       const leadCount = researchContext.leads.length;
-      const leadNames = researchContext.leads.slice(0, 3).map(l => `${l.name} (${l.company})`).join(", ");
-      const moreText = leadCount > 3 ? ` and ${leadCount - 3} more` : "";
-      const opportunityText = researchContext.opportunity ? `\nOpportunity: ${researchContext.opportunity}` : "";
-      const icpText = researchContext.icp ? `\nICP: ${researchContext.icp}` : "";
+      const icpText = researchContext.icp ? `ICP Match: ${researchContext.icp}` : "";
+      const opportunityText = researchContext.opportunity ? `Report: ${researchContext.opportunity}` : "";
+
+      // Build structured lead summary
+      const leadSummaries = researchContext.leads.map((l, i) => {
+        const parts = [`${i + 1}. ${l.name} — ${l.jobTitle} at ${l.company}`];
+        if (l.tenure) parts.push(`   Tenure: ${l.tenure}`);
+        if (l.source) parts.push(`   Source: ${l.source}`);
+        if (l.signals && l.signals.length > 0) parts.push(`   Signals: ${l.signals.join("; ")}`);
+        return parts.join("\n");
+      }).join("\n\n");
+
+      const contextHeader = [icpText, opportunityText].filter(Boolean).join("  |  ");
 
       setMessages([{
         role: "assistant",
-        content: `You are researching ${leadCount} lead${leadCount > 1 ? 's' : ''} from the Lead Stream:\n${leadNames}${moreText}${opportunityText}${icpText}\n\nI already have context on these leads and their companies. Choose a suggested action above or ask me anything.`,
+        content: `I've loaded ${leadCount} leads from your Lead Stream.\n${contextHeader ? contextHeader + "\n" : ""}\n${leadSummaries}\n\nI already have full context on these leads and their traits. Choose a prompt below or ask me anything.`,
         timestamp: new Date().toLocaleTimeString(),
       }]);
     } else {
