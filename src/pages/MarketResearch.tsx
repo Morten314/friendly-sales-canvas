@@ -847,7 +847,45 @@ const MarketResearch = React.memo(() => {
     handleTabChange('trends');
   };
 
-  const handleChatWithScout = (leads: any[]) => {
+  const handleChatWithScout = (leads: any[], reportFilter?: string) => {
+    const reportLabels: Record<string, string> = {
+      'market-size': 'Market Size & Opportunity',
+      'industry-trends': 'Industry Trends',
+      'competitor-landscape': 'Competitor Landscape',
+      'regulatory-compliance': 'Regulatory Compliance',
+      'market-entry': 'Market Entry & Growth',
+    };
+
+    // Build report-level traits from current report state
+    const reportTraits: string[] = [];
+    if (reportFilter) {
+      const label = reportLabels[reportFilter] || reportFilter;
+      reportTraits.push(`Matched Report: ${label}`);
+      
+      if (reportFilter === 'market-size' && marketData) {
+        if (marketData.executiveSummary) reportTraits.push(`Summary: ${marketData.executiveSummary}`);
+        if (marketData.tamValue) reportTraits.push(`TAM: ${marketData.tamValue}`);
+        if (marketData.samValue) reportTraits.push(`SAM: ${marketData.samValue}`);
+        if (marketData.GrowthRate) reportTraits.push(`Growth Rate: ${marketData.GrowthRate}`);
+      } else if (reportFilter === 'industry-trends' && industryTrendsData) {
+        if (industryTrendsData.executiveSummary) reportTraits.push(`Summary: ${industryTrendsData.executiveSummary}`);
+        if (industryTrendsData.aiAdoption) reportTraits.push(`AI Adoption: ${industryTrendsData.aiAdoption}`);
+        if (industryTrendsData.cloudMigration) reportTraits.push(`Cloud Migration: ${industryTrendsData.cloudMigration}`);
+      } else if (reportFilter === 'competitor-landscape' && competitorData) {
+        if (competitorData.executiveSummary) reportTraits.push(`Summary: ${competitorData.executiveSummary}`);
+        if (competitorData.topPlayerShare) reportTraits.push(`Top Player Share: ${competitorData.topPlayerShare}`);
+        if (competitorData.emergingPlayers) reportTraits.push(`Emerging Players: ${competitorData.emergingPlayers}`);
+      } else if (reportFilter === 'regulatory-compliance' && regulatoryData) {
+        if (regulatoryData.executiveSummary) reportTraits.push(`Summary: ${regulatoryData.executiveSummary}`);
+        if (regulatoryData.euAiActDeadline) reportTraits.push(`EU AI Act Deadline: ${regulatoryData.euAiActDeadline}`);
+        if (regulatoryData.gdprCompliance) reportTraits.push(`GDPR Compliance: ${regulatoryData.gdprCompliance}`);
+      } else if (reportFilter === 'market-entry' && marketEntryData) {
+        if (marketEntryData.executiveSummary) reportTraits.push(`Summary: ${marketEntryData.executiveSummary}`);
+        if (marketEntryData.recommendedChannel) reportTraits.push(`Recommended Channel: ${marketEntryData.recommendedChannel}`);
+        if (marketEntryData.timeToMarket) reportTraits.push(`Time to Market: ${marketEntryData.timeToMarket}`);
+      }
+    }
+
     setScoutMode("full-list");
     setScoutResearchContext({
       leads: leads.map(l => ({
@@ -859,7 +897,9 @@ const MarketResearch = React.memo(() => {
         source: l.source,
         signals: l.signals || [],
       })),
+      opportunity: reportFilter ? (reportLabels[reportFilter] || reportFilter) : undefined,
       icp: 'Mid-Market SaaS',
+      reportTraits,
     });
     handleTabChange('trends');
   };
