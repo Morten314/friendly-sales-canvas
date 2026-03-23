@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -95,52 +96,34 @@ interface PromptCategory {
   category: string;
   icon: React.ReactNode;
   actions: SuggestedAction[];
+  strategistLinked?: boolean;
 }
 
 const categorizedPrompts: PromptCategory[] = [
   {
-    category: "Prioritize",
-    icon: <Zap className="h-3.5 w-3.5" />,
+    category: "What is happening?",
+    icon: <Search className="h-3.5 w-3.5" />,
     actions: [
-      { label: "Which leads should we prioritize first?", prompt: "Which leads should we prioritize first?", icon: <Zap className="h-3.5 w-3.5" /> },
-      { label: "Strongest buying signals?", prompt: "Which companies show the strongest buying signals?", icon: <TrendingUp className="h-3.5 w-3.5" /> },
-      { label: "Most likely to convert in 30–90 days?", prompt: "Which leads are most likely to convert in the next 30–90 days?", icon: <Target className="h-3.5 w-3.5" /> },
+      { label: "What patterns do you see across these leads?", prompt: "What patterns do you see across these leads?", icon: <Search className="h-3.5 w-3.5" /> },
+      { label: "What signals are most common among these companies?", prompt: "What signals are most common among these companies?", icon: <Activity className="h-3.5 w-3.5" /> },
+      { label: "What stage are these companies currently in?", prompt: "What stage are these companies currently in?", icon: <TrendingUp className="h-3.5 w-3.5" /> },
     ],
   },
   {
-    category: "Understand Accounts",
-    icon: <Building2 className="h-3.5 w-3.5" />,
-    actions: [
-      { label: "What are these companies working on?", prompt: "Summarize what these companies are currently working on", icon: <Search className="h-3.5 w-3.5" /> },
-      { label: "What do they have in common?", prompt: "What do these companies have in common?", icon: <Users className="h-3.5 w-3.5" /> },
-      { label: "What growth stage are they in?", prompt: "What stage of growth are these companies in?", icon: <TrendingUp className="h-3.5 w-3.5" /> },
-    ],
-  },
-  {
-    category: "Detect Signals",
-    icon: <Activity className="h-3.5 w-3.5" />,
-    actions: [
-      { label: "Hiring for roles related to our product?", prompt: "Which companies are hiring for roles related to our product?", icon: <Users className="h-3.5 w-3.5" /> },
-      { label: "Recently raised funding or expanding?", prompt: "Which companies recently raised funding or are expanding?", icon: <Sparkles className="h-3.5 w-3.5" /> },
-      { label: "Signals indicating urgency?", prompt: "What signals indicate urgency across these accounts?", icon: <Zap className="h-3.5 w-3.5" /> },
-    ],
-  },
-  {
-    category: "Buyer & Competition",
+    category: "Why does it matter?",
     icon: <Target className="h-3.5 w-3.5" />,
     actions: [
-      { label: "Potential pain points?", prompt: "Identify potential pain points for these accounts", icon: <Search className="h-3.5 w-3.5" /> },
-      { label: "Competitors they're evaluating?", prompt: "Which competitors are these companies likely evaluating?", icon: <Newspaper className="h-3.5 w-3.5" /> },
-      { label: "Likely decision-makers?", prompt: "Who are the likely decision-makers across these companies?", icon: <Users className="h-3.5 w-3.5" /> },
+      { label: "Which of these signals indicate strong buying intent?", prompt: "Which of these signals indicate strong buying intent?", icon: <Zap className="h-3.5 w-3.5" /> },
+      { label: "Which leads matter the most, and why?", prompt: "Which leads matter the most, and why?", icon: <Users className="h-3.5 w-3.5" /> },
     ],
   },
   {
-    category: "Take Action",
+    category: "What should I do?",
     icon: <FileText className="h-3.5 w-3.5" />,
+    strategistLinked: true,
     actions: [
-      { label: "Create prioritized outreach list", prompt: "Create a prioritized outreach list", icon: <FileText className="h-3.5 w-3.5" /> },
-      { label: "Suggest outreach angles", prompt: "Suggest outreach angles for the top accounts", icon: <Target className="h-3.5 w-3.5" /> },
-      { label: "Segment by opportunity type", prompt: "Segment these leads based on opportunity type", icon: <Users className="h-3.5 w-3.5" /> },
+      { label: "Suggest outreach angles for the top accounts", prompt: "Suggest outreach angles for the top accounts", icon: <Target className="h-3.5 w-3.5" /> },
+      { label: "How should we approach these companies?", prompt: "How should we approach these companies?", icon: <ArrowRight className="h-3.5 w-3.5" /> },
     ],
   },
 ];
@@ -228,6 +211,7 @@ const ProspectSummaryCard = ({ lead, opportunity }: { lead: LeadContext; opportu
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 export function ChatWithScout({ fullPage = false, researchContext, mode = "selected-leads" }: ChatWithScoutProps) {
+  const navigate = useNavigate();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -241,9 +225,20 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
   // Build initial message based on context
   useEffect(() => {
     if (mode === "full-list" && researchContext && researchContext.leads.length > 0) {
+      const leadCount = researchContext.leads.length;
+      const icpText = researchContext.icp ? `ICP Match: ${researchContext.icp}` : "";
+
+      const leadSummaries = researchContext.leads.map((l, i) => {
+        const parts = [`${i + 1}. ${l.name} — ${l.jobTitle} at ${l.company}`];
+        if (l.tenure) parts.push(`   Tenure: ${l.tenure}`);
+        if (l.source) parts.push(`   Source: ${l.source}`);
+        if (l.signals && l.signals.length > 0) parts.push(`   Signals: ${l.signals.join("; ")}`);
+        return parts.join("\n");
+      }).join("\n\n");
+
       setMessages([{
         role: "assistant",
-        content: `Choose a prompt above or ask me anything about your leads.`,
+        content: `I've loaded ${leadCount} leads from your Lead Stream.\n${icpText ? icpText + "\n" : ""}\n${leadSummaries}\n\nI already have full context on these leads and their traits. Choose a prompt below or ask me anything.`,
         timestamp: new Date().toLocaleTimeString(),
       }]);
     } else if (researchContext && researchContext.leads.length === 1) {
@@ -254,14 +249,23 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
       }]);
     } else if (researchContext && researchContext.leads.length > 0) {
       const leadCount = researchContext.leads.length;
-      const leadNames = researchContext.leads.slice(0, 3).map(l => `${l.name} (${l.company})`).join(", ");
-      const moreText = leadCount > 3 ? ` and ${leadCount - 3} more` : "";
-      const opportunityText = researchContext.opportunity ? `\nOpportunity: ${researchContext.opportunity}` : "";
-      const icpText = researchContext.icp ? `\nICP: ${researchContext.icp}` : "";
+      const icpText = researchContext.icp ? `ICP Match: ${researchContext.icp}` : "";
+      const opportunityText = researchContext.opportunity ? `Report: ${researchContext.opportunity}` : "";
+
+      // Build structured lead summary
+      const leadSummaries = researchContext.leads.map((l, i) => {
+        const parts = [`${i + 1}. ${l.name} — ${l.jobTitle} at ${l.company}`];
+        if (l.tenure) parts.push(`   Tenure: ${l.tenure}`);
+        if (l.source) parts.push(`   Source: ${l.source}`);
+        if (l.signals && l.signals.length > 0) parts.push(`   Signals: ${l.signals.join("; ")}`);
+        return parts.join("\n");
+      }).join("\n\n");
+
+      const contextHeader = [icpText, opportunityText].filter(Boolean).join("  |  ");
 
       setMessages([{
         role: "assistant",
-        content: `You are researching ${leadCount} lead${leadCount > 1 ? 's' : ''} from the Lead Stream:\n${leadNames}${moreText}${opportunityText}${icpText}\n\nI already have context on these leads and their companies. Choose a suggested action above or ask me anything.`,
+        content: `I've loaded ${leadCount} leads from your Lead Stream.\n${contextHeader ? contextHeader + "\n" : ""}\n${leadSummaries}\n\nI already have full context on these leads and their traits. Choose a prompt below or ask me anything.`,
         timestamp: new Date().toLocaleTimeString(),
       }]);
     } else {
@@ -500,7 +504,17 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
               <div key={cat.category} className="flex items-start gap-2">
                 <div className="flex items-center gap-1 shrink-0 pt-1">
                   <span className="text-muted-foreground">{cat.icon}</span>
-                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider w-[90px]">{cat.category}</span>
+                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider w-[120px]">
+                    {cat.category}
+                    {cat.strategistLinked && (
+                      <button
+                        className="ml-1 text-primary hover:underline normal-case tracking-normal font-medium"
+                        onClick={() => navigate('/deals')}
+                      >
+                        (with Strategist)
+                      </button>
+                    )}
+                  </span>
                 </div>
                 <div className="flex flex-wrap gap-1">
                   {cat.actions.map((action) => (
