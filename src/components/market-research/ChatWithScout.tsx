@@ -4,10 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   MessageSquare, Send, Loader2, Bot, Sparkles, Download, Upload, ArrowRight,
   Search, TrendingUp, Users, Newspaper, Zap, Target, FileText, CheckCircle2,
-  User, Building2, Clock, Activity, ChevronDown,
+  User, Building2, Clock, Activity, ChevronDown, Plus,
 } from "lucide-react";
 
 // ─── Expandable Trait Item ──────────────────────────────────────────────────
