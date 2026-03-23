@@ -312,9 +312,22 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
     ));
   };
 
+  // Check if prompt should trigger Strategist handoff
+  const isStrategistPrompt = (text: string) => {
+    const strategistKeywords = ["outreach angles", "approach these", "how should we approach", "outreach strategy"];
+    return strategistKeywords.some(kw => text.toLowerCase().includes(kw));
+  };
+
   const handleSendMessage = async (messageText?: string) => {
     const text = messageText || input;
     if (!text.trim() || isLoading) return;
+
+    // Strategist handoff for bulk leads
+    if (!isSingleLead && hasContext && isStrategistPrompt(text)) {
+      setStrategistPrompt(text);
+      setStrategistActive(true);
+      return;
+    }
 
     const userMessage: ChatMessage = {
       role: "user",
