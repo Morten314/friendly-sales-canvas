@@ -2,7 +2,7 @@ import React from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip } from "recharts";
-import { Users, Target, AlertTriangle, Clock, Zap, ArrowRight, DollarSign } from "lucide-react";
+import { Users, Target, Activity, DollarSign } from "lucide-react";
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 
