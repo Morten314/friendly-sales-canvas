@@ -225,48 +225,15 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
 
   // Build initial message based on context
   useEffect(() => {
-    if (mode === "full-list" && researchContext && researchContext.leads.length > 0) {
-      const leadCount = researchContext.leads.length;
-      const icpText = researchContext.icp ? `ICP Match: ${researchContext.icp}` : "";
-
-      // Show report-level traits if available
-      const reportTraitsBlock = researchContext.reportTraits && researchContext.reportTraits.length > 0
-        ? `\nReport Context:\n${researchContext.reportTraits.join("\n")}`
-        : "";
-
-      setMessages([{
-        role: "assistant",
-        content: `I've loaded ${leadCount} leads from your Lead Stream.\n${icpText ? icpText + "\n" : ""}${reportTraitsBlock}\n\nThese leads share the traits of the matched report above. Choose a prompt below or ask me anything.`,
-        timestamp: new Date().toLocaleTimeString(),
-      }]);
-    } else if (researchContext && researchContext.leads.length === 1) {
+    if (researchContext && researchContext.leads.length === 1) {
       setMessages([{
         role: "assistant",
         content: `I've loaded full context on ${researchContext.leads[0].name}. What would you like to know?`,
         timestamp: new Date().toLocaleTimeString(),
       }]);
-    } else if (researchContext && researchContext.leads.length > 0) {
-      const leadCount = researchContext.leads.length;
-      const icpText = researchContext.icp ? `ICP Match: ${researchContext.icp}` : "";
-      const opportunityText = researchContext.opportunity ? `Report: ${researchContext.opportunity}` : "";
-      const contextHeader = [icpText, opportunityText].filter(Boolean).join("  |  ");
-
-      // Show report-level traits if available
-      const reportTraitsBlock = researchContext.reportTraits && researchContext.reportTraits.length > 0
-        ? `\nReport Context:\n${researchContext.reportTraits.join("\n")}`
-        : "";
-
-      setMessages([{
-        role: "assistant",
-        content: `I've loaded ${leadCount} leads from your Lead Stream.\n${contextHeader ? contextHeader + "\n" : ""}${reportTraitsBlock}\n\nThese leads share the traits of the matched report above. Choose a prompt below or ask me anything.`,
-        timestamp: new Date().toLocaleTimeString(),
-      }]);
     } else {
-      setMessages([{
-        role: "assistant",
-        content: "Hi! I'm Scout, your AI research assistant. Select leads from the Lead Stream and click \"Research with Scout\" to start, or ask me anything about your market.",
-        timestamp: new Date().toLocaleTimeString(),
-      }]);
+      // For bulk leads or no context, start empty — context shown in the report context card
+      setMessages([]);
     }
   }, [researchContext, mode]);
 
