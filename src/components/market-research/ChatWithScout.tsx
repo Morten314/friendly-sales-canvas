@@ -322,8 +322,8 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
     const text = messageText || input;
     if (!text.trim() || isLoading) return;
 
-    // Strategist handoff for bulk leads
-    if (!isSingleLead && hasContext && isStrategistPrompt(text)) {
+    // Strategist handoff for bulk leads — trigger even without full context
+    if (!isSingleLead && isStrategistPrompt(text)) {
       setStrategistPrompt(text);
       setStrategistActive(true);
       return;
@@ -421,13 +421,13 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
   const hasContext = researchContext && researchContext.leads.length > 0;
 
   // ─── Strategist Mode ──────────────────────────────────────────────────────
-  if (strategistActive && researchContext) {
+  if (strategistActive) {
     return (
       <div className={`${fullPage ? 'flex-1 h-full min-h-0' : 'h-[80vh]'}`}>
         <StrategistWorkspace
-          leads={researchContext.leads}
-          opportunity={researchContext.opportunity}
-          icp={researchContext.icp}
+          leads={researchContext?.leads || []}
+          opportunity={researchContext?.opportunity}
+          icp={researchContext?.icp}
           triggerPrompt={strategistPrompt}
           onBack={() => setStrategistActive(false)}
         />
