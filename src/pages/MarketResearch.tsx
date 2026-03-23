@@ -819,7 +819,7 @@ const MarketResearch = React.memo(() => {
 
   const [activeTab, setActiveTab] = useState(getActiveTabFromPath());
   const [signalsChatContext, setSignalsChatContext] = useState<SignalsChatContext | null>(null);
-  const [scoutResearchContext, setScoutResearchContext] = useState<{ leads: { name: string; company: string; jobTitle: string }[]; opportunity?: string; icp?: string } | null>(null);
+  const [scoutResearchContext, setScoutResearchContext] = useState<{ leads: { name: string; company: string; jobTitle: string }[]; opportunity?: string; icp?: string; reportTraits?: string[] } | null>(null);
   const [scoutMode, setScoutMode] = useState<"selected-leads" | "full-list">("selected-leads");
 
   const handleResearchWithScout = (leads: any[], context?: string) => {

@@ -33,6 +33,7 @@ interface ScoutResearchContext {
   leads: LeadContext[];
   opportunity?: string;
   icp?: string;
+  reportTraits?: string[];
 }
 
 type ScoutMode = "selected-leads" | "full-list";
