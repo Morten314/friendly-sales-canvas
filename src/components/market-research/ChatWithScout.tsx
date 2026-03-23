@@ -229,11 +229,6 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
       const leadCount = researchContext.leads.length;
       const icpText = researchContext.icp ? `ICP Match: ${researchContext.icp}` : "";
 
-      // List leads concisely (name + role + company only)
-      const leadList = researchContext.leads.map((l, i) =>
-        `${i + 1}. ${l.name} — ${l.jobTitle} at ${l.company}`
-      ).join("\n");
-
       // Show report-level traits if available
       const reportTraitsBlock = researchContext.reportTraits && researchContext.reportTraits.length > 0
         ? `\nReport Context:\n${researchContext.reportTraits.join("\n")}`
@@ -241,7 +236,7 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
 
       setMessages([{
         role: "assistant",
-        content: `I've loaded ${leadCount} leads from your Lead Stream.\n${icpText ? icpText + "\n" : ""}${reportTraitsBlock}\n\nLeads:\n${leadList}\n\nThese leads share the traits of the matched report above. Choose a prompt below or ask me anything.`,
+        content: `I've loaded ${leadCount} leads from your Lead Stream.\n${icpText ? icpText + "\n" : ""}${reportTraitsBlock}\n\nThese leads share the traits of the matched report above. Choose a prompt below or ask me anything.`,
         timestamp: new Date().toLocaleTimeString(),
       }]);
     } else if (researchContext && researchContext.leads.length === 1) {
