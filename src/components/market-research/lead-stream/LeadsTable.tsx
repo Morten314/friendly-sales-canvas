@@ -191,7 +191,7 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
             variant="ghost"
             size="icon"
             className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
-            onClick={() => onChatWithScout?.(filteredLeads)}
+            onClick={() => onChatWithScout?.(filteredLeads, reportFilter !== "all" ? reportFilter : undefined)}
           >
             <Bot className="h-4 w-4" />
           </Button>
