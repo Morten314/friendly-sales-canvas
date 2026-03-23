@@ -7,8 +7,38 @@ import { Card } from "@/components/ui/card";
 import {
   MessageSquare, Send, Loader2, Bot, Sparkles, Download, Upload, ArrowRight,
   Search, TrendingUp, Users, Newspaper, Zap, Target, FileText, CheckCircle2,
-  User, Building2, Clock, Activity,
-} from "lucide-react";
+  User, Building2, Clock, Activity, ChevronDown,
+};
+
+// ─── Expandable Trait Item ──────────────────────────────────────────────────
+
+const ExpandableTraitItem: React.FC<{ label: string; value: string; isLong: boolean }> = ({ label, value, isLong }) => {
+  const [expanded, setExpanded] = useState(false);
+
+  if (!isLong) {
+    return (
+      <div className="flex items-baseline gap-1 text-[11px] min-w-0">
+        <span className="text-muted-foreground shrink-0 font-medium">{label}:</span>
+        <span className="text-foreground">{value}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="text-[11px] min-w-0">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="flex items-center gap-1 w-full text-left group"
+      >
+        <span className="text-muted-foreground shrink-0 font-medium">{label}:</span>
+        <span className={`text-foreground flex-1 ${expanded ? '' : 'line-clamp-1'}`}>
+          {value}
+        </span>
+        <ChevronDown className={`h-3 w-3 text-muted-foreground shrink-0 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} />
+      </button>
+    </div>
+  );
+};
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
