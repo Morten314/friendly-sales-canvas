@@ -322,8 +322,8 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
     const text = messageText || input;
     if (!text.trim() || isLoading) return;
 
-    // Strategist handoff for bulk leads
-    if (!isSingleLead && hasContext && isStrategistPrompt(text)) {
+    // Strategist handoff for bulk leads — trigger even without full context
+    if (!isSingleLead && isStrategistPrompt(text)) {
       setStrategistPrompt(text);
       setStrategistActive(true);
       return;
