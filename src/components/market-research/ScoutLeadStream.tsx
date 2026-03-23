@@ -13,7 +13,7 @@ interface ScoutLeadStreamProps {
   onFiltersChange?: (filters: { selectedIndustry: string; selectedSize: string; selectedRegion: string }) => void;
   onClearOpportunityFilter?: () => void;
   onResearchWithScout?: (leads: any[], context?: string) => void;
-  onChatWithScout?: (leads: any[]) => void;
+  onChatWithScout?: (leads: any[], reportFilter?: string) => void;
 }
 
 // ─── Main Component ──────────────────────────────────────────────────────────
