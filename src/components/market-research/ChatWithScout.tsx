@@ -225,48 +225,15 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
 
   // Build initial message based on context
   useEffect(() => {
-    if (mode === "full-list" && researchContext && researchContext.leads.length > 0) {
-      const leadCount = researchContext.leads.length;
-      const icpText = researchContext.icp ? `ICP Match: ${researchContext.icp}` : "";
-
-      // Show report-level traits if available
-      const reportTraitsBlock = researchContext.reportTraits && researchContext.reportTraits.length > 0
-        ? `\nReport Context:\n${researchContext.reportTraits.join("\n")}`
-        : "";
-
-      setMessages([{
-        role: "assistant",
-        content: `I've loaded ${leadCount} leads from your Lead Stream.\n${icpText ? icpText + "\n" : ""}${reportTraitsBlock}\n\nThese leads share the traits of the matched report above. Choose a prompt below or ask me anything.`,
-        timestamp: new Date().toLocaleTimeString(),
-      }]);
-    } else if (researchContext && researchContext.leads.length === 1) {
+    if (researchContext && researchContext.leads.length === 1) {
       setMessages([{
         role: "assistant",
         content: `I've loaded full context on ${researchContext.leads[0].name}. What would you like to know?`,
         timestamp: new Date().toLocaleTimeString(),
       }]);
-    } else if (researchContext && researchContext.leads.length > 0) {
-      const leadCount = researchContext.leads.length;
-      const icpText = researchContext.icp ? `ICP Match: ${researchContext.icp}` : "";
-      const opportunityText = researchContext.opportunity ? `Report: ${researchContext.opportunity}` : "";
-      const contextHeader = [icpText, opportunityText].filter(Boolean).join("  |  ");
-
-      // Show report-level traits if available
-      const reportTraitsBlock = researchContext.reportTraits && researchContext.reportTraits.length > 0
-        ? `\nReport Context:\n${researchContext.reportTraits.join("\n")}`
-        : "";
-
-      setMessages([{
-        role: "assistant",
-        content: `I've loaded ${leadCount} leads from your Lead Stream.\n${contextHeader ? contextHeader + "\n" : ""}${reportTraitsBlock}\n\nThese leads share the traits of the matched report above. Choose a prompt below or ask me anything.`,
-        timestamp: new Date().toLocaleTimeString(),
-      }]);
     } else {
-      setMessages([{
-        role: "assistant",
-        content: "Hi! I'm Scout, your AI research assistant. Select leads from the Lead Stream and click \"Research with Scout\" to start, or ask me anything about your market.",
-        timestamp: new Date().toLocaleTimeString(),
-      }]);
+      // For bulk leads or no context, start empty — context shown in the report context card
+      setMessages([]);
     }
   }, [researchContext, mode]);
 
@@ -469,6 +436,11 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
   }
 
   // ─── Default layout (multi-lead or no context) ─────────────────────────────
+
+  const hasBulkContext = hasContext && !isSingleLead;
+  const reportTraits = researchContext?.reportTraits || [];
+  const leadCount = researchContext?.leads.length || 0;
+
   return (
     <div className={`bg-background border rounded-lg overflow-hidden flex flex-col ${fullPage ? 'flex-1 h-full min-h-[28rem]' : 'h-[80vh]'}`}>
       {/* Header */}
@@ -488,8 +460,45 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
         )}
       </div>
 
+      {/* Zone 1: Report Context Card (bulk leads only) */}
+      {hasBulkContext && reportTraits.length > 0 && (
+        <div className="px-4 pt-4 pb-2 shrink-0">
+          <Card className="p-4 bg-primary/5 border-primary/20 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center">
+                  <FileText className="h-3.5 w-3.5 text-primary" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-semibold text-foreground">
+                    {researchContext?.opportunity || "Market Intelligence Report"}
+                  </h4>
+                  <p className="text-[11px] text-muted-foreground">
+                    {leadCount} matched leads · {researchContext?.icp || "ICP Profile"}
+                  </p>
+                </div>
+              </div>
+              <Badge variant="outline" className="text-[10px] bg-primary/5 text-primary border-primary/20">
+                Report Context
+              </Badge>
+            </div>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 pt-1">
+              {reportTraits.filter(t => !t.startsWith("Matched Report:")).map((trait, i) => {
+                const [label, ...rest] = trait.split(": ");
+                const value = rest.join(": ");
+                return (
+                  <div key={i} className="flex items-baseline gap-1.5 text-xs">
+                    <span className="text-muted-foreground shrink-0">{label}:</span>
+                    <span className="text-foreground font-medium truncate">{value}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+        </div>
+      )}
 
-      {/* Suggested Actions - compact layout under header */}
+      {/* Zone 2: Suggested Prompts */}
       <div className="px-4 py-3 border-b shrink-0 space-y-2.5">
         {useCategorized ? (
           <div className="space-y-2">
@@ -548,16 +557,27 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
         )}
       </div>
 
-      {/* Messages */}
+      {/* Zone 3: Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-[200px]">
+        {messages.length === 0 && !isLoading && (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center space-y-2">
+              <Bot className="h-8 w-8 text-muted-foreground/40 mx-auto" />
+              <p className="text-sm text-muted-foreground">
+                {hasBulkContext 
+                  ? "Select a prompt above or type below to start chatting with Scout."
+                  : "Ask Scout anything about your market."}
+              </p>
+            </div>
+          </div>
+        )}
+
         {messages.map((message, index) => (
           <div key={index} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
             <div className={`max-w-[85%] rounded-lg p-3 ${
               message.role === "user"
                 ? "bg-primary text-primary-foreground"
-                : index === 0
-                  ? "bg-primary/5 border border-primary/20"
-                  : "bg-muted/50 border border-border"
+                : "bg-muted/50 border border-border"
             }`}>
               {message.role === "assistant" && (
                 <div className="flex items-center gap-1.5 mb-1.5">
@@ -565,7 +585,7 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
                   <span className="text-xs font-semibold text-primary">Scout</span>
                 </div>
               )}
-              <div className={`text-sm whitespace-pre-line leading-relaxed ${index === 0 && message.role === "assistant" ? "text-foreground font-medium" : ""}`}>{message.content}</div>
+              <div className="text-sm whitespace-pre-line leading-relaxed">{message.content}</div>
               
               {message.structuredActions && (
                 <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-border">
@@ -600,7 +620,7 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyPress}
-          placeholder={hasContext ? "Ask Scout about these leads..." : "Ask Scout anything about your market..."}
+          placeholder={hasBulkContext ? "Select a prompt or type here to start chatting with Scout..." : "Ask Scout anything about your market..."}
           className="resize-none text-sm min-h-[44px]"
           rows={2}
           disabled={isLoading}
