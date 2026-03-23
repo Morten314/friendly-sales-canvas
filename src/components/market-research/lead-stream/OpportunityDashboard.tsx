@@ -115,25 +115,24 @@ const OpportunityDashboard: React.FC = () => {
           </div>
         </Card>
 
-        {/* 4. Top Opportunities */}
+        {/* 4. Top Opportunities by ICP */}
         <Card className="p-4">
           <div className="flex items-center gap-2 mb-3">
             <Star className="h-4 w-4 text-primary" />
             <h3 className="text-sm font-semibold text-foreground">Top Opportunities</h3>
           </div>
-          <div className="space-y-2">
-            {topOpportunities.map((lead, i) => (
+          <div className="space-y-2.5">
+            {topICPOpportunities.map((item, i) => (
               <div key={i} className="flex items-center justify-between gap-1">
                 <div className="min-w-0">
-                  <div className="text-xs font-medium text-foreground truncate">{lead.name}</div>
-                  <div className="text-[10px] text-muted-foreground truncate">{lead.company} · {lead.icp}</div>
+                  <div className="text-xs font-medium text-foreground">{item.icp}</div>
+                  <div className="text-[10px] text-muted-foreground">{item.leads} leads · Avg score {item.avgScore}</div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 font-semibold">{lead.score}</Badge>
-                  <Button variant="ghost" size="icon" className="h-5 w-5" title="Send email">
+                  <Button variant="ghost" size="icon" className="h-5 w-5" title="Bulk email">
                     <Mail className="h-3 w-3" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-5 w-5" title="Add to CRM">
+                  <Button variant="ghost" size="icon" className="h-5 w-5" title="Add all to CRM">
                     <UserPlus className="h-3 w-3" />
                   </Button>
                 </div>
