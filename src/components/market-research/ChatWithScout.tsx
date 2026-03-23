@@ -560,7 +560,7 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
       </div>
 
       {/* Zone 3: Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-[200px]">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
         {messages.length === 0 && !isLoading && (
           <div className="flex items-center justify-center h-full">
             <div className="text-center space-y-2">
