@@ -483,15 +483,13 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
               </Badge>
             </div>
             {reportTraits.length > 0 && (
-              <div className="grid grid-cols-2 gap-x-3 gap-y-1 pt-1">
+              <div className="grid grid-cols-1 gap-y-1 pt-1">
                 {reportTraits.filter(t => !t.startsWith("Matched Report:")).map((trait, i) => {
                   const [label, ...rest] = trait.split(": ");
                   const value = rest.join(": ");
+                  const isLong = value.length > 60;
                   return (
-                    <div key={i} className="flex items-baseline gap-1 text-[11px] min-w-0">
-                      <span className="text-muted-foreground shrink-0">{label}:</span>
-                      <span className="text-foreground font-medium truncate">{value}</span>
-                    </div>
+                    <ExpandableTraitItem key={i} label={label} value={value} isLong={isLong} />
                   );
                 })}
               </div>
