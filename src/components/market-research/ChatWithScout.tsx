@@ -461,39 +461,41 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
       </div>
 
       {/* Zone 1: Report Context Card (bulk leads only) */}
-      {hasBulkContext && reportTraits.length > 0 && (
-        <div className="px-4 pt-4 pb-2 shrink-0">
-          <Card className="p-4 bg-primary/5 border-primary/20 space-y-2.5">
+      {hasBulkContext && (
+        <div className="px-4 pt-3 pb-1 shrink-0">
+          <Card className="p-3 bg-primary/5 border-primary/20 space-y-2 max-h-[140px] overflow-y-auto">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center">
-                  <FileText className="h-3.5 w-3.5 text-primary" />
+                <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <FileText className="h-3 w-3 text-primary" />
                 </div>
                 <div>
-                  <h4 className="text-xs font-semibold text-foreground">
-                    {researchContext?.opportunity || "Market Intelligence Report"}
+                  <h4 className="text-xs font-semibold text-foreground leading-tight">
+                    {researchContext?.opportunity || "Market Intelligence Context"}
                   </h4>
-                  <p className="text-[11px] text-muted-foreground">
+                  <p className="text-[10px] text-muted-foreground">
                     {leadCount} matched leads · {researchContext?.icp || "ICP Profile"}
                   </p>
                 </div>
               </div>
-              <Badge variant="outline" className="text-[10px] bg-primary/5 text-primary border-primary/20">
+              <Badge variant="outline" className="text-[9px] bg-primary/5 text-primary border-primary/20 shrink-0">
                 Report Context
               </Badge>
             </div>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 pt-1">
-              {reportTraits.filter(t => !t.startsWith("Matched Report:")).map((trait, i) => {
-                const [label, ...rest] = trait.split(": ");
-                const value = rest.join(": ");
-                return (
-                  <div key={i} className="flex items-baseline gap-1.5 text-xs">
-                    <span className="text-muted-foreground shrink-0">{label}:</span>
-                    <span className="text-foreground font-medium truncate">{value}</span>
-                  </div>
-                );
-              })}
-            </div>
+            {reportTraits.length > 0 && (
+              <div className="grid grid-cols-2 gap-x-3 gap-y-1 pt-1">
+                {reportTraits.filter(t => !t.startsWith("Matched Report:")).map((trait, i) => {
+                  const [label, ...rest] = trait.split(": ");
+                  const value = rest.join(": ");
+                  return (
+                    <div key={i} className="flex items-baseline gap-1 text-[11px] min-w-0">
+                      <span className="text-muted-foreground shrink-0">{label}:</span>
+                      <span className="text-foreground font-medium truncate">{value}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </Card>
         </div>
       )}
