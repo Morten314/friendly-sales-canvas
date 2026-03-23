@@ -493,7 +493,17 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
               <div key={cat.category} className="flex items-start gap-2">
                 <div className="flex items-center gap-1 shrink-0 pt-1">
                   <span className="text-muted-foreground">{cat.icon}</span>
-                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider w-[90px]">{cat.category}</span>
+                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider w-[120px]">
+                    {cat.category}
+                    {cat.strategistLinked && (
+                      <button
+                        className="ml-1 text-primary hover:underline normal-case tracking-normal font-medium"
+                        onClick={() => navigate('/deals')}
+                      >
+                        (with Strategist)
+                      </button>
+                    )}
+                  </span>
                 </div>
                 <div className="flex flex-wrap gap-1">
                   {cat.actions.map((action) => (
