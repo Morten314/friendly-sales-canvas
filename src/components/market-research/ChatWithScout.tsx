@@ -10,6 +10,7 @@ import {
   Search, TrendingUp, Users, Newspaper, Zap, Target, FileText, CheckCircle2,
   User, Building2, Clock, Activity, ChevronDown, Plus,
 } from "lucide-react";
+import StrategistWorkspace from "./StrategistWorkspace";
 
 // ─── Expandable Trait Item ──────────────────────────────────────────────────
 
@@ -257,6 +258,8 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [agentStep, setAgentStep] = useState(-1);
+  const [strategistActive, setStrategistActive] = useState(false);
+  const [strategistPrompt, setStrategistPrompt] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const isSingleLead = mode === "selected-leads" && researchContext?.leads.length === 1;
@@ -309,9 +312,22 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
     ));
   };
 
+  // Check if prompt should trigger Strategist handoff
+  const isStrategistPrompt = (text: string) => {
+    const strategistKeywords = ["outreach angles", "approach these", "how should we approach", "outreach strategy"];
+    return strategistKeywords.some(kw => text.toLowerCase().includes(kw));
+  };
+
   const handleSendMessage = async (messageText?: string) => {
     const text = messageText || input;
     if (!text.trim() || isLoading) return;
+
+    // Strategist handoff for bulk leads
+    if (!isSingleLead && hasContext && isStrategistPrompt(text)) {
+      setStrategistPrompt(text);
+      setStrategistActive(true);
+      return;
+    }
 
     const userMessage: ChatMessage = {
       role: "user",
@@ -403,6 +419,21 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
   };
 
   const hasContext = researchContext && researchContext.leads.length > 0;
+
+  // ─── Strategist Mode ──────────────────────────────────────────────────────
+  if (strategistActive && researchContext) {
+    return (
+      <div className={`${fullPage ? 'flex-1 h-full min-h-0' : 'h-[80vh]'}`}>
+        <StrategistWorkspace
+          leads={researchContext.leads}
+          opportunity={researchContext.opportunity}
+          icp={researchContext.icp}
+          triggerPrompt={strategistPrompt}
+          onBack={() => setStrategistActive(false)}
+        />
+      </div>
+    );
+  }
 
   // ─── Single Lead: Two-panel layout ─────────────────────────────────────────
   if (isSingleLead && researchContext) {
@@ -594,12 +625,9 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
                   <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider w-[120px]">
                     {cat.category}
                     {cat.strategistLinked && (
-                      <button
-                        className="ml-1 text-primary hover:underline normal-case tracking-normal font-medium"
-                        onClick={() => navigate('/deals')}
-                      >
-                        (with Strategist)
-                      </button>
+                      <span className="ml-1 text-primary normal-case tracking-normal font-medium text-[10px]">
+                        → Strategist
+                      </span>
                     )}
                   </span>
                 </div>
