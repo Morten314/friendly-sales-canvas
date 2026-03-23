@@ -314,18 +314,29 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
 
   // Check if prompt should trigger Strategist handoff
   const isStrategistPrompt = (text: string) => {
-    const strategistKeywords = ["outreach angles", "approach these", "how should we approach", "outreach strategy"];
+    const strategistKeywords = [
+      "outreach angles",
+      "outreach angle",
+      "create outreach angle",
+      "approach these",
+      "how should we approach",
+      "outreach strategy",
+    ];
     return strategistKeywords.some(kw => text.toLowerCase().includes(kw));
   };
 
-  const handleSendMessage = async (messageText?: string) => {
+  const handleSendMessage = async (
+    messageText?: string,
+    options?: { forceStrategist?: boolean }
+  ) => {
     const text = messageText || input;
     if (!text.trim() || isLoading) return;
 
-    // Strategist handoff for bulk leads — trigger even without full context
-    if (!isSingleLead && isStrategistPrompt(text)) {
+    // Strategist handoff for bulk leads — trigger from explicit strategist actions or matching intent
+    if (!isSingleLead && (options?.forceStrategist || isStrategistPrompt(text))) {
       setStrategistPrompt(text);
       setStrategistActive(true);
+      if (!messageText) setInput("");
       return;
     }
 
@@ -638,7 +649,7 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
                       variant="outline"
                       size="sm"
                       className="h-6 text-[10px] px-2 gap-1 hover:bg-primary/5 hover:text-primary hover:border-primary/30 transition-colors"
-                      onClick={() => handleSendMessage(action.prompt)}
+                      onClick={() => handleSendMessage(action.prompt, { forceStrategist: !!cat.strategistLinked })}
                       disabled={isLoading}
                     >
                       {action.label}
