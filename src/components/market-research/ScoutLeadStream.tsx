@@ -40,7 +40,7 @@ const ScoutLeadStream: React.FC<ScoutLeadStreamProps> = ({
         opportunityFilter={opportunityFilter}
         onClearOpportunityFilter={onClearOpportunityFilter}
         onResearchWithScout={handleResearchLead}
-        onChatWithScout={(leads) => onChatWithScout?.(leads)}
+        onChatWithScout={(leads, reportFilter) => onChatWithScout?.(leads, reportFilter)}
       />
     </div>
   );
