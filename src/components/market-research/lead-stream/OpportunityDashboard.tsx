@@ -13,9 +13,9 @@ const coverageData = [
 ];
 
 const icpMatchData = [
-  { name: "Mid-Market SaaS", leads: 18 },
-  { name: "Enterprise FinTech", leads: 12 },
-  { name: "Growth E-commerce", leads: 8 },
+  { name: "Mid-Market SaaS", leads: 32 },
+  { name: "Enterprise FinTech", leads: 24 },
+  { name: "Growth E-commerce", leads: 18 },
 ];
 
 const pipelineData = [
