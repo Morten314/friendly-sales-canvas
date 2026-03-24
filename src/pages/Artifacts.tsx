@@ -140,6 +140,7 @@ const Artefacts = () => {
   const [expandedArtefact, setExpandedArtefact] = useState<string | null>(null);
   const [editingArtefact, setEditingArtefact] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
+  const [activeFolder, setActiveFolder] = useState<string | null>(null);
 
   // Listen for search events from header
   useEffect(() => {
@@ -158,6 +159,10 @@ const Artefacts = () => {
     const handleAddArtefact = (event: CustomEvent) => {
       const newArtefact = event.detail as ArtefactItem;
       setArtefacts(prev => [newArtefact, ...prev]);
+      // If it has a folder, open that folder view
+      if (newArtefact.folder) {
+        setActiveFolder(newArtefact.folder);
+      }
       setExpandedArtefact(newArtefact.id);
     };
 
@@ -167,11 +172,19 @@ const Artefacts = () => {
     };
   }, []);
 
-  const filteredArtefacts = artefacts.filter(artefact => 
-    artefact.agentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    artefact.taskNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    artefact.actionDelegated.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Get unique folders
+  const folders = [...new Set(artefacts.filter(a => a.folder).map(a => a.folder!))];
+
+  const filteredArtefacts = artefacts.filter(artefact => {
+    const matchesSearch = artefact.agentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      artefact.taskNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      artefact.actionDelegated.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    if (activeFolder) {
+      return matchesSearch && artefact.folder === activeFolder;
+    }
+    return matchesSearch && !artefact.folder;
+  });
 
   const handleArtefactClick = (id: string) => {
     setExpandedArtefact(expandedArtefact === id ? null : id);
