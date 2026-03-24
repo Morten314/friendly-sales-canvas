@@ -592,15 +592,60 @@ startxref
           </Card>
         </div>
 
+        {/* Folders */}
+        {folders.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button
+              variant={activeFolder === null ? "default" : "outline"}
+              size="sm"
+              className="text-xs gap-1.5"
+              onClick={() => setActiveFolder(null)}
+            >
+              <FileText className="h-3.5 w-3.5" />
+              All Artefacts
+            </Button>
+            {folders.map(folder => {
+              const count = artefacts.filter(a => a.folder === folder).length;
+              return (
+                <Button
+                  key={folder}
+                  variant={activeFolder === folder ? "default" : "outline"}
+                  size="sm"
+                  className="text-xs gap-1.5"
+                  onClick={() => setActiveFolder(folder)}
+                >
+                  <FolderOpen className="h-3.5 w-3.5" />
+                  {folder}
+                  <Badge variant="secondary" className="text-[10px] ml-1 px-1.5 py-0">{count}</Badge>
+                </Button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Active folder header */}
+        {activeFolder && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <button onClick={() => setActiveFolder(null)} className="hover:text-foreground transition-colors">Artefacts</button>
+            <ChevronRight className="h-3 w-3" />
+            <span className="font-medium text-foreground flex items-center gap-1.5">
+              <Mail className="h-3.5 w-3.5" />
+              {activeFolder}
+            </span>
+          </div>
+        )}
+
         {/* Artefacts Library */}
         <div className="space-y-4">
           {filteredArtefacts.length === 0 ? (
             <Card>
               <CardContent className="p-8 text-center">
                 <Bot className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No artefacts found</h3>
+                <h3 className="text-lg font-semibold mb-2">
+                  {activeFolder ? `No items in "${activeFolder}"` : 'No artefacts found'}
+                </h3>
                 <p className="text-muted-foreground">
-                  {searchQuery ? 'Try adjusting your search query' : 'Your agents will generate artefacts as they complete tasks'}
+                  {searchQuery ? 'Try adjusting your search query' : activeFolder ? 'Emails saved from Strategist will appear here' : 'Your agents will generate artefacts as they complete tasks'}
                 </p>
               </CardContent>
             </Card>
