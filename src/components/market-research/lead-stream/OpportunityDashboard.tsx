@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip } from "recharts";
-import { Users, Target, DollarSign, Star, Mail, UserPlus } from "lucide-react";
+import { Users, Target, DollarSign, Star, Mail, UserPlus, Bot } from "lucide-react";
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 
