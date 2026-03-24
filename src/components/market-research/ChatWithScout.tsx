@@ -259,8 +259,6 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [agentStep, setAgentStep] = useState(-1);
-  const [strategistActive, setStrategistActive] = useState(false);
-  const [strategistPrompt, setStrategistPrompt] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const isSingleLead = mode === "selected-leads" && researchContext?.leads.length === 1;
