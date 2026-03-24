@@ -251,7 +251,7 @@ const ProspectSummaryCard = ({ lead, opportunity }: { lead: LeadContext; opportu
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 
-export function ChatWithScout({ fullPage = false, researchContext, mode = "selected-leads" }: ChatWithScoutProps) {
+export function ChatWithScout({ fullPage = false, researchContext, mode = "selected-leads", onActivateStrategist }: ChatWithScoutProps) {
   const navigate = useNavigate();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
