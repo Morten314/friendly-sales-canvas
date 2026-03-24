@@ -212,7 +212,7 @@ const StrategistChat: React.FC<{
         {messages.length === 0 && !isLoading && (
           <div className="flex items-center justify-center h-full">
             <div className="text-center space-y-2">
-              <Sparkles className="h-7 w-7 text-muted-foreground/40 mx-auto" />
+              <MessageSquare className="h-7 w-7 text-muted-foreground/40 mx-auto" />
               <p className="text-xs text-muted-foreground">
                 Ask Strategist to refine angles, generate copy, or customize outreach.
               </p>
