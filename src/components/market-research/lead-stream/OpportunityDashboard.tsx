@@ -65,7 +65,7 @@ const OpportunityDashboard: React.FC = () => {
               <div className="text-muted-foreground">Total: <span className="font-semibold text-foreground">120</span></div>
               <div className="flex items-center gap-1.5">
                 <div className="w-2 h-2 rounded-full bg-primary" />
-                <span className="text-muted-foreground">Matched: <span className="font-semibold text-foreground">38</span></span>
+                <span className="text-muted-foreground">Matched: <span className="font-semibold text-foreground">74</span></span>
               </div>
               <div className="flex items-center gap-1.5">
                 <div className="w-2 h-2 rounded-full bg-muted" />
