@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Bot, CheckCircle2, Loader2, Mail, MessageSquare, Users,
   ArrowLeft, Clock, Target, Send, Linkedin, Filter,
-  Play, Eye, MousePointerClick, FileCheck, ChevronRight,
+  Play, Eye, MousePointerClick, FileCheck, ChevronRight, Save,
 } from "lucide-react";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
