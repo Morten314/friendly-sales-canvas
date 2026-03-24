@@ -37,9 +37,14 @@ const topICPOpportunities = [
 const OpportunityDashboard: React.FC = () => {
   return (
     <div className="space-y-4">
-      <div>
-        <h2 className="text-lg font-bold text-foreground tracking-tight">Opportunity Dashboard</h2>
-        <p className="text-xs text-muted-foreground mt-0.5">Visual overview of your lead intelligence across all Scout report sections</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h2 className="text-lg font-bold text-foreground tracking-tight">Opportunity Dashboard</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">Visual overview of your lead intelligence across all Scout report sections</p>
+        </div>
+        <button className="h-8 w-8 rounded-full bg-primary/10 hover:bg-primary/20 flex items-center justify-center transition-colors" title="Chat with Scout about all leads">
+          <Bot className="h-4 w-4 text-primary" />
+        </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
