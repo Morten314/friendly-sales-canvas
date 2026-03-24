@@ -323,7 +323,10 @@ const StrategistChat: React.FC<{
   input: string;
   onInputChange: (v: string) => void;
   onSend: () => void;
-}> = ({ messages, isLoading, agentStep, input, onInputChange, onSend }) => {
+  showSaveEmail: boolean;
+  onSaveEmail: () => void;
+  savingEmail: boolean;
+}> = ({ messages, isLoading, agentStep, input, onInputChange, onSend, showSaveEmail, onSaveEmail, savingEmail }) => {
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -384,6 +387,25 @@ const StrategistChat: React.FC<{
             </div>
           </div>
         ))}
+
+        {/* Save Email button after last assistant message */}
+        {showSaveEmail && !isLoading && (
+          <div className="flex justify-start">
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-xs gap-1.5 border-primary/30 text-primary hover:bg-primary/10"
+              onClick={onSaveEmail}
+              disabled={savingEmail}
+            >
+              {savingEmail ? (
+                <><Loader2 className="h-3 w-3 animate-spin" /> Saving...</>
+              ) : (
+                <><Save className="h-3 w-3" /> Save email to Artefacts</>
+              )}
+            </Button>
+          </div>
+        )}
 
         {isLoading && agentStep >= 0 && (
           <div className="space-y-2 p-3 bg-muted/30 rounded-lg border border-border">
@@ -447,6 +469,9 @@ const StrategistWorkspace: React.FC<StrategistWorkspaceProps> = ({
   const [showSequence, setShowSequence] = useState(false);
   const [sequenceSteps, setSequenceSteps] = useState<SequenceStep[]>([]);
   const [savingStepId, setSavingStepId] = useState<string | null>(null);
+  const [activeEmailStepId, setActiveEmailStepId] = useState<string | null>(null);
+  const [emailEditMode, setEmailEditMode] = useState(false);
+  const [savingEmail, setSavingEmail] = useState(false);
 
   // Simulate agent steps during loading
   useEffect(() => {
