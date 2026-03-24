@@ -14063,10 +14063,6 @@ const MarketResearch = React.memo(() => {
 
                 </TabsTrigger>
 
-                <TabsTrigger value="strategist" className="flex items-center gap-2 flex-1">
-                  <Sparkles className="h-4 w-4" />
-                  Strategist
-                </TabsTrigger>
 
               </TabsList>
 
