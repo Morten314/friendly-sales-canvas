@@ -794,8 +794,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-      'chatwithscout': 'trends',
-      'strategist': 'strategist'
+      'chatwithscout': 'trends'
     };
 
 
