@@ -493,13 +493,89 @@ const StrategistWorkspace: React.FC<StrategistWorkspaceProps> = ({
     setShowSequence(true);
   };
 
+  const handleEmailClick = (step: SequenceStep) => {
+    if (step.emailGenerated || step.savedToArtefacts) return;
+    setActiveEmailStepId(step.id);
+    setEmailEditMode(true);
+
+    // Generate email in chat
+    const prompt = `Generate a professional cold outreach email for the "${step.action}" step (Day ${step.day}).
+Subject line: ${step.subject || "Create a compelling subject"}
+Context: Targeting ${strategy.persona} leads. Angle: ${strategy.angle}. 
+Write the full email with subject line, greeting, body, and sign-off. Make it concise and compelling.`;
+
+    handleSendChat(prompt);
+
+    // Mark step as email generated
+    setSequenceSteps((prev) =>
+      prev.map((s) => (s.id === step.id ? { ...s, emailGenerated: true } : s))
+    );
+  };
+
+  const handleSaveEmail = () => {
+    // Find the last assistant message as the email content
+    const lastAssistantMsg = [...chatMessages].reverse().find((m) => m.role === "assistant");
+    if (!lastAssistantMsg) return;
+
+    setSavingEmail(true);
+    const activeStep = sequenceSteps.find((s) => s.id === activeEmailStepId);
+    const stepAction = activeStep?.action || "Outreach Email";
+    const stepDay = activeStep?.day || 1;
+
+    setTimeout(() => {
+      const artefactEvent = new CustomEvent("addArtefact", {
+        detail: {
+          id: `strat-email-${activeEmailStepId}-${Date.now()}`,
+          agentName: "Strategist",
+          agentIcon: "🧭",
+          agentColor: "bg-indigo-500",
+          taskNumber: `STR-${new Date().getFullYear()}-${Math.floor(Math.random() * 900) + 100}`,
+          timestamp: "Just now",
+          status: "new",
+          type: "playbook",
+          actionDelegated: `Strategist, generate ${stepAction} for outreach sequence — Day ${stepDay}`,
+          contextRationale: `Part of the outreach sequence targeting ${strategy.persona} leads based on ${strategy.basis}`,
+          systemImpact: `${stepAction} (Day ${stepDay}) finalized and saved for deployment`,
+          actionPerformed: `Generated and refined ${stepAction} for ${leads.length} leads with ${strategy.angle.toLowerCase()} angle`,
+          outputSummary: lastAssistantMsg.content.substring(0, 200) + "...",
+          fullReport: {
+            title: `${stepAction} — Day ${stepDay} · Outreach Sequence`,
+            executiveSummary: `Finalized email for Day ${stepDay} of the outreach sequence targeting ${strategy.persona} leads.`,
+            keyFindings: [
+              `Targeting ${leads.length} leads as ${strategy.persona}`,
+              `Primary angle: ${strategy.angle}`,
+              `Sequence step: Day ${stepDay} — ${stepAction}`,
+              `Confidence level: ${strategy.confidence}`,
+            ],
+            analysis: lastAssistantMsg.content,
+            recommendations: [
+              "Personalize {{first_name}} and {{company}} placeholders before sending",
+              "A/B test subject lines for better open rates",
+              "Send during business hours (9-11 AM recipient timezone)",
+            ],
+          },
+        },
+      });
+      window.dispatchEvent(artefactEvent);
+
+      // Mark step as saved
+      setSequenceSteps((prev) =>
+        prev.map((s) => (s.id === activeEmailStepId ? { ...s, savedToArtefacts: true } : s))
+      );
+      setSavingEmail(false);
+      setEmailEditMode(false);
+      setActiveEmailStepId(null);
+
+      // Navigate to artefacts
+      setTimeout(() => navigate("/artifacts"), 1200);
+    }, 1000);
+  };
+
   const handleLinkedInClick = (step: SequenceStep) => {
     if (!step.linkedinMessage || step.savedToArtefacts) return;
     setSavingStepId(step.id);
 
-    // Simulate generating + saving
     setTimeout(() => {
-      // Dispatch event to add artefact
       const artefactEvent = new CustomEvent("addArtefact", {
         detail: {
           id: `strat-li-${step.id}-${Date.now()}`,
@@ -535,16 +611,12 @@ const StrategistWorkspace: React.FC<StrategistWorkspaceProps> = ({
       });
       window.dispatchEvent(artefactEvent);
 
-      // Mark step as saved
       setSequenceSteps((prev) =>
         prev.map((s) => (s.id === step.id ? { ...s, savedToArtefacts: true } : s))
       );
       setSavingStepId(null);
 
-      // Navigate to artefacts after a brief delay
-      setTimeout(() => {
-        navigate("/artifacts");
-      }, 1200);
+      setTimeout(() => navigate("/artifacts"), 1200);
     }, 1500);
   };
 
@@ -594,6 +666,9 @@ const StrategistWorkspace: React.FC<StrategistWorkspaceProps> = ({
     }
   };
 
+  // Determine if we should show the save email button
+  const showSaveEmail = emailEditMode && activeEmailStepId !== null && chatMessages.length > 0 && chatMessages[chatMessages.length - 1]?.role === "assistant";
+
   return (
     <div className="flex flex-col h-full min-h-0 bg-background border rounded-lg overflow-hidden">
       {/* Header */}
@@ -618,7 +693,9 @@ const StrategistWorkspace: React.FC<StrategistWorkspaceProps> = ({
             <SequenceView
               steps={sequenceSteps}
               onLinkedInClick={handleLinkedInClick}
+              onEmailClick={handleEmailClick}
               savingStepId={savingStepId}
+              activeEmailStepId={activeEmailStepId}
             />
           ) : (
             <StrategistDashboard
@@ -638,6 +715,9 @@ const StrategistWorkspace: React.FC<StrategistWorkspaceProps> = ({
             input={chatInput}
             onInputChange={setChatInput}
             onSend={() => handleSendChat()}
+            showSaveEmail={showSaveEmail}
+            onSaveEmail={handleSaveEmail}
+            savingEmail={savingEmail}
           />
         </div>
       </div>
