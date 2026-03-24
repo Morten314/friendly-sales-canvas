@@ -2716,6 +2716,22 @@ const MarketResearch = React.memo(() => {
     handleTabChange('analysis');
   };
 
+  const handleChatAboutCoverage = () => {
+    setScoutMode("full-list");
+    setScoutResearchContext({
+      leads: [],
+      opportunity: "Leads Coverage Analysis",
+      icp: 'All Segments',
+      reportTraits: [
+        "Total Leads: 120",
+        "Matched Leads: 74 (62%)",
+        "Unmatched Leads: 46 (38%)",
+        "62% should comprise of your active pipeline",
+      ],
+    });
+    handleTabChange('trends');
+  };
+
 
 
 
@@ -15198,6 +15214,7 @@ const MarketResearch = React.memo(() => {
                   onClearOpportunityFilter={() => setOpportunityFilter(null)}
                   onResearchWithScout={handleResearchWithScout}
                   onChatWithScout={handleChatWithScout}
+                  onChatAboutCoverage={handleChatAboutCoverage}
                 />
 
 
