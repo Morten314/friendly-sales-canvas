@@ -8,8 +8,8 @@ import { Users, Target, DollarSign, Star, Mail, UserPlus } from "lucide-react";
 // ─── Data ────────────────────────────────────────────────────────────────────
 
 const coverageData = [
-  { name: "Matched", value: 38, color: "hsl(var(--primary))" },
-  { name: "Unmatched", value: 82, color: "hsl(var(--muted))" },
+  { name: "Matched", value: 74, color: "hsl(var(--primary))" },
+  { name: "Unmatched", value: 46, color: "hsl(var(--muted))" },
 ];
 
 const icpMatchData = [
