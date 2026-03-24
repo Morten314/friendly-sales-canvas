@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Bot, CheckCircle2, Loader2, Mail, MessageSquare, Users,
   ArrowLeft, Clock, Target, Send, Linkedin, Filter,
-  Play, Eye, MousePointerClick, FileCheck, ChevronRight,
+  Play, Eye, MousePointerClick, FileCheck, ChevronRight, Save,
 } from "lucide-react";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -89,7 +89,9 @@ interface SequenceStep {
   subject?: string;
   preview?: string;
   linkedinMessage?: string;
+  emailBody?: string;
   savedToArtefacts?: boolean;
+  emailGenerated?: boolean;
 }
 
 function generateSequence(strategy: ReturnType<typeof generateStrategy>): SequenceStep[] {
@@ -193,8 +195,10 @@ const StrategistDashboard: React.FC<{
 const SequenceView: React.FC<{
   steps: SequenceStep[];
   onLinkedInClick: (step: SequenceStep) => void;
+  onEmailClick: (step: SequenceStep) => void;
   savingStepId: string | null;
-}> = ({ steps, onLinkedInClick, savingStepId }) => {
+  activeEmailStepId: string | null;
+}> = ({ steps, onLinkedInClick, onEmailClick, savingStepId, activeEmailStepId }) => {
   const channelConfig = {
     email: { icon: Mail, label: "Email", color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-950/30", border: "border-blue-200 dark:border-blue-800" },
     linkedin: { icon: Linkedin, label: "LinkedIn", color: "text-indigo-600 dark:text-indigo-400", bg: "bg-indigo-50 dark:bg-indigo-950/30", border: "border-indigo-200 dark:border-indigo-800" },
@@ -214,8 +218,10 @@ const SequenceView: React.FC<{
         const config = channelConfig[step.channel];
         const Icon = config.icon;
         const isLinkedIn = step.channel === "linkedin";
+        const isEmail = step.channel === "email";
         const isSaving = savingStepId === step.id;
         const isSaved = step.savedToArtefacts;
+        const isActiveEmail = activeEmailStepId === step.id;
 
         return (
           <div key={step.id} className="flex items-stretch gap-3">
@@ -234,6 +240,8 @@ const SequenceView: React.FC<{
               className={`flex-1 mb-2 rounded-lg border p-2.5 transition-all ${
                 isLinkedIn && !isSaved
                   ? "border-indigo-200 dark:border-indigo-800 hover:border-indigo-400 dark:hover:border-indigo-600 cursor-pointer hover:shadow-sm"
+                  : isActiveEmail
+                  ? "border-primary ring-1 ring-primary/20"
                   : "border-border"
               } ${step.channel === "wait" ? "bg-muted/20" : "bg-background"}`}
               onClick={() => isLinkedIn && !isSaved && !isSaving && onLinkedInClick(step)}
@@ -268,6 +276,24 @@ const SequenceView: React.FC<{
                 </p>
               )}
               <p className="text-[11px] text-muted-foreground leading-relaxed">{step.preview}</p>
+              
+              {/* Email: Click here to generate */}
+              {isEmail && !step.emailGenerated && !isSaved && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onEmailClick(step); }}
+                  className="flex items-center gap-1.5 mt-2 text-[11px] text-primary font-medium hover:underline cursor-pointer"
+                >
+                  <Mail className="h-3 w-3" />
+                  Click here to generate the email →
+                </button>
+              )}
+              {isEmail && step.emailGenerated && !isSaved && (
+                <div className="flex items-center gap-1 mt-1.5 text-[10px] text-primary">
+                  <Eye className="h-2.5 w-2.5" />
+                  <span>Email generated — refine it in Chat with Strategist</span>
+                </div>
+              )}
+
               {isLinkedIn && !isSaved && (
                 <div className="flex items-center gap-1 mt-1.5 text-[10px] text-indigo-500 dark:text-indigo-400">
                   <Eye className="h-2.5 w-2.5" />
@@ -297,7 +323,10 @@ const StrategistChat: React.FC<{
   input: string;
   onInputChange: (v: string) => void;
   onSend: () => void;
-}> = ({ messages, isLoading, agentStep, input, onInputChange, onSend }) => {
+  showSaveEmail: boolean;
+  onSaveEmail: () => void;
+  savingEmail: boolean;
+}> = ({ messages, isLoading, agentStep, input, onInputChange, onSend, showSaveEmail, onSaveEmail, savingEmail }) => {
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -358,6 +387,25 @@ const StrategistChat: React.FC<{
             </div>
           </div>
         ))}
+
+        {/* Save Email button after last assistant message */}
+        {showSaveEmail && !isLoading && (
+          <div className="flex justify-start">
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-xs gap-1.5 border-primary/30 text-primary hover:bg-primary/10"
+              onClick={onSaveEmail}
+              disabled={savingEmail}
+            >
+              {savingEmail ? (
+                <><Loader2 className="h-3 w-3 animate-spin" /> Saving...</>
+              ) : (
+                <><Save className="h-3 w-3" /> Save email to Artefacts</>
+              )}
+            </Button>
+          </div>
+        )}
 
         {isLoading && agentStep >= 0 && (
           <div className="space-y-2 p-3 bg-muted/30 rounded-lg border border-border">
@@ -421,6 +469,9 @@ const StrategistWorkspace: React.FC<StrategistWorkspaceProps> = ({
   const [showSequence, setShowSequence] = useState(false);
   const [sequenceSteps, setSequenceSteps] = useState<SequenceStep[]>([]);
   const [savingStepId, setSavingStepId] = useState<string | null>(null);
+  const [activeEmailStepId, setActiveEmailStepId] = useState<string | null>(null);
+  const [emailEditMode, setEmailEditMode] = useState(false);
+  const [savingEmail, setSavingEmail] = useState(false);
 
   // Simulate agent steps during loading
   useEffect(() => {
@@ -442,13 +493,89 @@ const StrategistWorkspace: React.FC<StrategistWorkspaceProps> = ({
     setShowSequence(true);
   };
 
+  const handleEmailClick = (step: SequenceStep) => {
+    if (step.emailGenerated || step.savedToArtefacts) return;
+    setActiveEmailStepId(step.id);
+    setEmailEditMode(true);
+
+    // Generate email in chat
+    const prompt = `Generate a professional cold outreach email for the "${step.action}" step (Day ${step.day}).
+Subject line: ${step.subject || "Create a compelling subject"}
+Context: Targeting ${strategy.persona} leads. Angle: ${strategy.angle}. 
+Write the full email with subject line, greeting, body, and sign-off. Make it concise and compelling.`;
+
+    handleSendChat(prompt);
+
+    // Mark step as email generated
+    setSequenceSteps((prev) =>
+      prev.map((s) => (s.id === step.id ? { ...s, emailGenerated: true } : s))
+    );
+  };
+
+  const handleSaveEmail = () => {
+    // Find the last assistant message as the email content
+    const lastAssistantMsg = [...chatMessages].reverse().find((m) => m.role === "assistant");
+    if (!lastAssistantMsg) return;
+
+    setSavingEmail(true);
+    const activeStep = sequenceSteps.find((s) => s.id === activeEmailStepId);
+    const stepAction = activeStep?.action || "Outreach Email";
+    const stepDay = activeStep?.day || 1;
+
+    setTimeout(() => {
+      const artefactEvent = new CustomEvent("addArtefact", {
+        detail: {
+          id: `strat-email-${activeEmailStepId}-${Date.now()}`,
+          agentName: "Strategist",
+          agentIcon: "🧭",
+          agentColor: "bg-indigo-500",
+          taskNumber: `STR-${new Date().getFullYear()}-${Math.floor(Math.random() * 900) + 100}`,
+          timestamp: "Just now",
+          status: "new",
+          type: "playbook",
+          actionDelegated: `Strategist, generate ${stepAction} for outreach sequence — Day ${stepDay}`,
+          contextRationale: `Part of the outreach sequence targeting ${strategy.persona} leads based on ${strategy.basis}`,
+          systemImpact: `${stepAction} (Day ${stepDay}) finalized and saved for deployment`,
+          actionPerformed: `Generated and refined ${stepAction} for ${leads.length} leads with ${strategy.angle.toLowerCase()} angle`,
+          outputSummary: lastAssistantMsg.content.substring(0, 200) + "...",
+          fullReport: {
+            title: `${stepAction} — Day ${stepDay} · Outreach Sequence`,
+            executiveSummary: `Finalized email for Day ${stepDay} of the outreach sequence targeting ${strategy.persona} leads.`,
+            keyFindings: [
+              `Targeting ${leads.length} leads as ${strategy.persona}`,
+              `Primary angle: ${strategy.angle}`,
+              `Sequence step: Day ${stepDay} — ${stepAction}`,
+              `Confidence level: ${strategy.confidence}`,
+            ],
+            analysis: lastAssistantMsg.content,
+            recommendations: [
+              "Personalize {{first_name}} and {{company}} placeholders before sending",
+              "A/B test subject lines for better open rates",
+              "Send during business hours (9-11 AM recipient timezone)",
+            ],
+          },
+        },
+      });
+      window.dispatchEvent(artefactEvent);
+
+      // Mark step as saved
+      setSequenceSteps((prev) =>
+        prev.map((s) => (s.id === activeEmailStepId ? { ...s, savedToArtefacts: true } : s))
+      );
+      setSavingEmail(false);
+      setEmailEditMode(false);
+      setActiveEmailStepId(null);
+
+      // Navigate to artefacts
+      setTimeout(() => navigate("/artifacts"), 1200);
+    }, 1000);
+  };
+
   const handleLinkedInClick = (step: SequenceStep) => {
     if (!step.linkedinMessage || step.savedToArtefacts) return;
     setSavingStepId(step.id);
 
-    // Simulate generating + saving
     setTimeout(() => {
-      // Dispatch event to add artefact
       const artefactEvent = new CustomEvent("addArtefact", {
         detail: {
           id: `strat-li-${step.id}-${Date.now()}`,
@@ -484,16 +611,12 @@ const StrategistWorkspace: React.FC<StrategistWorkspaceProps> = ({
       });
       window.dispatchEvent(artefactEvent);
 
-      // Mark step as saved
       setSequenceSteps((prev) =>
         prev.map((s) => (s.id === step.id ? { ...s, savedToArtefacts: true } : s))
       );
       setSavingStepId(null);
 
-      // Navigate to artefacts after a brief delay
-      setTimeout(() => {
-        navigate("/artifacts");
-      }, 1200);
+      setTimeout(() => navigate("/artifacts"), 1200);
     }, 1500);
   };
 
@@ -543,6 +666,9 @@ const StrategistWorkspace: React.FC<StrategistWorkspaceProps> = ({
     }
   };
 
+  // Determine if we should show the save email button
+  const showSaveEmail = emailEditMode && activeEmailStepId !== null && chatMessages.length > 0 && chatMessages[chatMessages.length - 1]?.role === "assistant";
+
   return (
     <div className="flex flex-col h-full min-h-0 bg-background border rounded-lg overflow-hidden">
       {/* Header */}
@@ -567,7 +693,9 @@ const StrategistWorkspace: React.FC<StrategistWorkspaceProps> = ({
             <SequenceView
               steps={sequenceSteps}
               onLinkedInClick={handleLinkedInClick}
+              onEmailClick={handleEmailClick}
               savingStepId={savingStepId}
+              activeEmailStepId={activeEmailStepId}
             />
           ) : (
             <StrategistDashboard
@@ -587,6 +715,9 @@ const StrategistWorkspace: React.FC<StrategistWorkspaceProps> = ({
             input={chatInput}
             onInputChange={setChatInput}
             onSend={() => handleSendChat()}
+            showSaveEmail={showSaveEmail}
+            onSaveEmail={handleSaveEmail}
+            savingEmail={savingEmail}
           />
         </div>
       </div>
