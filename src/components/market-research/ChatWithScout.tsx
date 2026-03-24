@@ -279,6 +279,12 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
         content: `I've loaded full context on ${researchContext.leads[0].name}. What would you like to know?`,
         timestamp: new Date().toLocaleTimeString(),
       }]);
+    } else if (researchContext?.opportunity === "Leads Coverage Analysis") {
+      setMessages([{
+        role: "assistant",
+        content: `I've loaded your Leads Coverage data — 74 out of 120 leads are matched across all Scout report sections (62% coverage).\n\nHere are a few things we can explore together:\n\n• Do you think the 62% match rate reflects your actual pipeline potential, or should we adjust the criteria?\n• Are there specific industries or segments where you'd expect higher or lower coverage?\n• Would you like me to break down which report sections are contributing the most matched leads?\n\nFeel free to share any intel — I'll factor it into the analysis.`,
+        timestamp: new Date().toLocaleTimeString(),
+      }]);
     } else {
       setMessages([]);
     }
