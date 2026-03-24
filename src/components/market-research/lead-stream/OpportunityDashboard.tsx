@@ -71,6 +71,9 @@ const OpportunityDashboard: React.FC = () => {
                 <div className="w-2 h-2 rounded-full bg-muted" />
                 <span className="text-muted-foreground">Unmatched: <span className="font-semibold text-foreground">46</span></span>
               </div>
+              <div className="mt-1 text-[11px] text-primary font-medium">
+                62% should comprise of your active pipeline
+              </div>
             </div>
           </div>
         </Card>
