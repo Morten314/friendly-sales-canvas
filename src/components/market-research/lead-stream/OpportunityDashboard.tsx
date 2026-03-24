@@ -34,7 +34,11 @@ const topICPOpportunities = [
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-const OpportunityDashboard: React.FC = () => {
+interface OpportunityDashboardProps {
+  onChatAboutCoverage?: () => void;
+}
+
+const OpportunityDashboard: React.FC<OpportunityDashboardProps> = ({ onChatAboutCoverage }) => {
   return (
     <div className="space-y-4">
       <div className="flex items-start justify-between">
@@ -42,7 +46,11 @@ const OpportunityDashboard: React.FC = () => {
           <h2 className="text-lg font-bold text-foreground tracking-tight">Opportunity Dashboard</h2>
           <p className="text-xs text-muted-foreground mt-0.5">Visual overview of your lead intelligence across all Scout report sections</p>
         </div>
-        <button className="h-8 w-8 rounded-full bg-primary/10 hover:bg-primary/20 flex items-center justify-center transition-colors" title="Chat with Scout about all leads">
+        <button 
+          className="h-8 w-8 rounded-full bg-primary/10 hover:bg-primary/20 flex items-center justify-center transition-colors" 
+          title="Chat with Scout about leads coverage"
+          onClick={onChatAboutCoverage}
+        >
           <Bot className="h-4 w-4 text-primary" />
         </button>
       </div>

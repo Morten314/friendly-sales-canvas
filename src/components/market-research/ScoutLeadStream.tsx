@@ -14,6 +14,7 @@ interface ScoutLeadStreamProps {
   onClearOpportunityFilter?: () => void;
   onResearchWithScout?: (leads: any[], context?: string) => void;
   onChatWithScout?: (leads: any[], reportFilter?: string) => void;
+  onChatAboutCoverage?: () => void;
 }
 
 // ─── Main Component ──────────────────────────────────────────────────────────
@@ -23,6 +24,7 @@ const ScoutLeadStream: React.FC<ScoutLeadStreamProps> = ({
   onClearOpportunityFilter,
   onResearchWithScout,
   onChatWithScout,
+  onChatAboutCoverage,
 }) => {
   const handleResearchLead = (lead: any) => {
     onResearchWithScout?.([lead]);
@@ -31,7 +33,7 @@ const ScoutLeadStream: React.FC<ScoutLeadStreamProps> = ({
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Zone 1: Opportunity Dashboard */}
-      <OpportunityDashboard />
+      <OpportunityDashboard onChatAboutCoverage={onChatAboutCoverage} />
 
       <Separator />
 
