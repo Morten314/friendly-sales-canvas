@@ -412,11 +412,15 @@ const StrategistWorkspace: React.FC<StrategistWorkspaceProps> = ({
   triggerPrompt,
   onBack,
 }) => {
+  const navigate = useNavigate();
   const strategy = generateStrategy(leads);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [agentStep, setAgentStep] = useState(-1);
+  const [showSequence, setShowSequence] = useState(false);
+  const [sequenceSteps, setSequenceSteps] = useState<SequenceStep[]>([]);
+  const [savingStepId, setSavingStepId] = useState<string | null>(null);
 
   // Simulate agent steps during loading
   useEffect(() => {
@@ -431,6 +435,67 @@ const StrategistWorkspace: React.FC<StrategistWorkspaceProps> = ({
     });
     return () => timers.forEach(clearTimeout);
   }, [isLoading]);
+
+  const handleCreateSequence = () => {
+    const steps = generateSequence(strategy);
+    setSequenceSteps(steps);
+    setShowSequence(true);
+  };
+
+  const handleLinkedInClick = (step: SequenceStep) => {
+    if (!step.linkedinMessage || step.savedToArtefacts) return;
+    setSavingStepId(step.id);
+
+    // Simulate generating + saving
+    setTimeout(() => {
+      // Dispatch event to add artefact
+      const artefactEvent = new CustomEvent("addArtefact", {
+        detail: {
+          id: `strat-li-${step.id}-${Date.now()}`,
+          agentName: "Strategist",
+          agentIcon: "🧭",
+          agentColor: "bg-indigo-500",
+          taskNumber: `STR-${new Date().getFullYear()}-${Math.floor(Math.random() * 900) + 100}`,
+          timestamp: "Just now",
+          status: "new",
+          type: "playbook",
+          actionDelegated: `Strategist, create customized LinkedIn message for outreach sequence — ${step.action}`,
+          contextRationale: `Part of the outreach sequence targeting ${strategy.persona} leads based on ${strategy.basis}`,
+          systemImpact: `Customized LinkedIn ${step.action.toLowerCase()} saved and ready for deployment`,
+          actionPerformed: `Generated personalized LinkedIn message for ${leads.length} leads with ${strategy.angle.toLowerCase()} angle`,
+          outputSummary: step.linkedinMessage || "",
+          fullReport: {
+            title: `LinkedIn ${step.action} — Outreach Sequence`,
+            executiveSummary: `Customized LinkedIn message for ${step.action.toLowerCase()} targeting ${strategy.persona} leads. Message angle: ${strategy.angle}.`,
+            keyFindings: [
+              `Targeting ${leads.length} leads as ${strategy.persona}`,
+              `Primary angle: ${strategy.angle}`,
+              `Optimal timing window: ${strategy.timing}`,
+              `Confidence level: ${strategy.confidence}`,
+            ],
+            analysis: step.linkedinMessage || "",
+            recommendations: [
+              "Personalize {{first_name}} and {{company}} placeholders before sending",
+              "Send during business hours (9-11 AM recipient timezone)",
+              "Follow up if no response within 48 hours",
+            ],
+          },
+        },
+      });
+      window.dispatchEvent(artefactEvent);
+
+      // Mark step as saved
+      setSequenceSteps((prev) =>
+        prev.map((s) => (s.id === step.id ? { ...s, savedToArtefacts: true } : s))
+      );
+      setSavingStepId(null);
+
+      // Navigate to artefacts after a brief delay
+      setTimeout(() => {
+        navigate("/artifacts");
+      }, 1200);
+    }, 1500);
+  };
 
   const handleSendChat = async (overrideText?: string) => {
     const text = overrideText || chatInput;
@@ -482,21 +547,35 @@ const StrategistWorkspace: React.FC<StrategistWorkspaceProps> = ({
     <div className="flex flex-col h-full min-h-0 bg-background border rounded-lg overflow-hidden">
       {/* Header */}
       <div className="bg-muted/30 p-3 border-b flex items-center gap-2 shrink-0">
-        <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={onBack}>
+        <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={showSequence ? () => setShowSequence(false) : onBack}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="min-w-0">
           <p className="text-[11px] text-muted-foreground truncate">
-            Strategy workspace for {leads.length} leads · {opportunity || "Scout Research"}
+            {showSequence
+              ? `Outreach sequence · ${sequenceSteps.length} steps · ${leads.length} leads`
+              : `Strategy workspace for ${leads.length} leads · ${opportunity || "Scout Research"}`}
           </p>
         </div>
       </div>
 
-      {/* Two-panel layout: Dashboard + Chat */}
+      {/* Two-panel layout */}
       <div className="flex-1 flex min-h-0">
-        {/* Left: Dashboard */}
+        {/* Left: Dashboard or Sequence */}
         <div className="w-[55%] shrink-0 border-r border-border overflow-y-auto">
-          <StrategistDashboard strategy={strategy} onAction={handleSendChat} />
+          {showSequence ? (
+            <SequenceView
+              steps={sequenceSteps}
+              onLinkedInClick={handleLinkedInClick}
+              savingStepId={savingStepId}
+            />
+          ) : (
+            <StrategistDashboard
+              strategy={strategy}
+              onAction={handleSendChat}
+              onCreateSequence={handleCreateSequence}
+            />
+          )}
         </div>
 
         {/* Right: Chat with Strategist */}
