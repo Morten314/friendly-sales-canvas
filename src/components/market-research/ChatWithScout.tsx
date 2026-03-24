@@ -333,10 +333,11 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
     const text = messageText || input;
     if (!text.trim() || isLoading) return;
 
-    // Strategist handoff for bulk leads — trigger from explicit strategist actions or matching intent
+    // Strategist handoff for bulk leads — navigate to Strategist tab
     if (!isSingleLead && (options?.forceStrategist || isStrategistPrompt(text))) {
-      setStrategistPrompt(text);
-      setStrategistActive(true);
+      if (onActivateStrategist) {
+        onActivateStrategist(text, researchContext);
+      }
       if (!messageText) setInput("");
       return;
     }
