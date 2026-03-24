@@ -109,7 +109,7 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
   ) : undefined;
 
   // Mock opportunity match data per section — fixed total lead pool
-  const totalLeadPool = 85;
+  const totalLeadPool = 120;
   const opportunityMatches: Record<string, { pattern: string; crm: number; uploaded: number; matching: number }> = {
     'market-size': {
       pattern: 'Companies in high-growth TAM segments matching your ICP',
