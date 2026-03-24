@@ -15214,6 +15214,7 @@ const MarketResearch = React.memo(() => {
                   onClearOpportunityFilter={() => setOpportunityFilter(null)}
                   onResearchWithScout={handleResearchWithScout}
                   onChatWithScout={handleChatWithScout}
+                  onChatAboutCoverage={handleChatAboutCoverage}
                 />
 
 
