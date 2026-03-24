@@ -819,7 +819,7 @@ const MarketResearch = React.memo(() => {
   const [signalsChatContext, setSignalsChatContext] = useState<SignalsChatContext | null>(null);
   const [scoutResearchContext, setScoutResearchContext] = useState<{ leads: { name: string; company: string; jobTitle: string }[]; opportunity?: string; icp?: string; reportTraits?: string[] } | null>(null);
   const [scoutMode, setScoutMode] = useState<"selected-leads" | "full-list">("selected-leads");
-  const [strategistPrompt, setStrategistPrompt] = useState("");
+  
 
   const handleResearchWithScout = (leads: any[], context?: string) => {
     const opportunityLabels: Record<string, string> = {
