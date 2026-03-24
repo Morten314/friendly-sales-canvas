@@ -197,7 +197,7 @@ const StrategistChat: React.FC<{
     <div className="flex flex-col h-full min-h-0">
       {/* Chat header */}
       <div className="px-3 py-2 border-b bg-muted/20 flex items-center gap-2 shrink-0">
-        <Sparkles className="h-3.5 w-3.5 text-primary" />
+        <MessageSquare className="h-3.5 w-3.5 text-primary" />
         <span className="text-xs font-semibold text-foreground">Chat with Strategist</span>
         {isLoading && (
           <div className="ml-auto flex items-center gap-1 text-primary text-[11px]">
