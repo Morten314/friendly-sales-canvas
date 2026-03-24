@@ -10,7 +10,7 @@ import {
   Search, TrendingUp, Users, Newspaper, Zap, Target, FileText, CheckCircle2,
   User, Building2, Clock, Activity, ChevronDown, Plus,
 } from "lucide-react";
-import StrategistWorkspace from "./StrategistWorkspace";
+
 
 // ─── Expandable Trait Item ──────────────────────────────────────────────────
 
