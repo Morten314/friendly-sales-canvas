@@ -81,7 +81,6 @@ interface ChatWithScoutProps {
   fullPage?: boolean;
   researchContext?: ScoutResearchContext | null;
   mode?: ScoutMode;
-  onActivateStrategist?: (prompt: string, context?: ScoutResearchContext | null) => void;
 }
 
 // ─── Agent Step Indicators ───────────────────────────────────────────────────
