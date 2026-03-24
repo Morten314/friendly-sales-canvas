@@ -119,7 +119,7 @@ const mockLeads: MatchedLead[] = [
   { id: "41", name: "Nadia Volkov", email: "n.volkov@saaslaunch.ee", company: "SaaSLaunch", jobTitle: "Head of GTM", tenure: "8 months", source: "HubSpot", matchedReports: ["market-entry"], signals: ["Baltic expansion", "GTM playbook building"] },
   { id: "42", name: "Chris Taylor", email: "c.taylor@scalepath.ca", company: "ScalePath Canada", jobTitle: "VP Business Development", tenure: "1 year 11 months", source: "Prospect List", matchedReports: ["market-entry", "market-size"], signals: ["Canadian market entry", "Cross-border sales strategy"] },
   { id: "43", name: "Priscilla Osei", email: "p.osei@growthwave.gh", company: "GrowthWave Africa", jobTitle: "Director of Expansion", tenure: "1 year 3 months", source: "HubSpot", matchedReports: ["industry-trends"], signals: ["Africa SaaS market pioneer", "Building distribution network"] },
-  { id: "44", name: "Kevin Lim", email: "k.lim@revscale.my", company: "RevScale MY", jobTitle: "Head of Sales", tenure: "7 months", source: "Prospect List", matchedReports: ["regulatory-compliance", "market-entry"], signals: ["Malaysia PDPA compliance", "Regional expansion focus"] },
+  { id: "44", name: "Kevin Lim", email: "k.lim@revscale.my", company: "RevScale MY", jobTitle: "Head of Sales", tenure: "7 months", source: "Prospect List", matchedReports: ["regulatory-compliance"], signals: ["Malaysia PDPA compliance", "Regional expansion focus"] },
 ];
 
 // ─── Props ────────────────────────────────────────────────────────────────────
