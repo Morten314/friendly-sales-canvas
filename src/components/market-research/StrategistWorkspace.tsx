@@ -89,7 +89,9 @@ interface SequenceStep {
   subject?: string;
   preview?: string;
   linkedinMessage?: string;
+  emailBody?: string;
   savedToArtefacts?: boolean;
+  emailGenerated?: boolean;
 }
 
 function generateSequence(strategy: ReturnType<typeof generateStrategy>): SequenceStep[] {
