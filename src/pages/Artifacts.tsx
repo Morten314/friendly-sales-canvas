@@ -5,7 +5,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { FileText, TrendingUp, Users, Target, BarChart, Clock, AlertCircle, CheckCircle, Lightbulb, Download, Bot, Edit, Trash2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { FileText, TrendingUp, Users, Target, BarChart, Clock, AlertCircle, CheckCircle, Lightbulb, Download, Bot, Edit, Trash2, FolderOpen, ChevronRight, Mail } from 'lucide-react';
 
 interface ArtefactItem {
   id: string;
