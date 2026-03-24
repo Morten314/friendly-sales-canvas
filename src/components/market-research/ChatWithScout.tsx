@@ -330,11 +330,16 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
     const text = messageText || input;
     if (!text.trim() || isLoading) return;
 
-    // Strategist handoff for bulk leads — navigate to Strategist tab
+    // Strategist handoff for bulk leads — navigate to Strategist page
     if (!isSingleLead && (options?.forceStrategist || isStrategistPrompt(text))) {
-      if (onActivateStrategist) {
-        onActivateStrategist(text, researchContext);
-      }
+      // Store context in sessionStorage for Strategist to pick up
+      sessionStorage.setItem('strategistContext', JSON.stringify({
+        leads: researchContext?.leads || [],
+        opportunity: researchContext?.opportunity,
+        icp: researchContext?.icp,
+        triggerPrompt: text,
+      }));
+      navigate('/deals');
       if (!messageText) setInput("");
       return;
     }
