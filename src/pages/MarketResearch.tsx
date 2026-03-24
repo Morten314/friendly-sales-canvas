@@ -822,13 +822,6 @@ const MarketResearch = React.memo(() => {
   const [scoutMode, setScoutMode] = useState<"selected-leads" | "full-list">("selected-leads");
   const [strategistPrompt, setStrategistPrompt] = useState("");
 
-  // Handle strategist activation from Chat with Scout
-  const handleActivateStrategist = (prompt: string, context?: typeof scoutResearchContext) => {
-    if (context) setScoutResearchContext(context);
-    setStrategistPrompt(prompt);
-    handleTabChange('strategist');
-  };
-
   const handleResearchWithScout = (leads: any[], context?: string) => {
     const opportunityLabels: Record<string, string> = {
       'market-size': 'Market Size & Opportunity',
