@@ -39,7 +39,7 @@ const OpportunityDashboard: React.FC = () => {
     <div className="space-y-4">
       <div>
         <h2 className="text-lg font-bold text-foreground tracking-tight">Opportunity Dashboard</h2>
-        <p className="text-xs text-muted-foreground mt-0.5">Visual overview of your lead intelligence</p>
+        <p className="text-xs text-muted-foreground mt-0.5">Visual overview of your lead intelligence across all Scout report sections</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
