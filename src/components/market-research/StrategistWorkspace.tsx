@@ -498,13 +498,92 @@ const StrategistWorkspace: React.FC<StrategistWorkspaceProps> = ({
     setActiveEmailStepId(step.id);
     setEmailEditMode(true);
 
-    // Generate email in chat
-    const prompt = `Generate a professional cold outreach email for the "${step.action}" step (Day ${step.day}).
-Subject line: ${step.subject || "Create a compelling subject"}
-Context: Targeting ${strategy.persona} leads. Angle: ${strategy.angle}. 
-Write the full email with subject line, greeting, body, and sign-off. Make it concise and compelling.`;
+    // Generate a customized mock email directly in chat
+    const leadName = leads[0]?.name?.split(" ")[0] || "there";
+    const leadCompany = leads[0]?.company || "your company";
+    const leadTitle = leads[0]?.jobTitle || "your role";
 
-    handleSendChat(prompt);
+    let emailContent = "";
+    if (step.id === "s1") {
+      emailContent = `Subject: ${step.subject || `Quick question about scaling ${leadCompany}`}
+
+Hey ${leadName},
+
+I noticed ${leadCompany} has been ${strategy.angle.toLowerCase()} — congrats on the momentum.
+
+I work with ${strategy.persona} teams who are navigating similar growth, and one thing that keeps coming up is how quickly operational bottlenecks show up when you're scaling fast.
+
+We recently helped a company in a similar stage cut their onboarding time by 40% while doubling their pipeline — happy to share what worked if it's relevant.
+
+Would a 15-minute call this week make sense? No pressure either way.
+
+Best,
+[Your Name]
+[Your Title] | [Company]`;
+    } else if (step.id === "s4") {
+      emailContent = `Subject: Re: Quick question
+
+Hey ${leadName},
+
+Just floating this back up — I know things move fast when you're scaling.
+
+I put together a short breakdown of how ${strategy.persona} teams at companies like ${leadCompany} are approaching ${strategy.angle.toLowerCase()}. It's a 2-minute read, no fluff.
+
+Worth a look? Happy to send it over — just say the word.
+
+Cheers,
+[Your Name]`;
+    } else if (step.id === "s6") {
+      emailContent = `Subject: How [Similar Company] achieved 3x results
+
+Hey ${leadName},
+
+Quick one — wanted to share a case study that might resonate given where ${leadCompany} is right now.
+
+[Similar Company], also in the ${strategy.persona} space, was facing the same challenges around ${strategy.angle.toLowerCase()}. Within 6 months, they:
+
+• Increased pipeline velocity by 3x
+• Reduced sales cycle from 45 to 28 days  
+• Grew revenue by 67% quarter-over-quarter
+
+The playbook they used is surprisingly simple. I'd love to walk you through it if you have 15 minutes this week.
+
+What does your calendar look like?
+
+Best,
+[Your Name]
+[Your Title] | [Company]`;
+    } else {
+      emailContent = `Subject: ${step.subject || "Should I close the loop?"}
+
+Hey ${leadName},
+
+I've reached out a couple of times and totally understand if the timing isn't right — ${leadCompany} clearly has a lot on the plate right now.
+
+I'll keep this simple: if ${strategy.angle.toLowerCase()} is a priority for you in the next quarter, I'd love to help. If not, no worries at all — I'll close the loop on my end.
+
+Either way, wishing you and the ${leadCompany} team continued success.
+
+Take care,
+[Your Name]
+[Your Title] | [Company]`;
+    }
+
+    // Add user message showing what was requested
+    const userMsg: ChatMessage = {
+      role: "user",
+      content: `Generate a customized ${step.action} for Day ${step.day} of the outreach sequence.`,
+      timestamp: new Date().toLocaleTimeString(),
+    };
+
+    // Add assistant message with the drafted email
+    const assistantMsg: ChatMessage = {
+      role: "assistant",
+      content: emailContent,
+      timestamp: new Date().toLocaleTimeString(),
+    };
+
+    setChatMessages((prev) => [...prev, userMsg, assistantMsg]);
 
     // Mark step as email generated
     setSequenceSteps((prev) =>
