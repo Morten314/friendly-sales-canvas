@@ -231,7 +231,7 @@ const StrategistChat: React.FC<{
             >
               {msg.role === "assistant" && (
                 <div className="flex items-center gap-1.5 mb-1">
-                  <Sparkles className="h-3 w-3 text-primary" />
+                  <Bot className="h-3 w-3 text-primary" />
                   <span className="text-[11px] font-semibold text-primary">Strategist</span>
                 </div>
               )}
