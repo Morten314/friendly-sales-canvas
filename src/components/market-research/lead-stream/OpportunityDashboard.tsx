@@ -8,8 +8,8 @@ import { Users, Target, DollarSign, Star, Mail, UserPlus } from "lucide-react";
 // ─── Data ────────────────────────────────────────────────────────────────────
 
 const coverageData = [
-  { name: "Matched", value: 38, color: "hsl(var(--primary))" },
-  { name: "Unmatched", value: 82, color: "hsl(var(--muted))" },
+  { name: "Matched", value: 74, color: "hsl(var(--primary))" },
+  { name: "Unmatched", value: 46, color: "hsl(var(--muted))" },
 ];
 
 const icpMatchData = [
@@ -65,11 +65,11 @@ const OpportunityDashboard: React.FC = () => {
               <div className="text-muted-foreground">Total: <span className="font-semibold text-foreground">120</span></div>
               <div className="flex items-center gap-1.5">
                 <div className="w-2 h-2 rounded-full bg-primary" />
-                <span className="text-muted-foreground">Matched: <span className="font-semibold text-foreground">38</span></span>
+                <span className="text-muted-foreground">Matched: <span className="font-semibold text-foreground">74</span></span>
               </div>
               <div className="flex items-center gap-1.5">
                 <div className="w-2 h-2 rounded-full bg-muted" />
-                <span className="text-muted-foreground">Unmatched: <span className="font-semibold text-foreground">82</span></span>
+                <span className="text-muted-foreground">Unmatched: <span className="font-semibold text-foreground">46</span></span>
               </div>
             </div>
           </div>
