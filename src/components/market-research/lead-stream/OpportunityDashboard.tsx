@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip } from "recharts";
-import { Users, Target, DollarSign, Star, Mail, UserPlus } from "lucide-react";
+import { Users, Target, DollarSign, Star, Mail, UserPlus, Bot } from "lucide-react";
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 
@@ -37,9 +37,14 @@ const topICPOpportunities = [
 const OpportunityDashboard: React.FC = () => {
   return (
     <div className="space-y-4">
-      <div>
-        <h2 className="text-lg font-bold text-foreground tracking-tight">Opportunity Dashboard</h2>
-        <p className="text-xs text-muted-foreground mt-0.5">Visual overview of your lead intelligence across all Scout report sections</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h2 className="text-lg font-bold text-foreground tracking-tight">Opportunity Dashboard</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">Visual overview of your lead intelligence across all Scout report sections</p>
+        </div>
+        <button className="h-8 w-8 rounded-full bg-primary/10 hover:bg-primary/20 flex items-center justify-center transition-colors" title="Chat with Scout about all leads">
+          <Bot className="h-4 w-4 text-primary" />
+        </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
