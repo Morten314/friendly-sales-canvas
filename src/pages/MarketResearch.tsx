@@ -23,7 +23,7 @@ import { Button } from "@/components/ui/button";
 
 
 
-import { Search, MessageSquare, Users, Settings, RefreshCw, AlertCircle, History, Calendar, Info, Loader2, Sparkles } from "lucide-react";
+import { Search, MessageSquare, Users, Settings, RefreshCw, AlertCircle, History, Calendar, Info, Loader2 } from "lucide-react";
 
 
 
