@@ -14092,11 +14092,31 @@ const MarketResearch = React.memo(() => {
 
 
 
-        {activeTab === "trends" ? (
+        {activeTab === "strategist" ? (
+          <div className="flex-1 h-full min-h-[30rem] flex flex-col overflow-hidden -mx-3 md:-mx-4 lg:-mx-6 w-[calc(100%+1.5rem)] md:w-[calc(100%+2rem)] lg:w-[calc(100%+3rem)] max-w-none">
+            <div className="px-3 md:px-4 lg:px-6 py-4 h-full flex flex-col min-h-0 flex-1">
+              <StrategistWorkspace
+                leads={scoutResearchContext?.leads?.map(l => ({
+                  name: l.name,
+                  company: l.company,
+                  jobTitle: l.jobTitle || '',
+                  email: (l as any).email,
+                  tenure: (l as any).tenure,
+                  source: (l as any).source,
+                  signals: (l as any).signals,
+                })) || []}
+                opportunity={scoutResearchContext?.opportunity}
+                icp={scoutResearchContext?.icp}
+                triggerPrompt={strategistPrompt}
+                onBack={() => handleTabChange('trends')}
+              />
+            </div>
+          </div>
+        ) : activeTab === "trends" ? (
           <div className="flex-1 h-full min-h-[30rem] flex flex-col overflow-hidden -mx-3 md:-mx-4 lg:-mx-6 w-[calc(100%+1.5rem)] md:w-[calc(100%+2rem)] lg:w-[calc(100%+3rem)] max-w-none">
             {scoutResearchContext ? (
               <div className="px-3 md:px-4 lg:px-6 py-4 h-full flex flex-col min-h-0 flex-1">
-                <ChatWithScout fullPage researchContext={scoutResearchContext} mode={scoutMode} />
+                <ChatWithScout fullPage researchContext={scoutResearchContext} mode={scoutMode} onActivateStrategist={handleActivateStrategist} />
               </div>
             ) : (
               <ScoutChatWithHistory
