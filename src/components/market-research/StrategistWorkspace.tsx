@@ -167,43 +167,6 @@ const StrategistDashboard: React.FC<{
       </div>
     </Card>
 
-    {/* Strategy Stats */}
-    <div className="grid grid-cols-2 gap-2">
-      <Card className="p-3 border-border space-y-1.5">
-        <div className="flex items-center gap-1.5">
-          <BarChart3 className="h-3.5 w-3.5 text-primary" />
-          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Signal Strength</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-            <div
-              className="h-full bg-primary rounded-full transition-all"
-              style={{ width: strategy.confidence === "High" ? "90%" : strategy.confidence === "Medium-High" ? "72%" : "55%" }}
-            />
-          </div>
-          <span className="text-xs font-semibold text-foreground">
-            {strategy.confidence === "High" ? "90%" : strategy.confidence === "Medium-High" ? "72%" : "55%"}
-          </span>
-        </div>
-      </Card>
-      <Card className="p-3 border-border space-y-1.5">
-        <div className="flex items-center gap-1.5">
-          <TrendingUp className="h-3.5 w-3.5 text-primary" />
-          <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Est. Response Rate</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-            <div
-              className="h-full bg-emerald-500 rounded-full transition-all"
-              style={{ width: strategy.confidence === "High" ? "35%" : "22%" }}
-            />
-          </div>
-          <span className="text-xs font-semibold text-foreground">
-            {strategy.confidence === "High" ? "~35%" : "~22%"}
-          </span>
-        </div>
-      </Card>
-    </div>
   </div>
 );
 
