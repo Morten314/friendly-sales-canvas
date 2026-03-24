@@ -151,6 +151,20 @@ const Artefacts = () => {
     };
   }, []);
 
+  // Listen for new artefacts from Strategist or other agents
+  useEffect(() => {
+    const handleAddArtefact = (event: CustomEvent) => {
+      const newArtefact = event.detail as ArtefactItem;
+      setArtefacts(prev => [newArtefact, ...prev]);
+      setExpandedArtefact(newArtefact.id);
+    };
+
+    window.addEventListener('addArtefact', handleAddArtefact as EventListener);
+    return () => {
+      window.removeEventListener('addArtefact', handleAddArtefact as EventListener);
+    };
+  }, []);
+
   const filteredArtefacts = artefacts.filter(artefact => 
     artefact.agentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
     artefact.taskNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
