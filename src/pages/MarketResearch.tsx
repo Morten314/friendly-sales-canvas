@@ -23,7 +23,7 @@ import { Button } from "@/components/ui/button";
 
 
 
-import { Search, MessageSquare, Users, Settings, RefreshCw, AlertCircle, History, Calendar, Info, Loader2, Sparkles } from "lucide-react";
+import { Search, MessageSquare, Users, Settings, RefreshCw, AlertCircle, History, Calendar, Info, Loader2 } from "lucide-react";
 
 
 
@@ -77,7 +77,7 @@ import { EmergingTrends } from "@/components/market-research/EmergingTrends";
 
 import ScoutLeadStream from "@/components/market-research/ScoutLeadStream";
 import { ChatWithScout } from "@/components/market-research/ChatWithScout";
-import StrategistWorkspace from "@/components/market-research/StrategistWorkspace";
+
 
 
 
@@ -794,8 +794,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-      'chatwithscout': 'trends',
-      'strategist': 'strategist'
+      'chatwithscout': 'trends'
     };
 
 
@@ -820,14 +819,7 @@ const MarketResearch = React.memo(() => {
   const [signalsChatContext, setSignalsChatContext] = useState<SignalsChatContext | null>(null);
   const [scoutResearchContext, setScoutResearchContext] = useState<{ leads: { name: string; company: string; jobTitle: string }[]; opportunity?: string; icp?: string; reportTraits?: string[] } | null>(null);
   const [scoutMode, setScoutMode] = useState<"selected-leads" | "full-list">("selected-leads");
-  const [strategistPrompt, setStrategistPrompt] = useState("");
-
-  // Handle strategist activation from Chat with Scout
-  const handleActivateStrategist = (prompt: string, context?: typeof scoutResearchContext) => {
-    if (context) setScoutResearchContext(context);
-    setStrategistPrompt(prompt);
-    handleTabChange('strategist');
-  };
+  
 
   const handleResearchWithScout = (leads: any[], context?: string) => {
     const opportunityLabels: Record<string, string> = {
@@ -3329,7 +3321,7 @@ const MarketResearch = React.memo(() => {
 
 
     setActiveTab(tabValue);
-    if (tabValue !== 'trends' && tabValue !== 'strategist') setScoutResearchContext(null);
+    if (tabValue !== 'trends') setScoutResearchContext(null);
 
 
 
@@ -3353,8 +3345,8 @@ const MarketResearch = React.memo(() => {
 
 
 
-      'trends': 'chatwithscout',
-      'strategist': 'strategist'
+      'trends': 'chatwithscout'
+
     };
 
 
@@ -14063,10 +14055,6 @@ const MarketResearch = React.memo(() => {
 
                 </TabsTrigger>
 
-                <TabsTrigger value="strategist" className="flex items-center gap-2 flex-1">
-                  <Sparkles className="h-4 w-4" />
-                  Strategist
-                </TabsTrigger>
 
               </TabsList>
 
@@ -14092,31 +14080,11 @@ const MarketResearch = React.memo(() => {
 
 
 
-        {activeTab === "strategist" ? (
-          <div className="flex-1 h-full min-h-[30rem] flex flex-col overflow-hidden -mx-3 md:-mx-4 lg:-mx-6 w-[calc(100%+1.5rem)] md:w-[calc(100%+2rem)] lg:w-[calc(100%+3rem)] max-w-none">
-            <div className="px-3 md:px-4 lg:px-6 py-4 h-full flex flex-col min-h-0 flex-1">
-              <StrategistWorkspace
-                leads={scoutResearchContext?.leads?.map(l => ({
-                  name: l.name,
-                  company: l.company,
-                  jobTitle: l.jobTitle || '',
-                  email: (l as any).email,
-                  tenure: (l as any).tenure,
-                  source: (l as any).source,
-                  signals: (l as any).signals,
-                })) || []}
-                opportunity={scoutResearchContext?.opportunity}
-                icp={scoutResearchContext?.icp}
-                triggerPrompt={strategistPrompt}
-                onBack={() => handleTabChange('trends')}
-              />
-            </div>
-          </div>
-        ) : activeTab === "trends" ? (
+        {activeTab === "trends" ? (
           <div className="flex-1 h-full min-h-[30rem] flex flex-col overflow-hidden -mx-3 md:-mx-4 lg:-mx-6 w-[calc(100%+1.5rem)] md:w-[calc(100%+2rem)] lg:w-[calc(100%+3rem)] max-w-none">
             {scoutResearchContext ? (
               <div className="px-3 md:px-4 lg:px-6 py-4 h-full flex flex-col min-h-0 flex-1">
-                <ChatWithScout fullPage researchContext={scoutResearchContext} mode={scoutMode} onActivateStrategist={handleActivateStrategist} />
+                <ChatWithScout fullPage researchContext={scoutResearchContext} mode={scoutMode} />
               </div>
             ) : (
               <ScoutChatWithHistory
@@ -15247,10 +15215,7 @@ const MarketResearch = React.memo(() => {
                 <div />
               </TabsContent>
 
-              <TabsContent value="strategist" className="mt-0 hidden">
-                {/* Strategist tab content rendered above when activeTab === 'strategist' */}
-                <div />
-              </TabsContent>
+
 
 
 
