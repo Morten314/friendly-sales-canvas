@@ -195,8 +195,10 @@ const StrategistDashboard: React.FC<{
 const SequenceView: React.FC<{
   steps: SequenceStep[];
   onLinkedInClick: (step: SequenceStep) => void;
+  onEmailClick: (step: SequenceStep) => void;
   savingStepId: string | null;
-}> = ({ steps, onLinkedInClick, savingStepId }) => {
+  activeEmailStepId: string | null;
+}> = ({ steps, onLinkedInClick, onEmailClick, savingStepId, activeEmailStepId }) => {
   const channelConfig = {
     email: { icon: Mail, label: "Email", color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-950/30", border: "border-blue-200 dark:border-blue-800" },
     linkedin: { icon: Linkedin, label: "LinkedIn", color: "text-indigo-600 dark:text-indigo-400", bg: "bg-indigo-50 dark:bg-indigo-950/30", border: "border-indigo-200 dark:border-indigo-800" },
@@ -216,8 +218,10 @@ const SequenceView: React.FC<{
         const config = channelConfig[step.channel];
         const Icon = config.icon;
         const isLinkedIn = step.channel === "linkedin";
+        const isEmail = step.channel === "email";
         const isSaving = savingStepId === step.id;
         const isSaved = step.savedToArtefacts;
+        const isActiveEmail = activeEmailStepId === step.id;
 
         return (
           <div key={step.id} className="flex items-stretch gap-3">
@@ -236,6 +240,8 @@ const SequenceView: React.FC<{
               className={`flex-1 mb-2 rounded-lg border p-2.5 transition-all ${
                 isLinkedIn && !isSaved
                   ? "border-indigo-200 dark:border-indigo-800 hover:border-indigo-400 dark:hover:border-indigo-600 cursor-pointer hover:shadow-sm"
+                  : isActiveEmail
+                  ? "border-primary ring-1 ring-primary/20"
                   : "border-border"
               } ${step.channel === "wait" ? "bg-muted/20" : "bg-background"}`}
               onClick={() => isLinkedIn && !isSaved && !isSaving && onLinkedInClick(step)}
@@ -270,6 +276,24 @@ const SequenceView: React.FC<{
                 </p>
               )}
               <p className="text-[11px] text-muted-foreground leading-relaxed">{step.preview}</p>
+              
+              {/* Email: Click here to generate */}
+              {isEmail && !step.emailGenerated && !isSaved && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onEmailClick(step); }}
+                  className="flex items-center gap-1.5 mt-2 text-[11px] text-primary font-medium hover:underline cursor-pointer"
+                >
+                  <Mail className="h-3 w-3" />
+                  Click here to generate the email →
+                </button>
+              )}
+              {isEmail && step.emailGenerated && !isSaved && (
+                <div className="flex items-center gap-1 mt-1.5 text-[10px] text-primary">
+                  <Eye className="h-2.5 w-2.5" />
+                  <span>Email generated — refine it in Chat with Strategist</span>
+                </div>
+              )}
+
               {isLinkedIn && !isSaved && (
                 <div className="flex items-center gap-1 mt-1.5 text-[10px] text-indigo-500 dark:text-indigo-400">
                   <Eye className="h-2.5 w-2.5" />
