@@ -15247,6 +15247,11 @@ const MarketResearch = React.memo(() => {
                 <div />
               </TabsContent>
 
+              <TabsContent value="strategist" className="mt-0 hidden">
+                {/* Strategist tab content rendered above when activeTab === 'strategist' */}
+                <div />
+              </TabsContent>
+
 
 
             </Tabs>
