@@ -17,6 +17,7 @@ interface ArtefactItem {
   timestamp: string;
   status: 'new' | 'viewed' | 'updated';
   type: 'report' | 'analysis' | 'insight' | 'proposal' | 'enrichment' | 'playbook';
+  folder?: string;
   actionDelegated: string;
   contextRationale: string;
   systemImpact: string;
