@@ -163,7 +163,6 @@ const categorizedPrompts: PromptCategory[] = [
     strategistLinked: true,
     actions: [
       { label: "Suggest outreach angles for the top accounts", prompt: "Suggest outreach angles for the top accounts", icon: <Target className="h-3.5 w-3.5" /> },
-      { label: "How should we approach these companies?", prompt: "How should we approach these companies?", icon: <ArrowRight className="h-3.5 w-3.5" /> },
     ],
   },
 ];
