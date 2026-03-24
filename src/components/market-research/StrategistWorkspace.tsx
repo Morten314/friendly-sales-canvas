@@ -367,11 +367,7 @@ const StrategistWorkspace: React.FC<StrategistWorkspaceProps> = ({
         <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={onBack}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <div className="p-1.5 rounded-full bg-accent/20">
-          <Sparkles className="h-4 w-4 text-accent-foreground" />
-        </div>
         <div className="min-w-0">
-          <h3 className="font-semibold text-sm text-foreground">Strategist activated</h3>
           <p className="text-[11px] text-muted-foreground truncate">
             Strategy workspace for {leads.length} leads · {opportunity || "Scout Research"}
           </p>
