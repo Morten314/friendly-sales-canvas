@@ -79,12 +79,39 @@ const cleanResponse = (content: string): string =>
     .replace(/\n\s*\n/g, "\n\n")
     .trim();
 
+// ─── Sequence Types ─────────────────────────────────────────────────────────
+
+interface SequenceStep {
+  id: string;
+  day: number;
+  channel: "email" | "linkedin" | "call" | "wait";
+  action: string;
+  subject?: string;
+  preview?: string;
+  linkedinMessage?: string;
+  savedToArtefacts?: boolean;
+}
+
+function generateSequence(strategy: ReturnType<typeof generateStrategy>): SequenceStep[] {
+  return [
+    { id: "s1", day: 1, channel: "email", action: "Opening Email", subject: `Quick question about ${strategy.angle}`, preview: `Hi {{first_name}}, noticed {{company}} is ${strategy.angle.toLowerCase()}. Wanted to share how we help similar ${strategy.persona} teams...` },
+    { id: "s2", day: 1, channel: "linkedin", action: "LinkedIn Connection Request", preview: "Personalized connection request referencing their role and recent activity", linkedinMessage: `Hi {{first_name}}, I came across {{company}} and was impressed by your work as ${strategy.persona}. I noticed you're ${strategy.angle.toLowerCase()} — we help teams like yours scale faster. Would love to connect!` },
+    { id: "s3", day: 3, channel: "wait", action: "Wait 2 Days", preview: "Allow time for open/reply before follow-up" },
+    { id: "s4", day: 3, channel: "email", action: "Follow-up Email", subject: "Re: Quick question", preview: `Following up on my previous note. I put together a brief analysis on how ${strategy.persona} teams are approaching ${strategy.angle.toLowerCase()}...` },
+    { id: "s5", day: 5, channel: "linkedin", action: "LinkedIn Message", preview: "Value-add message with industry insight", linkedinMessage: `Hey {{first_name}}, thought you'd find this interesting — we just published research on how ${strategy.persona} teams are navigating ${strategy.angle.toLowerCase()}. Happy to share the key takeaways if you're interested!` },
+    { id: "s6", day: 7, channel: "email", action: "Case Study Email", subject: `How {{similar_company}} achieved 3x results`, preview: "Social proof email with relevant case study and specific metrics..." },
+    { id: "s7", day: 10, channel: "linkedin", action: "LinkedIn Breakup Message", preview: "Final touchpoint with a soft close", linkedinMessage: `Hi {{first_name}}, I know you're busy scaling {{company}}. Just wanted to leave this here — if timing ever aligns for a quick chat about ${strategy.angle.toLowerCase()}, I'd love to help. Either way, wishing you all the best!` },
+    { id: "s8", day: 12, channel: "email", action: "Breakup Email", subject: "Should I close the loop?", preview: "Final email with a clear CTA and easy opt-out..." },
+  ];
+}
+
 // ─── Dashboard Panel ────────────────────────────────────────────────────────
 
 const StrategistDashboard: React.FC<{
   strategy: ReturnType<typeof generateStrategy>;
   onAction: (prompt: string) => void;
-}> = ({ strategy, onAction }) => (
+  onCreateSequence: () => void;
+}> = ({ strategy, onAction, onCreateSequence }) => (
   <div className="flex flex-col gap-3 overflow-y-auto p-3">
     {/* Context Banner */}
     <div className="flex items-center gap-3 text-xs text-muted-foreground bg-muted/30 rounded-md px-3 py-2 border border-border">
@@ -142,34 +169,124 @@ const StrategistDashboard: React.FC<{
         <Button
           size="sm"
           className="text-xs gap-1.5"
-          onClick={() => onAction("Generate email sequences for these leads based on the outreach strategy")}
+          onClick={onCreateSequence}
         >
-          <Mail className="h-3.5 w-3.5" />
-          Generate Emails
+          <Play className="h-3.5 w-3.5" />
+          Create an outreach sequence for these leads
         </Button>
         <Button
           variant="outline"
           size="sm"
           className="text-xs gap-1.5"
-          onClick={() => onAction("Create LinkedIn connection messages for these leads")}
+          onClick={() => onAction("Segment these leads into targeted campaign groups based on their signals, industry, and persona")}
         >
-          <MessageSquare className="h-3.5 w-3.5" />
-          Create LinkedIn Messages
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          className="text-xs gap-1.5"
-          onClick={() => onAction("Customize outreach for the top-scoring leads with personalized angles")}
-        >
-          <Users className="h-3.5 w-3.5" />
-          Customize for Top Leads
+          <Filter className="h-3.5 w-3.5" />
+          Segment these leads for campaigns
         </Button>
       </div>
     </Card>
-
   </div>
 );
+
+// ─── Sequence View ──────────────────────────────────────────────────────────
+
+const SequenceView: React.FC<{
+  steps: SequenceStep[];
+  onLinkedInClick: (step: SequenceStep) => void;
+  savingStepId: string | null;
+}> = ({ steps, onLinkedInClick, savingStepId }) => {
+  const channelConfig = {
+    email: { icon: Mail, label: "Email", color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-950/30", border: "border-blue-200 dark:border-blue-800" },
+    linkedin: { icon: Linkedin, label: "LinkedIn", color: "text-indigo-600 dark:text-indigo-400", bg: "bg-indigo-50 dark:bg-indigo-950/30", border: "border-indigo-200 dark:border-indigo-800" },
+    call: { icon: MessageSquare, label: "Call", color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-950/30", border: "border-emerald-200 dark:border-emerald-800" },
+    wait: { icon: Clock, label: "Delay", color: "text-muted-foreground", bg: "bg-muted/30", border: "border-border" },
+  };
+
+  return (
+    <div className="flex flex-col gap-0 p-3 overflow-y-auto">
+      <div className="flex items-center gap-2 mb-3">
+        <Play className="h-4 w-4 text-primary" />
+        <h3 className="text-sm font-semibold text-foreground">Outreach Sequence</h3>
+        <Badge variant="outline" className="text-[10px]">{steps.length} steps · 12 days</Badge>
+      </div>
+
+      {steps.map((step, i) => {
+        const config = channelConfig[step.channel];
+        const Icon = config.icon;
+        const isLinkedIn = step.channel === "linkedin";
+        const isSaving = savingStepId === step.id;
+        const isSaved = step.savedToArtefacts;
+
+        return (
+          <div key={step.id} className="flex items-stretch gap-3">
+            {/* Timeline connector */}
+            <div className="flex flex-col items-center w-6 shrink-0">
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center border-2 ${config.border} ${config.bg}`}>
+                <Icon className={`h-3.5 w-3.5 ${config.color}`} />
+              </div>
+              {i < steps.length - 1 && (
+                <div className="w-px flex-1 bg-border min-h-[8px]" />
+              )}
+            </div>
+
+            {/* Step card */}
+            <div
+              className={`flex-1 mb-2 rounded-lg border p-2.5 transition-all ${
+                isLinkedIn && !isSaved
+                  ? "border-indigo-200 dark:border-indigo-800 hover:border-indigo-400 dark:hover:border-indigo-600 cursor-pointer hover:shadow-sm"
+                  : "border-border"
+              } ${step.channel === "wait" ? "bg-muted/20" : "bg-background"}`}
+              onClick={() => isLinkedIn && !isSaved && !isSaving && onLinkedInClick(step)}
+            >
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-medium text-muted-foreground">Day {step.day}</span>
+                  <span className="text-xs font-semibold text-foreground">{step.action}</span>
+                </div>
+                {isLinkedIn && !isSaved && !isSaving && (
+                  <Badge variant="outline" className="text-[9px] gap-1 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800">
+                    <MousePointerClick className="h-2.5 w-2.5" />
+                    Click to generate & save
+                  </Badge>
+                )}
+                {isSaving && (
+                  <Badge variant="outline" className="text-[9px] gap-1 text-primary">
+                    <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                    Saving to Artefacts...
+                  </Badge>
+                )}
+                {isSaved && (
+                  <Badge variant="outline" className="text-[9px] gap-1 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800">
+                    <FileCheck className="h-2.5 w-2.5" />
+                    Saved to Artefacts
+                  </Badge>
+                )}
+              </div>
+              {step.subject && (
+                <p className="text-[11px] text-muted-foreground mb-0.5">
+                  <span className="font-medium">Subject:</span> {step.subject}
+                </p>
+              )}
+              <p className="text-[11px] text-muted-foreground leading-relaxed">{step.preview}</p>
+              {isLinkedIn && !isSaved && (
+                <div className="flex items-center gap-1 mt-1.5 text-[10px] text-indigo-500 dark:text-indigo-400">
+                  <Eye className="h-2.5 w-2.5" />
+                  <span>Click to preview & save customized message to Artefacts</span>
+                </div>
+              )}
+              {isSaved && (
+                <div className="flex items-center gap-1 mt-1.5 text-[10px] text-emerald-600 dark:text-emerald-400">
+                  <ChevronRight className="h-2.5 w-2.5" />
+                  <span>View in Artefacts under Signals</span>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
 
 // ─── Chat Panel ─────────────────────────────────────────────────────────────
 
