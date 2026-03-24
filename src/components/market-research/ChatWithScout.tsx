@@ -10,7 +10,7 @@ import {
   Search, TrendingUp, Users, Newspaper, Zap, Target, FileText, CheckCircle2,
   User, Building2, Clock, Activity, ChevronDown, Plus,
 } from "lucide-react";
-import StrategistWorkspace from "./StrategistWorkspace";
+
 
 // ─── Expandable Trait Item ──────────────────────────────────────────────────
 
@@ -81,6 +81,7 @@ interface ChatWithScoutProps {
   fullPage?: boolean;
   researchContext?: ScoutResearchContext | null;
   mode?: ScoutMode;
+  onActivateStrategist?: (prompt: string, context?: ScoutResearchContext | null) => void;
 }
 
 // ─── Agent Step Indicators ───────────────────────────────────────────────────
@@ -250,7 +251,7 @@ const ProspectSummaryCard = ({ lead, opportunity }: { lead: LeadContext; opportu
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 
-export function ChatWithScout({ fullPage = false, researchContext, mode = "selected-leads" }: ChatWithScoutProps) {
+export function ChatWithScout({ fullPage = false, researchContext, mode = "selected-leads", onActivateStrategist }: ChatWithScoutProps) {
   const navigate = useNavigate();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -258,8 +259,6 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [agentStep, setAgentStep] = useState(-1);
-  const [strategistActive, setStrategistActive] = useState(false);
-  const [strategistPrompt, setStrategistPrompt] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const isSingleLead = mode === "selected-leads" && researchContext?.leads.length === 1;
@@ -332,10 +331,11 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
     const text = messageText || input;
     if (!text.trim() || isLoading) return;
 
-    // Strategist handoff for bulk leads — trigger from explicit strategist actions or matching intent
+    // Strategist handoff for bulk leads — navigate to Strategist tab
     if (!isSingleLead && (options?.forceStrategist || isStrategistPrompt(text))) {
-      setStrategistPrompt(text);
-      setStrategistActive(true);
+      if (onActivateStrategist) {
+        onActivateStrategist(text, researchContext);
+      }
       if (!messageText) setInput("");
       return;
     }
@@ -431,20 +431,7 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
 
   const hasContext = researchContext && researchContext.leads.length > 0;
 
-  // ─── Strategist Mode ──────────────────────────────────────────────────────
-  if (strategistActive) {
-    return (
-      <div className={`${fullPage ? 'flex-1 h-full min-h-0' : 'h-[80vh]'}`}>
-        <StrategistWorkspace
-          leads={researchContext?.leads || []}
-          opportunity={researchContext?.opportunity}
-          icp={researchContext?.icp}
-          triggerPrompt={strategistPrompt}
-          onBack={() => setStrategistActive(false)}
-        />
-      </div>
-    );
-  }
+  // Strategist is now handled by parent via onActivateStrategist prop
 
   // ─── Single Lead: Two-panel layout ─────────────────────────────────────────
   if (isSingleLead && researchContext) {
