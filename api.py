@@ -1994,6 +1994,11 @@ async def get_customer_profile(org_id: str = Query(...)):
             }
         }
 
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.post("/customer_profile/from_suggested_icp")
 async def save_suggested_icp_as_customer_profile(request: SuggestedICPToCustomerProfileRequest):
