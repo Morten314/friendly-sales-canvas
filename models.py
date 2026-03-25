@@ -125,6 +125,12 @@ class CustomerProfileRequest(BaseModel):
     org_id: str  # Required for multi-org support
     icps: List[CustomerProfileICP] = Field(..., min_items=1)
 
+# Convert a recommended/suggested ICP (from GET /icp) into a saved customer profile ICP
+class SuggestedICPToCustomerProfileRequest(BaseModel):
+    user_id: str
+    org_id: str
+    icp_id: str
+
 # Signal Action Request model
 class SignalActionRequest(BaseModel):
     org_id: str

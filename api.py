@@ -26,7 +26,8 @@ from models import (
     ProspectData, Lead, Contact, SalesPipelineResponse, TimeframeResponse, StageStats,
     CompanyProfile, UserProfile, ScoutProfile, MarketRequest, EditRequest,
     CustomerProfileRequest, CustomerProfileICP, LeadCreateRequest, LeadUpdateRequest,
-    SignalActionRequest, SignalAskRequest, RegistrationRequest, RegistrationResponse
+    SignalActionRequest, SignalAskRequest, RegistrationRequest, RegistrationResponse,
+    SuggestedICPToCustomerProfileRequest
 )
 from database import driver, graph, client, upsert_node
 from llm_config import chain, chain2, llm2
@@ -865,12 +866,81 @@ async def get_or_create_icp_config(user_id: str = Query(...), refresh: bool = Qu
 
             normalized_icps = []
             base_ts = int(datetime.utcnow().timestamp() * 1000)
+            seen_ids = set()
             for idx, icp in enumerate(raw_icps):
                 if not isinstance(icp, dict):
                     icp = {}
 
+                # Ensure a unique, stable identifier exists for each suggested ICP.
+                # If the generator didn't provide an id (or duplicates exist), generate a UUID.
+                candidate_id = str(icp.get("id") or "").strip()
+                if not candidate_id or candidate_id in seen_ids:
+                    candidate_id = str(uuid.uuid4())
+                seen_ids.add(candidate_id)
+
+                # Backward/forward-compatible mapping to the expanded suggested ICP schema.
+                # Old keys: industry, segment, companySize, decisionMakers, whySuggested, marketSize, topPainPoint, buyingTriggers
+                # New keys: title, is_new, is_agentic, why_suggested, how_it_differs, firmographics, key_decision_makers, pain_points_and_triggers
+                firmographics = icp.get("firmographics") if isinstance(icp.get("firmographics"), dict) else {}
+                pain_points_and_triggers = icp.get("pain_points_and_triggers") if isinstance(icp.get("pain_points_and_triggers"), dict) else {}
+
+                old_industry = str(icp.get("industry") or "").strip()
+                old_segment = str(icp.get("segment") or "").strip()
+                old_company_size = str(icp.get("companySize") or "").strip()
+                old_market_size = str(icp.get("marketSize") or "").strip()
+
+                new_title = str(icp.get("title") or "").strip()
+                if not new_title:
+                    # Fallback title derived from firmographics (or old keys)
+                    title_parts = [p for p in [firmographics.get("industry") or old_industry,
+                                              firmographics.get("segment") or old_segment,
+                                              firmographics.get("company_size") or old_company_size] if isinstance(p, str) and p.strip()]
+                    new_title = " - ".join([str(p).strip() for p in title_parts]) or f"Suggested ICP {idx+1}"
+
+                why_suggested = icp.get("why_suggested") if isinstance(icp.get("why_suggested"), list) else None
+                if why_suggested is None:
+                    why_suggested = icp.get("whySuggested") if isinstance(icp.get("whySuggested"), list) else []
+
+                how_it_differs = icp.get("how_it_differs") if isinstance(icp.get("how_it_differs"), list) else []
+
+                key_decision_makers = icp.get("key_decision_makers") if isinstance(icp.get("key_decision_makers"), list) else None
+                if key_decision_makers is None:
+                    key_decision_makers = icp.get("decisionMakers") if isinstance(icp.get("decisionMakers"), list) else []
+
+                competitors = icp.get("competitors") if isinstance(icp.get("competitors"), list) else []
+
+                # Build firmographics block with fallbacks
+                firmographics_out = {
+                    "industry": str(firmographics.get("industry") or old_industry),
+                    "segment": str(firmographics.get("segment") or old_segment),
+                    "company_size": str(firmographics.get("company_size") or old_company_size),
+                    "market_size": str(firmographics.get("market_size") or old_market_size),
+                }
+
+                # Build pain points & triggers block with fallbacks
+                critical_pp = pain_points_and_triggers.get("critical")
+                if not (isinstance(critical_pp, str) and critical_pp.strip()):
+                    critical_pp = str(icp.get("topPainPoint") or "").strip()
+                others_list = pain_points_and_triggers.get("others") if isinstance(pain_points_and_triggers.get("others"), list) else None
+                if others_list is None:
+                    others_list = icp.get("buyingTriggers") if isinstance(icp.get("buyingTriggers"), list) else []
+
+                pain_points_out = {
+                    "critical": str(critical_pp or ""),
+                    "others": others_list,
+                }
+
                 normalized_icps.append({
-                    "id": str(icp.get("id") or f"icp-{base_ts}-{idx}"),
+                    "id": candidate_id,
+                    "title": new_title,
+                    "is_new": bool(icp.get("is_new", True)),
+                    "is_agentic": bool(icp.get("is_agentic", True)),
+                    "why_suggested": why_suggested,
+                    "how_it_differs": how_it_differs,
+                    "firmographics": firmographics_out,
+                    "key_decision_makers": key_decision_makers,
+                    "pain_points_and_triggers": pain_points_out,
+                    # Keep legacy keys for backward compatibility
                     "industry": str(icp.get("industry") or ""),
                     "segment": str(icp.get("segment") or ""),
                     "companySize": str(icp.get("companySize") or ""),
@@ -884,7 +954,7 @@ async def get_or_create_icp_config(user_id: str = Query(...), refresh: bool = Qu
                     "growth": str(icp.get("growth") or ""),
                     "topPainPoint": str(icp.get("topPainPoint") or ""),
                     "buyingTriggers": icp.get("buyingTriggers") if isinstance(icp.get("buyingTriggers"), list) else [],
-                    "competitors": icp.get("competitors") if isinstance(icp.get("competitors"), list) else []
+                    "competitors": competitors
                 })
 
             return {"suggestedICPs": normalized_icps}
@@ -1793,9 +1863,10 @@ async def create_or_update_customer_profile(request: CustomerProfileRequest):
                         except json.JSONDecodeError:
                             pass
         
-        # Prepare ICPs with IDs and timestamps
+        # Prepare ICPs with IDs and timestamps (and ensure uniqueness)
         current_time = datetime.now(timezone.utc).isoformat()
         processed_icps = []
+        seen_ids = set()
         
         for icp in request.icps:
             icp_dict = icp.model_dump(exclude_none=True)
@@ -1803,6 +1874,10 @@ async def create_or_update_customer_profile(request: CustomerProfileRequest):
             # Generate ID if not provided
             if not icp_dict.get("id"):
                 icp_dict["id"] = str(uuid.uuid4())
+            # Ensure unique within this request payload
+            if icp_dict["id"] in seen_ids:
+                icp_dict["id"] = str(uuid.uuid4())
+            seen_ids.add(icp_dict["id"])
             
             # Set created_at if not provided
             if not icp_dict.get("created_at"):
@@ -1815,7 +1890,21 @@ async def create_or_update_customer_profile(request: CustomerProfileRequest):
             processed_icps.append(icp_dict)
         
         # Upsert the document - store company profile + customer profiles together (filter by org_id)
+        # Merge with existing ICPs instead of overwriting the entire list.
         filter_query = {"profile_type": "company", "org_id": request.org_id}
+        existing_doc = collection.find_one(filter_query) or {}
+        existing_icps = (((existing_doc.get("customer_profiles") or {}).get("icps")) or [])
+        existing_by_id = {str(x.get("id")): x for x in existing_icps if isinstance(x, dict) and x.get("id")}
+
+        # Upsert by id: replace if id exists, else append
+        for icp in processed_icps:
+            icp_id = str(icp.get("id"))
+            if icp_id and icp_id in existing_by_id:
+                existing_by_id[icp_id] = icp
+            elif icp_id:
+                existing_by_id[icp_id] = icp
+
+        merged_icps = list(existing_by_id.values())
         
         update_doc = {
             "$set": {
@@ -1823,7 +1912,7 @@ async def create_or_update_customer_profile(request: CustomerProfileRequest):
                 "org_id": request.org_id,
                 "company_profile": company_profile_data,
                 "customer_profiles": {
-                    "icps": processed_icps
+                    "icps": merged_icps
                 },
                 "updated_at": current_time
             }
@@ -1837,7 +1926,7 @@ async def create_or_update_customer_profile(request: CustomerProfileRequest):
             "success": True,
             "message": "Customer profiles saved successfully",
             "data": {
-                "icps": processed_icps
+                "icps": merged_icps
             }
         }
         
@@ -1904,6 +1993,160 @@ async def get_customer_profile(org_id: str = Query(...)):
                 "icps": icps
             }
         }
+
+
+@app.post("/customer_profile/from_suggested_icp")
+async def save_suggested_icp_as_customer_profile(request: SuggestedICPToCustomerProfileRequest):
+    """
+    Convert a suggested/recommended ICP (from GET /icp) into a Customer Profile ICP and save it.
+    Enforces uniqueness by source suggested ICP id within the org's saved customer profiles.
+    """
+    try:
+        # --- Load suggested ICPs for this user_id ---
+        username = urllib.parse.quote_plus("techbrewra")
+        password = urllib.parse.quote_plus("Brewra@Best09")
+        mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
+        mongo_client = MongoClient(mongo_uri)
+
+        profiler_db = mongo_client["Profiler"]
+        icp_config_collection = profiler_db["ICP_config"]
+        icp_config = icp_config_collection.find_one({"user_id": request.user_id}) or {}
+        icps_payload = icp_config.get("icps") or {}
+        suggested = []
+        if isinstance(icps_payload, dict) and isinstance(icps_payload.get("suggestedICPs"), list):
+            suggested = icps_payload.get("suggestedICPs", [])
+        elif isinstance(icps_payload, list):
+            suggested = icps_payload
+
+        # Find requested suggested ICP by id
+        target = None
+        for item in suggested:
+            if isinstance(item, dict) and str(item.get("id")) == str(request.icp_id):
+                target = item
+                break
+        if not target:
+            mongo_client.close()
+            raise HTTPException(status_code=404, detail=f"Suggested ICP not found for icp_id: {request.icp_id}")
+
+        # --- Map suggested ICP -> CustomerProfileICP schema ---
+        regions = target.get("regions") if isinstance(target.get("regions"), list) else []
+        decision_makers = target.get("decisionMakers") if isinstance(target.get("decisionMakers"), list) else []
+
+        primary_region = (regions[0] if regions else None) or "global"
+        industry_list = [x for x in [target.get("industry"), target.get("segment")] if isinstance(x, str) and x.strip()]
+        company_size_list = [target.get("companySize")] if isinstance(target.get("companySize"), str) and target.get("companySize").strip() else []
+        buyer_role_list = [x for x in decision_makers if isinstance(x, str) and x.strip()]
+
+        # fit_confidence: map from confidenceScore if possible, else default to medium
+        raw_conf = str(target.get("confidenceScore") or "").strip().lower()
+        if raw_conf in {"high", "medium", "low"}:
+            fit_confidence = raw_conf
+        else:
+            # Try to parse numeric confidence
+            fit_confidence = "medium"
+            try:
+                conf_num = float(raw_conf)
+                if conf_num >= 0.75:
+                    fit_confidence = "high"
+                elif conf_num <= 0.35:
+                    fit_confidence = "low"
+            except Exception:
+                pass
+
+        # Pydantic required fields guardrails
+        if not industry_list:
+            industry_list = ["unknown"]
+        if not company_size_list:
+            company_size_list = ["unknown"]
+        if not buyer_role_list:
+            buyer_role_list = ["unknown"]
+
+        why_suggested = target.get("whySuggested") if isinstance(target.get("whySuggested"), list) else []
+        additional_context_parts = []
+        if why_suggested:
+            additional_context_parts.append("Why suggested: " + "; ".join([str(x) for x in why_suggested if str(x).strip()]))
+        if target.get("topPainPoint"):
+            additional_context_parts.append("Top pain point: " + str(target.get("topPainPoint")))
+        if target.get("growthIndicator"):
+            additional_context_parts.append("Growth indicator: " + str(target.get("growthIndicator")))
+        additional_context = "\n".join([p for p in additional_context_parts if p])
+
+        new_icp = {
+            "id": str(uuid.uuid4()),
+            "primary_region": str(primary_region),
+            "industry": industry_list,
+            "company_size": company_size_list,
+            "buyer_role": buyer_role_list,
+            "fit_confidence": fit_confidence,
+            "status": "saved",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            # Track source suggested icp for uniqueness + traceability (allowed due to extra='allow')
+            "source_suggested_icp_id": str(request.icp_id),
+            "source_user_id": str(request.user_id),
+            "source_payload": target,
+            "additional_context": additional_context or None,
+        }
+
+        # --- Save into Company_Profile customer_profiles.icps (org-scoped) with uniqueness check ---
+        company_profile_collection = profiler_db["Company_Profile"]
+        filter_query = {"profile_type": "company", "org_id": request.org_id}
+        existing_doc = company_profile_collection.find_one(filter_query) or {}
+        existing_icps = (((existing_doc.get("customer_profiles") or {}).get("icps")) or [])
+
+        # Reject if this suggested ICP was already saved for this org
+        for existing in existing_icps:
+            if isinstance(existing, dict) and str(existing.get("source_suggested_icp_id")) == str(request.icp_id):
+                mongo_client.close()
+                raise HTTPException(status_code=409, detail="This suggested ICP is already saved in customer profile.")
+
+        # Ensure no id collision (extremely unlikely, but enforce anyway)
+        existing_ids = {str(x.get("id")) for x in existing_icps if isinstance(x, dict) and x.get("id")}
+        while new_icp["id"] in existing_ids:
+            new_icp["id"] = str(uuid.uuid4())
+
+        merged_icps = [x for x in existing_icps if isinstance(x, dict)] + [new_icp]
+
+        # Get company profile from Neo4j to include (reuse existing if present)
+        company_profile_data = existing_doc.get("company_profile") or {}
+        if not company_profile_data:
+            with driver.session() as session:
+                result = session.run(
+                    "MATCH (c:CompanyProfile {org_id: $org_id}) RETURN c LIMIT 1",
+                    org_id=request.org_id
+                )
+                record = result.single()
+                if record:
+                    company_profile_data = dict(record.values()[0])
+                    for key, value in company_profile_data.items():
+                        if isinstance(value, str) and value.strip().startswith(('{', '[')):
+                            try:
+                                company_profile_data[key] = json.loads(value)
+                            except json.JSONDecodeError:
+                                pass
+
+        current_time = datetime.now(timezone.utc).isoformat()
+        update_doc = {
+            "$set": {
+                "profile_type": "company",
+                "org_id": request.org_id,
+                "company_profile": company_profile_data,
+                "customer_profiles": {"icps": merged_icps},
+                "updated_at": current_time,
+            }
+        }
+        company_profile_collection.update_one(filter_query, update_doc, upsert=True)
+        mongo_client.close()
+
+        return {
+            "success": True,
+            "message": "Suggested ICP saved to customer profile successfully",
+            "data": {"icp": new_icp}
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
         
     except HTTPException:
         raise

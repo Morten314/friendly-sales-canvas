@@ -1145,6 +1145,7 @@ CRITICAL INSTRUCTIONS:
 2. Use WebSearch to find real ICPs that match the company's ACTUAL industry and target markets
 3. DO NOT use the example values below - they are ONLY showing the JSON format/structure
 4. All ICPs must be based on the company profile's actual industry, regions, and business context
+5. You MUST populate the new schema fields: title, why_suggested, how_it_differs, firmographics, key_decision_makers, pain_points_and_triggers, competitors
 
 Company Profile Data:
 {pre_data}
@@ -1162,51 +1163,66 @@ You MUST use the WebSearch tool to find real ICPs that match the company's actua
 - Search for ICPs in the company's actual industry
 - Find ICPs that target the company's actual regions/markets
 - Research real customer segments, company sizes, and decision makers relevant to the company's industry
+- Research common pain points and buying triggers for each segment (use credible sources)
+- Research competitors relevant to selling into that ICP (peer tools/platforms they evaluate)
+- Research how each ICP differs from the others (distinct segment + pains + triggers + buyers)
 - Example searches: "[company's actual industry] ideal customer profiles [company's actual regions]"
 - Example searches: "[company's actual industry] target customer segments [company's actual regions]"
+- Example searches: "[industry] [segment] common pain points buying triggers"
+- Example searches: "[industry] [segment] buying committee decision makers titles"
+- Example searches: "[industry] [segment] alternatives competitors vendor landscape"
 
 STEP 3 - OUTPUT FORMAT:
 Return your results in the following JSON format. The examples below show ONLY the structure - you MUST replace ALL values with data based on the company profile:
 
 {{"suggestedICPs": [
     {{
-      "id": "[create unique id based on company's industry, e.g., 'manufacturing-automation' if company is in manufacturing]",
-      "industry": "[company's ACTUAL industry from profile, NOT 'Fintech']",
-      "segment": "[specific segment relevant to company's industry, NOT 'Neobanks']",
-      "companySize": "[realistic company size range for this ICP, e.g., '50–200 employees']",
-      "decisionMakers": ["[actual decision maker roles for this industry]", "[another role]"],
-      "regions": ["[company's ACTUAL target regions from profile, NOT 'North America' or 'DACH' unless that's what's in the profile]"],
-      "keyAttributes": ["[attributes relevant to company's industry]", "[another attribute]"],
-      "growthIndicator": "[High/Medium/Low based on research confidence and trend strength]",
-      "whySuggested": [
+      "id": "[optional. if you include, it must be unique; otherwise omit and API will generate]",
+      "title": "[short descriptive title for this ICP, e.g., 'Mid-market logistics operators modernizing dispatch']",
+      "is_new": true,
+      "is_agentic": true,
+      "why_suggested": [
         "[Reason 1 why this ICP aligns with company profile and strategy]",
         "[Reason 2 with market evidence from WebSearch]"
       ],
-      "confidenceScore": "[High/Medium/Low based on source quality and fit]",
-      "marketSize": "[Estimated market size, e.g., '$45B' or '€12B']",
-      "growth": "[Growth metric, e.g., '+18% YoY' or '7.2% CAGR']",
-      "topPainPoint": "[Most relevant pain point for this ICP segment]",
-      "buyingTriggers": [
-        "[Trigger 1 based on industry dynamics]",
-        "[Trigger 2 based on regulatory/technology/market shifts]"
+      "how_it_differs": [
+        "[Key differentiator vs other suggested ICPs: different segment, buyer, trigger, or buying motion]",
+        "[Another differentiator]"
       ],
+      "firmographics": {{
+        "industry": "[company's ACTUAL industry from profile]",
+        "segment": "[specific segment relevant to company's industry]",
+        "company_size": "[realistic company size range for this ICP, e.g., '50–200 employees']",
+        "market_size": "[Estimated market size for this segment, e.g., '$45B' or '€12B']"
+      }},
+      "key_decision_makers": ["[actual decision maker roles/titles]", "[another role]"],
+      "pain_points_and_triggers": {{
+        "critical": "[Most relevant pain point for this ICP segment]",
+        "others": [
+          "[Buying trigger 1 based on industry dynamics]",
+          "[Buying trigger 2 based on regulatory/technology/market shifts]"
+        ]
+      }},
       "competitors": ["[Competitor 1]", "[Competitor 2]", "[Competitor 3]"]
     }},
     {{
-      "id": "[another unique id based on company's industry]",
-      "industry": "[company's ACTUAL industry or related industry]",
-      "segment": "[another specific segment]",
-      "companySize": "[different company size range]",
-      "decisionMakers": ["[relevant decision makers]", "[another role]"],
-      "regions": ["[company's ACTUAL target regions]"],
-      "keyAttributes": ["[relevant attributes]", "[another attribute]"],
-      "growthIndicator": "[High/Medium/Low]",
-      "whySuggested": ["[Reason 1]", "[Reason 2]"],
-      "confidenceScore": "[High/Medium/Low]",
-      "marketSize": "[Market size]",
-      "growth": "[Growth metric]",
-      "topPainPoint": "[Top pain point]",
-      "buyingTriggers": ["[Trigger 1]", "[Trigger 2]"],
+      "id": "[optional unique id or omit]",
+      "title": "[short descriptive title]",
+      "is_new": true,
+      "is_agentic": true,
+      "why_suggested": ["[Reason 1]", "[Reason 2]"],
+      "how_it_differs": ["[Differentiator 1]", "[Differentiator 2]"],
+      "firmographics": {{
+        "industry": "[industry]",
+        "segment": "[another specific segment]",
+        "company_size": "[different company size range]",
+        "market_size": "[Market size]"
+      }},
+      "key_decision_makers": ["[relevant decision makers]", "[another role]"],
+      "pain_points_and_triggers": {{
+        "critical": "[Top pain point]",
+        "others": ["[Trigger 1]", "[Trigger 2]"]
+      }},
       "competitors": ["[Competitor 1]", "[Competitor 2]", "[Competitor 3]"]
     }}
 ]}}
@@ -1215,8 +1231,8 @@ Return your results in the following JSON format. The examples below show ONLY t
 - DO NOT copy the example values (fintech-neobanks, Healthcare SaaS, etc.) - they are FORMAT examples only
 - Extract and use the company's ACTUAL industry, regions, and business context from the company_profile
 - Use WebSearch to find real ICPs that match the company's actual industry and markets
-- All industry, regions, segments, and attributes must be based on the company profile data
-- Use reasoning + WebSearch evidence to populate whySuggested, confidenceScore, marketSize, growth, topPainPoint, buyingTriggers, and competitors
+- All firmographics, decision makers, pain points, triggers, and competitors must be based on the company profile data + WebSearch
+- Use reasoning + WebSearch evidence to populate why_suggested, how_it_differs, firmographics.market_size, pain_points_and_triggers, and competitors
 - Return realistic business values (no placeholders, no "TBD", no example text)
 - Return at least 2-3 ICPs, all relevant to the company's actual industry and target markets
 - Only return JSON, nothing else
