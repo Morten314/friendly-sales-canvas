@@ -3274,6 +3274,10 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
   };
 
   const showTable = dataSources.length > 0;
+  const showDataSourcesEmptyState =
+    dataSources.length === 0 && leads.length === 0 && !isLoadingLeads;
+  const showHeaderAddDataSource =
+    !isAddingInline && (dataSources.length > 0 || leads.length > 0);
 
   return (
     <div className="space-y-6 relative">
@@ -3323,7 +3327,7 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
           </p>
         </div>
         <div className="flex gap-2">
-          {dataSources.length > 0 && !isAddingInline && (
+          {showHeaderAddDataSource && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button 
@@ -3413,8 +3417,8 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
       {/* Add/Edit Form */}
       {renderAddForm()}
 
-      {/* Empty State */}
-      {!showTable && (
+      {/* Empty State — only when there are no URL/file/connector sources and no leads */}
+      {showDataSourcesEmptyState && (
         <div className="flex flex-col items-center justify-center py-16 px-4 border-2 border-dashed rounded-lg bg-muted/20">
           <Database className="h-12 w-12 text-muted-foreground mb-4" />
           <h3 className="text-lg font-medium mb-2">No data sources added yet</h3>
