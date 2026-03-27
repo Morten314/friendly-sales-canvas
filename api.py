@@ -906,8 +906,12 @@ async def get_or_create_icp_config(user_id: str = Query(...), refresh: bool = Qu
                 key_decision_makers = icp.get("key_decision_makers") if isinstance(icp.get("key_decision_makers"), list) else None
                 if key_decision_makers is None:
                     key_decision_makers = icp.get("decisionMakers") if isinstance(icp.get("decisionMakers"), list) else []
+                if not key_decision_makers:
+                    key_decision_makers = ["unknown"]
 
                 competitors = icp.get("competitors") if isinstance(icp.get("competitors"), list) else []
+                if not competitors:
+                    competitors = ["unknown"]
 
                 # Build firmographics block with fallbacks
                 firmographics_out = {
@@ -930,6 +934,15 @@ async def get_or_create_icp_config(user_id: str = Query(...), refresh: bool = Qu
                     "others": others_list,
                 }
 
+                # Derive legacy output keys from new schema whenever possible.
+                derived_regions = icp.get("regions") if isinstance(icp.get("regions"), list) else []
+                if not derived_regions:
+                    derived_regions = ["global"]
+
+                derived_confidence = str(icp.get("confidenceScore") or "").strip()
+                if not derived_confidence:
+                    derived_confidence = "medium"
+
                 normalized_icps.append({
                     "id": candidate_id,
                     "title": new_title,
@@ -944,12 +957,12 @@ async def get_or_create_icp_config(user_id: str = Query(...), refresh: bool = Qu
                     "industry": str(icp.get("industry") or ""),
                     "segment": str(icp.get("segment") or ""),
                     "companySize": str(icp.get("companySize") or ""),
-                    "decisionMakers": icp.get("decisionMakers") if isinstance(icp.get("decisionMakers"), list) else [],
-                    "regions": icp.get("regions") if isinstance(icp.get("regions"), list) else [],
+                    "decisionMakers": icp.get("decisionMakers") if isinstance(icp.get("decisionMakers"), list) and icp.get("decisionMakers") else key_decision_makers,
+                    "regions": derived_regions,
                     "keyAttributes": icp.get("keyAttributes") if isinstance(icp.get("keyAttributes"), list) else [],
                     "growthIndicator": str(icp.get("growthIndicator") or ""),
                     "whySuggested": icp.get("whySuggested") if isinstance(icp.get("whySuggested"), list) else [],
-                    "confidenceScore": str(icp.get("confidenceScore") or ""),
+                    "confidenceScore": derived_confidence,
                     "marketSize": str(icp.get("marketSize") or ""),
                     "growth": str(icp.get("growth") or ""),
                     "topPainPoint": str(icp.get("topPainPoint") or ""),

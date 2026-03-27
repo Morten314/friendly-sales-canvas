@@ -1146,6 +1146,7 @@ CRITICAL INSTRUCTIONS:
 3. DO NOT use the example values below - they are ONLY showing the JSON format/structure
 4. All ICPs must be based on the company profile's actual industry, regions, and business context
 5. You MUST populate the new schema fields: title, why_suggested, how_it_differs, firmographics, key_decision_makers, pain_points_and_triggers, competitors
+6. For backward compatibility, also include these keys for each ICP: regions, confidenceScore, decisionMakers
 
 Company Profile Data:
 {pre_data}
@@ -1196,6 +1197,9 @@ Return your results in the following JSON format. The examples below show ONLY t
         "market_size": "[Estimated market size for this segment, e.g., '$45B' or '€12B']"
       }},
       "key_decision_makers": ["[actual decision maker roles/titles]", "[another role]"],
+      "decisionMakers": ["[same decision makers for backward compatibility]"],
+      "regions": ["[specific target markets/regions from company profile]"],
+      "confidenceScore": "[high|medium|low]",
       "pain_points_and_triggers": {{
         "critical": "[Most relevant pain point for this ICP segment]",
         "others": [
@@ -1219,6 +1223,9 @@ Return your results in the following JSON format. The examples below show ONLY t
         "market_size": "[Market size]"
       }},
       "key_decision_makers": ["[relevant decision makers]", "[another role]"],
+      "decisionMakers": ["[same decision makers for backward compatibility]"],
+      "regions": ["[specific target markets/regions from company profile]"],
+      "confidenceScore": "[high|medium|low]",
       "pain_points_and_triggers": {{
         "critical": "[Top pain point]",
         "others": ["[Trigger 1]", "[Trigger 2]"]
@@ -1231,7 +1238,7 @@ Return your results in the following JSON format. The examples below show ONLY t
 - DO NOT copy the example values (fintech-neobanks, Healthcare SaaS, etc.) - they are FORMAT examples only
 - Extract and use the company's ACTUAL industry, regions, and business context from the company_profile
 - Use WebSearch to find real ICPs that match the company's actual industry and markets
-- All firmographics, decision makers, pain points, triggers, and competitors must be based on the company profile data + WebSearch
+- All firmographics, decision makers, regions, confidence scoring, pain points, triggers, and competitors must be based on the company profile data + WebSearch
 - Use reasoning + WebSearch evidence to populate why_suggested, how_it_differs, firmographics.market_size, pain_points_and_triggers, and competitors
 - Return realistic business values (no placeholders, no "TBD", no example text)
 - Return at least 2-3 ICPs, all relevant to the company's actual industry and target markets
