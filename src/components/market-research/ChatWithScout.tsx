@@ -265,7 +265,6 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
   // Add tier-specific validation prompts when in Tier 1 context
   const activeCategorizedPrompts: PromptCategory[] = isTier1Context
     ? [
-        ...categorizedPrompts,
         {
           category: "Validate & Upgrade",
           icon: <Target className="h-3.5 w-3.5" />,
@@ -273,6 +272,7 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
             { label: "Compare Tier 1 leads against Tier 2 criteria — show gaps", prompt: "Compare Tier 1 leads against Tier 2 criteria — show gaps", icon: <TrendingUp className="h-3.5 w-3.5" /> },
           ],
         },
+        ...categorizedPrompts,
       ]
     : categorizedPrompts;
 
