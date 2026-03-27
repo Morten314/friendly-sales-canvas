@@ -154,7 +154,7 @@ const TierOpportunityCards: React.FC<TierOpportunityCardsProps> = ({ onAskScout 
               variant="ghost"
               size="sm"
               className="w-full mt-auto text-xs text-primary hover:text-primary hover:bg-primary/10 gap-1.5"
-              onClick={() => onAskScout?.(`${card.tier} — ${card.label}`)}
+              onClick={() => onAskScout?.(card)}
             >
               <Bot className="h-3.5 w-3.5" />
               Ask Scout
