@@ -1,6 +1,7 @@
 import React from "react";
 import { Separator } from "@/components/ui/separator";
 import OpportunityDashboard from "./lead-stream/OpportunityDashboard";
+import TierOpportunityCards from "./lead-stream/TierOpportunityCards";
 import LeadsTable from "./lead-stream/LeadsTable";
 
 // ─── Props ───────────────────────────────────────────────────────────────────
@@ -34,6 +35,8 @@ const ScoutLeadStream: React.FC<ScoutLeadStreamProps> = ({
     <div className="space-y-6 animate-fade-in">
       {/* Zone 1: Opportunity Dashboard */}
       <OpportunityDashboard onChatAboutCoverage={onChatAboutCoverage} />
+
+      <TierOpportunityCards />
 
       <Separator />
 
