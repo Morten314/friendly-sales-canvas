@@ -95,7 +95,15 @@ const TierOpportunityCards: React.FC<TierOpportunityCardsProps> = ({ onAskScout 
               </Badge>
             </div>
 
-            {/* Fit Score */}
+            {/* Lead Count & Fit Score */}
+            <div className="flex items-center justify-between text-xs mb-1">
+              <span className="text-muted-foreground">
+                <span className="font-semibold text-foreground">{card.leadCount}</span> leads
+              </span>
+              <span className="font-semibold text-foreground">
+                Fit: {card.fitScore}%
+              </span>
+            </div>
             <div className="flex items-center gap-2">
               <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
                 <div
@@ -106,9 +114,6 @@ const TierOpportunityCards: React.FC<TierOpportunityCardsProps> = ({ onAskScout 
                   }}
                 />
               </div>
-              <span className="text-xs font-semibold text-foreground">
-                {card.fitScore}%
-              </span>
             </div>
 
             {/* Details */}
