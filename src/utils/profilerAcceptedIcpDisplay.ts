@@ -56,8 +56,8 @@ export function isProfilerPlaceholderIcp(icp: any): boolean {
 }
 
 /**
- * Apply Profiler display merge only for placeholder rows. Mission Control loads normal ICPs
- * unchanged so manual geography/location are not mixed with suggested-ICP localStorage meta.
+ * Legacy helper: merge only when API used the classic global + unknown placeholder shape.
+ * Prefer {@link mergeProfilerAcceptedIcpDisplay} for Customer Profile / Current ICPs.
  */
 export function mergeProfilerAcceptedIcpDisplayIfPlaceholder(icp: any): any {
   if (!icp?.id) return icp;
@@ -108,19 +108,34 @@ export function mergeProfilerAcceptedIcpDisplay(icp: any): any {
   out.primaryRegion = primaryRegion;
   out.location = location;
 
-  if (industry.length === 1 && isUnknownPlaceholder(String(industry[0])) && meta.industry) {
-    industry = [meta.industry];
+  if (meta.industry) {
+    const industryEmptyOrUnknown =
+      industry.length === 0 ||
+      (industry.length === 1 && isUnknownPlaceholder(String(industry[0])));
+    if (industryEmptyOrUnknown) {
+      industry = [meta.industry];
+    }
   }
   out.industry = industry;
 
-  if (companySize.length === 1 && isUnknownPlaceholder(String(companySize[0])) && meta.companySize) {
-    companySize = [meta.companySize];
+  if (meta.companySize) {
+    const sizeEmptyOrUnknown =
+      companySize.length === 0 ||
+      (companySize.length === 1 && isUnknownPlaceholder(String(companySize[0])));
+    if (sizeEmptyOrUnknown) {
+      companySize = [meta.companySize];
+    }
   }
   out.company_size = companySize;
   out.companySize = companySize;
 
-  if (buyerRole.length === 1 && isUnknownPlaceholder(String(buyerRole[0])) && meta.decisionMakers?.length) {
-    buyerRole = [...meta.decisionMakers];
+  if (meta.decisionMakers?.length) {
+    const rolesEmptyOrUnknown =
+      buyerRole.length === 0 ||
+      (buyerRole.length === 1 && isUnknownPlaceholder(String(buyerRole[0])));
+    if (rolesEmptyOrUnknown) {
+      buyerRole = [...meta.decisionMakers];
+    }
   }
   out.buyer_role = buyerRole;
   out.buyerRole = buyerRole;

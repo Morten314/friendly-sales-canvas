@@ -1694,7 +1694,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { setUserLocalStorage, getUserLocalStorage, removeUserLocalStorage } from "@/utils/cacheUtils";
 import {
-  mergeProfilerAcceptedIcpDisplayIfPlaceholder,
+  mergeProfilerAcceptedIcpDisplay,
   removeProfilerAcceptedIcpDisplayMeta,
 } from "@/utils/profilerAcceptedIcpDisplay";
 import { cn } from "@/lib/utils";
@@ -2085,7 +2085,7 @@ const ICPManager: React.FC = () => {
       
       if (Array.isArray(icpsData) && icpsData.length > 0) {
         const loadedICPs: ICP[] = icpsData.map((icp: any) => {
-          const merged = mergeProfilerAcceptedIcpDisplayIfPlaceholder(icp);
+          const merged = mergeProfilerAcceptedIcpDisplay(icp);
           return {
             id: merged.id || `icp-${Date.now()}-${Math.random()}`,
             primaryRegion: merged.primary_region || merged.primaryRegion || "",
