@@ -260,7 +260,23 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const isSingleLead = mode === "selected-leads" && researchContext?.leads.length === 1;
-  const primaryActions = isSingleLead ? singleLeadActions : categorizedPrompts.flatMap(c => c.actions);
+  const isTier1Context = researchContext?.opportunity?.includes("Tier 1");
+
+  // Add tier-specific validation prompts when in Tier 1 context
+  const activeCategorizedPrompts: PromptCategory[] = isTier1Context
+    ? [
+        ...categorizedPrompts,
+        {
+          category: "Validate & Upgrade",
+          icon: <Target className="h-3.5 w-3.5" />,
+          actions: [
+            { label: "Compare Tier 1 leads against Tier 2 criteria — show gaps", prompt: "Compare Tier 1 leads against Tier 2 criteria — show gaps", icon: <TrendingUp className="h-3.5 w-3.5" /> },
+          ],
+        },
+      ]
+    : categorizedPrompts;
+
+  const primaryActions = isSingleLead ? singleLeadActions : activeCategorizedPrompts.flatMap(c => c.actions);
   const useCategorized = !isSingleLead;
 
   const hasConversations = conversations.length > 0;
