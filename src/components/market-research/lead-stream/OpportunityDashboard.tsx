@@ -1,11 +1,10 @@
 import React from "react";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import {
   PieChart, Pie, Cell, ResponsiveContainer, ScatterChart, Scatter,
   XAxis, YAxis, Tooltip as RechartsTooltip, CartesianGrid, ReferenceLine,
 } from "recharts";
-import { Users, Crosshair, DollarSign, Star, Mail, UserPlus, Bot } from "lucide-react";
+import { Users, Crosshair, DollarSign, Bot } from "lucide-react";
 
 // ─── Tier distribution data (from the 120-lead dataset) ──────────────────────
 
@@ -16,25 +15,12 @@ const tierData = [
 ];
 const totalLeads = tierData.reduce((s, d) => s + d.value, 0);
 
-// ─── Priority Quadrant data (Strategic Fit × Likelihood to Win) ──────────────
+// ─── Priority Quadrant data by Tier (Strategic Fit × Likelihood to Win) ──────
 
-const quadrantLeads = [
-  // Top-right: pursue now
-  { name: "Sarah Chen", x: 85, y: 90 },
-  { name: "James Okoro", x: 78, y: 85 },
-  { name: "Amara Johnson", x: 92, y: 88 },
-  { name: "Priya Sharma", x: 80, y: 82 },
-  // Bottom-right: strategic but hard
-  { name: "Marcus Liu", x: 75, y: 40 },
-  { name: "Elena Vasquez", x: 82, y: 35 },
-  { name: "Tobias Müller", x: 70, y: 30 },
-  // Top-left: easier wins, lower value
-  { name: "Lily Tran", x: 30, y: 78 },
-  { name: "David Park", x: 25, y: 72 },
-  { name: "Raj Patel", x: 35, y: 80 },
-  // Bottom-left: deprioritise
-  { name: "Kevin Lim", x: 20, y: 25 },
-  { name: "Nadia Volkov", x: 30, y: 30 },
+const quadrantByTier = [
+  { name: "Tier 1", x: 82, y: 85, count: 28, color: "hsl(var(--chart-1))" },
+  { name: "Tier 2", x: 58, y: 55, count: 52, color: "hsl(var(--chart-2))" },
+  { name: "Tier 3", x: 28, y: 30, count: 40, color: "hsl(var(--chart-3))" },
 ];
 
 // ─── Pipeline Value by Tier ──────────────────────────────────────────────────
@@ -46,14 +32,6 @@ const pipelineByTier = [
 ];
 const totalPipeline = pipelineByTier.reduce((s, d) => s + d.value, 0);
 
-// ─── Top Opportunities (highest scoring leads) ──────────────────────────────
-
-const topOpportunities = [
-  { name: "Amara Johnson", company: "RevStack AI", score: 92, tier: "Tier 1" as const },
-  { name: "Sarah Chen", company: "Acme Corp", score: 88, tier: "Tier 1" as const },
-  { name: "James Okoro", company: "ScaleUp Inc", score: 84, tier: "Tier 1" as const },
-];
-
 // ─── Quadrant custom tooltip ─────────────────────────────────────────────────
 
 const QuadrantTooltip = ({ active, payload }: any) => {
@@ -62,8 +40,9 @@ const QuadrantTooltip = ({ active, payload }: any) => {
   return (
     <div className="bg-popover border border-border rounded-lg px-3 py-2 shadow-md text-xs">
       <p className="font-semibold text-foreground">{d.name}</p>
-      <p className="text-muted-foreground">Strategic Fit: {d.x}</p>
-      <p className="text-muted-foreground">Win Likelihood: {d.y}</p>
+      <p className="text-muted-foreground">{d.count} leads</p>
+      <p className="text-muted-foreground">Avg Strategic Fit: {d.x}</p>
+      <p className="text-muted-foreground">Avg Win Likelihood: {d.y}</p>
     </div>
   );
 };
@@ -91,7 +70,7 @@ const OpportunityDashboard: React.FC<OpportunityDashboardProps> = ({ onChatAbout
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {/* 1. Leads Coverage — Tier Breakdown */}
         <Card className="p-4">
           <div className="flex items-center gap-2 mb-3">
@@ -125,38 +104,46 @@ const OpportunityDashboard: React.FC<OpportunityDashboardProps> = ({ onChatAbout
           </div>
         </Card>
 
-        {/* 2. Priority Quadrant — Strategic Fit × Likelihood to Win */}
-        <Card className="p-4 col-span-1 md:col-span-1">
+        {/* 2. Priority Quadrant — Tiers plotted by Strategic Fit × Likelihood to Win */}
+        <Card className="p-4">
           <div className="flex items-center gap-2 mb-2">
             <Crosshair className="h-4 w-4 text-primary" />
             <h3 className="text-sm font-semibold text-foreground">Priority Quadrant</h3>
           </div>
-          <div className="h-[100px]">
+          <div className="h-[110px]">
             <ResponsiveContainer width="100%" height="100%">
-              <ScatterChart margin={{ top: 4, right: 4, bottom: 14, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.5} />
+              <ScatterChart margin={{ top: 4, right: 8, bottom: 16, left: 4 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.4} />
                 <XAxis
                   type="number" dataKey="x" domain={[0, 100]}
+                  ticks={[0, 25, 50, 75, 100]}
                   tick={{ fontSize: 8, fill: "hsl(var(--muted-foreground))" }}
                   axisLine={false} tickLine={false}
-                  label={{ value: "Strategic Fit →", position: "insideBottom", offset: -8, fontSize: 8, fill: "hsl(var(--muted-foreground))" }}
+                  label={{ value: "Strategic Fit →", position: "insideBottom", offset: -10, fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
                 />
                 <YAxis
                   type="number" dataKey="y" domain={[0, 100]}
+                  ticks={[0, 25, 50, 75, 100]}
                   tick={{ fontSize: 8, fill: "hsl(var(--muted-foreground))" }}
-                  axisLine={false} tickLine={false} width={20}
-                  label={{ value: "Win ↑", position: "insideTop", offset: -4, fontSize: 8, fill: "hsl(var(--muted-foreground))" }}
+                  axisLine={false} tickLine={false} width={22}
+                  label={{ value: "Win Likelihood ↑", angle: -90, position: "insideLeft", offset: 10, fontSize: 8, fill: "hsl(var(--muted-foreground))" }}
                 />
                 <ReferenceLine x={50} stroke="hsl(var(--border))" strokeDasharray="3 3" />
                 <ReferenceLine y={50} stroke="hsl(var(--border))" strokeDasharray="3 3" />
                 <RechartsTooltip content={<QuadrantTooltip />} />
-                <Scatter data={quadrantLeads} fill="hsl(var(--primary))" fillOpacity={0.7} r={4} />
+                {quadrantByTier.map((tier, i) => (
+                  <Scatter key={i} data={[tier]} fill={tier.color} fillOpacity={0.85} r={Math.max(8, tier.count / 3)} />
+                ))}
               </ScatterChart>
             </ResponsiveContainer>
           </div>
-          <div className="flex justify-between text-[9px] text-muted-foreground mt-1 px-1">
-            <span>↗ Top-right: Pursue now</span>
-            <span>↙ Bottom-left: Deprioritise</span>
+          <div className="flex items-center justify-center gap-3 text-[10px] text-muted-foreground mt-1">
+            {quadrantByTier.map((t, i) => (
+              <div key={i} className="flex items-center gap-1">
+                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: t.color }} />
+                <span>{t.name}</span>
+              </div>
+            ))}
           </div>
         </Card>
 
@@ -182,32 +169,6 @@ const OpportunityDashboard: React.FC<OpportunityDashboardProps> = ({ onChatAbout
             <div className="text-[11px] text-primary font-medium mt-1">
               Tier 1 accounts for {Math.round((pipelineByTier[0].value / totalPipeline) * 100)}% of total value
             </div>
-          </div>
-        </Card>
-
-        {/* 4. Top Opportunities — highest scored leads */}
-        <Card className="p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Star className="h-4 w-4 text-primary" />
-            <h3 className="text-sm font-semibold text-foreground">Top Opportunities</h3>
-          </div>
-          <div className="space-y-2.5">
-            {topOpportunities.map((item, i) => (
-              <div key={i} className="flex items-center justify-between gap-1">
-                <div className="min-w-0">
-                  <div className="text-xs font-medium text-foreground">{item.name}</div>
-                  <div className="text-[10px] text-muted-foreground">{item.company} · Score {item.score} · {item.tier}</div>
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <Button variant="ghost" size="icon" className="h-5 w-5" title="Bulk email">
-                    <Mail className="h-3 w-3" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-5 w-5" title="Add to CRM">
-                    <UserPlus className="h-3 w-3" />
-                  </Button>
-                </div>
-              </div>
-            ))}
           </div>
         </Card>
       </div>
