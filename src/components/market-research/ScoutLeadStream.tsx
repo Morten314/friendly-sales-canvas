@@ -38,7 +38,7 @@ const ScoutLeadStream: React.FC<ScoutLeadStreamProps> = ({
       {/* Zone 1: Opportunity Dashboard */}
       <OpportunityDashboard onChatAboutCoverage={onChatAboutCoverage} />
 
-      <TierOpportunityCards />
+      <TierOpportunityCards onAskScout={onAskScoutTier} />
 
       <Separator />
 
