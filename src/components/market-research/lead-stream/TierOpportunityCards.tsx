@@ -4,11 +4,24 @@ import { Badge } from "@/components/ui/badge";
 import { TrendingUp, AlertTriangle, Zap, Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-interface TierOpportunityCardsProps {
-  onAskScout?: (tierContext: string) => void;
+export interface TierCardData {
+  tier: string;
+  label: string;
+  badge: string;
+  badgeVariant: "default" | "secondary" | "outline";
+  fitScore: number;
+  color: string;
+  leadCount: number;
+  whyItFits: string;
+  keyRisks: string;
+  recommendedAction: string;
 }
 
-const tierCards = [
+interface TierOpportunityCardsProps {
+  onAskScout?: (tierCard: TierCardData) => void;
+}
+
+const tierCards: TierCardData[] = [
   {
     tier: "Tier 1",
     label: "Prioritise Now",
@@ -16,6 +29,7 @@ const tierCards = [
     badgeVariant: "default" as const,
     fitScore: 82,
     color: "hsl(var(--chart-1))",
+    leadCount: 28,
     whyItFits:
       "Strong alignment with your ICP across firmographics, buying signals, and decision-maker engagement. These leads match 4+ report dimensions with high scores.",
     keyRisks:
@@ -30,6 +44,7 @@ const tierCards = [
     badgeVariant: "secondary" as const,
     fitScore: 58,
     color: "hsl(var(--chart-2))",
+    leadCount: 52,
     whyItFits:
       "Partial ICP match — strong in 2–3 report dimensions but gaps in market timing or budget signals. Good potential with nurturing.",
     keyRisks:
@@ -44,6 +59,7 @@ const tierCards = [
     badgeVariant: "outline" as const,
     fitScore: 28,
     color: "hsl(var(--chart-3))",
+    leadCount: 40,
     whyItFits:
       "Limited overlap with current ICP criteria. May match on industry or region but lack key buying signals or decision-maker access.",
     keyRisks:
