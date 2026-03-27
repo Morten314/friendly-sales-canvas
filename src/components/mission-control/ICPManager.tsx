@@ -1699,6 +1699,10 @@ import {
 } from "@/utils/profilerAcceptedIcpDisplay";
 import { cn } from "@/lib/utils";
 import { apiFetch } from "@/lib/api";
+import {
+  addPendingDeletedIcpId,
+  finalizeDisplayIcpsForUser,
+} from "@/utils/pendingIcpDeletes";
 
 // Types
 type FitConfidence = "high" | "medium" | "low";
@@ -1838,8 +1842,9 @@ const ICPManager: React.FC = () => {
 
     setIsSaving(true);
     try {
-      // Prepare payload with customer profile data
+      // Prepare payload with customer profile data (user_id required by API for persistence)
       const payload = {
+        user_id: currentUser.uid,
         org_id: orgIdToUse,
         icps: icpsToSave.map(icp => ({
           id: icp.id,
@@ -1874,28 +1879,11 @@ const ICPManager: React.FC = () => {
         console.warn("Failed to save to localStorage:", e);
       }
 
-      const apiUrl = `/api/customer_profile?org_id=${orgIdToUse}`;
-      const response = await fetch(apiUrl, {
+      const profileQuery = `customer_profile?user_id=${encodeURIComponent(currentUser.uid)}&org_id=${encodeURIComponent(orgIdToUse)}`;
+      const response = await apiFetch(profileQuery, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
+        body: payload,
       });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("API Error:", response.status, errorText);
-        
-        // Retry for 500 errors (server/database issues) up to 2 times
-        if (response.status === 500 && retryCount < 2) {
-          console.log(`Retrying save (attempt ${retryCount + 1}/2)...`);
-          await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1))); // Exponential backoff
-          return saveCustomerProfileToBackend(icpsToSave, retryCount + 1);
-        }
-        
-        throw new Error(`Failed to save customer profile: ${response.status} - ${errorText}`);
-      }
 
       const data = await response.json();
       console.log("✅ Customer profile saved successfully to backend");
@@ -1951,35 +1939,10 @@ const ICPManager: React.FC = () => {
     console.log("User ID:", currentUser.uid);
     setIsLoading(true);
     try {
-      const apiUrl = `/api/customer_profile?org_id=${orgIdToUse}`;
-      console.log("ICPManager: Fetching from API:", apiUrl);
-      const response = await fetch(apiUrl, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-      
-      console.log("ICPManager: API response status:", response.status, response.statusText);
-
-      if (!response.ok) {
-        console.log("No existing customer profile found in API, trying localStorage fallback");
-        // Try loading from localStorage as fallback
-        try {
-          const localData = getUserLocalStorage('customerProfile', currentUser.uid);
-          if (localData) {
-            const localICPs = JSON.parse(localData);
-            if (Array.isArray(localICPs) && localICPs.length > 0) {
-              console.log("Loading customer profile from localStorage fallback");
-              setIcps(localICPs);
-              window.dispatchEvent(new CustomEvent('customerProfileSaved'));
-            }
-          }
-        } catch (e) {
-          console.error("Error loading from localStorage:", e);
-        }
-        return;
-      }
+      const profileQuery = `customer_profile?user_id=${encodeURIComponent(currentUser.uid)}&org_id=${encodeURIComponent(orgIdToUse)}`;
+      console.log("ICPManager: Fetching from API:", profileQuery);
+      const response = await apiFetch(profileQuery, { method: "GET" });
+      console.log("ICPManager: API response ok");
 
       // Avoid replaying a stale full-list POST from customerProfile_pending (can resurrect deleted ICPs).
       try {
@@ -2018,7 +1981,7 @@ const ICPManager: React.FC = () => {
             const localICPs = JSON.parse(localData);
             if (Array.isArray(localICPs) && localICPs.length > 0) {
               console.log("ICPManager: Loading from localStorage fallback (user mismatch)");
-              setIcps(localICPs);
+              setIcps(finalizeDisplayIcpsForUser(currentUser.uid, localICPs));
               window.dispatchEvent(new CustomEvent('customerProfileSaved'));
             }
           }
@@ -2086,8 +2049,9 @@ const ICPManager: React.FC = () => {
       if (Array.isArray(icpsData) && icpsData.length > 0) {
         const loadedICPs: ICP[] = icpsData.map((icp: any) => {
           const merged = mergeProfilerAcceptedIcpDisplayIfPlaceholder(icp);
+          const stableId = merged.id || merged._id || merged.icp_id;
           return {
-            id: merged.id || `icp-${Date.now()}-${Math.random()}`,
+            id: stableId ? String(stableId) : `icp-${Date.now()}-${Math.random()}`,
             primaryRegion: merged.primary_region || merged.primaryRegion || "",
             location: Array.isArray(merged.location) ? merged.location : [],
             industry: Array.isArray(merged.industry) ? merged.industry : [],
@@ -2116,22 +2080,33 @@ const ICPManager: React.FC = () => {
           };
         });
 
-        setIcps(loadedICPs);
+        const displayIcps = finalizeDisplayIcpsForUser(currentUser.uid, loadedICPs);
+        setIcps(displayIcps);
         console.log("✅ Customer profile loaded from backend successfully");
-        console.log("Loaded ICPs count:", loadedICPs.length);
-        console.log("Loaded ICPs data:", JSON.stringify(loadedICPs, null, 2));
+        console.log("Loaded ICPs count (display):", displayIcps.length);
+        console.log("Loaded ICPs data:", JSON.stringify(displayIcps, null, 2));
         
         // Save to localStorage for offline access
         try {
-          setUserLocalStorage('customerProfile', JSON.stringify(loadedICPs), currentUser.uid);
+          setUserLocalStorage('customerProfile', JSON.stringify(displayIcps), currentUser.uid);
         } catch (e) {
           console.warn("Failed to save to localStorage:", e);
         }
         
         // Dispatch event to notify MissionControl that customer profile is loaded
-        if (loadedICPs.length > 0) {
+        if (displayIcps.length > 0) {
           window.dispatchEvent(new CustomEvent('customerProfileSaved'));
         }
+      } else if (Array.isArray(icpsData) && icpsData.length === 0) {
+        console.log("ICPManager: API returned 0 ICPs — clearing list (do not use stale localStorage)");
+        finalizeDisplayIcpsForUser(currentUser.uid, []);
+        setIcps([]);
+        try {
+          setUserLocalStorage("customerProfile", JSON.stringify([]), currentUser.uid);
+        } catch (e) {
+          console.warn("Failed to clear customerProfile in localStorage:", e);
+        }
+        window.dispatchEvent(new CustomEvent("customerProfileSaved"));
       } else {
         console.log("ICPManager: No icps found in API response, checking localStorage");
         // Try loading from localStorage as fallback
@@ -2160,7 +2135,7 @@ const ICPManager: React.FC = () => {
                 setIcps([]);
               } else {
                 console.log("Loading customer profile from localStorage fallback");
-                setIcps(localICPs);
+                setIcps(finalizeDisplayIcpsForUser(currentUser.uid, localICPs));
                 window.dispatchEvent(new CustomEvent('customerProfileSaved'));
               }
             }
@@ -2178,7 +2153,7 @@ const ICPManager: React.FC = () => {
           const localICPs = JSON.parse(localData);
           if (Array.isArray(localICPs) && localICPs.length > 0) {
             console.log("Loading customer profile from localStorage fallback (error case)");
-            setIcps(localICPs);
+            setIcps(finalizeDisplayIcpsForUser(currentUser.uid, localICPs));
             window.dispatchEvent(new CustomEvent('customerProfileSaved'));
           }
         }
@@ -2489,20 +2464,15 @@ const ICPManager: React.FC = () => {
   };
 
   const handleDeleteICP = async (id: string) => {
+    if (currentUser?.uid) {
+      addPendingDeletedIcpId(currentUser.uid, id);
+    }
     const updatedICPs = icps.filter((icp) => icp.id !== id);
     setIcps(updatedICPs);
     removeProfilerAcceptedIcpDisplayMeta(id);
 
-    try {
-      await apiFetch(
-        `customer_profile/icp/${encodeURIComponent(id)}?org_id=${encodeURIComponent(orgIdToUse)}`,
-        { method: "DELETE" },
-      );
-    } catch (e) {
-      console.warn("DELETE customer_profile/icp (optional):", e);
-    }
-
     await saveCustomerProfileToBackend(updatedICPs);
+    await loadCustomerProfileFromBackend();
 
     toast({
       title: "ICP deleted",
