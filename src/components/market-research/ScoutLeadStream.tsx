@@ -1,6 +1,7 @@
 import React from "react";
 import { Separator } from "@/components/ui/separator";
 import OpportunityDashboard from "./lead-stream/OpportunityDashboard";
+import TierOpportunityCards from "./lead-stream/TierOpportunityCards";
 import LeadsTable from "./lead-stream/LeadsTable";
 
 // ─── Props ───────────────────────────────────────────────────────────────────
