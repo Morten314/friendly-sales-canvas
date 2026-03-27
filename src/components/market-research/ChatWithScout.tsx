@@ -653,7 +653,7 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
       <div className="px-4 py-2 border-b shrink-0 space-y-2 max-h-[160px] overflow-y-auto">
         {useCategorized ? (
           <div className="space-y-2">
-            {categorizedPrompts.map((cat) => (
+            {activeCategorizedPrompts.map((cat) => (
               <div key={cat.category} className="flex items-start gap-2">
                 <div className="flex items-center gap-1 shrink-0 pt-1">
                   <span className="text-muted-foreground">{cat.icon}</span>
