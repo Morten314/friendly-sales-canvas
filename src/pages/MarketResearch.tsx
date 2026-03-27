@@ -2732,16 +2732,18 @@ const MarketResearch = React.memo(() => {
     handleTabChange('trends');
   };
 
-  const handleAskScoutTier = (tierContext: string) => {
+  const handleAskScoutTier = (tierCard: any) => {
     setScoutMode("full-list");
     setScoutResearchContext({
       leads: [],
-      opportunity: `${tierContext} Intelligence`,
+      opportunity: `${tierCard.tier} — ${tierCard.label}`,
       icp: 'All Segments',
       reportTraits: [
-        `Tier: ${tierContext}`,
-        "Discuss fit score, risks, and recommended actions for this tier",
-        "Help me validate and refine the tier classification",
+        `**${tierCard.tier} — ${tierCard.label}**`,
+        `Leads: ${tierCard.leadCount} | Fit Score: ${tierCard.fitScore}%`,
+        `Why it fits: ${tierCard.whyItFits}`,
+        `Key risks: ${tierCard.keyRisks}`,
+        `Recommended action: ${tierCard.recommendedAction}`,
       ],
     });
     handleTabChange('trends');
