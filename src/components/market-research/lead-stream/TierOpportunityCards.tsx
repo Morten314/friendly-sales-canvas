@@ -4,11 +4,24 @@ import { Badge } from "@/components/ui/badge";
 import { TrendingUp, AlertTriangle, Zap, Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-interface TierOpportunityCardsProps {
-  onAskScout?: (tierContext: string) => void;
+export interface TierCardData {
+  tier: string;
+  label: string;
+  badge: string;
+  badgeVariant: "default" | "secondary" | "outline";
+  fitScore: number;
+  color: string;
+  leadCount: number;
+  whyItFits: string;
+  keyRisks: string;
+  recommendedAction: string;
 }
 
-const tierCards = [
+interface TierOpportunityCardsProps {
+  onAskScout?: (tierCard: TierCardData) => void;
+}
+
+const tierCards: TierCardData[] = [
   {
     tier: "Tier 1",
     label: "Prioritise Now",
@@ -16,6 +29,7 @@ const tierCards = [
     badgeVariant: "default" as const,
     fitScore: 82,
     color: "hsl(var(--chart-1))",
+    leadCount: 28,
     whyItFits:
       "Strong alignment with your ICP across firmographics, buying signals, and decision-maker engagement. These leads match 4+ report dimensions with high scores.",
     keyRisks:
@@ -30,6 +44,7 @@ const tierCards = [
     badgeVariant: "secondary" as const,
     fitScore: 58,
     color: "hsl(var(--chart-2))",
+    leadCount: 52,
     whyItFits:
       "Partial ICP match — strong in 2–3 report dimensions but gaps in market timing or budget signals. Good potential with nurturing.",
     keyRisks:
@@ -44,6 +59,7 @@ const tierCards = [
     badgeVariant: "outline" as const,
     fitScore: 28,
     color: "hsl(var(--chart-3))",
+    leadCount: 40,
     whyItFits:
       "Limited overlap with current ICP criteria. May match on industry or region but lack key buying signals or decision-maker access.",
     keyRisks:
@@ -79,7 +95,15 @@ const TierOpportunityCards: React.FC<TierOpportunityCardsProps> = ({ onAskScout 
               </Badge>
             </div>
 
-            {/* Fit Score */}
+            {/* Lead Count & Fit Score */}
+            <div className="flex items-center justify-between text-xs mb-1">
+              <span className="text-muted-foreground">
+                <span className="font-semibold text-foreground">{card.leadCount}</span> leads
+              </span>
+              <span className="font-semibold text-foreground">
+                Fit: {card.fitScore}%
+              </span>
+            </div>
             <div className="flex items-center gap-2">
               <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
                 <div
@@ -90,9 +114,6 @@ const TierOpportunityCards: React.FC<TierOpportunityCardsProps> = ({ onAskScout 
                   }}
                 />
               </div>
-              <span className="text-xs font-semibold text-foreground">
-                {card.fitScore}%
-              </span>
             </div>
 
             {/* Details */}
@@ -133,7 +154,7 @@ const TierOpportunityCards: React.FC<TierOpportunityCardsProps> = ({ onAskScout 
               variant="ghost"
               size="sm"
               className="w-full mt-auto text-xs text-primary hover:text-primary hover:bg-primary/10 gap-1.5"
-              onClick={() => onAskScout?.(`${card.tier} — ${card.label}`)}
+              onClick={() => onAskScout?.(card)}
             >
               <Bot className="h-3.5 w-3.5" />
               Ask Scout

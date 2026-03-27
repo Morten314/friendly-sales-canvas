@@ -1,7 +1,7 @@
 import React from "react";
 import { Separator } from "@/components/ui/separator";
 import OpportunityDashboard from "./lead-stream/OpportunityDashboard";
-import TierOpportunityCards from "./lead-stream/TierOpportunityCards";
+import TierOpportunityCards, { type TierCardData } from "./lead-stream/TierOpportunityCards";
 import LeadsTable from "./lead-stream/LeadsTable";
 
 // ─── Props ───────────────────────────────────────────────────────────────────
@@ -16,7 +16,7 @@ interface ScoutLeadStreamProps {
   onResearchWithScout?: (leads: any[], context?: string) => void;
   onChatWithScout?: (leads: any[], reportFilter?: string) => void;
   onChatAboutCoverage?: () => void;
-  onAskScoutTier?: (tierContext: string) => void;
+  onAskScoutTier?: (tierCard: TierCardData) => void;
 }
 
 // ─── Main Component ──────────────────────────────────────────────────────────
