@@ -81,7 +81,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import ApiService from "@/services/api";
-import { buildApiUrl, apiFetch } from "@/lib/api";
+import { buildApiUrl } from "@/lib/api";
 import jwtManager from "@/lib/jwt";
 
 // Data Source Interface
@@ -3233,37 +3233,59 @@ const MissionControl = () => {
       }
 
       try {
-        const profileQuery = `customer_profile?user_id=${encodeURIComponent(currentUser.uid)}&org_id=${encodeURIComponent(orgIdToUse)}`;
-        const response = await apiFetch(profileQuery, { method: "GET" });
+        const apiUrl = `/api/customer_profile?org_id=${orgIdToUse}`;
+        const response = await fetch(apiUrl, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
 
-        const responseData = await response.json();
-        const data = responseData.data || responseData;
-
-        // Check if icps exists in the response
-        let icpsData = null;
-        if (responseData.data) {
-          if (Array.isArray(responseData.data.icps)) {
-            icpsData = responseData.data.icps;
-          } else if (responseData.data.customer_profiles && Array.isArray(responseData.data.customer_profiles.icps)) {
-            icpsData = responseData.data.customer_profiles.icps;
-          } else if (responseData.data.customer_profile && Array.isArray(responseData.data.customer_profile.icps)) {
-            icpsData = responseData.data.customer_profile.icps;
+        if (response.ok) {
+          const responseData = await response.json();
+          const data = responseData.data || responseData;
+          
+          // Check if icps exists in the response
+          let icpsData = null;
+          if (responseData.data) {
+            if (Array.isArray(responseData.data.icps)) {
+              icpsData = responseData.data.icps;
+            } else if (responseData.data.customer_profiles && Array.isArray(responseData.data.customer_profiles.icps)) {
+              icpsData = responseData.data.customer_profiles.icps;
+            } else if (responseData.data.customer_profile && Array.isArray(responseData.data.customer_profile.icps)) {
+              icpsData = responseData.data.customer_profile.icps;
+            }
           }
-        }
-
-        if (!icpsData) {
-          if (Array.isArray(data.icps)) {
-            icpsData = data.icps;
-          } else if (data.customer_profiles && Array.isArray(data.customer_profiles.icps)) {
-            icpsData = data.customer_profiles.icps;
-          } else if (data.customer_profile && Array.isArray(data.customer_profile.icps)) {
-            icpsData = data.customer_profile.icps;
+          
+          if (!icpsData) {
+            if (Array.isArray(data.icps)) {
+              icpsData = data.icps;
+            } else if (data.customer_profiles && Array.isArray(data.customer_profiles.icps)) {
+              icpsData = data.customer_profiles.icps;
+            } else if (data.customer_profile && Array.isArray(data.customer_profile.icps)) {
+              icpsData = data.customer_profile.icps;
+            }
           }
-        }
-
-        if (Array.isArray(icpsData) && icpsData.length > 0) {
-          console.log("MissionControl: Customer profile found in backend, unlocking customer profile tab");
-          setIsCustomerProfileSaved(true);
+          
+          if (Array.isArray(icpsData) && icpsData.length > 0) {
+            console.log("MissionControl: Customer profile found in backend, unlocking customer profile tab");
+            setIsCustomerProfileSaved(true);
+          }
+        } else {
+          // Try localStorage as fallback
+          try {
+            const { getUserLocalStorage } = await import("@/utils/cacheUtils");
+            const localData = getUserLocalStorage('customerProfile', currentUser.uid);
+            if (localData) {
+              const localICPs = JSON.parse(localData);
+              if (Array.isArray(localICPs) && localICPs.length > 0) {
+                console.log("MissionControl: Customer profile found in localStorage, unlocking customer profile tab");
+                setIsCustomerProfileSaved(true);
+              }
+            }
+          } catch (e) {
+            // Ignore errors
+          }
         }
       } catch (error) {
         console.error("Error checking customer profile:", error);

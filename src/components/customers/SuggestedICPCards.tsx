@@ -56,19 +56,12 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { getLeadCountForICP } from "@/components/customers/LeadStream";
-import { buildIcpUrl, buildApiUrl, apiFetch, apiFetchJson } from "@/lib/api";
-import { getUserLocalStorage, setUserLocalStorage, removeUserLocalStorage } from "@/utils/cacheUtils";
-import { deleteIcpViaCustomerProfilePost, type CustomerProfileICP } from "@/utils/customerProfileSync";
-import {
-  addPendingDeletedIcpId,
-  finalizeDisplayIcpsForUser,
-  removePendingDeletedIcpId,
-} from "@/utils/pendingIcpDeletes";
+import { buildIcpUrl, buildApiUrl, apiFetchJson } from "@/lib/api";
+import { getUserLocalStorage } from "@/utils/cacheUtils";
 import {
   mergeProfilerAcceptedIcpDisplay,
   saveProfilerAcceptedIcpDisplayMeta,
   copyProfilerDisplayMetaToProfileId,
-  removeProfilerAcceptedIcpDisplayMeta,
   PROFILER_ICP_DISPLAY_KEY,
 } from "@/utils/profilerAcceptedIcpDisplay";
 
@@ -219,7 +212,7 @@ const mapCustomerProfileICPToExisting = (icp: any, index: number): ExistingICP =
     }
   }
   return {
-    id: String(merged.id ?? merged._id ?? merged.icp_id ?? `icp-${index + 1}`),
+    id: merged.id || `icp-${index + 1}`,
     name,
     geography: primaryRegion || (locationArr.length > 0 ? locationArr.join(", ") : undefined),
     industry: industryArr.join(", ") || undefined,
@@ -229,27 +222,6 @@ const mapCustomerProfileICPToExisting = (icp: any, index: number): ExistingICP =
     status: (merged.status || "active") as "active" | "inactive",
   };
 };
-
-const mapProfileIcpsToExistingRows = (remaining: CustomerProfileICP[]): ExistingICP[] =>
-  remaining.map((r, i) =>
-    mapCustomerProfileICPToExisting(
-      {
-        id: r.id,
-        primary_region: r.primaryRegion,
-        location: r.location,
-        industry: r.industry,
-        company_size: r.companySize,
-        buyer_role: r.buyerRole,
-        fit_confidence: r.fitConfidence,
-        additional_context: r.additionalContext,
-        accounts_on_watchlist: r.accountsOnWatchlist,
-        accounts_to_avoid: r.accountsToAvoid,
-        status: r.status,
-        created_at: r.createdAt.toISOString(),
-      },
-      i,
-    ),
-  );
 
 /** First non-empty string among candidates (GET /icp may use firmographics vs root). */
 const coalesceString = (...vals: unknown[]): string | undefined => {
@@ -504,16 +476,14 @@ export const SuggestedICPCards = ({
   });
   const [expandedReportId, setExpandedReportId] = useState<string | null>(null);
   const [isSavingAccept, setIsSavingAccept] = useState(false);
-  const [deletingIcpId, setDeletingIcpId] = useState<string | null>(null);
 
   /** Reload Current ICPs from GET /customer_profile after backend updates (e.g. accept from suggested). Returns profile ICP ids. */
   const refetchCustomerProfileIcps = useCallback(async (): Promise<string[]> => {
     const orgIdToUse = orgId || currentUser?.uid || "brewra";
-    const uid = currentUser?.uid;
-    if (!uid) return [];
     try {
-      const profileQuery = `customer_profile?user_id=${encodeURIComponent(uid)}&org_id=${encodeURIComponent(orgIdToUse)}`;
-      const profileRes = await apiFetch(profileQuery, { method: "GET" });
+      const profileUrl = buildApiUrl(`customer_profile?org_id=${encodeURIComponent(orgIdToUse)}`);
+      const profileRes = await fetch(profileUrl, { method: "GET", headers: { "Content-Type": "application/json" } });
+      if (!profileRes.ok) return [];
       const profileData = await profileRes.json();
       const data = profileData.data || profileData;
       const icpsData =
@@ -521,10 +491,9 @@ export const SuggestedICPCards = ({
         data.customer_profiles?.icps ??
         data.customer_profile?.icps ??
         [];
-      if (Array.isArray(icpsData)) {
-        const rows = icpsData.map((icp: any, i: number) => mapCustomerProfileICPToExisting(icp, i));
-        setExistingICPs(finalizeDisplayIcpsForUser(uid, rows));
-        return icpsData.map((row: any) => String(row.id || row._id || "")).filter(Boolean);
+      if (Array.isArray(icpsData) && icpsData.length > 0) {
+        setExistingICPs(icpsData.map((icp: any, i: number) => mapCustomerProfileICPToExisting(icp, i)));
+        return icpsData.map((row: any) => String(row.id || "")).filter(Boolean);
       }
     } catch {
       /* keep existing rows */
@@ -550,14 +519,13 @@ export const SuggestedICPCards = ({
     const loadData = async () => {
       setLoading(true);
 
-      // 1. Load Current ICPs — authenticated GET (user_id + JWT) so refresh matches server; then localStorage fallbacks
+      // 1. Load Current ICPs - same GET /api/customer_profile as Mission Control, then localStorage fallbacks
       let icps: ExistingICP[] = [];
       const orgIdToUse = orgId || currentUser?.uid || "brewra";
-      let loadedCurrentIcpsFromApi = false;
-      if (currentUser?.uid) {
-        try {
-          const profileQuery = `customer_profile?user_id=${encodeURIComponent(currentUser.uid)}&org_id=${encodeURIComponent(orgIdToUse)}`;
-          const profileRes = await apiFetch(profileQuery, { method: "GET" });
+      try {
+        const profileUrl = buildApiUrl(`customer_profile?org_id=${orgIdToUse}`);
+        const profileRes = await fetch(profileUrl, { method: "GET", headers: { "Content-Type": "application/json" } });
+        if (profileRes.ok) {
           const profileData = await profileRes.json();
           const data = profileData.data || profileData;
           const icpsData =
@@ -565,15 +533,12 @@ export const SuggestedICPCards = ({
             data.customer_profiles?.icps ??
             data.customer_profile?.icps ??
             [];
-          if (Array.isArray(icpsData)) {
+          if (Array.isArray(icpsData) && icpsData.length > 0) {
             icps = icpsData.map((icp: any, i: number) => mapCustomerProfileICPToExisting(icp, i));
-            loadedCurrentIcpsFromApi = true;
           }
-        } catch {
-          /* fall through to localStorage */
         }
-      }
-      if (!loadedCurrentIcpsFromApi && icps.length === 0) {
+      } catch {}
+      if (icps.length === 0) {
         try {
           const customerProfileData = getUserLocalStorage("customerProfile", currentUser?.uid);
           if (customerProfileData) {
@@ -584,7 +549,7 @@ export const SuggestedICPCards = ({
           }
         } catch {}
       }
-      if (!loadedCurrentIcpsFromApi && icps.length === 0) {
+      if (icps.length === 0) {
         try {
           const persistedExisting = localStorage.getItem("profiler_existingICPs");
           if (persistedExisting) {
@@ -593,20 +558,17 @@ export const SuggestedICPCards = ({
           }
         } catch {}
       }
-      if (!loadedCurrentIcpsFromApi && icps.length === 0) {
+      if (icps.length === 0) {
         try {
           const stored = localStorage.getItem("customerICPs") || localStorage.getItem("missionControlICPs");
           if (stored) icps = JSON.parse(stored);
         } catch {}
       }
-      if (!loadedCurrentIcpsFromApi && icps.length === 0) {
+      if (icps.length === 0) {
         icps = [
           { id: "existing-1", name: "ICP 1", geography: "North America", industry: "Software & Technology", companySize: "100-500 employees", buyerRole: "CTO / VP Engineering", fitConfidence: "High", status: "active" },
           { id: "existing-2", name: "ICP 2", geography: "US, UK", industry: "Healthcare", companySize: "200-1000 employees", buyerRole: "CIO / Chief Digital Officer", fitConfidence: "Medium", status: "active" },
         ];
-      }
-      if (currentUser?.uid) {
-        icps = finalizeDisplayIcpsForUser(currentUser.uid, icps);
       }
       setExistingICPs(icps);
 
@@ -808,67 +770,6 @@ export const SuggestedICPCards = ({
     setConfirmAcceptICP(icp);
   };
 
-  const handleDeleteExistingICP = async (icp: ExistingICP) => {
-    const uid = currentUser?.uid;
-    const orgIdToUse = orgId || uid || "brewra";
-    if (!uid) {
-      toast({
-        title: "Sign in required",
-        description: "Log in to update your customer profile.",
-        variant: "destructive",
-      });
-      return;
-    }
-    setDeletingIcpId(icp.id);
-    try {
-      addPendingDeletedIcpId(uid, icp.id);
-      const remaining = await deleteIcpViaCustomerProfilePost(orgIdToUse, icp.id, uid);
-      removeProfilerAcceptedIcpDisplayMeta(icp.id);
-      const displayRows = finalizeDisplayIcpsForUser(uid, mapProfileIcpsToExistingRows(remaining));
-      setExistingICPs(displayRows);
-      const allowedIds = new Set(displayRows.map((r) => r.id));
-      const remainingForStorage = remaining.filter((r) => allowedIds.has(r.id));
-      try {
-        setUserLocalStorage(
-          "customerProfile",
-          JSON.stringify(
-            remainingForStorage.map((r) => ({
-              id: r.id,
-              primaryRegion: r.primaryRegion,
-              location: r.location,
-              industry: r.industry,
-              companySize: r.companySize,
-              buyerRole: r.buyerRole,
-              accountsOnWatchlist: r.accountsOnWatchlist,
-              accountsToAvoid: r.accountsToAvoid,
-              fitConfidence: r.fitConfidence,
-              additionalContext: r.additionalContext,
-              status: r.status,
-              createdAt: r.createdAt,
-            })),
-          ),
-          uid,
-        );
-        removeUserLocalStorage("customerProfile_pending", uid);
-      } catch (e) {
-        console.warn("Failed to update localStorage after ICP delete:", e);
-      }
-      if (expandedCurrentICPId === icp.id) setExpandedCurrentICPId(null);
-      window.dispatchEvent(new CustomEvent("customerProfileSaved"));
-      toast({ title: "ICP deleted", description: `"${icp.name}" removed from Current ICPs.` });
-    } catch (e) {
-      console.error(e);
-      removePendingDeletedIcpId(uid, icp.id);
-      toast({
-        title: "Could not delete ICP",
-        description: e instanceof Error ? e.message : "Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setDeletingIcpId(null);
-    }
-  };
-
   const handleConfirmAccept = async () => {
     if (!confirmAcceptICP || isSavingAccept) return;
     const icp = confirmAcceptICP;
@@ -1055,8 +956,11 @@ export const SuggestedICPCards = ({
                         <Button
                           variant="ghost"
                           size="sm"
-                          disabled={deletingIcpId === icp.id}
-                          onClick={() => void handleDeleteExistingICP(icp)}
+                          onClick={() => {
+                            setExistingICPs((prev) => prev.filter((e) => e.id !== icp.id));
+                            if (isExpanded) setExpandedCurrentICPId(null);
+                            toast({ title: "ICP deleted", description: `"${icp.name}" removed from Current ICPs.` });
+                          }}
                           className="text-destructive hover:text-destructive/80 hover:bg-destructive/10"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
