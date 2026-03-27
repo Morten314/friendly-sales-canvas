@@ -90,9 +90,6 @@ const TierOpportunityCards: React.FC<TierOpportunityCardsProps> = ({ onAskScout 
                   <span className="font-medium text-muted-foreground"> — {card.label}</span>
                 </span>
               </div>
-              <Badge variant={card.badgeVariant} className="text-[10px] px-2 py-0.5">
-                {card.badge}
-              </Badge>
             </div>
 
             {/* Lead Count & Fit Score */}
