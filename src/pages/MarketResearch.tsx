@@ -2732,6 +2732,21 @@ const MarketResearch = React.memo(() => {
     handleTabChange('trends');
   };
 
+  const handleAskScoutTier = (tierContext: string) => {
+    setScoutMode("full-list");
+    setScoutResearchContext({
+      leads: [],
+      opportunity: `${tierContext} Intelligence`,
+      icp: 'All Segments',
+      reportTraits: [
+        `Tier: ${tierContext}`,
+        "Discuss fit score, risks, and recommended actions for this tier",
+        "Help me validate and refine the tier classification",
+      ],
+    });
+    handleTabChange('trends');
+  };
+
 
 
 
@@ -15215,6 +15230,7 @@ const MarketResearch = React.memo(() => {
                   onResearchWithScout={handleResearchWithScout}
                   onChatWithScout={handleChatWithScout}
                   onChatAboutCoverage={handleChatAboutCoverage}
+                  onAskScoutTier={handleAskScoutTier}
                 />
 
 
