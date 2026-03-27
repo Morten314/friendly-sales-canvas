@@ -270,6 +270,7 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
           icon: <Target className="h-3.5 w-3.5" />,
           actions: [
             { label: "Compare Tier 1 leads against Tier 2 criteria — show gaps", prompt: "Compare Tier 1 leads against Tier 2 criteria — show gaps", icon: <TrendingUp className="h-3.5 w-3.5" /> },
+            { label: "Want to review specific leads in Tier 2 & 3 that may need reclassification?", prompt: "Review specific leads in Tier 2 and Tier 3 that may need reclassification — highlight candidates with signals suggesting a tier upgrade", icon: <Target className="h-3.5 w-3.5" /> },
           ],
         },
         ...categorizedPrompts,
