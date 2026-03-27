@@ -310,7 +310,7 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
       const action = traits.find(t => t.startsWith("Recommended action:"))?.replace("Recommended action: ", "") || '';
       setMessages([{
         role: "assistant",
-        content: `Here's the full context for **${tierLine}** (${statsLine}):\n\n**Why it fits:** ${whyFits}\n\n**Key risks:** ${risks}\n\n**Recommended action:** ${action}\n\nI'm ready to dive deeper. What would you like to explore?\n\n• Should we validate the fit score against your actual pipeline data?\n• Want to review specific leads in this tier that may need reclassification?\n• Should I suggest outreach strategies tailored to this tier's risk profile?`,
+        content: `Here's the full context for **${tierLine}** (${statsLine}):\n\n**Why it fits:** ${whyFits}\n\n**Key risks:** ${risks}\n\n**Recommended action:** ${action}`,
         timestamp: new Date().toLocaleTimeString(),
       }]);
     } else {
