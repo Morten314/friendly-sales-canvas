@@ -16,6 +16,7 @@ interface ScoutLeadStreamProps {
   onResearchWithScout?: (leads: any[], context?: string) => void;
   onChatWithScout?: (leads: any[], reportFilter?: string) => void;
   onChatAboutCoverage?: () => void;
+  onAskScoutTier?: (tierContext: string) => void;
 }
 
 // ─── Main Component ──────────────────────────────────────────────────────────
@@ -26,6 +27,7 @@ const ScoutLeadStream: React.FC<ScoutLeadStreamProps> = ({
   onResearchWithScout,
   onChatWithScout,
   onChatAboutCoverage,
+  onAskScoutTier,
 }) => {
   const handleResearchLead = (lead: any) => {
     onResearchWithScout?.([lead]);
