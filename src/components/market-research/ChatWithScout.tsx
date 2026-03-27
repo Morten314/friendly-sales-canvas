@@ -612,10 +612,11 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
         )}
       </div>
 
-      {/* Zone 1: Report Context Card (bulk leads only) */}
-      {hasBulkContext && (
-        <div className="px-4 pt-3 pb-1 shrink-0">
-          <Card className="p-3 bg-primary/5 border-primary/20 space-y-2 max-h-[140px] overflow-y-auto">
+      {/* Zone 1+2: Two-column layout for tier context */}
+      {hasBulkContext ? (
+        <div className="grid grid-cols-2 gap-3 px-4 pt-3 pb-2 shrink-0 border-b">
+          {/* Left: Context Block */}
+          <Card className="p-3 bg-primary/5 border-primary/20 space-y-2 overflow-y-auto max-h-[200px]">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
@@ -647,64 +648,116 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
               </div>
             )}
           </Card>
-        </div>
-      )}
 
-      {/* Zone 2: Suggested Prompts */}
-      <div className="px-4 py-2 border-b shrink-0 space-y-2 max-h-[160px] overflow-y-auto">
-        {useCategorized ? (
-          <div className="space-y-2">
-            {activeCategorizedPrompts.map((cat) => (
-              <div key={cat.category} className="flex items-start gap-2">
-                <div className="flex items-center gap-1 shrink-0 pt-1">
-                  <span className="text-muted-foreground">{cat.icon}</span>
-                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider w-[120px]">
-                    {cat.category}
-                    {cat.strategistLinked && (
-                      <span className="ml-1 text-primary normal-case tracking-normal font-medium text-[10px]">
-                        → Strategist
-                      </span>
-                    )}
-                  </span>
+          {/* Right: Prompts + Input */}
+          <div className="flex flex-col gap-2 overflow-y-auto max-h-[200px]">
+            <div className="space-y-2">
+              {activeCategorizedPrompts.map((cat) => (
+                <div key={cat.category} className="flex items-start gap-2">
+                  <div className="flex items-center gap-1 shrink-0 pt-1">
+                    <span className="text-muted-foreground">{cat.icon}</span>
+                    <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider w-[120px]">
+                      {cat.category}
+                      {cat.strategistLinked && (
+                        <span className="ml-1 text-primary normal-case tracking-normal font-medium text-[10px]">
+                          → Strategist
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {cat.actions.map((action) => (
+                      <Button
+                        key={action.label}
+                        variant="outline"
+                        size="sm"
+                        className="h-6 text-[10px] px-2 gap-1 hover:bg-primary/5 hover:text-primary hover:border-primary/30 transition-colors"
+                        onClick={() => handleSendMessage(action.prompt, { forceStrategist: !!cat.strategistLinked })}
+                        disabled={isLoading}
+                      >
+                        {action.label}
+                      </Button>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-1">
-                  {cat.actions.map((action) => (
-                    <Button
-                      key={action.label}
-                      variant="outline"
-                      size="sm"
-                      className="h-6 text-[10px] px-2 gap-1 hover:bg-primary/5 hover:text-primary hover:border-primary/30 transition-colors"
-                      onClick={() => handleSendMessage(action.prompt, { forceStrategist: !!cat.strategistLinked })}
-                      disabled={isLoading}
-                    >
-                      {action.label}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <>
-            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Suggested Questions</p>
-            <div className="flex flex-wrap gap-1.5">
-              {primaryActions.map((action) => (
-                <Button
-                  key={action.label}
-                  variant="outline"
-                  size="sm"
-                  className="h-7 text-[11px] gap-1.5 hover:bg-primary/5 hover:text-primary hover:border-primary/30 transition-colors"
-                  onClick={() => handleSendMessage(action.prompt)}
-                  disabled={isLoading}
-                >
-                  {action.icon}
-                  {action.label}
-                </Button>
               ))}
             </div>
-          </>
-        )}
-      </div>
+            <div className="flex gap-2 mt-auto pt-1">
+              <Textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyPress}
+                placeholder="Ask Scout anything..."
+                className="resize-none text-sm min-h-[36px]"
+                rows={1}
+                disabled={isLoading}
+              />
+              <Button
+                onClick={() => handleSendMessage()}
+                className="self-end h-9"
+                disabled={!input.trim() || isLoading}
+              >
+                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="px-4 py-2 border-b shrink-0 space-y-2 max-h-[160px] overflow-y-auto">
+          {useCategorized ? (
+            <div className="space-y-2">
+              {activeCategorizedPrompts.map((cat) => (
+                <div key={cat.category} className="flex items-start gap-2">
+                  <div className="flex items-center gap-1 shrink-0 pt-1">
+                    <span className="text-muted-foreground">{cat.icon}</span>
+                    <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider w-[120px]">
+                      {cat.category}
+                      {cat.strategistLinked && (
+                        <span className="ml-1 text-primary normal-case tracking-normal font-medium text-[10px]">
+                          → Strategist
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {cat.actions.map((action) => (
+                      <Button
+                        key={action.label}
+                        variant="outline"
+                        size="sm"
+                        className="h-6 text-[10px] px-2 gap-1 hover:bg-primary/5 hover:text-primary hover:border-primary/30 transition-colors"
+                        onClick={() => handleSendMessage(action.prompt, { forceStrategist: !!cat.strategistLinked })}
+                        disabled={isLoading}
+                      >
+                        {action.label}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <>
+              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Suggested Questions</p>
+              <div className="flex flex-wrap gap-1.5">
+                {primaryActions.map((action) => (
+                  <Button
+                    key={action.label}
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-[11px] gap-1.5 hover:bg-primary/5 hover:text-primary hover:border-primary/30 transition-colors"
+                    onClick={() => handleSendMessage(action.prompt)}
+                    disabled={isLoading}
+                  >
+                    {action.icon}
+                    {action.label}
+                  </Button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
       {/* Zone 3: Chat area with history sidebar */}
       <div className="flex-1 flex min-h-0">
