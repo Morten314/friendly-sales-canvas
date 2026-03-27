@@ -49,7 +49,7 @@ const TierOpportunityCards: React.FC = () => {
   return (
     <div className="space-y-3">
       <h3 className="text-sm font-semibold text-foreground tracking-tight">
-        Tier Validation
+        Opportunity Intelligence by Tier
       </h3>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {tierCards.map((card) => (
