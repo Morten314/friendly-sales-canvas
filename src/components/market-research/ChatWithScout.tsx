@@ -284,6 +284,18 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
         content: `I've loaded your Leads Coverage data — 74 out of 120 leads are matched across all Scout report sections (62% coverage).\n\n• Do you think the 62% match rate reflects your actual pipeline potential, or should we adjust the criteria?\n• Are there specific industries or segments where you'd expect higher or lower coverage?\n• Would you like me to break down which report sections are contributing the most matched leads?`,
         timestamp: new Date().toLocaleTimeString(),
       }]);
+    } else if (researchContext?.opportunity?.includes("Tier")) {
+      const traits = researchContext.reportTraits || [];
+      const tierLine = traits[0]?.replace(/\*\*/g, '') || researchContext.opportunity;
+      const statsLine = traits[1] || '';
+      const whyFits = traits.find(t => t.startsWith("Why it fits:"))?.replace("Why it fits: ", "") || '';
+      const risks = traits.find(t => t.startsWith("Key risks:"))?.replace("Key risks: ", "") || '';
+      const action = traits.find(t => t.startsWith("Recommended action:"))?.replace("Recommended action: ", "") || '';
+      setMessages([{
+        role: "assistant",
+        content: `Here's the full context for **${tierLine}** (${statsLine}):\n\n**Why it fits:** ${whyFits}\n\n**Key risks:** ${risks}\n\n**Recommended action:** ${action}\n\nI'm ready to dive deeper. What would you like to explore?\n\n• Should we validate the fit score against your actual pipeline data?\n• Want to review specific leads in this tier that may need reclassification?\n• Should I suggest outreach strategies tailored to this tier's risk profile?`,
+        timestamp: new Date().toLocaleTimeString(),
+      }]);
     } else {
       setMessages([]);
     }
