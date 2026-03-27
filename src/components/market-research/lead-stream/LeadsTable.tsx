@@ -9,126 +9,194 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Popover, PopoverContent, PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from "@/components/ui/dialog";
-import { Bot, Plus, Loader2, Check, ArrowRight } from "lucide-react";
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Bot, ArrowRight, ArrowUpDown, Info } from "lucide-react";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-interface MatchedLead {
+type Rating = "High" | "Medium" | "Low";
+
+interface HeatmapLead {
   id: string;
   name: string;
-  email: string;
   company: string;
-  jobTitle: string;
-  tenure: string;
   source: "HubSpot" | "Prospect List";
-  matchedReports: string[];
-  signals: string[];
-  // Agentic enrichment columns (populated on demand)
-  [key: string]: unknown;
+  ratings: Record<string, Rating>;
+  totalScore: number;
+  priority: "Tier 1" | "Tier 2" | "Tier 3";
 }
 
-type AgenticColumnId =
-  | "linkedinUrl"
-  | "companyWebsite"
-  | "employeeSize"
-  | "industry"
-  | "fundingStage"
-  | "hiringActivity"
-  | "techStack"
-  | "icpScore"
-  | "leadScore";
+// ─── Report Sections ─────────────────────────────────────────────────────────
 
-interface AgenticColumnDef {
-  id: AgenticColumnId;
-  label: string;
-  mockValues: string[];
+const REPORT_COLUMNS = [
+  { key: "market-size", label: "Market Size & Opportunity", shortLabel: "Market Size" },
+  { key: "industry-trends", label: "Industry Trends", shortLabel: "Industry" },
+  { key: "competitor-landscape", label: "Competitor Landscape", shortLabel: "Competitor" },
+  { key: "regulatory-compliance", label: "Regulatory & Compliance", shortLabel: "Regulatory" },
+  { key: "market-entry", label: "Market Entry & Growth Strategy", shortLabel: "Market Entry" },
+];
+
+// ─── Score calculation helpers ───────────────────────────────────────────────
+
+const RATING_SCORE: Record<Rating, number> = { High: 20, Medium: 12, Low: 5 };
+
+function computeScore(ratings: Record<string, Rating>): number {
+  return REPORT_COLUMNS.reduce((sum, col) => sum + (RATING_SCORE[ratings[col.key]] || 0), 0);
 }
 
-// ─── Available Agentic Columns ───────────────────────────────────────────────
+function getPriority(score: number): "Tier 1" | "Tier 2" | "Tier 3" {
+  if (score >= 75) return "Tier 1";
+  if (score >= 50) return "Tier 2";
+  return "Tier 3";
+}
 
-const AGENTIC_COLUMNS: AgenticColumnDef[] = [
-  { id: "linkedinUrl", label: "LinkedIn URL", mockValues: ["linkedin.com/in/schen", "linkedin.com/in/jokoro", "linkedin.com/in/psharma", "linkedin.com/in/mliu", "linkedin.com/in/evasquez", "linkedin.com/in/dpark", "linkedin.com/in/ajohnson", "linkedin.com/in/tmuller", "linkedin.com/in/ltran", "linkedin.com/in/rpatel"] },
-  { id: "companyWebsite", label: "Company Website", mockValues: ["acme.com", "scaleup.io", "novatech.com", "datadriven.ai", "cloudfirst.io", "momentum.dev", "revstack.ai", "finserv.digital", "shopscale.com", "opsflow.io"] },
-  { id: "employeeSize", label: "Employee Size", mockValues: ["500-1000", "50-200", "200-500", "1000-5000", "200-500", "50-200", "100-500", "5000+", "50-200", "200-500"] },
-  { id: "industry", label: "Industry", mockValues: ["SaaS", "FinTech", "HealthTech", "AI/ML", "Cloud", "MarTech", "RevOps", "FinServ", "D2C", "SaaS"] },
-  { id: "fundingStage", label: "Funding Stage", mockValues: ["Series C", "Series A", "Series B", "Series D", "Series B", "Seed", "Series A", "Public", "Series A", "Series B"] },
-  { id: "hiringActivity", label: "Hiring Activity", mockValues: ["High", "Medium", "High", "High", "Low", "Medium", "High", "Low", "Medium", "Medium"] },
-  { id: "techStack", label: "Tech Stack", mockValues: ["React, AWS", "Python, GCP", "Node, Azure", "PyTorch, AWS", "Go, GCP", "Next.js, Vercel", "Python, AWS", "Java, Azure", "Shopify, AWS", "Node, GCP"] },
-  { id: "icpScore", label: "ICP Score", mockValues: ["92%", "78%", "85%", "88%", "91%", "65%", "87%", "45%", "72%", "70%"] },
-  { id: "leadScore", label: "Lead Score", mockValues: ["5/5", "4/5", "4/5", "3/5", "5/5", "3/5", "4/5", "2/5", "3/5", "3/5"] },
+// ─── Deterministic rating assignment based on lead data ──────────────────────
+
+function assignRatings(
+  id: string,
+  matchedReports: string[]
+): Record<string, Rating> {
+  const hash = parseInt(id, 10);
+  const ratings: Record<string, Rating> = {};
+
+  REPORT_COLUMNS.forEach((col) => {
+    const isMatched = matchedReports.includes(col.key);
+    if (isMatched) {
+      // Matched reports: mostly High, some Medium
+      ratings[col.key] = hash % 3 === 0 ? "Medium" : "High";
+    } else {
+      // Unmatched: distribute across Medium and Low
+      ratings[col.key] = hash % 2 === 0 ? "Medium" : "Low";
+    }
+  });
+
+  return ratings;
+}
+
+// ─── Raw lead data (matched reports from previous dataset) ───────────────────
+
+const RAW_LEADS = [
+  { id: "1", name: "Sarah Chen", company: "Acme Corp", source: "HubSpot" as const, matchedReports: ["market-size", "industry-trends"] },
+  { id: "2", name: "James Okoro", company: "ScaleUp Inc", source: "HubSpot" as const, matchedReports: ["market-size", "competitor-landscape"] },
+  { id: "3", name: "Priya Sharma", company: "NovaTech Solutions", source: "Prospect List" as const, matchedReports: ["industry-trends", "market-entry"] },
+  { id: "4", name: "Marcus Liu", company: "DataDriven AI", source: "HubSpot" as const, matchedReports: ["competitor-landscape", "regulatory-compliance"] },
+  { id: "5", name: "Elena Vasquez", company: "CloudFirst Systems", source: "Prospect List" as const, matchedReports: ["market-size", "market-entry"] },
+  { id: "6", name: "David Park", company: "Momentum Labs", source: "HubSpot" as const, matchedReports: ["regulatory-compliance"] },
+  { id: "7", name: "Amara Johnson", company: "RevStack AI", source: "Prospect List" as const, matchedReports: ["market-size", "industry-trends", "competitor-landscape"] },
+  { id: "8", name: "Tobias Müller", company: "FinServ Digital", source: "HubSpot" as const, matchedReports: ["regulatory-compliance"] },
+  { id: "9", name: "Lily Tran", company: "ShopScale D2C", source: "Prospect List" as const, matchedReports: ["market-entry"] },
+  { id: "10", name: "Raj Patel", company: "OpsFlow SaaS", source: "HubSpot" as const, matchedReports: ["industry-trends", "market-entry"] },
+  { id: "11", name: "Nina Kozlov", company: "BrightPath Analytics", source: "HubSpot" as const, matchedReports: ["market-size", "competitor-landscape"] },
+  { id: "12", name: "Carlos Mendez", company: "GrowthLoop", source: "Prospect List" as const, matchedReports: ["market-size", "market-entry"] },
+  { id: "13", name: "Aisha Okafor", company: "NexGen AI", source: "HubSpot" as const, matchedReports: ["market-size", "industry-trends"] },
+  { id: "14", name: "Henrik Larsen", company: "NordicSoft AB", source: "Prospect List" as const, matchedReports: ["market-size", "regulatory-compliance"] },
+  { id: "15", name: "Maya Tanaka", company: "CloudBridge Japan", source: "HubSpot" as const, matchedReports: ["market-size", "market-entry"] },
+  { id: "16", name: "Zach Williams", company: "Pipeline AI", source: "Prospect List" as const, matchedReports: ["market-size", "competitor-landscape"] },
+  { id: "17", name: "Fatima Al-Rashid", company: "VentureX MENA", source: "HubSpot" as const, matchedReports: ["market-size", "industry-trends"] },
+  { id: "18", name: "Tom Bradley", company: "SaasPro Inc", source: "Prospect List" as const, matchedReports: ["market-size", "competitor-landscape"] },
+  { id: "19", name: "Suki Patel", company: "ScaleForce", source: "HubSpot" as const, matchedReports: ["market-size", "market-entry"] },
+  { id: "20", name: "Lena Fischer", company: "DataVault EU", source: "Prospect List" as const, matchedReports: ["market-size", "regulatory-compliance"] },
+  { id: "21", name: "Ben Adeyemi", company: "TractionHQ", source: "HubSpot" as const, matchedReports: ["market-size", "competitor-landscape"] },
+  { id: "22", name: "Clara Rossi", company: "FinCloud Italia", source: "Prospect List" as const, matchedReports: ["market-size", "market-entry"] },
+  { id: "23", name: "Derek Ng", company: "QuantumSales SG", source: "HubSpot" as const, matchedReports: ["market-size", "industry-trends"] },
+  { id: "24", name: "Rachel Kim", company: "OrbitSaaS", source: "Prospect List" as const, matchedReports: ["market-size"] },
+  { id: "25", name: "Oscar Hernandez", company: "RevGrowth LATAM", source: "HubSpot" as const, matchedReports: ["industry-trends", "competitor-landscape"] },
+  { id: "26", name: "Ingrid Johansson", company: "TechScale Nordic", source: "Prospect List" as const, matchedReports: ["industry-trends", "market-entry"] },
+  { id: "27", name: "Wei Zhang", company: "AI Venture", source: "HubSpot" as const, matchedReports: ["industry-trends", "competitor-landscape"] },
+  { id: "28", name: "Sophie Martin", company: "GrowthEngine FR", source: "Prospect List" as const, matchedReports: ["industry-trends", "market-entry"] },
+  { id: "29", name: "Alex Petrov", company: "DataOps Sofia", source: "HubSpot" as const, matchedReports: ["industry-trends", "competitor-landscape"] },
+  { id: "30", name: "Lisa Chang", company: "RevOps Taiwan", source: "Prospect List" as const, matchedReports: ["industry-trends"] },
+  { id: "31", name: "Patrick O'Brien", company: "SaaSBridge", source: "HubSpot" as const, matchedReports: ["competitor-landscape"] },
+  { id: "32", name: "Mia Santos", company: "CloudScale Brasil", source: "Prospect List" as const, matchedReports: ["competitor-landscape"] },
+  { id: "33", name: "Yuki Yamamoto", company: "NextSaaS Japan", source: "HubSpot" as const, matchedReports: ["competitor-landscape", "regulatory-compliance"] },
+  { id: "34", name: "Ahmed Hassan", company: "ScaleUp Cairo", source: "Prospect List" as const, matchedReports: ["competitor-landscape"] },
+  { id: "35", name: "Eva Novak", company: "FintechPro CZ", source: "HubSpot" as const, matchedReports: ["competitor-landscape"] },
+  { id: "36", name: "Ryan Murphy", company: "GrowthStack AU", source: "Prospect List" as const, matchedReports: ["competitor-landscape"] },
+  { id: "37", name: "Anita Desai", company: "RevSync India", source: "HubSpot" as const, matchedReports: ["competitor-landscape"] },
+  { id: "38", name: "Lucas Weber", company: "ComplianceIO", source: "Prospect List" as const, matchedReports: ["competitor-landscape"] },
+  { id: "39", name: "Grace Lee", company: "MarketPulse SG", source: "HubSpot" as const, matchedReports: ["market-size", "market-entry"] },
+  { id: "40", name: "Daniel Costa", company: "RevHub Portugal", source: "Prospect List" as const, matchedReports: ["market-entry", "industry-trends"] },
+  { id: "41", name: "Nadia Volkov", company: "SaaSLaunch", source: "HubSpot" as const, matchedReports: ["market-entry"] },
+  { id: "42", name: "Chris Taylor", company: "ScalePath Canada", source: "Prospect List" as const, matchedReports: ["market-entry", "market-size"] },
+  { id: "43", name: "Priscilla Osei", company: "GrowthWave Africa", source: "HubSpot" as const, matchedReports: ["market-entry"] },
+  { id: "44", name: "Kevin Lim", company: "RevScale MY", source: "Prospect List" as const, matchedReports: ["regulatory-compliance"] },
 ];
 
-// ─── Mock Data ───────────────────────────────────────────────────────────────
+// ─── Build heatmap leads with varied ratings ─────────────────────────────────
 
-const REPORT_SECTIONS = [
-  { value: "all", label: "Show All Reports" },
-  { value: "market-size", label: "Market Size & Opportunity" },
-  { value: "industry-trends", label: "Industry Trends" },
-  { value: "competitor-landscape", label: "Competitor Landscape" },
-  { value: "regulatory-compliance", label: "Regulatory Compliance" },
-  { value: "market-entry", label: "Market Entry & Growth" },
-];
+// Use a seeded approach for more variety than just id-based hash
+function buildHeatmapLeads(): HeatmapLead[] {
+  // Predefined rating patterns for more realistic variety
+  const ratingOverrides: Record<string, Record<string, Rating>> = {
+    "1": { "market-size": "High", "industry-trends": "High", "competitor-landscape": "Medium", "regulatory-compliance": "High", "market-entry": "High" },
+    "2": { "market-size": "High", "industry-trends": "High", "competitor-landscape": "High", "regulatory-compliance": "Medium", "market-entry": "Medium" },
+    "3": { "market-size": "High", "industry-trends": "High", "competitor-landscape": "Medium", "regulatory-compliance": "Medium", "market-entry": "High" },
+    "4": { "market-size": "Low", "industry-trends": "Medium", "competitor-landscape": "High", "regulatory-compliance": "High", "market-entry": "Low" },
+    "5": { "market-size": "High", "industry-trends": "Medium", "competitor-landscape": "Low", "regulatory-compliance": "Medium", "market-entry": "High" },
+    "6": { "market-size": "Medium", "industry-trends": "Low", "competitor-landscape": "Medium", "regulatory-compliance": "High", "market-entry": "Low" },
+    "7": { "market-size": "High", "industry-trends": "High", "competitor-landscape": "High", "regulatory-compliance": "Low", "market-entry": "High" },
+    "8": { "market-size": "Low", "industry-trends": "Medium", "competitor-landscape": "Low", "regulatory-compliance": "High", "market-entry": "Low" },
+    "9": { "market-size": "Medium", "industry-trends": "Low", "competitor-landscape": "Low", "regulatory-compliance": "Low", "market-entry": "High" },
+    "10": { "market-size": "Medium", "industry-trends": "High", "competitor-landscape": "Low", "regulatory-compliance": "Medium", "market-entry": "High" },
+  };
 
-const mockLeads: MatchedLead[] = [
-  { id: "1", name: "Sarah Chen", email: "s.chen@acme.com", company: "Acme Corp", jobTitle: "VP Revenue Operations", tenure: "1 year 3 months", source: "HubSpot", matchedReports: ["market-size", "industry-trends"], signals: ["Recently hired", "Company expanding GTM team", "Active on LinkedIn discussing RevOps automation"] },
-  { id: "2", name: "James Okoro", email: "j.okoro@scaleup.io", company: "ScaleUp Inc", jobTitle: "Head of Growth", tenure: "2 years 5 months", source: "HubSpot", matchedReports: ["market-size", "competitor-landscape"], signals: ["Recently promoted", "Company raised Series B", "Published article on scaling outbound"] },
-  { id: "3", name: "Priya Sharma", email: "p.sharma@novatech.com", company: "NovaTech Solutions", jobTitle: "Director of Sales", tenure: "8 months", source: "Prospect List", matchedReports: ["industry-trends", "market-entry"], signals: ["Newly hired", "Company entering new market", "Hiring 5 SDRs"] },
-  { id: "4", name: "Marcus Liu", email: "m.liu@datadriven.ai", company: "DataDriven AI", jobTitle: "CRO", tenure: "3 years 1 month", source: "HubSpot", matchedReports: ["competitor-landscape", "regulatory-compliance"], signals: ["Long tenure decision maker", "Company evaluating new tools", "Spoke at SaaStr Annual"] },
-  { id: "5", name: "Elena Vasquez", email: "e.vasquez@cloudfirst.io", company: "CloudFirst Systems", jobTitle: "VP Sales", tenure: "1 year 8 months", source: "Prospect List", matchedReports: ["market-size", "market-entry"], signals: ["Company doubled ARR", "Hiring across go-to-market", "Active on LinkedIn"] },
-  { id: "6", name: "David Park", email: "d.park@momentum.dev", company: "Momentum Labs", jobTitle: "Sales Operations Manager", tenure: "6 months", source: "HubSpot", matchedReports: ["regulatory-compliance"], signals: ["Newly hired", "Building sales ops function from scratch"] },
-  { id: "7", name: "Amara Johnson", email: "a.johnson@revstack.ai", company: "RevStack AI", jobTitle: "Chief Revenue Officer", tenure: "2 years", source: "Prospect List", matchedReports: ["market-size", "industry-trends", "competitor-landscape"], signals: ["Key decision maker", "Company in hyper-growth", "Engaged with competitor content"] },
-  { id: "8", name: "Tobias Müller", email: "t.muller@finserv.digital", company: "FinServ Digital", jobTitle: "Head of Business Development", tenure: "4 years 2 months", source: "HubSpot", matchedReports: ["regulatory-compliance"], signals: ["Long tenure", "Company navigating compliance changes"] },
-  { id: "9", name: "Lily Tran", email: "l.tran@shopscale.com", company: "ShopScale D2C", jobTitle: "Director of Partnerships", tenure: "1 year", source: "Prospect List", matchedReports: ["market-entry"], signals: ["Company expanding partnerships", "Recently posted about channel strategy"] },
-  { id: "10", name: "Raj Patel", email: "r.patel@opsflow.io", company: "OpsFlow SaaS", jobTitle: "VP Marketing", tenure: "9 months", source: "HubSpot", matchedReports: ["industry-trends", "market-entry"], signals: ["Recently hired", "Company rebranding", "Active thought leader on LinkedIn"] },
-  // Additional leads to match badge counts
-  { id: "11", name: "Nina Kozlov", email: "n.kozlov@brightpath.io", company: "BrightPath Analytics", jobTitle: "Head of Sales", tenure: "1 year 6 months", source: "HubSpot", matchedReports: ["market-size", "competitor-landscape"], signals: ["Company scaling outbound", "Evaluating competitor tools"] },
-  { id: "12", name: "Carlos Mendez", email: "c.mendez@growthloop.co", company: "GrowthLoop", jobTitle: "VP Business Development", tenure: "2 years 3 months", source: "Prospect List", matchedReports: ["market-size", "market-entry"], signals: ["Company entering LATAM market", "Expanded sales team by 40%"] },
-  { id: "13", name: "Aisha Okafor", email: "a.okafor@nexgen.ai", company: "NexGen AI", jobTitle: "Director of Revenue", tenure: "10 months", source: "HubSpot", matchedReports: ["market-size", "industry-trends"], signals: ["AI-native company", "Growing ARR rapidly"] },
-  { id: "14", name: "Henrik Larsen", email: "h.larsen@nordicsoft.se", company: "NordicSoft AB", jobTitle: "Sales Director", tenure: "3 years", source: "Prospect List", matchedReports: ["market-size", "regulatory-compliance"], signals: ["EU expansion focus", "GDPR compliance leader"] },
-  { id: "15", name: "Maya Tanaka", email: "m.tanaka@cloudbridge.jp", company: "CloudBridge Japan", jobTitle: "GTM Lead", tenure: "1 year 2 months", source: "HubSpot", matchedReports: ["market-size", "market-entry"], signals: ["APAC market expansion", "Partnerships with local distributors"] },
-  { id: "16", name: "Zach Williams", email: "z.williams@pipelineai.com", company: "Pipeline AI", jobTitle: "Head of GTM", tenure: "7 months", source: "Prospect List", matchedReports: ["market-size", "competitor-landscape"], signals: ["Recently hired", "Company pivoting GTM strategy"] },
-  { id: "17", name: "Fatima Al-Rashid", email: "f.alrashid@venturex.ae", company: "VentureX MENA", jobTitle: "Chief Growth Officer", tenure: "2 years 8 months", source: "HubSpot", matchedReports: ["market-size", "industry-trends"], signals: ["MENA expansion", "Active AI adoption"] },
-  { id: "18", name: "Tom Bradley", email: "t.bradley@saaspro.com", company: "SaasPro Inc", jobTitle: "VP Revenue", tenure: "1 year 5 months", source: "Prospect List", matchedReports: ["market-size", "competitor-landscape"], signals: ["Competitor displacement opportunity", "Company consolidating tools"] },
-  { id: "19", name: "Suki Patel", email: "s.patel@scaleforce.io", company: "ScaleForce", jobTitle: "Director of Growth", tenure: "11 months", source: "HubSpot", matchedReports: ["market-size", "market-entry"], signals: ["High-growth segment", "Expanding to new verticals"] },
-  { id: "20", name: "Lena Fischer", email: "l.fischer@datavault.eu", company: "DataVault EU", jobTitle: "Head of Partnerships", tenure: "2 years 1 month", source: "Prospect List", matchedReports: ["market-size", "regulatory-compliance"], signals: ["EU data sovereignty focus", "Building partner ecosystem"] },
-  { id: "21", name: "Ben Adeyemi", email: "b.adeyemi@tractionhq.com", company: "TractionHQ", jobTitle: "CRO", tenure: "3 years 4 months", source: "HubSpot", matchedReports: ["market-size", "competitor-landscape"], signals: ["Key decision maker", "Evaluating new platforms"] },
-  { id: "22", name: "Clara Rossi", email: "c.rossi@fincloud.it", company: "FinCloud Italia", jobTitle: "VP Sales EMEA", tenure: "1 year 9 months", source: "Prospect List", matchedReports: ["market-size", "market-entry"], signals: ["Southern Europe expansion", "Fintech vertical focus"] },
-  { id: "23", name: "Derek Ng", email: "d.ng@quantumsales.sg", company: "QuantumSales SG", jobTitle: "Head of Revenue", tenure: "8 months", source: "HubSpot", matchedReports: ["market-size", "industry-trends"], signals: ["SEA market leader", "AI-first sales approach"] },
-  { id: "24", name: "Rachel Kim", email: "r.kim@orbitsaas.kr", company: "OrbitSaaS", jobTitle: "Director of Sales", tenure: "1 year 4 months", source: "Prospect List", matchedReports: ["market-size"], signals: ["Company doubled revenue", "Expanding internationally"] },
-  { id: "25", name: "Oscar Hernandez", email: "o.hernandez@revgrowth.mx", company: "RevGrowth LATAM", jobTitle: "VP Growth", tenure: "2 years", source: "HubSpot", matchedReports: ["industry-trends", "competitor-landscape"], signals: ["LATAM market intelligence", "Competitor benchmarking"] },
-  { id: "26", name: "Ingrid Johansson", email: "i.johansson@techscale.no", company: "TechScale Nordic", jobTitle: "Sales Director", tenure: "3 years 2 months", source: "Prospect List", matchedReports: ["industry-trends", "market-entry"], signals: ["Nordic SaaS expansion", "Cloud migration leader"] },
-  { id: "27", name: "Wei Zhang", email: "w.zhang@aiventure.cn", company: "AI Venture", jobTitle: "Head of International Sales", tenure: "1 year 7 months", source: "HubSpot", matchedReports: ["industry-trends", "competitor-landscape"], signals: ["AI adoption accelerating", "Competing in global markets"] },
-  { id: "28", name: "Sophie Martin", email: "s.martin@growthengine.fr", company: "GrowthEngine FR", jobTitle: "Director of GTM", tenure: "10 months", source: "Prospect List", matchedReports: ["industry-trends", "market-entry"], signals: ["French market entry", "Cloud-first strategy"] },
-  { id: "29", name: "Alex Petrov", email: "a.petrov@dataops.bg", company: "DataOps Sofia", jobTitle: "VP Sales", tenure: "2 years 6 months", source: "HubSpot", matchedReports: ["industry-trends", "competitor-landscape"], signals: ["Eastern Europe hub", "Evaluating competitor alternatives"] },
-  { id: "30", name: "Lisa Chang", email: "l.chang@revops.tw", company: "RevOps Taiwan", jobTitle: "Head of Growth", tenure: "1 year 1 month", source: "Prospect List", matchedReports: ["industry-trends"], signals: ["RevOps automation adoption", "Active in SaaS community"] },
-  { id: "31", name: "Patrick O'Brien", email: "p.obrien@saasbridge.ie", company: "SaaSBridge", jobTitle: "Chief Revenue Officer", tenure: "4 years", source: "HubSpot", matchedReports: ["competitor-landscape"], signals: ["Competitor displacement", "UK/Ireland expansion"] },
-  { id: "32", name: "Mia Santos", email: "m.santos@cloudscale.br", company: "CloudScale Brasil", jobTitle: "Director of Sales", tenure: "1 year 3 months", source: "Prospect List", matchedReports: ["competitor-landscape"], signals: ["Brazil SaaS growth", "Evaluating US-based tools"] },
-  { id: "33", name: "Yuki Yamamoto", email: "y.yamamoto@nextsaas.jp", company: "NextSaaS Japan", jobTitle: "VP Partnerships", tenure: "2 years 4 months", source: "HubSpot", matchedReports: ["competitor-landscape", "regulatory-compliance"], signals: ["Japan data privacy compliance", "Competitor benchmarking"] },
-  { id: "34", name: "Ahmed Hassan", email: "a.hassan@scaleup.eg", company: "ScaleUp Cairo", jobTitle: "Head of Sales", tenure: "9 months", source: "Prospect List", matchedReports: ["competitor-landscape"], signals: ["MENA growth market", "Switching from competitor platform"] },
-  { id: "35", name: "Eva Novak", email: "e.novak@fintechpro.cz", company: "FintechPro CZ", jobTitle: "GTM Director", tenure: "1 year 8 months", source: "HubSpot", matchedReports: ["competitor-landscape"], signals: ["Central Europe expansion", "Active competitive analysis"] },
-  { id: "36", name: "Ryan Murphy", email: "r.murphy@growthstack.au", company: "GrowthStack AU", jobTitle: "VP Revenue", tenure: "2 years 2 months", source: "Prospect List", matchedReports: ["competitor-landscape"], signals: ["ANZ market leader", "Evaluating new sales tools"] },
-  { id: "37", name: "Anita Desai", email: "a.desai@revsync.in", company: "RevSync India", jobTitle: "Director of Growth", tenure: "1 year", source: "HubSpot", matchedReports: ["competitor-landscape"], signals: ["India SaaS ecosystem", "Competitor content engagement"] },
-  { id: "38", name: "Lucas Weber", email: "l.weber@complianceio.de", company: "ComplianceIO", jobTitle: "Head of Legal & Sales", tenure: "3 years 5 months", source: "Prospect List", matchedReports: ["competitor-landscape"], signals: ["German compliance specialist", "Evaluating integrated platforms"] },
-  { id: "39", name: "Grace Lee", email: "g.lee@marketpulse.sg", company: "MarketPulse SG", jobTitle: "VP Growth", tenure: "1 year 6 months", source: "HubSpot", matchedReports: ["market-size", "market-entry"], signals: ["SEA competitive landscape", "Active market analysis"] },
-  { id: "40", name: "Daniel Costa", email: "d.costa@revhub.pt", company: "RevHub Portugal", jobTitle: "Sales Director", tenure: "2 years 7 months", source: "Prospect List", matchedReports: ["market-entry", "industry-trends"], signals: ["Southern Europe growth", "Cloud adoption wave"] },
-  { id: "41", name: "Nadia Volkov", email: "n.volkov@saaslaunch.ee", company: "SaaSLaunch", jobTitle: "Head of GTM", tenure: "8 months", source: "HubSpot", matchedReports: ["market-entry"], signals: ["Baltic expansion", "GTM playbook building"] },
-  { id: "42", name: "Chris Taylor", email: "c.taylor@scalepath.ca", company: "ScalePath Canada", jobTitle: "VP Business Development", tenure: "1 year 11 months", source: "Prospect List", matchedReports: ["market-entry", "market-size"], signals: ["Canadian market entry", "Cross-border sales strategy"] },
-  { id: "43", name: "Priscilla Osei", email: "p.osei@growthwave.gh", company: "GrowthWave Africa", jobTitle: "Director of Expansion", tenure: "1 year 3 months", source: "HubSpot", matchedReports: ["market-entry"], signals: ["Africa SaaS market pioneer", "Building distribution network"] },
-  { id: "44", name: "Kevin Lim", email: "k.lim@revscale.my", company: "RevScale MY", jobTitle: "Head of Sales", tenure: "7 months", source: "Prospect List", matchedReports: ["regulatory-compliance"], signals: ["Malaysia PDPA compliance", "Regional expansion focus"] },
-];
+  return RAW_LEADS.map((lead) => {
+    const ratings = ratingOverrides[lead.id] || assignRatings(lead.id, lead.matchedReports);
+    const totalScore = computeScore(ratings);
+    return {
+      id: lead.id,
+      name: lead.name,
+      company: lead.company,
+      source: lead.source,
+      ratings,
+      totalScore,
+      priority: getPriority(totalScore),
+    };
+  });
+}
 
-// ─── Props ────────────────────────────────────────────────────────────────────
+const heatmapLeads = buildHeatmapLeads();
+
+// ─── Rating Cell Component ──────────────────────────────────────────────────
+
+const RatingCell = ({ rating }: { rating: Rating }) => {
+  const styles: Record<Rating, string> = {
+    High: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400",
+    Medium: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
+    Low: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+  };
+
+  return (
+    <span className={`inline-block px-2 py-0.5 rounded text-[11px] font-semibold ${styles[rating]}`}>
+      {rating}
+    </span>
+  );
+};
+
+// ─── Priority Badge ─────────────────────────────────────────────────────────
+
+const PriorityBadge = ({ tier }: { tier: string }) => {
+  const styles: Record<string, string> = {
+    "Tier 1": "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800",
+    "Tier 2": "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800",
+    "Tier 3": "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800",
+  };
+
+  return (
+    <Badge variant="outline" className={`text-[11px] font-semibold ${styles[tier] || ""}`}>
+      {tier}
+    </Badge>
+  );
+};
+
+// ─── Props ───────────────────────────────────────────────────────────────────
 
 interface LeadsTableProps {
   opportunityFilter?: string | null;
   onClearOpportunityFilter?: () => void;
-  onResearchWithScout?: (lead: MatchedLead) => void;
-  onChatWithScout?: (leads: MatchedLead[], reportFilter?: string) => void;
+  onResearchWithScout?: (lead: any) => void;
+  onChatWithScout?: (leads: any[], reportFilter?: string) => void;
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -139,207 +207,169 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
   onResearchWithScout,
   onChatWithScout,
 }) => {
-  const [reportFilter, setReportFilter] = useState<string>(opportunityFilter || "all");
-  const [activeColumns, setActiveColumns] = useState<AgenticColumnId[]>([]);
-  const [enrichedData, setEnrichedData] = useState<Record<string, Record<string, string>>>({});
-  const [enrichingColumn, setEnrichingColumn] = useState<string | null>(null);
-  const [addColumnOpen, setAddColumnOpen] = useState(false);
-  const [enrichDialog, setEnrichDialog] = useState<{ columnId: AgenticColumnId; label: string } | null>(null);
+  const [sortBy, setSortBy] = useState<"score" | "priority" | null>(null);
+  const [sortAsc, setSortAsc] = useState(false);
+  const [tierFilter, setTierFilter] = useState<string>("all");
 
-  // Sync external filter
+  // Sync external filter (not used for heatmap but kept for compatibility)
   React.useEffect(() => {
-    if (opportunityFilter) setReportFilter(opportunityFilter);
+    // External opportunity filter can be handled if needed
   }, [opportunityFilter]);
 
-  const filteredLeads = reportFilter === "all"
-    ? mockLeads
-    : mockLeads.filter((l) => l.matchedReports.includes(reportFilter));
+  // Filter by tier
+  const filteredLeads = tierFilter === "all"
+    ? heatmapLeads
+    : heatmapLeads.filter((l) => l.priority === tierFilter);
 
-  const currentReportLabel = REPORT_SECTIONS.find((r) => r.value === reportFilter)?.label || "All Reports";
+  // Sort
+  const sortedLeads = sortBy
+    ? [...filteredLeads].sort((a, b) => {
+        const diff = sortBy === "score" ? a.totalScore - b.totalScore : a.priority.localeCompare(b.priority);
+        return sortAsc ? diff : -diff;
+      })
+    : [...filteredLeads].sort((a, b) => b.totalScore - a.totalScore); // Default: highest score first
 
-  const handleAddColumn = (colId: AgenticColumnId) => {
-    setAddColumnOpen(false);
-    const col = AGENTIC_COLUMNS.find((c) => c.id === colId);
-    if (!col) return;
-    setEnrichDialog({ columnId: colId, label: col.label });
-  };
-
-  const runEnrichment = (colId: AgenticColumnId, scope: "column" | "all") => {
-    setEnrichDialog(null);
-    if (!activeColumns.includes(colId)) {
-      setActiveColumns((prev) => [...prev, colId]);
+  const toggleSort = (col: "score" | "priority") => {
+    if (sortBy === col) {
+      setSortAsc(!sortAsc);
+    } else {
+      setSortBy(col);
+      setSortAsc(false);
     }
-    setEnrichingColumn(colId);
-
-    // Mock enrichment delay
-    setTimeout(() => {
-      const col = AGENTIC_COLUMNS.find((c) => c.id === colId)!;
-      const newData: Record<string, Record<string, string>> = { ...enrichedData };
-      mockLeads.forEach((lead, i) => {
-        if (!newData[lead.id]) newData[lead.id] = {};
-        newData[lead.id][colId] = col.mockValues[i % col.mockValues.length];
-      });
-      setEnrichedData(newData);
-      setEnrichingColumn(null);
-    }, 1800);
   };
-
-  const removeColumn = (colId: AgenticColumnId) => {
-    setActiveColumns((prev) => prev.filter((c) => c !== colId));
-  };
-
-  const availableColumns = AGENTIC_COLUMNS.filter((c) => !activeColumns.includes(c.id));
 
   return (
     <div className="space-y-4">
-      {/* Header + Report Filter */}
+      {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-3">
-          <h3 className="text-sm font-semibold text-foreground">Matched Leads</h3>
-          {reportFilter !== "all" && (
+          <h3 className="text-sm font-semibold text-foreground">Lead Intelligence Heatmap</h3>
+          <TooltipProvider delayDuration={200}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent side="right" className="max-w-xs text-xs">
+                Each lead is rated High, Medium, or Low across all Scout report sections. Scores are calculated from these ratings to determine priority tiers.
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          {opportunityFilter && opportunityFilter !== "all" && (
             <Badge variant="outline" className="text-xs bg-primary/5 text-primary border-primary/20 gap-1">
-              From: {currentReportLabel}
-              <button
-                className="ml-1 hover:text-primary/70"
-                onClick={() => {
-                  setReportFilter("all");
-                  onClearOpportunityFilter?.();
-                }}
-              >
-                ×
-              </button>
+              Filtered view
+              <button className="ml-1 hover:text-primary/70" onClick={onClearOpportunityFilter}>×</button>
             </Badge>
           )}
         </div>
         <div className="flex items-center gap-2">
-          <Select value={reportFilter} onValueChange={setReportFilter}>
-            <SelectTrigger className="h-8 text-xs w-[200px]">
-              <SelectValue />
+          <Select value={tierFilter} onValueChange={setTierFilter}>
+            <SelectTrigger className="h-8 text-xs w-[130px]">
+              <SelectValue placeholder="All Tiers" />
             </SelectTrigger>
             <SelectContent>
-              {REPORT_SECTIONS.map((r) => (
-                <SelectItem key={r.value} value={r.value} className="text-xs">{r.label}</SelectItem>
-              ))}
+              <SelectItem value="all" className="text-xs">All Tiers</SelectItem>
+              <SelectItem value="Tier 1" className="text-xs">Tier 1 (75+)</SelectItem>
+              <SelectItem value="Tier 2" className="text-xs">Tier 2 (50–74)</SelectItem>
+              <SelectItem value="Tier 3" className="text-xs">Tier 3 (&lt;50)</SelectItem>
             </SelectContent>
           </Select>
           <Button
             variant="ghost"
             size="icon"
             className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
-            onClick={() => onChatWithScout?.(filteredLeads, reportFilter !== "all" ? reportFilter : undefined)}
+            onClick={() => onChatWithScout?.(sortedLeads)}
+            title="Chat with Scout about all leads"
           >
             <Bot className="h-4 w-4" />
           </Button>
         </div>
       </div>
 
-      {/* Table */}
+      {/* Color legend */}
+      <div className="flex items-center gap-4 text-[11px] text-muted-foreground">
+        <div className="flex items-center gap-1.5">
+          <span className="inline-block w-3 h-3 rounded bg-emerald-100 dark:bg-emerald-900/30" />
+          Green = strong fit
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="inline-block w-3 h-3 rounded bg-amber-100 dark:bg-amber-900/30" />
+          Amber = moderate fit
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="inline-block w-3 h-3 rounded bg-red-100 dark:bg-red-900/30" />
+          Red = weak fit
+        </div>
+      </div>
+
+      {/* Heatmap Table */}
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead className="w-[160px] text-xs">Name</TableHead>
-                <TableHead className="w-[200px] text-xs">Email</TableHead>
-                <TableHead className="w-[150px] text-xs">Company</TableHead>
-                <TableHead className="w-[120px] text-xs">Source</TableHead>
-
-                {/* Agentic Columns */}
-                {activeColumns.map((colId) => {
-                  const col = AGENTIC_COLUMNS.find((c) => c.id === colId)!;
-                  return (
-                    <TableHead key={colId} className="text-xs min-w-[120px]">
-                      <div className="flex items-center gap-1.5">
-                        <span>{col.label}</span>
-                        {enrichingColumn === colId && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
-                        {enrichingColumn !== colId && enrichedData[mockLeads[0]?.id]?.[colId] && (
-                          <Check className="h-3 w-3 text-emerald-500" />
-                        )}
-                        <button
-                          className="text-muted-foreground hover:text-destructive ml-auto text-[10px]"
-                          onClick={() => removeColumn(colId)}
-                        >
-                          ×
-                        </button>
-                      </div>
-                    </TableHead>
-                  );
-                })}
-
-                {/* Add Column Button */}
-                <TableHead className="w-[100px] text-xs">
-                  <Popover open={addColumnOpen} onOpenChange={setAddColumnOpen}>
-                    <PopoverTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-6 text-[10px] gap-1 text-primary hover:text-primary">
-                        <Plus className="h-3 w-3" /> Add Column
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-48 p-1.5" align="start">
-                      <div className="space-y-0.5">
-                        {availableColumns.length === 0 ? (
-                          <p className="text-xs text-muted-foreground p-2 text-center">All columns added</p>
-                        ) : (
-                          availableColumns.map((col) => (
-                            <button
-                              key={col.id}
-                              className="w-full text-left text-xs px-2.5 py-1.5 rounded hover:bg-muted transition-colors text-foreground"
-                              onClick={() => handleAddColumn(col.id)}
-                            >
-                              {col.label}
-                            </button>
-                          ))
-                        )}
-                      </div>
-                    </PopoverContent>
-                  </Popover>
+                <TableHead className="w-[150px] text-xs font-semibold sticky left-0 bg-background z-10">Lead</TableHead>
+                <TableHead className="w-[130px] text-xs font-semibold">Company</TableHead>
+                {REPORT_COLUMNS.map((col) => (
+                  <TableHead key={col.key} className="text-xs font-semibold text-center min-w-[100px]">
+                    <TooltipProvider delayDuration={200}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="cursor-default">{col.shortLabel}</span>
+                        </TooltipTrigger>
+                        <TooltipContent className="text-xs">{col.label}</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </TableHead>
+                ))}
+                <TableHead className="text-xs font-semibold text-center w-[90px]">
+                  <button
+                    className="flex items-center gap-1 mx-auto hover:text-foreground transition-colors"
+                    onClick={() => toggleSort("score")}
+                  >
+                    Total Score
+                    <ArrowUpDown className={`h-3 w-3 ${sortBy === "score" ? "text-primary" : "text-muted-foreground"}`} />
+                  </button>
                 </TableHead>
-
-                {/* Ask Scout - persistent */}
-                <TableHead className="w-[160px] text-xs text-right">Action</TableHead>
+                <TableHead className="text-xs font-semibold text-center w-[80px]">
+                  <button
+                    className="flex items-center gap-1 mx-auto hover:text-foreground transition-colors"
+                    onClick={() => toggleSort("priority")}
+                  >
+                    Priority
+                    <ArrowUpDown className={`h-3 w-3 ${sortBy === "priority" ? "text-primary" : "text-muted-foreground"}`} />
+                  </button>
+                </TableHead>
+                <TableHead className="w-[80px] text-xs text-right">Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredLeads.length === 0 ? (
+              {sortedLeads.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5 + activeColumns.length + 1} className="text-center py-10 text-sm text-muted-foreground">
-                    No matched leads for this report section.
+                  <TableCell colSpan={REPORT_COLUMNS.length + 5} className="text-center py-10 text-sm text-muted-foreground">
+                    No leads match this filter.
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredLeads.map((lead) => (
+                sortedLeads.map((lead) => (
                   <TableRow key={lead.id} className="group">
-                    <TableCell className="text-sm font-medium text-foreground">{lead.name}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{lead.email}</TableCell>
-                    <TableCell className="text-sm text-foreground">{lead.company}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={`text-[10px] font-medium ${lead.source === "HubSpot" ? "bg-orange-50 text-orange-700 border-orange-200" : "bg-violet-50 text-violet-700 border-violet-200"}`}>
-                        {lead.source}
-                      </Badge>
-                    </TableCell>
-
-                    {/* Agentic Column Values */}
-                    {activeColumns.map((colId) => (
-                      <TableCell key={colId} className="text-xs text-muted-foreground">
-                        {enrichingColumn === colId ? (
-                          <div className="flex items-center gap-1.5">
-                            <Loader2 className="h-3 w-3 animate-spin text-primary" />
-                            <span className="text-[10px] text-muted-foreground">Enriching…</span>
-                          </div>
-                        ) : (
-                          enrichedData[lead.id]?.[colId] || <span className="text-muted-foreground/50">—</span>
-                        )}
+                    <TableCell className="text-sm font-medium text-foreground sticky left-0 bg-background z-10">{lead.name}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{lead.company}</TableCell>
+                    {REPORT_COLUMNS.map((col) => (
+                      <TableCell key={col.key} className="text-center">
+                        <RatingCell rating={lead.ratings[col.key]} />
                       </TableCell>
                     ))}
-
-                    {/* Add Column spacer */}
-                    <TableCell />
-
-                    {/* Ask Scout */}
+                    <TableCell className="text-center">
+                      <span className="text-sm font-bold text-foreground">{lead.totalScore}</span>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <PriorityBadge tier={lead.priority} />
+                    </TableCell>
                     <TableCell className="text-right">
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-7 text-xs gap-1.5 text-primary hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="h-7 text-xs gap-1 text-primary hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
                         onClick={() => onResearchWithScout?.(lead)}
                       >
                         Ask Scout <ArrowRight className="h-3 w-3" />
@@ -352,25 +382,6 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
           </Table>
         </div>
       </Card>
-
-      {/* Enrichment Dialog */}
-      <Dialog open={!!enrichDialog} onOpenChange={() => setEnrichDialog(null)}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="text-sm">Run enrichment: {enrichDialog?.label}</DialogTitle>
-          </DialogHeader>
-          <p className="text-xs text-muted-foreground">Scout will enrich your leads with <span className="font-medium text-foreground">{enrichDialog?.label}</span> data.</p>
-          <p className="text-xs text-muted-foreground mt-2">Run enrichment for:</p>
-          <DialogFooter className="flex-col sm:flex-row gap-2 mt-2">
-            <Button variant="outline" size="sm" className="text-xs gap-1.5" onClick={() => enrichDialog && runEnrichment(enrichDialog.columnId, "column")}>
-              <Bot className="h-3 w-3" /> This column only
-            </Button>
-            <Button size="sm" className="text-xs gap-1.5" onClick={() => enrichDialog && runEnrichment(enrichDialog.columnId, "all")}>
-              <Bot className="h-3 w-3" /> All leads
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
