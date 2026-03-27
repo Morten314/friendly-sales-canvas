@@ -12,7 +12,6 @@ interface SuggestedICP {
 export const ICPIntelligence = () => {
   const { currentUser } = useAuth();
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [acceptedICPs, setAcceptedICPs] = useState<SuggestedICP[]>([]);
 
   // Listen for Refresh button click from header - triggers recommended ICP generation
   useEffect(() => {
@@ -36,7 +35,6 @@ export const ICPIntelligence = () => {
   }, [currentUser?.uid]);
 
   const handleICPAccepted = (icp: SuggestedICP) => {
-    setAcceptedICPs(prev => [...prev, icp]);
     window.dispatchEvent(new CustomEvent('icpAccepted', { detail: icp }));
   };
 

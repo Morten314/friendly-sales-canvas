@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { EditDropdownMenu } from "@/components/market-research/EditDropdownMenu";
@@ -56,8 +56,14 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { getLeadCountForICP } from "@/components/customers/LeadStream";
-import { buildIcpUrl, buildApiUrl } from "@/lib/api";
+import { buildIcpUrl, buildApiUrl, apiFetchJson } from "@/lib/api";
 import { getUserLocalStorage } from "@/utils/cacheUtils";
+import {
+  mergeProfilerAcceptedIcpDisplay,
+  saveProfilerAcceptedIcpDisplayMeta,
+  copyProfilerDisplayMetaToProfileId,
+  PROFILER_ICP_DISPLAY_KEY,
+} from "@/utils/profilerAcceptedIcpDisplay";
 
 /** Dev-only logs for verifying Refresh → GET /icp → mapped cards/reports. Strip or disable for production noise. */
 function profilerIcpDebug(...args: unknown[]) {
@@ -181,21 +187,39 @@ const confidenceColor = (c: string) => {
 
 // Map customer profile ICP (Mission Control) to ExistingICP format
 const mapCustomerProfileICPToExisting = (icp: any, index: number): ExistingICP => {
-  const industryArr = Array.isArray(icp.industry) ? icp.industry : [icp.industry].filter(Boolean);
-  const companySizeArr = Array.isArray(icp.company_size) ? icp.company_size : Array.isArray(icp.companySize) ? icp.companySize : [];
-  const buyerRoleArr = Array.isArray(icp.buyer_role) ? icp.buyer_role : Array.isArray(icp.buyerRole) ? icp.buyerRole : [];
-  const locationArr = Array.isArray(icp.location) ? icp.location : [];
-  const primaryRegion = icp.primary_region || icp.primaryRegion || "";
-  const name = icp.name || (industryArr[0] ? `${industryArr[0]} - ${primaryRegion || "Global"}` : `ICP ${index + 1}`);
+  const merged = mergeProfilerAcceptedIcpDisplay(icp);
+  const industryArr = Array.isArray(merged.industry) ? merged.industry : [merged.industry].filter(Boolean);
+  const companySizeArr = Array.isArray(merged.company_size)
+    ? merged.company_size
+    : Array.isArray(merged.companySize)
+      ? merged.companySize
+      : [];
+  const buyerRoleArr = Array.isArray(merged.buyer_role) ? merged.buyer_role : Array.isArray(merged.buyerRole) ? merged.buyerRole : [];
+  const locationArr = Array.isArray(merged.location) ? merged.location : [];
+  const primaryRegion = merged.primary_region || merged.primaryRegion || "";
+  let name =
+    merged.name ||
+    (industryArr[0] ? `${industryArr[0]} - ${primaryRegion || "Global"}` : `ICP ${index + 1}`);
+  if (String(industryArr[0] || "").toLowerCase() === "unknown" && merged.id) {
+    try {
+      const raw = localStorage.getItem(PROFILER_ICP_DISPLAY_KEY(merged.id));
+      if (raw) {
+        const m = JSON.parse(raw) as { displayName?: string };
+        if (m.displayName) name = m.displayName;
+      }
+    } catch {
+      /* ignore */
+    }
+  }
   return {
-    id: icp.id || `icp-${index + 1}`,
+    id: merged.id || `icp-${index + 1}`,
     name,
     geography: primaryRegion || (locationArr.length > 0 ? locationArr.join(", ") : undefined),
     industry: industryArr.join(", ") || undefined,
     companySize: companySizeArr.join(", ") || undefined,
     buyerRole: buyerRoleArr.join(", ") || undefined,
-    fitConfidence: (icp.fit_confidence || icp.fitConfidence || "medium") as string,
-    status: (icp.status || "active") as "active" | "inactive",
+    fitConfidence: (merged.fit_confidence || merged.fitConfidence || "medium") as string,
+    status: (merged.status || "active") as "active" | "inactive",
   };
 };
 
@@ -428,13 +452,6 @@ export const SuggestedICPCards = ({
     } catch {}
     return [];
   });
-  const [acceptedICPs, setAcceptedICPs] = useState<SuggestedICP[]>(() => {
-    try {
-      const saved = localStorage.getItem("profiler_acceptedICPs");
-      if (saved) return JSON.parse(saved);
-    } catch {}
-    return [];
-  });
   const [refinedICPs, setRefinedICPs] = useState<SuggestedICP[]>([]);
   const [newICPs, setNewICPs] = useState<SuggestedICP[]>([]);
   const [cardStatuses, setCardStatuses] = useState<Record<string, ICPCardStatus>>(() => {
@@ -458,6 +475,31 @@ export const SuggestedICPCards = ({
     return false;
   });
   const [expandedReportId, setExpandedReportId] = useState<string | null>(null);
+  const [isSavingAccept, setIsSavingAccept] = useState(false);
+
+  /** Reload Current ICPs from GET /customer_profile after backend updates (e.g. accept from suggested). Returns profile ICP ids. */
+  const refetchCustomerProfileIcps = useCallback(async (): Promise<string[]> => {
+    const orgIdToUse = orgId || currentUser?.uid || "brewra";
+    try {
+      const profileUrl = buildApiUrl(`customer_profile?org_id=${encodeURIComponent(orgIdToUse)}`);
+      const profileRes = await fetch(profileUrl, { method: "GET", headers: { "Content-Type": "application/json" } });
+      if (!profileRes.ok) return [];
+      const profileData = await profileRes.json();
+      const data = profileData.data || profileData;
+      const icpsData =
+        data.icps ??
+        data.customer_profiles?.icps ??
+        data.customer_profile?.icps ??
+        [];
+      if (Array.isArray(icpsData) && icpsData.length > 0) {
+        setExistingICPs(icpsData.map((icp: any, i: number) => mapCustomerProfileICPToExisting(icp, i)));
+        return icpsData.map((row: any) => String(row.id || "")).filter(Boolean);
+      }
+    } catch {
+      /* keep existing rows */
+    }
+    return [];
+  }, [orgId, currentUser?.uid]);
 
   // Persist state changes
   useEffect(() => {
@@ -467,10 +509,6 @@ export const SuggestedICPCards = ({
   useEffect(() => {
     localStorage.setItem("profiler_existingICPs", JSON.stringify(existingICPs));
   }, [existingICPs]);
-
-  useEffect(() => {
-    localStorage.setItem("profiler_acceptedICPs", JSON.stringify(acceptedICPs));
-  }, [acceptedICPs]);
 
   useEffect(() => {
     localStorage.setItem("profiler_showRecommendations", String(showRecommendations));
@@ -732,23 +770,70 @@ export const SuggestedICPCards = ({
     setConfirmAcceptICP(icp);
   };
 
-  const handleConfirmAccept = () => {
-    if (!confirmAcceptICP) return;
+  const handleConfirmAccept = async () => {
+    if (!confirmAcceptICP || isSavingAccept) return;
     const icp = confirmAcceptICP;
-    setCardStatuses((prev) => ({
-      ...prev,
-      [icp.id]: { status: "accepted", acceptedAt: new Date() },
-    }));
+    const uid = currentUser?.uid;
+    const orgIdToUse = orgId || uid || "";
+    if (!uid || !orgIdToUse) {
+      toast({
+        title: "Cannot save ICP",
+        description: "Sign in and ensure an organization context is available.",
+        variant: "destructive",
+      });
+      setConfirmAcceptICP(null);
+      return;
+    }
 
-    // Save full suggestion data to Current ICPs table
-    setAcceptedICPs((prev) => [...prev, icp]);
+    setIsSavingAccept(true);
+    try {
+      const idsBeforeAccept = new Set(existingICPs.map((e) => e.id));
 
-    onICPAccepted?.(icp);
-    toast({
-      title: "Customer Profile updated.",
-      description: `"${icp.name}" has been saved to your Customer Profile and Current ICPs.`,
-    });
-    setConfirmAcceptICP(null);
+      await apiFetchJson("customer_profile/from_suggested_icp", {
+        method: "POST",
+        body: {
+          user_id: uid,
+          org_id: orgIdToUse,
+          icp_id: icp.id,
+        },
+      });
+
+      saveProfilerAcceptedIcpDisplayMeta(icp.id, {
+        regions: Array.isArray(icp.regions) ? icp.regions : [],
+        industry: icp.industry,
+        companySize: icp.companySize,
+        decisionMakers: Array.isArray(icp.decisionMakers) ? icp.decisionMakers : [],
+        displayName: icp.name,
+      });
+
+      setCardStatuses((prev) => ({
+        ...prev,
+        [icp.id]: { status: "accepted", acceptedAt: new Date() },
+      }));
+      onICPAccepted?.(icp);
+
+      const idsAfter = await refetchCustomerProfileIcps();
+      const newProfileIds = idsAfter.filter((id) => !idsBeforeAccept.has(id));
+      if (newProfileIds.length === 1 && newProfileIds[0] !== icp.id) {
+        copyProfilerDisplayMetaToProfileId(icp.id, newProfileIds[0]);
+        await refetchCustomerProfileIcps();
+      }
+      window.dispatchEvent(new CustomEvent("customerProfileSaved"));
+
+      toast({
+        title: "Customer Profile updated.",
+        description: `"${icp.name}" has been saved to your Customer Profile and Current ICPs.`,
+      });
+    } catch (err) {
+      toast({
+        title: "Could not save ICP",
+        description: err instanceof Error ? err.message : "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingAccept(false);
+      setConfirmAcceptICP(null);
+    }
   };
 
   const handleRejectICP = (icp: SuggestedICP) => {
@@ -769,8 +854,6 @@ export const SuggestedICPCards = ({
       ...prev,
       [icpId]: { status: "suggested" },
     }));
-    // Remove from Current ICPs table
-    setAcceptedICPs((prev) => prev.filter((icp) => icp.id !== icpId));
     if (expandedReportId === icpId) setExpandedReportId(null);
     toast({ title: "Action undone", description: "ICP returned to suggestions and removed from Current ICPs." });
   };
@@ -984,121 +1067,6 @@ export const SuggestedICPCards = ({
                   </>
                 );
               })}
-              {/* Accepted recommended ICPs appear in the same table under Current ICPs */}
-              {acceptedICPs.map((icp) => (
-                <>
-                  <TableRow key={icp.id} className="bg-emerald-50/20">
-                    <TableCell className="font-medium">
-                      <Badge
-                        variant="secondary"
-                        className={`text-[9px] px-1.5 py-0 mb-1 block w-fit ${
-                          icp.type === "refined"
-                            ? "bg-amber-100 text-amber-800"
-                            : "bg-primary/10 text-primary"
-                        }`}
-                      >
-                        {icp.type === "refined" ? "Refined" : "New"}
-                      </Badge>
-                      {icp.name}
-                    </TableCell>
-                    <TableCell>{icp.industry || "—"}</TableCell>
-                    <TableCell>{icp.regions?.join(", ") || "—"}</TableCell>
-                    <TableCell>{icp.companySize || "—"}</TableCell>
-                    <TableCell>{icp.decisionMakers?.join(", ") || "—"}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${confidenceColor(icp.confidenceScore || "Medium")}`}>
-                        {icp.confidenceScore || "Medium"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="sm" onClick={() => handleViewProspects(icp.name)} className="text-primary hover:text-primary/80">
-                        <Zap className="h-3.5 w-3.5 mr-1" />
-                        View Leads
-                      </Button>
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setExpandedReportId(expandedReportId === icp.id ? null : icp.id)}
-                        className="text-primary hover:text-primary/80"
-                      >
-                        <Eye className="h-3.5 w-3.5 mr-1" />
-                        {expandedReportId === icp.id ? "Close" : "View Report"}
-                      </Button>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleUndoAction(icp.id)}
-                        className="text-muted-foreground hover:text-foreground"
-                        title="Undo — return to recommendations"
-                      >
-                        <Undo2 className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setAcceptedICPs((prev) => prev.filter((a) => a.id !== icp.id));
-                          setCardStatuses((prev) => {
-                            const next = { ...prev };
-                            delete next[icp.id];
-                            return next;
-                          });
-                          toast({ title: "ICP deleted", description: `"${icp.name}" permanently removed.` });
-                        }}
-                        className="text-destructive hover:text-destructive/80 hover:bg-destructive/10"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                  {expandedReportId === icp.id && (
-                    <TableRow key={`${icp.id}-report`}>
-                      <TableCell colSpan={9} className="p-0">
-                        <div className="transition-all duration-500 ease-in-out border-t px-6 py-5 space-y-5 bg-background">
-                          <div className="flex items-center justify-between flex-wrap gap-2">
-                            <div className="flex items-center gap-2">
-                              <Sparkles className="h-4 w-4 text-primary" />
-                              <h4 className="text-sm font-semibold">Full Report — {icp.name}</h4>
-                              <Badge
-                                variant="secondary"
-                                className={`text-[10px] ${icp.type === "refined" ? "bg-amber-100 text-amber-800" : "bg-primary/10 text-primary"}`}
-                              >
-                                {icp.type === "refined" ? "Refined" : "New"}
-                              </Badge>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <EditDropdownMenu onModify={() => toast({ title: "Edit mode", description: "You can now modify this report." })} />
-                              <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80 gap-1 h-7 text-xs" onClick={() => toast({ title: "Chat with Profiler", description: "Profiler agent chat opening..." })}>
-                                <MessageSquare className="h-3.5 w-3.5" />
-                                Agentic
-                              </Button>
-                            </div>
-                          </div>
-
-                          <SuggestedICPFullReportBody icp={icp} />
-
-                          <div className="bg-primary/[0.03] rounded-lg p-3 border border-primary/20 flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <Zap className="h-4 w-4 text-primary" />
-                              <div>
-                                <p className="text-xs font-semibold text-foreground">View prospects</p>
-                                <p className="text-[11px] text-muted-foreground">See leads for "{icp.name}"</p>
-                              </div>
-                            </div>
-                            <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={() => handleViewProspects(icp.name)}>
-                              Lead Stream <ArrowRight className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </>
-              ))}
             </TableBody>
           </Table>
         </Card>
@@ -1182,7 +1150,9 @@ export const SuggestedICPCards = ({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmAccept}>Okay</AlertDialogAction>
+            <AlertDialogAction disabled={isSavingAccept} onClick={() => void handleConfirmAccept()}>
+              {isSavingAccept ? "Saving…" : "Okay"}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

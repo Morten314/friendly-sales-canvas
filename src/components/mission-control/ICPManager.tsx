@@ -1693,7 +1693,12 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { setUserLocalStorage, getUserLocalStorage, removeUserLocalStorage } from "@/utils/cacheUtils";
+import {
+  mergeProfilerAcceptedIcpDisplayIfPlaceholder,
+  removeProfilerAcceptedIcpDisplayMeta,
+} from "@/utils/profilerAcceptedIcpDisplay";
 import { cn } from "@/lib/utils";
+import { apiFetch } from "@/lib/api";
 
 // Types
 type FitConfidence = "high" | "medium" | "low";
@@ -1976,6 +1981,13 @@ const ICPManager: React.FC = () => {
         return;
       }
 
+      // Avoid replaying a stale full-list POST from customerProfile_pending (can resurrect deleted ICPs).
+      try {
+        removeUserLocalStorage("customerProfile_pending", currentUser.uid);
+      } catch (e) {
+        console.warn("Failed to clear customerProfile_pending:", e);
+      }
+
       const responseData = await response.json();
       console.log("ICPManager: Full API response:", JSON.stringify(responseData, null, 2));
       console.log("ICPManager: Response structure:", {
@@ -2072,20 +2084,37 @@ const ICPManager: React.FC = () => {
       });
       
       if (Array.isArray(icpsData) && icpsData.length > 0) {
-        const loadedICPs: ICP[] = icpsData.map((icp: any) => ({
-          id: icp.id || `icp-${Date.now()}-${Math.random()}`,
-          primaryRegion: icp.primary_region || icp.primaryRegion || "",
-          location: Array.isArray(icp.location) ? icp.location : [],
-          industry: Array.isArray(icp.industry) ? icp.industry : [],
-          companySize: Array.isArray(icp.company_size) ? icp.company_size : Array.isArray(icp.companySize) ? icp.companySize : [],
-          buyerRole: Array.isArray(icp.buyer_role) ? icp.buyer_role : Array.isArray(icp.buyerRole) ? icp.buyerRole : [],
-          accountsOnWatchlist: Array.isArray(icp.accounts_on_watchlist) ? icp.accounts_on_watchlist : Array.isArray(icp.accountsOnWatchlist) ? icp.accountsOnWatchlist : [],
-          accountsToAvoid: Array.isArray(icp.accounts_to_avoid) ? icp.accounts_to_avoid : Array.isArray(icp.accountsToAvoid) ? icp.accountsToAvoid : [],
-          fitConfidence: (icp.fit_confidence || icp.fitConfidence || "medium") as FitConfidence,
-          additionalContext: icp.additional_context || icp.additionalContext || "",
-          status: icp.status || "saved",
-          createdAt: icp.created_at ? new Date(icp.created_at) : (icp.createdAt ? new Date(icp.createdAt) : new Date()),
-        }));
+        const loadedICPs: ICP[] = icpsData.map((icp: any) => {
+          const merged = mergeProfilerAcceptedIcpDisplayIfPlaceholder(icp);
+          return {
+            id: merged.id || `icp-${Date.now()}-${Math.random()}`,
+            primaryRegion: merged.primary_region || merged.primaryRegion || "",
+            location: Array.isArray(merged.location) ? merged.location : [],
+            industry: Array.isArray(merged.industry) ? merged.industry : [],
+            companySize:
+              Array.isArray(merged.company_size)
+                ? merged.company_size
+                : Array.isArray(merged.companySize)
+                  ? merged.companySize
+                  : [],
+            buyerRole:
+              Array.isArray(merged.buyer_role) ? merged.buyer_role : Array.isArray(merged.buyerRole) ? merged.buyerRole : [],
+            accountsOnWatchlist: Array.isArray(merged.accounts_on_watchlist)
+              ? merged.accounts_on_watchlist
+              : Array.isArray(merged.accountsOnWatchlist)
+                ? merged.accountsOnWatchlist
+                : [],
+            accountsToAvoid: Array.isArray(merged.accounts_to_avoid)
+              ? merged.accounts_to_avoid
+              : Array.isArray(merged.accountsToAvoid)
+                ? merged.accountsToAvoid
+                : [],
+            fitConfidence: (merged.fit_confidence || merged.fitConfidence || "medium") as FitConfidence,
+            additionalContext: merged.additional_context || merged.additionalContext || "",
+            status: merged.status || "saved",
+            createdAt: merged.created_at ? new Date(merged.created_at) : merged.createdAt ? new Date(merged.createdAt) : new Date(),
+          };
+        });
 
         setIcps(loadedICPs);
         console.log("✅ Customer profile loaded from backend successfully");
@@ -2161,48 +2190,11 @@ const ICPManager: React.FC = () => {
     }
   };
 
-  // Load customer profile on mount
+  // Load customer profile on mount (no delayed replay of customerProfile_pending — it could restore deleted ICPs).
   useEffect(() => {
     if (currentUser?.uid) {
       console.log("ICPManager: useEffect triggered, loading customer profile for user:", currentUser.uid);
       loadCustomerProfileFromBackend();
-      
-      // Check for pending saves and retry them
-      const retryPendingSave = async () => {
-        try {
-          const pendingData = getUserLocalStorage('customerProfile_pending', currentUser.uid);
-          if (pendingData) {
-            const pendingPayload = JSON.parse(pendingData);
-            console.log("Found pending customer profile save, retrying...");
-            // Extract ICPs from the pending payload to retry (handle both old and new structure)
-            const icpsFromPending = pendingPayload.icps || pendingPayload.customer_profile?.icps || [];
-            if (icpsFromPending.length > 0) {
-              // Convert back to ICP format
-              const icpsToRetry: ICP[] = icpsFromPending.map((icp: any) => ({
-                id: icp.id,
-                primaryRegion: icp.primary_region || icp.primaryRegion || "",
-                location: Array.isArray(icp.location) ? icp.location : [],
-                industry: Array.isArray(icp.industry) ? icp.industry : [],
-                companySize: Array.isArray(icp.company_size) ? icp.company_size : [],
-                buyerRole: Array.isArray(icp.buyer_role) ? icp.buyer_role : [],
-                accountsOnWatchlist: Array.isArray(icp.accounts_on_watchlist) ? icp.accounts_on_watchlist : [],
-                accountsToAvoid: Array.isArray(icp.accounts_to_avoid) ? icp.accounts_to_avoid : [],
-                fitConfidence: (icp.fit_confidence || icp.fitConfidence || "medium") as FitConfidence,
-                additionalContext: icp.additional_context || icp.additionalContext || "",
-                status: icp.status || "saved",
-                createdAt: icp.created_at ? new Date(icp.created_at) : new Date(),
-              }));
-              await saveCustomerProfileToBackend(icpsToRetry, 0);
-            }
-          }
-        } catch (error) {
-          console.error("Error retrying pending save:", error);
-        }
-      };
-      
-      // Retry after a short delay to allow backend to recover
-      const retryTimer = setTimeout(retryPendingSave, 5000);
-      return () => clearTimeout(retryTimer);
     }
   }, [currentUser?.uid]);
 
@@ -2497,12 +2489,21 @@ const ICPManager: React.FC = () => {
   };
 
   const handleDeleteICP = async (id: string) => {
-    const updatedICPs = icps.filter(icp => icp.id !== id);
+    const updatedICPs = icps.filter((icp) => icp.id !== id);
     setIcps(updatedICPs);
-    
-    // Save to backend
+    removeProfilerAcceptedIcpDisplayMeta(id);
+
+    try {
+      await apiFetch(
+        `customer_profile/icp/${encodeURIComponent(id)}?org_id=${encodeURIComponent(orgIdToUse)}`,
+        { method: "DELETE" },
+      );
+    } catch (e) {
+      console.warn("DELETE customer_profile/icp (optional):", e);
+    }
+
     await saveCustomerProfileToBackend(updatedICPs);
-    
+
     toast({
       title: "ICP deleted",
       description: "The ICP has been removed.",

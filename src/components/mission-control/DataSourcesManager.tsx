@@ -39,7 +39,6 @@ import {
   Check,
   Lock,
   Building2,
-  ExternalLink,
   Users,
   ChevronDown,
   Plug,
@@ -110,11 +109,7 @@ const SUGGESTED_TAGS = [
 ];
 
 
-interface DataSourcesManagerProps {
-  onNavigateToCompanyProfile?: () => void;
-}
-
-const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCompanyProfile }) => {
+const DataSourcesManager: React.FC = () => {
   const { toast } = useToast();
   const { currentUser, orgId } = useAuth();
   const orgIdToUse = orgId || 'brewra'; // Fallback to 'brewra' for backward compatibility
@@ -3293,29 +3288,22 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
       )}
 
       {/* Company Context Bar */}
-      <div className="flex items-center justify-between px-4 py-3 bg-muted/40 border rounded-lg">
+      <div className="flex items-center px-4 py-3 bg-muted/40 border rounded-lg">
         <div className="flex items-center gap-3">
           <Building2 className="h-5 w-5 text-muted-foreground" />
           <div>
             <p className="text-xs text-muted-foreground uppercase tracking-wide">Company Context</p>
             <div className="flex items-center gap-2 mt-0.5">
               <span className="font-medium">
-                {companyProfile?.companyName || "Brewra"}
+                {companyProfile?.companyName || "Brewra Ventures"}
               </span>
               <span className="text-muted-foreground">•</span>
               <span className="text-sm text-muted-foreground">
-                {companyProfile?.companyUrl || "www.brewra.com"}
+                {companyProfile?.companyUrl || "www.brewraventures.com"}
               </span>
             </div>
           </div>
         </div>
-        <button 
-          onClick={onNavigateToCompanyProfile}
-          className="text-xs text-primary hover:underline flex items-center gap-1"
-        >
-          Edit Company Profile
-          <ExternalLink className="h-3 w-3" />
-        </button>
       </div>
 
       {/* Header */}
@@ -3388,26 +3376,16 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
                     </DropdownMenuItem>
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-          {!showLeadUpload && !showLeadEditForm && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button 
-                  variant="outline"
-                  className="gap-2"
-                >
-                  <Users className="h-4 w-4" />
-                  Add Leads
-                  <ChevronDown className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem onClick={() => setShowLeadUpload(true)}>
-                  <Upload className="mr-2 h-4 w-4" />
-                  Upload CSV
-                </DropdownMenuItem>
+                {!showLeadUpload && !showLeadEditForm && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel>Lead stream</DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => setShowLeadUpload(true)}>
+                      <Upload className="mr-2 h-4 w-4" />
+                      Upload CSV
+                    </DropdownMenuItem>
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           )}
@@ -3585,26 +3563,14 @@ const DataSourcesManager: React.FC<DataSourcesManagerProps> = ({ onNavigateToCom
           {dataSources.length > 0 && <div className="my-8 border-t" />}
           
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <Users className="h-5 w-5 text-green-600" />
-                  Lead Stream
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  Manage your prospect database and contact information
-                </p>
-              </div>
-              {leads.length > 0 && !showLeadUpload && !showLeadEditForm && (
-                <Button 
-                  onClick={() => setShowLeadUpload(true)} 
-                  variant="outline"
-                  className="gap-2"
-                >
-                  <Upload className="h-4 w-4" />
-                  Add More Leads
-                </Button>
-              )}
+            <div>
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <Users className="h-5 w-5 text-green-600" />
+                Lead Stream
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Manage your prospect database and contact information
+              </p>
             </div>
 
             {/* Edit Lead Form */}
