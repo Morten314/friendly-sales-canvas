@@ -1,11 +1,17 @@
 import React from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, AlertTriangle, Zap } from "lucide-react";
+import { TrendingUp, AlertTriangle, Zap, Bot } from "lucide-react";
+import { Button } from "@/components/ui/button";
+
+interface TierOpportunityCardsProps {
+  onAskScout?: (tierContext: string) => void;
+}
 
 const tierCards = [
   {
     tier: "Tier 1",
+    label: "Prioritise Now",
     badge: "High Priority",
     badgeVariant: "default" as const,
     fitScore: 82,
@@ -19,6 +25,7 @@ const tierCards = [
   },
   {
     tier: "Tier 2",
+    label: "Evaluate & Engage",
     badge: "Moderate Priority",
     badgeVariant: "secondary" as const,
     fitScore: 58,
@@ -32,6 +39,7 @@ const tierCards = [
   },
   {
     tier: "Tier 3",
+    label: "Nurture & Monitor",
     badge: "Low Priority",
     badgeVariant: "outline" as const,
     fitScore: 28,
@@ -45,7 +53,7 @@ const tierCards = [
   },
 ];
 
-const TierOpportunityCards: React.FC = () => {
+const TierOpportunityCards: React.FC<TierOpportunityCardsProps> = ({ onAskScout }) => {
   return (
     <div className="space-y-3">
       <h3 className="text-sm font-semibold text-foreground tracking-tight">
@@ -53,7 +61,7 @@ const TierOpportunityCards: React.FC = () => {
       </h3>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {tierCards.map((card) => (
-          <Card key={card.tier} className="p-4 space-y-3">
+          <Card key={card.tier} className="p-4 space-y-3 flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -63,6 +71,7 @@ const TierOpportunityCards: React.FC = () => {
                 />
                 <span className="text-sm font-bold text-foreground">
                   {card.tier}
+                  <span className="font-medium text-muted-foreground"> — {card.label}</span>
                 </span>
               </div>
               <Badge variant={card.badgeVariant} className="text-[10px] px-2 py-0.5">
@@ -87,7 +96,7 @@ const TierOpportunityCards: React.FC = () => {
             </div>
 
             {/* Details */}
-            <div className="space-y-2 text-xs">
+            <div className="space-y-2 text-xs flex-1">
               <div>
                 <div className="flex items-center gap-1 text-primary font-medium mb-0.5">
                   <TrendingUp className="h-3 w-3" />
@@ -118,6 +127,17 @@ const TierOpportunityCards: React.FC = () => {
                 </p>
               </div>
             </div>
+
+            {/* Ask Scout CTA */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full mt-auto text-xs text-primary hover:text-primary hover:bg-primary/10 gap-1.5"
+              onClick={() => onAskScout?.(`${card.tier} — ${card.label}`)}
+            >
+              <Bot className="h-3.5 w-3.5" />
+              Ask Scout
+            </Button>
           </Card>
         ))}
       </div>
