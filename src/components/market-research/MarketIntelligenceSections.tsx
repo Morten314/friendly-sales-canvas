@@ -207,13 +207,6 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
 
       {/* Competitor Landscape Section */}
       <div>
-        <div className="flex justify-end mb-1.5">
-          <OpportunitySignalBadge
-            matchingLeads={opportunityMatches['competitor-landscape'].matching}
-            totalLeads={totalLeadPool}
-            onViewLeads={() => handleViewLeads('competitor-landscape')}
-          />
-        </div>
         <div className={`${props.showCompetitorScoutChat ? 'flex gap-6' : ''}`}>
           <div className={`${props.showCompetitorScoutChat ? 'w-1/2' : ''}`}>
             <CompetitorLandscapeSection
