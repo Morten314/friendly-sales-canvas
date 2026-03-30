@@ -295,13 +295,6 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
 
       {/* Market Entry & Growth Strategy Section */}
       <div>
-        <div className="flex justify-end mb-1.5">
-          <OpportunitySignalBadge
-            matchingLeads={opportunityMatches['market-entry'].matching}
-            totalLeads={totalLeadPool}
-            onViewLeads={() => handleViewLeads('market-entry')}
-          />
-        </div>
         <div className={`${props.showMarketEntryScoutChat ? 'flex gap-6' : ''}`}>
           <div className={`${props.showMarketEntryScoutChat ? 'w-1/2' : ''}`}>
             <MarketEntrySection
