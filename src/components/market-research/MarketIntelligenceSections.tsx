@@ -160,13 +160,6 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
 
       {/* Industry Trends Section */}
       <div>
-        <div className="flex justify-end mb-1.5">
-          <OpportunitySignalBadge
-            matchingLeads={opportunityMatches['industry-trends'].matching}
-            totalLeads={totalLeadPool}
-            onViewLeads={() => handleViewLeads('industry-trends')}
-          />
-        </div>
         <div className={`${props.showIndustryTrendsScoutChat ? 'flex gap-6' : ''}`}>
           <div className={`${props.showIndustryTrendsScoutChat ? 'w-1/2' : ''}`}>
             <IndustryTrendsSection
