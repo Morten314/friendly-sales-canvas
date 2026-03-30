@@ -1,29 +1,42 @@
 import React from "react";
 import { Card } from "@/components/ui/card";
 import {
-  PieChart, Pie, Cell, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, CartesianGrid,
+  ResponsiveContainer, PieChart, Pie, Cell,
 } from "recharts";
 import { Users, BarChart3, Bot } from "lucide-react";
+import { heatmapLeads, getReportComponentScores } from "./leadData";
 
-// ─── Tier distribution data ─────────────────────────────────────────────────
+// ─── Tier distribution from actual data ──────────────────────────────────────
+
+const tierCounts = heatmapLeads.reduce(
+  (acc, lead) => {
+    if (lead.priority === "Tier 1") acc.tier1++;
+    else if (lead.priority === "Tier 2") acc.tier2++;
+    else acc.tier3++;
+    return acc;
+  },
+  { tier1: 0, tier2: 0, tier3: 0 }
+);
 
 const tierData = [
-  { name: "Tier 1", value: 28, color: "hsl(var(--chart-1))" },
-  { name: "Tier 2", value: 52, color: "hsl(var(--chart-2))" },
-  { name: "Tier 3", value: 40, color: "hsl(var(--chart-3))" },
+  { name: "Tier 1", value: tierCounts.tier1, color: "hsl(var(--chart-1))" },
+  { name: "Tier 2", value: tierCounts.tier2, color: "hsl(var(--chart-2))" },
+  { name: "Tier 3", value: tierCounts.tier3, color: "hsl(var(--chart-3))" },
 ];
-const totalLeads = tierData.reduce((s, d) => s + d.value, 0);
+const totalLeads = heatmapLeads.length;
 
-// ─── Report components scored by number of leads ────────────────────────────
+// ─── Report component scores from actual heatmap ratings ─────────────────────
 
-const reportComponentData = [
-  { name: "Market Size", leads: 98, color: "hsl(var(--chart-1))" },
-  { name: "Industry Trends", leads: 84, color: "hsl(var(--chart-2))" },
-  { name: "Competitor Landscape", leads: 76, color: "hsl(var(--chart-3))" },
-  { name: "Market Entry & Growth", leads: 62, color: "hsl(var(--chart-4))" },
-  { name: "Regulatory & Compliance", leads: 45, color: "hsl(var(--chart-5))" },
-].sort((a, b) => b.leads - a.leads);
+const reportComponentData = getReportComponentScores();
+
+const CHART_COLORS = [
+  "hsl(var(--chart-1))",
+  "hsl(var(--chart-2))",
+  "hsl(var(--chart-3))",
+  "hsl(var(--chart-4))",
+  "hsl(var(--chart-5))",
+];
 
 // ─── Custom tooltip ─────────────────────────────────────────────────────────
 
@@ -31,9 +44,16 @@ const ReportTooltip = ({ active, payload }: any) => {
   if (!active || !payload?.length) return null;
   const d = payload[0].payload;
   return (
-    <div className="bg-popover border border-border rounded-lg px-3 py-2 shadow-md text-xs">
+    <div className="bg-popover border border-border rounded-lg px-3 py-2 shadow-md text-xs space-y-1">
       <p className="font-semibold text-foreground">{d.name}</p>
-      <p className="text-muted-foreground">{d.leads} leads scored</p>
+      <p className="text-muted-foreground">
+        Score: <span className="font-semibold text-foreground">{d.totalScore}</span>
+      </p>
+      <div className="flex gap-3 text-[11px]">
+        <span className="text-emerald-600">High: {d.high}</span>
+        <span className="text-amber-600">Medium: {d.medium}</span>
+        <span className="text-red-600">Low: {d.low}</span>
+      </div>
     </div>
   );
 };
@@ -95,11 +115,18 @@ const OpportunityDashboard: React.FC<OpportunityDashboardProps> = ({ onChatAbout
           </div>
         </Card>
 
-        {/* 2. Report Components — Leads Scored */}
+        {/* 2. Report Components — Ranked by Score */}
         <Card className="p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <BarChart3 className="h-4 w-4 text-primary" />
-            <h3 className="text-sm font-semibold text-foreground">Leads by Report Component</h3>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4 text-primary" />
+              <h3 className="text-sm font-semibold text-foreground">Report Components by Lead Score</h3>
+            </div>
+            <div className="flex gap-2 text-[10px] text-muted-foreground">
+              <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />High(20)</span>
+              <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-amber-500" />Med(12)</span>
+              <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-red-500" />Low(5)</span>
+            </div>
           </div>
           <div className="h-[130px]">
             <ResponsiveContainer width="100%" height="100%">
@@ -110,7 +137,6 @@ const OpportunityDashboard: React.FC<OpportunityDashboardProps> = ({ onChatAbout
                   tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
                   axisLine={false}
                   tickLine={false}
-                  domain={[0, 120]}
                 />
                 <YAxis
                   type="category"
@@ -118,12 +144,12 @@ const OpportunityDashboard: React.FC<OpportunityDashboardProps> = ({ onChatAbout
                   tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
                   axisLine={false}
                   tickLine={false}
-                  width={110}
+                  width={80}
                 />
                 <RechartsTooltip content={<ReportTooltip />} />
-                <Bar dataKey="leads" radius={[0, 4, 4, 0]} barSize={14}>
-                  {reportComponentData.map((entry, i) => (
-                    <Cell key={i} fill={entry.color} />
+                <Bar dataKey="totalScore" radius={[0, 4, 4, 0]} barSize={14}>
+                  {reportComponentData.map((_, i) => (
+                    <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
                   ))}
                 </Bar>
               </BarChart>
