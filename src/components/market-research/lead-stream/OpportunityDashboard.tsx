@@ -122,11 +122,6 @@ const OpportunityDashboard: React.FC<OpportunityDashboardProps> = ({ onChatAbout
               <BarChart3 className="h-4 w-4 text-primary" />
               <h3 className="text-sm font-semibold text-foreground">Report Components by Lead Score</h3>
             </div>
-            <div className="flex gap-2 text-[10px] text-muted-foreground">
-              <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />High(20)</span>
-              <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-amber-500" />Med(12)</span>
-              <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-red-500" />Low(5)</span>
-            </div>
           </div>
           <div className="h-[130px]">
             <ResponsiveContainer width="100%" height="100%">
