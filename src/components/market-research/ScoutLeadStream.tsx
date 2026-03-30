@@ -1,7 +1,6 @@
 import React from "react";
 import { Separator } from "@/components/ui/separator";
 import OpportunityDashboard from "./lead-stream/OpportunityDashboard";
-import TierOpportunityCards, { type TierCardData } from "./lead-stream/TierOpportunityCards";
 import LeadsTable from "./lead-stream/LeadsTable";
 
 // ─── Props ───────────────────────────────────────────────────────────────────
@@ -16,7 +15,6 @@ interface ScoutLeadStreamProps {
   onResearchWithScout?: (leads: any[], context?: string) => void;
   onChatWithScout?: (leads: any[], reportFilter?: string) => void;
   onChatAboutCoverage?: () => void;
-  onAskScoutTier?: (tierCard: TierCardData) => void;
 }
 
 // ─── Main Component ──────────────────────────────────────────────────────────
@@ -27,7 +25,6 @@ const ScoutLeadStream: React.FC<ScoutLeadStreamProps> = ({
   onResearchWithScout,
   onChatWithScout,
   onChatAboutCoverage,
-  onAskScoutTier,
 }) => {
   const handleResearchLead = (lead: any) => {
     onResearchWithScout?.([lead]);
@@ -37,8 +34,6 @@ const ScoutLeadStream: React.FC<ScoutLeadStreamProps> = ({
     <div className="space-y-6 animate-fade-in">
       {/* Zone 1: Opportunity Dashboard */}
       <OpportunityDashboard onChatAboutCoverage={onChatAboutCoverage} />
-
-      <TierOpportunityCards onAskScout={onAskScoutTier} />
 
       <Separator />
 

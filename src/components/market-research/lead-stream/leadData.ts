@@ -124,6 +124,40 @@ function buildHeatmapLeads(): HeatmapLead[] {
 
 export const heatmapLeads = buildHeatmapLeads();
 
+// ─── Tier Intelligence Data ──────────────────────────────────────────────────
+
+export interface TierIntelligence {
+  label: string;
+  fitScore: number;
+  whyItFits: string;
+  keyRisks: string;
+  recommendedAction: string;
+}
+
+export const TIER_INTELLIGENCE: Record<string, TierIntelligence> = {
+  "Tier 1": {
+    label: "Prioritise Now",
+    fitScore: 82,
+    whyItFits: "Strong alignment with your ICP across firmographics, buying signals, and decision-maker engagement. Matches 4+ report dimensions with high scores.",
+    keyRisks: "Competitive pressure from incumbents; longer enterprise sales cycles may delay conversion.",
+    recommendedAction: "Prioritise for immediate outreach. Assign dedicated AEs and personalise messaging using Scout intelligence.",
+  },
+  "Tier 2": {
+    label: "Evaluate & Engage",
+    fitScore: 58,
+    whyItFits: "Partial ICP match — strong in 2–3 report dimensions but gaps in market timing or budget signals. Good potential with nurturing.",
+    keyRisks: "Budget constraints or unclear buying timelines; may require longer qualification cycles.",
+    recommendedAction: "Add to nurture sequences. Monitor for trigger events and re-score monthly as new intelligence arrives.",
+  },
+  "Tier 3": {
+    label: "Nurture & Monitor",
+    fitScore: 28,
+    whyItFits: "Limited overlap with current ICP criteria. May match on industry or region but lack key buying signals or decision-maker access.",
+    keyRisks: "Low conversion probability; resource investment unlikely to yield near-term ROI.",
+    recommendedAction: "Park for now. Revisit if ICP evolves or new market signals emerge. Use for market awareness campaigns only.",
+  },
+};
+
 // ─── Computed report component scores ────────────────────────────────────────
 
 export interface ReportComponentScore {
