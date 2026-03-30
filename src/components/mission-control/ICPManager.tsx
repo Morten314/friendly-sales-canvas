@@ -2429,10 +2429,17 @@ const ICPManager: React.FC = () => {
     // Clear errors if validation passes
     setValidationErrors({});
 
+    // Commit typed location that is not yet added as a tag (same as Enter / Add button)
+    const pendingLocation = locationInput.trim();
+    const locationCommitted = [...locations];
+    if (pendingLocation && !locationCommitted.includes(pendingLocation)) {
+      locationCommitted.push(pendingLocation);
+    }
+
     const newICP: ICP = {
       id: editingId || `icp-${Date.now()}`,
       primaryRegion: primaryRegion.trim(),
-      location: locations.filter(loc => loc.trim() !== ""),
+      location: locationCommitted.filter((loc) => loc.trim() !== ""),
       industry: selectedIndustries,
       companySize: selectedCompanySizes,
       buyerRole: selectedBuyerRoles,
