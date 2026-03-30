@@ -11,8 +11,8 @@ import {
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Bot, ArrowRight, ArrowUpDown, Info } from "lucide-react";
-import { type Rating, type HeatmapLead, REPORT_COLUMNS, RATING_SCORE, heatmapLeads } from "./leadData";
+import { Bot, ArrowRight, ArrowUpDown, Info, ChevronRight, ChevronDown, TrendingUp, AlertTriangle, Zap } from "lucide-react";
+import { type Rating, type HeatmapLead, REPORT_COLUMNS, RATING_SCORE, TIER_INTELLIGENCE, heatmapLeads } from "./leadData";
 
 // ─── Rating Cell Component ──────────────────────────────────────────────────
 
@@ -46,6 +46,66 @@ const PriorityBadge = ({ tier }: { tier: string }) => {
   );
 };
 
+// ─── Expanded Intelligence Row ──────────────────────────────────────────────
+
+const LeadIntelligencePanel = ({ lead }: { lead: HeatmapLead }) => {
+  const intel = TIER_INTELLIGENCE[lead.priority];
+  if (!intel) return null;
+
+  const tierColor: Record<string, string> = {
+    "Tier 1": "hsl(var(--chart-1))",
+    "Tier 2": "hsl(var(--chart-2))",
+    "Tier 3": "hsl(var(--chart-3))",
+  };
+
+  return (
+    <div className="px-4 py-3 bg-muted/30 border-t border-border/50">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
+        {/* Fit Score */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground font-medium">{lead.priority} — {intel.label}</span>
+            <span className="font-semibold text-foreground">Fit: {intel.fitScore}%</span>
+          </div>
+          <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all"
+              style={{ width: `${intel.fitScore}%`, backgroundColor: tierColor[lead.priority] }}
+            />
+          </div>
+        </div>
+
+        {/* Why it fits */}
+        <div>
+          <div className="flex items-center gap-1 text-primary font-medium mb-0.5">
+            <TrendingUp className="h-3 w-3" />
+            Why it fits
+          </div>
+          <p className="text-muted-foreground leading-relaxed">{intel.whyItFits}</p>
+        </div>
+
+        {/* Key risks */}
+        <div>
+          <div className="flex items-center gap-1 text-destructive font-medium mb-0.5">
+            <AlertTriangle className="h-3 w-3" />
+            Key risks
+          </div>
+          <p className="text-muted-foreground leading-relaxed">{intel.keyRisks}</p>
+        </div>
+
+        {/* Recommended action */}
+        <div>
+          <div className="flex items-center gap-1 text-accent-foreground font-medium mb-0.5">
+            <Zap className="h-3 w-3" />
+            Recommended action
+          </div>
+          <p className="text-muted-foreground leading-relaxed">{intel.recommendedAction}</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ─── Props ───────────────────────────────────────────────────────────────────
 
 interface LeadsTableProps {
@@ -66,11 +126,16 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
   const [sortBy, setSortBy] = useState<"score" | "priority" | null>(null);
   const [sortAsc, setSortAsc] = useState(false);
   const [tierFilter, setTierFilter] = useState<string>("all");
+  const [expandedLeads, setExpandedLeads] = useState<Set<string>>(new Set());
 
-  // Sync external filter (not used for heatmap but kept for compatibility)
-  React.useEffect(() => {
-    // External opportunity filter can be handled if needed
-  }, [opportunityFilter]);
+  const toggleExpand = (id: string) => {
+    setExpandedLeads((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   // Filter by tier
   const filteredLeads = tierFilter === "all"
@@ -83,7 +148,7 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
         const diff = sortBy === "score" ? a.totalScore - b.totalScore : a.priority.localeCompare(b.priority);
         return sortAsc ? diff : -diff;
       })
-    : [...filteredLeads].sort((a, b) => b.totalScore - a.totalScore); // Default: highest score first
+    : [...filteredLeads].sort((a, b) => b.totalScore - a.totalScore);
 
   const toggleSort = (col: "score" | "priority") => {
     if (sortBy === col) {
@@ -106,7 +171,7 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
                 <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
               </TooltipTrigger>
               <TooltipContent side="right" className="max-w-xs text-xs">
-                Each lead is rated High, Medium, or Low across all Scout report sections. Scores are calculated from these ratings to determine priority tiers.
+                Each lead is rated High, Medium, or Low across all Scout report sections. Click the arrow on any lead to view opportunity intelligence.
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -163,7 +228,7 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead className="w-[150px] text-xs font-semibold sticky left-0 bg-background z-10">Lead</TableHead>
+                <TableHead className="w-[170px] text-xs font-semibold sticky left-0 bg-background z-10">Lead</TableHead>
                 <TableHead className="w-[130px] text-xs font-semibold">Company</TableHead>
                 {REPORT_COLUMNS.map((col) => (
                   <TableHead key={col.key} className="text-xs font-semibold text-center min-w-[100px]">
@@ -207,31 +272,54 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
                 </TableRow>
               ) : (
                 sortedLeads.map((lead) => (
-                  <TableRow key={lead.id} className="group">
-                    <TableCell className="text-sm font-medium text-foreground sticky left-0 bg-background z-10">{lead.name}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{lead.company}</TableCell>
-                    {REPORT_COLUMNS.map((col) => (
-                      <TableCell key={col.key} className="text-center">
-                        <RatingCell rating={lead.ratings[col.key]} />
+                  <React.Fragment key={lead.id}>
+                    <TableRow className="group">
+                      <TableCell className="text-sm font-medium text-foreground sticky left-0 bg-background z-10">
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => toggleExpand(lead.id)}
+                            className="p-0.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                          >
+                            {expandedLeads.has(lead.id) ? (
+                              <ChevronDown className="h-3.5 w-3.5" />
+                            ) : (
+                              <ChevronRight className="h-3.5 w-3.5" />
+                            )}
+                          </button>
+                          {lead.name}
+                        </div>
                       </TableCell>
-                    ))}
-                    <TableCell className="text-center">
-                      <span className="text-sm font-bold text-foreground">{lead.totalScore}</span>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <PriorityBadge tier={lead.priority} />
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 text-xs gap-1 text-primary hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => onResearchWithScout?.(lead)}
-                      >
-                        Ask Scout <ArrowRight className="h-3 w-3" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
+                      <TableCell className="text-xs text-muted-foreground">{lead.company}</TableCell>
+                      {REPORT_COLUMNS.map((col) => (
+                        <TableCell key={col.key} className="text-center">
+                          <RatingCell rating={lead.ratings[col.key]} />
+                        </TableCell>
+                      ))}
+                      <TableCell className="text-center">
+                        <span className="text-sm font-bold text-foreground">{lead.totalScore}</span>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <PriorityBadge tier={lead.priority} />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs gap-1 text-primary hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => onResearchWithScout?.(lead)}
+                        >
+                          Ask Scout <ArrowRight className="h-3 w-3" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                    {expandedLeads.has(lead.id) && (
+                      <TableRow className="hover:bg-transparent">
+                        <TableCell colSpan={REPORT_COLUMNS.length + 5} className="p-0">
+                          <LeadIntelligencePanel lead={lead} />
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </React.Fragment>
                 ))
               )}
             </TableBody>
