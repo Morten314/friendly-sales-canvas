@@ -1,12 +1,12 @@
 import React from "react";
 import { Card } from "@/components/ui/card";
 import {
-  PieChart, Pie, Cell, ResponsiveContainer, ScatterChart, Scatter,
-  XAxis, YAxis, Tooltip as RechartsTooltip, CartesianGrid, ReferenceLine,
+  PieChart, Pie, Cell, ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, CartesianGrid,
 } from "recharts";
-import { Users, Crosshair, DollarSign, Bot } from "lucide-react";
+import { Users, BarChart3, Bot } from "lucide-react";
 
-// ─── Tier distribution data (from the 120-lead dataset) ──────────────────────
+// ─── Tier distribution data ─────────────────────────────────────────────────
 
 const tierData = [
   { name: "Tier 1", value: 28, color: "hsl(var(--chart-1))" },
@@ -15,34 +15,25 @@ const tierData = [
 ];
 const totalLeads = tierData.reduce((s, d) => s + d.value, 0);
 
-// ─── Priority Quadrant data by Tier (Strategic Fit × Likelihood to Win) ──────
+// ─── Report components scored by number of leads ────────────────────────────
 
-const quadrantByTier = [
-  { name: "Tier 1", x: 82, y: 85, count: 28, color: "hsl(var(--chart-1))" },
-  { name: "Tier 2", x: 58, y: 55, count: 52, color: "hsl(var(--chart-2))" },
-  { name: "Tier 3", x: 28, y: 30, count: 40, color: "hsl(var(--chart-3))" },
-];
+const reportComponentData = [
+  { name: "Market Size", leads: 98, color: "hsl(var(--chart-1))" },
+  { name: "Industry Trends", leads: 84, color: "hsl(var(--chart-2))" },
+  { name: "Competitor Landscape", leads: 76, color: "hsl(var(--chart-3))" },
+  { name: "Market Entry & Growth", leads: 62, color: "hsl(var(--chart-4))" },
+  { name: "Regulatory & Compliance", leads: 45, color: "hsl(var(--chart-5))" },
+].sort((a, b) => b.leads - a.leads);
 
-// ─── Pipeline Value by Tier ──────────────────────────────────────────────────
+// ─── Custom tooltip ─────────────────────────────────────────────────────────
 
-const pipelineByTier = [
-  { tier: "Tier 1", value: 380000, color: "hsl(var(--chart-1))" },
-  { tier: "Tier 2", value: 245000, color: "hsl(var(--chart-2))" },
-  { tier: "Tier 3", value: 92000, color: "hsl(var(--chart-3))" },
-];
-const totalPipeline = pipelineByTier.reduce((s, d) => s + d.value, 0);
-
-// ─── Quadrant custom tooltip ─────────────────────────────────────────────────
-
-const QuadrantTooltip = ({ active, payload }: any) => {
+const ReportTooltip = ({ active, payload }: any) => {
   if (!active || !payload?.length) return null;
   const d = payload[0].payload;
   return (
     <div className="bg-popover border border-border rounded-lg px-3 py-2 shadow-md text-xs">
       <p className="font-semibold text-foreground">{d.name}</p>
-      <p className="text-muted-foreground">{d.count} leads</p>
-      <p className="text-muted-foreground">Avg Strategic Fit: {d.x}</p>
-      <p className="text-muted-foreground">Avg Win Likelihood: {d.y}</p>
+      <p className="text-muted-foreground">{d.leads} leads scored</p>
     </div>
   );
 };
@@ -70,7 +61,7 @@ const OpportunityDashboard: React.FC<OpportunityDashboardProps> = ({ onChatAbout
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {/* 1. Leads Coverage — Tier Breakdown */}
         <Card className="p-4">
           <div className="flex items-center gap-2 mb-3">
@@ -104,71 +95,39 @@ const OpportunityDashboard: React.FC<OpportunityDashboardProps> = ({ onChatAbout
           </div>
         </Card>
 
-        {/* 2. Priority Quadrant — Tiers plotted by Strategic Fit × Likelihood to Win */}
+        {/* 2. Report Components — Leads Scored */}
         <Card className="p-4">
           <div className="flex items-center gap-2 mb-2">
-            <Crosshair className="h-4 w-4 text-primary" />
-            <h3 className="text-sm font-semibold text-foreground">Priority Quadrant</h3>
+            <BarChart3 className="h-4 w-4 text-primary" />
+            <h3 className="text-sm font-semibold text-foreground">Leads by Report Component</h3>
           </div>
-          <div className="h-[110px]">
+          <div className="h-[130px]">
             <ResponsiveContainer width="100%" height="100%">
-              <ScatterChart margin={{ top: 4, right: 8, bottom: 16, left: 4 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.4} />
+              <BarChart data={reportComponentData} layout="vertical" margin={{ top: 0, right: 12, bottom: 0, left: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.4} horizontal={false} />
                 <XAxis
-                  type="number" dataKey="x" domain={[0, 100]}
-                  ticks={[0, 25, 50, 75, 100]}
-                  tick={{ fontSize: 8, fill: "hsl(var(--muted-foreground))" }}
-                  axisLine={false} tickLine={false}
-                  label={{ value: "Strategic Fit →", position: "insideBottom", offset: -10, fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
+                  type="number"
+                  tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
+                  axisLine={false}
+                  tickLine={false}
+                  domain={[0, 120]}
                 />
                 <YAxis
-                  type="number" dataKey="y" domain={[0, 100]}
-                  ticks={[0, 25, 50, 75, 100]}
-                  tick={{ fontSize: 8, fill: "hsl(var(--muted-foreground))" }}
-                  axisLine={false} tickLine={false} width={22}
-                  label={{ value: "Win Likelihood ↑", angle: -90, position: "insideLeft", offset: 10, fontSize: 8, fill: "hsl(var(--muted-foreground))" }}
+                  type="category"
+                  dataKey="name"
+                  tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
+                  axisLine={false}
+                  tickLine={false}
+                  width={110}
                 />
-                <ReferenceLine x={50} stroke="hsl(var(--border))" strokeDasharray="3 3" />
-                <ReferenceLine y={50} stroke="hsl(var(--border))" strokeDasharray="3 3" />
-                <RechartsTooltip content={<QuadrantTooltip />} />
-                {quadrantByTier.map((tier, i) => (
-                  <Scatter key={i} data={[tier]} fill={tier.color} fillOpacity={0.85} r={Math.max(8, tier.count / 3)} />
-                ))}
-              </ScatterChart>
+                <RechartsTooltip content={<ReportTooltip />} />
+                <Bar dataKey="leads" radius={[0, 4, 4, 0]} barSize={14}>
+                  {reportComponentData.map((entry, i) => (
+                    <Cell key={i} fill={entry.color} />
+                  ))}
+                </Bar>
+              </BarChart>
             </ResponsiveContainer>
-          </div>
-          <div className="flex items-center justify-center gap-3 text-[10px] text-muted-foreground mt-1">
-            {quadrantByTier.map((t, i) => (
-              <div key={i} className="flex items-center gap-1">
-                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: t.color }} />
-                <span>{t.name}</span>
-              </div>
-            ))}
-          </div>
-        </Card>
-
-        {/* 3. Pipeline Value by Tier */}
-        <Card className="p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <DollarSign className="h-4 w-4 text-primary" />
-            <h3 className="text-sm font-semibold text-foreground">Pipeline Value</h3>
-          </div>
-          <div className="space-y-2">
-            <div className="text-lg font-bold text-foreground">${(totalPipeline / 1000).toFixed(0)}K</div>
-            <div className="space-y-1.5">
-              {pipelineByTier.map((seg, i) => (
-                <div key={i} className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: seg.color }} />
-                    <span className="text-muted-foreground">{seg.tier}</span>
-                  </div>
-                  <span className="font-semibold text-foreground">${(seg.value / 1000).toFixed(0)}K</span>
-                </div>
-              ))}
-            </div>
-            <div className="text-[11px] text-primary font-medium mt-1">
-              Tier 1 accounts for {Math.round((pipelineByTier[0].value / totalPipeline) * 100)}% of total value
-            </div>
           </div>
         </Card>
       </div>
