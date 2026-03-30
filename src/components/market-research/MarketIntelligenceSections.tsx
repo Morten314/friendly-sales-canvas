@@ -251,13 +251,6 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
 
       {/* Regulatory & Compliance Highlights Section */}
       <div>
-        <div className="flex justify-end mb-1.5">
-          <OpportunitySignalBadge
-            matchingLeads={opportunityMatches['regulatory-compliance'].matching}
-            totalLeads={totalLeadPool}
-            onViewLeads={() => handleViewLeads('regulatory-compliance')}
-          />
-        </div>
         <div className={`${props.showRegulatoryScoutChat ? 'flex gap-6' : ''}`}>
           <div className={`${props.showRegulatoryScoutChat ? 'w-1/2' : ''}`}>
             <RegulatoryComplianceSection
