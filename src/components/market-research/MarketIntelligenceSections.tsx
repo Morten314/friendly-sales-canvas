@@ -6,7 +6,7 @@ import CompetitorLandscapeSection from './CompetitorLandscapeSection';
 import RegulatoryComplianceSection from './RegulatoryComplianceSection';
 import MarketEntrySection from './MarketEntrySection';
 import ScoutChatPanel from './ScoutChatPanel';
-import OpportunitySignalBadge from './OpportunitySignalBadge';
+
 import { MarketIntelligenceTabProps } from './MarketIntelligenceTabProps';
 
 interface MarketIntelligenceSectionsProps extends MarketIntelligenceTabProps {}
@@ -108,48 +108,13 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
     />
   ) : undefined;
 
-  // Mock opportunity match data per section — fixed total lead pool
-  const totalLeadPool = 120;
-  const opportunityMatches: Record<string, { pattern: string; crm: number; uploaded: number; matching: number }> = {
-    'market-size': {
-      pattern: 'Companies in high-growth TAM segments matching your ICP',
-      crm: 12, uploaded: 8, matching: 20,
-    },
-    'industry-trends': {
-      pattern: 'Accounts showing AI adoption & cloud migration signals',
-      crm: 9, uploaded: 5, matching: 14,
-    },
-    'competitor-landscape': {
-      pattern: 'Prospects using competitor products with switching signals',
-      crm: 7, uploaded: 11, matching: 18,
-    },
-    'regulatory-compliance': {
-      pattern: 'Companies impacted by upcoming regulatory deadlines',
-      crm: 4, uploaded: 3, matching: 7,
-    },
-    'market-entry': {
-      pattern: 'Accounts in recommended entry channels & regions',
-      crm: 6, uploaded: 9, matching: 15,
-    },
-  };
 
-  const handleViewLeads = (sectionContext: string) => {
-    if (props.onViewOpportunityLeads) {
-      props.onViewOpportunityLeads(sectionContext);
-    }
-  };
+
   
   return (
     <>
       {/* Market Size & Opportunity Section */}
       <div>
-        <div className="flex justify-end mb-1.5">
-          <OpportunitySignalBadge
-            matchingLeads={opportunityMatches['market-size'].matching}
-            totalLeads={totalLeadPool}
-            onViewLeads={() => handleViewLeads('market-size')}
-          />
-        </div>
         <MarketSizeSection
           isEditing={props.isEditing}
           isSplitView={props.isSplitView}
@@ -195,13 +160,6 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
 
       {/* Industry Trends Section */}
       <div>
-        <div className="flex justify-end mb-1.5">
-          <OpportunitySignalBadge
-            matchingLeads={opportunityMatches['industry-trends'].matching}
-            totalLeads={totalLeadPool}
-            onViewLeads={() => handleViewLeads('industry-trends')}
-          />
-        </div>
         <div className={`${props.showIndustryTrendsScoutChat ? 'flex gap-6' : ''}`}>
           <div className={`${props.showIndustryTrendsScoutChat ? 'w-1/2' : ''}`}>
             <IndustryTrendsSection
@@ -249,13 +207,6 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
 
       {/* Competitor Landscape Section */}
       <div>
-        <div className="flex justify-end mb-1.5">
-          <OpportunitySignalBadge
-            matchingLeads={opportunityMatches['competitor-landscape'].matching}
-            totalLeads={totalLeadPool}
-            onViewLeads={() => handleViewLeads('competitor-landscape')}
-          />
-        </div>
         <div className={`${props.showCompetitorScoutChat ? 'flex gap-6' : ''}`}>
           <div className={`${props.showCompetitorScoutChat ? 'w-1/2' : ''}`}>
             <CompetitorLandscapeSection
@@ -300,13 +251,6 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
 
       {/* Regulatory & Compliance Highlights Section */}
       <div>
-        <div className="flex justify-end mb-1.5">
-          <OpportunitySignalBadge
-            matchingLeads={opportunityMatches['regulatory-compliance'].matching}
-            totalLeads={totalLeadPool}
-            onViewLeads={() => handleViewLeads('regulatory-compliance')}
-          />
-        </div>
         <div className={`${props.showRegulatoryScoutChat ? 'flex gap-6' : ''}`}>
           <div className={`${props.showRegulatoryScoutChat ? 'w-1/2' : ''}`}>
             <RegulatoryComplianceSection
@@ -351,13 +295,6 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
 
       {/* Market Entry & Growth Strategy Section */}
       <div>
-        <div className="flex justify-end mb-1.5">
-          <OpportunitySignalBadge
-            matchingLeads={opportunityMatches['market-entry'].matching}
-            totalLeads={totalLeadPool}
-            onViewLeads={() => handleViewLeads('market-entry')}
-          />
-        </div>
         <div className={`${props.showMarketEntryScoutChat ? 'flex gap-6' : ''}`}>
           <div className={`${props.showMarketEntryScoutChat ? 'w-1/2' : ''}`}>
             <MarketEntrySection
