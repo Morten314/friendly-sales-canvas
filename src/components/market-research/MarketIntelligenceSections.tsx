@@ -115,13 +115,6 @@ const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (p
     <>
       {/* Market Size & Opportunity Section */}
       <div>
-        <div className="flex justify-end mb-1.5">
-          <OpportunitySignalBadge
-            matchingLeads={opportunityMatches['market-size'].matching}
-            totalLeads={totalLeadPool}
-            onViewLeads={() => handleViewLeads('market-size')}
-          />
-        </div>
         <MarketSizeSection
           isEditing={props.isEditing}
           isSplitView={props.isSplitView}
