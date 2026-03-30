@@ -57,11 +57,18 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { getLeadCountForICP } from "@/components/customers/LeadStream";
 import { buildIcpUrl, buildApiUrl, apiFetchJson } from "@/lib/api";
-import { getUserLocalStorage } from "@/utils/cacheUtils";
+import { getUserLocalStorage, setUserLocalStorage } from "@/utils/cacheUtils";
 import {
   mergeProfilerAcceptedIcpDisplay,
   saveProfilerAcceptedIcpDisplayMeta,
   copyProfilerDisplayMetaToProfileId,
+  extractPersistedIcpIdFromSuggestedProfileResponse,
+  extractIcpsArrayFromCustomerProfileResponse,
+  mergeSuggestedIntoCustomerProfileApiRow,
+  buildCustomerProfileSavePayload,
+  mapCustomerProfileApiRowsToStoredIcps,
+  resolveAcceptedPersistedIcpId,
+  type SuggestedIcpCardFields,
   PROFILER_ICP_DISPLAY_KEY,
 } from "@/utils/profilerAcceptedIcpDisplay";
 
@@ -69,6 +76,43 @@ import {
 function profilerIcpDebug(...args: unknown[]) {
   if (import.meta.env.DEV) {
     console.log("[Profiler ICP]", ...args);
+  }
+}
+
+/**
+ * After POST /from_suggested_icp, persist firmographics the same way as Mission Control manual save:
+ * GET full profile → merge suggested fields into the new row → POST /customer_profile (full icps[]).
+ */
+async function persistAcceptedSuggestedIcpToBackend(options: {
+  orgId: string;
+  suggested: SuggestedIcpCardFields;
+  targetIcpId: string;
+}): Promise<boolean> {
+  const { orgId, suggested, targetIcpId } = options;
+  const profileUrl = buildApiUrl(`customer_profile?org_id=${encodeURIComponent(orgId)}`);
+  try {
+    const profileRes = await fetch(profileUrl, { method: "GET", headers: { "Content-Type": "application/json" } });
+    if (!profileRes.ok) return false;
+    const profileData = await profileRes.json();
+    const icpsData = extractIcpsArrayFromCustomerProfileResponse(profileData);
+    if (!icpsData.length) return false;
+
+    const idx = icpsData.findIndex((row: any) => String(row.id) === String(targetIcpId));
+    if (idx < 0) return false;
+
+    const merged = mergeSuggestedIntoCustomerProfileApiRow(icpsData[idx], suggested);
+    const nextIcps = [...icpsData];
+    nextIcps[idx] = merged;
+
+    const payload = buildCustomerProfileSavePayload(nextIcps, orgId);
+    const saveRes = await fetch(profileUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    return saveRes.ok;
+  } catch {
+    return false;
   }
 }
 
@@ -200,7 +244,9 @@ const mapCustomerProfileICPToExisting = (icp: any, index: number): ExistingICP =
   let name =
     merged.name ||
     (industryArr[0] ? `${industryArr[0]} - ${primaryRegion || "Global"}` : `ICP ${index + 1}`);
-  if (String(industryArr[0] || "").toLowerCase() === "unknown" && merged.id) {
+  const nameLooksPlaceholder =
+    !String(name || "").trim() || String(name).trim().toLowerCase() === "unknown";
+  if (nameLooksPlaceholder && merged.id) {
     try {
       const raw = localStorage.getItem(PROFILER_ICP_DISPLAY_KEY(merged.id));
       if (raw) {
@@ -789,7 +835,7 @@ export const SuggestedICPCards = ({
     try {
       const idsBeforeAccept = new Set(existingICPs.map((e) => e.id));
 
-      await apiFetchJson("customer_profile/from_suggested_icp", {
+      const acceptResult = await apiFetchJson("customer_profile/from_suggested_icp", {
         method: "POST",
         body: {
           user_id: uid,
@@ -798,13 +844,18 @@ export const SuggestedICPCards = ({
         },
       });
 
-      saveProfilerAcceptedIcpDisplayMeta(icp.id, {
+      const displayMeta = {
         regions: Array.isArray(icp.regions) ? icp.regions : [],
         industry: icp.industry,
         companySize: icp.companySize,
         decisionMakers: Array.isArray(icp.decisionMakers) ? icp.decisionMakers : [],
         displayName: icp.name,
-      });
+      };
+      saveProfilerAcceptedIcpDisplayMeta(icp.id, displayMeta);
+      const persistedFromResponse = extractPersistedIcpIdFromSuggestedProfileResponse(acceptResult);
+      if (persistedFromResponse && persistedFromResponse !== icp.id) {
+        saveProfilerAcceptedIcpDisplayMeta(persistedFromResponse, displayMeta);
+      }
 
       setCardStatuses((prev) => ({
         ...prev,
@@ -813,11 +864,42 @@ export const SuggestedICPCards = ({
       onICPAccepted?.(icp);
 
       const idsAfter = await refetchCustomerProfileIcps();
+      const targetIcpId = resolveAcceptedPersistedIcpId(
+        persistedFromResponse,
+        idsBeforeAccept,
+        idsAfter,
+        icp.id
+      );
+      if (targetIcpId) {
+        const synced = await persistAcceptedSuggestedIcpToBackend({
+          orgId: orgIdToUse,
+          suggested: icp,
+          targetIcpId,
+        });
+        if (synced) {
+          try {
+            const profileUrl = buildApiUrl(`customer_profile?org_id=${encodeURIComponent(orgIdToUse)}`);
+            const verifyRes = await fetch(profileUrl, { method: "GET", headers: { "Content-Type": "application/json" } });
+            if (verifyRes.ok) {
+              const vd = await verifyRes.json();
+              const icpsData = extractIcpsArrayFromCustomerProfileResponse(vd);
+              setUserLocalStorage(
+                "customerProfile",
+                JSON.stringify(mapCustomerProfileApiRowsToStoredIcps(icpsData)),
+                uid
+              );
+            }
+          } catch {
+            /* ignore */
+          }
+        }
+      }
+
       const newProfileIds = idsAfter.filter((id) => !idsBeforeAccept.has(id));
       if (newProfileIds.length === 1 && newProfileIds[0] !== icp.id) {
         copyProfilerDisplayMetaToProfileId(icp.id, newProfileIds[0]);
-        await refetchCustomerProfileIcps();
       }
+      await refetchCustomerProfileIcps();
       window.dispatchEvent(new CustomEvent("customerProfileSaved"));
 
       toast({
