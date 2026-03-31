@@ -255,7 +255,7 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
                     <ArrowUpDown className={`h-3 w-3 ${sortBy === "priority" ? "text-primary" : "text-muted-foreground"}`} />
                   </button>
                 </TableHead>
-                <TableHead className="w-[80px] text-xs text-right">Action</TableHead>
+                <TableHead className="w-[160px] text-xs text-right">Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
