@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Users, Trash2 } from "lucide-react";
+import { Users, Trash2, Plus } from "lucide-react";
 
 interface StrategistLead {
   id: string;
@@ -32,6 +32,7 @@ const PriorityBadge = ({ tier }: { tier: string }) => {
 
 const StrategistLeadStream = () => {
   const [leads, setLeads] = useState<StrategistLead[]>([]);
+  const [customColumns, setCustomColumns] = useState<string[]>(["", "", "", ""]);
 
   useEffect(() => {
     const stored = localStorage.getItem("strategistLeadStream");
@@ -81,6 +82,14 @@ const StrategistLeadStream = () => {
               <TableHead className="text-xs font-semibold">Company</TableHead>
               <TableHead className="text-xs font-semibold text-center">Lead Score</TableHead>
               <TableHead className="text-xs font-semibold text-center">Priority</TableHead>
+              {customColumns.map((_, idx) => (
+                <TableHead key={`custom-${idx}`} className="text-xs text-center min-w-[120px]">
+                  <span className="inline-flex items-center gap-1 text-muted-foreground/60 font-medium cursor-default">
+                    <Plus className="h-3 w-3" />
+                    Add Column
+                  </span>
+                </TableHead>
+              ))}
               <TableHead className="text-xs font-semibold text-right w-[60px]"></TableHead>
             </TableRow>
           </TableHeader>
@@ -99,6 +108,11 @@ const StrategistLeadStream = () => {
                 <TableCell className="text-center">
                   <PriorityBadge tier={lead.priority} />
                 </TableCell>
+                {customColumns.map((_, idx) => (
+                  <TableCell key={`custom-cell-${idx}`} className="text-center text-xs text-muted-foreground/40">
+                    —
+                  </TableCell>
+                ))}
                 <TableCell className="text-right">
                   <Button
                     variant="ghost"
