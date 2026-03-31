@@ -5,7 +5,10 @@ import { Button } from "@/components/ui/button";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Users, Trash2, Plus } from "lucide-react";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Users, Trash2, Plus, MoreVertical, Megaphone, Mail, MessageSquare } from "lucide-react";
 
 interface StrategistLead {
   id: string;
