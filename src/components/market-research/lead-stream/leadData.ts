@@ -158,6 +158,42 @@ export const TIER_INTELLIGENCE: Record<string, TierIntelligence> = {
   },
 };
 
+// ─── Per-Component Rating Explanations ──────────────────────────────────────
+
+export interface ComponentExplanations {
+  High: string;
+  Medium: string;
+  Low: string;
+}
+
+export const COMPONENT_EXPLANATIONS: Record<string, ComponentExplanations> = {
+  "market-size": {
+    High: "Operating in a large, expanding TAM with strong demand signals. Company size and revenue trajectory align with high-value segments.",
+    Medium: "Addressable market is moderate. Some growth indicators present but TAM may be niche or saturating in their vertical.",
+    Low: "Limited market opportunity. Small or contracting TAM with few expansion signals in their sector.",
+  },
+  "industry-trends": {
+    High: "Strongly aligned with current macro trends — digital transformation, AI adoption, or regulatory tailwinds driving demand in their space.",
+    Medium: "Partial alignment with industry trends. Some tailwinds present but adoption pace or relevance is moderate.",
+    Low: "Weak trend alignment. Operating in a stable or declining segment with few catalysts for near-term growth.",
+  },
+  "competitor-landscape": {
+    High: "Favorable competitive positioning — few dominant incumbents, or clear differentiation opportunity for your solution.",
+    Medium: "Moderate competitive density. Incumbents present but switching costs or dissatisfaction create openings.",
+    Low: "Highly competitive space with entrenched incumbents. High switching costs and strong vendor lock-in reduce opportunity.",
+  },
+  "regulatory-compliance": {
+    High: "Strong regulatory tailwinds — new compliance mandates or standards creating urgent demand for solutions in their category.",
+    Medium: "Some regulatory considerations present. Compliance needs exist but aren't urgent drivers of purchasing decisions.",
+    Low: "Minimal regulatory pressure. No imminent compliance requirements driving urgency in this segment.",
+  },
+  "market-entry": {
+    High: "Clear entry path with low barriers, established channels, and strong partner ecosystem. Timing aligns with budget cycles.",
+    Medium: "Entry is feasible but requires relationship-building or channel development. Timing is acceptable but not optimal.",
+    Low: "Significant barriers to entry — complex procurement, long cycles, or misaligned timing reduce near-term viability.",
+  },
+};
+
 // ─── Computed report component scores ────────────────────────────────────────
 
 export interface ReportComponentScore {
