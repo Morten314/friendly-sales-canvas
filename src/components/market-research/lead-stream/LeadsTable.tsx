@@ -115,6 +115,7 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
   opportunityFilter,
   onClearOpportunityFilter,
   onResearchWithScout,
+  onSendToStrategist,
   onChatWithScout,
 }) => {
   const [sortBy, setSortBy] = useState<"score" | "priority" | null>(null);
