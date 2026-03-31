@@ -12,6 +12,7 @@ from fastapi import FastAPI, UploadFile, File, Form, Query, HTTPException, Body,
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pymongo import MongoClient
+from pymongo.errors import DuplicateKeyError
 import boto3
 from pinecone import Pinecone
 from langchain_pinecone import PineconeVectorStore
@@ -56,6 +57,53 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+def _get_profiler_mongo_client() -> MongoClient:
+    username = urllib.parse.quote_plus("techbrewra")
+    password = urllib.parse.quote_plus("Brewra@Best09")
+    mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
+    return MongoClient(mongo_uri)
+
+
+def _ensure_icp_id_registry_indexes(db) -> None:
+    registry = db["ICP_ID_REGISTRY"]
+    registry.create_index("id", unique=True)
+    registry.create_index("id_type")
+
+
+def _reserve_unique_icp_id(db, id_type: str, owner_key: str = "", preferred_id: str = "") -> str:
+    """
+    Reserve a globally unique ICP id across recommended ICPs + customer profile ICPs.
+    Uses ICP_ID_REGISTRY with a unique index on `id`.
+    """
+    registry = db["ICP_ID_REGISTRY"]
+    candidate = str(preferred_id or "").strip()
+    for _ in range(20):
+        if not candidate:
+            candidate = str(uuid.uuid4())
+        try:
+            registry.insert_one({
+                "id": candidate,
+                "id_type": id_type,
+                "owner_key": owner_key,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            })
+            return candidate
+        except DuplicateKeyError:
+            # If the same owner/type already reserved this id, keep it stable.
+            existing = registry.find_one({"id": candidate})
+            if existing and str(existing.get("id_type")) == str(id_type) and str(existing.get("owner_key")) == str(owner_key):
+                return candidate
+            candidate = ""
+    raise HTTPException(status_code=500, detail="Failed to generate globally unique ICP id.")
+
+
+def _release_icp_id(db, icp_id: str) -> None:
+    if not icp_id:
+        return
+    registry = db["ICP_ID_REGISTRY"]
+    registry.delete_one({"id": str(icp_id)})
 
 @app.post("/upload_file/")
 async def upload_document(file: UploadFile = File(...)):
@@ -849,6 +897,7 @@ async def market_research(request: MarketRequest):
 @app.get("/icp")
 async def get_or_create_icp_config(user_id: str = Query(...), refresh: bool = Query(False)):
     print(f"[ICP] Request - user_id: {user_id}, refresh: {refresh}")
+    client = None
     try:
         def normalize_icp_response(payload: Any) -> Dict[str, Any]:
             """
@@ -865,17 +914,22 @@ async def get_or_create_icp_config(user_id: str = Query(...), refresh: bool = Qu
                 raw_icps = []
 
             normalized_icps = []
-            base_ts = int(datetime.utcnow().timestamp() * 1000)
             seen_ids = set()
             for idx, icp in enumerate(raw_icps):
                 if not isinstance(icp, dict):
                     icp = {}
 
-                # Ensure a unique, stable identifier exists for each suggested ICP.
-                # If the generator didn't provide an id (or duplicates exist), generate a UUID.
-                candidate_id = str(icp.get("id") or "").strip()
-                if not candidate_id or candidate_id in seen_ids:
-                    candidate_id = str(uuid.uuid4())
+                # Backend-controlled id generation with global uniqueness across ICP datasets.
+                # Keep existing id only if non-empty and not duplicated in current response.
+                preferred_id = str(icp.get("id") or "").strip()
+                if preferred_id in seen_ids:
+                    preferred_id = ""
+                candidate_id = _reserve_unique_icp_id(
+                    db,
+                    id_type="recommended_icp",
+                    owner_key=str(user_id),
+                    preferred_id=preferred_id
+                )
                 seen_ids.add(candidate_id)
 
                 # Backward/forward-compatible mapping to the expanded suggested ICP schema.
@@ -895,7 +949,7 @@ async def get_or_create_icp_config(user_id: str = Query(...), refresh: bool = Qu
                     title_parts = [p for p in [firmographics.get("industry") or old_industry,
                                               firmographics.get("segment") or old_segment,
                                               firmographics.get("company_size") or old_company_size] if isinstance(p, str) and p.strip()]
-                    new_title = " - ".join([str(p).strip() for p in title_parts]) or f"Suggested ICP {idx+1}"
+                    new_title = " - ".join([str(p).strip() for p in title_parts]) or f"Suggested ICP {idx + 1}"
 
                 why_suggested = icp.get("why_suggested") if isinstance(icp.get("why_suggested"), list) else None
                 if why_suggested is None:
@@ -973,12 +1027,9 @@ async def get_or_create_icp_config(user_id: str = Query(...), refresh: bool = Qu
             return {"suggestedICPs": normalized_icps}
 
         # MongoDB connection setup
-        username = urllib.parse.quote_plus("techbrewra")
-        password = urllib.parse.quote_plus("Brewra@Best09")
-        mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
-        client = MongoClient(mongo_uri)
-
+        client = _get_profiler_mongo_client()
         db = client["Profiler"]
+        _ensure_icp_id_registry_indexes(db)
         collection = db["ICP_config"]
 
         # Filter by user_id only for multitenancy
@@ -997,8 +1048,14 @@ async def get_or_create_icp_config(user_id: str = Query(...), refresh: bool = Qu
 
         if existing_icp and not refresh:
             print(f"[ICP] Returning cached ICP for user_id: {user_id}")
-            client.close()
-            return normalize_icp_response(existing_icp.get("icps", {"suggestedICPs": []}))
+            normalized_cached = normalize_icp_response(existing_icp.get("icps", {"suggestedICPs": []}))
+            # Persist normalized payload so ids/shape remain stable for subsequent fetches.
+            collection.update_one(
+                {"user_id": user_id},
+                {"$set": {"user_id": user_id, "icps": normalized_cached}},
+                upsert=True
+            )
+            return normalized_cached
 
         print(f"[ICP] Generating new ICPs for user_id: {user_id}")
 
@@ -1035,7 +1092,6 @@ async def get_or_create_icp_config(user_id: str = Query(...), refresh: bool = Qu
                 icp_result = normalize_icp_response(icp_result)
             except Exception as gen_error:
                 print(f"[ICP] ERROR in ICP_generator: {str(gen_error)}")
-                client.close()
                 raise HTTPException(status_code=500, detail=f"ICP generation failed: {str(gen_error)}")
 
             # Upsert the result in MongoDB - filter by user_id only
@@ -1049,10 +1105,8 @@ async def get_or_create_icp_config(user_id: str = Query(...), refresh: bool = Qu
                 print(f"[ICP] Saved to MongoDB - matched: {update_result.matched_count}, modified: {update_result.modified_count}")
             except Exception as save_error:
                 print(f"[ICP] ERROR saving to MongoDB: {str(save_error)}")
-                client.close()
                 raise HTTPException(status_code=500, detail=f"Failed to save ICP: {str(save_error)}")
 
-            client.close()
             print(f"[ICP] Successfully returned ICPs for user_id: {user_id}")
             return icp_result
 
@@ -1061,6 +1115,9 @@ async def get_or_create_icp_config(user_id: str = Query(...), refresh: bool = Qu
     except Exception as e:
         print(f"[ICP] ERROR: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+    finally:
+        if client:
+            client.close()
 
 @app.post("/icp-research")
 async def icp_research(request: MarketRequest):
@@ -1851,11 +1908,9 @@ async def create_or_update_customer_profile(request: CustomerProfileRequest):
     """
     try:
         # MongoDB connection
-        username = urllib.parse.quote_plus("techbrewra")
-        password = urllib.parse.quote_plus("Brewra@Best09")
-        mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
-        mongo_client = MongoClient(mongo_uri)
+        mongo_client = _get_profiler_mongo_client()
         db = mongo_client["Profiler"]
+        _ensure_icp_id_registry_indexes(db)
         collection = db["Company_Profile"]
         
         # Get company profile from Neo4j to include in MongoDB document (filter by org_id)
@@ -1876,21 +1931,12 @@ async def create_or_update_customer_profile(request: CustomerProfileRequest):
                         except json.JSONDecodeError:
                             pass
         
-        # Prepare ICPs with IDs and timestamps (and ensure uniqueness)
+        # Prepare ICPs with backend-generated globally unique IDs and timestamps.
         current_time = datetime.now(timezone.utc).isoformat()
         processed_icps = []
-        seen_ids = set()
         
         for icp in request.icps:
             icp_dict = icp.model_dump(exclude_none=True)
-            
-            # Generate ID if not provided
-            if not icp_dict.get("id"):
-                icp_dict["id"] = str(uuid.uuid4())
-            # Ensure unique within this request payload
-            if icp_dict["id"] in seen_ids:
-                icp_dict["id"] = str(uuid.uuid4())
-            seen_ids.add(icp_dict["id"])
             
             # Set created_at if not provided
             if not icp_dict.get("created_at"):
@@ -1909,13 +1955,47 @@ async def create_or_update_customer_profile(request: CustomerProfileRequest):
         existing_icps = (((existing_doc.get("customer_profiles") or {}).get("icps")) or [])
         existing_by_id = {str(x.get("id")): x for x in existing_icps if isinstance(x, dict) and x.get("id")}
 
-        # Upsert by id: replace if id exists, else append
+        # Ensure existing records have globally reserved IDs.
+        repaired_existing = {}
+        for existing in existing_icps:
+            if not isinstance(existing, dict):
+                continue
+            existing_id = str(existing.get("id") or "").strip()
+            if existing_id:
+                reserved_existing_id = _reserve_unique_icp_id(
+                    db,
+                    id_type="customer_profile_icp",
+                    owner_key=str(request.org_id),
+                    preferred_id=existing_id
+                )
+                existing["id"] = reserved_existing_id
+                repaired_existing[reserved_existing_id] = existing
+            else:
+                new_existing_id = _reserve_unique_icp_id(
+                    db,
+                    id_type="customer_profile_icp",
+                    owner_key=str(request.org_id)
+                )
+                existing["id"] = new_existing_id
+                repaired_existing[new_existing_id] = existing
+
+        existing_by_id = repaired_existing
+
+        # Upsert by id for existing ICPs. New ICPs always get backend-generated IDs.
         for icp in processed_icps:
-            icp_id = str(icp.get("id"))
-            if icp_id and icp_id in existing_by_id:
-                existing_by_id[icp_id] = icp
-            elif icp_id:
-                existing_by_id[icp_id] = icp
+            requested_id = str(icp.get("id") or "").strip()
+            if requested_id and requested_id in existing_by_id:
+                icp["id"] = requested_id
+                existing_by_id[requested_id] = icp
+                continue
+
+            generated_id = _reserve_unique_icp_id(
+                db,
+                id_type="customer_profile_icp",
+                owner_key=str(request.org_id)
+            )
+            icp["id"] = generated_id
+            existing_by_id[generated_id] = icp
 
         merged_icps = list(existing_by_id.values())
         
@@ -1955,20 +2035,17 @@ async def get_customer_profile(org_id: str = Query(...)):
     Returns both company profile and associated customer profiles from the same document.
     Filtered by org_id for multi-org support.
     """
+    mongo_client = None
     try:
         # MongoDB connection
-        username = urllib.parse.quote_plus("techbrewra")
-        password = urllib.parse.quote_plus("Brewra@Best09")
-        mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
-        mongo_client = MongoClient(mongo_uri)
+        mongo_client = _get_profiler_mongo_client()
         db = mongo_client["Profiler"]
+        _ensure_icp_id_registry_indexes(db)
         collection = db["Company_Profile"]
         
         # Find the company profile document (filter by org_id)
         filter_query = {"profile_type": "company", "org_id": org_id}
         document = collection.find_one(filter_query)
-        
-        mongo_client.close()
         
         if not document:
             # If no MongoDB document exists, try to get from Neo4j and return empty customer profiles
@@ -1994,6 +2071,36 @@ async def get_customer_profile(org_id: str = Query(...)):
         # Extract customer profiles
         customer_profiles = document.get("customer_profiles", {})
         icps = customer_profiles.get("icps", [])
+
+        # Ensure frontend always receives ids and every id is globally unique/reserved.
+        changed = False
+        for icp in icps:
+            if not isinstance(icp, dict):
+                continue
+            existing_id = str(icp.get("id") or "").strip()
+            if existing_id:
+                reserved_id = _reserve_unique_icp_id(
+                    db,
+                    id_type="customer_profile_icp",
+                    owner_key=str(org_id),
+                    preferred_id=existing_id
+                )
+                if reserved_id != existing_id:
+                    icp["id"] = reserved_id
+                    changed = True
+            else:
+                icp["id"] = _reserve_unique_icp_id(
+                    db,
+                    id_type="customer_profile_icp",
+                    owner_key=str(org_id)
+                )
+                changed = True
+
+        if changed:
+            collection.update_one(
+                filter_query,
+                {"$set": {"customer_profiles.icps": icps, "updated_at": datetime.now(timezone.utc).isoformat()}}
+            )
         
         # Remove MongoDB _id if present in ICPs
         for icp in icps:
@@ -2011,6 +2118,9 @@ async def get_customer_profile(org_id: str = Query(...)):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if mongo_client:
+            mongo_client.close()
 
 
 @app.post("/customer_profile/from_suggested_icp")
@@ -2021,12 +2131,10 @@ async def save_suggested_icp_as_customer_profile(request: SuggestedICPToCustomer
     """
     try:
         # --- Load suggested ICPs for this user_id ---
-        username = urllib.parse.quote_plus("techbrewra")
-        password = urllib.parse.quote_plus("Brewra@Best09")
-        mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
-        mongo_client = MongoClient(mongo_uri)
+        mongo_client = _get_profiler_mongo_client()
 
         profiler_db = mongo_client["Profiler"]
+        _ensure_icp_id_registry_indexes(profiler_db)
         icp_config_collection = profiler_db["ICP_config"]
         icp_config = icp_config_collection.find_one({"user_id": request.user_id}) or {}
         icps_payload = icp_config.get("icps") or {}
@@ -2090,7 +2198,11 @@ async def save_suggested_icp_as_customer_profile(request: SuggestedICPToCustomer
         additional_context = "\n".join([p for p in additional_context_parts if p])
 
         new_icp = {
-            "id": str(uuid.uuid4()),
+            "id": _reserve_unique_icp_id(
+                profiler_db,
+                id_type="customer_profile_icp",
+                owner_key=str(request.org_id)
+            ),
             "primary_region": str(primary_region),
             "industry": industry_list,
             "company_size": company_size_list,
@@ -2116,11 +2228,6 @@ async def save_suggested_icp_as_customer_profile(request: SuggestedICPToCustomer
             if isinstance(existing, dict) and str(existing.get("source_suggested_icp_id")) == str(request.icp_id):
                 mongo_client.close()
                 raise HTTPException(status_code=409, detail="This suggested ICP is already saved in customer profile.")
-
-        # Ensure no id collision (extremely unlikely, but enforce anyway)
-        existing_ids = {str(x.get("id")) for x in existing_icps if isinstance(x, dict) and x.get("id")}
-        while new_icp["id"] in existing_ids:
-            new_icp["id"] = str(uuid.uuid4())
 
         merged_icps = [x for x in existing_icps if isinstance(x, dict)] + [new_icp]
 
@@ -2165,11 +2272,117 @@ async def save_suggested_icp_as_customer_profile(request: SuggestedICPToCustomer
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-        
+
+
+@app.delete("/customer_profile/icp/{icp_id}")
+async def delete_customer_profile_icp(icp_id: str, org_id: str = Query(...)):
+    """
+    Delete a single saved customer profile ICP by icp_id for a given org_id.
+    """
+    mongo_client = None
+    try:
+        mongo_client = _get_profiler_mongo_client()
+        db = mongo_client["Profiler"]
+        _ensure_icp_id_registry_indexes(db)
+        collection = db["Company_Profile"]
+
+        filter_query = {"profile_type": "company", "org_id": org_id}
+        document = collection.find_one(filter_query)
+        if not document:
+            raise HTTPException(status_code=404, detail=f"No customer profile document found for org_id: {org_id}")
+
+        existing_icps = (((document.get("customer_profiles") or {}).get("icps")) or [])
+        updated_icps = []
+        deleted_icp = None
+        for icp in existing_icps:
+            if isinstance(icp, dict) and str(icp.get("id")) == str(icp_id):
+                deleted_icp = icp
+                continue
+            updated_icps.append(icp)
+
+        if not deleted_icp:
+            raise HTTPException(status_code=404, detail=f"Customer profile ICP not found for icp_id: {icp_id}")
+
+        collection.update_one(
+            filter_query,
+            {"$set": {"customer_profiles.icps": updated_icps, "updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+        _release_icp_id(db, icp_id)
+
+        return {
+            "success": True,
+            "message": "Customer profile ICP deleted successfully",
+            "data": {
+                "deleted_icp_id": str(icp_id),
+                "remaining_count": len(updated_icps)
+            }
+        }
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if mongo_client:
+            mongo_client.close()
+
+
+@app.delete("/icp/recommended/{icp_id}")
+async def delete_recommended_icp(icp_id: str, user_id: str = Query(...)):
+    """
+    Delete a single recommended ICP from ICP_config by icp_id for a given user_id.
+    """
+    mongo_client = None
+    try:
+        mongo_client = _get_profiler_mongo_client()
+        db = mongo_client["Profiler"]
+        _ensure_icp_id_registry_indexes(db)
+        collection = db["ICP_config"]
+
+        document = collection.find_one({"user_id": user_id})
+        if not document:
+            raise HTTPException(status_code=404, detail=f"No ICP config found for user_id: {user_id}")
+
+        icps_payload = document.get("icps") or {}
+        suggested = []
+        if isinstance(icps_payload, dict) and isinstance(icps_payload.get("suggestedICPs"), list):
+            suggested = icps_payload.get("suggestedICPs", [])
+        elif isinstance(icps_payload, list):
+            suggested = icps_payload
+
+        updated_suggested = []
+        deleted_icp = None
+        for icp in suggested:
+            if isinstance(icp, dict) and str(icp.get("id")) == str(icp_id):
+                deleted_icp = icp
+                continue
+            updated_suggested.append(icp)
+
+        if not deleted_icp:
+            raise HTTPException(status_code=404, detail=f"Recommended ICP not found for icp_id: {icp_id}")
+
+        new_payload = {"suggestedICPs": updated_suggested}
+        collection.update_one(
+            {"user_id": user_id},
+            {"$set": {"user_id": user_id, "icps": new_payload}},
+            upsert=True
+        )
+        _release_icp_id(db, icp_id)
+
+        return {
+            "success": True,
+            "message": "Recommended ICP deleted successfully",
+            "data": {
+                "deleted_icp_id": str(icp_id),
+                "remaining_count": len(updated_suggested)
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if mongo_client:
+            mongo_client.close()
 
 # ============================================================================
 # ORG MANAGEMENT APIs
