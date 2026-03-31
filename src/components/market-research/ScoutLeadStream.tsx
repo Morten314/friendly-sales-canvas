@@ -26,6 +26,7 @@ const ScoutLeadStream: React.FC<ScoutLeadStreamProps> = ({
   onResearchWithScout,
   onChatWithScout,
   onChatAboutCoverage,
+  onSendToStrategist,
 }) => {
   const handleResearchLead = (lead: any) => {
     onResearchWithScout?.([lead]);
