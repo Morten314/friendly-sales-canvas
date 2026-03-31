@@ -297,14 +297,24 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
                         <PriorityBadge tier={lead.priority} />
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 text-xs gap-1 text-primary hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={() => onResearchWithScout?.(lead)}
-                        >
-                          Ask Scout <ArrowRight className="h-3 w-3" />
-                        </Button>
+                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-xs gap-1 text-primary hover:text-primary"
+                            onClick={() => onResearchWithScout?.(lead)}
+                          >
+                            Ask Scout <ArrowRight className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-xs gap-1 text-accent-foreground hover:text-accent-foreground"
+                            onClick={() => onSendToStrategist?.(lead)}
+                          >
+                            <Send className="h-3 w-3" /> Strategist
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                     {expandedLeads.has(lead.id) && (
