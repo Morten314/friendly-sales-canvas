@@ -11,7 +11,7 @@ import {
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Bot, ArrowRight, ArrowUpDown, Info, ChevronRight, ChevronDown, TrendingUp, AlertTriangle, Zap } from "lucide-react";
+import { Bot, ArrowRight, ArrowUpDown, Info, ChevronRight, ChevronDown, TrendingUp, AlertTriangle, Zap, Send } from "lucide-react";
 import { type Rating, type HeatmapLead, REPORT_COLUMNS, RATING_SCORE, TIER_INTELLIGENCE, COMPONENT_EXPLANATIONS, heatmapLeads } from "./leadData";
 
 // ─── Rating Cell Component ──────────────────────────────────────────────────
@@ -105,6 +105,7 @@ interface LeadsTableProps {
   opportunityFilter?: string | null;
   onClearOpportunityFilter?: () => void;
   onResearchWithScout?: (lead: any) => void;
+  onSendToStrategist?: (lead: any) => void;
   onChatWithScout?: (leads: any[], reportFilter?: string) => void;
 }
 
@@ -114,6 +115,7 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
   opportunityFilter,
   onClearOpportunityFilter,
   onResearchWithScout,
+  onSendToStrategist,
   onChatWithScout,
 }) => {
   const [sortBy, setSortBy] = useState<"score" | "priority" | null>(null);
@@ -253,7 +255,7 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
                     <ArrowUpDown className={`h-3 w-3 ${sortBy === "priority" ? "text-primary" : "text-muted-foreground"}`} />
                   </button>
                 </TableHead>
-                <TableHead className="w-[80px] text-xs text-right">Action</TableHead>
+                <TableHead className="w-[160px] text-xs text-right">Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -295,14 +297,24 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
                         <PriorityBadge tier={lead.priority} />
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 text-xs gap-1 text-primary hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={() => onResearchWithScout?.(lead)}
-                        >
-                          Ask Scout <ArrowRight className="h-3 w-3" />
-                        </Button>
+                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-xs gap-1 text-primary hover:text-primary"
+                            onClick={() => onResearchWithScout?.(lead)}
+                          >
+                            Ask Scout <ArrowRight className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-xs gap-1 text-accent-foreground hover:text-accent-foreground"
+                            onClick={() => onSendToStrategist?.(lead)}
+                          >
+                            <Send className="h-3 w-3" /> Strategist
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                     {expandedLeads.has(lead.id) && (
