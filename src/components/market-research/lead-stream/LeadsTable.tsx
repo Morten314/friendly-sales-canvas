@@ -105,6 +105,7 @@ interface LeadsTableProps {
   opportunityFilter?: string | null;
   onClearOpportunityFilter?: () => void;
   onResearchWithScout?: (lead: any) => void;
+  onSendToStrategist?: (lead: any) => void;
   onChatWithScout?: (leads: any[], reportFilter?: string) => void;
 }
 
