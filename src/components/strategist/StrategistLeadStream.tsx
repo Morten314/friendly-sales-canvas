@@ -93,6 +93,7 @@ const StrategistLeadStream = () => {
                   </span>
                 </TableHead>
               ))}
+              <TableHead className="text-xs font-semibold text-center">Actions</TableHead>
               <TableHead className="text-xs font-semibold text-right w-[60px]"></TableHead>
             </TableRow>
           </TableHeader>
@@ -116,6 +117,26 @@ const StrategistLeadStream = () => {
                     —
                   </TableCell>
                 ))}
+                <TableCell className="text-center">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-7 w-7">
+                        <MoreVertical className="h-4 w-4 text-muted-foreground" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-44">
+                      <DropdownMenuItem className="text-xs gap-2 cursor-pointer">
+                        <Megaphone className="h-3.5 w-3.5" /> Add to Campaign
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="text-xs gap-2 cursor-pointer">
+                        <Mail className="h-3.5 w-3.5" /> Send Email
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="text-xs gap-2 cursor-pointer">
+                        <MessageSquare className="h-3.5 w-3.5" /> Ask Strategist
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
                 <TableCell className="text-right">
                   <Button
                     variant="ghost"
