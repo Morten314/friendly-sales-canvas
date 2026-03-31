@@ -615,7 +615,7 @@ export function Sidebar() {
                             onClick={handleLinkClick}
                             className={cn(
                               "flex items-center px-4 py-2 text-sm text-gray-600 hover:bg-sales-gray hover:text-sales-blue rounded-lg transition-colors ml-9",
-                              location.pathname === item.href && "bg-blue-50 text-sales-blue"
+                              (location.pathname === item.href || location.pathname.startsWith(item.href.replace(/\/[^/]+$/, ''))) && "bg-blue-50 text-sales-blue"
                             )}
                           >
                             <item.icon className="h-4 w-4" />
