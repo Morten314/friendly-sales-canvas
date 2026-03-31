@@ -10,6 +10,16 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Users, Trash2, Plus, MoreVertical, Megaphone, Mail, MessageSquare } from "lucide-react";
 
+const COLUMN_OPTIONS = [
+  "LinkedIn URL",
+  "Company Website",
+  "Employee Size",
+  "Funding Status",
+  "Hiring Activity",
+  "Industry",
+  "ICP Fit",
+];
+
 interface StrategistLead {
   id: string;
   name: string;
