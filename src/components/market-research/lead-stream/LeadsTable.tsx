@@ -297,11 +297,11 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
                         <PriorityBadge tier={lead.priority} />
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex flex-col items-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-7 text-xs gap-1 text-primary hover:text-primary"
+                            className="h-6 text-xs gap-1 text-primary hover:text-primary"
                             onClick={() => onResearchWithScout?.(lead)}
                           >
                             Ask Scout <ArrowRight className="h-3 w-3" />
@@ -309,7 +309,7 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-7 text-xs gap-1 text-accent-foreground hover:text-accent-foreground"
+                            className="h-6 text-xs gap-1 text-accent-foreground hover:text-accent-foreground"
                             onClick={() => onSendToStrategist?.(lead)}
                           >
                             <Send className="h-3 w-3" /> Strategist
