@@ -15,6 +15,7 @@ interface ScoutLeadStreamProps {
   onResearchWithScout?: (leads: any[], context?: string) => void;
   onChatWithScout?: (leads: any[], reportFilter?: string) => void;
   onChatAboutCoverage?: () => void;
+  onSendToStrategist?: (lead: any) => void;
 }
 
 // ─── Main Component ──────────────────────────────────────────────────────────
