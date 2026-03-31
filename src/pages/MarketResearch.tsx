@@ -15243,7 +15243,7 @@ const MarketResearch = React.memo(() => {
                   onResearchWithScout={handleResearchWithScout}
                   onChatWithScout={handleChatWithScout}
                   onChatAboutCoverage={handleChatAboutCoverage}
-                  
+                  onSendToStrategist={handleSendToStrategist}
                 />
 
 
