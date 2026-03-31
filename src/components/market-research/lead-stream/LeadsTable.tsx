@@ -11,8 +11,59 @@ import {
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Bot, ArrowRight, ArrowUpDown, Info, ChevronRight, ChevronDown, TrendingUp, AlertTriangle, Zap, Send } from "lucide-react";
+import { Bot, ArrowRight, ArrowUpDown, Info, ChevronRight, ChevronDown, TrendingUp, AlertTriangle, Zap, Send, ChevronUp } from "lucide-react";
 import { type Rating, type HeatmapLead, REPORT_COLUMNS, RATING_SCORE, TIER_INTELLIGENCE, COMPONENT_EXPLANATIONS, heatmapLeads } from "./leadData";
+
+// ─── Score Breakdown Popover ────────────────────────────────────────────────
+
+const ScoreBreakdown = ({ lead }: { lead: HeatmapLead }) => {
+  const [open, setOpen] = useState(false);
+
+  const breakdown = REPORT_COLUMNS.map((col) => {
+    const rating = lead.ratings[col.key];
+    const score = RATING_SCORE[rating];
+    return { label: col.shortLabel, rating, score };
+  });
+
+  const ratingColor: Record<Rating, string> = {
+    High: "text-emerald-700 dark:text-emerald-400",
+    Medium: "text-amber-700 dark:text-amber-400",
+    Low: "text-red-700 dark:text-red-400",
+  };
+
+  return (
+    <div className="relative inline-flex items-center gap-1">
+      <span className="text-sm font-bold text-foreground">{lead.totalScore}</span>
+      <button
+        onClick={() => setOpen(!open)}
+        className="p-0.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+      >
+        {open ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+      </button>
+      {open && (
+        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1.5 z-30 w-[220px] bg-popover border border-border rounded-lg shadow-lg p-3 space-y-2">
+          <p className="text-[11px] font-semibold text-foreground mb-1.5">Score Breakdown</p>
+          {breakdown.map((item) => (
+            <div key={item.label} className="flex items-center justify-between text-[11px]">
+              <span className="text-muted-foreground">{item.label}</span>
+              <div className="flex items-center gap-1.5">
+                <span className={`font-semibold ${ratingColor[item.rating]}`}>{item.rating}</span>
+                <span className="font-bold text-foreground w-5 text-right">{item.score}</span>
+              </div>
+            </div>
+          ))}
+          <div className="border-t border-border pt-1.5 flex items-center justify-between text-[11px]">
+            <span className="font-semibold text-foreground">Total</span>
+            <span className="font-bold text-foreground">{lead.totalScore}</span>
+          </div>
+          <p className="text-[10px] text-muted-foreground leading-snug pt-1">
+            High = {RATING_SCORE.High}pts · Medium = {RATING_SCORE.Medium}pts · Low = {RATING_SCORE.Low}pts
+          </p>
+        </div>
+      )}
+    </div>
+  );
+};
 
 // ─── Rating Cell Component ──────────────────────────────────────────────────
 
