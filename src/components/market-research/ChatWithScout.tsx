@@ -373,7 +373,7 @@ export function ChatWithScout({ fullPage = false, researchContext, mode = "selec
         icp: researchContext?.icp,
         triggerPrompt: text,
       }));
-      navigate('/deals');
+      navigate('/your-ai-team/strategist/workspace');
       if (!messageText) setInput("");
       return;
     }
