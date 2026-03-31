@@ -2732,6 +2732,17 @@ const MarketResearch = React.memo(() => {
     handleTabChange('trends');
   };
 
+  const handleSendToStrategist = (lead: any) => {
+    // Persist lead to strategist lead stream
+    const existing = JSON.parse(localStorage.getItem('strategistLeadStream') || '[]');
+    const alreadyExists = existing.some((l: any) => l.id === lead.id);
+    if (!alreadyExists) {
+      existing.push({ ...lead, sentAt: new Date().toISOString() });
+      localStorage.setItem('strategistLeadStream', JSON.stringify(existing));
+    }
+    navigate('/your-ai-team/strategist/leadstream');
+  };
+
   const handleAskScoutTier = (tierCard: any) => {
     setScoutMode("full-list");
     setScoutResearchContext({
