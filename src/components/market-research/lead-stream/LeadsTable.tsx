@@ -342,7 +342,7 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
                         </TableCell>
                       ))}
                       <TableCell className="text-center">
-                        <span className="text-sm font-bold text-foreground">{lead.totalScore}</span>
+                        <ScoreBreakdown lead={lead} />
                       </TableCell>
                       <TableCell className="text-center">
                         <PriorityBadge tier={lead.priority} />
