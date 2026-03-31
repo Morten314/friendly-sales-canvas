@@ -48,59 +48,52 @@ const PriorityBadge = ({ tier }: { tier: string }) => {
 
 // ─── Expanded Intelligence Row ──────────────────────────────────────────────
 
+const ratingIcon: Record<Rating, React.ReactNode> = {
+  High: <TrendingUp className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />,
+  Medium: <AlertTriangle className="h-3 w-3 text-amber-600 dark:text-amber-400" />,
+  Low: <Zap className="h-3 w-3 text-red-600 dark:text-red-400" />,
+};
+
+const ratingBorderColor: Record<Rating, string> = {
+  High: "border-emerald-200 dark:border-emerald-800",
+  Medium: "border-amber-200 dark:border-amber-800",
+  Low: "border-red-200 dark:border-red-800",
+};
+
 const LeadIntelligencePanel = ({ lead }: { lead: HeatmapLead }) => {
   const intel = TIER_INTELLIGENCE[lead.priority];
-  if (!intel) return null;
-
-  const tierColor: Record<string, string> = {
-    "Tier 1": "hsl(var(--chart-1))",
-    "Tier 2": "hsl(var(--chart-2))",
-    "Tier 3": "hsl(var(--chart-3))",
-  };
 
   return (
-    <div className="px-4 py-3 bg-muted/30 border-t border-border/50">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
-        {/* Fit Score */}
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground font-medium">{lead.priority} — {intel.label}</span>
-            <span className="font-semibold text-foreground">Fit: {intel.fitScore}%</span>
-          </div>
-          <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+    <div className="px-4 py-3 bg-muted/30 border-t border-border/50 space-y-3">
+      {/* Tier summary */}
+      {intel && (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <PriorityBadge tier={lead.priority} />
+          <span>{intel.label} · Fit Score {intel.fitScore}%</span>
+        </div>
+      )}
+
+      {/* Per-component explanations */}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
+        {REPORT_COLUMNS.map((col) => {
+          const rating = lead.ratings[col.key];
+          const explanation = COMPONENT_EXPLANATIONS[col.key]?.[rating] || "";
+          return (
             <div
-              className="h-full rounded-full transition-all"
-              style={{ width: `${intel.fitScore}%`, backgroundColor: tierColor[lead.priority] }}
-            />
-          </div>
-        </div>
-
-        {/* Why it fits */}
-        <div>
-          <div className="flex items-center gap-1 text-primary font-medium mb-0.5">
-            <TrendingUp className="h-3 w-3" />
-            Why it fits
-          </div>
-          <p className="text-muted-foreground leading-relaxed">{intel.whyItFits}</p>
-        </div>
-
-        {/* Key risks */}
-        <div>
-          <div className="flex items-center gap-1 text-destructive font-medium mb-0.5">
-            <AlertTriangle className="h-3 w-3" />
-            Key risks
-          </div>
-          <p className="text-muted-foreground leading-relaxed">{intel.keyRisks}</p>
-        </div>
-
-        {/* Recommended action */}
-        <div>
-          <div className="flex items-center gap-1 text-accent-foreground font-medium mb-0.5">
-            <Zap className="h-3 w-3" />
-            Recommended action
-          </div>
-          <p className="text-muted-foreground leading-relaxed">{intel.recommendedAction}</p>
-        </div>
+              key={col.key}
+              className={`rounded-md border ${ratingBorderColor[rating]} bg-background p-2.5 space-y-1`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-foreground">{col.shortLabel}</span>
+                <div className="flex items-center gap-1">
+                  {ratingIcon[rating]}
+                  <RatingCell rating={rating} />
+                </div>
+              </div>
+              <p className="text-[11px] leading-relaxed text-muted-foreground">{explanation}</p>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
