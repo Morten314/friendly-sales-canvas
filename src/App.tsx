@@ -67,11 +67,13 @@ const App = () => (
                   <Customers />
                 </ProtectedRoute>
               } />
-              <Route path="/deals" element={
+              <Route path="/deals" element={<Navigate to="/your-ai-team/strategist/workspace" replace />} />
+              <Route path="/your-ai-team/strategist/:tab" element={
                 <ProtectedRoute requireTenant>
                   <Deals />
                 </ProtectedRoute>
               } />
+              <Route path="/your-ai-team/strategist" element={<Navigate to="/your-ai-team/strategist/workspace" replace />} />
               <Route path="/calendar" element={
                 <ProtectedRoute requireTenant>
                   <Calendar />

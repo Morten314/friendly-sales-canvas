@@ -372,7 +372,7 @@ const navItems: NavItem[] = [
   // { icon: LayoutDashboard, label: "Dashboard", href: "/agent-hub" }, // Commented out for future use
   { icon: Search, label: "Scout", href: "/market-research" },
   { icon: Users, label: "Profiler", href: "/customers" },
-  { icon: FileText, label: "Strategist", href: "/deals" },
+  { icon: FileText, label: "Strategist", href: "/your-ai-team/strategist/workspace" },
   // { icon: Calendar, label: "Activator", href: "/calendar" }, // Commented out - not constructed yet
   // { icon: Presentation, label: "Presenter", href: "/reports" }, // Commented out - not constructed yet
   // { icon: BarChart, label: "Reports", href: "/insights" }, // Commented out - hidden from UI for now
