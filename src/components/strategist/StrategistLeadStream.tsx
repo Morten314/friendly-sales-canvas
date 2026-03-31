@@ -95,12 +95,35 @@ const StrategistLeadStream = () => {
               <TableHead className="text-xs font-semibold">Company</TableHead>
               <TableHead className="text-xs font-semibold text-center">Lead Score</TableHead>
               <TableHead className="text-xs font-semibold text-center">Priority</TableHead>
-              {customColumns.map((_, idx) => (
+              {customColumns.map((col, idx) => (
                 <TableHead key={`custom-${idx}`} className="text-xs text-center min-w-[120px]">
-                  <span className="inline-flex items-center gap-1 text-muted-foreground/60 font-medium cursor-default">
-                    <Plus className="h-3 w-3" />
-                    Add Column
-                  </span>
+                  {col ? (
+                    <span className="font-semibold text-foreground">{col}</span>
+                  ) : (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button className="inline-flex items-center gap-1 text-muted-foreground/60 font-medium hover:text-muted-foreground transition-colors">
+                          <Plus className="h-3 w-3" />
+                          Add Column
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="center" className="w-44">
+                        {COLUMN_OPTIONS.filter((opt) => !customColumns.includes(opt)).map((opt) => (
+                          <DropdownMenuItem
+                            key={opt}
+                            className="text-xs cursor-pointer"
+                            onClick={() => {
+                              const updated = [...customColumns];
+                              updated[idx] = opt;
+                              setCustomColumns(updated);
+                            }}
+                          >
+                            {opt}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
                 </TableHead>
               ))}
               <TableHead className="text-xs font-semibold text-center">Actions</TableHead>
