@@ -166,33 +166,114 @@ export interface ComponentExplanations {
   Low: string;
 }
 
+// Generic fallbacks (used when no lead-specific explanation exists)
 export const COMPONENT_EXPLANATIONS: Record<string, ComponentExplanations> = {
   "market-size": {
-    High: "Operating in a large, expanding TAM with strong demand signals. Company size and revenue trajectory align with high-value segments.",
-    Medium: "Addressable market is moderate. Some growth indicators present but TAM may be niche or saturating in their vertical.",
-    Low: "Limited market opportunity. Small or contracting TAM with few expansion signals in their sector.",
+    High: "Operating in a large, expanding TAM with strong demand signals.",
+    Medium: "Addressable market is moderate with some growth indicators.",
+    Low: "Limited market opportunity with few expansion signals.",
   },
   "industry-trends": {
-    High: "Strongly aligned with current macro trends — digital transformation, AI adoption, or regulatory tailwinds driving demand in their space.",
-    Medium: "Partial alignment with industry trends. Some tailwinds present but adoption pace or relevance is moderate.",
-    Low: "Weak trend alignment. Operating in a stable or declining segment with few catalysts for near-term growth.",
+    High: "Strongly aligned with current macro trends.",
+    Medium: "Partial alignment with industry trends.",
+    Low: "Weak trend alignment in their segment.",
   },
   "competitor-landscape": {
-    High: "Favorable competitive positioning — few dominant incumbents, or clear differentiation opportunity for your solution.",
-    Medium: "Moderate competitive density. Incumbents present but switching costs or dissatisfaction create openings.",
-    Low: "Highly competitive space with entrenched incumbents. High switching costs and strong vendor lock-in reduce opportunity.",
+    High: "Favorable competitive positioning with clear differentiation opportunity.",
+    Medium: "Moderate competitive density with some openings.",
+    Low: "Highly competitive space with entrenched incumbents.",
   },
   "regulatory-compliance": {
-    High: "Strong regulatory tailwinds — new compliance mandates or standards creating urgent demand for solutions in their category.",
-    Medium: "Some regulatory considerations present. Compliance needs exist but aren't urgent drivers of purchasing decisions.",
-    Low: "Minimal regulatory pressure. No imminent compliance requirements driving urgency in this segment.",
+    High: "Strong regulatory tailwinds creating urgent demand.",
+    Medium: "Some regulatory considerations but not urgent drivers.",
+    Low: "Minimal regulatory pressure in this segment.",
   },
   "market-entry": {
-    High: "Clear entry path with low barriers, established channels, and strong partner ecosystem. Timing aligns with budget cycles.",
-    Medium: "Entry is feasible but requires relationship-building or channel development. Timing is acceptable but not optimal.",
-    Low: "Significant barriers to entry — complex procurement, long cycles, or misaligned timing reduce near-term viability.",
+    High: "Clear entry path with low barriers and strong partner ecosystem.",
+    Medium: "Entry feasible but requires relationship-building.",
+    Low: "Significant barriers to entry reduce near-term viability.",
   },
 };
+
+// ─── Lead-Specific Explanations (business-contextualized) ───────────────────
+
+export const LEAD_SPECIFIC_EXPLANATIONS: Record<string, Record<string, string>> = {
+  "1": {
+    "market-size": "Acme Corp operates in the enterprise CRM space valued at $72B globally. Their 2,400-employee base and 23% YoY revenue growth place them squarely in the high-value mid-market segment expanding fastest in NA.",
+    "industry-trends": "Acme is actively investing in AI-powered sales automation — their recent job postings show 8 open roles in ML engineering. This aligns with the 34% industry shift toward predictive analytics in sales tech.",
+    "competitor-landscape": "Their current vendor contract with Salesforce expires Q3 2025. Glassdoor reviews indicate dissatisfaction with implementation support, creating a clear switching window.",
+    "regulatory-compliance": "Acme recently achieved SOC 2 Type II compliance and is pursuing GDPR readiness for EU expansion. New SEC data governance rules in their sector create urgency for compliant tooling.",
+    "market-entry": "Acme's VP Sales spoke at SaaStr 2024 about 'rethinking their tech stack.' Direct warm intro possible through mutual connection at Sequoia. Budget cycle aligns with Q1 planning.",
+  },
+  "2": {
+    "market-size": "ScaleUp Inc targets the $18B revenue intelligence market. At 800 employees with Series C funding ($45M), they're scaling rapidly into enterprise accounts — a segment growing at 28% CAGR.",
+    "industry-trends": "ScaleUp is building proprietary intent data capabilities, aligning with the industry-wide pivot from static lead lists to real-time buying signals. Their blog highlights 'signal-based selling' as a 2025 priority.",
+    "competitor-landscape": "ScaleUp currently uses Gong + ZoomInfo stack. Recent LinkedIn posts from their CRO suggest frustration with data fragmentation — they're evaluating consolidated platforms.",
+    "regulatory-compliance": "Operating primarily in US markets with limited compliance exposure. No imminent regulatory drivers, though CCPA considerations may increase as they expand into consumer-adjacent verticals.",
+    "market-entry": "Attended their webinar on 'Scaling Revenue Teams' — product-market fit discussion suggests openness to new tools. Their procurement cycle is fast (avg. 45 days based on G2 reviews).",
+  },
+  "3": {
+    "market-size": "NovaTech Solutions sits in the $14B cloud infrastructure optimization space. Their 350-person team and recent $30M Series B signal aggressive growth into a market expanding at 31% CAGR.",
+    "industry-trends": "NovaTech's product roadmap (per their DevCon talk) heavily emphasizes FinOps and cost optimization — directly aligned with the 41% of enterprises now prioritizing cloud spend management.",
+    "competitor-landscape": "Competing against Spot.io and CloudHealth but differentiated through their Kubernetes-native approach. Niche positioning means less vendor lock-in risk for new partnerships.",
+    "regulatory-compliance": "Some exposure to FedRAMP requirements as they pursue government contracts. This creates moderate urgency for compliant tooling partners but isn't their primary buying driver.",
+    "market-entry": "NovaTech's CEO posted about 'building a best-in-class partner ecosystem' on LinkedIn last month. Their open API strategy and marketplace model create natural integration entry points.",
+  },
+  "4": {
+    "market-size": "DataDriven AI operates in the niche ML model monitoring space (~$2.1B TAM). While growing at 45% CAGR, the total addressable market remains small relative to adjacent segments.",
+    "industry-trends": "Their focus on LLM observability is cutting-edge and trend-aligned, but the market is still emerging. Only 12% of enterprises have adopted dedicated ML monitoring — early stage limits near-term revenue.",
+    "competitor-landscape": "Strong competitive moat with 3 patents in anomaly detection. However, AWS and Datadog are building native capabilities — the window to establish vendor relationships is narrowing.",
+    "regulatory-compliance": "EU AI Act compliance requirements directly impact DataDriven's customer base. Their clients need compliant monitoring tools, creating strong downstream demand for audit-ready solutions.",
+    "market-entry": "Complex enterprise procurement with 6-9 month cycles. Technical POC requirements and limited partner channel make initial engagement resource-intensive.",
+  },
+  "5": {
+    "market-size": "CloudFirst Systems addresses the $52B cloud migration market. Their 1,200-employee team and recent $80M Series D position them as a fast-growing mid-market leader in a large, expanding TAM.",
+    "industry-trends": "CloudFirst is riding the multi-cloud adoption wave — 73% of enterprises now use 2+ cloud providers. Their multi-cloud management platform aligns perfectly with this structural shift.",
+    "competitor-landscape": "Competing with HashiCorp and Terraform but differentiated by their no-code migration tooling. Low brand awareness among enterprise buyers creates opportunity for co-marketing partnerships.",
+    "regulatory-compliance": "Limited regulatory drivers in their core market. Data residency requirements in APAC could become relevant as they expand, but no urgent compliance mandates today.",
+    "market-entry": "CloudFirst's partner program is actively recruiting — their VP Alliances posted 3 partnership-related roles this quarter. AWS Marketplace listing provides frictionless procurement path.",
+  },
+  "6": {
+    "market-size": "Momentum Labs is a 150-person startup in the $5.8B product analytics space. While the market is growing, their early-stage positioning and limited ARR (<$5M) constrain near-term deal size.",
+    "industry-trends": "Product-led growth is a strong macro trend, and Momentum's behavioral analytics approach aligns with the 28% of SaaS companies shifting to PLG motions. However, their product maturity is still developing.",
+    "competitor-landscape": "Amplitude and Mixpanel dominate with 60%+ market share. Momentum's real-time streaming differentiator is compelling but unproven at scale — high risk for enterprise adoption.",
+    "regulatory-compliance": "New CPRA enforcement in California directly affects Momentum's data collection practices. They'll need compliant analytics infrastructure, creating a specific buying trigger for Q2 2025.",
+    "market-entry": "Small team means faster decisions but limited budget. Ideal for land-and-expand strategy — start with a pilot and grow with their anticipated Series A funding round.",
+  },
+  "7": {
+    "market-size": "RevStack AI targets the $28B sales enablement market. At 600 employees with strong enterprise logos (Stripe, Shopify), they're positioned in the sweet spot of a market growing at 19% CAGR.",
+    "industry-trends": "RevStack is pioneering AI-generated sales playbooks — their recent Product Hunt launch got 1,200+ upvotes. This aligns with the 56% of sales leaders prioritizing AI coaching tools in 2025.",
+    "competitor-landscape": "Competing with Highspot and Seismic but winning on AI-native architecture. Their 4.7/5 G2 rating and 92% customer retention suggest strong product-market fit and low churn risk.",
+    "regulatory-compliance": "Minimal regulatory exposure in their core sales enablement vertical. SOC 2 compliance is standard but not a buying differentiator.",
+    "market-entry": "RevStack actively co-sells with HubSpot and Salesforce partners. Warm intro possible through their VP Partnerships who previously worked at your portfolio company. Short sales cycles (30-45 days).",
+  },
+  "8": {
+    "market-size": "FinServ Digital operates in the $41B financial technology infrastructure market. Their 950-employee team serves 200+ financial institutions — a concentrated, high-value customer base.",
+    "industry-trends": "Open banking mandates (PSD2, FDX) are restructuring how financial services consume technology. FinServ's API-first platform is directly aligned with this regulatory-driven digital shift.",
+    "competitor-landscape": "Competing with Plaid and MX in a rapidly consolidating space. Recent M&A activity (Visa/Plaid near-acquisition) signals high market value but increasing competitive pressure.",
+    "regulatory-compliance": "Financial services compliance is the core buying driver. Basel III updates, AML/KYC requirements, and DORA (Digital Operational Resilience Act) create recurring compliance-driven purchasing cycles.",
+    "market-entry": "Complex procurement with 9-12 month cycles typical in financial services. Requires security assessments and vendor risk reviews — resource-intensive but high-LTV once established.",
+  },
+  "9": {
+    "market-size": "ShopScale D2C is in the $9.2B D2C commerce platform space. Their 200-person team focuses on mid-market brands — a segment growing at 22% but facing increasing platform commoditization.",
+    "industry-trends": "D2C growth is decelerating post-pandemic. While still relevant, the shift back to marketplace and retail channels means ShopScale's pure-play D2C positioning may face headwinds.",
+    "competitor-landscape": "Shopify Plus and BigCommerce dominate the mid-market. ShopScale's subscription-commerce specialization is a defensible niche but limits total addressable opportunity.",
+    "regulatory-compliance": "E-commerce data privacy regulations (CPRA, GDPR for EU brands) create moderate compliance needs but aren't primary purchase drivers for their customer base.",
+    "market-entry": "ShopScale's marketplace has a vendor application process. Their recent 'Commerce Partners' program launch is actively seeking complementary technology partners — timing is favorable.",
+  },
+  "10": {
+    "market-size": "OpsFlow SaaS operates in the $15B revenue operations market. At 500 employees with $40M ARR, they've hit the growth inflection point where enterprise deals start scaling.",
+    "industry-trends": "RevOps consolidation is a defining 2024-2025 trend — 67% of B2B companies are merging sales, marketing, and CS ops. OpsFlow's unified platform directly addresses this structural shift.",
+    "competitor-landscape": "Competing with Clari and InsightSquared, but their forecasting accuracy (claimed 94% at enterprise scale) is a strong differentiator. Recent G2 Leader recognition boosts credibility.",
+    "regulatory-compliance": "Limited regulatory pressure in RevOps. SOC 2 and GDPR compliance are table stakes but not urgent buying triggers.",
+    "market-entry": "OpsFlow's CRO spoke at a recent industry event about 'looking for predictive intelligence partners.' Their open API and Salesforce-native architecture provide straightforward integration paths.",
+  },
+};
+
+// Helper to get the best available explanation for a lead + component + rating
+export function getLeadExplanation(leadId: string, componentKey: string, rating: Rating): string {
+  return LEAD_SPECIFIC_EXPLANATIONS[leadId]?.[componentKey] || COMPONENT_EXPLANATIONS[componentKey]?.[rating] || "";
+}
 
 // ─── Computed report component scores ────────────────────────────────────────
 
