@@ -631,24 +631,29 @@ export const SuggestedICPCards = ({
 
   const rejectTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
-  /** Reload Current ICPs from GET /customer_profile after backend updates (e.g. accept from suggested). Returns profile ICP ids. */
+  /** Reload Current ICPs from GET /customer_profile after backend updates (e.g. accept from suggested, delete). Returns profile ICP ids. */
   const refetchCustomerProfileIcps = useCallback(async (): Promise<string[]> => {
     const orgIdToUse = orgId || currentUser?.uid || "brewra";
+    const uid = currentUser?.uid;
     try {
       const profileUrl = buildApiUrl(`customer_profile?org_id=${encodeURIComponent(orgIdToUse)}`);
       const profileRes = await fetch(profileUrl, { method: "GET", headers: { "Content-Type": "application/json" } });
       if (!profileRes.ok) return [];
       const profileData = await profileRes.json();
-      const data = profileData.data || profileData;
-      const icpsData =
-        data.icps ??
-        data.customer_profiles?.icps ??
-        data.customer_profile?.icps ??
-        [];
-      if (Array.isArray(icpsData) && icpsData.length > 0) {
-        setExistingICPs(icpsData.map((icp: any, i: number) => mapCustomerProfileICPToExisting(icp, i)));
-        return icpsData.map((row: any) => String(row.id ?? row.icp_id ?? "").trim()).filter(Boolean);
+      const icpsData = extractIcpsArrayFromCustomerProfileResponse(profileData);
+      setExistingICPs(icpsData.map((icp: any, i: number) => mapCustomerProfileICPToExisting(icp, i)));
+      if (uid) {
+        try {
+          setUserLocalStorage(
+            "customerProfile",
+            JSON.stringify(mapCustomerProfileApiRowsToStoredIcps(icpsData)),
+            uid
+          );
+        } catch {
+          /* ignore */
+        }
       }
+      return icpsData.map((row: any) => String(row.id ?? row.icp_id ?? "").trim()).filter(Boolean);
     } catch {
       /* keep existing rows */
     }
@@ -681,6 +686,8 @@ export const SuggestedICPCards = ({
             deleteBody.data.remaining_count,
           );
         }
+        await refetchCustomerProfileIcps();
+        window.dispatchEvent(new CustomEvent("customerProfileSaved"));
         toast({ title: "ICP deleted", description: `"${icp.name}" removed from Current ICPs.` });
       } catch (e) {
         console.warn("[Profiler Current ICPs] DELETE customer_profile/icp: failed", e);
@@ -1112,7 +1119,10 @@ export const SuggestedICPCards = ({
         [icpId]: { status: "suggested" },
       }));
       setExpandedReportId((cur) => (cur === icpId ? null : cur));
-      toast({ title: "Dismissal undone", description: "The recommendation is back in your list." });
+      toast({
+        title: "Undo",
+        description: "This recommendation has been restored to your list.",
+      });
     },
     [toast],
   );
@@ -1140,7 +1150,10 @@ export const SuggestedICPCards = ({
         });
         setExpandedReportId((cur) => (cur === icpId ? null : cur));
         if (icpForParent) onICPRejected?.(icpForParent);
-        toast({ title: "ICP removed", description: "Recommended ICP dismissed." });
+        toast({
+          title: "Recommendation removed",
+          description: "This recommendation has been removed from your list.",
+        });
       };
 
       try {
@@ -1239,9 +1252,8 @@ export const SuggestedICPCards = ({
       }, 5000);
       rejectTimersRef.current.set(icp.id, t);
       toast({
-        title: "ICP dismissed",
-        description: "Do you want to undo? You have 5 seconds.",
-        variant: "destructive",
+        title: "Recommendation dismissed",
+        description: "Use Undo if you want to keep this recommendation.",
         action: (
           <ToastAction altText="Undo dismiss" onClick={() => handleUndoReject(icp.id)}>
             Undo
@@ -1260,6 +1272,7 @@ export const SuggestedICPCards = ({
 
   // --- Render ---
   const allSuggestions = [...refinedICPs, ...newICPs];
+  const visibleRecommendedIcps = allSuggestions.filter((s) => cardStatuses[s.id]?.status !== "accepted");
   const pendingCount = allSuggestions.filter((s) => cardStatuses[s.id]?.status === "suggested").length;
 
   return (
@@ -1468,28 +1481,32 @@ export const SuggestedICPCards = ({
 
       {/* ═══ Section 3: Recommended ICPs — Cards row + Full Report below at 80% width ═══ */}
       <div className="space-y-4 animate-fade-in">
-        <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-          Recommended ICPs
-        </h3>
-        <ScrollArea className="w-full">
-          <div className="flex gap-4 pb-4">
-            {allSuggestions.filter((s) => cardStatuses[s.id]?.status !== "accepted").map((icp) => (
-              <RecommendedICPCard
-                key={icp.id}
-                icp={icp}
-                leadCount={getLeadCountForICP(icp.name)}
-                status={cardStatuses[icp.id] || { status: "suggested" }}
-                isExpanded={expandedReportId === icp.id}
-                onAccept={() => handleAcceptClick(icp)}
-                onReject={() => handleRejectICP(icp)}
-                onUndo={() => handleUndoReject(icp.id)}
-                onToggleReport={() => setExpandedReportId(expandedReportId === icp.id ? null : icp.id)}
-                onViewProspects={() => handleViewProspects(icp.name)}
-              />
-            ))}
-          </div>
-          <ScrollBar orientation="horizontal" />
-        </ScrollArea>
+        {visibleRecommendedIcps.length > 0 && (
+          <>
+            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+              Recommended ICPs
+            </h3>
+            <ScrollArea className="w-full">
+              <div className="flex gap-4 pb-4">
+                {visibleRecommendedIcps.map((icp) => (
+                  <RecommendedICPCard
+                    key={icp.id}
+                    icp={icp}
+                    leadCount={getLeadCountForICP(icp.name)}
+                    status={cardStatuses[icp.id] || { status: "suggested" }}
+                    isExpanded={expandedReportId === icp.id}
+                    onAccept={() => handleAcceptClick(icp)}
+                    onReject={() => handleRejectICP(icp)}
+                    onUndo={() => handleUndoReject(icp.id)}
+                    onToggleReport={() => setExpandedReportId(expandedReportId === icp.id ? null : icp.id)}
+                    onViewProspects={() => handleViewProspects(icp.name)}
+                  />
+                ))}
+              </div>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
+          </>
+        )}
 
         {/* Full Report — appears below the cards, 80% width, no drawer */}
         {expandedReportId && (() => {

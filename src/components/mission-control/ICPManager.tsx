@@ -2532,6 +2532,8 @@ const ICPManager: React.FC = () => {
 
     await saveCustomerProfileToBackend(updatedICPs);
 
+    window.dispatchEvent(new CustomEvent("customerProfileSaved"));
+
     toast({
       title: "ICP deleted",
       description: "The ICP has been removed.",
