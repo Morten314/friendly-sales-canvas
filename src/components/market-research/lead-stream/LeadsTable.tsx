@@ -11,7 +11,7 @@ import {
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Bot, ArrowRight, ArrowUpDown, Info, ChevronRight, ChevronDown, TrendingUp, AlertTriangle, Zap, Send, ChevronUp, MapPin, Building2, Users, Eye } from "lucide-react";
+import { Bot, ArrowRight, ArrowUpDown, Info, ChevronRight, ChevronDown, TrendingUp, AlertTriangle, Zap, Send, ChevronUp, MapPin, Building2, Users, Eye, Search } from "lucide-react";
 import { type Rating, type HeatmapLead, REPORT_COLUMNS, RATING_SCORE, TIER_INTELLIGENCE, heatmapLeads, getLeadSegment, getLeadExplanation } from "./leadData";
 
 // ─── Score Breakdown Popover ────────────────────────────────────────────────
@@ -111,7 +111,7 @@ const ratingBorderColor: Record<Rating, string> = {
   Low: "border-red-200 dark:border-red-800",
 };
 
-const LeadIntelligencePanel = ({ lead }: { lead: HeatmapLead }) => {
+const LeadIntelligencePanel = ({ lead, onChatWithScout }: { lead: HeatmapLead; onChatWithScout?: (leads: any[], reportFilter?: string) => void }) => {
   const intel = TIER_INTELLIGENCE[lead.priority];
   const [showSegment, setShowSegment] = useState(false);
   const segment = getLeadSegment(lead.id);
@@ -192,9 +192,18 @@ const LeadIntelligencePanel = ({ lead }: { lead: HeatmapLead }) => {
             ))}
           </div>
 
-          <p className="text-[10px] leading-snug text-foreground bg-primary/10 rounded px-2 py-1.5 border border-primary/20">
-            <span className="font-semibold">Why expand here?</span> {segment.expansionNote}
-          </p>
+          <div className="flex items-center justify-between bg-primary/10 rounded px-2 py-1.5 border border-primary/20">
+            <p className="text-[10px] leading-snug text-foreground">
+              <span className="font-semibold">Why expand here?</span> {segment.expansionNote}
+            </p>
+            <button
+              onClick={() => onChatWithScout?.([lead], `Find more accounts in the ${segment.industry} segment across ${segment.region}`)}
+              className="shrink-0 ml-2 inline-flex items-center gap-1 text-[10px] font-semibold text-primary-foreground bg-primary hover:bg-primary/90 rounded-full px-2.5 py-1 transition-colors"
+            >
+              <Search className="h-3 w-3" />
+              Scout Similar Accounts
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -422,7 +431,7 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
                     {expandedLeads.has(lead.id) && (
                       <TableRow className="hover:bg-transparent">
                         <TableCell colSpan={REPORT_COLUMNS.length + 5} className="p-0">
-                          <LeadIntelligencePanel lead={lead} />
+                          <LeadIntelligencePanel lead={lead} onChatWithScout={onChatWithScout} />
                         </TableCell>
                       </TableRow>
                     )}
