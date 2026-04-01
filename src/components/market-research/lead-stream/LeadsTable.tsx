@@ -163,76 +163,38 @@ const LeadIntelligencePanel = ({ lead }: { lead: HeatmapLead }) => {
 
       {/* Segment Deep-Dive */}
       {showSegment && segment && (
-        <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-3">
-          <div className="flex items-center gap-2">
-            <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center">
-              <MapPin className="h-3.5 w-3.5 text-primary" />
-            </div>
-            <h4 className="text-xs font-semibold text-foreground">Segment Deep-Dive</h4>
+        <div className="rounded-md border border-primary/20 bg-primary/5 p-2.5 space-y-2">
+          <div className="flex items-center gap-1.5">
+            <MapPin className="h-3 w-3 text-primary" />
+            <h4 className="text-[11px] font-semibold text-foreground">Segment Deep-Dive</h4>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {/* Industry */}
-            <div className="space-y-1">
-              <div className="flex items-center gap-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
-                <Building2 className="h-3 w-3" /> Industry
-              </div>
-              <p className="text-xs font-medium text-foreground">{segment.industry}</p>
-            </div>
-
-            {/* Region */}
-            <div className="space-y-1">
-              <div className="flex items-center gap-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
-                <MapPin className="h-3 w-3" /> Region
-              </div>
-              <p className="text-xs font-medium text-foreground">{segment.region}</p>
-            </div>
-
-            {/* Geographies */}
-            <div className="space-y-1">
-              <div className="flex items-center gap-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
-                <MapPin className="h-3 w-3" /> Key Geographies
-              </div>
-              <div className="flex flex-wrap gap-1">
-                {segment.geographies.map((geo) => (
-                  <Badge key={geo} variant="outline" className="text-[10px] font-medium bg-background">
-                    {geo}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-
-            {/* Employee Size */}
-            <div className="space-y-1">
-              <div className="flex items-center gap-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
-                <Users className="h-3 w-3" /> Employee Size
-              </div>
-              <p className="text-xs font-medium text-foreground">{segment.employeeSize}</p>
-            </div>
-          </div>
-
-          {/* Trends */}
-          <div className="space-y-2">
-            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Key Trends in This Segment</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              {segment.trends.map((trend) => (
-                <div key={trend.title} className="rounded-md border border-border bg-background p-2.5 space-y-1">
-                  <div className="flex items-center gap-1.5">
-                    <TrendingUp className="h-3 w-3 text-primary" />
-                    <span className="text-[11px] font-semibold text-foreground">{trend.title}</span>
-                  </div>
-                  <p className="text-[11px] leading-relaxed text-muted-foreground">{trend.insight}</p>
-                </div>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px]">
+            <span className="text-muted-foreground"><Building2 className="h-3 w-3 inline mr-0.5" /><strong className="text-foreground">{segment.industry}</strong></span>
+            <span className="text-muted-foreground"><MapPin className="h-3 w-3 inline mr-0.5" /><strong className="text-foreground">{segment.region}</strong></span>
+            <span className="text-muted-foreground"><Users className="h-3 w-3 inline mr-0.5" /><strong className="text-foreground">{segment.employeeSize}</strong></span>
+            <span className="text-muted-foreground flex items-center gap-1 flex-wrap">
+              {segment.geographies.map((geo) => (
+                <Badge key={geo} variant="outline" className="text-[9px] px-1.5 py-0 h-4 font-medium bg-background">{geo}</Badge>
               ))}
-            </div>
+            </span>
           </div>
 
-          {/* Expansion Note */}
-          <div className="rounded-md bg-primary/10 border border-primary/20 p-2.5">
-            <p className="text-[11px] leading-relaxed text-foreground">
-              <span className="font-semibold">Why expand here?</span> {segment.expansionNote}
-            </p>
+          <div className="grid grid-cols-2 gap-1.5">
+            {segment.trends.map((trend) => (
+              <div key={trend.title} className="rounded border border-border bg-background px-2 py-1.5">
+                <div className="flex items-center gap-1">
+                  <TrendingUp className="h-2.5 w-2.5 text-primary shrink-0" />
+                  <span className="text-[10px] font-semibold text-foreground">{trend.title}</span>
+                </div>
+                <p className="text-[10px] leading-snug text-muted-foreground mt-0.5">{trend.insight}</p>
+              </div>
+            ))}
           </div>
+
+          <p className="text-[10px] leading-snug text-foreground bg-primary/10 rounded px-2 py-1.5 border border-primary/20">
+            <span className="font-semibold">Why expand here?</span> {segment.expansionNote}
+          </p>
         </div>
       )}
     </div>
