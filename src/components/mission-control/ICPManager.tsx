@@ -2087,7 +2087,7 @@ const ICPManager: React.FC = () => {
         const loadedICPs: ICP[] = icpsData.map((icp: any) => {
           const merged = mergeProfilerAcceptedIcpDisplay(icp);
           return {
-            id: merged.id || `icp-${Date.now()}-${Math.random()}`,
+            id: String(merged.icp_id || merged.id || `icp-${Date.now()}-${Math.random()}`),
             primaryRegion: merged.primary_region || merged.primaryRegion || "",
             location: Array.isArray(merged.location) ? merged.location : [],
             industry: Array.isArray(merged.industry) ? merged.industry : [],
@@ -2116,20 +2116,32 @@ const ICPManager: React.FC = () => {
           };
         });
 
-        setIcps(loadedICPs);
+        const uniqueById = new Map<string, ICP>();
+        for (const icp of loadedICPs) {
+          if (!uniqueById.has(icp.id)) uniqueById.set(icp.id, icp);
+        }
+        const dedupedICPs = Array.from(uniqueById.values());
+        if (dedupedICPs.length !== loadedICPs.length) {
+          console.warn(
+            "ICPManager: Dropped duplicate ICP rows (same id) from API response.",
+            { before: loadedICPs.length, after: dedupedICPs.length }
+          );
+        }
+
+        setIcps(dedupedICPs);
         console.log("✅ Customer profile loaded from backend successfully");
-        console.log("Loaded ICPs count:", loadedICPs.length);
-        console.log("Loaded ICPs data:", JSON.stringify(loadedICPs, null, 2));
+        console.log("Loaded ICPs count:", dedupedICPs.length);
+        console.log("Loaded ICPs data:", JSON.stringify(dedupedICPs, null, 2));
         
         // Save to localStorage for offline access
         try {
-          setUserLocalStorage('customerProfile', JSON.stringify(loadedICPs), currentUser.uid);
+          setUserLocalStorage('customerProfile', JSON.stringify(dedupedICPs), currentUser.uid);
         } catch (e) {
           console.warn("Failed to save to localStorage:", e);
         }
         
         // Dispatch event to notify MissionControl that customer profile is loaded
-        if (loadedICPs.length > 0) {
+        if (dedupedICPs.length > 0) {
           window.dispatchEvent(new CustomEvent('customerProfileSaved'));
         }
       } else {
@@ -2496,17 +2508,26 @@ const ICPManager: React.FC = () => {
   };
 
   const handleDeleteICP = async (id: string) => {
+    console.log("[ICPManager] DELETE customer_profile/icp: request", {
+      icp_id: id,
+      org_id: orgIdToUse,
+    });
     const updatedICPs = icps.filter((icp) => icp.id !== id);
     setIcps(updatedICPs);
     removeProfilerAcceptedIcpDisplayMeta(id);
 
     try {
-      await apiFetch(
+      const deleteRes = await apiFetch(
         `customer_profile/icp/${encodeURIComponent(id)}?org_id=${encodeURIComponent(orgIdToUse)}`,
         { method: "DELETE" },
       );
+      const deleteBody = await deleteRes.json();
+      console.log("[ICPManager] DELETE customer_profile/icp: response body", deleteBody);
+      if (deleteBody?.success && deleteBody?.data) {
+        console.log("[ICPManager] DELETE customer_profile/icp: deleted_icp_id=", deleteBody.data.deleted_icp_id, "remaining_count=", deleteBody.data.remaining_count);
+      }
     } catch (e) {
-      console.warn("DELETE customer_profile/icp (optional):", e);
+      console.warn("[ICPManager] DELETE customer_profile/icp: failed (local state already updated)", e);
     }
 
     await saveCustomerProfileToBackend(updatedICPs);

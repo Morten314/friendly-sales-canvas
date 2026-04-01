@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { EditDropdownMenu } from "@/components/market-research/EditDropdownMenu";
@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -53,10 +53,11 @@ import {
   Trash2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { getLeadCountForICP } from "@/components/customers/LeadStream";
-import { buildIcpUrl, buildApiUrl, apiFetchJson } from "@/lib/api";
+import { buildIcpUrl, buildApiUrl, apiFetchJson, apiFetch } from "@/lib/api";
 import { getUserLocalStorage, setUserLocalStorage } from "@/utils/cacheUtils";
 import {
   mergeProfilerAcceptedIcpDisplay,
@@ -70,7 +71,112 @@ import {
   resolveAcceptedPersistedIcpId,
   type SuggestedIcpCardFields,
   PROFILER_ICP_DISPLAY_KEY,
+  removeProfilerAcceptedIcpDisplayMeta,
 } from "@/utils/profilerAcceptedIcpDisplay";
+
+const PROFILER_PENDING_RECOMMENDED_REJECT_KEY = "profiler_pendingRecommendedRejects";
+const PROFILER_DISMISSED_RECOMMENDED_IDS_KEY = "profiler_dismissedRecommendedIcpIds";
+
+type PendingRecommendedRejectItem = {
+  icp_id: string;
+  user_id: string;
+  expiresAt: number;
+  icpSnapshot?: unknown;
+};
+
+function readPendingRecommendedRejects(): PendingRecommendedRejectItem[] {
+  try {
+    const raw = localStorage.getItem(PROFILER_PENDING_RECOMMENDED_REJECT_KEY);
+    if (!raw) return [];
+    const data = JSON.parse(raw) as { items?: PendingRecommendedRejectItem[] };
+    return Array.isArray(data?.items) ? data.items : [];
+  } catch {
+    return [];
+  }
+}
+
+function writePendingRecommendedRejects(items: PendingRecommendedRejectItem[]) {
+  localStorage.setItem(PROFILER_PENDING_RECOMMENDED_REJECT_KEY, JSON.stringify({ items }));
+}
+
+function upsertPendingRecommendedReject(
+  icp_id: string,
+  user_id: string,
+  expiresAt: number,
+  icpSnapshot: object,
+) {
+  const next = readPendingRecommendedRejects().filter((x) => x.icp_id !== icp_id);
+  next.push({
+    icp_id,
+    user_id,
+    expiresAt,
+    icpSnapshot: JSON.parse(JSON.stringify(icpSnapshot)),
+  });
+  writePendingRecommendedRejects(next);
+}
+
+function removePendingRecommendedReject(icp_id: string) {
+  const next = readPendingRecommendedRejects().filter((x) => x.icp_id !== icp_id);
+  writePendingRecommendedRejects(next);
+}
+
+type DismissedRecommendedStore = Record<string, string[]>;
+
+function readDismissedRecommendedStore(): DismissedRecommendedStore {
+  try {
+    const raw = localStorage.getItem(PROFILER_DISMISSED_RECOMMENDED_IDS_KEY);
+    if (!raw) return {};
+    const p = JSON.parse(raw) as DismissedRecommendedStore;
+    return p && typeof p === "object" && !Array.isArray(p) ? p : {};
+  } catch {
+    return {};
+  }
+}
+
+function readDismissedRecommendedIds(userId: string | undefined): Set<string> {
+  if (!userId) return new Set();
+  const arr = readDismissedRecommendedStore()[userId];
+  return new Set(Array.isArray(arr) ? arr : []);
+}
+
+function recordDismissedRecommendedIcp(userId: string, icpId: string) {
+  const store = readDismissedRecommendedStore();
+  const prev = store[userId] ?? [];
+  if (prev.includes(icpId)) return;
+  store[userId] = [...prev, icpId];
+  localStorage.setItem(PROFILER_DISMISSED_RECOMMENDED_IDS_KEY, JSON.stringify(store));
+}
+
+function removeFromProfilerRecommendedCached(icpId: string) {
+  try {
+    const raw = localStorage.getItem("profiler_recommendedICPs");
+    if (!raw) return;
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return;
+    const next = parsed.filter((x: { id?: string }) => String(x?.id) !== String(icpId));
+    localStorage.setItem("profiler_recommendedICPs", JSON.stringify(next));
+  } catch {
+    /* ignore */
+  }
+}
+
+function filterDismissedFromSuggested<T extends { id: string }>(
+  userId: string | undefined,
+  refined: T[],
+  newSuggestions: T[],
+): { refined: T[]; newSuggestions: T[] } {
+  const dismissed = readDismissedRecommendedIds(userId);
+  if (dismissed.size === 0) return { refined, newSuggestions };
+  return {
+    refined: refined.filter((x) => !dismissed.has(x.id)),
+    newSuggestions: newSuggestions.filter((x) => !dismissed.has(x.id)),
+  };
+}
+
+function isRecommendedDeleteNotFound(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  return /\b404\b/.test(error.message) || /not found/i.test(error.message);
+}
 
 /** Dev-only logs for verifying Refresh → GET /icp → mapped cards/reports. Strip or disable for production noise. */
 function profilerIcpDebug(...args: unknown[]) {
@@ -258,7 +364,7 @@ const mapCustomerProfileICPToExisting = (icp: any, index: number): ExistingICP =
     }
   }
   return {
-    id: merged.id || `icp-${index + 1}`,
+    id: String(merged.id || icp?.icp_id || icp?.customer_profile_icp_id || `icp-${index + 1}`),
     name,
     geography: primaryRegion || (locationArr.length > 0 ? locationArr.join(", ") : undefined),
     industry: industryArr.join(", ") || undefined,
@@ -523,6 +629,8 @@ export const SuggestedICPCards = ({
   const [expandedReportId, setExpandedReportId] = useState<string | null>(null);
   const [isSavingAccept, setIsSavingAccept] = useState(false);
 
+  const rejectTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+
   /** Reload Current ICPs from GET /customer_profile after backend updates (e.g. accept from suggested). Returns profile ICP ids. */
   const refetchCustomerProfileIcps = useCallback(async (): Promise<string[]> => {
     const orgIdToUse = orgId || currentUser?.uid || "brewra";
@@ -539,13 +647,53 @@ export const SuggestedICPCards = ({
         [];
       if (Array.isArray(icpsData) && icpsData.length > 0) {
         setExistingICPs(icpsData.map((icp: any, i: number) => mapCustomerProfileICPToExisting(icp, i)));
-        return icpsData.map((row: any) => String(row.id || "")).filter(Boolean);
+        return icpsData.map((row: any) => String(row.id ?? row.icp_id ?? "").trim()).filter(Boolean);
       }
     } catch {
       /* keep existing rows */
     }
     return [];
   }, [orgId, currentUser?.uid]);
+
+  const handleDeleteCurrentIcp = useCallback(
+    async (icp: ExistingICP) => {
+      const orgIdToUse = orgId || currentUser?.uid || "brewra";
+      const icpId = icp.id;
+      console.log("[Profiler Current ICPs] DELETE customer_profile/icp: request", {
+        icp_id: icpId,
+        org_id: orgIdToUse,
+      });
+      setExistingICPs((prev) => prev.filter((e) => e.id !== icpId));
+      setExpandedCurrentICPId((cur) => (cur === icpId ? null : cur));
+      removeProfilerAcceptedIcpDisplayMeta(icpId);
+      try {
+        const deleteRes = await apiFetch(
+          `customer_profile/icp/${encodeURIComponent(icpId)}?org_id=${encodeURIComponent(orgIdToUse)}`,
+          { method: "DELETE" },
+        );
+        const deleteBody = await deleteRes.json();
+        console.log("[Profiler Current ICPs] DELETE customer_profile/icp: response body", deleteBody);
+        if (deleteBody?.success && deleteBody?.data) {
+          console.log(
+            "[Profiler Current ICPs] DELETE: deleted_icp_id=",
+            deleteBody.data.deleted_icp_id,
+            "remaining_count=",
+            deleteBody.data.remaining_count,
+          );
+        }
+        toast({ title: "ICP deleted", description: `"${icp.name}" removed from Current ICPs.` });
+      } catch (e) {
+        console.warn("[Profiler Current ICPs] DELETE customer_profile/icp: failed", e);
+        await refetchCustomerProfileIcps();
+        toast({
+          title: "Could not delete ICP",
+          description: e instanceof Error ? e.message : "Please try again.",
+          variant: "destructive",
+        });
+      }
+    },
+    [orgId, currentUser?.uid, toast, refetchCustomerProfileIcps],
+  );
 
   // Persist state changes
   useEffect(() => {
@@ -667,8 +815,9 @@ export const SuggestedICPCards = ({
             profilerIcpDebug("GET /icp — normalized array length", icpArray.length);
             if (icpArray.length > 0) {
               const mapped = icpArray.map((item: any, i: number) => mapApiICPToSuggested(item, i, "new"));
-              newSuggestions = mapped;
-              refined = [];
+              const filteredGet = filterDismissedFromSuggested(currentUser?.uid, [], mapped);
+              newSuggestions = filteredGet.newSuggestions;
+              refined = filteredGet.refined;
               profilerIcpDebug(
                 "GET /icp — mapped recommended ICPs (source: backend)",
                 mapped.map((icp) => ({
@@ -680,11 +829,10 @@ export const SuggestedICPCards = ({
                   fullReportKeys: icp.fullReport ? Object.keys(icp.fullReport) : [],
                 })),
               );
-              // Persist so recommended ICPs survive navigation
-              try {
-                localStorage.setItem("profiler_recommendedICPs", JSON.stringify(mapped));
-              } catch {}
-              toast({ title: "ICPs refreshed", description: `${mapped.length} recommended ICPs generated.` });
+              toast({
+                title: "ICPs refreshed",
+                description: `${newSuggestions.length} recommended ICPs generated.`,
+              });
             } else {
               profilerIcpDebug("GET /icp — empty normalized array; UI will fall back to cache or mock");
             }
@@ -793,6 +941,20 @@ export const SuggestedICPCards = ({
         profilerIcpDebug(
           "Recommended ICPs source: built-in mock data (no backend response and no profiler_recommendedICPs cache)",
         );
+      }
+
+      {
+        const filtered = filterDismissedFromSuggested(currentUser?.uid, refined, newSuggestions);
+        refined = filtered.refined;
+        newSuggestions = filtered.newSuggestions;
+      }
+
+      try {
+        if (newSuggestions.length > 0 || refined.length > 0) {
+          localStorage.setItem("profiler_recommendedICPs", JSON.stringify([...refined, ...newSuggestions]));
+        }
+      } catch {
+        /* ignore */
       }
 
       setRefinedICPs(refined);
@@ -918,27 +1080,177 @@ export const SuggestedICPCards = ({
     }
   };
 
-  const handleRejectICP = (icp: SuggestedICP) => {
-    setCardStatuses((prev) => ({
-      ...prev,
-      [icp.id]: { status: "rejected", rejectedAt: new Date() },
-    }));
-    onICPRejected?.(icp);
-    toast({
-      title: "ICP Dismissed",
-      description: `"${icp.name}" has been rejected.`,
-      variant: "destructive",
-    });
-  };
+  const handleUndoReject = useCallback(
+    (icpId: string) => {
+      const pending = readPendingRecommendedRejects().find((x) => x.icp_id === icpId);
+      const rawSnap = pending?.icpSnapshot;
+      const snap =
+        rawSnap && typeof rawSnap === "object" && rawSnap !== null
+          ? (rawSnap as SuggestedICP)
+          : undefined;
 
-  const handleUndoAction = (icpId: string) => {
-    setCardStatuses((prev) => ({
-      ...prev,
-      [icpId]: { status: "suggested" },
-    }));
-    if (expandedReportId === icpId) setExpandedReportId(null);
-    toast({ title: "Action undone", description: "ICP returned to suggestions and removed from Current ICPs." });
-  };
+      const existing = rejectTimersRef.current.get(icpId);
+      if (existing) {
+        clearTimeout(existing);
+        rejectTimersRef.current.delete(icpId);
+      }
+      removePendingRecommendedReject(icpId);
+
+      if (snap) {
+        setRefinedICPs((prev) => {
+          const without = prev.filter((x) => x.id !== icpId);
+          return snap.type === "refined" ? [...without, snap] : without;
+        });
+        setNewICPs((prev) => {
+          const without = prev.filter((x) => x.id !== icpId);
+          return snap.type !== "refined" ? [...without, snap] : without;
+        });
+      }
+
+      setCardStatuses((prev) => ({
+        ...prev,
+        [icpId]: { status: "suggested" },
+      }));
+      setExpandedReportId((cur) => (cur === icpId ? null : cur));
+      toast({ title: "Dismissal undone", description: "The recommendation is back in your list." });
+    },
+    [toast],
+  );
+
+  const finalizeRecommendedReject = useCallback(
+    async (icpId: string, userId: string) => {
+      removePendingRecommendedReject(icpId);
+      const existingTimer = rejectTimersRef.current.get(icpId);
+      if (existingTimer) {
+        clearTimeout(existingTimer);
+        rejectTimersRef.current.delete(icpId);
+      }
+      const icpForParent =
+        refinedICPs.find((i) => i.id === icpId) ?? newICPs.find((i) => i.id === icpId);
+
+      const applyDeleteSuccess = () => {
+        removeFromProfilerRecommendedCached(icpId);
+        recordDismissedRecommendedIcp(userId, icpId);
+        setRefinedICPs((prev) => prev.filter((x) => x.id !== icpId));
+        setNewICPs((prev) => prev.filter((x) => x.id !== icpId));
+        setCardStatuses((prev) => {
+          const next = { ...prev };
+          delete next[icpId];
+          return next;
+        });
+        setExpandedReportId((cur) => (cur === icpId ? null : cur));
+        if (icpForParent) onICPRejected?.(icpForParent);
+        toast({ title: "ICP removed", description: "Recommended ICP dismissed." });
+      };
+
+      try {
+        await apiFetch(
+          `icp/recommended/${encodeURIComponent(icpId)}?user_id=${encodeURIComponent(userId)}`,
+          { method: "DELETE" },
+        );
+        applyDeleteSuccess();
+      } catch (e) {
+        if (isRecommendedDeleteNotFound(e)) {
+          applyDeleteSuccess();
+          return;
+        }
+        toast({
+          title: "Could not remove recommendation",
+          description: e instanceof Error ? e.message : "Please try again.",
+          variant: "destructive",
+        });
+        setCardStatuses((prev) => ({
+          ...prev,
+          [icpId]: { status: "suggested" },
+        }));
+      }
+    },
+    [refinedICPs, newICPs, toast, onICPRejected],
+  );
+
+  const finalizeRecommendedRejectRef = useRef(finalizeRecommendedReject);
+  finalizeRecommendedRejectRef.current = finalizeRecommendedReject;
+
+  useEffect(() => {
+    if (loading || !currentUser?.uid) return;
+    const uid = currentUser.uid;
+    const items = readPendingRecommendedRejects().filter((x) => x.user_id === uid);
+    const now = Date.now();
+    for (const item of items) {
+      if (rejectTimersRef.current.has(item.icp_id)) continue;
+      const remaining = item.expiresAt - now;
+      if (remaining <= 0) {
+        removePendingRecommendedReject(item.icp_id);
+        void finalizeRecommendedRejectRef.current(item.icp_id, uid);
+      } else {
+        setCardStatuses((prev) => ({
+          ...prev,
+          [item.icp_id]: {
+            status: "rejected",
+            rejectedAt: prev[item.icp_id]?.rejectedAt ?? new Date(),
+          },
+        }));
+        const t = setTimeout(() => {
+          rejectTimersRef.current.delete(item.icp_id);
+          void finalizeRecommendedRejectRef.current(item.icp_id, uid);
+        }, remaining);
+        rejectTimersRef.current.set(item.icp_id, t);
+      }
+    }
+  }, [loading, currentUser?.uid]);
+
+  const handleUndoAccept = useCallback(
+    (icpId: string) => {
+      setCardStatuses((prev) => ({
+        ...prev,
+        [icpId]: { status: "suggested" },
+      }));
+      setExpandedReportId((cur) => (cur === icpId ? null : cur));
+      toast({ title: "Action undone", description: "ICP returned to suggestions and removed from Current ICPs." });
+    },
+    [toast],
+  );
+
+  const handleRejectICP = useCallback(
+    (icp: SuggestedICP) => {
+      const userId = currentUser?.uid;
+      if (!userId) {
+        toast({
+          title: "Sign in required",
+          description: "You must be signed in to dismiss recommendations.",
+          variant: "destructive",
+        });
+        return;
+      }
+      const prevTimer = rejectTimersRef.current.get(icp.id);
+      if (prevTimer) {
+        clearTimeout(prevTimer);
+        rejectTimersRef.current.delete(icp.id);
+      }
+      const expiresAt = Date.now() + 5000;
+      upsertPendingRecommendedReject(icp.id, userId, expiresAt, icp);
+      setCardStatuses((prev) => ({
+        ...prev,
+        [icp.id]: { status: "rejected", rejectedAt: new Date() },
+      }));
+      const t = setTimeout(() => {
+        rejectTimersRef.current.delete(icp.id);
+        void finalizeRecommendedReject(icp.id, userId);
+      }, 5000);
+      rejectTimersRef.current.set(icp.id, t);
+      toast({
+        title: "ICP dismissed",
+        description: "Do you want to undo? You have 5 seconds.",
+        variant: "destructive",
+        action: (
+          <ToastAction altText="Undo dismiss" onClick={() => handleUndoReject(icp.id)}>
+            Undo
+          </ToastAction>
+        ),
+      });
+    },
+    [currentUser?.uid, toast, handleUndoReject, finalizeRecommendedReject],
+  );
 
   const handleViewProspects = (icpName: string) => {
     window.dispatchEvent(
@@ -955,6 +1267,10 @@ export const SuggestedICPCards = ({
       {/* Loading Modal - same as Scout (Brewra logo) */}
       <Dialog open={loading} onOpenChange={() => {}}>
         <DialogContent className="sm:max-w-md border-0 bg-transparent shadow-none p-0">
+          <DialogTitle className="sr-only">Generating ICPs</DialogTitle>
+          <DialogDescription className="sr-only">
+            Please wait while we fetch your recommended ICPs.
+          </DialogDescription>
           <div className="flex flex-col items-center justify-center gap-6 p-8 bg-background rounded-lg border border-border shadow-2xl">
             {/* Animated Brewra Logo */}
             <div className="relative w-24 h-24 flex items-center justify-center">
@@ -1038,11 +1354,7 @@ export const SuggestedICPCards = ({
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => {
-                            setExistingICPs((prev) => prev.filter((e) => e.id !== icp.id));
-                            if (isExpanded) setExpandedCurrentICPId(null);
-                            toast({ title: "ICP deleted", description: `"${icp.name}" removed from Current ICPs.` });
-                          }}
+                          onClick={() => void handleDeleteCurrentIcp(icp)}
                           className="text-destructive hover:text-destructive/80 hover:bg-destructive/10"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -1170,7 +1482,7 @@ export const SuggestedICPCards = ({
                 isExpanded={expandedReportId === icp.id}
                 onAccept={() => handleAcceptClick(icp)}
                 onReject={() => handleRejectICP(icp)}
-                onUndo={() => handleUndoAction(icp.id)}
+                onUndo={() => handleUndoReject(icp.id)}
                 onToggleReport={() => setExpandedReportId(expandedReportId === icp.id ? null : icp.id)}
                 onViewProspects={() => handleViewProspects(icp.name)}
               />
@@ -1212,7 +1524,7 @@ export const SuggestedICPCards = ({
                   isRejected={isRejected}
                   onAccept={() => handleAcceptClick(icp)}
                   onReject={() => handleRejectICP(icp)}
-                  onUndo={() => handleUndoAction(icp.id)}
+                  onUndo={() => (isAccepted ? handleUndoAccept(icp.id) : handleUndoReject(icp.id))}
                   onViewProspects={() => handleViewProspects(icp.name)}
                 />
               </CardContent>

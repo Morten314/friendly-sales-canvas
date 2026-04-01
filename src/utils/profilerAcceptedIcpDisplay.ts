@@ -122,41 +122,53 @@ export function isProfilerPlaceholderIcp(icp: any): boolean {
  * Prefer {@link mergeProfilerAcceptedIcpDisplay} for Customer Profile / Current ICPs.
  */
 export function mergeProfilerAcceptedIcpDisplayIfPlaceholder(icp: any): any {
-  if (!icp?.id) return icp;
+  const hasId = icp?.id ?? icp?.icp_id ?? icp?.customer_profile_icp_id;
+  if (!hasId) return icp;
   if (!isProfilerPlaceholderIcp(icp)) return icp;
   return mergeProfilerAcceptedIcpDisplay(icp);
+}
+
+/** Backend GET may return `icp_id` (or aliases) while local merge/display key on `id`. */
+function resolveCustomerProfileIcpId(icp: any): string {
+  const candidates = [icp?.id, icp?.icp_id, icp?.customer_profile_icp_id, icp?.icpId];
+  for (const c of candidates) {
+    if (c != null && String(c).trim() !== "") return String(c).trim();
+  }
+  return "";
 }
 
 /**
  * Merge local accept-time metadata into a customer_profile ICP object (API shape).
  */
 export function mergeProfilerAcceptedIcpDisplay(icp: any): any {
-  if (!icp?.id) return icp;
+  const resolvedId = resolveCustomerProfileIcpId(icp);
+  if (!resolvedId) return icp;
+  const icpWithId = icp?.id === resolvedId ? icp : { ...icp, id: resolvedId };
   let meta: ProfilerAcceptedIcpDisplayMeta | null = null;
   try {
-    const raw = localStorage.getItem(PROFILER_ICP_DISPLAY_KEY(icp.id));
+    const raw = localStorage.getItem(PROFILER_ICP_DISPLAY_KEY(resolvedId));
     if (raw) meta = JSON.parse(raw);
   } catch {
-    return icp;
+    return icpWithId;
   }
-  if (!meta) return icp;
+  if (!meta) return icpWithId;
 
-  const out = { ...icp };
-  let primaryRegion = String(icp.primary_region || icp.primaryRegion || "");
-  let location = Array.isArray(icp.location) ? [...icp.location] : [];
-  let industry = Array.isArray(icp.industry) ? [...icp.industry] : [];
-  let companySize = Array.isArray(icp.company_size)
-    ? [...icp.company_size]
-    : Array.isArray(icp.companySize)
-      ? [...icp.companySize]
+  const out = { ...icpWithId, id: resolvedId };
+  let primaryRegion = String(icpWithId.primary_region || icpWithId.primaryRegion || "");
+  let location = Array.isArray(icpWithId.location) ? [...icpWithId.location] : [];
+  let industry = Array.isArray(icpWithId.industry) ? [...icpWithId.industry] : [];
+  let companySize = Array.isArray(icpWithId.company_size)
+    ? [...icpWithId.company_size]
+    : Array.isArray(icpWithId.companySize)
+      ? [...icpWithId.companySize]
       : [];
-  let buyerRole = Array.isArray(icp.buyer_role)
-    ? [...icp.buyer_role]
-    : Array.isArray(icp.buyerRole)
-      ? [...icp.buyerRole]
+  let buyerRole = Array.isArray(icpWithId.buyer_role)
+    ? [...icpWithId.buyer_role]
+    : Array.isArray(icpWithId.buyerRole)
+      ? [...icpWithId.buyerRole]
       : [];
 
-  const existingName = pickIcpNameFromRecord(icp);
+  const existingName = pickIcpNameFromRecord(icpWithId);
   if (
     meta.displayName &&
     (!existingName || isUnknownPlaceholder(existingName))
@@ -284,7 +296,7 @@ export function buildCustomerProfileSavePayload(icps: any[], orgId: string) {
   return {
     org_id: orgId,
     icps: icps.map((row: any) => ({
-      id: row.id,
+      id: row.id ?? row.icp_id,
       primary_region: row.primary_region ?? row.primaryRegion ?? "",
       location: Array.isArray(row.location) ? row.location : [],
       industry: Array.isArray(row.industry) ? row.industry : [],
@@ -324,7 +336,7 @@ export function mapCustomerProfileApiRowsToStoredIcps(icpsData: any[]): any[] {
   return icpsData.map((icp: any) => {
     const merged = mergeProfilerAcceptedIcpDisplay(icp);
     return {
-      id: merged.id || `icp-${Date.now()}-${Math.random()}`,
+      id: merged.id || merged.icp_id || `icp-${Date.now()}-${Math.random()}`,
       primaryRegion: merged.primary_region || merged.primaryRegion || "",
       location: Array.isArray(merged.location) ? merged.location : [],
       industry: Array.isArray(merged.industry) ? merged.industry : [],

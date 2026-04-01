@@ -3382,6 +3382,10 @@ const MissionControl = () => {
       {/* Loading Modal */}
       <Dialog open={isLoadingProfile} onOpenChange={() => {}}>
         <DialogContent className="sm:max-w-md border-0 bg-transparent shadow-none p-0">
+          <DialogTitle className="sr-only">Loading company profile</DialogTitle>
+          <DialogDescription className="sr-only">
+            Please wait while we fetch your company profile data.
+          </DialogDescription>
           <div className="flex flex-col items-center justify-center gap-6 p-8 bg-background rounded-lg border border-border shadow-2xl">
             {/* Animated Brewra Logo */}
             <div className="relative w-24 h-24 flex items-center justify-center">
