@@ -205,6 +205,91 @@ export interface ReportComponentScore {
   totalScore: number;
 }
 
+// ─── Segment Intelligence Data ───────────────────────────────────────────────
+
+export interface LeadSegment {
+  industry: string;
+  region: string;
+  geographies: string[];
+  employeeSize: string;
+  trends: { title: string; insight: string }[];
+  expansionNote: string;
+}
+
+const SEGMENT_POOL: Record<string, LeadSegment> = {
+  "enterprise-saas-na": {
+    industry: "Enterprise SaaS",
+    region: "North America",
+    geographies: ["San Francisco, CA", "Austin, TX", "Toronto, ON"],
+    employeeSize: "500–2,000",
+    trends: [
+      { title: "AI-Powered Sales Automation", insight: "72% of enterprise SaaS buyers are actively evaluating AI copilot tools for GTM teams." },
+      { title: "Platform Consolidation", insight: "Budget holders consolidating vendors — companies with unified platforms see 3x faster deal cycles." },
+    ],
+    expansionNote: "This segment contains 12 similar accounts in your ICP with matching firmographics and buying signals. Expanding here could yield 8–10 net-new pipeline opportunities.",
+  },
+  "fintech-eu": {
+    industry: "FinTech & Financial Services",
+    region: "Europe",
+    geographies: ["London, UK", "Frankfurt, DE", "Milan, IT"],
+    employeeSize: "200–1,000",
+    trends: [
+      { title: "Open Banking Regulation (PSD3)", insight: "Upcoming PSD3 mandates driving urgent compliance spend across EU fintech firms." },
+      { title: "Embedded Finance Growth", insight: "Embedded finance market growing 28% YoY — creating demand for API-first compliance tools." },
+    ],
+    expansionNote: "This segment has 9 lookalike accounts with strong regulatory tailwinds. PSD3 timeline creates urgency for 6 of them within the next 2 quarters.",
+  },
+  "ai-ml-apac": {
+    industry: "AI & Machine Learning",
+    region: "Asia-Pacific",
+    geographies: ["Singapore", "Bengaluru, IN", "Tokyo, JP"],
+    employeeSize: "100–500",
+    trends: [
+      { title: "Sovereign AI Initiatives", insight: "Government-backed AI programs in SG, IN, and JP driving enterprise adoption and local data residency requirements." },
+      { title: "MLOps Maturity", insight: "50% of APAC AI firms moving from experimentation to production — creating demand for scalable infrastructure." },
+    ],
+    expansionNote: "This segment maps to 7 accounts in your pipeline with shared technology stacks and growth trajectories. Regional expansion here aligns with your APAC GTM strategy.",
+  },
+  "healthtech-na": {
+    industry: "HealthTech & Digital Health",
+    region: "North America",
+    geographies: ["Boston, MA", "Nashville, TN", "Vancouver, BC"],
+    employeeSize: "50–300",
+    trends: [
+      { title: "Interoperability Mandates (TEFCA)", insight: "TEFCA framework pushing health systems toward data exchange — creating urgent integration needs." },
+      { title: "Remote Patient Monitoring", insight: "RPM adoption accelerating post-pandemic, with 40% of health systems expanding telehealth infrastructure." },
+    ],
+    expansionNote: "This segment includes 5 similar accounts actively seeking compliant data solutions. Early movers here gain significant market share before 2026 mandates.",
+  },
+  "ecommerce-latam": {
+    industry: "E-Commerce & D2C",
+    region: "Latin America",
+    geographies: ["São Paulo, BR", "Mexico City, MX", "Bogotá, CO"],
+    employeeSize: "50–500",
+    trends: [
+      { title: "Cross-Border Commerce Boom", insight: "LATAM cross-border e-commerce growing 35% YoY driven by mobile-first consumers and fintech payment rails." },
+      { title: "Social Commerce Adoption", insight: "Social selling now accounts for 22% of D2C revenue in Brazil and Mexico — shifting marketing spend priorities." },
+    ],
+    expansionNote: "This segment contains 6 high-growth accounts with similar GMV trajectories. Expanding here captures the LATAM digital commerce wave ahead of competitors.",
+  },
+};
+
+const SEGMENT_ASSIGNMENTS: Record<string, string> = {
+  "1": "enterprise-saas-na", "2": "enterprise-saas-na", "5": "enterprise-saas-na", "7": "enterprise-saas-na",
+  "11": "enterprise-saas-na", "16": "enterprise-saas-na", "18": "enterprise-saas-na", "19": "enterprise-saas-na",
+  "8": "fintech-eu", "14": "fintech-eu", "20": "fintech-eu", "22": "fintech-eu", "35": "fintech-eu",
+  "3": "ai-ml-apac", "10": "ai-ml-apac", "15": "ai-ml-apac", "23": "ai-ml-apac", "27": "ai-ml-apac", "33": "ai-ml-apac",
+  "4": "healthtech-na", "6": "healthtech-na", "13": "healthtech-na", "31": "healthtech-na",
+  "9": "ecommerce-latam", "12": "ecommerce-latam", "25": "ecommerce-latam", "28": "ecommerce-latam", "32": "ecommerce-latam",
+};
+
+export function getLeadSegment(leadId: string): LeadSegment | null {
+  const segKey = SEGMENT_ASSIGNMENTS[leadId];
+  return segKey ? SEGMENT_POOL[segKey] : SEGMENT_POOL["enterprise-saas-na"]; // fallback
+}
+
+// ─── Computed report component scores ────────────────────────────────────────
+
 export function getReportComponentScores(): ReportComponentScore[] {
   return REPORT_COLUMNS.map((col) => {
     let high = 0, medium = 0, low = 0;

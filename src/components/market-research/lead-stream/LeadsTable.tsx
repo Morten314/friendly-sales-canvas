@@ -11,8 +11,8 @@ import {
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Bot, ArrowRight, ArrowUpDown, Info, ChevronRight, ChevronDown, TrendingUp, AlertTriangle, Zap, Send, ChevronUp } from "lucide-react";
-import { type Rating, type HeatmapLead, REPORT_COLUMNS, RATING_SCORE, TIER_INTELLIGENCE, COMPONENT_EXPLANATIONS, heatmapLeads } from "./leadData";
+import { Bot, ArrowRight, ArrowUpDown, Info, ChevronRight, ChevronDown, TrendingUp, AlertTriangle, Zap, Send, ChevronUp, MapPin, Building2, Users, Eye } from "lucide-react";
+import { type Rating, type HeatmapLead, REPORT_COLUMNS, RATING_SCORE, TIER_INTELLIGENCE, COMPONENT_EXPLANATIONS, heatmapLeads, getLeadSegment } from "./leadData";
 
 // ─── Score Breakdown Popover ────────────────────────────────────────────────
 
@@ -113,6 +113,8 @@ const ratingBorderColor: Record<Rating, string> = {
 
 const LeadIntelligencePanel = ({ lead }: { lead: HeatmapLead }) => {
   const intel = TIER_INTELLIGENCE[lead.priority];
+  const [showSegment, setShowSegment] = useState(false);
+  const segment = getLeadSegment(lead.id);
 
   return (
     <div className="px-4 py-3 bg-muted/30 border-t border-border/50 space-y-3">
@@ -146,6 +148,93 @@ const LeadIntelligencePanel = ({ lead }: { lead: HeatmapLead }) => {
           );
         })}
       </div>
+
+      {/* View Segment Button */}
+      <div className="pt-1">
+        <button
+          onClick={() => setShowSegment(!showSegment)}
+          className="flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+        >
+          <Eye className="h-3.5 w-3.5" />
+          {showSegment ? "Hide Segment" : "View Segment"}
+          {showSegment ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+        </button>
+      </div>
+
+      {/* Segment Deep-Dive */}
+      {showSegment && segment && (
+        <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center">
+              <MapPin className="h-3.5 w-3.5 text-primary" />
+            </div>
+            <h4 className="text-xs font-semibold text-foreground">Segment Deep-Dive</h4>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {/* Industry */}
+            <div className="space-y-1">
+              <div className="flex items-center gap-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
+                <Building2 className="h-3 w-3" /> Industry
+              </div>
+              <p className="text-xs font-medium text-foreground">{segment.industry}</p>
+            </div>
+
+            {/* Region */}
+            <div className="space-y-1">
+              <div className="flex items-center gap-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
+                <MapPin className="h-3 w-3" /> Region
+              </div>
+              <p className="text-xs font-medium text-foreground">{segment.region}</p>
+            </div>
+
+            {/* Geographies */}
+            <div className="space-y-1">
+              <div className="flex items-center gap-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
+                <MapPin className="h-3 w-3" /> Key Geographies
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {segment.geographies.map((geo) => (
+                  <Badge key={geo} variant="outline" className="text-[10px] font-medium bg-background">
+                    {geo}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+
+            {/* Employee Size */}
+            <div className="space-y-1">
+              <div className="flex items-center gap-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
+                <Users className="h-3 w-3" /> Employee Size
+              </div>
+              <p className="text-xs font-medium text-foreground">{segment.employeeSize}</p>
+            </div>
+          </div>
+
+          {/* Trends */}
+          <div className="space-y-2">
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Key Trends in This Segment</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {segment.trends.map((trend) => (
+                <div key={trend.title} className="rounded-md border border-border bg-background p-2.5 space-y-1">
+                  <div className="flex items-center gap-1.5">
+                    <TrendingUp className="h-3 w-3 text-primary" />
+                    <span className="text-[11px] font-semibold text-foreground">{trend.title}</span>
+                  </div>
+                  <p className="text-[11px] leading-relaxed text-muted-foreground">{trend.insight}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Expansion Note */}
+          <div className="rounded-md bg-primary/10 border border-primary/20 p-2.5">
+            <p className="text-[11px] leading-relaxed text-foreground">
+              <span className="font-semibold">Why expand here?</span> {segment.expansionNote}
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
