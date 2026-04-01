@@ -12,7 +12,7 @@ import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Bot, ArrowRight, ArrowUpDown, Info, ChevronRight, ChevronDown, TrendingUp, AlertTriangle, Zap, Send, ChevronUp, MapPin, Building2, Users, Eye } from "lucide-react";
-import { type Rating, type HeatmapLead, REPORT_COLUMNS, RATING_SCORE, TIER_INTELLIGENCE, COMPONENT_EXPLANATIONS, heatmapLeads, getLeadSegment } from "./leadData";
+import { type Rating, type HeatmapLead, REPORT_COLUMNS, RATING_SCORE, TIER_INTELLIGENCE, heatmapLeads, getLeadSegment, getLeadExplanation } from "./leadData";
 
 // ─── Score Breakdown Popover ────────────────────────────────────────────────
 
@@ -130,7 +130,7 @@ const LeadIntelligencePanel = ({ lead }: { lead: HeatmapLead }) => {
       <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
         {REPORT_COLUMNS.map((col) => {
           const rating = lead.ratings[col.key];
-          const explanation = COMPONENT_EXPLANATIONS[col.key]?.[rating] || "";
+          const explanation = getLeadExplanation(lead.id, col.key, rating);
           return (
             <div
               key={col.key}
