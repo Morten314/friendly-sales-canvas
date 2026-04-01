@@ -130,7 +130,7 @@ const LeadIntelligencePanel = ({ lead }: { lead: HeatmapLead }) => {
       <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
         {REPORT_COLUMNS.map((col) => {
           const rating = lead.ratings[col.key];
-          const explanation = COMPONENT_EXPLANATIONS[col.key]?.[rating] || "";
+          const explanation = getLeadExplanation(lead.id, col.key, rating);
           return (
             <div
               key={col.key}
