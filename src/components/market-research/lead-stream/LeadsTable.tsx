@@ -431,7 +431,7 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
                     {expandedLeads.has(lead.id) && (
                       <TableRow className="hover:bg-transparent">
                         <TableCell colSpan={REPORT_COLUMNS.length + 5} className="p-0">
-                          <LeadIntelligencePanel lead={lead} />
+                          <LeadIntelligencePanel lead={lead} onChatWithScout={onChatWithScout} />
                         </TableCell>
                       </TableRow>
                     )}
