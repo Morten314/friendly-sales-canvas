@@ -3350,42 +3350,24 @@ const DataSourcesManager: React.FC = () => {
                   </DropdownMenuSubTrigger>
                   <DropdownMenuSubContent>
                     <DropdownMenuLabel>Connect to CRM System</DropdownMenuLabel>
-                    <DropdownMenuItem onClick={() => handleConnectToCRM('HubSpot')}>
-                      <Plug className="mr-2 h-4 w-4" />
-                      HubSpot
-                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleConnectToCRM('Salesforce')}>
                       <Plug className="mr-2 h-4 w-4" />
                       Salesforce
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleConnectToCRM('HubSpot')}>
+                      <Plug className="mr-2 h-4 w-4" />
+                      HubSpot
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleConnectToCRM('Pipedrive')}>
                       <Plug className="mr-2 h-4 w-4" />
                       Pipedrive
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleConnectToCRM('Zoho')}>
-                      <Plug className="mr-2 h-4 w-4" />
-                      Zoho CRM
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleConnectToCRM('Monday')}>
-                      <Plug className="mr-2 h-4 w-4" />
-                      Monday.com
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleConnectToCRM('Asana')}>
-                      <Plug className="mr-2 h-4 w-4" />
-                      Asana
+                    <DropdownMenuItem onClick={() => setShowLeadUpload(true)}>
+                      <Upload className="mr-2 h-4 w-4" />
+                      Add lead stream
                     </DropdownMenuItem>
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
-                {!showLeadUpload && !showLeadEditForm && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuLabel>Lead stream</DropdownMenuLabel>
-                    <DropdownMenuItem onClick={() => setShowLeadUpload(true)}>
-                      <Upload className="mr-2 h-4 w-4" />
-                      Upload CSV
-                    </DropdownMenuItem>
-                  </>
-                )}
               </DropdownMenuContent>
             </DropdownMenu>
           )}
@@ -3435,29 +3417,21 @@ const DataSourcesManager: React.FC = () => {
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent>
                   <DropdownMenuLabel>Connect to CRM System</DropdownMenuLabel>
-                  <DropdownMenuItem onClick={() => handleConnectToCRM('HubSpot')}>
-                    <Plug className="mr-2 h-4 w-4" />
-                    HubSpot
-                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handleConnectToCRM('Salesforce')}>
                     <Plug className="mr-2 h-4 w-4" />
                     Salesforce
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleConnectToCRM('HubSpot')}>
+                    <Plug className="mr-2 h-4 w-4" />
+                    HubSpot
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handleConnectToCRM('Pipedrive')}>
                     <Plug className="mr-2 h-4 w-4" />
                     Pipedrive
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleConnectToCRM('Zoho')}>
-                    <Plug className="mr-2 h-4 w-4" />
-                    Zoho CRM
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleConnectToCRM('Monday')}>
-                    <Plug className="mr-2 h-4 w-4" />
-                    Monday.com
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleConnectToCRM('Asana')}>
-                    <Plug className="mr-2 h-4 w-4" />
-                    Asana
+                  <DropdownMenuItem onClick={() => setShowLeadUpload(true)}>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Add lead stream
                   </DropdownMenuItem>
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
