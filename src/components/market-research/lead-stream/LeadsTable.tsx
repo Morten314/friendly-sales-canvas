@@ -111,7 +111,7 @@ const ratingBorderColor: Record<Rating, string> = {
   Low: "border-red-200 dark:border-red-800",
 };
 
-const LeadIntelligencePanel = ({ lead }: { lead: HeatmapLead }) => {
+const LeadIntelligencePanel = ({ lead, onChatWithScout }: { lead: HeatmapLead; onChatWithScout?: (leads: any[], reportFilter?: string) => void }) => {
   const intel = TIER_INTELLIGENCE[lead.priority];
   const [showSegment, setShowSegment] = useState(false);
   const segment = getLeadSegment(lead.id);
