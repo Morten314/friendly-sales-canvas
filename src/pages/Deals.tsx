@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MessageSquare, Users } from "lucide-react";
 import StrategistWorkspace from "@/components/market-research/StrategistWorkspace";
 import StrategistLeadStream from "@/components/strategist/StrategistLeadStream";
+import StrategistRecommendations from "@/components/strategist/StrategistRecommendations";
 
 interface StrategistContext {
   leads: { name: string; company: string; jobTitle: string; email?: string; tenure?: string; source?: string; signals?: string[] }[];
@@ -56,13 +57,17 @@ const Deals = () => {
           </div>
 
           <TabsContent value="workspace" className="flex-1 mt-0 overflow-hidden">
-            <StrategistWorkspace
-              leads={context?.leads || []}
-              opportunity={context?.opportunity}
-              icp={context?.icp}
-              triggerPrompt={context?.triggerPrompt || ""}
-              onBack={() => navigate('/your-ai-team/scout/chatwithscout')}
-            />
+            {context?.leads?.length ? (
+              <StrategistWorkspace
+                leads={context.leads}
+                opportunity={context?.opportunity}
+                icp={context?.icp}
+                triggerPrompt={context?.triggerPrompt || ""}
+                onBack={() => navigate('/your-ai-team/scout/chatwithscout')}
+              />
+            ) : (
+              <StrategistRecommendations />
+            )}
           </TabsContent>
 
           <TabsContent value="leadstream" className="flex-1 mt-0 overflow-auto px-4 py-4">
