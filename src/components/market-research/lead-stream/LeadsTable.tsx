@@ -427,14 +427,6 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
                           >
                             Ask Scout <ArrowRight className="h-3 w-3" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 text-xs gap-1 text-accent-foreground hover:text-accent-foreground"
-                            onClick={() => onSendToStrategist?.(lead)}
-                          >
-                            <Send className="h-3 w-3" /> Send to Strategist
-                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
