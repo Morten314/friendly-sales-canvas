@@ -291,10 +291,7 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
           )}
         </div>
         <button
-          onClick={() => {
-            window.location.hash = "";
-            window.dispatchEvent(new CustomEvent("navigate-to-strategist-leads"));
-          }}
+          onClick={() => navigate('/your-ai-team/strategist/leadstream')}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-primary/20 bg-primary/5 hover:bg-primary/10 hover:border-primary/40 transition-all duration-200 text-[11px] font-semibold text-primary"
         >
           <Zap className="h-3 w-3" />
