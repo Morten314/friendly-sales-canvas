@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -229,6 +230,7 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
   onSendToStrategist,
   onChatWithScout,
 }) => {
+  const navigate = useNavigate();
   const [sortBy, setSortBy] = useState<"score" | "priority" | null>(null);
   const [sortAsc, setSortAsc] = useState(false);
   const [tierFilter, setTierFilter] = useState<string>("all");
@@ -288,6 +290,14 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
             </Badge>
           )}
         </div>
+        <button
+          onClick={() => navigate('/your-ai-team/strategist/leadstream')}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-primary/20 bg-primary/5 hover:bg-primary/10 hover:border-primary/40 transition-all duration-200 text-[11px] font-semibold text-primary"
+        >
+          <Zap className="h-3 w-3" />
+          Next Actions by Strategist
+          <ArrowRight className="h-3 w-3" />
+        </button>
         <div className="flex items-center gap-2">
           <Select value={tierFilter} onValueChange={setTierFilter}>
             <SelectTrigger className="h-8 text-xs w-[130px]">
