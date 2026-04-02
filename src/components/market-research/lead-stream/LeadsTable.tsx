@@ -288,6 +288,17 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
             </Badge>
           )}
         </div>
+        <button
+          onClick={() => {
+            window.location.hash = "";
+            window.dispatchEvent(new CustomEvent("navigate-to-strategist-leads"));
+          }}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-primary/20 bg-primary/5 hover:bg-primary/10 hover:border-primary/40 transition-all duration-200 text-[11px] font-semibold text-primary"
+        >
+          <Zap className="h-3 w-3" />
+          Next Actions by Strategist
+          <ArrowRight className="h-3 w-3" />
+        </button>
         <div className="flex items-center gap-2">
           <Select value={tierFilter} onValueChange={setTierFilter}>
             <SelectTrigger className="h-8 text-xs w-[130px]">
