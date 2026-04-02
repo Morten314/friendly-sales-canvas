@@ -230,6 +230,7 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
   onSendToStrategist,
   onChatWithScout,
 }) => {
+  const navigate = useNavigate();
   const [sortBy, setSortBy] = useState<"score" | "priority" | null>(null);
   const [sortAsc, setSortAsc] = useState(false);
   const [tierFilter, setTierFilter] = useState<string>("all");
