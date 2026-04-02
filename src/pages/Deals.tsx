@@ -57,13 +57,17 @@ const Deals = () => {
           </div>
 
           <TabsContent value="workspace" className="flex-1 mt-0 overflow-hidden">
-            <StrategistWorkspace
-              leads={context?.leads || []}
-              opportunity={context?.opportunity}
-              icp={context?.icp}
-              triggerPrompt={context?.triggerPrompt || ""}
-              onBack={() => navigate('/your-ai-team/scout/chatwithscout')}
-            />
+            {context?.leads?.length ? (
+              <StrategistWorkspace
+                leads={context.leads}
+                opportunity={context?.opportunity}
+                icp={context?.icp}
+                triggerPrompt={context?.triggerPrompt || ""}
+                onBack={() => navigate('/your-ai-team/scout/chatwithscout')}
+              />
+            ) : (
+              <StrategistRecommendations />
+            )}
           </TabsContent>
 
           <TabsContent value="leadstream" className="flex-1 mt-0 overflow-auto px-4 py-4">
