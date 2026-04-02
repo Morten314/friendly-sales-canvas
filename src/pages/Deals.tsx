@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MessageSquare, Users } from "lucide-react";
 import StrategistWorkspace from "@/components/market-research/StrategistWorkspace";
 import StrategistLeadStream from "@/components/strategist/StrategistLeadStream";
+import StrategistRecommendations from "@/components/strategist/StrategistRecommendations";
 
 interface StrategistContext {
   leads: { name: string; company: string; jobTitle: string; email?: string; tenure?: string; source?: string; signals?: string[] }[];
