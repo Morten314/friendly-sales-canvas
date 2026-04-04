@@ -431,6 +431,28 @@ async def batch_upload_leads(
             tmp_path = tmp_file.name
         
         try:
+            # Prepare lead stream tracking (Mongo)
+            mongo_client = _get_profiler_mongo_client()
+            profiler_db = mongo_client["Profiler"]
+            lead_stream_coll = profiler_db["Lead_Stream_Files"]
+            lead_stream_coll.create_index("file_id", unique=True)
+            lead_stream_coll.create_index([("user_id", 1), ("org_id", 1)])
+            # Generate backend file_id
+            file_id = str(uuid.uuid4())
+            uploaded_at = datetime.utcnow().isoformat()
+            lead_stream_coll.insert_one({
+                "file_id": file_id,
+                "user_id": user_id,
+                "org_id": org_id,
+                "filename": file.filename,
+                "uploaded_at": uploaded_at,
+                "processing_status": "processing",
+                "total_rows": 0,
+                "created_count": 0,
+                "error_count": 0,
+                "last_processed_at": uploaded_at
+            })
+
             # Read CSV file
             df = pd.read_csv(tmp_path)
             
@@ -444,6 +466,7 @@ async def batch_upload_leads(
             created_count = 0
             error_count = 0
             errors = []
+            total_rows = int(len(df))
             
             for index, row in df.iterrows():
                 try:
@@ -461,6 +484,7 @@ async def batch_upload_leads(
                     lead_data["org_id"] = org_id
                     lead_data["lead_id"] = lead_id
                     lead_data["created_at"] = datetime.utcnow().isoformat()
+                    lead_data["file_id"] = file_id
                     
                     # Set default stage if not provided
                     if "stage" not in lead_data and "status" not in lead_data and "Status" not in lead_data:
@@ -487,9 +511,25 @@ async def batch_upload_leads(
                     logger.error(f"Error processing row {index + 1}: {str(e)}")
                     continue
             
+            # Update stream status
+            lead_stream_coll.update_one(
+                {"file_id": file_id},
+                {"$set": {
+                    "processing_status": "completed",
+                    "total_rows": total_rows,
+                    "created_count": created_count,
+                    "error_count": error_count,
+                    "last_processed_at": datetime.utcnow().isoformat()
+                }}
+            )
+            mongo_client.close()
             return {
                 "status": "success",
                 "message": f"Batch upload completed. {created_count} leads created, {error_count} errors.",
+                "file_id": file_id,
+                "filename": file.filename,
+                "uploaded_at": uploaded_at,
+                "total_rows": total_rows,
                 "created_count": created_count,
                 "error_count": error_count,
                 "errors": errors[:10] if errors else []  # Limit errors to first 10
@@ -505,6 +545,71 @@ async def batch_upload_leads(
     except Exception as e:
         logger.error(f"Error in batch upload: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to process CSV file: {str(e)}")
+
+@app.get("/leads/by-file", response_model=List[Dict[str, Any]])
+def get_leads_by_file(user_id: str = Query(...), org_id: str = Query(...), file_id: str = Query(...)):
+    """
+    Fetch leads filtered by file_id (and user_id/org_id for multitenancy).
+    Returns full lead records with all properties similar to GET /leads.
+    """
+    try:
+        query_string = """
+        MATCH (l:Lead)
+        WHERE l.user_id = $user_id AND l.org_id = $org_id AND l.file_id = $file_id
+        RETURN l
+        """
+        with driver.session() as session:
+            results = session.run(query_string, user_id=user_id, org_id=org_id, file_id=file_id)
+            leads: List[Dict[str, Any]] = []
+            for record in results:
+                lead_node = record["l"]
+                lead_dict = dict(lead_node.items())
+                processed_lead: Dict[str, Any] = {}
+                for key, value in lead_dict.items():
+                    if isinstance(value, str) and value.strip().startswith(('{', '[')):
+                        try:
+                            processed_lead[key] = json.loads(value)
+                        except json.JSONDecodeError:
+                            processed_lead[key] = value
+                    else:
+                        processed_lead[key] = value
+                leads.append(processed_lead)
+        return leads
+    except Exception as e:
+        logger.error(f"Error fetching leads by file_id: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch leads by file_id: {str(e)}")
+
+@app.get("/leads/stream/status", response_model=Dict[str, Any])
+def get_lead_stream_status(user_id: str = Query(...), org_id: str = Query(...)):
+    """
+    List lead-stream uploads (file_id registry/status) for a given user/org.
+    """
+    mongo_client = None
+    try:
+        mongo_client = _get_profiler_mongo_client()
+        profiler_db = mongo_client["Profiler"]
+        coll = profiler_db["Lead_Stream_Files"]
+        cursor = coll.find({"user_id": user_id, "org_id": org_id}).sort("uploaded_at", -1)
+        files = []
+        for doc in cursor:
+            item = {
+                "file_id": str(doc.get("file_id")),
+                "filename": doc.get("filename"),
+                "uploaded_at": doc.get("uploaded_at"),
+                "last_processed_at": doc.get("last_processed_at"),
+                "total_rows": doc.get("total_rows", 0),
+                "created_count": doc.get("created_count", 0),
+                "error_count": doc.get("error_count", 0),
+                "processing_status": doc.get("processing_status", "completed")
+            }
+            files.append(item)
+        return {"files": files}
+    except Exception as e:
+        logger.error(f"Error fetching lead-stream status: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch lead-stream status: {str(e)}")
+    finally:
+        if mongo_client:
+            mongo_client.close()
 
 @app.get("/Sales_Pipeline")
 def get_sales_pipeline(user_id: str = Query(...), timeframe: int = Query(...)):
