@@ -138,11 +138,6 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
       .trim();
   };
 
-  // Helper functions for API integration
-  const handleQuestionClick = async (question: string) => {
-    await callChatAPI(question);
-  };
-
   const handleSendMessage = async () => {
     if (!userInput.trim()) return;
     const question = userInput;
@@ -203,7 +198,17 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
         console.log('Response type:', typeof data);
         console.log('Is array:', Array.isArray(data));
         
-        // Handle different response formats - STRICTLY only extract response_message
+        // Backend /chat returns { response: "..." } (Swagger); some paths use response_message
+        const pickScoutBody = (obj: Record<string, unknown> | null | undefined): string => {
+          if (!obj || typeof obj !== 'object') return '';
+          const msg = obj.response_message;
+          const alt = obj.response;
+          if (typeof msg === 'string' && msg.trim() !== '') return msg;
+          if (typeof alt === 'string' && alt.trim() !== '') return alt;
+          return '';
+        };
+
+        // Handle different response formats — extract user-facing text only
         let answer = '';
         if (Array.isArray(data) && data.length > 0) {
           console.log('Processing as array, first element:', data[0]);
@@ -211,23 +216,20 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
           
           if (typeof data[0] === 'string') {
             answer = data[0];
-          } else if (typeof data[0] === 'object') {
-            // STRICTLY only use response_message - do not fall back to other fields or JSON.stringify
-            answer = data[0].response_message || '';
+          } else if (typeof data[0] === 'object' && data[0] !== null) {
+            answer = pickScoutBody(data[0] as Record<string, unknown>);
           } else {
             answer = String(data[0]);
           }
         } else if (typeof data === 'object' && data !== null) {
           console.log('Processing as object, keys:', Object.keys(data));
-          // STRICTLY only use response_message - do not fall back to other fields or JSON.stringify
-          answer = data.response_message || '';
+          answer = pickScoutBody(data as Record<string, unknown>);
         } else if (typeof data === 'string') {
           console.log('Processing as string');
-          // Try to parse as JSON string in case it contains response_message
+          // Try to parse as JSON string in case it contains response / response_message
           try {
-            const parsedData = JSON.parse(data);
-            // STRICTLY only use response_message
-            answer = parsedData.response_message || '';
+            const parsedData = JSON.parse(data) as Record<string, unknown>;
+            answer = pickScoutBody(parsedData);
           } catch (e) {
             // If it's not JSON, use the string as-is
             answer = data;
@@ -327,7 +329,7 @@ const getContextualScoutMessage = () => {
     }
     
     // Default message for industry-trends context (even when hasEdits is false)
-    return "Hi there! 👋 I'm Scout. Want to dive deeper into industry trends and emerging technologies? Here are some questions I can help answer.";
+    return "Hi there! 👋 I'm Scout. Want to dive deeper into industry trends and emerging technologies? Ask me anything.";
   }
 
   if (context === 'regulatory-compliance') {
@@ -400,154 +402,8 @@ const getContextualScoutMessage = () => {
     return "I noticed you updated the market analysis. Would you like me to provide additional insights based on your changes?";
   }
   
-  return "Hi there! 👋 I'm Scout. Want to dive deeper into your market size and opportunities? Here are some questions I can help answer.";
+  return "Hi there! 👋 I'm Scout. Want to dive deeper into your market size and opportunities? Ask me anything.";
 };
-
-  const getContextualQuestions = () => {
-    if (context === 'lead-stream') {
-      return [
-        "Find similar companies",
-        "Research a company",
-        "Help me find leads matching my ICP"
-      ];
-    }
-
-    if (context === 'general') {
-      return [
-        "Analyze a market or industry",
-        "Research a specific company",
-        "Compare competitors",
-        "Explore growth opportunities",
-        "Break down market size and TAM"
-      ];
-    }
-
-    if (context === 'competitor-landscape') {
-      if (hasEdits) {
-        return [
-          "Pull latest competitor news",
-          "Analyze funding impact on market",
-          "Compare competitive positioning", 
-          "Identify emerging threats",
-          "Track M&A activity",
-          "Benchmark feature capabilities"
-        ];
-      }
-
-      return [
-        "Show latest funding rounds",
-        "Analyze market share shifts",
-        "Compare feature roadmaps",
-        "Identify acquisition targets",
-        "Track competitive pricing"
-      ];
-    }
-
-    if (context === 'industry-trends') {
-      if (hasEdits) {
-        return [
-          "Validate trend data sources",
-          "Explore technology drivers",
-          "Analyze regional differences", 
-          "Track regulatory impacts",
-          "Identify disruption signals",
-          "Compare adoption timelines"
-        ];
-      }
-
-      return [
-        "Show AI adoption trends",
-        "Analyze cloud migration drivers",
-        "Track regulatory changes",
-        "Identify emerging technologies",
-        "Compare regional variations"
-      ];
-    }
-
-    if (context === 'regulatory-compliance') {
-      // Post-save specific questions
-      if (isPostSave) {
-        return [
-          "Would you like to analyze the business impact of new EU regulations?",
-          "Need help drafting updated compliance messaging?",
-          "Should I generate a comparison chart for regional laws?",
-          "Want to track upcoming compliance deadlines?",
-          "Analyze competitive compliance advantages?"
-        ];
-      }
-      
-      if (hasEdits) {
-        return [
-          "Analyze compliance impact",
-          "Track regulatory deadlines",
-          "Compare regional requirements", 
-          "Validate compliance data",
-          "Update enforcement news",
-          "Assess implementation risks"
-        ];
-      }
-
-      return [
-        "Would you like updates on EU AI Act timelines?",
-        "Need a regional compliance comparison?",
-        "Want a summary of regulatory risks for SaaS deployment?",
-        "Track GDPR enforcement updates",
-        "Analyze data localization requirements"
-      ];
-    }
-
-    if (context === 'market-entry') {
-      // Post-save specific questions
-      if (isPostSave) {
-        return [
-          "Analyze regulatory impact on partnerships",
-          "Suggest fastest go-to-market path",
-          "Research local partnership opportunities",
-          "Compare direct entry vs. partnership models",
-          "Validate regulatory compliance requirements"
-        ];
-      }
-      
-      if (hasEdits) {
-        return [
-          "Research entry barrier solutions",
-          "Validate market entry timelines",
-          "Analyze competitive positioning", 
-          "Identify partnership opportunities",
-          "Assess regulatory requirements",
-          "Compare go-to-market strategies"
-        ];
-      }
-
-      return [
-        "How long would it take to enter the market?",
-        "What GTM strategies work best for mid-sized companies here?",
-        "Can you compare direct entry vs. partnership models?",
-        "Which entry barriers should we prioritize addressing?",
-        "What competitive advantages should we emphasize?"
-      ];
-    }
-
-    // Default market-size questions
-    if (hasEdits) {
-      return [
-        "Show me drivers of TAM growth",
-        "Break down mid-market vs enterprise TAM", 
-        "Which segments are fastest growing?",
-        "Analyze competitor presence in APAC",
-        "Update regional market breakdown",
-        "Identify emerging tech impacts on TAM"
-      ];
-    }
-
-    return [
-      "Show TAM breakdown by region",
-      "What's driving mid-market growth?",
-      "Any emerging competitors to watch?",
-      "How fast is the market growing YoY?",
-      "Break down opportunity by vertical"
-    ];
-  };
 
   // Auto-scroll to top when chat panel opens (only when showScoutChat becomes true)
   useEffect(() => {
@@ -656,7 +512,7 @@ const getContextualScoutMessage = () => {
   if (!showScoutChat) return null;
 
   return (
-    <div className="w-full bg-white rounded-lg border border-gray-200 p-6 transition-all duration-500 animate-slide-in-right h-[400px] flex flex-col">
+    <div className="w-full max-w-none min-w-0 bg-white rounded-lg border border-gray-200 p-4 sm:p-6 transition-all duration-500 animate-slide-in-right min-h-[min(72vh,880px)] flex-1 flex flex-col">
       {!hideCloseButton && (
         <div className="flex items-center justify-end mb-2">
           <Button variant="ghost" size="sm" onClick={onClose}>
@@ -665,34 +521,19 @@ const getContextualScoutMessage = () => {
         </div>
       )}
 
-      <div ref={chatContainerRef} className="space-y-4 mb-4 flex-1 overflow-y-auto">
+      <div ref={chatContainerRef} className="space-y-4 mb-4 flex-1 min-h-0 overflow-y-auto">
         <div className="bg-gradient-to-r from-blue-50 to-green-50 p-4 rounded-lg border border-blue-200">
-          <p className="text-sm text-gray-700">
+          <p className="text-sm sm:text-base text-gray-700">
             {getContextualScoutMessage()}
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          {getContextualQuestions().map((question, index) => (
-            <Button
-              key={index}
-              variant="outline"
-              size="sm"
-              className="text-xs hover:bg-blue-50 hover:border-blue-300 transition-colors"
-              onClick={() => handleQuestionClick(question)}
-              disabled={isLoading}
-            >
-              {question}
-            </Button>
-          ))}
-        </div>
-
         {/* Display chat response if available */}
         {chatResponse && (
-          <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-            <div className="flex items-start gap-2">
-              <Bot className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-              <div className="text-sm text-blue-800 leading-relaxed whitespace-pre-wrap">
+          <div className="mt-4 p-4 sm:p-5 bg-blue-50 rounded-lg border border-blue-200 w-full max-w-none">
+            <div className="flex items-start gap-3">
+              <Bot className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+              <div className="text-sm sm:text-base text-blue-900 leading-relaxed whitespace-pre-wrap break-words min-w-0 flex-1">
                 {chatResponse}
               </div>
             </div>

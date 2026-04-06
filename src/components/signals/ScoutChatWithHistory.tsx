@@ -244,11 +244,11 @@ export function ScoutChatWithHistory({
   }, []);
 
   return (
-    <div className="flex h-full min-h-0 w-full overflow-hidden">
+    <div className="flex h-full min-h-0 w-full max-w-none overflow-hidden">
       {/* Sidebar - Chat history */}
       <div
         className={`flex flex-col border-r border-border bg-muted/30 transition-all duration-200 ${
-          sidebarOpen ? 'w-[28rem] min-w-[24rem] max-w-[90vw] shrink-0' : 'w-0 overflow-hidden'
+          sidebarOpen ? 'w-64 sm:w-72 min-w-[14rem] max-w-[min(18rem,42vw)] shrink-0' : 'w-0 overflow-hidden'
         }`}
       >
         {sidebarOpen && (
@@ -343,7 +343,7 @@ export function ScoutChatWithHistory({
               }}
             />
           ) : (
-            <div className="flex flex-col gap-4 h-full overflow-y-auto">
+            <div className="flex flex-col gap-4 flex-1 min-h-0 w-full min-w-0 overflow-hidden">
               {onTabChange && activeSession.leadContext && (
                 <Button
                   variant="ghost"

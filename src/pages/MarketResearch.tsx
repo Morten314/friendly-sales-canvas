@@ -13970,7 +13970,7 @@ const MarketResearch = React.memo(() => {
 
 
         {activeTab === "trends" ? (
-          <div className="flex-1 min-h-0 flex flex-col overflow-hidden -mx-3 md:-mx-4 lg:-mx-6 w-[calc(100%+1.5rem)] md:w-[calc(100%+2rem)] lg:w-[calc(100%+3rem)] max-w-none">
+          <div className="flex-1 min-h-0 flex flex-col overflow-hidden -mx-3 md:-mx-4 lg:-mx-6 w-[calc(100%+1.5rem)] md:w-[calc(100%+2rem)] lg:w-[calc(100%+3rem)] max-w-none self-stretch">
             <ScoutChatWithHistory
               initialContext={signalsChatContext}
               onClearContext={() => {
@@ -15243,5 +15243,4 @@ const MarketResearch = React.memo(() => {
 
 
 export default MarketResearch;
-
 

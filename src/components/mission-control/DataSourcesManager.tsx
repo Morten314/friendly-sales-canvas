@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -79,6 +79,7 @@ interface DataSource {
 interface Lead {
   lead_id?: string;
   id?: string;
+  _id?: string;
   fullName?: string;
   email?: string;
   mobile?: string;
@@ -90,6 +91,18 @@ interface Lead {
   contact?: any;
   techStack?: any;
   [key: string]: any;
+}
+
+/** Row from GET /leads/stream/status */
+interface LeadStreamFileApiRow {
+  file_id: string;
+  filename: string;
+  uploaded_at?: string;
+  last_processed_at?: string;
+  total_rows?: number;
+  created_count?: number;
+  error_count?: number;
+  processing_status?: string;
 }
 
 interface CompanyProfile {
@@ -118,25 +131,15 @@ const DataSourcesManager: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
-  // Lead Stream state
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [isLoadingLeads, setIsLoadingLeads] = useState(false);
+  // Lead Stream — files + backend processing status (GET /leads/stream/status)
+  const [leadStreamFiles, setLeadStreamFiles] = useState<LeadStreamFileApiRow[]>([]);
+  const [leadStreamStatusLoading, setLeadStreamStatusLoading] = useState(false);
   const [isUploadingLeads, setIsUploadingLeads] = useState(false);
+  const [deletingLeadStreamFileId, setDeletingLeadStreamFileId] = useState<string | null>(null);
   const [showLeadUpload, setShowLeadUpload] = useState(false);
   const [selectedLeadFile, setSelectedLeadFile] = useState<File | null>(null);
   const [isDraggingLead, setIsDraggingLead] = useState(false);
   const leadFileInputRef = useRef<HTMLInputElement>(null);
-  
-  // Lead edit state
-  const [editingLeadId, setEditingLeadId] = useState<string | null>(null);
-  const [showLeadEditForm, setShowLeadEditForm] = useState(false);
-  const [leadFullName, setLeadFullName] = useState("");
-  const [leadEmail, setLeadEmail] = useState("");
-  const [leadMobile, setLeadMobile] = useState("");
-  const [leadCompanyName, setLeadCompanyName] = useState("");
-  const [leadCompanyWebsite, setLeadCompanyWebsite] = useState("");
-  const [leadLinkedInProfile, setLeadLinkedInProfile] = useState("");
-  const [leadActions, setLeadActions] = useState("");
 
   // Load company profile from localStorage
   useEffect(() => {
@@ -2168,12 +2171,11 @@ const DataSourcesManager: React.FC = () => {
 
   // API: Upload CSV batch
   const uploadCsvBatch = async (file: File) => {
-    // For leads API, org_id should match user_id (backend requirement)
     const userId = currentUser?.uid || "";
-    const leadOrgId = userId || ""; // Use user_id as org_id to ensure they match
-    
-    if (!userId || !leadOrgId) {
-      throw new Error("User ID and Org ID are required");
+    const leadOrgId = orgIdToUse;
+
+    if (!userId) {
+      throw new Error("User ID is required");
     }
 
     const convertToUtf8 = (file: File): Promise<File> => {
@@ -2233,7 +2235,7 @@ const DataSourcesManager: React.FC = () => {
     const formData = new FormData();
     formData.append("file", utf8File);
     formData.append("user_id", userId);
-    formData.append("org_id", leadOrgId); // Use user_id as org_id for leads API
+    formData.append("org_id", leadOrgId);
 
     console.log("🚀 DataSourcesManager - Batch Upload Starting:", {
       url,
@@ -2282,29 +2284,34 @@ const DataSourcesManager: React.FC = () => {
     return result;
   };
 
-  // API: Fetch leads
-  const fetchLeads = async () => {
-    // For leads API, org_id should match user_id (backend requirement)
+  const isTerminalLeadStreamStatus = (status?: string) => {
+    const s = (status || "").toLowerCase();
+    return s === "completed" || s === "complete" || s === "failed" || s === "error";
+  };
+
+  const mapProcessingStatusToSourceStatus = (status?: string): SourceStatus => {
+    const s = (status || "").toLowerCase();
+    if (s === "completed" || s === "complete") return "completed";
+    if (s === "failed" || s === "error") return "failed";
+    return "processing";
+  };
+
+  /** GET /leads/stream/status — list uploads + processing stats for user/org */
+  const refreshLeadStreamStatus = useCallback(async () => {
     const userId = currentUser?.uid || "";
-    const leadOrgId = userId || ""; // Use user_id as org_id to ensure they match
-    
-    if (!userId || !leadOrgId) {
-      setIsLoadingLeads(false);
+    if (!userId) {
+      setLeadStreamFiles([]);
       return;
     }
 
+    setLeadStreamStatusLoading(true);
     try {
-      setIsLoadingLeads(true);
       const authHeader = await getAuthHeader();
-      const url = buildApiUrl(`leads?user_id=${userId}&org_id=${leadOrgId}`);
-      
-      console.log("🚀 DataSourcesManager - Fetching leads:", {
-        url,
-        userId,
-        orgId: leadOrgId,
-        hasAuth: !!authHeader,
+      const qs = new URLSearchParams({
+        user_id: userId,
+        org_id: orgIdToUse,
       });
-
+      const url = buildApiUrl(`leads/stream/status?${qs.toString()}`);
       const response = await fetch(url, {
         method: "GET",
         headers: {
@@ -2315,121 +2322,96 @@ const DataSourcesManager: React.FC = () => {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error("❌ DataSourcesManager - Fetch error:", errorText);
-        throw new Error(`Failed to fetch leads: ${response.status} - ${errorText}`);
+        throw new Error(`Failed to fetch lead stream status: ${response.status} - ${errorText}`);
       }
 
       const data = await response.json();
-      
-      let leadsArray: any[] = [];
-      if (Array.isArray(data)) {
-        leadsArray = data;
-      } else if (data && typeof data === 'object') {
-        leadsArray = data.leads || data.data || data.results || data.items || [];
+      let files: LeadStreamFileApiRow[] = [];
+      if (data && typeof data === "object" && Array.isArray(data.files)) {
+        files = data.files;
+      } else if (Array.isArray(data)) {
+        files = data;
       }
-      
-      const transformedLeads = leadsArray.map((lead: any) => {
-        const getValue = (...values: any[]): string => {
-          for (const val of values) {
-            if (val !== null && val !== undefined && val !== "") {
-              const trimmed = String(val).trim();
-              if (trimmed !== "") return trimmed;
-            }
-          }
-          return "";
-        };
-        
-        return {
-          ...lead,
-          fullName: getValue(lead.fullName, lead.full_name, lead.contact?.name, lead.name),
-          email: getValue(lead.email, lead.contact?.email),
-          mobile: getValue(lead.mobile, lead.phone, lead.contact?.mobile, lead.contact?.phone),
-          companyName: getValue(lead.companyName, lead.company_name, lead.company),
-          companyWebsite: getValue(lead.companyWebsite, lead.company_website, lead.website, lead.company?.website),
-          linkedInProfile: getValue(lead.linkedInProfile, lead.linkedin_profile, lead.linkedIn, lead.contact?.linkedIn, lead.contact?.linkedin),
-          actions: getValue(lead.actions, lead.notes, lead.action),
-          contact: lead.contact || {},
-          company: lead.company || {},
-        };
-      });
-      
-      setLeads(transformedLeads);
-    } catch (error) {
-      console.error("Error fetching leads:", error);
-      toast({
-        title: "Failed to fetch leads",
-        description: error instanceof Error ? error.message : "Unknown error",
-        variant: "destructive",
-      });
+      setLeadStreamFiles(files);
+    } catch (e) {
+      console.error("DataSourcesManager refreshLeadStreamStatus:", e);
     } finally {
-      setIsLoadingLeads(false);
+      setLeadStreamStatusLoading(false);
     }
-  };
+  }, [currentUser?.uid, orgIdToUse]);
 
-  // API: Update lead
-  const updateLead = async (leadId: string, leadData: Record<string, any>) => {
-    // For leads API, org_id should match user_id (backend requirement)
+  /** GET /leads/by-file — leads for one import file (multitenant). Same shape as GET /leads. */
+  const fetchLeadsByFileId = async (fileId: string): Promise<Lead[]> => {
     const userId = currentUser?.uid || "";
-    const leadOrgId = userId || "";
-    
-    if (!userId || !leadOrgId) {
-      throw new Error("User ID and Org ID are required");
-    }
+    const leadOrgId = orgIdToUse;
 
-    if (!leadId) {
-      throw new Error("Lead ID is required");
+    if (!userId || !fileId) {
+      return [];
     }
 
     const authHeader = await getAuthHeader();
-    const url = buildApiUrl(`leads/${leadId}`);
-    
-    const payload = {
+    const qs = new URLSearchParams({
       user_id: userId,
       org_id: leadOrgId,
-      data: leadData,
-    };
-
-    console.log("🚀 DataSourcesManager - Updating lead:", {
-      url,
-      leadId,
-      userId,
-      orgId: leadOrgId,
-      payload,
-      hasAuth: !!authHeader,
+      file_id: fileId,
     });
+    const url = buildApiUrl(`leads/by-file?${qs.toString()}`);
 
     const response = await fetch(url, {
-      method: "PUT",
+      method: "GET",
       headers: {
         "Content-Type": "application/json",
         ...(authHeader && { Authorization: authHeader }),
       },
-      body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("❌ DataSourcesManager - Update error:", {
-        status: response.status,
-        errorText,
-        leadId,
-      });
-      throw new Error(`Failed to update lead: ${response.status} - ${errorText}`);
+      throw new Error(`Failed to fetch leads for file: ${response.status} - ${errorText}`);
     }
 
-    const result = await response.json();
-    console.log("✅ DataSourcesManager - Update success:", result);
-    return result;
+    const data = await response.json();
+
+    let leadsArray: any[] = [];
+    if (Array.isArray(data)) {
+      leadsArray = data;
+    } else if (data && typeof data === "object") {
+      leadsArray = data.leads || data.data || data.results || data.items || [];
+    }
+
+    return leadsArray.map((lead: any) => {
+      const getValue = (...values: any[]): string => {
+        for (const val of values) {
+          if (val !== null && val !== undefined && val !== "") {
+            const trimmed = String(val).trim();
+            if (trimmed !== "") return trimmed;
+          }
+        }
+        return "";
+      };
+
+      return {
+        ...lead,
+        fullName: getValue(lead.fullName, lead.full_name, lead.contact?.name, lead.name),
+        email: getValue(lead.email, lead.contact?.email),
+        mobile: getValue(lead.mobile, lead.phone, lead.contact?.mobile, lead.contact?.phone),
+        companyName: getValue(lead.companyName, lead.company_name, lead.company),
+        companyWebsite: getValue(lead.companyWebsite, lead.company_website, lead.website, lead.company?.website),
+        linkedInProfile: getValue(lead.linkedInProfile, lead.linkedin_profile, lead.linkedIn, lead.contact?.linkedIn, lead.contact?.linkedin),
+        actions: getValue(lead.actions, lead.notes, lead.action),
+        contact: lead.contact || {},
+        company: lead.company || {},
+      };
+    });
   };
 
   // API: Delete lead
   const deleteLead = async (leadId: string) => {
-    // For leads API, org_id should match user_id (backend requirement)
     const userId = currentUser?.uid || "";
-    const leadOrgId = userId || "";
-    
-    if (!userId || !leadOrgId) {
-      throw new Error("User ID and Org ID are required");
+    const leadOrgId = orgIdToUse;
+
+    if (!userId) {
+      throw new Error("User ID is required");
     }
 
     if (!leadId) {
@@ -2470,166 +2452,62 @@ const DataSourcesManager: React.FC = () => {
     return result;
   };
 
-  // Handlers for lead editing
-  const handleEditLead = (lead: Lead) => {
-    const leadId = lead.lead_id || lead.id || lead._id || "";
-    
-    if (!leadId) {
+  const handleDeleteLeadStream = async (fileId: string) => {
+    if (!fileId) {
       toast({
-        title: "Error",
-        description: "Cannot edit lead: Lead ID is missing.",
-        variant: "destructive",
-      });
-      console.error("❌ DataSourcesManager - Cannot edit lead without ID:", lead);
-      return;
-    }
-
-    console.log("✏️ DataSourcesManager - Editing lead:", {
-      leadId,
-      lead,
-    });
-
-    setEditingLeadId(leadId);
-    
-    // Populate form with lead data
-    setLeadFullName(lead.fullName || lead.full_name || lead.contact?.name || lead.name || "");
-    setLeadEmail(lead.email || lead.contact?.email || "");
-    setLeadMobile(lead.mobile || lead.phone || lead.contact?.mobile || lead.contact?.phone || "");
-    setLeadCompanyName(lead.companyName || lead.company_name || lead.company || lead.company?.name || "");
-    setLeadCompanyWebsite(lead.companyWebsite || lead.company_website || lead.website || lead.company?.website || "");
-    setLeadLinkedInProfile(lead.linkedInProfile || lead.linkedin_profile || lead.linkedIn || lead.contact?.linkedIn || lead.contact?.linkedin || "");
-    setLeadActions(lead.actions || lead.notes || lead.action || "");
-    
-    setShowLeadEditForm(true);
-  };
-
-  const handleCancelLeadEdit = () => {
-    setShowLeadEditForm(false);
-    setEditingLeadId(null);
-    setLeadFullName("");
-    setLeadEmail("");
-    setLeadMobile("");
-    setLeadCompanyName("");
-    setLeadCompanyWebsite("");
-    setLeadLinkedInProfile("");
-    setLeadActions("");
-  };
-
-  const handleSaveLead = async () => {
-    // Basic validation
-    if (!leadFullName.trim() || !leadEmail.trim()) {
-      toast({
-        title: "Required fields missing",
-        description: "Please fill in at least Full Name and Email.",
+        title: "Cannot remove import",
+        description: "Missing file id for this upload.",
         variant: "destructive",
       });
       return;
     }
-
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(leadEmail)) {
-      toast({
-        title: "Invalid email",
-        description: "Please enter a valid email address.",
-        variant: "destructive",
-      });
+    if (
+      !confirm(
+        "Remove this lead stream file? All leads imported from this upload will be deleted from the backend."
+      )
+    ) {
       return;
     }
 
+    setDeletingLeadStreamFileId(fileId);
     try {
-      if (!editingLeadId) {
-        toast({
-          title: "Error",
-          description: "Please use CSV upload to add new leads.",
-          variant: "destructive",
-        });
-        return;
+      const list = await fetchLeadsByFileId(fileId);
+      for (const lead of list) {
+        const id = lead.lead_id || lead.id || lead._id;
+        if (id) await deleteLead(String(id));
       }
-
-      // Prepare lead data object
-      const leadData: Record<string, any> = {};
-      
-      if (leadFullName.trim()) leadData.fullName = leadFullName.trim();
-      if (leadEmail.trim()) leadData.email = leadEmail.trim();
-      if (leadMobile.trim()) leadData.mobile = leadMobile.trim();
-      if (leadCompanyName.trim()) leadData.companyName = leadCompanyName.trim();
-      if (leadCompanyWebsite.trim()) leadData.companyWebsite = leadCompanyWebsite.trim();
-      if (leadLinkedInProfile.trim()) leadData.linkedInProfile = leadLinkedInProfile.trim();
-      if (leadActions.trim()) leadData.actions = leadActions.trim();
-
-      console.log("💾 DataSourcesManager - Saving lead update:", {
-        leadId: editingLeadId,
-        leadData,
-      });
-
-      await updateLead(editingLeadId, leadData);
-      
+      await refreshLeadStreamStatus();
       toast({
-        title: "Lead updated",
-        description: `${leadFullName} has been updated successfully.`,
+        title: "Lead stream removed",
+        description: "The file import and associated leads have been removed.",
       });
-      
-      setEditingLeadId(null);
-
-      // Refresh leads list
-      await fetchLeads();
-
-      // Reset form and close
-      handleCancelLeadEdit();
     } catch (error) {
-      console.error("❌ DataSourcesManager - Save lead error:", error);
-      toast({
-        title: "Update failed",
-        description: error instanceof Error ? error.message : "An error occurred while updating the lead. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleDeleteLead = async (leadId: string) => {
-    if (!leadId) {
-      toast({
-        title: "Error",
-        description: "Lead ID is missing. Cannot delete lead.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Confirm deletion
-    if (!confirm("Are you sure you want to delete this lead? This action cannot be undone.")) {
-      return;
-    }
-
-    try {
-      console.log("🗑️ DataSourcesManager - Deleting lead:", leadId);
-      await deleteLead(leadId);
-      
-      toast({
-        title: "Lead deleted",
-        description: "The lead has been successfully removed.",
-      });
-      
-      // Refresh leads list
-      await fetchLeads();
-    } catch (error) {
-      console.error("❌ DataSourcesManager - Delete lead error:", error);
+      console.error("❌ DataSourcesManager - Delete lead stream error:", error);
       toast({
         title: "Delete failed",
-        description: error instanceof Error ? error.message : "Failed to delete lead. Please try again.",
+        description:
+          error instanceof Error ? error.message : "Could not remove lead stream. Try again.",
         variant: "destructive",
       });
+    } finally {
+      setDeletingLeadStreamFileId(null);
     }
   };
 
-  // Load leads on mount
   useEffect(() => {
-    if (currentUser?.uid) {
-      fetchLeads();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser?.uid]);
+    if (!currentUser?.uid) return;
+    void refreshLeadStreamStatus();
+  }, [currentUser?.uid, refreshLeadStreamStatus]);
+
+  useEffect(() => {
+    if (!currentUser?.uid) return;
+    const needsPoll = leadStreamFiles.some((f) => !isTerminalLeadStreamStatus(f.processing_status));
+    if (!needsPoll) return;
+    const id = setInterval(() => {
+      void refreshLeadStreamStatus();
+    }, 3000);
+    return () => clearInterval(id);
+  }, [leadStreamFiles, currentUser?.uid, refreshLeadStreamStatus]);
 
   // Handlers for CSV upload
   const handleLeadFileSelect = async (file: File) => {
@@ -2681,13 +2559,6 @@ const DataSourcesManager: React.FC = () => {
     const file = e.dataTransfer.files[0];
     if (file) {
       await handleLeadFileSelect(file);
-    }
-  };
-
-  const handleRemoveLeadFile = () => {
-    setSelectedLeadFile(null);
-    if (leadFileInputRef.current) {
-      leadFileInputRef.current.value = '';
     }
   };
 
@@ -2753,11 +2624,20 @@ const DataSourcesManager: React.FC = () => {
 
     try {
       const result = await uploadCsvBatch(selectedLeadFile);
-      
+
+      const fileIdFromUpload =
+        result.file_id ??
+        result.fileId ??
+        result.file_uuid ??
+        (typeof result.file === "object" && result.file?.id) ??
+        undefined;
+      if (!fileIdFromUpload) {
+        console.warn("DataSourcesManager: batch-upload response missing file_id", result);
+      }
       const createdCount = result.created_count || 0;
       const errorCount = result.error_count || 0;
       const errors = result.errors || [];
-      
+
       if (errorCount > 0 && errors.length > 0) {
         toast({
           title: "CSV uploaded with some errors",
@@ -2776,18 +2656,10 @@ const DataSourcesManager: React.FC = () => {
           variant: "default",
         });
       }
-      
+
+      await refreshLeadStreamStatus();
       setSelectedLeadFile(null);
       setShowLeadUpload(false);
-      
-      // Refresh leads list after upload
-      setTimeout(async () => {
-        try {
-          await fetchLeads();
-        } catch (refreshError) {
-          console.error("Failed to refresh leads after upload:", refreshError);
-        }
-      }, 1500);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Failed to upload CSV file. Please try again.";
       const parsedMessage = parseErrorMessage(errorMessage);
@@ -3270,9 +3142,10 @@ const DataSourcesManager: React.FC = () => {
 
   const showTable = dataSources.length > 0;
   const showDataSourcesEmptyState =
-    dataSources.length === 0 && leads.length === 0 && !isLoadingLeads;
+    dataSources.length === 0 && leadStreamFiles.length === 0 && !showLeadUpload;
   const showHeaderAddDataSource =
-    !isAddingInline && (dataSources.length > 0 || leads.length > 0);
+    !isAddingInline &&
+    (dataSources.length > 0 || leadStreamFiles.length > 0 || showLeadUpload);
 
   return (
     <div className="space-y-6 relative">
@@ -3349,7 +3222,7 @@ const DataSourcesManager: React.FC = () => {
                     Connect to Systems
                   </DropdownMenuSubTrigger>
                   <DropdownMenuSubContent>
-                    <DropdownMenuLabel>Connect to CRM System</DropdownMenuLabel>
+                    <DropdownMenuLabel>Connect a system</DropdownMenuLabel>
                     <DropdownMenuItem onClick={() => handleConnectToCRM('Salesforce')}>
                       <Plug className="mr-2 h-4 w-4" />
                       Salesforce
@@ -3363,8 +3236,8 @@ const DataSourcesManager: React.FC = () => {
                       Pipedrive
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setShowLeadUpload(true)}>
-                      <Upload className="mr-2 h-4 w-4" />
-                      Add lead stream
+                      <Users className="mr-2 h-4 w-4" />
+                      Lead stream
                     </DropdownMenuItem>
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
@@ -3377,7 +3250,7 @@ const DataSourcesManager: React.FC = () => {
       {/* Add/Edit Form */}
       {renderAddForm()}
 
-      {/* Empty State — only when there are no URL/file/connector sources and no leads */}
+      {/* Empty State — only when there are no data sources and no lead stream file */}
       {showDataSourcesEmptyState && (
         <div className="flex flex-col items-center justify-center py-16 px-4 border-2 border-dashed rounded-lg bg-muted/20">
           <Database className="h-12 w-12 text-muted-foreground mb-4" />
@@ -3416,7 +3289,7 @@ const DataSourcesManager: React.FC = () => {
                   Connect to Systems
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent>
-                  <DropdownMenuLabel>Connect to CRM System</DropdownMenuLabel>
+                  <DropdownMenuLabel>Connect a system</DropdownMenuLabel>
                   <DropdownMenuItem onClick={() => handleConnectToCRM('Salesforce')}>
                     <Plug className="mr-2 h-4 w-4" />
                     Salesforce
@@ -3430,8 +3303,8 @@ const DataSourcesManager: React.FC = () => {
                     Pipedrive
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setShowLeadUpload(true)}>
-                    <Upload className="mr-2 h-4 w-4" />
-                    Add lead stream
+                    <Users className="mr-2 h-4 w-4" />
+                    Lead stream
                   </DropdownMenuItem>
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
@@ -3530,12 +3403,11 @@ const DataSourcesManager: React.FC = () => {
         </div>
       )}
 
-      {/* Lead Stream Section - Only shown when has leads OR is uploading OR is editing */}
-      {(leads.length > 0 || showLeadUpload || showLeadEditForm) && (
+      {/* Lead Stream — upload flow + backend status (GET /leads/stream/status) */}
+      {(leadStreamFiles.length > 0 || showLeadUpload) && (
         <>
-          {/* Visual separator - only when both sections exist */}
           {dataSources.length > 0 && <div className="my-8 border-t" />}
-          
+
           <div className="space-y-4">
             <div>
               <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -3543,161 +3415,38 @@ const DataSourcesManager: React.FC = () => {
                 Lead Stream
               </h3>
               <p className="text-sm text-muted-foreground">
-                Manage your prospect database and contact information
+                Import leads from a CSV. Status and row counts come from the server while the file is processed.
               </p>
+              {leadStreamStatusLoading && leadStreamFiles.length > 0 && (
+                <p className="text-xs text-muted-foreground mt-1">Refreshing status…</p>
+              )}
             </div>
 
-            {/* Edit Lead Form */}
-            {showLeadEditForm && (
-              <Card className="mb-6">
-                <CardContent className="pt-6">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-semibold">Edit Lead</h3>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={handleCancelLeadEdit}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-
-                    {/* Form Fields */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {/* Full Name */}
-                      <div className="space-y-1.5">
-                        <Label htmlFor="lead-full-name">Full Name *</Label>
-                        <Input
-                          id="lead-full-name"
-                          placeholder="Enter full name..."
-                          value={leadFullName}
-                          onChange={(e) => setLeadFullName(e.target.value)}
-                          className="h-9 text-sm"
-                        />
-                      </div>
-
-                      {/* Email */}
-                      <div className="space-y-1.5">
-                        <Label htmlFor="lead-email">Email *</Label>
-                        <Input
-                          id="lead-email"
-                          type="email"
-                          placeholder="Enter email address..."
-                          value={leadEmail}
-                          onChange={(e) => setLeadEmail(e.target.value)}
-                          className="h-9 text-sm"
-                        />
-                      </div>
-
-                      {/* Mobile */}
-                      <div className="space-y-1.5">
-                        <Label htmlFor="lead-mobile">Mobile</Label>
-                        <Input
-                          id="lead-mobile"
-                          type="tel"
-                          placeholder="Enter mobile number..."
-                          value={leadMobile}
-                          onChange={(e) => setLeadMobile(e.target.value)}
-                          className="h-9 text-sm"
-                        />
-                      </div>
-
-                      {/* Company Name */}
-                      <div className="space-y-1.5">
-                        <Label htmlFor="lead-company-name">Company Name</Label>
-                        <Input
-                          id="lead-company-name"
-                          placeholder="Enter company name..."
-                          value={leadCompanyName}
-                          onChange={(e) => setLeadCompanyName(e.target.value)}
-                          className="h-9 text-sm"
-                        />
-                      </div>
-
-                      {/* Company Website */}
-                      <div className="space-y-1.5">
-                        <Label htmlFor="lead-company-website">Company Website</Label>
-                        <Input
-                          id="lead-company-website"
-                          type="url"
-                          placeholder="https://example.com"
-                          value={leadCompanyWebsite}
-                          onChange={(e) => setLeadCompanyWebsite(e.target.value)}
-                          className="h-9 text-sm"
-                        />
-                      </div>
-
-                      {/* LinkedIn Profile */}
-                      <div className="space-y-1.5">
-                        <Label htmlFor="lead-linkedin-profile">LinkedIn Profile</Label>
-                        <Input
-                          id="lead-linkedin-profile"
-                          type="url"
-                          placeholder="https://linkedin.com/in/..."
-                          value={leadLinkedInProfile}
-                          onChange={(e) => setLeadLinkedInProfile(e.target.value)}
-                          className="h-9 text-sm"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Actions - Full Width */}
-                    <div className="space-y-1.5">
-                      <Label htmlFor="lead-actions">Actions</Label>
-                      <Input
-                        id="lead-actions"
-                        placeholder="Enter actions or notes..."
-                        value={leadActions}
-                        onChange={(e) => setLeadActions(e.target.value)}
-                        className="h-9 text-sm"
-                      />
-                    </div>
-
-                    {/* Save Button */}
-                    <div className="flex justify-end gap-2 pt-2 border-t">
-                      <Button variant="outline" size="sm" onClick={handleCancelLeadEdit}>
-                        Cancel
-                      </Button>
-                      <Button size="sm" onClick={handleSaveLead} className="gap-1">
-                        <Check className="h-4 w-4" />
-                        Save Changes
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* CSV Upload Form */}
             {showLeadUpload && (
               <Card className="mb-6">
-                <CardContent className="pt-6">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-semibold">Upload CSV File</h3>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          setShowLeadUpload(false);
-                          setSelectedLeadFile(null);
-                        }}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-
-                    {/* Drag and Drop Area */}
+                <CardContent className="pt-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold">Add leads</h3>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        setShowLeadUpload(false);
+                        setSelectedLeadFile(null);
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="lead-csv-upload" className="text-base font-medium">
+                      CSV file *
+                    </Label>
                     <div
                       onDragOver={handleLeadDragOver}
                       onDragLeave={handleLeadDragLeave}
                       onDrop={handleLeadDrop}
-                      className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                        isDraggingLead
-                          ? "border-primary bg-primary/5"
-                          : "border-muted-foreground/25 hover:border-primary/50"
-                      }`}
+                      className="flex items-center gap-2"
                     >
                       <input
                         ref={leadFileInputRef}
@@ -3707,178 +3456,122 @@ const DataSourcesManager: React.FC = () => {
                         className="hidden"
                         id="lead-csv-upload"
                       />
-                      <label htmlFor="lead-csv-upload" className="cursor-pointer">
-                        <Upload
-                          className={`h-12 w-12 mx-auto mb-4 ${
-                            isDraggingLead ? "text-primary" : "text-muted-foreground"
-                          }`}
-                        />
-                        <p className="text-sm font-medium mb-2">
-                          {selectedLeadFile
-                            ? selectedLeadFile.name
-                            : "Drag and drop your CSV file here, or click to browse"}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Supported format: CSV files only
-                        </p>
-                        <div className="mt-4 p-3 bg-muted/50 rounded-md text-left text-xs">
-                          <p className="font-medium mb-1">CSV Format Requirements:</p>
-                          <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                            <li>All rows must have the same number of columns</li>
-                            <li>Fields containing commas must be enclosed in double quotes</li>
-                            <li>Use commas (,) as column separators (semicolons will be auto-converted)</li>
-                            <li>Recommended columns: Full Name, Email, Mobile, Company Name, Company Website, LinkedIn Profile, Actions</li>
-                          </ul>
-                          <p className="mt-2 text-xs text-muted-foreground">
-                            <strong>Note:</strong> Files from WPS Office, Excel, or Google Sheets are automatically converted to the correct format.
-                          </p>
-                        </div>
+                      <label
+                        htmlFor="lead-csv-upload"
+                        className={`flex-1 inline-flex items-center gap-3 px-4 py-3 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors bg-muted/20 ${
+                          isDraggingLead ? "border-primary bg-primary/5" : ""
+                        }`}
+                      >
+                        <Upload className="h-5 w-5 text-muted-foreground shrink-0" />
+                        {selectedLeadFile ? (
+                          <span className="text-foreground font-medium truncate">{selectedLeadFile.name}</span>
+                        ) : (
+                          <span className="text-muted-foreground">
+                            Click to browse or drag and drop a CSV file here
+                          </span>
+                        )}
                       </label>
                     </div>
-
-                    {/* Selected File Display */}
-                    {selectedLeadFile && (
-                      <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <FileText className="h-5 w-5 text-muted-foreground" />
-                          <div>
-                            <p className="text-sm font-medium">{selectedLeadFile.name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {(selectedLeadFile.size / 1024).toFixed(2)} KB
-                            </p>
-                          </div>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={handleRemoveLeadFile}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    )}
-
-                    {/* Upload Button */}
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          setShowLeadUpload(false);
-                          setSelectedLeadFile(null);
-                        }}
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        onClick={handleUploadLeadCsv}
-                        disabled={!selectedLeadFile || isUploadingLeads}
-                      >
-                        {isUploadingLeads ? "Uploading..." : "Upload CSV"}
-                      </Button>
-                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Same as adding a file under Data Sources — save as CSV from Excel or Google Sheets.
+                    </p>
+                  </div>
+                  <div className="flex justify-end gap-2 pt-2 border-t">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setShowLeadUpload(false);
+                        setSelectedLeadFile(null);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleUploadLeadCsv}
+                      disabled={!selectedLeadFile || isUploadingLeads}
+                    >
+                      {isUploadingLeads ? "Uploading..." : "Add leads"}
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
             )}
 
-            {/* Loading State for Leads */}
-            {isLoadingLeads && (
-              <div className="flex items-center justify-center py-8">
-                <div className="flex gap-2">
-                  <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms', animationDuration: '1.4s' }}></div>
-                  <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '200ms', animationDuration: '1.4s' }}></div>
-                  <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '400ms', animationDuration: '1.4s' }}></div>
-                </div>
-                <span className="ml-2 text-sm text-muted-foreground">Loading leads...</span>
-              </div>
-            )}
-
-            {/* Leads Table - Only when has leads */}
-            {!isLoadingLeads && leads.length > 0 && (
-              <div className="border rounded-lg overflow-hidden">
+            {leadStreamFiles.length > 0 && (
+              <div className="border rounded-lg overflow-hidden relative">
+                {deletingLeadStreamFileId && (
+                  <div className="absolute inset-0 bg-background/60 backdrop-blur-sm z-10 flex items-center justify-center">
+                    <div className="flex gap-2">
+                      <div
+                        className="w-2 h-2 rounded-full bg-primary animate-bounce"
+                        style={{ animationDelay: "0ms", animationDuration: "1.4s" }}
+                      />
+                      <div
+                        className="w-2 h-2 rounded-full bg-primary animate-bounce"
+                        style={{ animationDelay: "200ms", animationDuration: "1.4s" }}
+                      />
+                      <div
+                        className="w-2 h-2 rounded-full bg-primary animate-bounce"
+                        style={{ animationDelay: "400ms", animationDuration: "1.4s" }}
+                      />
+                    </div>
+                  </div>
+                )}
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/50">
-                      <TableHead>Full Name</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead className="hidden md:table-cell">Mobile</TableHead>
-                      <TableHead className="hidden lg:table-cell">Company</TableHead>
-                      <TableHead className="hidden lg:table-cell">Website</TableHead>
-                      <TableHead className="hidden xl:table-cell">LinkedIn</TableHead>
-                      <TableHead className="hidden xl:table-cell">Actions</TableHead>
-                      <TableHead className="text-right w-[90px]">Operations</TableHead>
+                      <TableHead className="w-[140px]">Type</TableHead>
+                      <TableHead className="min-w-[180px]">File</TableHead>
+                      <TableHead className="hidden md:table-cell min-w-[160px]">Import</TableHead>
+                      <TableHead className="w-[120px]">Status</TableHead>
+                      <TableHead className="w-[90px] text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {leads.map((lead, index) => {
-                      const leadId = lead.lead_id || lead.id || `lead-${index}`;
-                      const displayName = lead.fullName || lead.full_name || lead.name || lead.contact?.name || lead.contact?.fullName || "—";
-                      const displayEmail = lead.email || lead.contact?.email || "—";
-                      const displayMobile = lead.mobile || lead.phone || lead.contact?.mobile || lead.contact?.phone || "—";
-                      const displayCompany = lead.companyName || lead.company_name || lead.company?.name || "—";
-                      const displayWebsite = lead.companyWebsite || lead.company_website || lead.website || lead.company?.website || "—";
-                      const displayLinkedIn = lead.linkedInProfile || lead.linkedin_profile || lead.linkedIn || lead.contact?.linkedIn || lead.contact?.linkedin || "—";
-                      const displayActions = lead.actions || lead.notes || lead.action || "—";
-                      
-                      return (
-                        <TableRow key={leadId}>
-                          <TableCell className="font-medium">{displayName}</TableCell>
-                          <TableCell>{displayEmail}</TableCell>
-                          <TableCell className="hidden md:table-cell">{displayMobile}</TableCell>
-                          <TableCell className="hidden lg:table-cell">{displayCompany}</TableCell>
-                          <TableCell className="hidden lg:table-cell">
-                            {displayWebsite !== "—" ? (
-                              <a href={displayWebsite} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-sm">
-                                {displayWebsite}
-                              </a>
-                            ) : (
-                              "—"
-                            )}
-                          </TableCell>
-                          <TableCell className="hidden xl:table-cell">
-                            {displayLinkedIn !== "—" ? (
-                              <a href={displayLinkedIn} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-sm">
-                                {displayLinkedIn}
-                              </a>
-                            ) : (
-                              "—"
-                            )}
-                          </TableCell>
-                          <TableCell className="hidden xl:table-cell">{displayActions}</TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleEditLead(lead)}
-                                className="h-8 w-8"
-                                disabled={showLeadEditForm || showLeadUpload}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleDeleteLead(leadId)}
-                                className="h-8 w-8 text-destructive hover:text-destructive"
-                                disabled={showLeadEditForm || showLeadUpload}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
+                    {leadStreamFiles.map((row) => (
+                      <TableRow key={row.file_id}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm">Lead stream</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <span
+                            className="text-sm font-medium truncate max-w-[min(100vw-12rem,28rem)] block"
+                            title={row.filename}
+                          >
+                            {row.filename}
+                          </span>
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          <span className="text-xs text-muted-foreground">
+                            {typeof row.total_rows === "number"
+                              ? `${row.created_count ?? 0} / ${row.total_rows} rows`
+                              : `${row.created_count ?? 0} created`}
+                            {typeof row.error_count === "number" && row.error_count > 0
+                              ? ` · ${row.error_count} error${row.error_count === 1 ? "" : "s"}`
+                              : ""}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          {getStatusBadge(mapProcessingStatusToSourceStatus(row.processing_status))}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            onClick={() => handleDeleteLeadStream(row.file_id)}
+                            disabled={!!deletingLeadStreamFileId || showLeadUpload}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
                   </TableBody>
                 </Table>
-              </div>
-            )}
-
-            {/* Empty state for leads - only shown when uploading but no leads yet */}
-            {!isLoadingLeads && leads.length === 0 && showLeadUpload && !showLeadEditForm && (
-              <div className="text-center py-8 text-muted-foreground">
-                <p>Upload a CSV file to add leads</p>
               </div>
             )}
           </div>

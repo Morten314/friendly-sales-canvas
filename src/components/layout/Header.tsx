@@ -218,10 +218,10 @@ export function Header() {
               window.dispatchEvent(new CustomEvent('signalsRefresh'));
             }}
             className="flex items-center gap-2"
-            title={isMobile ? (isSignalsRefreshing ? 'Generating...' : 'Refresh Signals') : undefined}
+            title={isMobile ? (isSignalsRefreshing ? 'Refreshing...' : 'Refresh Signals') : undefined}
           >
             <RefreshCw className={`h-4 w-4 ${isSignalsRefreshing ? 'animate-spin' : ''}`} />
-            {!isMobile && (isSignalsRefreshing ? 'Generating...' : 'Refresh Signals')}
+            {!isMobile && (isSignalsRefreshing ? 'Refreshing...' : 'Refresh Signals')}
           </Button>
         )}
 
