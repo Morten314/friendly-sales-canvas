@@ -422,11 +422,17 @@ async def batch_upload_leads(
         import os
         
         # Validate file type
-        if not file.filename.endswith('.csv'):
-            raise HTTPException(status_code=400, detail="Only CSV files are supported")
+        filename_lower = (file.filename or "").lower()
+        if not (filename_lower.endswith('.csv') or filename_lower.endswith('.xlsx') or filename_lower.endswith('.xls')):
+            raise HTTPException(status_code=400, detail="Only CSV and Excel files (.csv, .xlsx, .xls) are supported")
         
         # Save uploaded file temporarily
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.csv') as tmp_file:
+        temp_suffix = ".csv"
+        if filename_lower.endswith(".xlsx"):
+            temp_suffix = ".xlsx"
+        elif filename_lower.endswith(".xls"):
+            temp_suffix = ".xls"
+        with tempfile.NamedTemporaryFile(delete=False, suffix=temp_suffix) as tmp_file:
             shutil.copyfileobj(file.file, tmp_file)
             tmp_path = tmp_file.name
         
@@ -453,8 +459,26 @@ async def batch_upload_leads(
                 "last_processed_at": uploaded_at
             })
 
-            # Read CSV file
-            df = pd.read_csv(tmp_path)
+            # Read input file with robust encoding support for CSV.
+            if filename_lower.endswith(".xlsx") or filename_lower.endswith(".xls"):
+                df = pd.read_excel(tmp_path)
+            else:
+                csv_read_errors = []
+                df = None
+                # Common encodings seen in lead exports.
+                encodings_to_try = ["utf-8-sig", "utf-8", "cp1252", "latin-1", "utf-16"]
+                for enc in encodings_to_try:
+                    try:
+                        df = pd.read_csv(tmp_path, encoding=enc)
+                        break
+                    except Exception as csv_err:
+                        csv_read_errors.append(f"{enc}: {str(csv_err)}")
+                        continue
+                if df is None:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Could not parse CSV with supported encodings. Tried: {', '.join(encodings_to_try)}"
+                    )
             
             if df.empty:
                 raise HTTPException(status_code=400, detail="CSV file is empty")
@@ -607,6 +631,73 @@ def get_lead_stream_status(user_id: str = Query(...), org_id: str = Query(...)):
     except Exception as e:
         logger.error(f"Error fetching lead-stream status: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to fetch lead-stream status: {str(e)}")
+    finally:
+        if mongo_client:
+            mongo_client.close()
+
+@app.delete("/leads/by-file/{file_id}", response_model=Dict[str, Any])
+def delete_leads_by_file(file_id: str, user_id: str = Query(...), org_id: str = Query(...)):
+    """
+    Delete all leads belonging to a specific file_id (scoped by user_id and org_id).
+    Also updates lead-stream tracking status in MongoDB.
+    """
+    mongo_client = None
+    try:
+        # First count matching leads
+        count_query = """
+            MATCH (l:Lead)
+            WHERE l.user_id = $user_id AND l.org_id = $org_id AND l.file_id = $file_id
+            RETURN count(l) AS total
+        """
+        with driver.session() as session:
+            count_result = session.run(count_query, user_id=user_id, org_id=org_id, file_id=file_id)
+            count_record = count_result.single()
+            total = int(count_record["total"]) if count_record and count_record["total"] is not None else 0
+
+            if total == 0:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"No leads found for file_id: {file_id} under provided user_id/org_id"
+                )
+
+            # Delete only leads and their relationships; keep company/contact/tech nodes.
+            delete_query = """
+                MATCH (l:Lead)
+                WHERE l.user_id = $user_id AND l.org_id = $org_id AND l.file_id = $file_id
+                OPTIONAL MATCH (c:Company)-[r1:Has_Lead]->(l)
+                OPTIONAL MATCH (contact:Contact)-[r2:Is_POC_For]->(l)
+                OPTIONAL MATCH (l)-[r3]->()
+                DELETE r1, r2, r3, l
+            """
+            session.run(delete_query, user_id=user_id, org_id=org_id, file_id=file_id)
+
+        # Update lead stream tracking document if present
+        mongo_client = _get_profiler_mongo_client()
+        profiler_db = mongo_client["Profiler"]
+        coll = profiler_db["Lead_Stream_Files"]
+        coll.update_one(
+            {"file_id": file_id, "user_id": user_id, "org_id": org_id},
+            {"$set": {
+                "processing_status": "deleted",
+                "deleted_count": total,
+                "deleted_at": datetime.utcnow().isoformat(),
+                "last_processed_at": datetime.utcnow().isoformat()
+            }}
+        )
+
+        return {
+            "status": "success",
+            "message": "All leads for file_id deleted successfully",
+            "file_id": file_id,
+            "deleted_count": total,
+            "user_id": user_id,
+            "org_id": org_id
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting leads by file_id: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete leads by file_id: {str(e)}")
     finally:
         if mongo_client:
             mongo_client.close()
