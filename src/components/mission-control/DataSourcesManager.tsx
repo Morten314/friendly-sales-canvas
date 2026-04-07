@@ -76,23 +76,6 @@ interface DataSource {
   createdAt: Date;
 }
 
-interface Lead {
-  lead_id?: string;
-  id?: string;
-  _id?: string;
-  fullName?: string;
-  email?: string;
-  mobile?: string;
-  companyName?: string;
-  companyWebsite?: string;
-  linkedInProfile?: string;
-  actions?: string;
-  company?: any;
-  contact?: any;
-  techStack?: any;
-  [key: string]: any;
-}
-
 /** Row from GET /leads/stream/status */
 interface LeadStreamFileApiRow {
   file_id: string;
@@ -103,6 +86,8 @@ interface LeadStreamFileApiRow {
   created_count?: number;
   error_count?: number;
   processing_status?: string;
+  /** Some backends mark Lead_Stream_Files as deleted separately from processing_status */
+  tracking_status?: string;
 }
 
 interface CompanyProfile {
@@ -140,6 +125,8 @@ const DataSourcesManager: React.FC = () => {
   const [selectedLeadFile, setSelectedLeadFile] = useState<File | null>(null);
   const [isDraggingLead, setIsDraggingLead] = useState(false);
   const leadFileInputRef = useRef<HTMLInputElement>(null);
+  /** file_ids removed via DELETE /leads/by-file — hide if status API still returns a stale row */
+  const deletedLeadStreamFileIdsRef = useRef<Set<string>>(new Set());
 
   // Load company profile from localStorage
   useEffect(() => {
@@ -2284,15 +2271,34 @@ const DataSourcesManager: React.FC = () => {
     return result;
   };
 
+  const isLeadStreamRowDeletedInApi = (row: LeadStreamFileApiRow): boolean => {
+    const ps = (row.processing_status || "").toLowerCase();
+    const ts = (row.tracking_status || "").toLowerCase();
+    return ps === "deleted" || ts === "deleted";
+  };
+
+  const filterVisibleLeadStreamFiles = (files: LeadStreamFileApiRow[]): LeadStreamFileApiRow[] =>
+    files.filter(
+      (f) =>
+        !deletedLeadStreamFileIdsRef.current.has(f.file_id) && !isLeadStreamRowDeletedInApi(f)
+    );
+
   const isTerminalLeadStreamStatus = (status?: string) => {
     const s = (status || "").toLowerCase();
-    return s === "completed" || s === "complete" || s === "failed" || s === "error";
+    return (
+      s === "completed" ||
+      s === "complete" ||
+      s === "failed" ||
+      s === "error" ||
+      s === "deleted"
+    );
   };
 
   const mapProcessingStatusToSourceStatus = (status?: string): SourceStatus => {
     const s = (status || "").toLowerCase();
     if (s === "completed" || s === "complete") return "completed";
     if (s === "failed" || s === "error") return "failed";
+    if (s === "deleted") return "completed";
     return "processing";
   };
 
@@ -2332,7 +2338,11 @@ const DataSourcesManager: React.FC = () => {
       } else if (Array.isArray(data)) {
         files = data;
       }
-      setLeadStreamFiles(files);
+      const idsInResponse = new Set(files.map((f) => f.file_id));
+      for (const id of [...deletedLeadStreamFileIdsRef.current]) {
+        if (!idsInResponse.has(id)) deletedLeadStreamFileIdsRef.current.delete(id);
+      }
+      setLeadStreamFiles(filterVisibleLeadStreamFiles(files));
     } catch (e) {
       console.error("DataSourcesManager refreshLeadStreamStatus:", e);
     } finally {
@@ -2340,94 +2350,24 @@ const DataSourcesManager: React.FC = () => {
     }
   }, [currentUser?.uid, orgIdToUse]);
 
-  /** GET /leads/by-file — leads for one import file (multitenant). Same shape as GET /leads. */
-  const fetchLeadsByFileId = async (fileId: string): Promise<Lead[]> => {
-    const userId = currentUser?.uid || "";
-    const leadOrgId = orgIdToUse;
-
-    if (!userId || !fileId) {
-      return [];
-    }
-
-    const authHeader = await getAuthHeader();
-    const qs = new URLSearchParams({
-      user_id: userId,
-      org_id: leadOrgId,
-      file_id: fileId,
-    });
-    const url = buildApiUrl(`leads/by-file?${qs.toString()}`);
-
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        ...(authHeader && { Authorization: authHeader }),
-      },
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to fetch leads for file: ${response.status} - ${errorText}`);
-    }
-
-    const data = await response.json();
-
-    let leadsArray: any[] = [];
-    if (Array.isArray(data)) {
-      leadsArray = data;
-    } else if (data && typeof data === "object") {
-      leadsArray = data.leads || data.data || data.results || data.items || [];
-    }
-
-    return leadsArray.map((lead: any) => {
-      const getValue = (...values: any[]): string => {
-        for (const val of values) {
-          if (val !== null && val !== undefined && val !== "") {
-            const trimmed = String(val).trim();
-            if (trimmed !== "") return trimmed;
-          }
-        }
-        return "";
-      };
-
-      return {
-        ...lead,
-        fullName: getValue(lead.fullName, lead.full_name, lead.contact?.name, lead.name),
-        email: getValue(lead.email, lead.contact?.email),
-        mobile: getValue(lead.mobile, lead.phone, lead.contact?.mobile, lead.contact?.phone),
-        companyName: getValue(lead.companyName, lead.company_name, lead.company),
-        companyWebsite: getValue(lead.companyWebsite, lead.company_website, lead.website, lead.company?.website),
-        linkedInProfile: getValue(lead.linkedInProfile, lead.linkedin_profile, lead.linkedIn, lead.contact?.linkedIn, lead.contact?.linkedin),
-        actions: getValue(lead.actions, lead.notes, lead.action),
-        contact: lead.contact || {},
-        company: lead.company || {},
-      };
-    });
-  };
-
-  // API: Delete lead
-  const deleteLead = async (leadId: string) => {
+  /** DELETE /leads/by-file/{file_id} — removes all leads for file (user/org scoped) and updates stream tracking */
+  const deleteLeadsByFile = async (fileId: string) => {
     const userId = currentUser?.uid || "";
     const leadOrgId = orgIdToUse;
 
     if (!userId) {
       throw new Error("User ID is required");
     }
-
-    if (!leadId) {
-      throw new Error("Lead ID is required");
+    if (!fileId) {
+      throw new Error("File ID is required");
     }
 
     const authHeader = await getAuthHeader();
-    const url = buildApiUrl(`leads/${leadId}?user_id=${userId}&org_id=${leadOrgId}`);
-    
-    console.log("🚀 DataSourcesManager - Deleting lead:", {
-      url,
-      leadId,
-      userId,
-      orgId: leadOrgId,
-      hasAuth: !!authHeader,
+    const qs = new URLSearchParams({
+      user_id: userId,
+      org_id: leadOrgId,
     });
+    const url = buildApiUrl(`leads/by-file/${encodeURIComponent(fileId)}?${qs.toString()}`);
 
     const response = await fetch(url, {
       method: "DELETE",
@@ -2439,17 +2379,22 @@ const DataSourcesManager: React.FC = () => {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("❌ DataSourcesManager - Delete error:", {
+      console.error("❌ DataSourcesManager - Delete leads by file error:", {
         status: response.status,
         errorText,
-        leadId,
+        fileId,
       });
-      throw new Error(`Failed to delete lead: ${response.status} - ${errorText}`);
+      throw new Error(`Failed to delete leads for file: ${response.status} - ${errorText}`);
     }
 
     const result = await response.json().catch(() => ({}));
-    console.log("✅ DataSourcesManager - Delete success:", result);
-    return result;
+    console.log("✅ DataSourcesManager - Delete leads by file success:", result);
+    return result as {
+      status?: string;
+      message?: string;
+      file_id?: string;
+      deleted_count?: number;
+    };
   };
 
   const handleDeleteLeadStream = async (fileId: string) => {
@@ -2471,15 +2416,17 @@ const DataSourcesManager: React.FC = () => {
 
     setDeletingLeadStreamFileId(fileId);
     try {
-      const list = await fetchLeadsByFileId(fileId);
-      for (const lead of list) {
-        const id = lead.lead_id || lead.id || lead._id;
-        if (id) await deleteLead(String(id));
-      }
+      const result = await deleteLeadsByFile(fileId);
+      deletedLeadStreamFileIdsRef.current.add(fileId);
+      setLeadStreamFiles((prev) => prev.filter((f) => f.file_id !== fileId));
       await refreshLeadStreamStatus();
+      const n = result?.deleted_count;
       toast({
         title: "Lead stream removed",
-        description: "The file import and associated leads have been removed.",
+        description:
+          typeof n === "number"
+            ? `${n} lead${n === 1 ? "" : "s"} removed for this file.`
+            : "The file import and associated leads have been removed.",
       });
     } catch (error) {
       console.error("❌ DataSourcesManager - Delete lead stream error:", error);
