@@ -866,19 +866,13 @@ const MissionControl = () => {
         while (retryCount <= maxRetries) {
         try {
           console.log(`MissionControl: Loading company profile for user: ${userId} (attempt ${retryCount + 1})`);
-          
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
           const response = await fetch(`/api/profile/company?org_id=${orgIdToUse}`, {
             method: "GET",
             headers: {
               "Content-Type": "application/json",
             },
-            signal: controller.signal,
           });
-
-          clearTimeout(timeoutId);
 
           if (response.ok) {
             const data = await response.json();
@@ -1078,18 +1072,7 @@ const MissionControl = () => {
           };
           console.error("MissionControl: Error loading company profile:", errorDetails);
           console.error("MissionControl: Full error object:", error);
-          
-          // Handle abort (timeout)
-          if (error.name === 'AbortError') {
-            console.error("MissionControl: Request timeout after 10 seconds");
-            if (retryCount < maxRetries) {
-              retryCount++;
-              console.log(`MissionControl: Retrying after timeout (attempt ${retryCount + 1})...`);
-              await new Promise(resolve => setTimeout(resolve, retryDelay * retryCount));
-              continue;
-            }
-          }
-          
+
           // Network error or other error, try localStorage if we haven't already
           if (retryCount === 0) {
             console.log("MissionControl: Network/connection error, trying localStorage fallback");
