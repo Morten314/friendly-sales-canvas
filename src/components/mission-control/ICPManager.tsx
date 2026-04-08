@@ -1699,6 +1699,10 @@ import {
 } from "@/utils/profilerAcceptedIcpDisplay";
 import { cn } from "@/lib/utils";
 import { apiFetch } from "@/lib/api";
+import {
+  getMissionControlSessionCache,
+  mergeMissionControlSessionCache,
+} from "@/utils/missionControlSessionCache";
 
 // Types
 type FitConfidence = "high" | "medium" | "low";
@@ -1779,6 +1783,22 @@ type InlineStep =
   | "fitConfidence"
   | "additionalContext";
 
+function reviveIcpsFromSnapshot(json: string): ICP[] {
+  try {
+    const parsed = JSON.parse(json) as ICP[];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map((row) => ({
+      ...row,
+      createdAt:
+        row.createdAt instanceof Date
+          ? row.createdAt
+          : new Date(row.createdAt as unknown as string),
+    }));
+  } catch {
+    return [];
+  }
+}
+
 const ICPManager: React.FC = () => {
   const { toast } = useToast();
   const { currentUser, orgId } = useAuth();
@@ -1822,6 +1842,14 @@ const ICPManager: React.FC = () => {
   
   const industryRef = useRef<HTMLInputElement>(null);
   const buyerRoleRef = useRef<HTMLInputElement>(null);
+
+  const commitIcpSnapshotToSessionCache = (list: ICP[]) => {
+    if (!currentUser?.uid) return;
+    mergeMissionControlSessionCache(currentUser.uid, orgIdToUse, {
+      icpManagerLoadCompleted: true,
+      icpsSnapshotJson: JSON.stringify(list),
+    });
+  };
 
   // Save customer profile (ICPs) to backend with retry logic
   const saveCustomerProfileToBackend = async (icpsToSave: ICP[], retryCount = 0) => {
@@ -1900,6 +1928,11 @@ const ICPManager: React.FC = () => {
       const data = await response.json();
       console.log("✅ Customer profile saved successfully to backend");
       console.log("Response data:", JSON.stringify(data, null, 2));
+
+      mergeMissionControlSessionCache(currentUser.uid, orgIdToUse, {
+        icpManagerLoadCompleted: true,
+        icpsSnapshotJson: JSON.stringify(icpsToSave),
+      });
       
       // Save to localStorage for offline access and refresh persistence
       try {
@@ -1973,10 +2006,16 @@ const ICPManager: React.FC = () => {
               console.log("Loading customer profile from localStorage fallback");
               setIcps(localICPs);
               window.dispatchEvent(new CustomEvent('customerProfileSaved'));
+              commitIcpSnapshotToSessionCache(localICPs);
+            } else {
+              commitIcpSnapshotToSessionCache([]);
             }
+          } else {
+            commitIcpSnapshotToSessionCache([]);
           }
         } catch (e) {
           console.error("Error loading from localStorage:", e);
+          commitIcpSnapshotToSessionCache([]);
         }
         return;
       }
@@ -2020,10 +2059,16 @@ const ICPManager: React.FC = () => {
               console.log("ICPManager: Loading from localStorage fallback (user mismatch)");
               setIcps(localICPs);
               window.dispatchEvent(new CustomEvent('customerProfileSaved'));
+              commitIcpSnapshotToSessionCache(localICPs);
+            } else {
+              commitIcpSnapshotToSessionCache([]);
             }
+          } else {
+            commitIcpSnapshotToSessionCache([]);
           }
         } catch (e) {
           console.error("Error loading from localStorage:", e);
+          commitIcpSnapshotToSessionCache([]);
         }
         return;
       }
@@ -2129,6 +2174,7 @@ const ICPManager: React.FC = () => {
         }
 
         setIcps(dedupedICPs);
+        commitIcpSnapshotToSessionCache(dedupedICPs);
         console.log("✅ Customer profile loaded from backend successfully");
         console.log("Loaded ICPs count:", dedupedICPs.length);
         console.log("Loaded ICPs data:", JSON.stringify(dedupedICPs, null, 2));
@@ -2170,15 +2216,22 @@ const ICPManager: React.FC = () => {
                 }
                 // Don't load mismatched data
                 setIcps([]);
+                commitIcpSnapshotToSessionCache([]);
               } else {
                 console.log("Loading customer profile from localStorage fallback");
                 setIcps(localICPs);
                 window.dispatchEvent(new CustomEvent('customerProfileSaved'));
+                commitIcpSnapshotToSessionCache(localICPs);
               }
+            } else {
+              commitIcpSnapshotToSessionCache([]);
             }
+          } else {
+            commitIcpSnapshotToSessionCache([]);
           }
         } catch (e) {
           console.error("Error loading from localStorage:", e);
+          commitIcpSnapshotToSessionCache([]);
         }
       }
     } catch (error) {
@@ -2192,23 +2245,42 @@ const ICPManager: React.FC = () => {
             console.log("Loading customer profile from localStorage fallback (error case)");
             setIcps(localICPs);
             window.dispatchEvent(new CustomEvent('customerProfileSaved'));
+            commitIcpSnapshotToSessionCache(localICPs);
+          } else {
+            commitIcpSnapshotToSessionCache([]);
           }
+        } else {
+          commitIcpSnapshotToSessionCache([]);
         }
       } catch (e) {
         console.error("Error loading from localStorage:", e);
+        commitIcpSnapshotToSessionCache([]);
       }
     } finally {
       setIsLoading(false);
     }
   };
 
+  useLayoutEffect(() => {
+    if (!currentUser?.uid) return;
+    const c = getMissionControlSessionCache(currentUser.uid, orgIdToUse);
+    if (c?.icpManagerLoadCompleted && c.icpsSnapshotJson != null) {
+      setIcps(reviveIcpsFromSnapshot(c.icpsSnapshotJson));
+      setIsLoading(false);
+    }
+  }, [currentUser?.uid, orgIdToUse]);
+
   // Load customer profile on mount (no delayed replay of customerProfile_pending — it could restore deleted ICPs).
   useEffect(() => {
-    if (currentUser?.uid) {
-      console.log("ICPManager: useEffect triggered, loading customer profile for user:", currentUser.uid);
-      loadCustomerProfileFromBackend();
+    if (!currentUser?.uid) {
+      return;
     }
-  }, [currentUser?.uid]);
+    if (getMissionControlSessionCache(currentUser.uid, orgIdToUse)?.icpManagerLoadCompleted) {
+      return;
+    }
+    console.log("ICPManager: useEffect triggered, loading customer profile for user:", currentUser.uid);
+    loadCustomerProfileFromBackend();
+  }, [currentUser?.uid, orgIdToUse]);
 
   // Focus management - combobox stays closed by default
 

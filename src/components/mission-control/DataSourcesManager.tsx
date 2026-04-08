@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -48,6 +48,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { buildApiUrl } from "@/lib/api";
 import jwtManager from "@/lib/jwt";
 import {
+  getMissionControlSessionCache,
+  mergeMissionControlSessionCache,
+} from "@/utils/missionControlSessionCache";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -95,6 +99,22 @@ interface CompanyProfile {
   companyUrl?: string;
 }
 
+function reviveDataSourcesFromSnapshot(json: string): DataSource[] {
+  try {
+    const parsed = JSON.parse(json) as DataSource[];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map((row) => ({
+      ...row,
+      createdAt:
+        row.createdAt instanceof Date
+          ? row.createdAt
+          : new Date((row as { createdAt?: string | Date }).createdAt as string),
+    }));
+  } catch {
+    return [];
+  }
+}
+
 // Suggested tags
 const SUGGESTED_TAGS = [
   "Competitor",
@@ -112,9 +132,22 @@ const DataSourcesManager: React.FC = () => {
   const { currentUser, orgId } = useAuth();
   const orgIdToUse = orgId || 'brewra'; // Fallback to 'brewra' for backward compatibility
   const [dataSources, setDataSources] = useState<DataSource[]>([]);
+  const dataSourcesRef = useRef<DataSource[]>([]);
   const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    dataSourcesRef.current = dataSources;
+  }, [dataSources]);
+
+  const commitDataSourcesSnapshotToSessionCache = (list: DataSource[]) => {
+    if (!currentUser?.uid) return;
+    mergeMissionControlSessionCache(currentUser.uid, orgIdToUse, {
+      dataSourcesManagerLoadCompleted: true,
+      dataSourcesSnapshotJson: JSON.stringify(list),
+    });
+  };
   
   // Lead Stream — files + backend processing status (GET /leads/stream/status)
   const [leadStreamFiles, setLeadStreamFiles] = useState<LeadStreamFileApiRow[]>([]);
@@ -417,6 +450,7 @@ const DataSourcesManager: React.FC = () => {
 
       if (!response.ok) {
         console.log("DataSourcesManager: No existing documents found in backend");
+        commitDataSourcesSnapshotToSessionCache(dataSourcesRef.current);
         return;
       }
 
@@ -760,24 +794,42 @@ const DataSourcesManager: React.FC = () => {
             totalCount: result.length,
             matchedIds: Array.from(matchedExistingIds),
           });
+
+          queueMicrotask(() => commitDataSourcesSnapshotToSessionCache(result));
           
           return result;
         });
         console.log("Data sources loaded from dedicated backend:", loadedSources);
+      } else {
+        commitDataSourcesSnapshotToSessionCache(dataSourcesRef.current);
       }
     } catch (error) {
       console.error("Error loading data sources:", error);
+      commitDataSourcesSnapshotToSessionCache(dataSourcesRef.current);
     } finally {
       setIsLoading(false);
     }
   };
 
+  useLayoutEffect(() => {
+    if (!currentUser?.uid) return;
+    const c = getMissionControlSessionCache(currentUser.uid, orgIdToUse);
+    if (c?.dataSourcesManagerLoadCompleted && c.dataSourcesSnapshotJson != null) {
+      setDataSources(reviveDataSourcesFromSnapshot(c.dataSourcesSnapshotJson));
+      setIsLoading(false);
+    }
+  }, [currentUser?.uid, orgIdToUse]);
+
   // Load data sources on mount
   useEffect(() => {
-    if (currentUser?.uid) {
-      loadDataSourcesFromBackend();
+    if (!currentUser?.uid) {
+      return;
     }
-  }, [currentUser?.uid]);
+    if (getMissionControlSessionCache(currentUser.uid, orgIdToUse)?.dataSourcesManagerLoadCompleted) {
+      return;
+    }
+    loadDataSourcesFromBackend();
+  }, [currentUser?.uid, orgIdToUse]);
   
   // Form state
   const [isAddingInline, setIsAddingInline] = useState(false);
