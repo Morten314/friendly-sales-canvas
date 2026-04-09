@@ -21,12 +21,15 @@ export type MissionControlSessionCacheEntry = {
   /** Data sources tab: first load done; JSON snapshot for instant revisit */
   dataSourcesManagerLoadCompleted?: boolean;
   dataSourcesSnapshotJson?: string | null;
+  /** Profiler page: first load done; JSON snapshot (current ICPs + suggested cards + card statuses) */
+  profilerPageLoadCompleted?: boolean;
+  profilerUiSnapshotJson?: string | null;
 };
 
 const store = new Map<string, MissionControlSessionCacheEntry>();
 
 /** Bump when cache shape or semantics change (invalidates stale sessionStorage). */
-const STORAGE_PREFIX = "mc_session_v3:";
+const STORAGE_PREFIX = "mc_session_v4:";
 
 function cacheKey(userId: string, orgId: string): string {
   return `${userId}::${orgId}`;
@@ -115,6 +118,8 @@ export function mergeMissionControlSessionCache(
       | "icpsSnapshotJson"
       | "dataSourcesManagerLoadCompleted"
       | "dataSourcesSnapshotJson"
+      | "profilerPageLoadCompleted"
+      | "profilerUiSnapshotJson"
     >
   >
 ): void {
@@ -130,6 +135,7 @@ export function mergeMissionControlSessionCache(
       hasDataSources: patch.hasDataSources ?? false,
       customerProfileCheckDone: patch.customerProfileCheckDone ?? false,
       isCustomerProfileSaved: patch.isCustomerProfileSaved ?? false,
+      ...patch,
     };
     store.set(k, created);
     persistEntry(k, created);

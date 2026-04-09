@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useCallback, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { EditDropdownMenu } from "@/components/market-research/EditDropdownMenu";
@@ -59,6 +59,10 @@ import { useNavigate } from "react-router-dom";
 import { getLeadCountForICP } from "@/components/customers/LeadStream";
 import { buildIcpUrl, buildApiUrl, apiFetchJson, apiFetch } from "@/lib/api";
 import { getUserLocalStorage, setUserLocalStorage } from "@/utils/cacheUtils";
+import {
+  getMissionControlSessionCache,
+  mergeMissionControlSessionCache,
+} from "@/utils/missionControlSessionCache";
 import {
   mergeProfilerAcceptedIcpDisplay,
   saveProfilerAcceptedIcpDisplayMeta,
@@ -588,6 +592,398 @@ const mapApiICPToSuggested = (item: any, index: number, type: "refined" | "new" 
   };
 };
 
+type ProfilerPageToast = (opts: { title: string; description?: string; variant?: "destructive" }) => void;
+
+function reviveProfilerCardStatusesFromSnapshot(
+  raw: Record<string, unknown> | undefined,
+): Record<string, ICPCardStatus> {
+  if (!raw || typeof raw !== "object") return {};
+  const out: Record<string, ICPCardStatus> = {};
+  for (const [k, v] of Object.entries(raw)) {
+    if (v && typeof v === "object" && v !== null && "status" in v) {
+      const s = v as ICPCardStatus & { acceptedAt?: string | Date; rejectedAt?: string | Date };
+      out[k] = {
+        status: s.status,
+        acceptedAt: s.acceptedAt != null ? new Date(s.acceptedAt as string | number | Date) : undefined,
+        rejectedAt: s.rejectedAt != null ? new Date(s.rejectedAt as string | number | Date) : undefined,
+      };
+    }
+  }
+  return out;
+}
+
+/** Shared loader for Profiler UI + background prefetch (customer_profile + GET /icp when needed). */
+async function loadProfilerPagePayload(options: {
+  orgIdToUse: string;
+  uid: string | undefined;
+  refreshJustIncremented: boolean;
+  refreshTrigger: number;
+  refreshStorageKey: string | null;
+  /** True when session cache already holds a profiler snapshot (GET /icp only for explicit refresh). */
+  warmProfilerCache: boolean;
+  toast?: ProfilerPageToast;
+}): Promise<{
+  icps: ExistingICP[];
+  refined: SuggestedICP[];
+  newSuggestions: SuggestedICP[];
+  mergedCardStatuses: Record<string, ICPCardStatus>;
+}> {
+  const {
+    orgIdToUse,
+    uid,
+    refreshJustIncremented,
+    refreshTrigger,
+    refreshStorageKey,
+    warmProfilerCache,
+    toast,
+  } = options;
+
+  let icps: ExistingICP[] = [];
+  try {
+    const profileUrl = buildApiUrl(`customer_profile?org_id=${orgIdToUse}`);
+    const profileRes = await fetch(profileUrl, { method: "GET", headers: { "Content-Type": "application/json" } });
+    if (profileRes.ok) {
+      const profileData = await profileRes.json();
+      const data = profileData.data || profileData;
+      const icpsData =
+        data.icps ??
+        data.customer_profiles?.icps ??
+        data.customer_profile?.icps ??
+        [];
+      if (Array.isArray(icpsData) && icpsData.length > 0) {
+        icps = icpsData.map((icp: any, i: number) => mapCustomerProfileICPToExisting(icp, i));
+      }
+    }
+  } catch {
+    /* fall through to fallbacks */
+  }
+  if (icps.length === 0) {
+    try {
+      const customerProfileData = getUserLocalStorage("customerProfile", uid);
+      if (customerProfileData) {
+        const parsed = JSON.parse(customerProfileData);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          icps = parsed.map((icp: any, i: number) => mapCustomerProfileICPToExisting(icp, i));
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+  if (icps.length === 0) {
+    try {
+      const persistedExisting = localStorage.getItem("profiler_existingICPs");
+      if (persistedExisting) {
+        const parsed = JSON.parse(persistedExisting);
+        if (parsed.length > 0) icps = parsed;
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+  if (icps.length === 0) {
+    try {
+      const stored = localStorage.getItem("customerICPs") || localStorage.getItem("missionControlICPs");
+      if (stored) icps = JSON.parse(stored);
+    } catch {
+      /* ignore */
+    }
+  }
+  if (icps.length === 0) {
+    icps = [
+      {
+        id: "existing-1",
+        name: "ICP 1",
+        geography: "North America",
+        industry: "Software & Technology",
+        companySize: "100-500 employees",
+        buyerRole: "CTO / VP Engineering",
+        fitConfidence: "High",
+        status: "active",
+      },
+      {
+        id: "existing-2",
+        name: "ICP 2",
+        geography: "US, UK",
+        industry: "Healthcare",
+        companySize: "200-1000 employees",
+        buyerRole: "CIO / Chief Digital Officer",
+        fitConfidence: "Medium",
+        status: "active",
+      },
+    ];
+  }
+
+  let refined: SuggestedICP[] = [];
+  let newSuggestions: SuggestedICP[] = [];
+
+  const shouldCallGetIcpApi = Boolean(uid) && (refreshJustIncremented || !warmProfilerCache);
+
+  if (shouldCallGetIcpApi && uid) {
+    if (refreshJustIncremented && refreshStorageKey) {
+      sessionStorage.setItem(refreshStorageKey, String(refreshTrigger));
+    }
+    try {
+      const icpParams = new URLSearchParams({ user_id: uid });
+      if (refreshJustIncremented) {
+        icpParams.set("refresh", "true");
+      }
+      const icpUrl = buildIcpUrl(icpParams.toString());
+      profilerIcpDebug("GET /icp (backend) — request", { url: icpUrl, user_id: uid, refresh: refreshJustIncremented });
+      const icpRes = await fetch(icpUrl, { method: "GET", headers: { "Content-Type": "application/json" } });
+      profilerIcpDebug("GET /icp — response", { status: icpRes.status, ok: icpRes.ok });
+      if (icpRes.ok) {
+        const icpData = await icpRes.json();
+        profilerIcpDebug("GET /icp — raw JSON (summary)", {
+          topLevelKeys:
+            icpData && typeof icpData === "object" && !Array.isArray(icpData)
+              ? Object.keys(icpData as object)
+              : Array.isArray(icpData)
+                ? [`<array length ${icpData.length}>`]
+                : typeof icpData,
+        });
+        const icpArray = normalizeIcpGetResponse(icpData);
+        profilerIcpDebug("GET /icp — normalized array length", icpArray.length);
+        if (icpArray.length > 0) {
+          const mapped = icpArray.map((item: any, i: number) => mapApiICPToSuggested(item, i, "new"));
+          const filteredGet = filterDismissedFromSuggested(uid, [], mapped);
+          newSuggestions = filteredGet.newSuggestions;
+          refined = filteredGet.refined;
+          profilerIcpDebug(
+            "GET /icp — mapped recommended ICPs (source: backend)",
+            mapped.map((icp) => ({
+              id: icp.id,
+              name: icp.name,
+              industry: icp.industry,
+              segment: icp.segment,
+              hasFullReport: Boolean(icp.fullReport && Object.keys(icp.fullReport).length > 0),
+              fullReportKeys: icp.fullReport ? Object.keys(icp.fullReport) : [],
+            })),
+          );
+          if (refreshJustIncremented) {
+            toast?.({
+              title: "ICPs refreshed",
+              description: `${newSuggestions.length} recommended ICPs generated.`,
+            });
+          }
+        } else {
+          profilerIcpDebug("GET /icp — empty normalized array; UI will fall back to cache or mock");
+        }
+      } else {
+        console.warn("ICP API returned", icpRes.status, icpRes.statusText);
+        profilerIcpDebug("GET /icp — non-OK response", { status: icpRes.status, statusText: icpRes.statusText });
+        if (refreshJustIncremented) {
+          toast?.({
+            title: "Refresh failed",
+            description: `API returned ${icpRes.status}. Using cached data.`,
+            variant: "destructive",
+          });
+        }
+      }
+    } catch (e) {
+      console.warn("Could not fetch recommended ICPs from API:", e);
+      profilerIcpDebug("GET /icp — fetch error", e);
+      if (refreshJustIncremented) {
+        toast?.({
+          title: "Refresh failed",
+          description: "Using cached data. Please try again.",
+          variant: "destructive",
+        });
+      }
+    }
+  } else if (refreshTrigger > 0 && !refreshJustIncremented) {
+    profilerIcpDebug("Skipping GET /icp (already handled this refreshTrigger or missing uid); using cache/mock path", {
+      refreshTrigger,
+      prevRefreshStored: refreshStorageKey ? Number(sessionStorage.getItem(refreshStorageKey) || "0") : 0,
+    });
+  }
+
+  if (newSuggestions.length === 0 && refined.length === 0) {
+    try {
+      const cached = localStorage.getItem("profiler_recommendedICPs");
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          newSuggestions = parsed;
+          refined = [];
+          profilerIcpDebug("Recommended ICPs source: localStorage cache (profiler_recommendedICPs)", {
+            count: parsed.length,
+            ids: parsed.map((x: SuggestedICP) => x.id),
+          });
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
+  if (newSuggestions.length === 0 && refined.length === 0) {
+    refined = [
+      {
+        id: "refined-1",
+        name: "Mid-Market SaaS – RevOps Teams",
+        type: "refined",
+        sourceICPId: icps[0]?.id,
+        sourceICPName: icps[0]?.name || "ICP 1",
+        industry: "Software & Technology",
+        segment: "RevOps Focus",
+        companySize: "100-500 employees",
+        regions: ["North America", "UK"],
+        decisionMakers: ["VP of RevOps", "Head of Sales Operations", "CRO"],
+        keyAttributes: ["High growth stage", "Using Salesforce or HubSpot", "Series B+"],
+        whySuggested: [
+          "RevOps roles show 3x higher engagement with your content",
+          "Faster sales cycles when RevOps is involved early",
+          "Higher average deal size in this segment",
+        ],
+        confidenceScore: "High",
+        marketSize: "$45B",
+        growth: "+18% YoY",
+        topPainPoint: "Sales & marketing alignment",
+        buyingTriggers: ["New CRO hire", "Revenue target increase", "Tech stack consolidation"],
+        competitors: ["Clari", "Gong", "Outreach"],
+      },
+    ];
+    newSuggestions = [
+      {
+        id: "new-1",
+        name: "Enterprise FinTech Decision Makers",
+        type: "new",
+        tag: "New ICP",
+        industry: "Financial Services",
+        segment: "FinTech",
+        companySize: "500-2000 employees",
+        regions: ["US", "EU"],
+        decisionMakers: ["Chief Digital Officer", "VP of Innovation", "Head of Partnerships"],
+        keyAttributes: ["Digital transformation focus", "API-first strategy", "Regulatory compliance needs"],
+        whySuggested: [
+          "High overlap with your current product capabilities",
+          "Growing market with 24% YoY expansion",
+          "Lower competition in this segment",
+        ],
+        opportunityUnlocked: "Access to $2.4B addressable market with strong product-market fit signals",
+        confidenceScore: "Medium",
+        marketSize: "$28B",
+        growth: "+24% YoY",
+        topPainPoint: "Legacy system modernization",
+        buyingTriggers: ["Regulatory changes", "Digital transformation initiative", "Competitor pressure"],
+        competitors: ["Stripe", "Plaid", "Marqeta"],
+      },
+      {
+        id: "new-2",
+        name: "Growth-Stage E-commerce Leaders",
+        type: "new",
+        sourceICPName: icps[0]?.name || "ICP 1",
+        tag: `Lookalike of ${icps[0]?.name || "ICP 1"}`,
+        industry: "E-commerce & Retail",
+        segment: "D2C Brands",
+        companySize: "50-200 employees",
+        regions: ["North America"],
+        decisionMakers: ["Head of Growth", "VP of Marketing", "COO"],
+        keyAttributes: ["Shopify Plus users", "High ad spend", "Scaling operations"],
+        whySuggested: [
+          "Similar buying patterns to your best customers",
+          "Strong intent signals detected in this segment",
+          "Complementary to existing ICP focus",
+        ],
+        opportunityUnlocked: "Expand into adjacent market with proven playbook from ICP 1",
+        confidenceScore: "High",
+        marketSize: "$18B",
+        growth: "+22% YoY",
+        topPainPoint: "Scaling customer acquisition",
+        buyingTriggers: ["Series A+ funding", "New market expansion", "Holiday season prep"],
+        competitors: ["Shopify", "Klaviyo", "Attentive"],
+      },
+    ];
+    profilerIcpDebug(
+      "Recommended ICPs source: built-in mock data (no backend response and no profiler_recommendedICPs cache)",
+    );
+  }
+
+  {
+    const filtered = filterDismissedFromSuggested(uid, refined, newSuggestions);
+    refined = filtered.refined;
+    newSuggestions = filtered.newSuggestions;
+  }
+
+  try {
+    if (newSuggestions.length > 0 || refined.length > 0) {
+      localStorage.setItem("profiler_recommendedICPs", JSON.stringify([...refined, ...newSuggestions]));
+    }
+  } catch {
+    /* ignore */
+  }
+
+  let mergedCardStatuses: Record<string, ICPCardStatus>;
+  try {
+    const persistedStatuses = localStorage.getItem("profiler_cardStatuses");
+    if (persistedStatuses && Object.keys(JSON.parse(persistedStatuses || "{}")).length > 0) {
+      mergedCardStatuses = JSON.parse(persistedStatuses) as Record<string, ICPCardStatus>;
+    } else {
+      mergedCardStatuses = {};
+      [...refined, ...newSuggestions].forEach((icp) => {
+        mergedCardStatuses[icp.id] = { status: "suggested" };
+      });
+    }
+  } catch {
+    mergedCardStatuses = {};
+    [...refined, ...newSuggestions].forEach((icp) => {
+      mergedCardStatuses[icp.id] = { status: "suggested" };
+    });
+  }
+
+  return { icps, refined, newSuggestions, mergedCardStatuses };
+}
+
+/** Background: warm session cache after sign-in so Profiler revisits skip GETs. */
+export async function prefetchProfilerSessionCacheIfNeeded(uid: string, orgId: string): Promise<void> {
+  const orgIdToUse = orgId || uid || "brewra";
+  if (!uid) return;
+  const existing = getMissionControlSessionCache(uid, orgIdToUse);
+  if (existing?.profilerPageLoadCompleted && existing.profilerUiSnapshotJson) return;
+
+  try {
+    const refreshStorageKey = `profiler_icp_refresh_${uid}`;
+    const result = await loadProfilerPagePayload({
+      orgIdToUse,
+      uid,
+      refreshJustIncremented: false,
+      refreshTrigger: 0,
+      refreshStorageKey,
+      warmProfilerCache: false,
+      toast: undefined,
+    });
+    let showRec = false;
+    try {
+      showRec = localStorage.getItem("profiler_showRecommendations") === "true";
+    } catch {
+      /* ignore */
+    }
+    mergeMissionControlSessionCache(uid, orgIdToUse, {
+      profilerPageLoadCompleted: true,
+      profilerUiSnapshotJson: JSON.stringify({
+        existingICPs: result.icps,
+        refinedICPs: result.refined,
+        newICPs: result.newSuggestions,
+        cardStatuses: result.mergedCardStatuses,
+        showRecommendations: showRec,
+      }),
+    });
+  } catch {
+    /* background prefetch — ignore */
+  }
+}
+
+export function ProfilerSessionBootstrap() {
+  const { currentUser, orgId } = useAuth();
+  useEffect(() => {
+    if (!currentUser?.uid) return;
+    const orgIdToUse = orgId || currentUser.uid || "brewra";
+    void prefetchProfilerSessionCacheIfNeeded(currentUser.uid, orgIdToUse);
+  }, [currentUser?.uid, orgId]);
+  return null;
+}
+
 export const SuggestedICPCards = ({
   onICPAccepted,
   onICPRejected,
@@ -688,6 +1084,12 @@ export const SuggestedICPCards = ({
         }
         await refetchCustomerProfileIcps();
         window.dispatchEvent(new CustomEvent("customerProfileSaved"));
+        if (currentUser?.uid) {
+          mergeMissionControlSessionCache(currentUser.uid, orgIdToUse, {
+            profilerPageLoadCompleted: false,
+            profilerUiSnapshotJson: null,
+          });
+        }
         toast({ title: "ICP deleted", description: `"${icp.name}" removed from Current ICPs.` });
       } catch (e) {
         console.warn("[Profiler Current ICPs] DELETE customer_profile/icp: failed", e);
@@ -715,269 +1117,99 @@ export const SuggestedICPCards = ({
     localStorage.setItem("profiler_showRecommendations", String(showRecommendations));
   }, [showRecommendations]);
 
-  // Load data: Current ICPs from localStorage, Recommended ICPs from GET /icp (with refresh=true when Refresh clicked)
+  useLayoutEffect(() => {
+    const uid = currentUser?.uid;
+    const orgIdToUse = orgId || uid || "brewra";
+    if (!uid) return;
+    const entry = getMissionControlSessionCache(uid, orgIdToUse);
+    if (!entry?.profilerPageLoadCompleted || !entry.profilerUiSnapshotJson) return;
+    try {
+      const snap = JSON.parse(entry.profilerUiSnapshotJson) as {
+        existingICPs?: ExistingICP[];
+        refinedICPs?: SuggestedICP[];
+        newICPs?: SuggestedICP[];
+        cardStatuses?: Record<string, unknown>;
+        showRecommendations?: boolean;
+      };
+      if (Array.isArray(snap.existingICPs)) setExistingICPs(snap.existingICPs);
+      if (Array.isArray(snap.refinedICPs)) setRefinedICPs(snap.refinedICPs);
+      if (Array.isArray(snap.newICPs)) setNewICPs(snap.newICPs);
+      if (snap.cardStatuses && typeof snap.cardStatuses === "object") {
+        setCardStatuses(reviveProfilerCardStatusesFromSnapshot(snap.cardStatuses as Record<string, unknown>));
+      }
+      if (typeof snap.showRecommendations === "boolean") setShowRecommendations(snap.showRecommendations);
+      setLoading(false);
+    } catch {
+      /* ignore */
+    }
+  }, [currentUser?.uid, orgId]);
+
+  // Load data: session cache avoids repeat GET customer_profile + GET /icp on navigation; Refresh still hits GET /icp.
   useEffect(() => {
+    const orgIdToUse = orgId || currentUser?.uid || "brewra";
+    const uid = currentUser?.uid;
+    if (!uid) {
+      setLoading(false);
+      return;
+    }
+
+    const entry = getMissionControlSessionCache(uid, orgIdToUse);
+    const warm = Boolean(entry?.profilerPageLoadCompleted && entry.profilerUiSnapshotJson);
+    const refreshStorageKey = uid ? `profiler_icp_refresh_${uid}` : null;
+    const prevRefreshStored = refreshStorageKey
+      ? Number(sessionStorage.getItem(refreshStorageKey) || "0")
+      : 0;
+    const refreshJustIncremented =
+      Boolean(refreshStorageKey) && refreshTrigger > 0 && refreshTrigger > prevRefreshStored;
+
+    if (warm && !refreshJustIncremented) {
+      setLoading(false);
+      return;
+    }
+
     const loadData = async () => {
       setLoading(true);
-
-      // 1. Load Current ICPs - same GET /api/customer_profile as Mission Control, then localStorage fallbacks
-      let icps: ExistingICP[] = [];
-      const orgIdToUse = orgId || currentUser?.uid || "brewra";
-      try {
-        const profileUrl = buildApiUrl(`customer_profile?org_id=${orgIdToUse}`);
-        const profileRes = await fetch(profileUrl, { method: "GET", headers: { "Content-Type": "application/json" } });
-        if (profileRes.ok) {
-          const profileData = await profileRes.json();
-          const data = profileData.data || profileData;
-          const icpsData =
-            data.icps ??
-            data.customer_profiles?.icps ??
-            data.customer_profile?.icps ??
-            [];
-          if (Array.isArray(icpsData) && icpsData.length > 0) {
-            icps = icpsData.map((icp: any, i: number) => mapCustomerProfileICPToExisting(icp, i));
-          }
-        }
-      } catch {}
-      if (icps.length === 0) {
-        try {
-          const customerProfileData = getUserLocalStorage("customerProfile", currentUser?.uid);
-          if (customerProfileData) {
-            const parsed = JSON.parse(customerProfileData);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              icps = parsed.map((icp: any, i: number) => mapCustomerProfileICPToExisting(icp, i));
-            }
-          }
-        } catch {}
-      }
-      if (icps.length === 0) {
-        try {
-          const persistedExisting = localStorage.getItem("profiler_existingICPs");
-          if (persistedExisting) {
-            const parsed = JSON.parse(persistedExisting);
-            if (parsed.length > 0) icps = parsed;
-          }
-        } catch {}
-      }
-      if (icps.length === 0) {
-        try {
-          const stored = localStorage.getItem("customerICPs") || localStorage.getItem("missionControlICPs");
-          if (stored) icps = JSON.parse(stored);
-        } catch {}
-      }
-      if (icps.length === 0) {
-        icps = [
-          { id: "existing-1", name: "ICP 1", geography: "North America", industry: "Software & Technology", companySize: "100-500 employees", buyerRole: "CTO / VP Engineering", fitConfidence: "High", status: "active" },
-          { id: "existing-2", name: "ICP 2", geography: "US, UK", industry: "Healthcare", companySize: "200-1000 employees", buyerRole: "CIO / Chief Digital Officer", fitConfidence: "Medium", status: "active" },
-        ];
-      }
-      setExistingICPs(icps);
-
-      // 2. Load Recommended ICPs - GET /icp when Refresh clicked, or from localStorage when returning to page
-      let refined: SuggestedICP[] = [];
-      let newSuggestions: SuggestedICP[] = [];
-      // Persist last handled refreshTrigger in sessionStorage so remounts (tabs, Strict Mode, parent re-renders)
-      // don't re-run GET /icp while refreshTrigger stays the same — useRef alone resets on unmount.
-      const refreshStorageKey = currentUser?.uid
-        ? `profiler_icp_refresh_${currentUser.uid}`
-        : null;
-      const prevRefreshStored = refreshStorageKey
-        ? Number(sessionStorage.getItem(refreshStorageKey) || "0")
-        : 0;
-      const refreshJustIncremented =
-        Boolean(refreshStorageKey) &&
-        refreshTrigger > 0 &&
-        refreshTrigger > prevRefreshStored;
 
       profilerIcpDebug("loadData: refresh state", {
         refreshTrigger,
         prevRefreshStored,
         refreshJustIncremented,
         sessionKey: refreshStorageKey,
-        willCallBackend: refreshJustIncremented && Boolean(currentUser?.uid),
+        warmProfilerCache: warm,
+        willCallBackend: Boolean(uid) && (refreshJustIncremented || !warm),
       });
 
-      if (refreshJustIncremented && currentUser?.uid) {
-        sessionStorage.setItem(refreshStorageKey!, String(refreshTrigger));
-        try {
-          const icpParams = new URLSearchParams({
-            user_id: currentUser.uid,
-            refresh: "true",
-          });
-          const icpUrl = buildIcpUrl(icpParams.toString());
-          profilerIcpDebug("GET /icp (backend) — request", { url: icpUrl, user_id: currentUser.uid });
-          const icpRes = await fetch(icpUrl, { method: "GET", headers: { "Content-Type": "application/json" } });
-          profilerIcpDebug("GET /icp — response", { status: icpRes.status, ok: icpRes.ok });
-          if (icpRes.ok) {
-            const icpData = await icpRes.json();
-            profilerIcpDebug("GET /icp — raw JSON (summary)", {
-              topLevelKeys:
-                icpData && typeof icpData === "object" && !Array.isArray(icpData)
-                  ? Object.keys(icpData as object)
-                  : Array.isArray(icpData)
-                    ? [`<array length ${icpData.length}>`]
-                    : typeof icpData,
-            });
-            const icpArray = normalizeIcpGetResponse(icpData);
-            profilerIcpDebug("GET /icp — normalized array length", icpArray.length);
-            if (icpArray.length > 0) {
-              const mapped = icpArray.map((item: any, i: number) => mapApiICPToSuggested(item, i, "new"));
-              const filteredGet = filterDismissedFromSuggested(currentUser?.uid, [], mapped);
-              newSuggestions = filteredGet.newSuggestions;
-              refined = filteredGet.refined;
-              profilerIcpDebug(
-                "GET /icp — mapped recommended ICPs (source: backend)",
-                mapped.map((icp) => ({
-                  id: icp.id,
-                  name: icp.name,
-                  industry: icp.industry,
-                  segment: icp.segment,
-                  hasFullReport: Boolean(icp.fullReport && Object.keys(icp.fullReport).length > 0),
-                  fullReportKeys: icp.fullReport ? Object.keys(icp.fullReport) : [],
-                })),
-              );
-              toast({
-                title: "ICPs refreshed",
-                description: `${newSuggestions.length} recommended ICPs generated.`,
-              });
-            } else {
-              profilerIcpDebug("GET /icp — empty normalized array; UI will fall back to cache or mock");
-            }
-          } else {
-            console.warn("ICP API returned", icpRes.status, icpRes.statusText);
-            profilerIcpDebug("GET /icp — non-OK response", { status: icpRes.status, statusText: icpRes.statusText });
-            toast({ title: "Refresh failed", description: `API returned ${icpRes.status}. Using cached data.`, variant: "destructive" });
-          }
-        } catch (e) {
-          console.warn("Could not fetch recommended ICPs from API:", e);
-          profilerIcpDebug("GET /icp — fetch error", e);
-          toast({ title: "Refresh failed", description: "Using cached data. Please try again.", variant: "destructive" });
-        }
-      } else if (refreshTrigger > 0 && !refreshJustIncremented) {
-        profilerIcpDebug(
-          "Skipping GET /icp (already handled this refreshTrigger or missing uid); using cache/mock path",
-          { refreshTrigger, prevRefreshStored },
-        );
-      }
+      const result = await loadProfilerPagePayload({
+        orgIdToUse,
+        uid,
+        refreshJustIncremented,
+        refreshTrigger,
+        refreshStorageKey,
+        warmProfilerCache: warm,
+        toast,
+      });
 
-      // Load from localStorage when not refreshing (e.g. returning to Profiler page)
-      if (newSuggestions.length === 0 && refined.length === 0) {
-        try {
-          const cached = localStorage.getItem("profiler_recommendedICPs");
-          if (cached) {
-            const parsed = JSON.parse(cached);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              newSuggestions = parsed;
-              refined = [];
-              profilerIcpDebug(
-                "Recommended ICPs source: localStorage cache (profiler_recommendedICPs)",
-                { count: parsed.length, ids: parsed.map((x: SuggestedICP) => x.id) },
-              );
-            }
-          }
-        } catch {}
-      }
+      setExistingICPs(result.icps);
+      setRefinedICPs(result.refined);
+      setNewICPs(result.newSuggestions);
+      setCardStatuses(result.mergedCardStatuses);
 
-      // Use mock data only when no API data and no cached data
-      if (newSuggestions.length === 0 && refined.length === 0) {
-        refined = [
-          {
-            id: "refined-1",
-            name: "Mid-Market SaaS – RevOps Teams",
-            type: "refined",
-            sourceICPId: icps[0]?.id,
-            sourceICPName: icps[0]?.name || "ICP 1",
-            industry: "Software & Technology",
-            segment: "RevOps Focus",
-            companySize: "100-500 employees",
-            regions: ["North America", "UK"],
-            decisionMakers: ["VP of RevOps", "Head of Sales Operations", "CRO"],
-            keyAttributes: ["High growth stage", "Using Salesforce or HubSpot", "Series B+"],
-            whySuggested: ["RevOps roles show 3x higher engagement with your content", "Faster sales cycles when RevOps is involved early", "Higher average deal size in this segment"],
-            confidenceScore: "High",
-            marketSize: "$45B",
-            growth: "+18% YoY",
-            topPainPoint: "Sales & marketing alignment",
-            buyingTriggers: ["New CRO hire", "Revenue target increase", "Tech stack consolidation"],
-            competitors: ["Clari", "Gong", "Outreach"],
-          },
-        ];
-        newSuggestions = [
-          {
-            id: "new-1",
-            name: "Enterprise FinTech Decision Makers",
-            type: "new",
-            tag: "New ICP",
-            industry: "Financial Services",
-            segment: "FinTech",
-            companySize: "500-2000 employees",
-            regions: ["US", "EU"],
-            decisionMakers: ["Chief Digital Officer", "VP of Innovation", "Head of Partnerships"],
-            keyAttributes: ["Digital transformation focus", "API-first strategy", "Regulatory compliance needs"],
-            whySuggested: ["High overlap with your current product capabilities", "Growing market with 24% YoY expansion", "Lower competition in this segment"],
-            opportunityUnlocked: "Access to $2.4B addressable market with strong product-market fit signals",
-            confidenceScore: "Medium",
-            marketSize: "$28B",
-            growth: "+24% YoY",
-            topPainPoint: "Legacy system modernization",
-            buyingTriggers: ["Regulatory changes", "Digital transformation initiative", "Competitor pressure"],
-            competitors: ["Stripe", "Plaid", "Marqeta"],
-          },
-          {
-            id: "new-2",
-            name: "Growth-Stage E-commerce Leaders",
-            type: "new",
-            sourceICPName: icps[0]?.name || "ICP 1",
-            tag: `Lookalike of ${icps[0]?.name || "ICP 1"}`,
-            industry: "E-commerce & Retail",
-            segment: "D2C Brands",
-            companySize: "50-200 employees",
-            regions: ["North America"],
-            decisionMakers: ["Head of Growth", "VP of Marketing", "COO"],
-            keyAttributes: ["Shopify Plus users", "High ad spend", "Scaling operations"],
-            whySuggested: ["Similar buying patterns to your best customers", "Strong intent signals detected in this segment", "Complementary to existing ICP focus"],
-            opportunityUnlocked: "Expand into adjacent market with proven playbook from ICP 1",
-            confidenceScore: "High",
-            marketSize: "$18B",
-            growth: "+22% YoY",
-            topPainPoint: "Scaling customer acquisition",
-            buyingTriggers: ["Series A+ funding", "New market expansion", "Holiday season prep"],
-            competitors: ["Shopify", "Klaviyo", "Attentive"],
-          },
-        ];
-        profilerIcpDebug(
-          "Recommended ICPs source: built-in mock data (no backend response and no profiler_recommendedICPs cache)",
-        );
-      }
+      mergeMissionControlSessionCache(uid, orgIdToUse, {
+        profilerPageLoadCompleted: true,
+        profilerUiSnapshotJson: JSON.stringify({
+          existingICPs: result.icps,
+          refinedICPs: result.refined,
+          newICPs: result.newSuggestions,
+          cardStatuses: result.mergedCardStatuses,
+          showRecommendations,
+        }),
+      });
 
-      {
-        const filtered = filterDismissedFromSuggested(currentUser?.uid, refined, newSuggestions);
-        refined = filtered.refined;
-        newSuggestions = filtered.newSuggestions;
-      }
-
-      try {
-        if (newSuggestions.length > 0 || refined.length > 0) {
-          localStorage.setItem("profiler_recommendedICPs", JSON.stringify([...refined, ...newSuggestions]));
-        }
-      } catch {
-        /* ignore */
-      }
-
-      setRefinedICPs(refined);
-      setNewICPs(newSuggestions);
-
-      const persistedStatuses = localStorage.getItem("profiler_cardStatuses");
-      if (!persistedStatuses || Object.keys(JSON.parse(persistedStatuses || "{}")).length === 0) {
-        const initialStatuses: Record<string, ICPCardStatus> = {};
-        [...refined, ...newSuggestions].forEach((icp) => {
-          initialStatuses[icp.id] = { status: "suggested" };
-        });
-        setCardStatuses(initialStatuses);
-      }
       setLoading(false);
     };
-    loadData();
+    void loadData();
+    // showRecommendations omitted from deps: toggling must not re-fetch; snapshot uses value at load time.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- toast is stable; listing avoids noisy reloads
   }, [refreshTrigger, currentUser?.uid, orgId]);
 
   // --- Accept flow ---
@@ -1070,6 +1302,11 @@ export const SuggestedICPCards = ({
       }
       await refetchCustomerProfileIcps();
       window.dispatchEvent(new CustomEvent("customerProfileSaved"));
+
+      mergeMissionControlSessionCache(uid, orgIdToUse, {
+        profilerPageLoadCompleted: false,
+        profilerUiSnapshotJson: null,
+      });
 
       toast({
         title: "Customer Profile updated.",
