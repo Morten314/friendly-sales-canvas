@@ -24,6 +24,7 @@ import MissionControl from "./pages/MissionControl";
 import Artifacts from "./pages/Artifacts";
 import PWAInstallPrompt from "./components/PWAInstallPrompt";
 import { ProfilerSessionBootstrap } from "./components/customers/SuggestedICPCards";
+import { SignalsSessionBootstrap } from "./pages/Signals";
 
 const queryClient = new QueryClient();
 
@@ -31,6 +32,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <ProfilerSessionBootstrap />
+      <SignalsSessionBootstrap />
       <TenantProvider>
         <SidebarProvider>
           <TooltipProvider>

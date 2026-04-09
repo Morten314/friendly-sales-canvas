@@ -8,11 +8,15 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useLayoutEffect, useCallback } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { sanitizeAnswerText } from '@/lib/utils';
+import {
+  getMissionControlSessionCache,
+  mergeMissionControlSessionCache,
+} from '@/utils/missionControlSessionCache';
 type Agent = 'scout' | 'profiler';
 type ActionType = 'accept' | 'dismiss' | 'save' | 'ask';
 interface ContextualSuggestion {
@@ -234,6 +238,230 @@ const parseTimestamp = (timestamp: string): number => {
   return 0;
 };
 
+type SignalsSessionSnapshot = {
+  preRejectSignals: SignalCard[];
+  signalsFromApi: boolean;
+};
+
+function applyRejectedFilterAndSort(preReject: SignalCard[], rejectedHashes: Set<string>): SignalCard[] {
+  const filtered = preReject.filter((signal) => {
+    const contentHash = getSignalContentHash(signal);
+    return !rejectedHashes.has(contentHash);
+  });
+  return [...filtered].sort((a, b) => parseTimestamp(b.timestamp) - parseTimestamp(a.timestamp));
+}
+
+function buildSignalCardsFromFetchData(data: { signals?: any[] }): SignalCard[] {
+  const rawSignals = data.signals || [];
+  const signalsWithIds = rawSignals.map((signal: any, index: number) => {
+    let signalId: string;
+    if (signal.signal_id) {
+      signalId = signal.signal_id;
+    } else if (signal.id) {
+      signalId = signal.id;
+    } else {
+      if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+        signalId = crypto.randomUUID();
+      } else {
+        const timestamp = Date.now();
+        const randomStr = Math.random().toString(36).substring(2, 11);
+        const perfNow = (performance?.now() || Math.random() * 1000).toString().replace('.', '');
+        signalId = `signal-${timestamp}-${index}-${randomStr}-${perfNow}`;
+      }
+    }
+
+    const nextBestMoves = signal.nextBestMoves || [];
+    const NBAs: NBAItem[] = Array.isArray(signal.NBAs) && signal.NBAs.length > 0
+      ? signal.NBAs.map((n: { nba?: string; prompt?: string }) => ({
+          nba: n.nba ?? '',
+          prompt: n.prompt ?? ''
+        }))
+      : nextBestMoves.map((m: string) => ({ nba: m, prompt: '' }));
+
+    const sourceRaw = signal.source;
+    const source: SourceCitation[] = Array.isArray(sourceRaw)
+      ? sourceRaw.map((s: SourceCitation | string) =>
+          typeof s === 'object' && s !== null && 'citation' in s && 'url' in s
+            ? { citation: (s as SourceCitation).citation ?? '', url: (s as SourceCitation).url ?? '' }
+            : { citation: typeof s === 'string' ? s : '', url: typeof s === 'string' && /^https?:\/\//i.test(s) ? s : '' }
+        ).filter((c) => c.citation || c.url)
+      : [];
+
+    return {
+      ...signal,
+      id: signalId,
+      description: signal.description || '',
+      source,
+      nextBestMoves,
+      NBAs,
+      contextualSuggestions: signal.contextualSuggestions || []
+    } as SignalCard;
+  });
+
+  const ids = signalsWithIds.map(s => s.id);
+  const uniqueIds = new Set(ids);
+  if (ids.length !== uniqueIds.size) {
+    signalsWithIds.forEach((signal, index) => {
+      if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+        signal.id = crypto.randomUUID();
+      } else {
+        signal.id = `signal-${Date.now()}-${index}-${Math.random().toString(36).substring(2, 11)}-${performance?.now() || Math.random() * 1000}`;
+      }
+    });
+  }
+
+  return signalsWithIds;
+}
+
+function getFallbackSampleSignals(): SignalCard[] {
+  return [
+    {
+      id: '1',
+      agent: 'scout',
+      timestamp: '1h ago',
+      headline: 'Competitor X launches SMB pricing tier.',
+      snippet: 'Likely to impact your ICP accounts in mid-market SaaS segment.',
+      description: 'This competitive pricing move by Company X directly impacts your SMB segment in the mid-market SaaS space. With 40% of your current pipeline falling into this category, this development could accelerate decision timelines or create pricing pressure. The launch targets companies with 50-200 employees—your core ICP—and includes features that overlap with your value proposition. Consider monitoring early adoption signals and preparing competitive differentiation messaging that emphasizes your unique ROI model and enterprise-grade capabilities.',
+      sourceUrl: '#',
+      sourceLabel: 'Press release link',
+      source: [
+        { citation: 'Press Release - Company X SMB Tier', url: 'https://example.com/press-release' },
+        { citation: 'Industry report 2024', url: 'https://example.com/industry-report' },
+      ],
+      nextBestMoves: [
+        'Would you like me to check how many of your target ICPs fall under the SMB segment and could be influenced by this move?',
+        'Do you want me to model a competitive bundle or ROI-driven value pitch against this pricing shift?',
+        'Should I track customer sentiment on LinkedIn, G2 reviews, or forums to see if it\'s gaining traction?'
+      ],
+      NBAs: [
+        { nba: 'Would you like me to check how many of your target ICPs fall under the SMB segment and could be influenced by this move?', prompt: '' },
+        { nba: 'Do you want me to model a competitive bundle or ROI-driven value pitch against this pricing shift?', prompt: '' },
+        { nba: 'Should I track customer sentiment on LinkedIn, G2 reviews, or forums to see if it\'s gaining traction?', prompt: '' }
+      ],
+      contextualSuggestions: [
+        { icon: '🔗', text: 'Get Company X\'s Website & Press Release' },
+        { icon: '🧑‍💼', text: 'Identify decision makers at Company X' },
+        { icon: '📊', text: 'Compare SMB pricing vs. our offering' },
+        { icon: '🚀', text: 'Monitor early adoption signals from Company X' },
+        { icon: '📅', text: 'Track mentions of SMB tier in LinkedIn updates' }
+      ]
+    },
+    {
+      id: '2',
+      agent: 'profiler',
+      timestamp: '3h ago',
+      headline: 'ICP contact posted about cloud migration struggles.',
+      snippet: 'John Doe, CTO @ Acme Corp, shared LinkedIn update relevant to DRaaS.',
+      description: 'John Doe, CTO at Acme Corp (a company matching your ICP profile with 150 employees in the FinTech sector), posted about challenges with cloud migration and data recovery strategies. This represents a strong buying signal as Acme Corp is actively evaluating solutions in your space. The post indicates urgency and budget allocation for DRaaS solutions, making this an ideal time for targeted outreach with relevant case studies and ROI messaging.',
+      sourceUrl: '#',
+      sourceLabel: 'LinkedIn post link',
+      source: [{ citation: 'LinkedIn post link', url: 'https://linkedin.com/post/example' }],
+      nextBestMoves: [
+        'Should I draft a contextual comment or connection request for this post?',
+        'Want me to identify other prospects posting about similar challenges?',
+        'Do you want me to create a follow-up sequence based on this signal?'
+      ],
+      NBAs: [
+        { nba: 'Should I draft a contextual comment or connection request for this post?', prompt: '' },
+        { nba: 'Want me to identify other prospects posting about similar challenges?', prompt: '' },
+        { nba: 'Do you want me to create a follow-up sequence based on this signal?', prompt: '' }
+      ],
+      contextualSuggestions: [
+        { icon: '💬', text: 'Draft contextual comment for this post' },
+        { icon: '🤝', text: 'Prepare connection request message' },
+        { icon: '🔄', text: 'Find similar prospects with same challenges' },
+        { icon: '📊', text: 'Analyze engagement patterns' },
+        { icon: '📝', text: 'Create follow-up sequence' }
+      ]
+    },
+    {
+      id: '3',
+      agent: 'scout',
+      timestamp: '5h ago',
+      headline: 'New funding round announced in AI automation space.',
+      snippet: 'Series B round indicates growing market confidence in automation solutions.',
+      description: 'A Series B funding round of $25M was announced for a competitor in the AI automation space, signaling strong market confidence and potential for aggressive expansion. This development could impact your competitive positioning, especially in the enterprise segment where both companies target similar buyer personas. The funding suggests increased marketing spend and product development, which may accelerate market education but also intensify competition for your target accounts.',
+      sourceUrl: '#',
+      sourceLabel: 'TechCrunch article',
+      source: [{ citation: 'TechCrunch article', url: 'https://techcrunch.com/article-example' }],
+      nextBestMoves: [
+        'Want me to analyze how this affects your competitive positioning in the market?',
+        'Should I identify which of your prospects might be considering this competitor now?',
+        'Do you want me to draft messaging that highlights your differentiators against this move?'
+      ],
+      NBAs: [
+        { nba: 'Want me to analyze how this affects your competitive positioning in the market?', prompt: '' },
+        { nba: 'Should I identify which of your prospects might be considering this competitor now?', prompt: '' },
+        { nba: 'Do you want me to draft messaging that highlights your differentiators against this move?', prompt: '' }
+      ],
+      contextualSuggestions: [
+        { icon: '💰', text: 'Analyze funding impact on market positioning' },
+        { icon: '🏢', text: 'Identify potential acquisition targets' },
+        { icon: '📈', text: 'Map competitive landscape changes' },
+        { icon: '🎯', text: 'Find prospects considering this competitor' },
+        { icon: '📋', text: 'Draft competitive differentiation messaging' }
+      ]
+    },
+    {
+      id: '4',
+      agent: 'profiler',
+      timestamp: 'Today',
+      headline: 'New ICP segment identified: FinTech startups (50–200 employees).',
+      snippet: 'High engagement signals found in EU market; strong overlap with your existing SaaS ICP.',
+      description: 'Analysis of market signals reveals a new high-value ICP segment: FinTech startups with 50-200 employees, particularly in the EU market. This segment shows strong engagement patterns with solutions similar to yours, with 65% overlap in key buying criteria with your existing SaaS ICP. The segment demonstrates high growth potential and budget allocation for automation tools, making it an ideal expansion target for your sales efforts.',
+      sourceUrl: '#',
+      sourceLabel: 'Profiler internal analysis',
+      source: [
+        { citation: 'Internal analysis', url: 'https://example.com/internal' },
+        { citation: 'Research report', url: 'https://example.com/research' },
+      ],
+      nextBestMoves: [
+        'Should I prioritize outreach to decision makers in this new segment?',
+        'Want me to create a tailored value proposition for this ICP profile?',
+        'Do you want me to identify similar companies that match this profile?'
+      ],
+      NBAs: [
+        { nba: 'Should I prioritize outreach to decision makers in this new segment?', prompt: '' },
+        { nba: 'Want me to create a tailored value proposition for this ICP profile?', prompt: '' },
+        { nba: 'Do you want me to identify similar companies that match this profile?', prompt: '' }
+      ],
+      contextualSuggestions: [
+        { icon: '🎯', text: 'Research FinTech segment decision makers' },
+        { icon: '📈', text: 'Analyze EU market penetration opportunities' },
+        { icon: '🔍', text: 'Find similar companies matching this profile' },
+        { icon: '📋', text: 'Create tailored value proposition' },
+        { icon: '📧', text: 'Draft outreach sequences for this segment' }
+      ]
+    },
+  ];
+}
+
+/** Background: warm session cache after login so Signals revisits skip GET /api/fetch-signals. */
+export async function prefetchSignalsSessionCacheIfNeeded(uid: string, orgId: string): Promise<void> {
+  const orgIdToUse = orgId || uid || 'brewra';
+  if (!uid) return;
+  const existing = getMissionControlSessionCache(uid, orgIdToUse);
+  if (existing?.signalsPageLoadCompleted && existing.signalsSnapshotJson) return;
+  try {
+    const data = await fetchSignals(uid);
+    const preRejectSignals = buildSignalCardsFromFetchData(data);
+    mergeMissionControlSessionCache(uid, orgIdToUse, {
+      signalsPageLoadCompleted: true,
+      signalsSnapshotJson: JSON.stringify({ preRejectSignals, signalsFromApi: true } satisfies SignalsSessionSnapshot),
+    });
+  } catch {
+    try {
+      const preRejectSignals = getFallbackSampleSignals();
+      mergeMissionControlSessionCache(uid, orgIdToUse, {
+        signalsPageLoadCompleted: true,
+        signalsSnapshotJson: JSON.stringify({ preRejectSignals, signalsFromApi: false } satisfies SignalsSessionSnapshot),
+      });
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
 const Index = () => {
   const { currentUser, orgId } = useAuth();
   const navigate = useNavigate();
@@ -276,6 +504,112 @@ const Index = () => {
     toast
   } = useToast();
 
+  const loadSignals = async () => {
+    if (!currentUser?.uid) {
+      console.error('User not authenticated');
+      return;
+    }
+    const uid = currentUser.uid;
+    const orgIdToUse = orgId || uid || 'brewra';
+    setIsLoading(true);
+    try {
+      const storageKey = `signals_${uid}`;
+      let rejectedHashes = new Set<string>();
+      try {
+        const savedRejected = localStorage.getItem(storageKey);
+        if (savedRejected) {
+          const rejectedArray = JSON.parse(savedRejected);
+          rejectedHashes = new Set(rejectedArray);
+          setRejectedSignalHashes(rejectedHashes);
+        }
+      } catch (error) {
+        console.error('Error loading rejected signals from localStorage:', error);
+      }
+
+      try {
+        const data = await fetchSignals(uid);
+        const rawSignals = data.signals || [];
+        console.log('Raw signals from API:', rawSignals.map((s: any) => ({
+          signal_id: s.signal_id,
+          id: s.id,
+          headline: s.headline,
+        })));
+        console.log('Rejected signal hashes from localStorage:', Array.from(rejectedHashes));
+
+        const preReject = buildSignalCardsFromFetchData(data);
+        console.log('Signals with unique IDs:', preReject.map(s => ({ id: s.id, headline: s.headline })));
+
+        mergeMissionControlSessionCache(uid, orgIdToUse, {
+          signalsPageLoadCompleted: true,
+          signalsSnapshotJson: JSON.stringify({
+            preRejectSignals: preReject,
+            signalsFromApi: true,
+          } satisfies SignalsSessionSnapshot),
+        });
+
+        const sortedSignals = applyRejectedFilterAndSort(preReject, rejectedHashes);
+        console.log('Filtered signals count:', sortedSignals.length, 'out of', preReject.length);
+        console.log('Signals sorted by timestamp (newest first):', sortedSignals.map(s => ({ timestamp: s.timestamp, headline: s.headline })));
+        setSignals(sortedSignals);
+        setSignalsFromApi(true);
+        if (rawSignals.length > 0) {
+          const first = rawSignals[0];
+          const hasNBAs = Array.isArray(first.NBAs) && first.NBAs.length > 0;
+          console.log('Signals loaded:', {
+            source: 'API (fetch-signals)',
+            firstSignalNBAsFromApi: hasNBAs,
+            firstSignalRecommendationCount: first.NBAs?.length ?? first.nextBestMoves?.length ?? 0,
+          });
+        }
+      } catch (error) {
+        console.error('Error loading signals:', error);
+        const sampleSignals = getFallbackSampleSignals();
+        mergeMissionControlSessionCache(uid, orgIdToUse, {
+          signalsPageLoadCompleted: true,
+          signalsSnapshotJson: JSON.stringify({
+            preRejectSignals: sampleSignals,
+            signalsFromApi: false,
+          } satisfies SignalsSessionSnapshot),
+        });
+        const sortedSampleSignals = applyRejectedFilterAndSort(sampleSignals, rejectedHashes);
+        setSignals(sortedSampleSignals);
+        setSignalsFromApi(false);
+        console.log('Recommendations source: sample data (API failed or unavailable)');
+        toast({
+          title: 'API Not Available',
+          description: 'Using sample data. Please ensure your backend API is running.',
+          variant: 'destructive',
+        });
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const reapplySignalsFromSessionCache = useCallback(() => {
+    if (!currentUser?.uid) return false;
+    const orgIdToUse = orgId || currentUser.uid || 'brewra';
+    const entry = getMissionControlSessionCache(currentUser.uid, orgIdToUse);
+    if (!entry?.signalsPageLoadCompleted || !entry.signalsSnapshotJson) return false;
+    try {
+      const snap = JSON.parse(entry.signalsSnapshotJson) as SignalsSessionSnapshot;
+      const storageKey = `signals_${currentUser.uid}`;
+      let rejectedHashes = new Set<string>();
+      try {
+        const savedRejected = localStorage.getItem(storageKey);
+        if (savedRejected) rejectedHashes = new Set(JSON.parse(savedRejected));
+      } catch {
+        /* ignore */
+      }
+      const sorted = applyRejectedFilterAndSort(snap.preRejectSignals, rejectedHashes);
+      setSignals(sorted);
+      setSignalsFromApi(snap.signalsFromApi);
+      return true;
+    } catch {
+      return false;
+    }
+  }, [currentUser?.uid, orgId]);
+
   // Load accepted and rejected signals from localStorage on mount
   useEffect(() => {
     if (currentUser?.uid) {
@@ -299,12 +633,41 @@ const Index = () => {
     }
   }, [currentUser?.uid]);
 
-  // Load signals on component mount
-  useEffect(() => {
-    if (currentUser?.uid) {
-      loadSignals();
+  useLayoutEffect(() => {
+    if (!currentUser?.uid) return;
+    const orgIdToUse = orgId || currentUser.uid || 'brewra';
+    const entry = getMissionControlSessionCache(currentUser.uid, orgIdToUse);
+    if (!entry?.signalsPageLoadCompleted || !entry.signalsSnapshotJson) return;
+    try {
+      const snap = JSON.parse(entry.signalsSnapshotJson) as SignalsSessionSnapshot;
+      const storageKey = `signals_${currentUser.uid}`;
+      let rejectedHashes = new Set<string>();
+      try {
+        const savedRejected = localStorage.getItem(`${storageKey}_rejected`);
+        if (savedRejected) rejectedHashes = new Set(JSON.parse(savedRejected));
+      } catch {
+        /* ignore */
+      }
+      const sorted = applyRejectedFilterAndSort(snap.preRejectSignals, rejectedHashes);
+      setSignals(sorted);
+      setSignalsFromApi(snap.signalsFromApi);
+      setIsLoading(false);
+    } catch {
+      /* ignore */
     }
-  }, [currentUser?.uid]);
+  }, [currentUser?.uid, orgId]);
+
+  // Fetch only when session cache is cold (after login / first use). Warm cache: skip GET /api/fetch-signals.
+  useEffect(() => {
+    if (!currentUser?.uid) return;
+    const orgIdToUse = orgId || currentUser.uid || 'brewra';
+    const entry = getMissionControlSessionCache(currentUser.uid, orgIdToUse);
+    if (entry?.signalsPageLoadCompleted && entry.signalsSnapshotJson) {
+      return;
+    }
+    void loadSignals();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- loadSignals intentionally omitted to avoid refetch loops
+  }, [currentUser?.uid, orgId]);
 
   // Listen for refresh event from header
   useEffect(() => {
@@ -319,7 +682,9 @@ const Index = () => {
           const savedRejected = localStorage.getItem(`${storageKey}_rejected`);
           if (savedAccepted) setAcceptedSignals(new Set(JSON.parse(savedAccepted)));
           if (savedRejected) setRejectedSignalHashes(new Set(JSON.parse(savedRejected)));
-          loadSignals();
+          if (!reapplySignalsFromSessionCache()) {
+            void loadSignals();
+          }
         } catch (e) {
           console.error('Error syncing signals state:', e);
         }
@@ -333,7 +698,7 @@ const Index = () => {
       window.removeEventListener('signalsStateChanged', handleSignalsStateChanged);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser?.uid]);
+  }, [currentUser?.uid, orgId, reapplySignalsFromSessionCache]);
 
   // Fetch answer when recommendation is expanded (prompt sent to signal_Ask)
   useEffect(() => {
@@ -369,292 +734,6 @@ const Index = () => {
       })
       .finally(() => setRecommendationAnswerLoading(null));
   }, [expandedRecommendation, signals, currentUser?.uid, orgId, recommendationAnswers, toast]);
-
-  const loadSignals = async () => {
-    if (!currentUser?.uid) {
-      console.error('User not authenticated');
-      return;
-    }
-    setIsLoading(true);
-    try {
-      // Load rejected signals from localStorage directly to ensure they're available
-      const storageKey = `signals_${currentUser.uid}`;
-      let rejectedHashes = new Set<string>();
-      try {
-        const savedRejected = localStorage.getItem(`${storageKey}_rejected`);
-        if (savedRejected) {
-          const rejectedArray = JSON.parse(savedRejected);
-          rejectedHashes = new Set(rejectedArray);
-          // Also update state
-          setRejectedSignalHashes(rejectedHashes);
-        }
-      } catch (error) {
-        console.error('Error loading rejected signals from localStorage:', error);
-      }
-      
-      const data = await fetchSignals(currentUser.uid);
-      // Ensure all signals have unique IDs - always generate new unique IDs
-      const rawSignals = data.signals || [];
-      console.log('Raw signals from API:', rawSignals.map(s => ({ 
-        signal_id: s.signal_id, 
-        id: s.id, 
-        headline: s.headline 
-      })));
-      console.log('Rejected signal hashes from localStorage:', Array.from(rejectedHashes));
-      
-      const signalsWithIds = rawSignals.map((signal: any, index: number) => {
-        // Use signal_id from API if available, otherwise fall back to id or generate unique ID
-        // The API should return signal_id field - use it as the primary identifier for API calls
-        let signalId: string;
-        if (signal.signal_id) {
-          signalId = signal.signal_id;
-          console.log(`Using signal_id from API for signal ${index}:`, signalId);
-        } else if (signal.id) {
-          signalId = signal.id;
-          console.warn(`Signal ${index} missing signal_id, using id field instead:`, signalId);
-        } else {
-          // Generate a truly unique ID for each signal as fallback
-          if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-            signalId = crypto.randomUUID();
-          } else {
-            const timestamp = Date.now();
-            const randomStr = Math.random().toString(36).substring(2, 11);
-            const perfNow = (performance?.now() || Math.random() * 1000).toString().replace('.', '');
-            signalId = `signal-${timestamp}-${index}-${randomStr}-${perfNow}`;
-          }
-          console.warn(`Signal ${index} missing both signal_id and id, generated fallback ID:`, signalId);
-        }
-        
-        // Support both schemas: NBAs (nba + prompt) or legacy nextBestMoves
-        const nextBestMoves = signal.nextBestMoves || [];
-        const NBAs: NBAItem[] = Array.isArray(signal.NBAs) && signal.NBAs.length > 0
-          ? signal.NBAs.map((n: { nba?: string; prompt?: string }) => ({
-              nba: n.nba ?? '',
-              prompt: n.prompt ?? ''
-            }))
-          : nextBestMoves.map((m: string) => ({ nba: m, prompt: '' }));
-
-        const sourceRaw = signal.source;
-        const source: SourceCitation[] = Array.isArray(sourceRaw)
-          ? sourceRaw.map((s: SourceCitation | string) =>
-              typeof s === 'object' && s !== null && 'citation' in s && 'url' in s
-                ? { citation: (s as SourceCitation).citation ?? '', url: (s as SourceCitation).url ?? '' }
-                : { citation: typeof s === 'string' ? s : '', url: typeof s === 'string' && /^https?:\/\//i.test(s) ? s : '' }
-            ).filter((c) => c.citation || c.url)
-          : [];
-
-        return {
-          ...signal,
-          id: signalId,
-          description: signal.description || '',
-          source,
-          nextBestMoves,
-          NBAs,
-          contextualSuggestions: signal.contextualSuggestions || []
-        } as SignalCard;
-      });
-      
-      // Verify all IDs are unique
-      const ids = signalsWithIds.map(s => s.id);
-      const uniqueIds = new Set(ids);
-      if (ids.length !== uniqueIds.size) {
-        console.error('Duplicate signal IDs detected after generation!', ids);
-        // Regenerate IDs if duplicates found using crypto.randomUUID or fallback
-        signalsWithIds.forEach((signal, index) => {
-          if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-            signal.id = crypto.randomUUID();
-          } else {
-            signal.id = `signal-${Date.now()}-${index}-${Math.random().toString(36).substring(2, 11)}-${performance?.now() || Math.random() * 1000}`;
-          }
-        });
-      }
-      
-      console.log('Signals with unique IDs:', signalsWithIds.map(s => ({ id: s.id, headline: s.headline })));
-      
-      // Filter out rejected signals using content hash (using localStorage data directly)
-      const filteredSignals = signalsWithIds.filter(signal => {
-        const contentHash = getSignalContentHash(signal);
-        const isRejected = rejectedHashes.has(contentHash);
-        if (isRejected) {
-          console.log('Filtering out rejected signal:', signal.headline, 'hash:', contentHash);
-        }
-        return !isRejected;
-      });
-      
-      // Sort signals by timestamp in descending order (newest first)
-      const sortedSignals = filteredSignals.sort((a, b) => {
-        const timestampA = parseTimestamp(a.timestamp);
-        const timestampB = parseTimestamp(b.timestamp);
-        return timestampB - timestampA; // Descending order (newest first)
-      });
-      
-      console.log('Filtered signals count:', filteredSignals.length, 'out of', signalsWithIds.length);
-      console.log('Signals sorted by timestamp (newest first):', sortedSignals.map(s => ({ timestamp: s.timestamp, headline: s.headline })));
-      setSignals(sortedSignals);
-      setSignalsFromApi(true);
-      if (rawSignals.length > 0) {
-        const first = rawSignals[0];
-        const hasNBAs = Array.isArray(first.NBAs) && first.NBAs.length > 0;
-        console.log('Signals loaded:', { source: 'API (fetch-signals)', firstSignalNBAsFromApi: hasNBAs, firstSignalRecommendationCount: first.NBAs?.length ?? first.nextBestMoves?.length ?? 0 });
-      }
-    } catch (error) {
-      console.error('Error loading signals:', error);
-      
-      // Fallback to sample data for development
-      const sampleSignals: SignalCard[] = [{
-        id: '1',
-        agent: 'scout',
-        timestamp: '1h ago',
-        headline: 'Competitor X launches SMB pricing tier.',
-        snippet: 'Likely to impact your ICP accounts in mid-market SaaS segment.',
-        description: 'This competitive pricing move by Company X directly impacts your SMB segment in the mid-market SaaS space. With 40% of your current pipeline falling into this category, this development could accelerate decision timelines or create pricing pressure. The launch targets companies with 50-200 employees—your core ICP—and includes features that overlap with your value proposition. Consider monitoring early adoption signals and preparing competitive differentiation messaging that emphasizes your unique ROI model and enterprise-grade capabilities.',
-        sourceUrl: '#',
-        sourceLabel: 'Press release link',
-        source: [
-          { citation: 'Press Release - Company X SMB Tier', url: 'https://example.com/press-release' },
-          { citation: 'Industry report 2024', url: 'https://example.com/industry-report' },
-        ],
-        nextBestMoves: [
-          'Would you like me to check how many of your target ICPs fall under the SMB segment and could be influenced by this move?',
-          'Do you want me to model a competitive bundle or ROI-driven value pitch against this pricing shift?',
-          'Should I track customer sentiment on LinkedIn, G2 reviews, or forums to see if it\'s gaining traction?'
-        ],
-        NBAs: [
-          { nba: 'Would you like me to check how many of your target ICPs fall under the SMB segment and could be influenced by this move?', prompt: '' },
-          { nba: 'Do you want me to model a competitive bundle or ROI-driven value pitch against this pricing shift?', prompt: '' },
-          { nba: 'Should I track customer sentiment on LinkedIn, G2 reviews, or forums to see if it\'s gaining traction?', prompt: '' }
-        ],
-        contextualSuggestions: [
-          { icon: '🔗', text: 'Get Company X\'s Website & Press Release' },
-          { icon: '🧑‍💼', text: 'Identify decision makers at Company X' },
-          { icon: '📊', text: 'Compare SMB pricing vs. our offering' },
-          { icon: '🚀', text: 'Monitor early adoption signals from Company X' },
-          { icon: '📅', text: 'Track mentions of SMB tier in LinkedIn updates' }
-        ]
-      }, {
-        id: '2',
-        agent: 'profiler',
-        timestamp: '3h ago',
-        headline: 'ICP contact posted about cloud migration struggles.',
-        snippet: 'John Doe, CTO @ Acme Corp, shared LinkedIn update relevant to DRaaS.',
-        description: 'John Doe, CTO at Acme Corp (a company matching your ICP profile with 150 employees in the FinTech sector), posted about challenges with cloud migration and data recovery strategies. This represents a strong buying signal as Acme Corp is actively evaluating solutions in your space. The post indicates urgency and budget allocation for DRaaS solutions, making this an ideal time for targeted outreach with relevant case studies and ROI messaging.',
-        sourceUrl: '#',
-        sourceLabel: 'LinkedIn post link',
-        source: [{ citation: 'LinkedIn post link', url: 'https://linkedin.com/post/example' }],
-        nextBestMoves: [
-          'Should I draft a contextual comment or connection request for this post?',
-          'Want me to identify other prospects posting about similar challenges?',
-          'Do you want me to create a follow-up sequence based on this signal?'
-        ],
-        NBAs: [
-          { nba: 'Should I draft a contextual comment or connection request for this post?', prompt: '' },
-          { nba: 'Want me to identify other prospects posting about similar challenges?', prompt: '' },
-          { nba: 'Do you want me to create a follow-up sequence based on this signal?', prompt: '' }
-        ],
-        contextualSuggestions: [
-          { icon: '💬', text: 'Draft contextual comment for this post' },
-          { icon: '🤝', text: 'Prepare connection request message' },
-          { icon: '🔄', text: 'Find similar prospects with same challenges' },
-          { icon: '📊', text: 'Analyze engagement patterns' },
-          { icon: '📝', text: 'Create follow-up sequence' }
-        ]
-      }, {
-        id: '3',
-        agent: 'scout',
-        timestamp: '5h ago',
-        headline: 'New funding round announced in AI automation space.',
-        snippet: 'Series B round indicates growing market confidence in automation solutions.',
-        description: 'A Series B funding round of $25M was announced for a competitor in the AI automation space, signaling strong market confidence and potential for aggressive expansion. This development could impact your competitive positioning, especially in the enterprise segment where both companies target similar buyer personas. The funding suggests increased marketing spend and product development, which may accelerate market education but also intensify competition for your target accounts.',
-        sourceUrl: '#',
-        sourceLabel: 'TechCrunch article',
-        source: [{ citation: 'TechCrunch article', url: 'https://techcrunch.com/article-example' }],
-        nextBestMoves: [
-          'Want me to analyze how this affects your competitive positioning in the market?',
-          'Should I identify which of your prospects might be considering this competitor now?',
-          'Do you want me to draft messaging that highlights your differentiators against this move?'
-        ],
-        NBAs: [
-          { nba: 'Want me to analyze how this affects your competitive positioning in the market?', prompt: '' },
-          { nba: 'Should I identify which of your prospects might be considering this competitor now?', prompt: '' },
-          { nba: 'Do you want me to draft messaging that highlights your differentiators against this move?', prompt: '' }
-        ],
-        contextualSuggestions: [
-          { icon: '💰', text: 'Analyze funding impact on market positioning' },
-          { icon: '🏢', text: 'Identify potential acquisition targets' },
-          { icon: '📈', text: 'Map competitive landscape changes' },
-          { icon: '🎯', text: 'Find prospects considering this competitor' },
-          { icon: '📋', text: 'Draft competitive differentiation messaging' }
-        ]
-      }, {
-        id: '4',
-        agent: 'profiler',
-        timestamp: 'Today',
-        headline: 'New ICP segment identified: FinTech startups (50–200 employees).',
-        snippet: 'High engagement signals found in EU market; strong overlap with your existing SaaS ICP.',
-        description: 'Analysis of market signals reveals a new high-value ICP segment: FinTech startups with 50-200 employees, particularly in the EU market. This segment shows strong engagement patterns with solutions similar to yours, with 65% overlap in key buying criteria with your existing SaaS ICP. The segment demonstrates high growth potential and budget allocation for automation tools, making it an ideal expansion target for your sales efforts.',
-        sourceUrl: '#',
-        sourceLabel: 'Profiler internal analysis',
-        source: [
-          { citation: 'Internal analysis', url: 'https://example.com/internal' },
-          { citation: 'Research report', url: 'https://example.com/research' },
-        ],
-        nextBestMoves: [
-          'Should I prioritize outreach to decision makers in this new segment?',
-          'Want me to create a tailored value proposition for this ICP profile?',
-          'Do you want me to identify similar companies that match this profile?'
-        ],
-        NBAs: [
-          { nba: 'Should I prioritize outreach to decision makers in this new segment?', prompt: '' },
-          { nba: 'Want me to create a tailored value proposition for this ICP profile?', prompt: '' },
-          { nba: 'Do you want me to identify similar companies that match this profile?', prompt: '' }
-        ],
-        contextualSuggestions: [
-          { icon: '🎯', text: 'Research FinTech segment decision makers' },
-          { icon: '📈', text: 'Analyze EU market penetration opportunities' },
-          { icon: '🔍', text: 'Find similar companies matching this profile' },
-          { icon: '📋', text: 'Create tailored value proposition' },
-          { icon: '📧', text: 'Draft outreach sequences for this segment' }
-        ]
-      }];
-      
-      // Load rejected signals from localStorage for sample data too
-      const storageKey = `signals_${currentUser.uid}`;
-      let rejectedHashes = new Set<string>();
-      try {
-        const savedRejected = localStorage.getItem(`${storageKey}_rejected`);
-        if (savedRejected) {
-          const rejectedArray = JSON.parse(savedRejected);
-          rejectedHashes = new Set(rejectedArray);
-        }
-      } catch (error) {
-        console.error('Error loading rejected signals from localStorage:', error);
-      }
-      
-      // Filter out rejected sample signals using content hash
-      const filteredSampleSignals = sampleSignals.filter(signal => {
-        const contentHash = getSignalContentHash(signal);
-        return !rejectedHashes.has(contentHash);
-      });
-      
-      // Sort sample signals by timestamp in descending order (newest first)
-      const sortedSampleSignals = filteredSampleSignals.sort((a, b) => {
-        const timestampA = parseTimestamp(a.timestamp);
-        const timestampB = parseTimestamp(b.timestamp);
-        return timestampB - timestampA; // Descending order (newest first)
-      });
-      
-      setSignals(sortedSampleSignals);
-      setSignalsFromApi(false);
-      console.log('Recommendations source: sample data (API failed or unavailable)');
-      toast({
-        title: "API Not Available",
-        description: "Using sample data. Please ensure your backend API is running.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleRefresh = async () => {
     if (!currentUser?.uid) {
@@ -1569,4 +1648,16 @@ const Index = () => {
      </Layout>
    );
  };
+
+/** Prefetch signals into session cache after login so revisiting /signals skips GET until refresh. */
+export function SignalsSessionBootstrap() {
+  const { currentUser, orgId } = useAuth();
+  useEffect(() => {
+    if (!currentUser?.uid) return;
+    const orgIdToUse = orgId || currentUser.uid || 'brewra';
+    void prefetchSignalsSessionCacheIfNeeded(currentUser.uid, orgIdToUse);
+  }, [currentUser?.uid, orgId]);
+  return null;
+}
+
  export default Index;

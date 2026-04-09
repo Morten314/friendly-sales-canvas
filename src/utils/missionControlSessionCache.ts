@@ -24,12 +24,15 @@ export type MissionControlSessionCacheEntry = {
   /** Profiler page: first load done; JSON snapshot (current ICPs + suggested cards + card statuses) */
   profilerPageLoadCompleted?: boolean;
   profilerUiSnapshotJson?: string | null;
+  /** Signals page: first load done; JSON snapshot (pre-reject list + API vs fallback flag) */
+  signalsPageLoadCompleted?: boolean;
+  signalsSnapshotJson?: string | null;
 };
 
 const store = new Map<string, MissionControlSessionCacheEntry>();
 
 /** Bump when cache shape or semantics change (invalidates stale sessionStorage). */
-const STORAGE_PREFIX = "mc_session_v4:";
+const STORAGE_PREFIX = "mc_session_v5:";
 
 function cacheKey(userId: string, orgId: string): string {
   return `${userId}::${orgId}`;
@@ -120,6 +123,8 @@ export function mergeMissionControlSessionCache(
       | "dataSourcesSnapshotJson"
       | "profilerPageLoadCompleted"
       | "profilerUiSnapshotJson"
+      | "signalsPageLoadCompleted"
+      | "signalsSnapshotJson"
     >
   >
 ): void {
