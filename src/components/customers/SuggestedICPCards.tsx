@@ -1132,8 +1132,15 @@ export const SuggestedICPCards = ({
         showRecommendations?: boolean;
       };
       if (Array.isArray(snap.existingICPs)) setExistingICPs(snap.existingICPs);
-      if (Array.isArray(snap.refinedICPs)) setRefinedICPs(snap.refinedICPs);
-      if (Array.isArray(snap.newICPs)) setNewICPs(snap.newICPs);
+      if (Array.isArray(snap.refinedICPs) || Array.isArray(snap.newICPs)) {
+        const filtered = filterDismissedFromSuggested(
+          uid,
+          snap.refinedICPs ?? [],
+          snap.newICPs ?? [],
+        );
+        setRefinedICPs(filtered.refined);
+        setNewICPs(filtered.newSuggestions);
+      }
       if (snap.cardStatuses && typeof snap.cardStatuses === "object") {
         setCardStatuses(reviveProfilerCardStatusesFromSnapshot(snap.cardStatuses as Record<string, unknown>));
       }
@@ -1387,6 +1394,11 @@ export const SuggestedICPCards = ({
         });
         setExpandedReportId((cur) => (cur === icpId ? null : cur));
         if (icpForParent) onICPRejected?.(icpForParent);
+        const orgIdToUse = orgId || userId || "brewra";
+        mergeMissionControlSessionCache(userId, orgIdToUse, {
+          profilerPageLoadCompleted: false,
+          profilerUiSnapshotJson: null,
+        });
         toast({
           title: "Recommendation removed",
           description: "This recommendation has been removed from your list.",
@@ -1415,7 +1427,7 @@ export const SuggestedICPCards = ({
         }));
       }
     },
-    [refinedICPs, newICPs, toast, onICPRejected],
+    [refinedICPs, newICPs, orgId, toast, onICPRejected],
   );
 
   const finalizeRecommendedRejectRef = useRef(finalizeRecommendedReject);
