@@ -16,7 +16,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Plus, X } from "lucide-react";
-import { profilerCache } from "@/lib/profilerCache";
 import { useAuth } from "@/contexts/AuthContext";
 import { getUserLocalStorage, setUserLocalStorage, removeUserLocalStorage } from "@/utils/cacheUtils";
 
@@ -368,10 +367,6 @@ export function CompanyProfile({ onProfileUpdate, isEditMode = false, profileDat
         (window as any).cachedMarketData = null;
         (window as any).cacheTimestamp = null;
       }
-      
-      // Clear profiler cache when company profile is updated
-      console.log("🧹 Clearing profiler cache due to company profile update");
-      profilerCache.clearCache(currentUser?.uid);
       
       // Dispatch a global event to notify other components
       console.log("=== DISPATCHING COMPANY PROFILE UPDATE EVENT ===");

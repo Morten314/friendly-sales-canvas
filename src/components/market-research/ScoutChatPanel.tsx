@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bot, X, Send, Loader2 } from 'lucide-react';
+import { Bot, X, Send, Loader2, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -16,6 +16,23 @@ interface ScoutChatPanelProps {
   context?: 'market-size' | 'industry-trends' | 'competitor-landscape' | 'regulatory-compliance' | 'market-entry' | 'lead-stream' | 'general';
   isPostSave?: boolean;
   customMessage?: string;
+  /** Subtitle under workspace heading (e.g. Lead Stream → Chat with Scout) */
+  workspaceLine?: string;
+  inputPlaceholder?: string;
+  /** Filled into the input when user picks a suggested question */
+  prefillQuestion?: string | null;
+  onPrefillConsumed?: () => void;
+  /** Shown directly under the welcome message (e.g. Lead Stream) */
+  suggestedQuestions?: string[];
+  onPickSuggestedQuestion?: (question: string) => void;
+  /** Compact lead context below “Researching …” (replaces sidebar Lead Profile) */
+  leadHeaderDetail?:
+    | { type: 'single'; company?: string; source?: string }
+    | {
+        type: 'multi';
+        leadCount: number;
+        leadSummaries: { name: string; company: string }[];
+      };
   onClose: () => void;
   /** Hide close button for simpler Lead Stream view */
   hideCloseButton?: boolean;
@@ -31,16 +48,27 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
   context = 'market-size',
   isPostSave = false,
   customMessage,
+  workspaceLine,
+  inputPlaceholder,
+  prefillQuestion,
+  onPrefillConsumed,
+  suggestedQuestions,
+  onPickSuggestedQuestion,
+  leadHeaderDetail,
   onClose,
   hideCloseButton = false,
 }) => {
   const { currentUser, orgId } = useAuth();
   const [userInput, setUserInput] = useState('');
-  const [chatResponse, setChatResponse] = useState<string>('');
+  type ChatTurn = { id: string; role: 'user' | 'assistant'; content: string };
+  const [transcript, setTranscript] = useState<ChatTurn[]>([]);
   /** Prior turns for /signal_Ask (non–edit-mode only). */
   const [signalAskHistory, setSignalAskHistory] = useState<{ user: string; assistant: string }[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const transcriptEndRef = useRef<HTMLDivElement>(null);
+
+  const newTurnId = () => `turn_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
 
   /** Wider textarea for “Chat with Scout” + Lead Stream tabs. */
   const useExpandedChatInput =
@@ -145,9 +173,10 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
   };
 
   const handleSendMessage = async () => {
-    if (!userInput.trim()) return;
-    const question = userInput;
+    if (!userInput.trim() || isLoading) return;
+    const question = userInput.trim();
     setUserInput('');
+    setTranscript((prev) => [...prev, { id: newTurnId(), role: 'user', content: question }]);
     await callChatAPI(question);
   };
 
@@ -186,7 +215,10 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
       } else {
         // Same contract as Signals Swagger: POST /signal_Ask (not GET /chat)
         if (!currentUser?.uid) {
-          setChatResponse('Please sign in to chat with Scout.');
+          setTranscript((prev) => [
+            ...prev,
+            { id: newTurnId(), role: 'assistant', content: 'Please sign in to chat with Scout.' },
+          ]);
           setIsLoading(false);
           return;
         }
@@ -280,16 +312,33 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
         console.log('Final answer:', answer);
         // Clean and format the response before setting it
         const cleanedAnswer = cleanResponseContent(answer);
-        setChatResponse(cleanedAnswer);
+        setTranscript((prev) => [
+          ...prev,
+          { id: newTurnId(), role: 'assistant', content: cleanedAnswer },
+        ]);
         if (!isEditMode) {
           setSignalAskHistory((prev) => [...prev, { user: question, assistant: cleanedAnswer }]);
         }
       } else {
-        setChatResponse('Sorry, I\'m having trouble connecting right now. Please try again later.');
+        setTranscript((prev) => [
+          ...prev,
+          {
+            id: newTurnId(),
+            role: 'assistant',
+            content: "Sorry, I'm having trouble connecting right now. Please try again later.",
+          },
+        ]);
         console.error('Failed to get response from Scout API');
       }
     } catch (error) {
-      setChatResponse('Sorry, I encountered an error. Please try again later.');
+      setTranscript((prev) => [
+        ...prev,
+        {
+          id: newTurnId(),
+          role: 'assistant',
+          content: "Sorry, I encountered an error. Please try again later.",
+        },
+      ]);
       console.error('Error calling Scout API:', error);
     } finally {
       setIsLoading(false);
@@ -431,109 +480,16 @@ const getContextualScoutMessage = () => {
   return "Hi there! 👋 I'm Scout. Want to dive deeper into your market size and opportunities? Ask me anything.";
 };
 
-  // Auto-scroll to top when chat panel opens (only when showScoutChat becomes true)
   useEffect(() => {
-    if (!showScoutChat) return;
-    
-    const container = chatContainerRef.current;
-    if (!container) return;
-    
-    let isScrolling = true; // Flag to control persistent scrolling
-    let scrollInterval: NodeJS.Timeout | null = null;
-    let scrollListener: ((e: Event) => void) | null = null;
-    
-    const scrollToTop = () => {
-      if (!container || !isScrolling) return;
-      
-      // Force scroll to top - simple and direct
-      container.scrollTop = 0;
-      
-      // Also use scrollTo for browser compatibility
-      try {
-        container.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-      } catch (e) {
-        try {
-          container.scrollTo(0, 0);
-        } catch (e2) {
-          // Fallback
-        }
-      }
-      
-      // Final force to ensure it's at 0
-      container.scrollTop = 0;
-    };
-    
-    // Add scroll event listener to prevent scrolling down
-    scrollListener = (e: Event) => {
-      if (!isScrolling) return;
-      const target = e.target as HTMLElement;
-      if (target && target.scrollTop > 0) {
-        // If scrolling down, immediately scroll back to top
-        target.scrollTop = 0;
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    };
-    
-    // Use capture phase to catch scroll events early
-    container.addEventListener('scroll', scrollListener, { passive: false, capture: true });
-    
-    // Immediate scroll - execute right away
-    scrollToTop();
-    
-    // Use requestAnimationFrame for DOM-ready scroll
-    const rafId1 = requestAnimationFrame(() => {
-      scrollToTop();
-      const rafId2 = requestAnimationFrame(() => {
-        scrollToTop();
-      });
-      return () => cancelAnimationFrame(rafId2);
-    });
-    
-    // Multiple timeouts with increasing delays to catch all render phases
-    // Focus on earlier delays to prevent any bottom-scrolling from taking effect
-    const timeouts: NodeJS.Timeout[] = [];
-    [0, 10, 25, 50, 100, 150, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1200, 1500, 2000].forEach(delay => {
-      const timeoutId = setTimeout(() => {
-        scrollToTop();
-      }, delay);
-      timeouts.push(timeoutId);
-    });
-    
-    // Persistent scroll check - keep forcing to top for the first 3 seconds
-    // This prevents any other code from scrolling to bottom
-    scrollInterval = setInterval(() => {
-      if (container && container.scrollTop > 0 && isScrolling) {
-        // If it's scrolled down at all, force it back to top
-        container.scrollTop = 0;
-        container.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-      }
-    }, 20); // Check every 20ms for more aggressive monitoring
-    
-    // Stop persistent scrolling after 3 seconds
-    setTimeout(() => {
-      isScrolling = false;
-      if (scrollInterval) {
-        clearInterval(scrollInterval);
-      }
-      if (scrollListener) {
-        container.removeEventListener('scroll', scrollListener, { capture: true });
-      }
-    }, 3000);
-    
-    // Cleanup function
-    return () => {
-      isScrolling = false;
-      cancelAnimationFrame(rafId1);
-      timeouts.forEach(timeout => clearTimeout(timeout));
-      if (scrollInterval) {
-        clearInterval(scrollInterval);
-      }
-      if (scrollListener) {
-        container.removeEventListener('scroll', scrollListener, { capture: true });
-      }
-    };
-  }, [showScoutChat]); // Only trigger when panel opens/closes, NOT on content changes
+    if (prefillQuestion == null || prefillQuestion === '') return;
+    setUserInput(prefillQuestion);
+    onPrefillConsumed?.();
+  }, [prefillQuestion, onPrefillConsumed]);
+
+  /** Keep latest messages and “thinking” row in view */
+  useEffect(() => {
+    transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }, [transcript, isLoading]);
 
   if (!showScoutChat) return null;
 
@@ -547,24 +503,113 @@ const getContextualScoutMessage = () => {
         </div>
       )}
 
+      {(workspaceLine || context === 'lead-stream') && (
+        <div className="mb-3 shrink-0">
+          <h2 className="text-sm font-semibold text-foreground">Scout Agent Workspace</h2>
+          {workspaceLine && (
+            <p className="text-xs text-muted-foreground mt-0.5">{workspaceLine}</p>
+          )}
+          {leadHeaderDetail?.type === 'single' &&
+            (leadHeaderDetail.source || leadHeaderDetail.company) && (
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+              {/* Company appears in workspaceLine as “— Acme Corp”; show here only if no source */}
+              {!leadHeaderDetail.source && leadHeaderDetail.company && (
+                <span>
+                  Company:{' '}
+                  <span className="font-medium text-foreground">{leadHeaderDetail.company}</span>
+                </span>
+              )}
+              {leadHeaderDetail.source && (
+                <span className="inline-flex items-center gap-1">
+                  Source:{' '}
+                  <span className="inline-flex items-center rounded-full border border-border bg-muted/50 px-2 py-0.5 text-[10px] font-medium text-foreground">
+                    {leadHeaderDetail.source}
+                  </span>
+                </span>
+              )}
+            </div>
+          )}
+          {leadHeaderDetail?.type === 'multi' && (
+            <div className="mt-2 space-y-1.5 text-[11px] text-muted-foreground">
+              <p className="text-foreground font-medium">
+                {leadHeaderDetail.leadCount} leads selected
+              </p>
+              {leadHeaderDetail.leadSummaries.length > 0 && (
+                <ul className="max-h-24 overflow-y-auto space-y-0.5 pl-0 list-none">
+                  {leadHeaderDetail.leadSummaries.slice(0, 8).map((row, i) => (
+                    <li key={`${row.name}-${i}`}>
+                      <span className="font-medium text-foreground">{row.name}</span>
+                      <span className="text-muted-foreground"> · {row.company}</span>
+                    </li>
+                  ))}
+                  {(leadHeaderDetail.leadSummaries.length > 8 ||
+                    leadHeaderDetail.leadCount > 8) && (
+                    <li className="italic text-muted-foreground">…</li>
+                  )}
+                </ul>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       <div ref={chatContainerRef} className="space-y-4 mb-4 flex-1 min-h-0 overflow-y-auto">
-        <div className="bg-gradient-to-r from-blue-50 to-green-50 p-4 rounded-lg border border-blue-200">
+        <div className="bg-gradient-to-r from-blue-50 to-green-50 p-4 rounded-lg border border-blue-200 space-y-2.5">
           <p className="text-sm sm:text-base text-gray-700">
             {getContextualScoutMessage()}
           </p>
+          {suggestedQuestions && suggestedQuestions.length > 0 && onPickSuggestedQuestion && (
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 pt-0.5 border-t border-blue-200/60">
+              <span className="text-[10px] font-medium text-muted-foreground shrink-0">Try</span>
+              {suggestedQuestions.map((q) => (
+                <button
+                  key={q}
+                  type="button"
+                  onClick={() => onPickSuggestedQuestion(q)}
+                  className="inline-flex max-w-full text-left text-[11px] leading-snug rounded-full border border-blue-200/80 bg-white/80 px-2.5 py-1 text-foreground hover:bg-primary/10 hover:border-primary/40 transition-colors"
+                >
+                  <span className="line-clamp-2">{q}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Display chat response if available */}
-        {chatResponse && (
-          <div className="mt-4 p-4 sm:p-5 bg-blue-50 rounded-lg border border-blue-200 w-full max-w-none">
-            <div className="flex items-start gap-3">
-              <Bot className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
-              <div className="text-sm sm:text-base text-blue-900 leading-relaxed whitespace-pre-wrap break-words min-w-0 flex-1">
-                {chatResponse}
+        {transcript.map((turn) =>
+          turn.role === 'user' ? (
+            <div key={turn.id} className="flex justify-end w-full">
+              <div className="max-w-[min(100%,48rem)] rounded-lg border border-primary/20 bg-primary/10 px-4 py-3 text-sm text-foreground shadow-sm">
+                <div className="flex items-start gap-2">
+                  <User className="h-4 w-4 text-primary mt-0.5 shrink-0" aria-hidden />
+                  <p className="whitespace-pre-wrap break-words leading-relaxed">{turn.content}</p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div key={turn.id} className="flex justify-start w-full">
+              <div className="w-full max-w-[min(100%,72rem)] rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 shadow-sm">
+                <div className="flex items-start gap-3">
+                  <Bot className="h-5 w-5 text-blue-600 mt-0.5 shrink-0" aria-hidden />
+                  <div className="text-sm sm:text-base text-blue-900 leading-relaxed whitespace-pre-wrap break-words min-w-0">
+                    {turn.content}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )
+        )}
+
+        {isLoading && (
+          <div className="flex justify-start w-full">
+            <div className="w-full max-w-[min(100%,72rem)] rounded-lg border border-muted bg-muted/40 px-4 py-3">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" aria-hidden />
+                <span>Scout is thinking…</span>
               </div>
             </div>
           </div>
         )}
+        <div ref={transcriptEndRef} className="h-px w-full shrink-0" aria-hidden />
       </div>
 
       <div className={`flex gap-2 mt-auto ${useExpandedChatInput ? 'items-end' : ''}`}>
@@ -572,7 +617,9 @@ const getContextualScoutMessage = () => {
           <Textarea
             value={userInput}
             onChange={(e) => setUserInput(e.target.value)}
-            placeholder="Ask Scout anything… (Shift+Enter for a new line)"
+            placeholder={
+              inputPlaceholder ?? 'Ask Scout anything… (Shift+Enter for a new line)'
+            }
             className="flex-1 min-h-[100px] max-h-[240px] resize-y"
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {

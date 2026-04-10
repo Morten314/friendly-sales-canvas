@@ -8,15 +8,11 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
-import { useState, useEffect, useLayoutEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { sanitizeAnswerText } from '@/lib/utils';
-import {
-  getMissionControlSessionCache,
-  mergeMissionControlSessionCache,
-} from '@/utils/missionControlSessionCache';
 type Agent = 'scout' | 'profiler';
 type ActionType = 'accept' | 'dismiss' | 'save' | 'ask';
 interface ContextualSuggestion {
@@ -238,11 +234,6 @@ const parseTimestamp = (timestamp: string): number => {
   return 0;
 };
 
-type SignalsSessionSnapshot = {
-  preRejectSignals: SignalCard[];
-  signalsFromApi: boolean;
-};
-
 function applyRejectedFilterAndSort(preReject: SignalCard[], rejectedHashes: Set<string>): SignalCard[] {
   const filtered = preReject.filter((signal) => {
     const contentHash = getSignalContentHash(signal);
@@ -436,32 +427,6 @@ function getFallbackSampleSignals(): SignalCard[] {
   ];
 }
 
-/** Background: warm session cache after login so Signals revisits skip GET /api/fetch-signals. */
-export async function prefetchSignalsSessionCacheIfNeeded(uid: string, orgId: string): Promise<void> {
-  const orgIdToUse = orgId || uid || 'brewra';
-  if (!uid) return;
-  const existing = getMissionControlSessionCache(uid, orgIdToUse);
-  if (existing?.signalsPageLoadCompleted && existing.signalsSnapshotJson) return;
-  try {
-    const data = await fetchSignals(uid);
-    const preRejectSignals = buildSignalCardsFromFetchData(data);
-    mergeMissionControlSessionCache(uid, orgIdToUse, {
-      signalsPageLoadCompleted: true,
-      signalsSnapshotJson: JSON.stringify({ preRejectSignals, signalsFromApi: true } satisfies SignalsSessionSnapshot),
-    });
-  } catch {
-    try {
-      const preRejectSignals = getFallbackSampleSignals();
-      mergeMissionControlSessionCache(uid, orgIdToUse, {
-        signalsPageLoadCompleted: true,
-        signalsSnapshotJson: JSON.stringify({ preRejectSignals, signalsFromApi: false } satisfies SignalsSessionSnapshot),
-      });
-    } catch {
-      /* ignore */
-    }
-  }
-}
-
 const Index = () => {
   const { currentUser, orgId } = useAuth();
   const navigate = useNavigate();
@@ -510,7 +475,6 @@ const Index = () => {
       return;
     }
     const uid = currentUser.uid;
-    const orgIdToUse = orgId || uid || 'brewra';
     setIsLoading(true);
     try {
       const storageKey = `signals_${uid}`;
@@ -539,14 +503,6 @@ const Index = () => {
         const preReject = buildSignalCardsFromFetchData(data);
         console.log('Signals with unique IDs:', preReject.map(s => ({ id: s.id, headline: s.headline })));
 
-        mergeMissionControlSessionCache(uid, orgIdToUse, {
-          signalsPageLoadCompleted: true,
-          signalsSnapshotJson: JSON.stringify({
-            preRejectSignals: preReject,
-            signalsFromApi: true,
-          } satisfies SignalsSessionSnapshot),
-        });
-
         const sortedSignals = applyRejectedFilterAndSort(preReject, rejectedHashes);
         console.log('Filtered signals count:', sortedSignals.length, 'out of', preReject.length);
         console.log('Signals sorted by timestamp (newest first):', sortedSignals.map(s => ({ timestamp: s.timestamp, headline: s.headline })));
@@ -564,13 +520,6 @@ const Index = () => {
       } catch (error) {
         console.error('Error loading signals:', error);
         const sampleSignals = getFallbackSampleSignals();
-        mergeMissionControlSessionCache(uid, orgIdToUse, {
-          signalsPageLoadCompleted: true,
-          signalsSnapshotJson: JSON.stringify({
-            preRejectSignals: sampleSignals,
-            signalsFromApi: false,
-          } satisfies SignalsSessionSnapshot),
-        });
         const sortedSampleSignals = applyRejectedFilterAndSort(sampleSignals, rejectedHashes);
         setSignals(sortedSampleSignals);
         setSignalsFromApi(false);
@@ -585,30 +534,6 @@ const Index = () => {
       setIsLoading(false);
     }
   };
-
-  const reapplySignalsFromSessionCache = useCallback(() => {
-    if (!currentUser?.uid) return false;
-    const orgIdToUse = orgId || currentUser.uid || 'brewra';
-    const entry = getMissionControlSessionCache(currentUser.uid, orgIdToUse);
-    if (!entry?.signalsPageLoadCompleted || !entry.signalsSnapshotJson) return false;
-    try {
-      const snap = JSON.parse(entry.signalsSnapshotJson) as SignalsSessionSnapshot;
-      const storageKey = `signals_${currentUser.uid}`;
-      let rejectedHashes = new Set<string>();
-      try {
-        const savedRejected = localStorage.getItem(storageKey);
-        if (savedRejected) rejectedHashes = new Set(JSON.parse(savedRejected));
-      } catch {
-        /* ignore */
-      }
-      const sorted = applyRejectedFilterAndSort(snap.preRejectSignals, rejectedHashes);
-      setSignals(sorted);
-      setSignalsFromApi(snap.signalsFromApi);
-      return true;
-    } catch {
-      return false;
-    }
-  }, [currentUser?.uid, orgId]);
 
   // Load accepted and rejected signals from localStorage on mount
   useEffect(() => {
@@ -633,38 +558,8 @@ const Index = () => {
     }
   }, [currentUser?.uid]);
 
-  useLayoutEffect(() => {
-    if (!currentUser?.uid) return;
-    const orgIdToUse = orgId || currentUser.uid || 'brewra';
-    const entry = getMissionControlSessionCache(currentUser.uid, orgIdToUse);
-    if (!entry?.signalsPageLoadCompleted || !entry.signalsSnapshotJson) return;
-    try {
-      const snap = JSON.parse(entry.signalsSnapshotJson) as SignalsSessionSnapshot;
-      const storageKey = `signals_${currentUser.uid}`;
-      let rejectedHashes = new Set<string>();
-      try {
-        const savedRejected = localStorage.getItem(`${storageKey}_rejected`);
-        if (savedRejected) rejectedHashes = new Set(JSON.parse(savedRejected));
-      } catch {
-        /* ignore */
-      }
-      const sorted = applyRejectedFilterAndSort(snap.preRejectSignals, rejectedHashes);
-      setSignals(sorted);
-      setSignalsFromApi(snap.signalsFromApi);
-      setIsLoading(false);
-    } catch {
-      /* ignore */
-    }
-  }, [currentUser?.uid, orgId]);
-
-  // Fetch only when session cache is cold (after login / first use). Warm cache: skip GET /api/fetch-signals.
   useEffect(() => {
     if (!currentUser?.uid) return;
-    const orgIdToUse = orgId || currentUser.uid || 'brewra';
-    const entry = getMissionControlSessionCache(currentUser.uid, orgIdToUse);
-    if (entry?.signalsPageLoadCompleted && entry.signalsSnapshotJson) {
-      return;
-    }
     void loadSignals();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- loadSignals intentionally omitted to avoid refetch loops
   }, [currentUser?.uid, orgId]);
@@ -682,9 +577,7 @@ const Index = () => {
           const savedRejected = localStorage.getItem(`${storageKey}_rejected`);
           if (savedAccepted) setAcceptedSignals(new Set(JSON.parse(savedAccepted)));
           if (savedRejected) setRejectedSignalHashes(new Set(JSON.parse(savedRejected)));
-          if (!reapplySignalsFromSessionCache()) {
-            void loadSignals();
-          }
+          void loadSignals();
         } catch (e) {
           console.error('Error syncing signals state:', e);
         }
@@ -698,7 +591,7 @@ const Index = () => {
       window.removeEventListener('signalsStateChanged', handleSignalsStateChanged);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser?.uid, orgId, reapplySignalsFromSessionCache]);
+  }, [currentUser?.uid, orgId]);
 
   // Fetch answer when recommendation is expanded (prompt sent to signal_Ask)
   useEffect(() => {
@@ -1648,16 +1541,5 @@ const Index = () => {
      </Layout>
    );
  };
-
-/** Prefetch signals into session cache after login so revisiting /signals skips GET until refresh. */
-export function SignalsSessionBootstrap() {
-  const { currentUser, orgId } = useAuth();
-  useEffect(() => {
-    if (!currentUser?.uid) return;
-    const orgIdToUse = orgId || currentUser.uid || 'brewra';
-    void prefetchSignalsSessionCacheIfNeeded(currentUser.uid, orgIdToUse);
-  }, [currentUser?.uid, orgId]);
-  return null;
-}
 
  export default Index;

@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { EditDropdownMenu } from "@/components/market-research/EditDropdownMenu";
@@ -59,10 +59,7 @@ import { useNavigate } from "react-router-dom";
 import { getLeadCountForICP } from "@/components/customers/LeadStream";
 import { buildIcpUrl, buildApiUrl, apiFetchJson, apiFetch } from "@/lib/api";
 import { getUserLocalStorage, setUserLocalStorage } from "@/utils/cacheUtils";
-import {
-  getMissionControlSessionCache,
-  mergeMissionControlSessionCache,
-} from "@/utils/missionControlSessionCache";
+import { fetchIcpsRowsForOrg } from "@/utils/profileIcpsExtract";
 import {
   mergeProfilerAcceptedIcpDisplay,
   saveProfilerAcceptedIcpDisplayMeta,
@@ -594,32 +591,14 @@ const mapApiICPToSuggested = (item: any, index: number, type: "refined" | "new" 
 
 type ProfilerPageToast = (opts: { title: string; description?: string; variant?: "destructive" }) => void;
 
-function reviveProfilerCardStatusesFromSnapshot(
-  raw: Record<string, unknown> | undefined,
-): Record<string, ICPCardStatus> {
-  if (!raw || typeof raw !== "object") return {};
-  const out: Record<string, ICPCardStatus> = {};
-  for (const [k, v] of Object.entries(raw)) {
-    if (v && typeof v === "object" && v !== null && "status" in v) {
-      const s = v as ICPCardStatus & { acceptedAt?: string | Date; rejectedAt?: string | Date };
-      out[k] = {
-        status: s.status,
-        acceptedAt: s.acceptedAt != null ? new Date(s.acceptedAt as string | number | Date) : undefined,
-        rejectedAt: s.rejectedAt != null ? new Date(s.rejectedAt as string | number | Date) : undefined,
-      };
-    }
-  }
-  return out;
-}
-
-/** Shared loader for Profiler UI + background prefetch (customer_profile + GET /icp when needed). */
+/** Shared loader for Profiler UI (customer_profile + GET /icp when needed). */
 async function loadProfilerPagePayload(options: {
   orgIdToUse: string;
   uid: string | undefined;
   refreshJustIncremented: boolean;
   refreshTrigger: number;
   refreshStorageKey: string | null;
-  /** True when session cache already holds a profiler snapshot (GET /icp only for explicit refresh). */
+  /** When true, skip GET /icp unless refresh was explicitly triggered. */
   warmProfilerCache: boolean;
   toast?: ProfilerPageToast;
 }): Promise<{
@@ -640,18 +619,10 @@ async function loadProfilerPagePayload(options: {
 
   let icps: ExistingICP[] = [];
   try {
-    const profileUrl = buildApiUrl(`customer_profile?org_id=${orgIdToUse}`);
-    const profileRes = await fetch(profileUrl, { method: "GET", headers: { "Content-Type": "application/json" } });
-    if (profileRes.ok) {
-      const profileData = await profileRes.json();
-      const data = profileData.data || profileData;
-      const icpsData =
-        data.icps ??
-        data.customer_profiles?.icps ??
-        data.customer_profile?.icps ??
-        [];
-      if (Array.isArray(icpsData) && icpsData.length > 0) {
-        icps = icpsData.map((icp: any, i: number) => mapCustomerProfileICPToExisting(icp, i));
+    if (uid) {
+      const rows = await fetchIcpsRowsForOrg(uid, orgIdToUse);
+      if (rows.length > 0) {
+        icps = rows.map((icp: any, i: number) => mapCustomerProfileICPToExisting(icp, i));
       }
     }
   } catch {
@@ -935,55 +906,6 @@ async function loadProfilerPagePayload(options: {
   return { icps, refined, newSuggestions, mergedCardStatuses };
 }
 
-/** Background: warm session cache after sign-in so Profiler revisits skip GETs. */
-export async function prefetchProfilerSessionCacheIfNeeded(uid: string, orgId: string): Promise<void> {
-  const orgIdToUse = orgId || uid || "brewra";
-  if (!uid) return;
-  const existing = getMissionControlSessionCache(uid, orgIdToUse);
-  if (existing?.profilerPageLoadCompleted && existing.profilerUiSnapshotJson) return;
-
-  try {
-    const refreshStorageKey = `profiler_icp_refresh_${uid}`;
-    const result = await loadProfilerPagePayload({
-      orgIdToUse,
-      uid,
-      refreshJustIncremented: false,
-      refreshTrigger: 0,
-      refreshStorageKey,
-      warmProfilerCache: false,
-      toast: undefined,
-    });
-    let showRec = false;
-    try {
-      showRec = localStorage.getItem("profiler_showRecommendations") === "true";
-    } catch {
-      /* ignore */
-    }
-    mergeMissionControlSessionCache(uid, orgIdToUse, {
-      profilerPageLoadCompleted: true,
-      profilerUiSnapshotJson: JSON.stringify({
-        existingICPs: result.icps,
-        refinedICPs: result.refined,
-        newICPs: result.newSuggestions,
-        cardStatuses: result.mergedCardStatuses,
-        showRecommendations: showRec,
-      }),
-    });
-  } catch {
-    /* background prefetch — ignore */
-  }
-}
-
-export function ProfilerSessionBootstrap() {
-  const { currentUser, orgId } = useAuth();
-  useEffect(() => {
-    if (!currentUser?.uid) return;
-    const orgIdToUse = orgId || currentUser.uid || "brewra";
-    void prefetchProfilerSessionCacheIfNeeded(currentUser.uid, orgIdToUse);
-  }, [currentUser?.uid, orgId]);
-  return null;
-}
-
 export const SuggestedICPCards = ({
   onICPAccepted,
   onICPRejected,
@@ -993,13 +915,8 @@ export const SuggestedICPCards = ({
   const { currentUser, orgId } = useAuth();
   const navigate = useNavigate();
 
-  const [existingICPs, setExistingICPs] = useState<ExistingICP[]>(() => {
-    try {
-      const saved = localStorage.getItem("profiler_existingICPs");
-      if (saved) return JSON.parse(saved);
-    } catch {}
-    return [];
-  });
+  /** Always filled from GET /profile/company (or legacy); avoid hydrating stale localStorage before fetch. */
+  const [existingICPs, setExistingICPs] = useState<ExistingICP[]>([]);
   const [refinedICPs, setRefinedICPs] = useState<SuggestedICP[]>([]);
   const [newICPs, setNewICPs] = useState<SuggestedICP[]>([]);
   const [cardStatuses, setCardStatuses] = useState<Record<string, ICPCardStatus>>(() => {
@@ -1027,29 +944,28 @@ export const SuggestedICPCards = ({
 
   const rejectTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
-  /** Reload Current ICPs from GET /customer_profile after backend updates (e.g. accept from suggested, delete). Returns profile ICP ids. */
+  /** Reload Current ICPs from GET /profile/company (same source as Mission Control / Swagger). */
   const refetchCustomerProfileIcps = useCallback(async (): Promise<string[]> => {
-    const orgIdToUse = orgId || currentUser?.uid || "brewra";
+    const orgIdToUse = orgId || "brewra";
     const uid = currentUser?.uid;
+    if (!uid) return [];
     try {
-      const profileUrl = buildApiUrl(`customer_profile?org_id=${encodeURIComponent(orgIdToUse)}`);
-      const profileRes = await fetch(profileUrl, { method: "GET", headers: { "Content-Type": "application/json" } });
-      if (!profileRes.ok) return [];
-      const profileData = await profileRes.json();
-      const icpsData = extractIcpsArrayFromCustomerProfileResponse(profileData);
-      setExistingICPs(icpsData.map((icp: any, i: number) => mapCustomerProfileICPToExisting(icp, i)));
-      if (uid) {
-        try {
-          setUserLocalStorage(
-            "customerProfile",
-            JSON.stringify(mapCustomerProfileApiRowsToStoredIcps(icpsData)),
-            uid
-          );
-        } catch {
-          /* ignore */
-        }
+      const rows = await fetchIcpsRowsForOrg(uid, orgIdToUse);
+      if (rows.length === 0) {
+        setExistingICPs([]);
+        return [];
       }
-      return icpsData.map((row: any) => String(row.id ?? row.icp_id ?? "").trim()).filter(Boolean);
+      setExistingICPs(rows.map((icp: any, i: number) => mapCustomerProfileICPToExisting(icp, i)));
+      try {
+        setUserLocalStorage(
+          "customerProfile",
+          JSON.stringify(mapCustomerProfileApiRowsToStoredIcps(rows as any[])),
+          uid
+        );
+      } catch {
+        /* ignore */
+      }
+      return rows.map((row: any) => String(row.id ?? row.icp_id ?? "").trim()).filter(Boolean);
     } catch {
       /* keep existing rows */
     }
@@ -1058,7 +974,7 @@ export const SuggestedICPCards = ({
 
   const handleDeleteCurrentIcp = useCallback(
     async (icp: ExistingICP) => {
-      const orgIdToUse = orgId || currentUser?.uid || "brewra";
+      const orgIdToUse = orgId || "brewra";
       const icpId = icp.id;
       console.log("[Profiler Current ICPs] DELETE customer_profile/icp: request", {
         icp_id: icpId,
@@ -1084,12 +1000,6 @@ export const SuggestedICPCards = ({
         }
         await refetchCustomerProfileIcps();
         window.dispatchEvent(new CustomEvent("customerProfileSaved"));
-        if (currentUser?.uid) {
-          mergeMissionControlSessionCache(currentUser.uid, orgIdToUse, {
-            profilerPageLoadCompleted: false,
-            profilerUiSnapshotJson: null,
-          });
-        }
         toast({ title: "ICP deleted", description: `"${icp.name}" removed from Current ICPs.` });
       } catch (e) {
         console.warn("[Profiler Current ICPs] DELETE customer_profile/icp: failed", e);
@@ -1117,62 +1027,20 @@ export const SuggestedICPCards = ({
     localStorage.setItem("profiler_showRecommendations", String(showRecommendations));
   }, [showRecommendations]);
 
-  useLayoutEffect(() => {
-    const uid = currentUser?.uid;
-    const orgIdToUse = orgId || uid || "brewra";
-    if (!uid) return;
-    const entry = getMissionControlSessionCache(uid, orgIdToUse);
-    if (!entry?.profilerPageLoadCompleted || !entry.profilerUiSnapshotJson) return;
-    try {
-      const snap = JSON.parse(entry.profilerUiSnapshotJson) as {
-        existingICPs?: ExistingICP[];
-        refinedICPs?: SuggestedICP[];
-        newICPs?: SuggestedICP[];
-        cardStatuses?: Record<string, unknown>;
-        showRecommendations?: boolean;
-      };
-      if (Array.isArray(snap.existingICPs)) setExistingICPs(snap.existingICPs);
-      if (Array.isArray(snap.refinedICPs) || Array.isArray(snap.newICPs)) {
-        const filtered = filterDismissedFromSuggested(
-          uid,
-          snap.refinedICPs ?? [],
-          snap.newICPs ?? [],
-        );
-        setRefinedICPs(filtered.refined);
-        setNewICPs(filtered.newSuggestions);
-      }
-      if (snap.cardStatuses && typeof snap.cardStatuses === "object") {
-        setCardStatuses(reviveProfilerCardStatusesFromSnapshot(snap.cardStatuses as Record<string, unknown>));
-      }
-      if (typeof snap.showRecommendations === "boolean") setShowRecommendations(snap.showRecommendations);
-      setLoading(false);
-    } catch {
-      /* ignore */
-    }
-  }, [currentUser?.uid, orgId]);
-
-  // Load data: session cache avoids repeat GET customer_profile + GET /icp on navigation; Refresh still hits GET /icp.
   useEffect(() => {
-    const orgIdToUse = orgId || currentUser?.uid || "brewra";
+    const orgIdToUse = orgId || "brewra";
     const uid = currentUser?.uid;
     if (!uid) {
       setLoading(false);
       return;
     }
 
-    const entry = getMissionControlSessionCache(uid, orgIdToUse);
-    const warm = Boolean(entry?.profilerPageLoadCompleted && entry.profilerUiSnapshotJson);
     const refreshStorageKey = uid ? `profiler_icp_refresh_${uid}` : null;
     const prevRefreshStored = refreshStorageKey
       ? Number(sessionStorage.getItem(refreshStorageKey) || "0")
       : 0;
     const refreshJustIncremented =
       Boolean(refreshStorageKey) && refreshTrigger > 0 && refreshTrigger > prevRefreshStored;
-
-    if (warm && !refreshJustIncremented) {
-      setLoading(false);
-      return;
-    }
 
     const loadData = async () => {
       setLoading(true);
@@ -1182,8 +1050,7 @@ export const SuggestedICPCards = ({
         prevRefreshStored,
         refreshJustIncremented,
         sessionKey: refreshStorageKey,
-        warmProfilerCache: warm,
-        willCallBackend: Boolean(uid) && (refreshJustIncremented || !warm),
+        willCallBackend: Boolean(uid),
       });
 
       const result = await loadProfilerPagePayload({
@@ -1192,7 +1059,7 @@ export const SuggestedICPCards = ({
         refreshJustIncremented,
         refreshTrigger,
         refreshStorageKey,
-        warmProfilerCache: warm,
+        warmProfilerCache: false,
         toast,
       });
 
@@ -1201,21 +1068,9 @@ export const SuggestedICPCards = ({
       setNewICPs(result.newSuggestions);
       setCardStatuses(result.mergedCardStatuses);
 
-      mergeMissionControlSessionCache(uid, orgIdToUse, {
-        profilerPageLoadCompleted: true,
-        profilerUiSnapshotJson: JSON.stringify({
-          existingICPs: result.icps,
-          refinedICPs: result.refined,
-          newICPs: result.newSuggestions,
-          cardStatuses: result.mergedCardStatuses,
-          showRecommendations,
-        }),
-      });
-
       setLoading(false);
     };
     void loadData();
-    // showRecommendations omitted from deps: toggling must not re-fetch; snapshot uses value at load time.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- toast is stable; listing avoids noisy reloads
   }, [refreshTrigger, currentUser?.uid, orgId]);
 
@@ -1228,8 +1083,8 @@ export const SuggestedICPCards = ({
     if (!confirmAcceptICP || isSavingAccept) return;
     const icp = confirmAcceptICP;
     const uid = currentUser?.uid;
-    const orgIdToUse = orgId || uid || "";
-    if (!uid || !orgIdToUse) {
+    const orgIdToUse = orgId || "brewra";
+    if (!uid) {
       toast({
         title: "Cannot save ICP",
         description: "Sign in and ensure an organization context is available.",
@@ -1310,11 +1165,6 @@ export const SuggestedICPCards = ({
       await refetchCustomerProfileIcps();
       window.dispatchEvent(new CustomEvent("customerProfileSaved"));
 
-      mergeMissionControlSessionCache(uid, orgIdToUse, {
-        profilerPageLoadCompleted: false,
-        profilerUiSnapshotJson: null,
-      });
-
       toast({
         title: "Customer Profile updated.",
         description: `"${icp.name}" has been saved to your Customer Profile and Current ICPs.`,
@@ -1394,11 +1244,6 @@ export const SuggestedICPCards = ({
         });
         setExpandedReportId((cur) => (cur === icpId ? null : cur));
         if (icpForParent) onICPRejected?.(icpForParent);
-        const orgIdToUse = orgId || userId || "brewra";
-        mergeMissionControlSessionCache(userId, orgIdToUse, {
-          profilerPageLoadCompleted: false,
-          profilerUiSnapshotJson: null,
-        });
         toast({
           title: "Recommendation removed",
           description: "This recommendation has been removed from your list.",

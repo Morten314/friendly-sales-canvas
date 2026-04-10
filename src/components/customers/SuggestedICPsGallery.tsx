@@ -11,7 +11,6 @@ import { Globe, TrendingUp, Users, Building, MapPin, Target, Bot, MessageSquare,
 import { ProfilerChatPanel } from "./ProfilerChatPanel";
 import { ICPEditHistory } from "./ICPEditHistory";
 import { useToast } from "@/hooks/use-toast";
-import { profilerCache } from "@/lib/profilerCache";
 import { useAuth } from "@/contexts/AuthContext";
 import { buildApiUrl } from "@/lib/api";
 
@@ -96,31 +95,6 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
       console.log("Timestamp:", new Date().toISOString());
       console.log("RefreshTrigger:", refreshTrigger);
       console.log("Is Refresh Mode:", refreshTrigger > 0);
-      
-      // Check cache first (unless it's a refresh trigger)
-      if (refreshTrigger === 0 && profilerCache.hasValidCache(currentUser?.uid)) {
-        console.log("📦 Using cached ICP data");
-        const cachedData = profilerCache.getCachedData(currentUser?.uid);
-        if (cachedData && cachedData.icpCards.length > 0) {
-          // Convert cached data to SuggestedICP format
-          const cachedICPs: SuggestedICP[] = cachedData.icpCards.map(icp => ({
-            id: icp.id,
-            industry: icp.industry,
-            segment: icp.name,
-            companySize: icp.companySize,
-            decisionMakers: icp.buyingSignals || [],
-            regions: [], // Not stored in cache
-            keyAttributes: icp.painPoints || [],
-            growthIndicator: "High" // Default value
-          }));
-          
-          setSuggestedICPs(cachedICPs);
-          setLoading(false);
-          setError(null);
-          console.log("✅ Loaded", cachedICPs.length, "ICPs from cache");
-          return;
-        }
-      }
       
       setLoading(true);
       setError(null);
@@ -439,27 +413,6 @@ export const SuggestedICPsGallery = ({ onICPSelect, onProfilerChatOpen, refreshT
       
       setSuggestedICPs(transformedICPs);
       setError(null);
-      
-      // Cache the transformed ICPs for future use
-      if (transformedICPs.length > 0) {
-        console.log("💾 Caching ICP data for future use");
-        const cacheData = transformedICPs.map(icp => ({
-          id: icp.id,
-          name: icp.segment,
-          description: `${icp.industry} - ${icp.segment}`,
-          industry: icp.industry,
-          companySize: icp.companySize,
-          painPoints: icp.keyAttributes,
-          buyingSignals: icp.decisionMakers,
-          marketSize: "TBD", // Will be populated by ICPSummaryOpportunity
-          competitiveLandscape: "TBD", // Will be populated by ICPSummaryOpportunity
-          lastUpdated: Date.now(),
-          dataSource: 'api' as const
-        }));
-        
-        profilerCache.setCachedData(cacheData, currentUser?.uid);
-        console.log("✅ Cached", cacheData.length, "ICPs");
-      }
       
       // Auto-select the first ICP if available
       if (transformedICPs.length > 0) {

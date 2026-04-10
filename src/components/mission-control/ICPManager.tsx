@@ -1636,7 +1636,7 @@
 // export default ICPManager;
 
 
-import React, { useState, useRef, useEffect, useCallback, useLayoutEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -1692,6 +1692,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useLocation } from "react-router-dom";
 import { setUserLocalStorage, getUserLocalStorage, removeUserLocalStorage } from "@/utils/cacheUtils";
 import {
   mergeProfilerAcceptedIcpDisplay,
@@ -1699,10 +1700,7 @@ import {
 } from "@/utils/profilerAcceptedIcpDisplay";
 import { cn } from "@/lib/utils";
 import { apiFetch } from "@/lib/api";
-import {
-  getMissionControlSessionCache,
-  mergeMissionControlSessionCache,
-} from "@/utils/missionControlSessionCache";
+import { extractIcpsDataFromFlexibleApiResponse } from "@/utils/profileIcpsExtract";
 
 // Types
 type FitConfidence = "high" | "medium" | "low";
@@ -1783,25 +1781,10 @@ type InlineStep =
   | "fitConfidence"
   | "additionalContext";
 
-function reviveIcpsFromSnapshot(json: string): ICP[] {
-  try {
-    const parsed = JSON.parse(json) as ICP[];
-    if (!Array.isArray(parsed)) return [];
-    return parsed.map((row) => ({
-      ...row,
-      createdAt:
-        row.createdAt instanceof Date
-          ? row.createdAt
-          : new Date(row.createdAt as unknown as string),
-    }));
-  } catch {
-    return [];
-  }
-}
-
 const ICPManager: React.FC = () => {
   const { toast } = useToast();
   const { currentUser, orgId } = useAuth();
+  const location = useLocation();
   const orgIdToUse = orgId || 'brewra'; // Fallback to 'brewra' for backward compatibility
   const [icps, setIcps] = useState<ICP[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -1842,14 +1825,6 @@ const ICPManager: React.FC = () => {
   
   const industryRef = useRef<HTMLInputElement>(null);
   const buyerRoleRef = useRef<HTMLInputElement>(null);
-
-  const commitIcpSnapshotToSessionCache = (list: ICP[]) => {
-    if (!currentUser?.uid) return;
-    mergeMissionControlSessionCache(currentUser.uid, orgIdToUse, {
-      icpManagerLoadCompleted: true,
-      icpsSnapshotJson: JSON.stringify(list),
-    });
-  };
 
   // Save customer profile (ICPs) to backend with retry logic
   const saveCustomerProfileToBackend = async (icpsToSave: ICP[], retryCount = 0) => {
@@ -1929,11 +1904,6 @@ const ICPManager: React.FC = () => {
       console.log("✅ Customer profile saved successfully to backend");
       console.log("Response data:", JSON.stringify(data, null, 2));
 
-      mergeMissionControlSessionCache(currentUser.uid, orgIdToUse, {
-        icpManagerLoadCompleted: true,
-        icpsSnapshotJson: JSON.stringify(icpsToSave),
-      });
-      
       // Save to localStorage for offline access and refresh persistence
       try {
         setUserLocalStorage('customerProfile', JSON.stringify(icpsToSave), currentUser.uid);
@@ -1941,7 +1911,7 @@ const ICPManager: React.FC = () => {
       } catch (e) {
         console.warn("Failed to save to localStorage:", e);
       }
-      
+
       // Clear pending flag on success
       try {
         removeUserLocalStorage('customerProfile_pending', currentUser.uid);
@@ -1950,11 +1920,11 @@ const ICPManager: React.FC = () => {
       }
     } catch (error) {
       console.error("Error saving customer profile:", error);
-      
+
       // Determine error message based on error type
       const isNetworkError = error instanceof TypeError && error.message.includes('fetch');
       const isServerError = error instanceof Error && error.message.includes('500');
-      
+
       if (isServerError || isNetworkError) {
         toast({
           title: "Backend temporarily unavailable",
@@ -1977,6 +1947,7 @@ const ICPManager: React.FC = () => {
   const loadCustomerProfileFromBackend = async () => {
     if (!currentUser?.uid) {
       console.warn("ICPManager: Cannot load customer profile - user not authenticated");
+      window.dispatchEvent(new CustomEvent("icpManagerCustomerProfileLoadFinished"));
       return;
     }
 
@@ -1984,18 +1955,49 @@ const ICPManager: React.FC = () => {
     console.log("User ID:", currentUser.uid);
     setIsLoading(true);
     try {
-      const apiUrl = `/api/customer_profile?org_id=${orgIdToUse}`;
-      console.log("ICPManager: Fetching from API:", apiUrl);
-      const response = await fetch(apiUrl, {
+      // Backend embeds ICPs on GET /profile/company (org_id + user_id) per Swagger; /customer_profile may omit them.
+      const companyUrl = `/api/profile/company?user_id=${encodeURIComponent(currentUser.uid)}&org_id=${encodeURIComponent(orgIdToUse)}`;
+      const legacyUrl = `/api/customer_profile?org_id=${encodeURIComponent(orgIdToUse)}`;
+      console.log("ICPManager: Fetching company profile (ICPs):", companyUrl);
+
+      const companyRes = await fetch(companyUrl, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
         },
       });
-      
-      console.log("ICPManager: API response status:", response.status, response.statusText);
 
-      if (!response.ok) {
+      let legacyRes: Response | null = null;
+      let responseData: Record<string, unknown> | null = null;
+      if (companyRes.ok) {
+        responseData = (await companyRes.json()) as Record<string, unknown>;
+      }
+
+      let icpsData = responseData ? extractIcpsDataFromFlexibleApiResponse(responseData) : [];
+
+      if (icpsData.length === 0) {
+        console.log("ICPManager: No ICPs on company profile (or request failed); trying GET customer_profile:", legacyUrl);
+        legacyRes = await fetch(legacyUrl, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+        if (legacyRes.ok) {
+          responseData = (await legacyRes.json()) as Record<string, unknown>;
+          icpsData = extractIcpsDataFromFlexibleApiResponse(responseData);
+        }
+      }
+
+      const anyOk = companyRes.ok || (legacyRes?.ok ?? false);
+      console.log(
+        "ICPManager: GET profile/company",
+        companyRes.status,
+        "GET customer_profile",
+        legacyRes ? legacyRes.status : "skipped"
+      );
+
+      if (!anyOk) {
         console.log("No existing customer profile found in API, trying localStorage fallback");
         // Try loading from localStorage as fallback
         try {
@@ -2006,16 +2008,10 @@ const ICPManager: React.FC = () => {
               console.log("Loading customer profile from localStorage fallback");
               setIcps(localICPs);
               window.dispatchEvent(new CustomEvent('customerProfileSaved'));
-              commitIcpSnapshotToSessionCache(localICPs);
-            } else {
-              commitIcpSnapshotToSessionCache([]);
             }
-          } else {
-            commitIcpSnapshotToSessionCache([]);
           }
         } catch (e) {
           console.error("Error loading from localStorage:", e);
-          commitIcpSnapshotToSessionCache([]);
         }
         return;
       }
@@ -2027,7 +2023,11 @@ const ICPManager: React.FC = () => {
         console.warn("Failed to clear customerProfile_pending:", e);
       }
 
-      const responseData = await response.json();
+      if (!responseData) {
+        console.warn("ICPManager: No response body after successful GET");
+        return;
+      }
+
       console.log("ICPManager: Full API response:", JSON.stringify(responseData, null, 2));
       console.log("ICPManager: Response structure:", {
         'hasSuccess': 'success' in responseData,
@@ -2040,11 +2040,13 @@ const ICPManager: React.FC = () => {
         'directIcps': responseData?.icps,
       });
       
-      // Handle wrapped API response structure: {success: true, data: {...}}
-      const data = responseData.data || responseData;
-      
+      const data =
+        typeof responseData.data === "object" && responseData.data !== null
+          ? (responseData.data as Record<string, unknown>)
+          : responseData;
+
       // Verify user_id matches (multi-tenancy safety)
-      const responseUserId = data.user_id || responseData.user_id;
+      const responseUserId = data.user_id ?? responseData.user_id;
       if (responseUserId && responseUserId !== currentUser.uid) {
         console.warn("ICPManager: API returned customer profile for different user! Ignoring data.", {
           'apiUserId': responseUserId,
@@ -2059,63 +2061,14 @@ const ICPManager: React.FC = () => {
               console.log("ICPManager: Loading from localStorage fallback (user mismatch)");
               setIcps(localICPs);
               window.dispatchEvent(new CustomEvent('customerProfileSaved'));
-              commitIcpSnapshotToSessionCache(localICPs);
-            } else {
-              commitIcpSnapshotToSessionCache([]);
             }
-          } else {
-            commitIcpSnapshotToSessionCache([]);
           }
         } catch (e) {
           console.error("Error loading from localStorage:", e);
-          commitIcpSnapshotToSessionCache([]);
         }
         return;
       }
-      
-      // Check if icps exists in the response (handle multiple possible structures)
-      // Structure 1: {success: true, data: {icps: [...]}} - Wrapped response
-      // Structure 2: {success: true, data: {customer_profiles: {icps: [...]}}} - Nested in customer_profiles
-      // Structure 3: {icps: [...]} - Direct array
-      // Structure 4: {customer_profiles: {icps: [...]}} - Nested in customer_profiles
-      // Structure 5: {customer_profile: {icps: [...]}} - Alternative nesting
-      let icpsData = null;
-      
-      // Try all possible paths
-      if (responseData.data) {
-        // Wrapped response: {success: true, data: {...}}
-        if (Array.isArray(responseData.data.icps)) {
-          icpsData = responseData.data.icps;
-          console.log("ICPManager: Found icps in responseData.data.icps");
-        } else if (responseData.data.customer_profiles && Array.isArray(responseData.data.customer_profiles.icps)) {
-          icpsData = responseData.data.customer_profiles.icps;
-          console.log("ICPManager: Found icps in responseData.data.customer_profiles.icps");
-        } else if (responseData.data.customer_profile && Array.isArray(responseData.data.customer_profile.icps)) {
-          icpsData = responseData.data.customer_profile.icps;
-          console.log("ICPManager: Found icps in responseData.data.customer_profile.icps");
-        }
-      }
-      
-      // If not found in wrapped response, try direct data object
-      if (!icpsData) {
-        if (Array.isArray(data.icps)) {
-          icpsData = data.icps;
-          console.log("ICPManager: Found icps in data.icps");
-        } else if (data.customer_profiles && Array.isArray(data.customer_profiles.icps)) {
-          icpsData = data.customer_profiles.icps;
-          console.log("ICPManager: Found icps in data.customer_profiles.icps");
-        } else if (data.customer_profile && Array.isArray(data.customer_profile.icps)) {
-          icpsData = data.customer_profile.icps;
-          console.log("ICPManager: Found icps in data.customer_profile.icps");
-        }
-      }
-      
-      // Default to empty array if nothing found
-      if (!icpsData) {
-        icpsData = [];
-        console.warn("ICPManager: No icps found in any expected location in API response");
-      }
-      
+
       console.log("ICPManager: Extracted icpsData:", {
         'icpsData': icpsData,
         'isArray': Array.isArray(icpsData),
@@ -2174,7 +2127,6 @@ const ICPManager: React.FC = () => {
         }
 
         setIcps(dedupedICPs);
-        commitIcpSnapshotToSessionCache(dedupedICPs);
         console.log("✅ Customer profile loaded from backend successfully");
         console.log("Loaded ICPs count:", dedupedICPs.length);
         console.log("Loaded ICPs data:", JSON.stringify(dedupedICPs, null, 2));
@@ -2216,22 +2168,15 @@ const ICPManager: React.FC = () => {
                 }
                 // Don't load mismatched data
                 setIcps([]);
-                commitIcpSnapshotToSessionCache([]);
               } else {
                 console.log("Loading customer profile from localStorage fallback");
                 setIcps(localICPs);
                 window.dispatchEvent(new CustomEvent('customerProfileSaved'));
-                commitIcpSnapshotToSessionCache(localICPs);
               }
-            } else {
-              commitIcpSnapshotToSessionCache([]);
             }
-          } else {
-            commitIcpSnapshotToSessionCache([]);
           }
         } catch (e) {
           console.error("Error loading from localStorage:", e);
-          commitIcpSnapshotToSessionCache([]);
         }
       }
     } catch (error) {
@@ -2245,42 +2190,22 @@ const ICPManager: React.FC = () => {
             console.log("Loading customer profile from localStorage fallback (error case)");
             setIcps(localICPs);
             window.dispatchEvent(new CustomEvent('customerProfileSaved'));
-            commitIcpSnapshotToSessionCache(localICPs);
-          } else {
-            commitIcpSnapshotToSessionCache([]);
           }
-        } else {
-          commitIcpSnapshotToSessionCache([]);
         }
       } catch (e) {
         console.error("Error loading from localStorage:", e);
-        commitIcpSnapshotToSessionCache([]);
       }
     } finally {
       setIsLoading(false);
+      window.dispatchEvent(new CustomEvent("icpManagerCustomerProfileLoadFinished"));
     }
   };
 
-  useLayoutEffect(() => {
-    if (!currentUser?.uid) return;
-    const c = getMissionControlSessionCache(currentUser.uid, orgIdToUse);
-    if (c?.icpManagerLoadCompleted && c.icpsSnapshotJson != null) {
-      setIcps(reviveIcpsFromSnapshot(c.icpsSnapshotJson));
-      setIsLoading(false);
-    }
-  }, [currentUser?.uid, orgIdToUse]);
-
-  // Load customer profile on mount (no delayed replay of customerProfile_pending — it could restore deleted ICPs).
   useEffect(() => {
-    if (!currentUser?.uid) {
-      return;
-    }
-    if (getMissionControlSessionCache(currentUser.uid, orgIdToUse)?.icpManagerLoadCompleted) {
-      return;
-    }
-    console.log("ICPManager: useEffect triggered, loading customer profile for user:", currentUser.uid);
-    loadCustomerProfileFromBackend();
-  }, [currentUser?.uid, orgIdToUse]);
+    if (!currentUser?.uid) return;
+    console.log("ICPManager: loading customer profile from backend for user:", currentUser.uid);
+    void loadCustomerProfileFromBackend();
+  }, [currentUser?.uid, orgIdToUse, location.pathname]);
 
   // Focus management - combobox stays closed by default
 

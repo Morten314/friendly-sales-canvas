@@ -75,11 +75,9 @@ import { EmergingTrends } from "@/components/market-research/EmergingTrends";
 
 
 
-import LeadStream from "@/components/market-research/LeadStream";
-import { LeadStreamScoutSplitView } from "@/components/market-research/LeadStreamScoutSplitView";
-import { LeadStreamFilterBar } from "@/components/market-research/LeadStreamFilterBar";
-import { AddLeadModal } from "@/components/market-research/AddLeadModal";
-import type { LeadStreamScoutContext } from "@/components/market-research/LeadStream";
+import ScoutLeadStream from "@/components/market-research/ScoutLeadStream";
+import { ChatWithScout } from "@/components/market-research/ChatWithScout";
+
 
 
 
@@ -88,6 +86,10 @@ import { TechnologyDrivers } from "@/components/market-research/TechnologyDriver
 
 
 import { MarketDetailDrawer } from "@/components/market-research/MarketDetailDrawer";
+
+
+
+import { ScoutDeploymentDetails } from "@/components/market-research/ScoutDeploymentDetails";
 
 
 
@@ -111,6 +113,10 @@ import EditHistoryPanel from "@/components/market-research/EditHistoryPanel";
 
 
 
+import { DeploymentData } from "@/components/layout/Header";
+
+
+
 import { useNavigate, useLocation } from "react-router-dom";
 
 
@@ -119,9 +125,10 @@ import { toUTCTimestamp, isTimestampNewer, logTimestampComparison } from '@/lib/
 
 
 
-import { apiFetchJson } from '@/lib/api';
+import { apiFetchJson, buildApiUrl } from '@/lib/api';
 
 import { marketResearchApiCall, logApiCallResult, shouldUseCachedData } from '@/utils/apiUtils';
+import { buildLeadStreamChatContext, LEAD_STREAM_CHAT_CONTEXT_KEY } from '@/utils/leadStreamChatContext';
 
 
 
@@ -789,9 +796,6 @@ const MarketResearch = React.memo(() => {
 
 
       'chatwithscout': 'trends'
-
-
-
     };
 
 
@@ -814,6 +818,21 @@ const MarketResearch = React.memo(() => {
 
   const [activeTab, setActiveTab] = useState(getActiveTabFromPath());
   const [signalsChatContext, setSignalsChatContext] = useState<SignalsChatContext | null>(null);
+  const [scoutResearchContext, setScoutResearchContext] = useState<{ leads: { name: string; company: string; jobTitle: string }[]; opportunity?: string; icp?: string; reportTraits?: string[] } | null>(null);
+  const [scoutMode, setScoutMode] = useState<"selected-leads" | "full-list">("selected-leads");
+  
+
+  /** Lead Stream → Chat with Scout: use session history UI + lead sidebar (not legacy full-page chat). */
+  const handleChatWithScout = (leads: any[], reportFilter?: string) => {
+    setScoutResearchContext(null);
+    try {
+      const ctx = buildLeadStreamChatContext(leads, reportFilter);
+      sessionStorage.setItem(LEAD_STREAM_CHAT_CONTEXT_KEY, JSON.stringify(ctx));
+    } catch {
+      sessionStorage.removeItem(LEAD_STREAM_CHAT_CONTEXT_KEY);
+    }
+    handleTabChange('trends');
+  };
 
   // When Chat with Scout tab is active, check for context from Signals page
   useEffect(() => {
@@ -846,6 +865,10 @@ const MarketResearch = React.memo(() => {
 
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+
+
+  const [scoutDeploymentData, setScoutDeploymentData] = useState<DeploymentData | null>(null);
 
 
 
@@ -1132,7 +1155,7 @@ const MarketResearch = React.memo(() => {
   const [componentFailureCounts, setComponentFailureCounts] = useState<Record<string, number>>({});
   
   // Track validation timeout IDs to clear them when validation completes
-  const validationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const validationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Flag to prevent multiple simultaneous validations
   const isValidatingRef = useRef<boolean>(false);
@@ -1140,7 +1163,7 @@ const MarketResearch = React.memo(() => {
   // Track if retries are in progress to prevent premature loading screen dismissal
   const isRetryingRef = useRef<boolean>(false);
   
-  const [globalTimeoutId, setGlobalTimeoutId] = useState<NodeJS.Timeout | null>(null);
+  const [globalTimeoutId, setGlobalTimeoutId] = useState<ReturnType<typeof setTimeout> | null>(null);
 
 
 
@@ -2588,34 +2611,63 @@ const MarketResearch = React.memo(() => {
 
   // ConsumerTrends (Your Lead Stream) filter state - persist across tab switches
 
-
-
   const [leadStreamFilters, setLeadStreamFilters] = useState({
-
-
-
     selectedIndustry: "all",
-
-
-
     selectedSize: "all", 
-
-
-
     selectedRegion: "all"
-
-
-
   });
 
+  // Opportunity filter from intelligence sections
+  const [opportunityFilter, setOpportunityFilter] = useState<string | null>(null);
 
+  const handleViewOpportunityLeads = (sectionContext: string) => {
+    setOpportunityFilter(sectionContext);
+    handleTabChange('analysis');
+  };
 
-  const [addLeadModalOpen, setAddLeadModalOpen] = useState(false);
+  const handleChatAboutCoverage = () => {
+    setScoutMode("full-list");
+    setScoutResearchContext({
+      leads: [],
+      opportunity: "Leads Coverage Analysis",
+      icp: 'All Segments',
+      reportTraits: [
+        "Total Leads: 120",
+        "Matched Leads: 74 (62%)",
+        "Unmatched Leads: 46 (38%)",
+        "62% should comprise of your active pipeline",
+      ],
+    });
+    handleTabChange('trends');
+  };
 
-  const [addLeadInitialData, setAddLeadInitialData] = useState<{ companyName?: string; companyWebsite?: string } | undefined>();
+  const handleSendToStrategist = (lead: any) => {
+    // Persist lead to strategist lead stream
+    const existing = JSON.parse(localStorage.getItem('strategistLeadStream') || '[]');
+    const alreadyExists = existing.some((l: any) => l.id === lead.id);
+    if (!alreadyExists) {
+      existing.push({ ...lead, sentAt: new Date().toISOString() });
+      localStorage.setItem('strategistLeadStream', JSON.stringify(existing));
+    }
+    navigate('/your-ai-team/strategist/leadstream');
+  };
 
-  /** Split view with Scout - opened when Research/Deep dive clicked on a lead */
-  const [leadStreamSplitContext, setLeadStreamSplitContext] = useState<LeadStreamScoutContext | null>(null);
+  const handleAskScoutTier = (tierCard: any) => {
+    setScoutMode("full-list");
+    setScoutResearchContext({
+      leads: [],
+      opportunity: `${tierCard.tier} — ${tierCard.label}`,
+      icp: 'All Segments',
+      reportTraits: [
+        `**${tierCard.tier} — ${tierCard.label}**`,
+        `Leads: ${tierCard.leadCount} | Fit Score: ${tierCard.fitScore}%`,
+        `Why it fits: ${tierCard.whyItFits}`,
+        `Key risks: ${tierCard.keyRisks}`,
+        `Recommended action: ${tierCard.recommendedAction}`,
+      ],
+    });
+    handleTabChange('trends');
+  };
 
 
 
@@ -3222,6 +3274,7 @@ const MarketResearch = React.memo(() => {
 
 
     setActiveTab(tabValue);
+    if (tabValue !== 'trends') setScoutResearchContext(null);
 
 
 
@@ -3246,8 +3299,6 @@ const MarketResearch = React.memo(() => {
 
 
       'trends': 'chatwithscout'
-
-
 
     };
 
@@ -3820,7 +3871,7 @@ const MarketResearch = React.memo(() => {
 
       
 
-      const response = await fetch(`/api/market-research?_cb=${Date.now()}&_r=${Math.random()}`, {
+      const response = await fetch(`${buildApiUrl('market-research')}?_cb=${Date.now()}&_r=${Math.random()}`, {
 
         method: 'POST',
 
@@ -4452,7 +4503,7 @@ const MarketResearch = React.memo(() => {
 
       try {
         // Include org_id in API call
-        const profileResponse = await fetch(`/api/profile/company?org_id=${orgIdToUse}`, {
+        const profileResponse = await fetch(`${buildApiUrl('profile/company')}?org_id=${orgIdToUse}`, {
 
           method: 'GET',
 
@@ -5157,7 +5208,7 @@ const MarketResearch = React.memo(() => {
           refresh: refresh
         };
 
-        const response = await fetch('/api/market-research', {
+        const response = await fetch(buildApiUrl('market-research'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -5371,7 +5422,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-      const response = await fetch('/api/market-research', {
+      const response = await fetch(buildApiUrl('market-research'), {
 
 
 
@@ -5486,7 +5537,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-              const altResponse = await fetch('/api/market-research', {
+              const altResponse = await fetch(buildApiUrl('market-research'), {
 
 
 
@@ -6165,7 +6216,7 @@ const MarketResearch = React.memo(() => {
       // Note: Removed cache-busting fields (_timestamp, _cache_bust) as backend doesn't accept them
       // The backend expects only: org_id, user_id, component_name, data, refresh
 
-      const response = await fetch('/api/market-research', {
+      const response = await fetch(buildApiUrl('market-research'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -6480,7 +6531,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-      const response = await fetch('/api/market-research', {
+      const response = await fetch(buildApiUrl('market-research'), {
 
 
 
@@ -7118,7 +7169,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-          const response = await fetch('/api/market-research', {
+          const response = await fetch(buildApiUrl('market-research'), {
 
 
 
@@ -7980,7 +8031,7 @@ const MarketResearch = React.memo(() => {
       // Note: Removed cache-busting fields (_timestamp, _cache_bust) as backend doesn't accept them
       // The backend expects only: org_id, user_id, component_name, data, refresh
 
-      const response = await fetch('/api/market-research', {
+      const response = await fetch(buildApiUrl('market-research'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -8937,6 +8988,20 @@ const MarketResearch = React.memo(() => {
   };
 
 
+
+
+
+
+
+  const handleDeployScout = () => {
+
+
+
+    navigate('/scout-deployment');
+
+
+
+  };
 
 
 
@@ -13944,7 +14009,6 @@ const MarketResearch = React.memo(() => {
                 </TabsTrigger>
 
 
-
               </TabsList>
 
 
@@ -13970,16 +14034,22 @@ const MarketResearch = React.memo(() => {
 
 
         {activeTab === "trends" ? (
-          <div className="flex-1 min-h-0 flex flex-col overflow-hidden -mx-3 md:-mx-4 lg:-mx-6 w-[calc(100%+1.5rem)] md:w-[calc(100%+2rem)] lg:w-[calc(100%+3rem)] max-w-none self-stretch">
-            <ScoutChatWithHistory
-              initialContext={signalsChatContext}
-              onClearContext={() => {
-                sessionStorage.removeItem('signalsChatContext');
-                setSignalsChatContext(null);
-              }}
-              editHistory={editHistory}
-              onTabChange={handleTabChange}
-            />
+          <div className="flex-1 h-full min-h-[30rem] flex flex-col overflow-hidden -mx-3 md:-mx-4 lg:-mx-6 w-[calc(100%+1.5rem)] md:w-[calc(100%+2rem)] lg:w-[calc(100%+3rem)] max-w-none">
+            {scoutResearchContext ? (
+              <div className="px-3 md:px-4 lg:px-6 py-4 h-full flex flex-col min-h-0 flex-1">
+                <ChatWithScout fullPage researchContext={scoutResearchContext} mode={scoutMode} />
+              </div>
+            ) : (
+              <ScoutChatWithHistory
+                initialContext={signalsChatContext}
+                onClearContext={() => {
+                  sessionStorage.removeItem('signalsChatContext');
+                  setSignalsChatContext(null);
+                }}
+                editHistory={editHistory}
+                onTabChange={setActiveTab}
+              />
+            )}
           </div>
         ) : (
         <ScrollArea className="flex-1">
@@ -14015,6 +14085,26 @@ const MarketResearch = React.memo(() => {
 
 
                   <div className="space-y-6">
+
+
+
+                    {/* Display deployment details if Scout has been deployed */}
+
+
+
+                    {scoutDeploymentData && (
+
+
+
+                      <ScoutDeploymentDetails deploymentData={scoutDeploymentData} />
+
+
+
+                    )}
+
+
+
+                    
 
 
 
@@ -14732,6 +14822,7 @@ const MarketResearch = React.memo(() => {
 
 
                       onGenerateShareableLink={handleMarketIntelligenceGenerateShareableLink}
+                      onViewOpportunityLeads={handleViewOpportunityLeads}
 
 
 
@@ -15048,39 +15139,23 @@ const MarketResearch = React.memo(() => {
 
 
               <TabsContent value="analysis" className="mt-0">
-                {leadStreamSplitContext ? (
-                  <div className="h-[calc(100vh-280px)] min-h-[400px]">
-                    <LeadStreamScoutSplitView
-                      filters={leadStreamFilters}
-                      onFiltersChange={setLeadStreamFilters}
-                      editHistory={editHistory}
-                      onTabChange={(tab) => { setActiveTab(tab); setLeadStreamSplitContext(null); }}
-                      onExitSplitView={() => setLeadStreamSplitContext(null)}
-                      initialLeadContext={leadStreamSplitContext}
-                    />
-                  </div>
-                ) : (
-                  <>
-                    <div className="mb-4">
-                      <LeadStreamFilterBar filters={leadStreamFilters} onFiltersChange={setLeadStreamFilters} />
-                    </div>
-                    <LeadStream
-                      selectedIndustry={leadStreamFilters.selectedIndustry}
-                      selectedSize={leadStreamFilters.selectedSize}
-                      selectedRegion={leadStreamFilters.selectedRegion}
-                      onFiltersChange={setLeadStreamFilters}
-                      onAskScout={(ctx) => {
-                        const hasLeadContext = ctx.company || ctx.customMessage;
-                        if (hasLeadContext) {
-                          setLeadStreamSplitContext(ctx);
-                        } else {
-                          sessionStorage.setItem('leadStreamChatContext', JSON.stringify(ctx));
-                          handleTabChange('trends');
-                        }
-                      }}
-                    />
-                  </>
-                )}
+
+
+
+                <ScoutLeadStream 
+                  selectedIndustry={leadStreamFilters.selectedIndustry}
+                  selectedSize={leadStreamFilters.selectedSize}
+                  selectedRegion={leadStreamFilters.selectedRegion}
+                  opportunityFilter={opportunityFilter}
+                  onFiltersChange={(filters) => setLeadStreamFilters(filters)}
+                  onClearOpportunityFilter={() => setOpportunityFilter(null)}
+                  onChatWithScout={handleChatWithScout}
+                  onChatAboutCoverage={handleChatAboutCoverage}
+                  onSendToStrategist={handleSendToStrategist}
+                />
+
+
+
               </TabsContent>
 
 
@@ -15093,6 +15168,8 @@ const MarketResearch = React.memo(() => {
                 {/* Chat tab content rendered above when activeTab === 'trends' */}
                 <div />
               </TabsContent>
+
+
 
 
 
@@ -15185,13 +15262,6 @@ const MarketResearch = React.memo(() => {
 
       />
 
-      <AddLeadModal
-        open={addLeadModalOpen}
-        onOpenChange={setAddLeadModalOpen}
-        initialData={addLeadInitialData}
-        onSuccess={() => window.dispatchEvent(new CustomEvent('leadStreamRefresh'))}
-      />
-
       {/* Loading Modal for Scout Refresh */}
       <Dialog open={isRefreshing} onOpenChange={() => {}}>
         <DialogContent className="sm:max-w-md border-0 bg-transparent shadow-none p-0">
@@ -15243,4 +15313,5 @@ const MarketResearch = React.memo(() => {
 
 
 export default MarketResearch;
+
 

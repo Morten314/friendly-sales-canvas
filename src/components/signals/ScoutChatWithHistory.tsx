@@ -6,15 +6,14 @@ import { SignalsContextChat, SignalsChatContext, ChatMessage } from './SignalsCo
 import ScoutChatPanel from '@/components/market-research/ScoutChatPanel';
 import { SuggestedCompaniesSection } from '@/components/market-research/SuggestedCompaniesSection';
 import { AddLeadModal } from '@/components/market-research/AddLeadModal';
+import {
+  LEAD_STREAM_CHAT_CONTEXT_KEY,
+  type LeadStreamChatContext,
+} from '@/utils/leadStreamChatContext';
+
+export type { LeadStreamChatContext };
 
 const STORAGE_KEY_PREFIX = 'scout_chat_sessions';
-const LEAD_STREAM_CHAT_CONTEXT_KEY = 'leadStreamChatContext';
-
-export interface LeadStreamChatContext {
-  company?: string;
-  industry?: string;
-  customMessage?: string;
-}
 
 export interface ChatSession {
   id: string;
@@ -86,7 +85,13 @@ export function ScoutChatWithHistory({
         try {
           const ctx = JSON.parse(leadStored) as LeadStreamChatContext;
           sessionStorage.removeItem(LEAD_STREAM_CHAT_CONTEXT_KEY);
-          const title = ctx.company ? `Research: ${ctx.company}` : 'Ask Scout about leads';
+          const title =
+            ctx.sessionTitle ??
+            (ctx.company && ctx.personName
+              ? `Research: ${ctx.personName}`
+              : ctx.company
+                ? `Research: ${ctx.company}`
+                : 'Ask Scout about leads');
           const newSession: ChatSession = {
             id: generateId(),
             title,
@@ -177,6 +182,7 @@ export function ScoutChatWithHistory({
   }, [initialContext?.contentHash, initialContext?.signalHeading, initialContext?.recommendation, initialContext?.answer]);
 
   const handleNewChat = useCallback(() => {
+    setSuggestionPrefill(null);
     const newSession: ChatSession = {
       id: generateId(),
       title: 'New chat',
@@ -231,6 +237,7 @@ export function ScoutChatWithHistory({
   );
 
   const activeSession = sessions.find((s) => s.id === activeSessionId);
+  const [suggestionPrefill, setSuggestionPrefill] = useState<string | null>(null);
   const [addLeadModalOpen, setAddLeadModalOpen] = useState(false);
   const [addLeadInitialData, setAddLeadInitialData] = useState<{ companyName?: string; companyWebsite?: string } | undefined>();
 
@@ -242,6 +249,8 @@ export function ScoutChatWithHistory({
   const handleLeadAdded = useCallback(() => {
     window.dispatchEvent(new CustomEvent('leadStreamRefresh'));
   }, []);
+
+  const clearSuggestionPrefill = useCallback(() => setSuggestionPrefill(null), []);
 
   return (
     <div className="flex h-full min-h-0 w-full max-w-none overflow-hidden">
@@ -277,7 +286,9 @@ export function ScoutChatWithHistory({
             <div className="flex-1 min-h-0 overflow-y-auto px-3 pr-4">
               <div className="space-y-3 py-2 min-w-0 w-full">
                 {sessions.map((session) => {
-                  const displayTitle = session.context ? getSessionTitle(session.context) : session.title;
+                  const displayTitle = session.context
+                    ? getSessionTitle(session.context)
+                    : session.leadContext?.sessionTitle ?? session.title;
                   return (
                     <div
                       key={session.id}
@@ -343,34 +354,66 @@ export function ScoutChatWithHistory({
               }}
             />
           ) : (
-            <div className="flex flex-col gap-4 flex-1 min-h-0 w-full min-w-0 overflow-hidden">
-              {onTabChange && activeSession.leadContext && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-fit -ml-1 text-muted-foreground hover:text-foreground"
-                  onClick={() => onTabChange('analysis')}
-                >
-                  <Users className="h-4 w-4 mr-1.5" />
-                  Back to Lead Stream
-                </Button>
-              )}
-              <ScoutChatPanel
-                key={activeSession.id}
-                showScoutChat={true}
-                isSplitView={false}
-                hasEdits={false}
-                showEditHistory={false}
-                editHistory={editHistory}
-                lastEditedField=""
-                context={activeSession.leadContext ? 'lead-stream' : 'general'}
-                customMessage={activeSession.leadContext?.customMessage}
-                onClose={handleCloseChat}
-                hideCloseButton={!!activeSession.leadContext}
-              />
-              {activeSession.leadContext && (
-                <SuggestedCompaniesSection onAddToLeadStream={handleAddToLeadStream} />
-              )}
+            <div className="flex flex-1 min-h-0 w-full min-w-0 flex-col overflow-hidden">
+              <div className="flex flex-col gap-3 flex-1 min-h-0 min-w-0 overflow-hidden">
+                {onTabChange && activeSession.leadContext && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-fit -ml-1 text-muted-foreground hover:text-foreground shrink-0"
+                    onClick={() => onTabChange('analysis')}
+                  >
+                    <Users className="h-4 w-4 mr-1.5" />
+                    Back to Lead Stream
+                  </Button>
+                )}
+                <ScoutChatPanel
+                  key={activeSession.id}
+                  showScoutChat={true}
+                  isSplitView={false}
+                  hasEdits={false}
+                  showEditHistory={false}
+                  editHistory={editHistory}
+                  lastEditedField=""
+                  context={activeSession.leadContext ? 'lead-stream' : 'general'}
+                  customMessage={activeSession.leadContext?.customMessage}
+                  workspaceLine={activeSession.leadContext?.workspaceLine}
+                  inputPlaceholder={
+                    activeSession.leadContext?.personName
+                      ? `Ask Scout about ${activeSession.leadContext.personName}…`
+                      : activeSession.leadContext?.leadCount
+                        ? `Ask Scout about these ${activeSession.leadContext.leadCount} leads…`
+                        : undefined
+                  }
+                  prefillQuestion={suggestionPrefill}
+                  onPrefillConsumed={clearSuggestionPrefill}
+                  suggestedQuestions={activeSession.leadContext?.suggestedQuestions}
+                  onPickSuggestedQuestion={setSuggestionPrefill}
+                  leadHeaderDetail={
+                    activeSession.leadContext?.personName
+                      ? {
+                          type: 'single',
+                          company: activeSession.leadContext.company,
+                          source: activeSession.leadContext.source,
+                        }
+                      : activeSession.leadContext?.leadSummaries &&
+                          activeSession.leadContext.leadSummaries.length > 0
+                        ? {
+                            type: 'multi',
+                            leadCount:
+                              activeSession.leadContext.leadCount ??
+                              activeSession.leadContext.leadSummaries.length,
+                            leadSummaries: activeSession.leadContext.leadSummaries,
+                          }
+                        : undefined
+                  }
+                  onClose={handleCloseChat}
+                  hideCloseButton={!!activeSession.leadContext}
+                />
+                {activeSession.leadContext && (
+                  <SuggestedCompaniesSection onAddToLeadStream={handleAddToLeadStream} />
+                )}
+              </div>
             </div>
           )
         ) : (
