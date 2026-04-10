@@ -222,23 +222,23 @@ async def upload_prospect_list(file: UploadFile = File(...)):
     return result
 
 @app.get("/leads", response_model=List[Dict[str, Any]])
-def get_all_leads(user_id: str = Query(...), org_id: str = Query(...)):
+def get_all_leads(org_id: str = Query(...)):
     """
-    Get all leads filtered by user_id and org_id (multitenant).
+    Get all leads filtered by org_id (multitenant).
     Returns all lead properties directly - completely flexible like company profile.
     Uses parameterized queries for security.
     """
     try:
-        # Use parameterized query for security with multitenancy
+        # Use parameterized query for security with org-scoped multitenancy
         query_string = """
         MATCH (l:Lead)
-        WHERE l.user_id = $user_id AND l.org_id = $org_id
+        WHERE l.org_id = $org_id
         RETURN l
         """
         
         # Execute query with parameters
         with driver.session() as session:
-            results = session.run(query_string, user_id=user_id, org_id=org_id)
+            results = session.run(query_string, org_id=org_id)
             leads = []
             for record in results:
                 # Get all properties from the Lead node
@@ -571,19 +571,19 @@ async def batch_upload_leads(
         raise HTTPException(status_code=500, detail=f"Failed to process CSV file: {str(e)}")
 
 @app.get("/leads/by-file", response_model=List[Dict[str, Any]])
-def get_leads_by_file(user_id: str = Query(...), org_id: str = Query(...), file_id: str = Query(...)):
+def get_leads_by_file(org_id: str = Query(...), file_id: str = Query(...)):
     """
-    Fetch leads filtered by file_id (and user_id/org_id for multitenancy).
+    Fetch leads filtered by file_id within an org.
     Returns full lead records with all properties similar to GET /leads.
     """
     try:
         query_string = """
         MATCH (l:Lead)
-        WHERE l.user_id = $user_id AND l.org_id = $org_id AND l.file_id = $file_id
+        WHERE l.org_id = $org_id AND l.file_id = $file_id
         RETURN l
         """
         with driver.session() as session:
-            results = session.run(query_string, user_id=user_id, org_id=org_id, file_id=file_id)
+            results = session.run(query_string, org_id=org_id, file_id=file_id)
             leads: List[Dict[str, Any]] = []
             for record in results:
                 lead_node = record["l"]
@@ -604,16 +604,16 @@ def get_leads_by_file(user_id: str = Query(...), org_id: str = Query(...), file_
         raise HTTPException(status_code=500, detail=f"Failed to fetch leads by file_id: {str(e)}")
 
 @app.get("/leads/stream/status", response_model=Dict[str, Any])
-def get_lead_stream_status(user_id: str = Query(...), org_id: str = Query(...)):
+def get_lead_stream_status(org_id: str = Query(...)):
     """
-    List lead-stream uploads (file_id registry/status) for a given user/org.
+    List lead-stream uploads (file_id registry/status) for an org.
     """
     mongo_client = None
     try:
         mongo_client = _get_profiler_mongo_client()
         profiler_db = mongo_client["Profiler"]
         coll = profiler_db["Lead_Stream_Files"]
-        cursor = coll.find({"user_id": user_id, "org_id": org_id}).sort("uploaded_at", -1)
+        cursor = coll.find({"org_id": org_id}).sort("uploaded_at", -1)
         files = []
         for doc in cursor:
             item = {
