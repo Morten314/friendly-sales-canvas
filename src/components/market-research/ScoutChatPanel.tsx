@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Bot, X, Send, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/contexts/AuthContext';
 import { getUserLocalStorage } from '@/utils/cacheUtils';
 
@@ -33,11 +34,17 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
   onClose,
   hideCloseButton = false,
 }) => {
-  const { currentUser } = useAuth();
+  const { currentUser, orgId } = useAuth();
   const [userInput, setUserInput] = useState('');
   const [chatResponse, setChatResponse] = useState<string>('');
+  /** Prior turns for /signal_Ask (non–edit-mode only). */
+  const [signalAskHistory, setSignalAskHistory] = useState<{ user: string; assistant: string }[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  /** Wider textarea for “Chat with Scout” + Lead Stream tabs. */
+  const useExpandedChatInput =
+    context === 'general' || context === 'lead-stream';
 
   // Function to clean up response content - removes special characters and formats properly
   const cleanResponseContent = (content: string): string => {
@@ -155,7 +162,7 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
       let requestOptions: RequestInit;
       
       if (isEditMode) {
-        // Use /ask endpoint with GET method for edit context
+        // Edit diff context: GET /ask (not signal_Ask)
         url = `${baseUrl}/ask/?question=${encodeURIComponent(question)}`;
         
         // Get the stored JSON data from localStorage (user-specific)
@@ -177,17 +184,32 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
           }
         };
       } else {
-        // Use /chat endpoint with GET method for general questions
-        url = `${baseUrl}/chat/?question=${encodeURIComponent(question)}`;
+        // Same contract as Signals Swagger: POST /signal_Ask (not GET /chat)
+        if (!currentUser?.uid) {
+          setChatResponse('Please sign in to chat with Scout.');
+          setIsLoading(false);
+          return;
+        }
+        url = `${baseUrl}/signal_Ask`;
         requestOptions = {
-          method: 'GET',
+          method: 'POST',
           headers: {
-            'accept': 'application/json'
-          }
+            'Content-Type': 'application/json',
+            accept: 'application/json',
+          },
+          body: JSON.stringify({
+            org_id: orgId ?? 'org-123',
+            user_id: currentUser.uid,
+            question,
+            history: signalAskHistory,
+          }),
         };
       }
 
-      console.log(`🤖 Making Scout API call to ${isEditMode ? '/ask' : '/chat'} with question:`, question);
+      console.log(
+        `🤖 Making Scout API call to ${isEditMode ? '/ask' : '/signal_Ask'} with question:`,
+        question
+      );
       
       const response = await fetch(url, requestOptions);
 
@@ -197,11 +219,13 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
         console.log('Response type:', typeof data);
         console.log('Is array:', Array.isArray(data));
         
-        // Backend /chat returns { response: "..." } (Swagger); some paths use response_message
+        // Backend /signal_Ask: answer; /chat legacy: response_message, response
         const pickScoutBody = (obj: Record<string, unknown> | null | undefined): string => {
           if (!obj || typeof obj !== 'object') return '';
+          const ans = obj.answer;
           const msg = obj.response_message;
           const alt = obj.response;
+          if (typeof ans === 'string' && ans.trim() !== '') return ans;
           if (typeof msg === 'string' && msg.trim() !== '') return msg;
           if (typeof alt === 'string' && alt.trim() !== '') return alt;
           return '';
@@ -257,6 +281,9 @@ const ScoutChatPanel: React.FC<ScoutChatPanelProps> = ({
         // Clean and format the response before setting it
         const cleanedAnswer = cleanResponseContent(answer);
         setChatResponse(cleanedAnswer);
+        if (!isEditMode) {
+          setSignalAskHistory((prev) => [...prev, { user: question, assistant: cleanedAnswer }]);
+        }
       } else {
         setChatResponse('Sorry, I\'m having trouble connecting right now. Please try again later.');
         console.error('Failed to get response from Scout API');
@@ -540,20 +567,37 @@ const getContextualScoutMessage = () => {
         )}
       </div>
 
-      <div className="flex gap-2 mt-auto">
-        <Input
-          value={userInput}
-          onChange={(e) => setUserInput(e.target.value)}
-          placeholder="Ask Scout anything..."
-          className="flex-1"
-          onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-          disabled={isLoading}
-        />
+      <div className={`flex gap-2 mt-auto ${useExpandedChatInput ? 'items-end' : ''}`}>
+        {useExpandedChatInput ? (
+          <Textarea
+            value={userInput}
+            onChange={(e) => setUserInput(e.target.value)}
+            placeholder="Ask Scout anything… (Shift+Enter for a new line)"
+            className="flex-1 min-h-[100px] max-h-[240px] resize-y"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSendMessage();
+              }
+            }}
+            disabled={isLoading}
+            rows={4}
+          />
+        ) : (
+          <Input
+            value={userInput}
+            onChange={(e) => setUserInput(e.target.value)}
+            placeholder="Ask Scout anything..."
+            className="flex-1"
+            onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+            disabled={isLoading}
+          />
+        )}
         <Button 
           size="sm" 
           onClick={handleSendMessage}
           disabled={isLoading || !userInput.trim()}
-          className="bg-blue-600 hover:bg-blue-700"
+          className={`bg-blue-600 hover:bg-blue-700 shrink-0 ${useExpandedChatInput ? 'h-10 self-end' : ''}`}
         >
           {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
         </Button>
