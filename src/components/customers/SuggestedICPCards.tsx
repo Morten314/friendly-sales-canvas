@@ -74,6 +74,12 @@ import {
   PROFILER_ICP_DISPLAY_KEY,
   removeProfilerAcceptedIcpDisplayMeta,
 } from "@/utils/profilerAcceptedIcpDisplay";
+import {
+  ensureMissionProfilerScope,
+  isProfilerCacheValid,
+  getProfilerSnapshot,
+  commitProfilerSnapshot,
+} from "@/lib/missionProfilerSessionCache";
 
 const PROFILER_PENDING_RECOMMENDED_REJECT_KEY = "profiler_pendingRecommendedRejects";
 const PROFILER_DISMISSED_RECOMMENDED_IDS_KEY = "profiler_dismissedRecommendedIcpIds";
@@ -999,7 +1005,9 @@ export const SuggestedICPCards = ({
           );
         }
         await refetchCustomerProfileIcps();
-        window.dispatchEvent(new CustomEvent("customerProfileSaved"));
+        window.dispatchEvent(
+          new CustomEvent("customerProfileSaved", { detail: { fromProfiler: true } }),
+        );
         toast({ title: "ICP deleted", description: `"${icp.name}" removed from Current ICPs.` });
       } catch (e) {
         console.warn("[Profiler Current ICPs] DELETE customer_profile/icp: failed", e);
@@ -1043,6 +1051,21 @@ export const SuggestedICPCards = ({
       Boolean(refreshStorageKey) && refreshTrigger > 0 && refreshTrigger > prevRefreshStored;
 
     const loadData = async () => {
+      if (uid) {
+        ensureMissionProfilerScope(uid, orgIdToUse);
+        if (!refreshJustIncremented && isProfilerCacheValid(uid, orgIdToUse)) {
+          const snap = getProfilerSnapshot(uid, orgIdToUse);
+          if (snap) {
+            setExistingICPs(snap.existingICPs as ExistingICP[]);
+            setRefinedICPs(snap.refinedICPs as SuggestedICP[]);
+            setNewICPs(snap.newICPs as SuggestedICP[]);
+            setCardStatuses(snap.cardStatuses as Record<string, ICPCardStatus>);
+            setLoading(false);
+            return;
+          }
+        }
+      }
+
       setLoading(true);
 
       profilerIcpDebug("loadData: refresh state", {
@@ -1067,6 +1090,15 @@ export const SuggestedICPCards = ({
       setRefinedICPs(result.refined);
       setNewICPs(result.newSuggestions);
       setCardStatuses(result.mergedCardStatuses);
+
+      if (uid) {
+        commitProfilerSnapshot(uid, orgIdToUse, {
+          existingICPs: result.icps,
+          refinedICPs: result.refined,
+          newICPs: result.newSuggestions,
+          cardStatuses: result.mergedCardStatuses,
+        });
+      }
 
       setLoading(false);
     };
@@ -1163,7 +1195,9 @@ export const SuggestedICPCards = ({
         copyProfilerDisplayMetaToProfileId(icp.id, newProfileIds[0]);
       }
       await refetchCustomerProfileIcps();
-      window.dispatchEvent(new CustomEvent("customerProfileSaved"));
+      window.dispatchEvent(
+        new CustomEvent("customerProfileSaved", { detail: { fromProfiler: true } }),
+      );
 
       toast({
         title: "Customer Profile updated.",

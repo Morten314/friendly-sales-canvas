@@ -85,6 +85,14 @@ import ApiService from "@/services/api";
 import { buildApiUrl } from "@/lib/api";
 import jwtManager from "@/lib/jwt";
 import { extractIcpsDataFromFlexibleApiResponse } from "@/utils/profileIcpsExtract";
+import {
+  ensureMissionProfilerScope,
+  isMissionControlCacheValid,
+  getMissionControlCompanyProfileJson,
+  commitMissionControlCompanyProfile,
+  invalidateMissionControlCache,
+  invalidateProfilerCache,
+} from "@/lib/missionProfilerSessionCache";
 
 // Data Source Interface
 interface DataSource {
@@ -682,6 +690,8 @@ const MissionControl = () => {
         // description: "profile saved",
       });
 
+      invalidateProfilerCache(currentUser.uid, orgIdToUse);
+
       // Only mark company profile as saved if we have a valid company name
       if (savedCompanyName) {
         setIsCompanyProfileSaved(true);
@@ -892,6 +902,34 @@ const MissionControl = () => {
     }
   };
 
+  const applyCustomerProfileCompletenessFromPayload = (data: Record<string, unknown>) => {
+    const icpsData = extractIcpsDataFromFlexibleApiResponse(data);
+    setIsCustomerProfileSaved(Array.isArray(icpsData) && icpsData.length > 0);
+  };
+
+  const applyCustomerProfileCompletenessFromBackend = async (
+    userId: string,
+    orgId: string,
+    data: Record<string, unknown>,
+  ) => {
+    let icpsData = extractIcpsDataFromFlexibleApiResponse(data);
+    if (icpsData.length === 0) {
+      try {
+        const legacyRes = await fetch(`/api/customer_profile?org_id=${encodeURIComponent(orgId)}`, {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        });
+        if (legacyRes.ok) {
+          const legacy = (await legacyRes.json()) as Record<string, unknown>;
+          icpsData = extractIcpsDataFromFlexibleApiResponse(legacy);
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+    setIsCustomerProfileSaved(Array.isArray(icpsData) && icpsData.length > 0);
+  };
+
   useEffect(() => {
     const onIcpLoadFinished = () => setSyncingProfilerCustomerProfile(false);
     window.addEventListener("icpManagerCustomerProfileLoadFinished", onIcpLoadFinished);
@@ -928,9 +966,20 @@ const MissionControl = () => {
         return;
       }
 
+      const userId = currentUser.uid;
+      ensureMissionProfilerScope(userId, orgIdToUse);
+      if (isMissionControlCacheValid(userId, orgIdToUse)) {
+        const cached = getMissionControlCompanyProfileJson(userId, orgIdToUse);
+        if (cached) {
+          applyCompanyProfileJsonToMissionControlUi(cached, userId);
+          applyCustomerProfileCompletenessFromPayload(cached);
+        }
+        setIsLoadingProfile(false);
+        return;
+      }
+
       setIsLoadingProfile(true);
       try {
-        const userId = currentUser.uid;
         let retryCount = 0;
         const maxRetries = 2;
         const retryDelay = 1000; // 1 second
@@ -1014,52 +1063,27 @@ const MissionControl = () => {
             console.log("MissionControl: Mapped profile data:", profileData);
             
             if (profileData) {
-              console.log("MissionControl: Setting company profile state:", profileData);
-              console.log("MissionControl: Profile data values being set:", {
-                companyName: `"${profileData.companyName}"`,
-                headquarters: `"${profileData.headquarters}"`,
-                employeeSize: `"${profileData.employeeSize}"`,
-                industry: `"${profileData.industry}"`,
-                revenue: `"${profileData.revenue}"`,
-                gtmModel: `"${profileData.gtmModel}"`,
-                regionFocus: `"${profileData.regionFocus}"`,
-                dealSize: `"${profileData.dealSize}"`,
-                companyUrl: `"${profileData.companyUrl}"`,
-                keyBuyerPersona: `"${profileData.keyBuyerPersona}"`,
-              });
+              applyCompanyProfileJsonToMissionControlUi(data, userId);
+              void applyCustomerProfileCompletenessFromBackend(
+                userId,
+                orgIdToUse,
+                data as Record<string, unknown>,
+              );
 
-              // CRITICAL: Actually set the state with the profile data
-              setCompanyProfile(profileData);
-              console.log("MissionControl: State has been updated with profileData");
-
-              // Check if company profile is saved (has at least company name)
-              // Check both raw data and mapped profileData, but treat empty strings as falsy
               const companyName = (data.company_name || data.companyName || profileData.companyName || "").trim();
               const hasCompanyName = companyName.length > 0;
-              
-              console.log("MissionControl: Has company name check:", {
-                'data.company_name': `"${data.company_name}"`,
-                'data.companyName': data.companyName,
-                'profileData.companyName': `"${profileData.companyName}"`,
-                'companyName (trimmed)': `"${companyName}"`,
-                'hasCompanyName': hasCompanyName
-              });
-              
-              // Also save to localStorage for offline access
-              // Only save if we have actual company profile data (not just empty strings)
+
               if (hasCompanyName || profileData.headquarters || profileData.industry || profileData.revenue) {
                 try {
                   const { setUserLocalStorage } = await import("@/utils/cacheUtils");
-                  // Save both the API response and the mapped profile data for redundancy
                   const dataToSave = {
                     ...data,
                     ...profileData,
                     user_id: userId,
-                    // Ensure company_name is saved in both formats
                     company_name: profileData.companyName || data.company_name || "",
                     companyName: profileData.companyName || data.companyName || "",
                   };
-                  setUserLocalStorage('companyProfile', JSON.stringify(dataToSave), userId);
+                  setUserLocalStorage("companyProfile", JSON.stringify(dataToSave), userId);
                   console.log("MissionControl: Saved company profile to localStorage");
                 } catch (e) {
                   console.warn("MissionControl: Failed to save to localStorage:", e);
@@ -1067,15 +1091,8 @@ const MissionControl = () => {
               } else {
                 console.log("MissionControl: Skipping localStorage save - no meaningful company profile data");
               }
-              
-              if (hasCompanyName) {
-                console.log("MissionControl: Company profile is saved, unlocking customer profile tab");
-                setIsCompanyProfileSaved(true);
-              } else {
-                console.log("MissionControl: Company profile not yet saved - no company name found (empty string)");
-                // Don't unlock customer profile if company name is empty
-                setIsCompanyProfileSaved(false);
-              }
+
+              commitMissionControlCompanyProfile(userId, orgIdToUse, data as Record<string, unknown>);
               setIsLoadingProfile(false);
               return; // Success, exit retry loop
             } else {
@@ -1191,7 +1208,6 @@ const MissionControl = () => {
     // Add a small delay to ensure user is fully initialized
     const timeoutId = setTimeout(() => {
       loadProfileData();
-      loadDataSourcesFromBackend();
     }, 100);
 
     return () => clearTimeout(timeoutId);
@@ -3270,95 +3286,26 @@ const MissionControl = () => {
 
   const overallCompleteness = calculateOverallCompleteness();
 
-  // Listen for customer profile save events from ICPManager
+  // Listen for customer profile save events from ICPManager and Profiler
   useEffect(() => {
-    const handleCustomerProfileSaved = () => {
+    const handleCustomerProfileSaved = (e: Event) => {
       setIsCustomerProfileSaved(true);
-    };
-
-    // Listen for custom event from ICPManager
-    window.addEventListener('customerProfileSaved', handleCustomerProfileSaved);
-    
-    return () => {
-      window.removeEventListener('customerProfileSaved', handleCustomerProfileSaved);
-    };
-  }, [currentUser?.uid, orgIdToUse]);
-
-  // Check for existing customer profile data on mount (from backend)
-  useEffect(() => {
-    if (!currentUser?.uid) {
-      return;
-    }
-
-    const loadCustomerProfileFromBackend = async () => {
-      try {
-        const companyUrl = `/api/profile/company?user_id=${encodeURIComponent(currentUser.uid)}&org_id=${encodeURIComponent(orgIdToUse)}`;
-        const legacyUrl = `/api/customer_profile?org_id=${encodeURIComponent(orgIdToUse)}`;
-
-        const companyRes = await fetch(companyUrl, {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-        });
-
-        let legacyRes: Response | null = null;
-        let responseData: Record<string, unknown> | null = null;
-        if (companyRes.ok) {
-          responseData = (await companyRes.json()) as Record<string, unknown>;
-        }
-        let icpsData = responseData ? extractIcpsDataFromFlexibleApiResponse(responseData) : [];
-
-        if (icpsData.length === 0) {
-          legacyRes = await fetch(legacyUrl, {
-            method: "GET",
-            headers: { "Content-Type": "application/json" },
-          });
-          if (legacyRes.ok) {
-            responseData = (await legacyRes.json()) as Record<string, unknown>;
-            icpsData = extractIcpsDataFromFlexibleApiResponse(responseData);
-          }
-        }
-
-        const anyOk = companyRes.ok || (legacyRes?.ok ?? false);
-
-        if (anyOk && Array.isArray(icpsData) && icpsData.length > 0) {
-          console.log("MissionControl: Customer profile found in backend, unlocking customer profile tab");
-          setIsCustomerProfileSaved(true);
-        } else if (!anyOk) {
-          // Try localStorage as fallback
-          try {
-            const { getUserLocalStorage } = await import("@/utils/cacheUtils");
-            const localData = getUserLocalStorage('customerProfile', currentUser.uid);
-            if (localData) {
-              const localICPs = JSON.parse(localData);
-              if (Array.isArray(localICPs) && localICPs.length > 0) {
-                console.log("MissionControl: Customer profile found in localStorage, unlocking customer profile tab");
-                setIsCustomerProfileSaved(true);
-              }
-            }
-          } catch (e) {
-            // Ignore errors
-          }
-        }
-      } catch (error) {
-        console.error("Error checking customer profile:", error);
-        // Try localStorage as fallback
-        try {
-          const { getUserLocalStorage } = await import("@/utils/cacheUtils");
-          const localData = getUserLocalStorage('customerProfile', currentUser.uid);
-          if (localData) {
-            const localICPs = JSON.parse(localData);
-            if (Array.isArray(localICPs) && localICPs.length > 0) {
-              console.log("MissionControl: Customer profile found in localStorage fallback, unlocking customer profile tab");
-              setIsCustomerProfileSaved(true);
-            }
-          }
-        } catch (e) {
-          // Ignore errors
-        }
+      const uid = currentUser?.uid;
+      if (!uid) return;
+      const fromProfiler = (e as CustomEvent<{ fromProfiler?: boolean }>).detail?.fromProfiler === true;
+      if (fromProfiler) {
+        invalidateMissionControlCache(uid, orgIdToUse);
+        invalidateProfilerCache(uid, orgIdToUse);
+      } else {
+        invalidateProfilerCache(uid, orgIdToUse);
       }
     };
 
-    loadCustomerProfileFromBackend();
+    window.addEventListener("customerProfileSaved", handleCustomerProfileSaved);
+
+    return () => {
+      window.removeEventListener("customerProfileSaved", handleCustomerProfileSaved);
+    };
   }, [currentUser?.uid, orgIdToUse]);
 
   // Listen for data source added events from DataSourcesManager
@@ -3381,42 +3328,6 @@ const MissionControl = () => {
       setHasDataSources(true);
     }
   }, [dataSources.length]);
-
-  // Check if data sources exist in backend on mount
-  useEffect(() => {
-    const checkDataSourcesInBackend = async () => {
-      if (!currentUser?.uid) {
-        return;
-      }
-
-      try {
-        const apiUrl = `/api/profile/company?org_id=${orgIdToUse}`;
-        const response = await fetch(apiUrl, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          
-          // Check if data_sources exists in the response
-          if (data.data_sources && data.data_sources.sources && Array.isArray(data.data_sources.sources) && data.data_sources.sources.length > 0) {
-            console.log("MissionControl: Data sources found in backend");
-            setHasDataSources(true);
-          }
-
-        }
-      } catch (error) {
-        console.error("Error checking data sources:", error);
-      }
-    };
-
-    if (currentUser?.uid) {
-      checkDataSourcesInBackend();
-    }
-  }, [currentUser?.uid, orgIdToUse]);
 
   // Preload logo image to prevent delay when loading modal appears
   useEffect(() => {
