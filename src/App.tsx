@@ -19,10 +19,12 @@ import NotFound from "./pages/NotFound";
 import MarketResearch from "./pages/MarketResearch";
 import Insights from "./pages/Insights";
 import AgentHub from "./pages/AgentHub";
+import ScoutDeploymentPage from "./pages/ScoutDeployment";
 import Signals from "./pages/Signals";
 import MissionControl from "./pages/MissionControl";
 import Artifacts from "./pages/Artifacts";
 import PWAInstallPrompt from "./components/PWAInstallPrompt";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -65,11 +67,13 @@ const App = () => (
                   <Customers />
                 </ProtectedRoute>
               } />
-              <Route path="/deals" element={
+              <Route path="/deals" element={<Navigate to="/your-ai-team/strategist/workspace" replace />} />
+              <Route path="/your-ai-team/strategist/:tab" element={
                 <ProtectedRoute requireTenant>
                   <Deals />
                 </ProtectedRoute>
               } />
+              <Route path="/your-ai-team/strategist" element={<Navigate to="/your-ai-team/strategist/workspace" replace />} />
               <Route path="/calendar" element={
                 <ProtectedRoute requireTenant>
                   <Calendar />
@@ -101,6 +105,11 @@ const App = () => (
               <Route path="/artifacts" element={
                 <ProtectedRoute requireTenant>
                   <Artifacts />
+                </ProtectedRoute>
+              } />
+              <Route path="/scout-deployment" element={
+                <ProtectedRoute requireTenant>
+                  <ScoutDeploymentPage />
                 </ProtectedRoute>
               } />
               <Route path="*" element={<NotFound />} />

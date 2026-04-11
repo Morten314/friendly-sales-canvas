@@ -73,6 +73,7 @@ export function Header() {
     if (path === '/agent-hub') return 'Signals';
     if (path === '/dashboard') return 'Dashboard';
     if (path === '/market-research' || path.startsWith('/your-ai-team/scout')) return 'Scout';
+    if (path.startsWith('/your-ai-team/strategist')) return 'Strategist';
     if (path === '/customers') return 'Profiler';
     if (path === '/deals') return 'Strategist';
     if (path === '/calendar') return 'Activator';
