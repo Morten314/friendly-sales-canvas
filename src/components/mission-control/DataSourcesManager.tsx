@@ -1737,23 +1737,91 @@ const DataSourcesManager: React.FC = () => {
   };
 
   // ==================== LEAD STREAM FUNCTIONS ====================
-  
-  // Helper: Detect CSV delimiter
-  const detectDelimiter = (text: string): string => {
-    const firstLine = text.split('\n')[0];
-    const delimiters = [',', ';', '\t'];
-    let maxCount = 0;
-    let detectedDelimiter = ',';
-    
-    for (const delimiter of delimiters) {
-      const count = (firstLine.match(new RegExp(`\\${delimiter}`, 'g')) || []).length;
-      if (count > maxCount) {
-        maxCount = count;
-        detectedDelimiter = delimiter;
+
+  /**
+   * RFC 4180 only treats U+0022 as the quote character. Excel/Word often emit “curly” quotes;
+   * those must become ASCII " or multiline quoted fields never merge and column counts break.
+   */
+  const normalizeCsvAsciiDoubleQuotes = (text: string): string =>
+    text.replace(/[\u201C\u201D\u201E\u201F\uFF02]/g, '"');
+
+  /** Split CSV into logical rows; newlines inside quoted fields do not end a row (RFC 4180). */
+  const splitCsvIntoLogicalRows = (text: string): string[] => {
+    if (!text) return [];
+    const rows: string[] = [];
+    let row = "";
+    let inQuotes = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      const next = text[i + 1];
+      if (c === '"') {
+        if (inQuotes && next === '"') {
+          row += '""';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+          row += '"';
+        }
+      } else if (!inQuotes && (c === "\n" || (c === "\r" && next === "\n"))) {
+        if (c === "\r") i++;
+        rows.push(row);
+        row = "";
+      } else if (!inQuotes && c === "\r") {
+        rows.push(row);
+        row = "";
+      } else {
+        row += c;
       }
     }
-    
-    return detectedDelimiter;
+    rows.push(row);
+    return rows;
+  };
+
+  /**
+   * Pick `,` vs `\t` vs `;` by how many rows match the header column count.
+   * Header-only counting breaks when the first row is misleading or `\t` is regex-mishandled (tab files look like “spaces” in editors).
+   */
+  const detectDelimiter = (text: string): string => {
+    const normalized = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+    const lines = splitCsvIntoLogicalRows(normalized).filter((l) => l.trim().length > 0);
+    if (lines.length === 0) return ",";
+
+    const candidates: readonly string[] = [",", "\t", ";"];
+    let best: string | null = null;
+    let bestScore = -1;
+
+    for (const delim of candidates) {
+      const headerCount = parseCsvLineRelaxed(lines[0], delim).length;
+      if (headerCount < 2) continue;
+
+      let score = 0;
+      const sample = Math.min(lines.length, 200);
+      for (let i = 1; i < sample; i++) {
+        if (parseCsvLineRelaxed(lines[i], delim).length === headerCount) score++;
+      }
+
+      if (
+        best === null ||
+        score > bestScore ||
+        (score === bestScore && candidates.indexOf(delim) < candidates.indexOf(best))
+      ) {
+        bestScore = score;
+        best = delim;
+      }
+    }
+
+    if (best !== null && bestScore > 0) return best;
+
+    // Fallback: raw separator counts on line 1 (no regex edge cases for \t)
+    const first = lines[0];
+    const commaC = (first.match(/,/g) || []).length;
+    const tabC = (first.match(/\t/g) || []).length;
+    const semiC = (first.match(/;/g) || []).length;
+    const m = Math.max(commaC, tabC, semiC);
+    if (m === 0) return ",";
+    if (tabC === m) return "\t";
+    if (semiC === m) return ";";
+    return ",";
   };
 
   // Helper: Normalize column names
@@ -1868,11 +1936,47 @@ const DataSourcesManager: React.FC = () => {
     return fields;
   };
 
+  /** True if a line has an odd number of unescaped `"` toggles (unclosed quoted field on this line alone). */
+  const csvLineHasUnclosedQuote = (line: string): boolean => {
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      const nextChar = line[i + 1];
+      if (char === '"') {
+        if (inQuotes && nextChar === '"') {
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      }
+    }
+    return inQuotes;
+  };
+
+  /**
+   * Many exports use non-standard `\"` or omit the final `"` on a row. That swallows commas into one field
+   * and collapses column counts. Repair before parsing.
+   */
+  const repairCsvLineForParsing = (line: string): string => {
+    let s = line.replace(/\\"/g, '"');
+    // No ASCII " in line → RFC quoting isn't in play; never append a synthetic closing quote.
+    if (!s.includes('"')) return s;
+    if (csvLineHasUnclosedQuote(s)) {
+      s = `${s}"`;
+    }
+    return s;
+  };
+
+  const parseCsvLineRelaxed = (line: string, delimiter: string = ","): string[] => {
+    return parseCsvLine(repairCsvLineForParsing(line), delimiter);
+  };
+
   // Helper: Normalize CSV format
   const normalizeCsv = (text: string): string => {
     text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    text = normalizeCsvAsciiDoubleQuotes(text);
     const delimiter = detectDelimiter(text);
-    let lines = text.split('\n').filter(line => line.trim().length > 0);
+    const lines = splitCsvIntoLogicalRows(text).filter(line => line.trim().length > 0);
     if (lines.length === 0) return text;
     
     // Normalize all lines to ensure consistent formatting
@@ -1880,7 +1984,7 @@ const DataSourcesManager: React.FC = () => {
       if (line.trim() === '') return line;
       
       // Parse the line using the detected delimiter
-      const fields = parseCsvLine(line, delimiter);
+      const fields = parseCsvLineRelaxed(line, delimiter);
       
       // Ensure fields with special characters are properly quoted
       const normalizedFields = fields.map(field => {
@@ -1899,7 +2003,7 @@ const DataSourcesManager: React.FC = () => {
     text = normalizedLines.join('\n');
     
     // Normalize column names in header
-    const finalLines = text.split('\n').filter(line => line.trim().length > 0);
+    const finalLines = splitCsvIntoLogicalRows(text).filter(line => line.trim().length > 0);
     if (finalLines.length > 0) {
       finalLines[0] = normalizeColumnNames(finalLines[0]);
       text = finalLines.join('\n');
@@ -1975,6 +2079,9 @@ const DataSourcesManager: React.FC = () => {
           if (text.charCodeAt(0) === 0xFEFF) {
             text = text.slice(1);
           }
+
+          text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+          text = normalizeCsvAsciiDoubleQuotes(text);
           
           // Check for binary content in decoded text
           const binaryPattern = /[\x00-\x08\x0E-\x1F\x7F-\x9F]/g;
@@ -1992,8 +2099,8 @@ const DataSourcesManager: React.FC = () => {
             return;
           }
           
-          // First, validate the original file structure
-          const originalLines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n').filter(line => line.trim().length > 0);
+          // First, validate the original file structure (respect quoted fields that span lines)
+          const originalLines = splitCsvIntoLogicalRows(text).filter((line) => line.trim().length > 0);
           if (originalLines.length === 0) {
             resolve({ valid: false, error: "CSV file appears to be empty" });
             return;
@@ -2003,7 +2110,7 @@ const DataSourcesManager: React.FC = () => {
           const originalDelimiter = detectDelimiter(text);
           
           // Validate original structure
-          const originalHeaderFields = parseCsvLine(originalLines[0], originalDelimiter);
+          const originalHeaderFields = parseCsvLineRelaxed(originalLines[0], originalDelimiter);
           const originalExpectedCount = originalHeaderFields.length;
           
           if (originalExpectedCount === 0) {
@@ -2011,46 +2118,77 @@ const DataSourcesManager: React.FC = () => {
             return;
           }
           
-          // Check original file structure
+          // Check original file structure (scan all rows — "line 70" is logical row index, not always your editor line)
+          type BadRow = { rowNum: number; actual: number; line: string; unclosed: boolean };
+          const badOriginal: BadRow[] = [];
           for (let i = 1; i < originalLines.length; i++) {
             const line = originalLines[i];
-            
-            // Check if line contains binary/control characters (indicates corrupted or wrong file type)
-            const binaryPattern = /[\x00-\x08\x0E-\x1F\x7F-\x9F]/;
-            if (binaryPattern.test(line)) {
+
+            const binaryPatternRow = /[\x00-\x08\x0E-\x1F\x7F-\x9F]/;
+            if (binaryPatternRow.test(line)) {
               console.error("❌ CSV Validation Error - Binary content detected:", {
                 lineNumber: i + 1,
-                linePreview: line.substring(0, 100)
+                linePreview: line.substring(0, 100),
               });
-              
-              resolve({ 
-                valid: false, 
-                error: `Invalid file format detected on line ${i + 1}: This file appears to be a binary file (possibly an Excel .xlsx file) rather than a CSV file. Please save your file as CSV format: In Excel, go to File > Save As > Choose "CSV (Comma delimited) (*.csv)" format.` 
+              resolve({
+                valid: false,
+                error: `Invalid file format detected on row ${i + 1} (data rows after header): This file appears to be a binary file (possibly an Excel .xlsx file) rather than a CSV file. Please save your file as CSV format: In Excel, go to File > Save As > Choose "CSV (Comma delimited) (*.csv)" format.`,
               });
               return;
             }
-            
-            const rowFields = parseCsvLine(line, originalDelimiter);
+
+            const rowFields = parseCsvLineRelaxed(line, originalDelimiter);
             if (rowFields.length !== originalExpectedCount) {
-              console.error("❌ CSV Validation Error (Original):", {
-                lineNumber: i + 1,
-                lineContent: line.substring(0, 200), // Only show first 200 chars
-                expectedColumns: originalExpectedCount,
-                actualColumns: rowFields.length,
-                delimiter: originalDelimiter
+              const repaired = repairCsvLineForParsing(line);
+              badOriginal.push({
+                rowNum: i + 1,
+                actual: rowFields.length,
+                line,
+                unclosed: csvLineHasUnclosedQuote(repaired),
               });
-              
-              resolve({ 
-                valid: false, 
-                error: `CSV format error on line ${i + 1}: Expected ${originalExpectedCount} column(s), but found ${rowFields.length}. Please ensure all rows have the same number of columns and that fields containing commas are enclosed in quotes.` 
+            }
+          }
+
+          if (badOriginal.length > 0) {
+            const first = badOriginal[0];
+            const examples = badOriginal
+              .slice(0, 8)
+              .map((b) => `row ${b.rowNum} (${b.actual} columns)`)
+              .join(", ");
+            const more =
+              badOriginal.length > 8 ? ` (+${badOriginal.length - 8} more)` : "";
+            console.error("❌ CSV Validation Error (Original):", {
+              badRowCount: badOriginal.length,
+              expectedColumns: originalExpectedCount,
+              delimiter: originalDelimiter,
+              examples: badOriginal.slice(0, 5).map((b) => ({
+                rowNum: b.rowNum,
+                actualColumns: b.actual,
+                linePreview: b.line.substring(0, 200),
+              })),
+            });
+
+            const tip =
+              "Row numbers count logical CSV rows (header is row 1); blank lines are skipped, and one spreadsheet row split across several lines counts as a single row—so they often do not match line numbers in VS Code. ";
+            if (badOriginal.some((b) => b.unclosed)) {
+              resolve({
+                valid: false,
+                error: `${tip}Problem rows include: ${examples}${more}. At least one row has a quoted field that is not closed (missing "). Fix those cells or re-export from Excel/Sheets as CSV.`,
               });
               return;
             }
+            resolve({
+              valid: false,
+              error: `${tip}Problem rows include: ${examples}${more}. Expected ${originalExpectedCount} columns per row (from the header). Often this is tabs vs commas—save as "CSV (Comma delimited)" from Excel, or ensure every row uses the same separator. First problem preview: "${first.line.substring(0, 120).replace(/\s+/g, " ")}"`,
+            });
+            return;
           }
           
           // Now validate after normalization (what will be sent to backend)
           const normalizedText = normalizeCsv(text);
-          const normalizedLines = normalizedText.split('\n').filter(line => line.trim().length > 0);
+          const normalizedLines = splitCsvIntoLogicalRows(normalizedText).filter(
+            (line) => line.trim().length > 0,
+          );
           
           if (normalizedLines.length === 0) {
             resolve({ valid: false, error: "CSV file appears to be empty after normalization" });
@@ -2061,7 +2199,7 @@ const DataSourcesManager: React.FC = () => {
           const delimiter = ',';
           
           // Parse normalized header
-          const headerFields = parseCsvLine(normalizedLines[0], delimiter);
+          const headerFields = parseCsvLineRelaxed(normalizedLines[0], delimiter);
           const expectedColumnCount = headerFields.length;
           
           console.log("🔍 CSV Validation - Normalized Header:", {
@@ -2075,24 +2213,48 @@ const DataSourcesManager: React.FC = () => {
             return;
           }
           
-          // Validate normalized rows
+          const badNormalized: BadRow[] = [];
           for (let i = 1; i < normalizedLines.length; i++) {
-            const rowFields = parseCsvLine(normalizedLines[i], delimiter);
+            const normLine = normalizedLines[i];
+            const rowFields = parseCsvLineRelaxed(normLine, delimiter);
             if (rowFields.length !== expectedColumnCount) {
-              console.error("❌ CSV Validation Error (Normalized):", {
-                lineNumber: i + 1,
-                lineContent: normalizedLines[i],
-                expectedColumns: expectedColumnCount,
-                actualColumns: rowFields.length,
-                parsedFields: rowFields
+              const repaired = repairCsvLineForParsing(normLine);
+              badNormalized.push({
+                rowNum: i + 1,
+                actual: rowFields.length,
+                line: normLine,
+                unclosed: csvLineHasUnclosedQuote(repaired),
               });
-              
-              resolve({ 
-                valid: false, 
-                error: `CSV format error on line ${i + 1}: Expected ${expectedColumnCount} column(s), but found ${rowFields.length}. Please ensure all rows have the same number of columns and that fields containing commas are enclosed in quotes.` 
+            }
+          }
+
+          if (badNormalized.length > 0) {
+            const first = badNormalized[0];
+            const examples = badNormalized
+              .slice(0, 8)
+              .map((b) => `row ${b.rowNum} (${b.actual} columns)`)
+              .join(", ");
+            const more =
+              badNormalized.length > 8 ? ` (+${badNormalized.length - 8} more)` : "";
+            console.error("❌ CSV Validation Error (Normalized):", {
+              badRowCount: badNormalized.length,
+              expectedColumns: expectedColumnCount,
+              examples: badNormalized.slice(0, 3),
+            });
+            const tip =
+              "After normalizing for upload, some rows still do not match the header. Row numbers are logical rows (header = 1), not always VS Code line numbers. ";
+            if (badNormalized.some((b) => b.unclosed)) {
+              resolve({
+                valid: false,
+                error: `${tip}Problem rows: ${examples}${more}. Fix unclosed quotes (") in those cells or re-export the CSV from Excel.`,
               });
               return;
             }
+            resolve({
+              valid: false,
+              error: `${tip}Problem rows: ${examples}${more}. Expected ${expectedColumnCount} columns. Preview: "${first.line.substring(0, 120).replace(/\s+/g, " ")}"`,
+            });
+            return;
           }
           
           console.log("✅ CSV Validation - All rows validated successfully (original and normalized)");
