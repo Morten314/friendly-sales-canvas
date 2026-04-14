@@ -115,12 +115,17 @@ const OpportunityDashboard: React.FC<OpportunityDashboardProps> = ({ onChatAbout
           </div>
         </Card>
 
-        {/* 2. Report Components — Ranked by Score */}
+        {/* 2. Leads × Reports — Rating Distribution */}
         <Card className="p-4">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4 text-primary" />
-              <h3 className="text-sm font-semibold text-foreground">Report Components by Lead Score</h3>
+              <h3 className="text-sm font-semibold text-foreground">Leads by Report Section</h3>
+            </div>
+            <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-emerald-500 inline-block" /> High</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-amber-500 inline-block" /> Medium</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-red-400 inline-block" /> Low</span>
             </div>
           </div>
           <div className="h-[130px]">
@@ -132,6 +137,7 @@ const OpportunityDashboard: React.FC<OpportunityDashboardProps> = ({ onChatAbout
                   tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
                   axisLine={false}
                   tickLine={false}
+                  label={{ value: "Leads", position: "insideBottomRight", fontSize: 9, fill: "hsl(var(--muted-foreground))", offset: -2 }}
                 />
                 <YAxis
                   type="category"
@@ -142,11 +148,9 @@ const OpportunityDashboard: React.FC<OpportunityDashboardProps> = ({ onChatAbout
                   width={80}
                 />
                 <RechartsTooltip content={<ReportTooltip />} />
-                <Bar dataKey="totalScore" radius={[0, 4, 4, 0]} barSize={14}>
-                  {reportComponentData.map((_, i) => (
-                    <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                  ))}
-                </Bar>
+                <Bar dataKey="high" stackId="a" fill="#10b981" radius={[0, 0, 0, 0]} barSize={14} name="High" />
+                <Bar dataKey="medium" stackId="a" fill="#f59e0b" radius={[0, 0, 0, 0]} barSize={14} name="Medium" />
+                <Bar dataKey="low" stackId="a" fill="#f87171" radius={[0, 4, 4, 0]} barSize={14} name="Low" />
               </BarChart>
             </ResponsiveContainer>
           </div>
