@@ -86,6 +86,8 @@ interface LeadStreamFileApiRow {
   created_count?: number;
   error_count?: number;
   processing_status?: string;
+  /** Some APIs use `status` instead of `processing_status`. */
+  status?: string;
   /** Some backends mark Lead_Stream_Files as deleted separately from processing_status */
   tracking_status?: string;
 }
@@ -2156,7 +2158,36 @@ const DataSourcesManager: React.FC = () => {
     return cleanMessage;
   };
 
-  // API: Upload CSV batch
+  /**
+   * Backend accepts CSV text and Excel binaries. Browsers often omit extensions or set only MIME;
+   * extension-only checks misclassify XLSX as CSV and run convertToUtf8 (corrupts ZIP/OLE bytes).
+   */
+  const getLeadImportKind = (file: File): "csv" | "excel" | null => {
+    if (/\.(xlsx|xls|xlsm)$/i.test(file.name)) return "excel";
+    if (/\.csv$/i.test(file.name)) return "csv";
+    const t = (file.type || "").toLowerCase();
+    if (
+      t === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+      t === "application/vnd.ms-excel" ||
+      t === "application/vnd.ms-excel.sheet.macroenabled.12" ||
+      (t.includes("spreadsheetml") && !t.includes("csv"))
+    ) {
+      return "excel";
+    }
+    if (t === "text/csv" || t === "application/csv") return "csv";
+    return null;
+  };
+
+  const sniffExcelBinarySignature = async (f: File): Promise<boolean> => {
+    if (f.size < 4) return false;
+    const ab = await f.slice(0, 8).arrayBuffer();
+    const u = new Uint8Array(ab);
+    if (u.length >= 2 && u[0] === 0x50 && u[1] === 0x4b) return true;
+    if (u.length >= 4 && u[0] === 0xd0 && u[1] === 0xcf && u[2] === 0x11 && u[3] === 0xe0) return true;
+    return false;
+  };
+
+  // API: Upload lead file batch (CSV, XLSX, XLS — matches backend)
   const uploadCsvBatch = async (file: File) => {
     const userId = currentUser?.uid || "";
     const leadOrgId = orgIdToUse;
@@ -2209,18 +2240,22 @@ const DataSourcesManager: React.FC = () => {
       });
     };
 
-    let utf8File: File;
-    try {
-      utf8File = await convertToUtf8(file);
-    } catch (error) {
-      throw new Error(`Failed to process CSV file encoding: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    let uploadFile: File;
+    if (getLeadImportKind(file) === "excel" || (await sniffExcelBinarySignature(file))) {
+      uploadFile = file;
+    } else {
+      try {
+        uploadFile = await convertToUtf8(file);
+      } catch (error) {
+        throw new Error(`Failed to process CSV file encoding: ${error instanceof Error ? error.message : "Unknown error"}`);
+      }
     }
 
     const authHeader = await getAuthHeader();
     const url = buildApiUrl("leads/batch-upload");
     
     const formData = new FormData();
-    formData.append("file", utf8File);
+    formData.append("file", uploadFile);
     formData.append("user_id", userId);
     formData.append("org_id", leadOrgId);
 
@@ -2228,8 +2263,8 @@ const DataSourcesManager: React.FC = () => {
       url,
       userId,
       orgId: leadOrgId,
-      fileName: utf8File.name,
-      fileSize: utf8File.size,
+      fileName: uploadFile.name,
+      fileSize: uploadFile.size,
       hasAuth: !!authHeader,
     });
 
@@ -2262,7 +2297,7 @@ const DataSourcesManager: React.FC = () => {
         // If not JSON, use the text as is
       }
       
-      throw new Error(`Failed to upload CSV: ${response.status} - ${errorText}`);
+      throw new Error(`Failed to upload file: ${response.status} - ${errorText}`);
     }
 
     const result = await response.json();
@@ -2284,33 +2319,59 @@ const DataSourcesManager: React.FC = () => {
     );
 
   const isTerminalLeadStreamStatus = (status?: string) => {
-    const s = (status || "").toLowerCase();
+    const s = (status || "").toLowerCase().trim();
     return (
       s === "completed" ||
       s === "complete" ||
       s === "failed" ||
       s === "error" ||
-      s === "deleted"
+      s === "deleted" ||
+      s === "success" ||
+      s === "succeeded" ||
+      s === "done" ||
+      s === "finished" ||
+      s === "processed" ||
+      s === "ready"
     );
+  };
+
+  const getLeadStreamRowStatus = (row: LeadStreamFileApiRow): string => {
+    const ts = (row.tracking_status || "").toLowerCase();
+    if (ts === "deleted") return "deleted";
+    return row.processing_status ?? row.status ?? "";
   };
 
   const mapProcessingStatusToSourceStatus = (status?: string): SourceStatus => {
     const s = (status || "").toLowerCase();
-    if (s === "completed" || s === "complete") return "completed";
-    if (s === "failed" || s === "error") return "failed";
     if (s === "deleted") return "completed";
+    if (
+      s === "completed" ||
+      s === "complete" ||
+      s === "success" ||
+      s === "succeeded" ||
+      s === "done" ||
+      s === "finished" ||
+      s === "processed" ||
+      s === "ready"
+    ) {
+      return "completed";
+    }
+    if (s === "failed" || s === "error") return "failed";
     return "processing";
   };
 
   /** GET /leads/stream/status — list uploads + processing stats for user/org */
-  const refreshLeadStreamStatus = useCallback(async () => {
+  const refreshLeadStreamStatus = useCallback(async (opts?: { silent?: boolean }) => {
+    const silent = opts?.silent === true;
     const userId = currentUser?.uid || "";
     if (!userId) {
       setLeadStreamFiles([]);
       return;
     }
 
-    setLeadStreamStatusLoading(true);
+    if (!silent) {
+      setLeadStreamStatusLoading(true);
+    }
     try {
       const authHeader = await getAuthHeader();
       const qs = new URLSearchParams({
@@ -2346,7 +2407,9 @@ const DataSourcesManager: React.FC = () => {
     } catch (e) {
       console.error("DataSourcesManager refreshLeadStreamStatus:", e);
     } finally {
-      setLeadStreamStatusLoading(false);
+      if (!silent) {
+        setLeadStreamStatusLoading(false);
+      }
     }
   }, [currentUser?.uid, orgIdToUse]);
 
@@ -2448,39 +2511,27 @@ const DataSourcesManager: React.FC = () => {
 
   useEffect(() => {
     if (!currentUser?.uid) return;
-    const needsPoll = leadStreamFiles.some((f) => !isTerminalLeadStreamStatus(f.processing_status));
+    const needsPoll = leadStreamFiles.some(
+      (f) => !isTerminalLeadStreamStatus(getLeadStreamRowStatus(f)),
+    );
     if (!needsPoll) return;
     const id = setInterval(() => {
-      void refreshLeadStreamStatus();
+      void refreshLeadStreamStatus({ silent: true });
     }, 3000);
     return () => clearInterval(id);
   }, [leadStreamFiles, currentUser?.uid, refreshLeadStreamStatus]);
 
-  // Handlers for CSV upload
+  // Handlers for lead batch upload (CSV / XLSX / XLS — same as backend)
   const handleLeadFileSelect = async (file: File) => {
-    // Check file extension
-    if (file.type !== "text/csv" && !file.name.toLowerCase().endsWith(".csv")) {
-      toast({
-        title: "Invalid file type",
-        description: "Please upload a CSV file. If you're using Excel, save the file as 'CSV (Comma delimited) (*.csv)' format.",
-        variant: "destructive",
-      });
+    if (getLeadImportKind(file) !== null || (await sniffExcelBinarySignature(file))) {
+      setSelectedLeadFile(file);
       return;
     }
-    
-    // Quick check for Excel files (ZIP signature)
-    const firstBytes = await file.slice(0, 4).arrayBuffer();
-    const bytes = new Uint8Array(firstBytes);
-    if (bytes.length >= 2 && bytes[0] === 0x50 && bytes[1] === 0x4B) {
-      toast({
-        title: "Invalid file format",
-        description: "This appears to be an Excel file (.xlsx) rather than a CSV file. Please save your file as CSV format: In Excel, go to File > Save As > Choose 'CSV (Comma delimited) (*.csv)' format.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    setSelectedLeadFile(file);
+    toast({
+      title: "Invalid file type",
+      description: "Please upload a CSV, XLSX, or XLS file.",
+      variant: "destructive",
+    });
   };
 
   const handleLeadFileInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -2541,7 +2592,7 @@ const DataSourcesManager: React.FC = () => {
     if (!selectedLeadFile) {
       toast({
         title: "No file selected",
-        description: "Please select a CSV file to upload.",
+        description: "Please select a CSV, XLSX, or XLS file to upload.",
         variant: "destructive",
       });
       return;
@@ -2549,15 +2600,17 @@ const DataSourcesManager: React.FC = () => {
 
     setIsUploadingLeads(true);
     try {
-      const validation = await validateCsvFormat(selectedLeadFile);
-      if (!validation.valid) {
-        toast({
-          title: "CSV validation failed",
-          description: validation.error || "Invalid CSV format",
-          variant: "destructive",
-        });
-        setIsUploadingLeads(false);
-        return;
+      if (getLeadImportKind(selectedLeadFile) === "csv") {
+        const validation = await validateCsvFormat(selectedLeadFile);
+        if (!validation.valid) {
+          toast({
+            title: "CSV validation failed",
+            description: validation.error || "Invalid CSV format",
+            variant: "destructive",
+          });
+          setIsUploadingLeads(false);
+          return;
+        }
       }
     } catch (validationError) {
       toast({
@@ -2587,19 +2640,19 @@ const DataSourcesManager: React.FC = () => {
 
       if (errorCount > 0 && errors.length > 0) {
         toast({
-          title: "CSV uploaded with some errors",
+          title: "Import completed with errors",
           description: `Created ${createdCount} leads. ${errorCount} errors occurred.`,
           variant: "default",
         });
       } else if (createdCount > 0) {
         toast({
-          title: "CSV uploaded successfully",
+          title: "Import successful",
           description: `Successfully created ${createdCount} lead(s).`,
         });
       } else {
         toast({
           title: "Upload completed",
-          description: "No leads were created. Please check your CSV file format.",
+          description: "No leads were created. Check column layout and try again, or see server messages.",
           variant: "default",
         });
       }
@@ -2608,7 +2661,7 @@ const DataSourcesManager: React.FC = () => {
       setSelectedLeadFile(null);
       setShowLeadUpload(false);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to upload CSV file. Please try again.";
+      const errorMessage = error instanceof Error ? error.message : "Failed to upload file. Please try again.";
       const parsedMessage = parseErrorMessage(errorMessage);
       
       toast({
@@ -3362,7 +3415,7 @@ const DataSourcesManager: React.FC = () => {
                 Lead Stream
               </h3>
               <p className="text-sm text-muted-foreground">
-                Import leads from a CSV. Status and row counts come from the server while the file is processed.
+                Import leads from a CSV, XLSX, or XLS file. Status and row counts come from the server while the file is processed.
               </p>
               {leadStreamStatusLoading && leadStreamFiles.length > 0 && (
                 <p className="text-xs text-muted-foreground mt-1">Refreshing status…</p>
@@ -3387,7 +3440,7 @@ const DataSourcesManager: React.FC = () => {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="lead-csv-upload" className="text-base font-medium">
-                      CSV file *
+                      Lead file (CSV, XLSX, or XLS) *
                     </Label>
                     <div
                       onDragOver={handleLeadDragOver}
@@ -3398,7 +3451,7 @@ const DataSourcesManager: React.FC = () => {
                       <input
                         ref={leadFileInputRef}
                         type="file"
-                        accept=".csv"
+                        accept=".csv,.xlsx,.xls,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
                         onChange={handleLeadFileInputChange}
                         className="hidden"
                         id="lead-csv-upload"
@@ -3414,13 +3467,13 @@ const DataSourcesManager: React.FC = () => {
                           <span className="text-foreground font-medium truncate">{selectedLeadFile.name}</span>
                         ) : (
                           <span className="text-muted-foreground">
-                            Click to browse or drag and drop a CSV file here
+                            Click to browse or drag and drop a CSV, XLSX, or XLS file here
                           </span>
                         )}
                       </label>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Same as adding a file under Data Sources — save as CSV from Excel or Google Sheets.
+                      Excel workbooks are parsed on the server. CSV files are checked in the browser before upload.
                     </p>
                   </div>
                   <div className="flex justify-end gap-2 pt-2 border-t">
@@ -3502,7 +3555,9 @@ const DataSourcesManager: React.FC = () => {
                           </span>
                         </TableCell>
                         <TableCell>
-                          {getStatusBadge(mapProcessingStatusToSourceStatus(row.processing_status))}
+                          {getStatusBadge(
+                            mapProcessingStatusToSourceStatus(getLeadStreamRowStatus(row)),
+                          )}
                         </TableCell>
                         <TableCell className="text-right">
                           <Button

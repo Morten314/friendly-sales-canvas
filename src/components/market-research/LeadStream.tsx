@@ -677,6 +677,31 @@ const LeadStream = ({
     return text;
   };
 
+  const getLeadImportKind = (file: File): "csv" | "excel" | null => {
+    if (/\.(xlsx|xls|xlsm)$/i.test(file.name)) return "excel";
+    if (/\.csv$/i.test(file.name)) return "csv";
+    const t = (file.type || "").toLowerCase();
+    if (
+      t === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+      t === "application/vnd.ms-excel" ||
+      t === "application/vnd.ms-excel.sheet.macroenabled.12" ||
+      (t.includes("spreadsheetml") && !t.includes("csv"))
+    ) {
+      return "excel";
+    }
+    if (t === "text/csv" || t === "application/csv") return "csv";
+    return null;
+  };
+
+  const sniffExcelBinarySignature = async (f: File): Promise<boolean> => {
+    if (f.size < 4) return false;
+    const ab = await f.slice(0, 8).arrayBuffer();
+    const u = new Uint8Array(ab);
+    if (u.length >= 2 && u[0] === 0x50 && u[1] === 0x4b) return true;
+    if (u.length >= 4 && u[0] === 0xd0 && u[1] === 0xcf && u[2] === 0x11 && u[3] === 0xe0) return true;
+    return false;
+  };
+
   const uploadCsvBatch = async (file: File) => {
     if (!userId || !orgId) {
       throw new Error("User ID and Org ID are required");
@@ -736,20 +761,22 @@ const LeadStream = ({
       });
     };
 
-    let utf8File: File;
-    try {
-      utf8File = await convertToUtf8(file);
-    } catch (error) {
-      throw new Error(`Failed to process CSV file encoding: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    let uploadFile: File;
+    if (getLeadImportKind(file) === "excel" || (await sniffExcelBinarySignature(file))) {
+      uploadFile = file;
+    } else {
+      try {
+        uploadFile = await convertToUtf8(file);
+      } catch (error) {
+        throw new Error(`Failed to process CSV file encoding: ${error instanceof Error ? error.message : "Unknown error"}`);
+      }
     }
 
     const authHeader = await jwtManager.getAuthHeader();
     const url = buildApiUrl("leads/batch-upload");
     
-    // Backend expects FormData with file, user_id, and org_id
-    // The CSV file has already been normalized (column names, encoding, delimiters)
     const formData = new FormData();
-    formData.append("file", utf8File);
+    formData.append("file", uploadFile);
     formData.append("user_id", userId);
     formData.append("org_id", orgId);
 
@@ -757,8 +784,8 @@ const LeadStream = ({
       url,
       userId,
       orgId,
-      fileName: utf8File.name,
-      fileSize: utf8File.size,
+      fileName: uploadFile.name,
+      fileSize: uploadFile.size,
       hasAuth: !!authHeader,
     });
 
@@ -783,7 +810,7 @@ const LeadStream = ({
         status: response.status,
         errorText,
       });
-      throw new Error(`Failed to upload CSV: ${response.status} - ${errorText}`);
+      throw new Error(`Failed to upload file: ${response.status} - ${errorText}`);
     }
 
     const result = await response.json();
@@ -805,22 +832,22 @@ const LeadStream = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, orgId]);
 
-  const handleFileSelect = (file: File) => {
-    if (file.type !== "text/csv" && !file.name.endsWith(".csv")) {
-      toast({
-        title: "Invalid file type",
-        description: "Please upload a CSV file.",
-        variant: "destructive",
-      });
+  const handleFileSelect = async (file: File) => {
+    if (getLeadImportKind(file) !== null || (await sniffExcelBinarySignature(file))) {
+      setSelectedFile(file);
       return;
     }
-    setSelectedFile(file);
+    toast({
+      title: "Invalid file type",
+      description: "Please upload a CSV, XLSX, or XLS file.",
+      variant: "destructive",
+    });
   };
 
-  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      handleFileSelect(file);
+      await handleFileSelect(file);
     }
   };
 
@@ -834,12 +861,12 @@ const LeadStream = ({
     setIsDragging(false);
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
     const file = e.dataTransfer.files[0];
     if (file) {
-      handleFileSelect(file);
+      await handleFileSelect(file);
     }
   };
 
@@ -913,24 +940,25 @@ const LeadStream = ({
     if (!selectedFile) {
       toast({
         title: "No file selected",
-        description: "Please select a CSV file to upload.",
+        description: "Please select a CSV, XLSX, or XLS file to upload.",
         variant: "destructive",
       });
       return;
     }
 
-    // Validate CSV format before uploading
     setIsUploading(true);
     try {
-      const validation = await validateCsvFormat(selectedFile);
-      if (!validation.valid) {
-        toast({
-          title: "CSV validation failed",
-          description: validation.error || "Invalid CSV format",
-          variant: "destructive",
-        });
-        setIsUploading(false);
-        return;
+      if (getLeadImportKind(selectedFile) === "csv") {
+        const validation = await validateCsvFormat(selectedFile);
+        if (!validation.valid) {
+          toast({
+            title: "CSV validation failed",
+            description: validation.error || "Invalid CSV format",
+            variant: "destructive",
+          });
+          setIsUploading(false);
+          return;
+        }
       }
     } catch (validationError) {
       toast({
@@ -974,19 +1002,19 @@ const LeadStream = ({
         });
         
         toast({
-          title: "CSV uploaded with some errors",
+          title: "Import completed with errors",
           description: `Created ${createdCount} leads. ${errorCount} errors occurred. Check console for details.`,
           variant: "default",
         });
       } else if (createdCount > 0) {
         toast({
-          title: "CSV uploaded successfully",
+          title: "Import successful",
           description: `Successfully created ${createdCount} lead(s).`,
         });
       } else {
         toast({
           title: "Upload completed",
-          description: "No leads were created. Please check your CSV file format.",
+          description: "No leads were created. Check your file layout or server response.",
           variant: "default",
         });
       }
@@ -1008,7 +1036,7 @@ const LeadStream = ({
         // Don't show error toast here as upload might have succeeded
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to upload CSV file. Please try again.";
+      const errorMessage = error instanceof Error ? error.message : "Failed to upload file. Please try again.";
       const parsedMessage = parseErrorMessage(errorMessage);
       
       toast({
@@ -1225,7 +1253,7 @@ const LeadStream = ({
               onClick={() => setShowCsvUpload(true)}
             >
               <Upload className="h-4 w-4" />
-              Upload CSV
+              Upload file
             </Button>
           </div>
         </div>
@@ -1353,7 +1381,7 @@ const LeadStream = ({
           <CardContent className="pt-6">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold">Upload CSV File</h3>
+                <h3 className="text-lg font-semibold">Upload lead file</h3>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -1380,7 +1408,7 @@ const LeadStream = ({
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".csv"
+                  accept=".csv,.xlsx,.xls,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
                   onChange={handleFileInputChange}
                   className="hidden"
                   id="csv-upload"
@@ -1394,21 +1422,21 @@ const LeadStream = ({
                   <p className="text-sm font-medium mb-2">
                     {selectedFile
                       ? selectedFile.name
-                      : "Drag and drop your CSV file here, or click to browse"}
+                      : "Drag and drop a CSV, XLSX, or XLS file here, or click to browse"}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Supported format: CSV files only
+                    Supported: CSV, XLSX, XLS (same as server). Excel files are parsed on the server.
                   </p>
                   <div className="mt-4 p-3 bg-muted/50 rounded-md text-left text-xs">
-                    <p className="font-medium mb-1">CSV Format Requirements:</p>
+                    <p className="font-medium mb-1">CSV tips (Excel is handled server-side):</p>
                     <ul className="list-disc list-inside space-y-1 text-muted-foreground">
                       <li>All rows must have the same number of columns</li>
                       <li>Fields containing commas must be enclosed in double quotes</li>
-                      <li>Use commas (,) as column separators (semicolons will be auto-converted)</li>
+                      <li>Use commas (,) as column separators where possible (semicolons are auto-converted on upload)</li>
                       <li>Recommended columns: Full Name, Email, Mobile, Company Name, Company Website, LinkedIn Profile, Actions</li>
                     </ul>
                     <p className="mt-2 text-xs text-muted-foreground">
-                      <strong>Note:</strong> Files from WPS Office, Excel, or Google Sheets are automatically converted to the correct format.
+                      <strong>Note:</strong> CSV uploads are normalized in the browser; XLSX/XLS go straight to the API.
                     </p>
                   </div>
                 </label>
@@ -1451,7 +1479,7 @@ const LeadStream = ({
                   onClick={handleUploadCsv}
                   disabled={!selectedFile || isUploading}
                 >
-                  {isUploading ? "Uploading..." : "Upload CSV"}
+                  {isUploading ? "Uploading..." : "Upload file"}
                 </Button>
               </div>
             </div>
@@ -1465,7 +1493,7 @@ const LeadStream = ({
           <Users className="h-12 w-12 text-muted-foreground mb-4" />
           <h3 className="text-lg font-medium mb-2">No leads added yet</h3>
           <p className="text-sm text-muted-foreground text-center max-w-md mb-6">
-            Upload a CSV file to add leads and start tracking your pipeline. Or ask Scout to help find leads based on your market research.
+            Upload a CSV, XLSX, or XLS file to add leads and start tracking your pipeline. Or ask Scout to help find leads based on your market research.
           </p>
           <div className="flex flex-wrap gap-2 justify-center">
             <Button 
@@ -1473,7 +1501,7 @@ const LeadStream = ({
               onClick={() => setShowCsvUpload(true)}
             >
               <Upload className="h-4 w-4" />
-              Upload CSV
+              Upload file
             </Button>
             {onAskScout && (
               <Button
