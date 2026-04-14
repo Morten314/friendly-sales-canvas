@@ -460,6 +460,16 @@ export function Sidebar() {
     }
   };
 
+  /** Match sidebar href to current route (Scout lives under /your-ai-team/scout/*, not /market-research). */
+  const isYourAiTeamItemActive = (href: string) => {
+    if (href === '/market-research') {
+      return (
+        location.pathname === '/market-research' ||
+        location.pathname.startsWith('/your-ai-team/scout')
+      );
+    }
+    return location.pathname === href;
+  };
 
   // On mobile, always show full sidebar (not collapsed)
   const isCollapsed = isMobile ? false : collapsed;
@@ -581,10 +591,7 @@ export function Sidebar() {
             <li>
               <div className="mx-2">
                 <div 
-                  className={cn(
-                    "flex items-center px-4 py-3 text-gray-700 hover:bg-sales-gray hover:text-sales-blue rounded-lg transition-colors cursor-pointer",
-                    location.search.includes("view=ai-team") && "bg-blue-50 text-sales-blue"
-                  )}
+                  className="flex items-center px-4 py-3 text-gray-700 hover:bg-sales-gray rounded-lg transition-colors cursor-pointer"
                   onClick={handleAITeamClick}
                 >
                   <Users className="h-5 w-5" />
@@ -614,8 +621,8 @@ export function Sidebar() {
                             to={item.href}
                             onClick={handleLinkClick}
                             className={cn(
-                              "flex items-center px-4 py-2 text-sm text-gray-600 hover:bg-sales-gray hover:text-sales-blue rounded-lg transition-colors ml-9",
-                              (location.pathname === item.href || location.pathname.startsWith(item.href.replace(/\/[^/]+$/, ''))) && "bg-blue-50 text-sales-blue"
+                              "flex items-center px-4 py-2 text-sm text-gray-600 hover:bg-sales-gray rounded-lg transition-colors ml-9",
+                              isYourAiTeamItemActive(item.href) && "bg-gray-50"
                             )}
                           >
                             <item.icon className="h-4 w-4" />
@@ -667,10 +674,7 @@ export function Sidebar() {
             <li>
               <div
                 onClick={handleAITeamClick}
-                className={cn(
-                  "flex items-center justify-center py-3 text-gray-700 hover:bg-sales-gray hover:text-sales-blue rounded-lg mx-2 transition-colors cursor-pointer",
-                  location.search.includes("view=ai-team") && "bg-blue-50 text-sales-blue"
-                )}
+                className="flex items-center justify-center py-3 text-gray-700 hover:bg-sales-gray rounded-lg mx-2 transition-colors cursor-pointer"
               >
                 <Users className="h-5 w-5" />
               </div>
