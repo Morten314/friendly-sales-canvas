@@ -36,11 +36,12 @@ const reportComponentData = getReportComponentScores();
 const ReportTooltip = ({ active, payload }: any) => {
   if (!active || !payload?.length) return null;
   const d = payload[0].payload;
+  const total = d.high + d.medium + d.low;
   return (
     <div className="bg-popover border border-border rounded-lg px-3 py-2 shadow-md text-xs space-y-1">
       <p className="font-semibold text-foreground">{d.name}</p>
       <p className="text-muted-foreground">
-        Score: <span className="font-semibold text-foreground">{d.totalScore}</span>
+        Total Leads: <span className="font-semibold text-foreground">{total}</span>
       </p>
       <div className="flex gap-3 text-[11px]">
         <span className="text-emerald-600">High: {d.high}</span>
