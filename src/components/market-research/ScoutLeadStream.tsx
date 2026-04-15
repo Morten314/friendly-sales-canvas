@@ -16,6 +16,7 @@ interface ScoutLeadStreamProps {
   onChatWithScout?: (leads: any[], reportFilter?: string) => void;
   onChatAboutCoverage?: () => void;
   onSendToStrategist?: (lead: any) => void;
+  onQualifyProfile?: (lead: any) => void;
 }
 
 // ─── Main Component ──────────────────────────────────────────────────────────
@@ -27,6 +28,7 @@ const ScoutLeadStream: React.FC<ScoutLeadStreamProps> = ({
   onChatWithScout,
   onChatAboutCoverage,
   onSendToStrategist,
+  onQualifyProfile,
 }) => {
   const handleResearchLead = (lead: any) => {
     onResearchWithScout?.([lead]);
@@ -45,6 +47,7 @@ const ScoutLeadStream: React.FC<ScoutLeadStreamProps> = ({
         onClearOpportunityFilter={onClearOpportunityFilter}
         onResearchWithScout={handleResearchLead}
         onSendToStrategist={onSendToStrategist}
+        onQualifyProfile={onQualifyProfile}
         onChatWithScout={(leads, reportFilter) => onChatWithScout?.(leads, reportFilter)}
       />
     </div>
