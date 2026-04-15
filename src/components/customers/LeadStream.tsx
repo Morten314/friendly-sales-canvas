@@ -473,6 +473,9 @@ export const LeadStreamPanel = ({ filterByICP, onClearFilter }: LeadStreamPanelP
 
   return (
     <div className="space-y-5 animate-fade-in">
+      {/* Dashboard */}
+      {!isFiltered && <ProfilerDashboard leads={localLeads} />}
+
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
