@@ -36,26 +36,55 @@ interface ContextChip {
 
 // --- Mock Data ---
 const mockLeads: Lead[] = [
-  // Current ICPs
+  // ── Current ICPs (15 leads) ──────────────────────────────────────────
   { id: "c1", name: "Tom Bradley", company: "Nextera Software", title: "CTO", matchedICP: "ICP 1", icpCategory: "current", fitScore: 90, intentLevel: "High", reason: "Matches ICP 1 buyer role (CTO) + North America region. Evaluating new platforms." },
   { id: "c2", name: "Jessica Wu", company: "CodeVault Inc", title: "VP Engineering", matchedICP: "ICP 1", icpCategory: "current", fitScore: 87, intentLevel: "High", reason: "Software & Technology, 200 employees. Active RFP for engineering tools." },
   { id: "c3", name: "Ryan Mitchell", company: "InfraOps Cloud", title: "CTO", matchedICP: "ICP 1", icpCategory: "current", fitScore: 79, intentLevel: "Medium", reason: "Tech company, 150 employees. Recently raised Series B, expanding platform." },
   { id: "c4", name: "Dr. Karen Wells", company: "MedStream Health", title: "CIO", matchedICP: "ICP 2", icpCategory: "current", fitScore: 93, intentLevel: "High", reason: "Healthcare, 400 employees. Digital transformation initiative launched Q1." },
   { id: "c5", name: "Oliver Grant", company: "HealthBridge UK", title: "Chief Digital Officer", matchedICP: "ICP 2", icpCategory: "current", fitScore: 84, intentLevel: "High", reason: "UK Healthcare, 350 employees. Modernizing patient management systems." },
   { id: "c6", name: "Fiona Reeves", company: "CareLogic Systems", title: "CIO", matchedICP: "ICP 2", icpCategory: "current", fitScore: 71, intentLevel: "Medium", reason: "Healthcare IT, 250 employees. Legacy system migration underway." },
-  // Pending Recommended ICPs (not yet accepted)
-  { id: "1", name: "Sarah Chen", company: "Acme Corp", title: "VP of Revenue Operations", matchedICP: "Mid-Market SaaS – RevOps Teams", icpCategory: "pending", fitScore: 94, intentLevel: "High", reason: "Matches ICP + buyer role + region. Active hiring for RevOps roles." },
-  { id: "3", name: "Priya Sharma", company: "NovaTech Solutions", title: "Director of Sales Enablement", matchedICP: "Mid-Market SaaS – RevOps Teams", icpCategory: "pending", fitScore: 91, intentLevel: "High", reason: "Lookalike of accepted ICP + high fit. Competitor tool usage detected." },
-  { id: "5", name: "Elena Vasquez", company: "CloudFirst Systems", title: "VP Sales", matchedICP: "Mid-Market SaaS – RevOps Teams", icpCategory: "pending", fitScore: 96, intentLevel: "High", reason: "Matches ICP + active job postings for sales leadership + competitor tool churn." },
-  { id: "7", name: "Amara Johnson", company: "RevStack AI", title: "VP of RevOps", matchedICP: "Mid-Market SaaS – RevOps Teams", icpCategory: "pending", fitScore: 92, intentLevel: "High", reason: "Matches refined ICP targeting RevOps teams. High engagement with your content." },
-  { id: "10", name: "Raj Patel", company: "OpsFlow SaaS", title: "Head of Sales Operations", matchedICP: "Mid-Market SaaS – RevOps Teams", icpCategory: "pending", fitScore: 76, intentLevel: "Medium", reason: "RevOps focus + Series B funding. Tech stack consolidation signals." },
-  { id: "4", name: "Marcus Liu", company: "DataDriven AI", title: "CRO", matchedICP: "Enterprise FinTech Decision Makers", icpCategory: "pending", fitScore: 72, intentLevel: "Medium", reason: "Right buyer role + region match. Recent funding round signals growth phase." },
-  { id: "6", name: "David Park", company: "Momentum Labs", title: "Head of Partnerships", matchedICP: "Enterprise FinTech Decision Makers", icpCategory: "pending", fitScore: 78, intentLevel: "Medium", reason: "Strong ICP alignment. Partnership-led growth model fits your offering." },
-  { id: "8", name: "Tobias Müller", company: "FinServ Digital", title: "Chief Digital Officer", matchedICP: "Enterprise FinTech Decision Makers", icpCategory: "pending", fitScore: 68, intentLevel: "Medium", reason: "Matches new FinTech ICP segment. Digital transformation initiative underway." },
-  { id: "11", name: "Nina Kowalski", company: "PayTech Global", title: "VP of Innovation", matchedICP: "Enterprise FinTech Decision Makers", icpCategory: "pending", fitScore: 82, intentLevel: "High", reason: "Digital transformation lead. Evaluating API-first partnerships." },
-  { id: "2", name: "James Okoro", company: "ScaleUp Inc", title: "Head of GTM Strategy", matchedICP: "Growth-Stage E-commerce Leaders", icpCategory: "pending", fitScore: 88, intentLevel: "High", reason: "Strong intent: expanding GTM team + evaluating competitors in your space." },
-  { id: "9", name: "Lily Tran", company: "ShopScale D2C", title: "Head of Growth", matchedICP: "Growth-Stage E-commerce Leaders", icpCategory: "pending", fitScore: 85, intentLevel: "High", reason: "Growth-stage leader. Similar buying patterns to best customers." },
-  { id: "12", name: "Chris Andersen", company: "BrandBurst D2C", title: "COO", matchedICP: "Growth-Stage E-commerce Leaders", icpCategory: "pending", fitScore: 64, intentLevel: "Medium", reason: "Scaling operations. Platform migration in progress." },
+  { id: "c7", name: "Daniel Russo", company: "StackDeploy", title: "VP Platform", matchedICP: "ICP 1", icpCategory: "current", fitScore: 82, intentLevel: "Medium", reason: "Dev tools company, 180 employees. Consolidating internal platforms." },
+  { id: "c8", name: "Aisha Ndiaye", company: "TeleHealth Africa", title: "CTO", matchedICP: "ICP 2", icpCategory: "current", fitScore: 76, intentLevel: "Medium", reason: "Healthcare SaaS, 120 employees. Expanding to new markets." },
+  { id: "c9", name: "Liam O'Connor", company: "BuildRight SaaS", title: "CTO", matchedICP: "ICP 1", icpCategory: "current", fitScore: 88, intentLevel: "High", reason: "Construction tech, 300 employees. Evaluating API-first vendors." },
+  { id: "c10", name: "Maria Santos", company: "PharmaLink Digital", title: "CIO", matchedICP: "ICP 2", icpCategory: "current", fitScore: 91, intentLevel: "High", reason: "Pharma IT, 500 employees. Mandated cloud-first strategy this quarter." },
+  { id: "c11", name: "Kevin Zhao", company: "AppForge Labs", title: "Head of Engineering", matchedICP: "ICP 1", icpCategory: "current", fitScore: 74, intentLevel: "Low", reason: "Dev tools startup, 60 employees. Exploring build pipeline improvements." },
+  { id: "c12", name: "Sarah Okafor", company: "WellCare Systems", title: "VP Digital Health", matchedICP: "ICP 2", icpCategory: "current", fitScore: 80, intentLevel: "Medium", reason: "Healthcare network, 280 employees. Patient portal modernization project." },
+  { id: "c13", name: "Henrik Larsson", company: "Nordic Cloud AB", title: "CTO", matchedICP: "ICP 1", icpCategory: "current", fitScore: 68, intentLevel: "Low", reason: "Cloud infra, 90 employees. Early-stage evaluation of new tooling." },
+  { id: "c14", name: "Rebecca Tan", company: "MedAxis Singapore", title: "Chief Digital Officer", matchedICP: "ICP 2", icpCategory: "current", fitScore: 86, intentLevel: "High", reason: "APAC healthcare SaaS, 220 employees. Active vendor evaluation." },
+  { id: "c15", name: "James Whitfield", company: "CoreStack IO", title: "VP Engineering", matchedICP: "ICP 1", icpCategory: "current", fitScore: 73, intentLevel: "Medium", reason: "Platform company, 140 employees. Budget approved for tooling Q2." },
+
+  // ── Accepted ICPs (8 leads) ──────────────────────────────────────────
+  { id: "a1", name: "Laura Fischer", company: "FinEdge Capital", title: "VP Strategy", matchedICP: "Enterprise FinTech Decision Makers", icpCategory: "accepted", fitScore: 89, intentLevel: "High", reason: "FinTech, 600 employees. Board-level digital agenda. Evaluating strategic partnerships." },
+  { id: "a2", name: "Samuel Kim", company: "PayNova", title: "Chief Product Officer", matchedICP: "Enterprise FinTech Decision Makers", icpCategory: "accepted", fitScore: 83, intentLevel: "High", reason: "Payments company, 450 employees. Rebuilding product stack." },
+  { id: "a3", name: "Ingrid Svensson", company: "NordPay AB", title: "Head of Digital", matchedICP: "Enterprise FinTech Decision Makers", icpCategory: "accepted", fitScore: 77, intentLevel: "Medium", reason: "Nordic payments, 300 employees. Exploring embedded finance integrations." },
+  { id: "a4", name: "Carlos Rivera", company: "TradeFlow MX", title: "CTO", matchedICP: "Enterprise FinTech Decision Makers", icpCategory: "accepted", fitScore: 71, intentLevel: "Medium", reason: "LATAM FinTech, 180 employees. Cross-border payment expansion." },
+  { id: "a5", name: "Mei Lin", company: "ShopWave Commerce", title: "VP Growth", matchedICP: "Growth-Stage E-commerce Leaders", icpCategory: "accepted", fitScore: 90, intentLevel: "High", reason: "D2C e-commerce, 250 employees. Scaling acquisition channels." },
+  { id: "a6", name: "Patrick Dubois", company: "CartEngine EU", title: "Head of GTM", matchedICP: "Growth-Stage E-commerce Leaders", icpCategory: "accepted", fitScore: 85, intentLevel: "High", reason: "EU e-commerce SaaS, 200 employees. Launching new market segments." },
+  { id: "a7", name: "Yuki Tanaka", company: "Rakuten Ventures", title: "Director of Ops", matchedICP: "Growth-Stage E-commerce Leaders", icpCategory: "accepted", fitScore: 78, intentLevel: "Medium", reason: "E-commerce portfolio, 350 employees. Operational efficiency initiative." },
+  { id: "a8", name: "Ananya Desai", company: "BazaarNext India", title: "COO", matchedICP: "Growth-Stage E-commerce Leaders", icpCategory: "accepted", fitScore: 66, intentLevel: "Low", reason: "Indian marketplace, 130 employees. Early-stage growth planning." },
+
+  // ── Pending Recommended ICPs (21 leads) ──────────────────────────────
+  { id: "p1", name: "Sarah Chen", company: "Acme Corp", title: "VP of Revenue Operations", matchedICP: "Mid-Market SaaS – RevOps Teams", icpCategory: "pending", fitScore: 94, intentLevel: "High", reason: "Matches ICP + buyer role + region. Active hiring for RevOps roles." },
+  { id: "p2", name: "Priya Sharma", company: "NovaTech Solutions", title: "Director of Sales Enablement", matchedICP: "Mid-Market SaaS – RevOps Teams", icpCategory: "pending", fitScore: 91, intentLevel: "High", reason: "Lookalike of accepted ICP + high fit. Competitor tool usage detected." },
+  { id: "p3", name: "Elena Vasquez", company: "CloudFirst Systems", title: "VP Sales", matchedICP: "Mid-Market SaaS – RevOps Teams", icpCategory: "pending", fitScore: 96, intentLevel: "High", reason: "Matches ICP + active job postings for sales leadership + competitor tool churn." },
+  { id: "p4", name: "Amara Johnson", company: "RevStack AI", title: "VP of RevOps", matchedICP: "Mid-Market SaaS – RevOps Teams", icpCategory: "pending", fitScore: 92, intentLevel: "High", reason: "Matches refined ICP targeting RevOps teams. High engagement with your content." },
+  { id: "p5", name: "Raj Patel", company: "OpsFlow SaaS", title: "Head of Sales Operations", matchedICP: "Mid-Market SaaS – RevOps Teams", icpCategory: "pending", fitScore: 76, intentLevel: "Medium", reason: "RevOps focus + Series B funding. Tech stack consolidation signals." },
+  { id: "p6", name: "Marcus Liu", company: "DataDriven AI", title: "CRO", matchedICP: "Enterprise FinTech Decision Makers", icpCategory: "pending", fitScore: 72, intentLevel: "Medium", reason: "Right buyer role + region match. Recent funding round signals growth phase." },
+  { id: "p7", name: "David Park", company: "Momentum Labs", title: "Head of Partnerships", matchedICP: "Enterprise FinTech Decision Makers", icpCategory: "pending", fitScore: 78, intentLevel: "Medium", reason: "Strong ICP alignment. Partnership-led growth model fits your offering." },
+  { id: "p8", name: "Tobias Müller", company: "FinServ Digital", title: "Chief Digital Officer", matchedICP: "Enterprise FinTech Decision Makers", icpCategory: "pending", fitScore: 68, intentLevel: "Medium", reason: "Matches new FinTech ICP segment. Digital transformation initiative underway." },
+  { id: "p9", name: "Nina Kowalski", company: "PayTech Global", title: "VP of Innovation", matchedICP: "Enterprise FinTech Decision Makers", icpCategory: "pending", fitScore: 82, intentLevel: "High", reason: "Digital transformation lead. Evaluating API-first partnerships." },
+  { id: "p10", name: "James Okoro", company: "ScaleUp Inc", title: "Head of GTM Strategy", matchedICP: "Growth-Stage E-commerce Leaders", icpCategory: "pending", fitScore: 88, intentLevel: "High", reason: "Strong intent: expanding GTM team + evaluating competitors in your space." },
+  { id: "p11", name: "Lily Tran", company: "ShopScale D2C", title: "Head of Growth", matchedICP: "Growth-Stage E-commerce Leaders", icpCategory: "pending", fitScore: 85, intentLevel: "High", reason: "Growth-stage leader. Similar buying patterns to best customers." },
+  { id: "p12", name: "Chris Andersen", company: "BrandBurst D2C", title: "COO", matchedICP: "Growth-Stage E-commerce Leaders", icpCategory: "pending", fitScore: 64, intentLevel: "Medium", reason: "Scaling operations. Platform migration in progress." },
+  { id: "p13", name: "Grace Mbeki", company: "AfriPay Solutions", title: "VP Product", matchedICP: "Enterprise FinTech Decision Makers", icpCategory: "pending", fitScore: 75, intentLevel: "Medium", reason: "African FinTech, 200 employees. Expanding payment infrastructure." },
+  { id: "p14", name: "Viktor Petrov", company: "NeoBanq EU", title: "Head of Strategy", matchedICP: "Enterprise FinTech Decision Makers", icpCategory: "pending", fitScore: 81, intentLevel: "High", reason: "Neobank, 400 employees. Actively evaluating B2B partnerships." },
+  { id: "p15", name: "Rosa Martinez", company: "ComercioPlus", title: "VP E-commerce", matchedICP: "Growth-Stage E-commerce Leaders", icpCategory: "pending", fitScore: 79, intentLevel: "Medium", reason: "LATAM marketplace, 160 employees. Omnichannel expansion project." },
+  { id: "p16", name: "Ahmed Hassan", company: "RevOptimize", title: "Director RevOps", matchedICP: "Mid-Market SaaS – RevOps Teams", icpCategory: "pending", fitScore: 87, intentLevel: "High", reason: "RevOps consultancy gone SaaS. Deep domain expertise and active buyer." },
+  { id: "p17", name: "Chloe Dupont", company: "SalesMotion FR", title: "Head of Revenue", matchedICP: "Mid-Market SaaS – RevOps Teams", icpCategory: "pending", fitScore: 70, intentLevel: "Medium", reason: "French SaaS, 110 employees. Building out revenue operations team." },
+  { id: "p18", name: "Ben Hargreaves", company: "RetailStack UK", title: "Head of Digital", matchedICP: "Growth-Stage E-commerce Leaders", icpCategory: "pending", fitScore: 73, intentLevel: "Medium", reason: "UK retail tech, 190 employees. Migrating to headless commerce." },
+  { id: "p19", name: "Suki Nakamura", company: "TechBridge Tokyo", title: "VP Operations", matchedICP: "Mid-Market SaaS – RevOps Teams", icpCategory: "pending", fitScore: 69, intentLevel: "Low", reason: "Japanese SaaS, 80 employees. Exploring ops automation tools." },
+  { id: "p20", name: "Ivan Kostadinov", company: "CryptoLedger", title: "CTO", matchedICP: "Enterprise FinTech Decision Makers", icpCategory: "pending", fitScore: 62, intentLevel: "Low", reason: "Blockchain FinTech, 70 employees. Early-stage platform evaluation." },
+  { id: "p21", name: "Diana Morales", company: "GrowthBox LATAM", title: "VP Marketing", matchedICP: "Growth-Stage E-commerce Leaders", icpCategory: "pending", fitScore: 67, intentLevel: "Low", reason: "E-commerce enablement, 95 employees. Exploring GTM partnerships." },
 ];
 
 /** Count of leads in Lead Stream that match the given ICP name. */
@@ -71,10 +100,10 @@ export function getLeadCountForICP(icpName: string): number {
 }
 
 const mockContextChips: ContextChip[] = [
-  { label: "Active ICPs", value: "4", icon: <Target className="h-3 w-3" /> },
-  { label: "Regions", value: "North America, EMEA", icon: <MapPin className="h-3 w-3" /> },
-  { label: "Industries", value: "SaaS, AI/ML, FinTech", icon: <Briefcase className="h-3 w-3" /> },
-  { label: "Buyer Roles", value: "VP Sales, CRO, RevOps", icon: <Users className="h-3 w-3" /> },
+  { label: "Active ICPs", value: "6", icon: <Target className="h-3 w-3" /> },
+  { label: "Regions", value: "NA, EMEA, APAC, LATAM", icon: <MapPin className="h-3 w-3" /> },
+  { label: "Industries", value: "SaaS, FinTech, Healthcare, E-commerce", icon: <Briefcase className="h-3 w-3" /> },
+  { label: "Buyer Roles", value: "CTO, CIO, VP Sales, RevOps, Growth", icon: <Users className="h-3 w-3" /> },
 ];
 
 const howItWorks = [
