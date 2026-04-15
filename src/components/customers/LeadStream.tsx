@@ -8,16 +8,20 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import {
   Zap, Download, RefreshCw, Save, Eye, ChevronDown, ChevronRight,
   Database, Users, Target, MapPin, Briefcase, ArrowUpRight, Info, Bookmark,
-  Layers
+  Layers, Check, X, Shield, Sparkles, Clock
 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 // --- Types ---
+type ICPCategory = "current" | "accepted" | "pending";
+
 interface Lead {
   id: string;
   name: string;
   company: string;
   title: string;
   matchedICP: string;
+  icpCategory: ICPCategory;
   fitScore: number; // 0-100
   intentLevel: "High" | "Medium" | "Low";
   reason: string;
@@ -31,29 +35,29 @@ interface ContextChip {
 
 // --- Mock Data ---
 const mockLeads: Lead[] = [
-  // Leads matched to Current ICPs (ICP 1 / ICP 2)
-  { id: "c1", name: "Tom Bradley", company: "Nextera Software", title: "CTO", matchedICP: "ICP 1", fitScore: 90, intentLevel: "High", reason: "Matches ICP 1 buyer role (CTO) + North America region. Evaluating new platforms." },
-  { id: "c2", name: "Jessica Wu", company: "CodeVault Inc", title: "VP Engineering", matchedICP: "ICP 1", fitScore: 87, intentLevel: "High", reason: "Software & Technology, 200 employees. Active RFP for engineering tools." },
-  { id: "c3", name: "Ryan Mitchell", company: "InfraOps Cloud", title: "CTO", matchedICP: "ICP 1", fitScore: 79, intentLevel: "Medium", reason: "Tech company, 150 employees. Recently raised Series B, expanding platform." },
-  { id: "c4", name: "Dr. Karen Wells", company: "MedStream Health", title: "CIO", matchedICP: "ICP 2", fitScore: 93, intentLevel: "High", reason: "Healthcare, 400 employees. Digital transformation initiative launched Q1." },
-  { id: "c5", name: "Oliver Grant", company: "HealthBridge UK", title: "Chief Digital Officer", matchedICP: "ICP 2", fitScore: 84, intentLevel: "High", reason: "UK Healthcare, 350 employees. Modernizing patient management systems." },
-  { id: "c6", name: "Fiona Reeves", company: "CareLogic Systems", title: "CIO", matchedICP: "ICP 2", fitScore: 71, intentLevel: "Medium", reason: "Healthcare IT, 250 employees. Legacy system migration underway." },
-  // Leads matched to Suggested/Refined ICPs
-  { id: "1", name: "Sarah Chen", company: "Acme Corp", title: "VP of Revenue Operations", matchedICP: "Mid-Market SaaS – RevOps Teams", fitScore: 94, intentLevel: "High", reason: "Matches ICP + buyer role + region. Active hiring for RevOps roles." },
-  { id: "2", name: "James Okoro", company: "ScaleUp Inc", title: "Head of GTM Strategy", matchedICP: "Growth-Stage E-commerce Leaders", fitScore: 88, intentLevel: "High", reason: "Strong intent: expanding GTM team + evaluating competitors in your space." },
-  { id: "3", name: "Priya Sharma", company: "NovaTech Solutions", title: "Director of Sales Enablement", matchedICP: "Mid-Market SaaS – RevOps Teams", fitScore: 91, intentLevel: "High", reason: "Lookalike of accepted ICP + high fit. Competitor tool usage detected." },
-  { id: "4", name: "Marcus Liu", company: "DataDriven AI", title: "CRO", matchedICP: "Enterprise FinTech Decision Makers", fitScore: 72, intentLevel: "Medium", reason: "Right buyer role + region match. Recent funding round signals growth phase." },
-  { id: "5", name: "Elena Vasquez", company: "CloudFirst Systems", title: "VP Sales", matchedICP: "Mid-Market SaaS – RevOps Teams", fitScore: 96, intentLevel: "High", reason: "Matches ICP + active job postings for sales leadership + competitor tool churn." },
-  { id: "6", name: "David Park", company: "Momentum Labs", title: "Head of Partnerships", matchedICP: "Enterprise FinTech Decision Makers", fitScore: 78, intentLevel: "Medium", reason: "Strong ICP alignment. Partnership-led growth model fits your offering." },
-  { id: "7", name: "Amara Johnson", company: "RevStack AI", title: "VP of RevOps", matchedICP: "Mid-Market SaaS – RevOps Teams", fitScore: 92, intentLevel: "High", reason: "Matches refined ICP targeting RevOps teams. High engagement with your content." },
-  { id: "8", name: "Tobias Müller", company: "FinServ Digital", title: "Chief Digital Officer", matchedICP: "Enterprise FinTech Decision Makers", fitScore: 68, intentLevel: "Medium", reason: "Matches new FinTech ICP segment. Digital transformation initiative underway." },
-  { id: "9", name: "Lily Tran", company: "ShopScale D2C", title: "Head of Growth", matchedICP: "Growth-Stage E-commerce Leaders", fitScore: 85, intentLevel: "High", reason: "Growth-stage leader. Similar buying patterns to best customers." },
-  { id: "10", name: "Raj Patel", company: "OpsFlow SaaS", title: "Head of Sales Operations", matchedICP: "Mid-Market SaaS – RevOps Teams", fitScore: 76, intentLevel: "Medium", reason: "RevOps focus + Series B funding. Tech stack consolidation signals." },
-  { id: "11", name: "Nina Kowalski", company: "PayTech Global", title: "VP of Innovation", matchedICP: "Enterprise FinTech Decision Makers", fitScore: 82, intentLevel: "High", reason: "Digital transformation lead. Evaluating API-first partnerships." },
-  { id: "12", name: "Chris Andersen", company: "BrandBurst D2C", title: "COO", matchedICP: "Growth-Stage E-commerce Leaders", fitScore: 64, intentLevel: "Medium", reason: "Scaling operations. Platform migration in progress." },
+  // Current ICPs
+  { id: "c1", name: "Tom Bradley", company: "Nextera Software", title: "CTO", matchedICP: "ICP 1", icpCategory: "current", fitScore: 90, intentLevel: "High", reason: "Matches ICP 1 buyer role (CTO) + North America region. Evaluating new platforms." },
+  { id: "c2", name: "Jessica Wu", company: "CodeVault Inc", title: "VP Engineering", matchedICP: "ICP 1", icpCategory: "current", fitScore: 87, intentLevel: "High", reason: "Software & Technology, 200 employees. Active RFP for engineering tools." },
+  { id: "c3", name: "Ryan Mitchell", company: "InfraOps Cloud", title: "CTO", matchedICP: "ICP 1", icpCategory: "current", fitScore: 79, intentLevel: "Medium", reason: "Tech company, 150 employees. Recently raised Series B, expanding platform." },
+  { id: "c4", name: "Dr. Karen Wells", company: "MedStream Health", title: "CIO", matchedICP: "ICP 2", icpCategory: "current", fitScore: 93, intentLevel: "High", reason: "Healthcare, 400 employees. Digital transformation initiative launched Q1." },
+  { id: "c5", name: "Oliver Grant", company: "HealthBridge UK", title: "Chief Digital Officer", matchedICP: "ICP 2", icpCategory: "current", fitScore: 84, intentLevel: "High", reason: "UK Healthcare, 350 employees. Modernizing patient management systems." },
+  { id: "c6", name: "Fiona Reeves", company: "CareLogic Systems", title: "CIO", matchedICP: "ICP 2", icpCategory: "current", fitScore: 71, intentLevel: "Medium", reason: "Healthcare IT, 250 employees. Legacy system migration underway." },
+  // Pending Recommended ICPs (not yet accepted)
+  { id: "1", name: "Sarah Chen", company: "Acme Corp", title: "VP of Revenue Operations", matchedICP: "Mid-Market SaaS – RevOps Teams", icpCategory: "pending", fitScore: 94, intentLevel: "High", reason: "Matches ICP + buyer role + region. Active hiring for RevOps roles." },
+  { id: "3", name: "Priya Sharma", company: "NovaTech Solutions", title: "Director of Sales Enablement", matchedICP: "Mid-Market SaaS – RevOps Teams", icpCategory: "pending", fitScore: 91, intentLevel: "High", reason: "Lookalike of accepted ICP + high fit. Competitor tool usage detected." },
+  { id: "5", name: "Elena Vasquez", company: "CloudFirst Systems", title: "VP Sales", matchedICP: "Mid-Market SaaS – RevOps Teams", icpCategory: "pending", fitScore: 96, intentLevel: "High", reason: "Matches ICP + active job postings for sales leadership + competitor tool churn." },
+  { id: "7", name: "Amara Johnson", company: "RevStack AI", title: "VP of RevOps", matchedICP: "Mid-Market SaaS – RevOps Teams", icpCategory: "pending", fitScore: 92, intentLevel: "High", reason: "Matches refined ICP targeting RevOps teams. High engagement with your content." },
+  { id: "10", name: "Raj Patel", company: "OpsFlow SaaS", title: "Head of Sales Operations", matchedICP: "Mid-Market SaaS – RevOps Teams", icpCategory: "pending", fitScore: 76, intentLevel: "Medium", reason: "RevOps focus + Series B funding. Tech stack consolidation signals." },
+  { id: "4", name: "Marcus Liu", company: "DataDriven AI", title: "CRO", matchedICP: "Enterprise FinTech Decision Makers", icpCategory: "pending", fitScore: 72, intentLevel: "Medium", reason: "Right buyer role + region match. Recent funding round signals growth phase." },
+  { id: "6", name: "David Park", company: "Momentum Labs", title: "Head of Partnerships", matchedICP: "Enterprise FinTech Decision Makers", icpCategory: "pending", fitScore: 78, intentLevel: "Medium", reason: "Strong ICP alignment. Partnership-led growth model fits your offering." },
+  { id: "8", name: "Tobias Müller", company: "FinServ Digital", title: "Chief Digital Officer", matchedICP: "Enterprise FinTech Decision Makers", icpCategory: "pending", fitScore: 68, intentLevel: "Medium", reason: "Matches new FinTech ICP segment. Digital transformation initiative underway." },
+  { id: "11", name: "Nina Kowalski", company: "PayTech Global", title: "VP of Innovation", matchedICP: "Enterprise FinTech Decision Makers", icpCategory: "pending", fitScore: 82, intentLevel: "High", reason: "Digital transformation lead. Evaluating API-first partnerships." },
+  { id: "2", name: "James Okoro", company: "ScaleUp Inc", title: "Head of GTM Strategy", matchedICP: "Growth-Stage E-commerce Leaders", icpCategory: "pending", fitScore: 88, intentLevel: "High", reason: "Strong intent: expanding GTM team + evaluating competitors in your space." },
+  { id: "9", name: "Lily Tran", company: "ShopScale D2C", title: "Head of Growth", matchedICP: "Growth-Stage E-commerce Leaders", icpCategory: "pending", fitScore: 85, intentLevel: "High", reason: "Growth-stage leader. Similar buying patterns to best customers." },
+  { id: "12", name: "Chris Andersen", company: "BrandBurst D2C", title: "COO", matchedICP: "Growth-Stage E-commerce Leaders", icpCategory: "pending", fitScore: 64, intentLevel: "Medium", reason: "Scaling operations. Platform migration in progress." },
 ];
 
-/** Count of leads in Lead Stream that match the given ICP name (same logic as filter). */
+/** Count of leads in Lead Stream that match the given ICP name. */
 export function getLeadCountForICP(icpName: string): number {
   if (!icpName) return 0;
   const lower = icpName.toLowerCase();
@@ -78,6 +82,28 @@ const howItWorks = [
   { icon: <Target className="h-4 w-4" />, text: "Leads scored by ICP fit + intent signals" },
   { icon: <Zap className="h-4 w-4" />, text: "Segmented and ranked by matched ICP" },
 ];
+
+// --- Category Config ---
+const categoryConfig: Record<ICPCategory, { label: string; icon: React.ReactNode; badgeClass: string; description: string }> = {
+  current: {
+    label: "Current ICP",
+    icon: <Shield className="h-3.5 w-3.5" />,
+    badgeClass: "bg-primary/10 text-primary border-primary/20",
+    description: "Your existing customer profiles",
+  },
+  accepted: {
+    label: "Accepted",
+    icon: <Check className="h-3.5 w-3.5" />,
+    badgeClass: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    description: "Recommended ICPs you've accepted",
+  },
+  pending: {
+    label: "Pending Review",
+    icon: <Clock className="h-3.5 w-3.5" />,
+    badgeClass: "bg-amber-50 text-amber-700 border-amber-200",
+    description: "Recommended ICPs awaiting your decision",
+  },
+};
 
 // --- Fit Score Badge ---
 const FitScoreBadge = ({ score }: { score: number }) => {
@@ -128,19 +154,39 @@ const EmptyState = () => (
 );
 
 // --- Segment Header ---
-const SegmentHeader = ({ icpName, leads, isOpen, onToggle }: { icpName: string; leads: Lead[]; isOpen: boolean; onToggle: () => void }) => {
+const SegmentHeader = ({
+  icpName,
+  leads,
+  isOpen,
+  onToggle,
+  category,
+  onAccept,
+  onReject,
+}: {
+  icpName: string;
+  leads: Lead[];
+  isOpen: boolean;
+  onToggle: () => void;
+  category: ICPCategory;
+  onAccept?: () => void;
+  onReject?: () => void;
+}) => {
   const avgFit = Math.round(leads.reduce((sum, l) => sum + l.fitScore, 0) / leads.length);
   const highIntent = leads.filter(l => l.intentLevel === "High").length;
+  const config = categoryConfig[category];
 
   return (
-    <button
-      onClick={onToggle}
-      className="w-full flex items-center gap-3 px-4 py-3 bg-muted/40 hover:bg-muted/60 transition-colors rounded-t-lg border border-border border-b-0"
-    >
-      {isOpen ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
-      <Layers className="h-4 w-4 text-primary" />
-      <span className="font-semibold text-sm text-foreground">{icpName}</span>
-      <div className="flex items-center gap-2 ml-auto">
+    <div className="w-full flex items-center gap-3 px-4 py-3 bg-muted/40 hover:bg-muted/60 transition-colors rounded-t-lg border border-border border-b-0">
+      <button onClick={onToggle} className="flex items-center gap-3 flex-1 min-w-0">
+        {isOpen ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+        <Layers className="h-4 w-4 text-primary" />
+        <span className="font-semibold text-sm text-foreground truncate">{icpName}</span>
+        <Badge variant="outline" className={`text-[10px] font-medium shrink-0 gap-1 ${config.badgeClass}`}>
+          {config.icon}
+          {config.label}
+        </Badge>
+      </button>
+      <div className="flex items-center gap-2 shrink-0">
         <Badge variant="secondary" className="text-xs">{leads.length} leads</Badge>
         <Badge variant="outline" className="text-xs bg-primary/5 text-primary border-primary/20">Avg Fit: {avgFit}%</Badge>
         {highIntent > 0 && (
@@ -149,8 +195,44 @@ const SegmentHeader = ({ icpName, leads, isOpen, onToggle }: { icpName: string; 
             {highIntent} high intent
           </Badge>
         )}
+        {category === "pending" && (
+          <div className="flex items-center gap-1 ml-2">
+            <TooltipProvider delayDuration={200}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 gap-1 text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200"
+                    onClick={(e) => { e.stopPropagation(); onAccept?.(); }}
+                  >
+                    <Check className="h-3 w-3" />
+                    Accept
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Accept this recommended ICP</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <TooltipProvider delayDuration={200}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 gap-1 text-xs hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
+                    onClick={(e) => { e.stopPropagation(); onReject?.(); }}
+                  >
+                    <X className="h-3 w-3" />
+                    Reject
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Dismiss this recommended ICP</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        )}
       </div>
-    </button>
+    </div>
   );
 };
 
@@ -229,6 +311,20 @@ const LeadRows = ({ leads, savedLeads, toggleSave, showSource }: { leads: Lead[]
   </>
 );
 
+// --- Category Section Header ---
+const CategorySectionHeader = ({ category }: { category: ICPCategory }) => {
+  const config = categoryConfig[category];
+  return (
+    <div className="flex items-center gap-2 pt-2 pb-1">
+      <div className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-md border ${config.badgeClass}`}>
+        {config.icon}
+        {category === "current" ? "Current ICPs" : category === "accepted" ? "Accepted Recommendations" : "Pending Recommendations"}
+      </div>
+      <span className="text-[10px] text-muted-foreground">{config.description}</span>
+    </div>
+  );
+};
+
 // --- Main Component ---
 interface LeadStreamPanelProps {
   filterByICP?: string | null;
@@ -239,36 +335,60 @@ export const LeadStreamPanel = ({ filterByICP, onClearFilter }: LeadStreamPanelP
   const [howOpen, setHowOpen] = useState(false);
   const [savedLeads, setSavedLeads] = useState<Set<string>>(new Set());
   const [collapsedSegments, setCollapsedSegments] = useState<Set<string>>(new Set());
+  const [localLeads, setLocalLeads] = useState<Lead[]>(mockLeads);
   const hasProspectData = true;
+  const { toast } = useToast();
 
   const isFiltered = !!filterByICP;
 
   const filteredLeads = useMemo(() => {
-    if (!filterByICP) return mockLeads;
+    if (!filterByICP) return localLeads;
     const lower = filterByICP.toLowerCase();
-    return mockLeads.filter(
+    return localLeads.filter(
       (lead) =>
         lead.matchedICP === filterByICP ||
         lead.matchedICP.toLowerCase().includes(lower) ||
         lower.includes(lead.matchedICP.toLowerCase())
     );
-  }, [filterByICP]);
+  }, [filterByICP, localLeads]);
 
-  // Group leads by matchedICP for segmented view
+  // Group leads by matchedICP
   const segments = useMemo(() => {
-    const map = new Map<string, Lead[]>();
+    const map = new Map<string, { leads: Lead[]; category: ICPCategory }>();
     filteredLeads.forEach((lead) => {
-      const list = map.get(lead.matchedICP) || [];
-      list.push(lead);
-      map.set(lead.matchedICP, list);
+      const existing = map.get(lead.matchedICP);
+      if (existing) {
+        existing.leads.push(lead);
+      } else {
+        map.set(lead.matchedICP, { leads: [lead], category: lead.icpCategory });
+      }
     });
-    // Sort segments by avg fit score descending
     return Array.from(map.entries()).sort((a, b) => {
-      const avgA = a[1].reduce((s, l) => s + l.fitScore, 0) / a[1].length;
-      const avgB = b[1].reduce((s, l) => s + l.fitScore, 0) / b[1].length;
+      // Sort by category order: current > accepted > pending
+      const order: Record<ICPCategory, number> = { current: 0, accepted: 1, pending: 2 };
+      const catDiff = order[a[1].category] - order[b[1].category];
+      if (catDiff !== 0) return catDiff;
+      // Within same category, sort by avg fit
+      const avgA = a[1].leads.reduce((s, l) => s + l.fitScore, 0) / a[1].leads.length;
+      const avgB = b[1].leads.reduce((s, l) => s + l.fitScore, 0) / b[1].leads.length;
       return avgB - avgA;
     });
   }, [filteredLeads]);
+
+  // Group segments by category for section headers
+  const categorizedSegments = useMemo(() => {
+    const groups: { category: ICPCategory; segments: [string, { leads: Lead[]; category: ICPCategory }][] }[] = [];
+    let currentCat: ICPCategory | null = null;
+    segments.forEach((seg) => {
+      if (seg[1].category !== currentCat) {
+        currentCat = seg[1].category;
+        groups.push({ category: currentCat, segments: [seg] });
+      } else {
+        groups[groups.length - 1].segments.push(seg);
+      }
+    });
+    return groups;
+  }, [segments]);
 
   const toggleSave = (id: string) => {
     setSavedLeads((prev) => {
@@ -284,6 +404,18 @@ export const LeadStreamPanel = ({ filterByICP, onClearFilter }: LeadStreamPanelP
       next.has(icpName) ? next.delete(icpName) : next.add(icpName);
       return next;
     });
+  };
+
+  const handleAcceptICP = (icpName: string) => {
+    setLocalLeads(prev => prev.map(lead =>
+      lead.matchedICP === icpName ? { ...lead, icpCategory: "accepted" as ICPCategory } : lead
+    ));
+    toast({ title: "ICP Accepted", description: `"${icpName}" has been accepted as an ICP.` });
+  };
+
+  const handleRejectICP = (icpName: string) => {
+    setLocalLeads(prev => prev.filter(lead => lead.matchedICP !== icpName));
+    toast({ title: "ICP Rejected", description: `Leads for "${icpName}" removed from stream.` });
   };
 
   if (!hasProspectData) return <EmptyState />;
@@ -339,7 +471,6 @@ export const LeadStreamPanel = ({ filterByICP, onClearFilter }: LeadStreamPanelP
 
       {/* Segmented or Filtered View */}
       {isFiltered ? (
-        /* Filtered: flat table for a single ICP */
         <Card>
           <div className="overflow-x-auto">
             <Table>
@@ -361,43 +492,50 @@ export const LeadStreamPanel = ({ filterByICP, onClearFilter }: LeadStreamPanelP
           </div>
         </Card>
       ) : (
-        /* Default: grouped by ICP segment */
-        <div className="space-y-3">
-          {segments.map(([icpName, leads]) => {
-            const isOpen = !collapsedSegments.has(icpName);
-            return (
-              <div key={icpName}>
-                <SegmentHeader
-                  icpName={icpName}
-                  leads={leads}
-                  isOpen={isOpen}
-                  onToggle={() => toggleSegment(icpName)}
-                />
-                {isOpen && (
-                  <Card className="rounded-t-none border-t-0">
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="hover:bg-transparent">
-                            <TableHead className="w-[160px]">Lead Name</TableHead>
-                            <TableHead className="w-[140px]">Company</TableHead>
-                            <TableHead className="w-[160px]">Title</TableHead>
-                            <TableHead className="w-[80px]">Fit</TableHead>
-                            <TableHead className="w-[100px]">Intent</TableHead>
-                            <TableHead className="min-w-[200px]">Reason</TableHead>
-                            <TableHead className="w-[100px] text-right">Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          <LeadRows leads={leads} savedLeads={savedLeads} toggleSave={toggleSave} />
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </Card>
-                )}
-              </div>
-            );
-          })}
+        <div className="space-y-4">
+          {categorizedSegments.map((group) => (
+            <div key={group.category} className="space-y-3">
+              <CategorySectionHeader category={group.category} />
+              {group.segments.map(([icpName, { leads, category }]) => {
+                const isOpen = !collapsedSegments.has(icpName);
+                return (
+                  <div key={icpName}>
+                    <SegmentHeader
+                      icpName={icpName}
+                      leads={leads}
+                      isOpen={isOpen}
+                      onToggle={() => toggleSegment(icpName)}
+                      category={category}
+                      onAccept={category === "pending" ? () => handleAcceptICP(icpName) : undefined}
+                      onReject={category === "pending" ? () => handleRejectICP(icpName) : undefined}
+                    />
+                    {isOpen && (
+                      <Card className="rounded-t-none border-t-0">
+                        <div className="overflow-x-auto">
+                          <Table>
+                            <TableHeader>
+                              <TableRow className="hover:bg-transparent">
+                                <TableHead className="w-[160px]">Lead Name</TableHead>
+                                <TableHead className="w-[140px]">Company</TableHead>
+                                <TableHead className="w-[160px]">Title</TableHead>
+                                <TableHead className="w-[80px]">Fit</TableHead>
+                                <TableHead className="w-[100px]">Intent</TableHead>
+                                <TableHead className="min-w-[200px]">Reason</TableHead>
+                                <TableHead className="w-[100px] text-right">Actions</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              <LeadRows leads={leads} savedLeads={savedLeads} toggleSave={toggleSave} />
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </Card>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
         </div>
       )}
 
