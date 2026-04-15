@@ -65,17 +65,6 @@ const ProfilerDashboard: React.FC<ProfilerDashboardProps> = ({ leads }) => {
     Pending: <Clock className="h-2.5 w-2.5" />,
   };
 
-  // ─── Intent breakdown ─────────────────────────────────────────────────
-  const intentCounts = leads.reduce(
-    (acc, l) => { acc[l.intentLevel]++; return acc; },
-    { High: 0, Medium: 0, Low: 0 } as Record<string, number>
-  );
-
-  const intentData = [
-    { name: "High", value: intentCounts.High, color: "#10b981" },
-    { name: "Medium", value: intentCounts.Medium, color: "#f59e0b" },
-    { name: "Low", value: intentCounts.Low, color: "#f87171" },
-  ];
 
   // ─── Leads by ICP with fit score breakdown ────────────────────────────
   const icpMap = new Map<string, { highFit: number; midFit: number; lowFit: number; total: number }>();
