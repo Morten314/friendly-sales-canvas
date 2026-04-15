@@ -167,34 +167,6 @@ const ProfilerDashboard: React.FC<ProfilerDashboardProps> = ({ leads }) => {
           </div>
         </Card>
 
-        {/* Intent Pie */}
-        <Card className="p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Zap className="h-4 w-4 text-primary" />
-            <h3 className="text-sm font-semibold text-foreground">Intent Levels</h3>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="w-20 h-20">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={intentData} cx="50%" cy="50%" innerRadius={22} outerRadius={36} paddingAngle={3} dataKey="value" strokeWidth={0}>
-                    {intentData.map((entry, i) => (
-                      <Cell key={i} fill={entry.color} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="space-y-1.5 text-xs">
-              {intentData.map((t, i) => (
-                <div key={i} className="flex items-center gap-1.5">
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: t.color }} />
-                  <span className="text-muted-foreground">{t.name}: <span className="font-semibold text-foreground">{t.value}</span></span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </Card>
 
         {/* Leads by ICP — Fit Distribution */}
         <Card className="p-4">
