@@ -150,7 +150,7 @@ const LeadIntelligencePanel = ({ lead, onChatWithScout }: { lead: HeatmapLead; o
         })}
       </div>
 
-      {/* View Segment Button */}
+      {/* View Segment Button — hidden per product request
       <div className="pt-1">
         <button
           onClick={() => setShowSegment(!showSegment)}
@@ -162,7 +162,6 @@ const LeadIntelligencePanel = ({ lead, onChatWithScout }: { lead: HeatmapLead; o
         </button>
       </div>
 
-      {/* Segment Deep-Dive */}
       {showSegment && segment && (
         <div className="rounded-md border border-primary/20 bg-primary/5 p-2.5 space-y-2">
           <div className="flex items-center gap-1.5">
@@ -207,6 +206,7 @@ const LeadIntelligencePanel = ({ lead, onChatWithScout }: { lead: HeatmapLead; o
           </div>
         </div>
       )}
+      */}
     </div>
   );
 };
