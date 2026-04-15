@@ -4,7 +4,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, CartesianGrid,
   ResponsiveContainer, PieChart, Pie, Cell,
 } from "recharts";
-import { Users, BarChart3, Target, Zap, Shield, Check, Clock } from "lucide-react";
+import { Users, BarChart3, Target, Shield, Check, Clock } from "lucide-react";
 
 // Types matching LeadStream
 type ICPCategory = "current" | "accepted" | "pending";
@@ -65,17 +65,6 @@ const ProfilerDashboard: React.FC<ProfilerDashboardProps> = ({ leads }) => {
     Pending: <Clock className="h-2.5 w-2.5" />,
   };
 
-  // ─── Intent breakdown ─────────────────────────────────────────────────
-  const intentCounts = leads.reduce(
-    (acc, l) => { acc[l.intentLevel]++; return acc; },
-    { High: 0, Medium: 0, Low: 0 } as Record<string, number>
-  );
-
-  const intentData = [
-    { name: "High", value: intentCounts.High, color: "#10b981" },
-    { name: "Medium", value: intentCounts.Medium, color: "#f59e0b" },
-    { name: "Low", value: intentCounts.Low, color: "#f87171" },
-  ];
 
   // ─── Leads by ICP with fit score breakdown ────────────────────────────
   const icpMap = new Map<string, { highFit: number; midFit: number; lowFit: number; total: number }>();
@@ -113,13 +102,11 @@ const ProfilerDashboard: React.FC<ProfilerDashboardProps> = ({ leads }) => {
         </Card>
         <Card className="p-4">
           <div className="flex items-center gap-2 mb-1">
-            <Zap className="h-4 w-4 text-emerald-600" />
-            <span className="text-xs font-semibold text-foreground">High Intent</span>
+            <BarChart3 className="h-4 w-4 text-primary" />
+            <span className="text-xs font-semibold text-foreground">Avg Fit Score</span>
           </div>
-          <p className="text-2xl font-bold text-foreground">{intentCounts.High}</p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">
-            {totalLeads > 0 ? Math.round((intentCounts.High / totalLeads) * 100) : 0}% of all leads
-          </p>
+          <p className="text-2xl font-bold text-foreground">{avgFit}%</p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">Across all leads</p>
         </Card>
         <Card className="p-4">
           <div className="flex items-center gap-2 mb-1">
@@ -134,7 +121,7 @@ const ProfilerDashboard: React.FC<ProfilerDashboardProps> = ({ leads }) => {
       </div>
 
       {/* Row 2: Charts */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {/* ICP Category Pie */}
         <Card className="p-4">
           <div className="flex items-center gap-2 mb-3">
@@ -167,34 +154,6 @@ const ProfilerDashboard: React.FC<ProfilerDashboardProps> = ({ leads }) => {
           </div>
         </Card>
 
-        {/* Intent Pie */}
-        <Card className="p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Zap className="h-4 w-4 text-primary" />
-            <h3 className="text-sm font-semibold text-foreground">Intent Levels</h3>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="w-20 h-20">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={intentData} cx="50%" cy="50%" innerRadius={22} outerRadius={36} paddingAngle={3} dataKey="value" strokeWidth={0}>
-                    {intentData.map((entry, i) => (
-                      <Cell key={i} fill={entry.color} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="space-y-1.5 text-xs">
-              {intentData.map((t, i) => (
-                <div key={i} className="flex items-center gap-1.5">
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: t.color }} />
-                  <span className="text-muted-foreground">{t.name}: <span className="font-semibold text-foreground">{t.value}</span></span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </Card>
 
         {/* Leads by ICP — Fit Distribution */}
         <Card className="p-4">
