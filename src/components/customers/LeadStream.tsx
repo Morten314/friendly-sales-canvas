@@ -188,7 +188,7 @@ const SegmentHeader = ({
       </button>
       <div className="flex items-center gap-2 shrink-0">
         <Badge variant="secondary" className="text-xs">{leads.length} leads</Badge>
-        <Badge variant="outline" className="text-xs bg-primary/5 text-primary border-primary/20">Avg Fit: {avgFit}%</Badge>
+        
         {highIntent > 0 && (
           <Badge variant="outline" className="text-xs bg-emerald-50 text-emerald-700 border-emerald-200">
             <Zap className="h-3 w-3 mr-1" />
