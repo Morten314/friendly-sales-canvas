@@ -31,6 +31,14 @@ interface ContextChip {
 
 // --- Mock Data ---
 const mockLeads: Lead[] = [
+  // Leads matched to Current ICPs (ICP 1 / ICP 2)
+  { id: "c1", name: "Tom Bradley", company: "Nextera Software", title: "CTO", matchedICP: "ICP 1", fitScore: 90, intentLevel: "High", reason: "Matches ICP 1 buyer role (CTO) + North America region. Evaluating new platforms." },
+  { id: "c2", name: "Jessica Wu", company: "CodeVault Inc", title: "VP Engineering", matchedICP: "ICP 1", fitScore: 87, intentLevel: "High", reason: "Software & Technology, 200 employees. Active RFP for engineering tools." },
+  { id: "c3", name: "Ryan Mitchell", company: "InfraOps Cloud", title: "CTO", matchedICP: "ICP 1", fitScore: 79, intentLevel: "Medium", reason: "Tech company, 150 employees. Recently raised Series B, expanding platform." },
+  { id: "c4", name: "Dr. Karen Wells", company: "MedStream Health", title: "CIO", matchedICP: "ICP 2", fitScore: 93, intentLevel: "High", reason: "Healthcare, 400 employees. Digital transformation initiative launched Q1." },
+  { id: "c5", name: "Oliver Grant", company: "HealthBridge UK", title: "Chief Digital Officer", matchedICP: "ICP 2", fitScore: 84, intentLevel: "High", reason: "UK Healthcare, 350 employees. Modernizing patient management systems." },
+  { id: "c6", name: "Fiona Reeves", company: "CareLogic Systems", title: "CIO", matchedICP: "ICP 2", fitScore: 71, intentLevel: "Medium", reason: "Healthcare IT, 250 employees. Legacy system migration underway." },
+  // Leads matched to Suggested/Refined ICPs
   { id: "1", name: "Sarah Chen", company: "Acme Corp", title: "VP of Revenue Operations", matchedICP: "Mid-Market SaaS – RevOps Teams", fitScore: 94, intentLevel: "High", reason: "Matches ICP + buyer role + region. Active hiring for RevOps roles." },
   { id: "2", name: "James Okoro", company: "ScaleUp Inc", title: "Head of GTM Strategy", matchedICP: "Growth-Stage E-commerce Leaders", fitScore: 88, intentLevel: "High", reason: "Strong intent: expanding GTM team + evaluating competitors in your space." },
   { id: "3", name: "Priya Sharma", company: "NovaTech Solutions", title: "Director of Sales Enablement", matchedICP: "Mid-Market SaaS – RevOps Teams", fitScore: 91, intentLevel: "High", reason: "Lookalike of accepted ICP + high fit. Competitor tool usage detected." },
