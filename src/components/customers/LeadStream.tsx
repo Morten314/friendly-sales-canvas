@@ -153,6 +153,41 @@ const EmptyState = () => (
   </Card>
 );
 
+// --- ICP Metadata ---
+interface ICPMeta {
+  region: string;
+  industries: string[];
+  buyerRoles: string[];
+}
+
+const icpMetaMap: Record<string, ICPMeta> = {
+  "ICP 1": {
+    region: "North America",
+    industries: ["Software & Technology", "AI/ML"],
+    buyerRoles: ["CTO", "VP Engineering"],
+  },
+  "ICP 2": {
+    region: "United Kingdom",
+    industries: ["Healthcare", "Health IT"],
+    buyerRoles: ["CIO", "Chief Digital Officer"],
+  },
+  "Mid-Market SaaS – RevOps Teams": {
+    region: "North America",
+    industries: ["SaaS", "AI/ML"],
+    buyerRoles: ["VP of RevOps", "Director of Sales Enablement", "VP Sales"],
+  },
+  "Enterprise FinTech Decision Makers": {
+    region: "EMEA",
+    industries: ["FinTech", "Financial Services"],
+    buyerRoles: ["CRO", "Chief Digital Officer", "VP of Innovation"],
+  },
+  "Growth-Stage E-commerce Leaders": {
+    region: "North America",
+    industries: ["E-commerce", "D2C"],
+    buyerRoles: ["Head of GTM Strategy", "Head of Growth", "COO"],
+  },
+};
+
 // --- Segment Header ---
 const SegmentHeader = ({
   icpName,
@@ -171,61 +206,82 @@ const SegmentHeader = ({
   onAccept?: () => void;
   onReject?: () => void;
 }) => {
-  const avgFit = Math.round(leads.reduce((sum, l) => sum + l.fitScore, 0) / leads.length);
-  const highIntent = leads.filter(l => l.intentLevel === "High").length;
   const config = categoryConfig[category];
+  const meta = icpMetaMap[icpName];
 
   return (
-    <div className="w-full flex items-center gap-3 px-4 py-3 bg-muted/40 hover:bg-muted/60 transition-colors rounded-t-lg border border-border border-b-0">
-      <button onClick={onToggle} className="flex items-center gap-3 flex-1 min-w-0">
-        {isOpen ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
-        <Layers className="h-4 w-4 text-primary" />
-        <span className="font-semibold text-sm text-foreground truncate">{icpName}</span>
-        <Badge variant="outline" className={`text-[10px] font-medium shrink-0 gap-1 ${config.badgeClass}`}>
-          {config.icon}
-          {config.label}
-        </Badge>
-      </button>
-      <div className="flex items-center gap-2 shrink-0">
-        <Badge variant="secondary" className="text-xs">{leads.length} leads</Badge>
-        
-        {category === "pending" && (
-          <div className="flex items-center gap-1 ml-2">
-            <TooltipProvider delayDuration={200}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 gap-1 text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200"
-                    onClick={(e) => { e.stopPropagation(); onAccept?.(); }}
-                  >
-                    <Check className="h-3 w-3" />
-                    Accept
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Accept this recommended ICP</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <TooltipProvider delayDuration={200}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 gap-1 text-xs hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
-                    onClick={(e) => { e.stopPropagation(); onReject?.(); }}
-                  >
-                    <X className="h-3 w-3" />
-                    Reject
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Dismiss this recommended ICP</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-        )}
+    <div className="w-full px-4 py-3 bg-muted/40 hover:bg-muted/60 transition-colors rounded-t-lg border border-border border-b-0">
+      <div className="flex items-center gap-3">
+        <button onClick={onToggle} className="flex items-center gap-3 flex-1 min-w-0">
+          {isOpen ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+          <Layers className="h-4 w-4 text-primary" />
+          <span className="font-semibold text-sm text-foreground truncate">{icpName}</span>
+          <Badge variant="outline" className={`text-[10px] font-medium shrink-0 gap-1 ${config.badgeClass}`}>
+            {config.icon}
+            {config.label}
+          </Badge>
+        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <Badge variant="secondary" className="text-xs">{leads.length} leads</Badge>
+          
+          {category === "pending" && (
+            <div className="flex items-center gap-1 ml-2">
+              <TooltipProvider delayDuration={200}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 gap-1 text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200"
+                      onClick={(e) => { e.stopPropagation(); onAccept?.(); }}
+                    >
+                      <Check className="h-3 w-3" />
+                      Accept
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Accept this recommended ICP</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <TooltipProvider delayDuration={200}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 gap-1 text-xs hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
+                      onClick={(e) => { e.stopPropagation(); onReject?.(); }}
+                    >
+                      <X className="h-3 w-3" />
+                      Reject
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Dismiss this recommended ICP</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+          )}
+        </div>
       </div>
+      {meta && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-2 ml-11 text-[11px]">
+          <span className="flex items-center gap-1 text-muted-foreground">
+            <MapPin className="h-3 w-3" />
+            <span className="font-medium text-foreground">{meta.region}</span>
+          </span>
+          <span className="flex items-center gap-1 text-muted-foreground">
+            <Briefcase className="h-3 w-3" />
+            {meta.industries.map((ind) => (
+              <Badge key={ind} variant="secondary" className="text-[10px] px-1.5 py-0 font-normal">{ind}</Badge>
+            ))}
+          </span>
+          <span className="flex items-center gap-1 text-muted-foreground">
+            <Users className="h-3 w-3" />
+            {meta.buyerRoles.map((role) => (
+              <Badge key={role} variant="outline" className="text-[10px] px-1.5 py-0 font-normal border-border">{role}</Badge>
+            ))}
+          </span>
+        </div>
+      )}
     </div>
   );
 };
