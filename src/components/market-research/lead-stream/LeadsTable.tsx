@@ -218,7 +218,7 @@ interface LeadsTableProps {
   onClearOpportunityFilter?: () => void;
   onResearchWithScout?: (lead: any) => void;
   onSendToStrategist?: (lead: any) => void;
-  onQualifyProfile?: (lead: any) => void;
+  onQualifyProfile?: (leads: any | any[]) => void;
   onChatWithScout?: (leads: any[], reportFilter?: string) => void;
 }
 

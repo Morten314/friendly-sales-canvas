@@ -15244,8 +15244,9 @@ const MarketResearch = React.memo(() => {
                   onChatWithScout={handleChatWithScout}
                   onChatAboutCoverage={handleChatAboutCoverage}
                   onSendToStrategist={handleSendToStrategist}
-                  onQualifyProfile={(lead) => {
-                    console.log('Qualify Profile:', lead.name);
+                  onQualifyProfile={(leads) => {
+                    const leadArray = Array.isArray(leads) ? leads : [leads];
+                    console.log('Qualify Profile:', leadArray.length, 'leads');
                     // TODO: Navigate to Profiler with lead context
                   }}
                 />
