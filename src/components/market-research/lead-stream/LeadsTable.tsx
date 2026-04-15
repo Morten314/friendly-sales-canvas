@@ -12,7 +12,7 @@ import {
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Bot, ArrowRight, ArrowUpDown, Info, ChevronRight, ChevronDown, TrendingUp, AlertTriangle, Zap, Send, ChevronUp, MapPin, Building2, Users, Eye, Search } from "lucide-react";
+import { Bot, ArrowRight, ArrowUpDown, Info, ChevronRight, ChevronDown, TrendingUp, AlertTriangle, Zap, Send, ChevronUp, MapPin, Building2, Users, Eye, Search, UserCheck } from "lucide-react";
 import { type Rating, type HeatmapLead, REPORT_COLUMNS, RATING_SCORE, TIER_INTELLIGENCE, heatmapLeads, getLeadSegment, getLeadExplanation } from "./leadData";
 
 // ─── Score Breakdown Popover ────────────────────────────────────────────────
@@ -218,6 +218,7 @@ interface LeadsTableProps {
   onClearOpportunityFilter?: () => void;
   onResearchWithScout?: (lead: any) => void;
   onSendToStrategist?: (lead: any) => void;
+  onQualifyProfile?: (lead: any) => void;
   onChatWithScout?: (leads: any[], reportFilter?: string) => void;
 }
 
@@ -228,6 +229,7 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
   onClearOpportunityFilter,
   onResearchWithScout,
   onSendToStrategist,
+  onQualifyProfile,
   onChatWithScout,
 }) => {
   const navigate = useNavigate();
@@ -426,6 +428,15 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
                             onClick={() => onResearchWithScout?.(lead)}
                           >
                             Ask Scout <ArrowRight className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 text-xs gap-1 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:text-emerald-300 dark:hover:bg-emerald-900/20"
+                            onClick={() => onQualifyProfile?.(lead)}
+                          >
+                            <UserCheck className="h-3 w-3" />
+                            Qualify Profile
                           </Button>
                         </div>
                       </TableCell>
