@@ -4,7 +4,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, CartesianGrid,
   ResponsiveContainer, PieChart, Pie, Cell,
 } from "recharts";
-import { Users, BarChart3, Target, Zap, Shield, Check, Clock } from "lucide-react";
+import { Users, BarChart3, Target, Shield, Check, Clock } from "lucide-react";
 
 // Types matching LeadStream
 type ICPCategory = "current" | "accepted" | "pending";
