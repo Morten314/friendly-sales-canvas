@@ -11,6 +11,7 @@ import {
   Layers, Check, X, Shield, Sparkles, Clock
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import ProfilerDashboard from "@/components/customers/ProfilerDashboard";
 
 // --- Types ---
 type ICPCategory = "current" | "accepted" | "pending";
