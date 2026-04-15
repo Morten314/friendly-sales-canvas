@@ -100,10 +100,10 @@ export function getLeadCountForICP(icpName: string): number {
 }
 
 const mockContextChips: ContextChip[] = [
-  { label: "Active ICPs", value: "4", icon: <Target className="h-3 w-3" /> },
-  { label: "Regions", value: "North America, EMEA", icon: <MapPin className="h-3 w-3" /> },
-  { label: "Industries", value: "SaaS, AI/ML, FinTech", icon: <Briefcase className="h-3 w-3" /> },
-  { label: "Buyer Roles", value: "VP Sales, CRO, RevOps", icon: <Users className="h-3 w-3" /> },
+  { label: "Active ICPs", value: "6", icon: <Target className="h-3 w-3" /> },
+  { label: "Regions", value: "NA, EMEA, APAC, LATAM", icon: <MapPin className="h-3 w-3" /> },
+  { label: "Industries", value: "SaaS, FinTech, Healthcare, E-commerce", icon: <Briefcase className="h-3 w-3" /> },
+  { label: "Buyer Roles", value: "CTO, CIO, VP Sales, RevOps, Growth", icon: <Users className="h-3 w-3" /> },
 ];
 
 const howItWorks = [
