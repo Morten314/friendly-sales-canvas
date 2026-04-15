@@ -209,7 +209,7 @@ const ProfilerDashboard: React.FC<ProfilerDashboardProps> = ({ leads }) => {
               <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-red-400 inline-block" /> &lt;70</span>
             </div>
           </div>
-          <div className="h-[130px]">
+          <div style={{ height: Math.max(130, icpBarData.length * 32) }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={icpBarData} layout="vertical" margin={{ top: 0, right: 12, bottom: 0, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.4} horizontal={false} />
@@ -222,10 +222,11 @@ const ProfilerDashboard: React.FC<ProfilerDashboardProps> = ({ leads }) => {
                 <YAxis
                   type="category"
                   dataKey="name"
-                  tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
+                  tick={{ fontSize: 8, fill: "hsl(var(--muted-foreground))" }}
                   axisLine={false}
                   tickLine={false}
-                  width={80}
+                  width={100}
+                  tickFormatter={(v: string) => v.length > 16 ? v.slice(0, 14) + '…' : v}
                 />
                 <RechartsTooltip content={<FitTooltip />} />
                 <Bar dataKey="highFit" stackId="a" fill="#10b981" barSize={14} name="High Fit" />
