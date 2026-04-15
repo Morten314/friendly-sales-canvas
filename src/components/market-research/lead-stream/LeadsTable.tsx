@@ -301,6 +301,18 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
           <ArrowRight className="h-3 w-3" />
         </button>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 text-xs gap-1.5 border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800 dark:border-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-900/20"
+            onClick={() => onQualifyProfile?.(sortedLeads)}
+          >
+            <UserCheck className="h-3.5 w-3.5" />
+            Qualify Profile
+            <Badge variant="secondary" className="ml-0.5 h-5 px-1.5 text-[10px] bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+              {sortedLeads.length}
+            </Badge>
+          </Button>
           <Select value={tierFilter} onValueChange={setTierFilter}>
             <SelectTrigger className="h-8 text-xs w-[130px]">
               <SelectValue placeholder="All Tiers" />
