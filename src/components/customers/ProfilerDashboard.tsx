@@ -102,13 +102,11 @@ const ProfilerDashboard: React.FC<ProfilerDashboardProps> = ({ leads }) => {
         </Card>
         <Card className="p-4">
           <div className="flex items-center gap-2 mb-1">
-            <Zap className="h-4 w-4 text-emerald-600" />
-            <span className="text-xs font-semibold text-foreground">High Intent</span>
+            <BarChart3 className="h-4 w-4 text-primary" />
+            <span className="text-xs font-semibold text-foreground">Avg Fit Score</span>
           </div>
-          <p className="text-2xl font-bold text-foreground">{intentCounts.High}</p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">
-            {totalLeads > 0 ? Math.round((intentCounts.High / totalLeads) * 100) : 0}% of all leads
-          </p>
+          <p className="text-2xl font-bold text-foreground">{avgFit}%</p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">Across all leads</p>
         </Card>
         <Card className="p-4">
           <div className="flex items-center gap-2 mb-1">
