@@ -14,7 +14,10 @@ import {
 } from "@/components/ui/tooltip";
 import { Bot, ArrowRight, ArrowUpDown, Info, ChevronRight, ChevronDown, TrendingUp, AlertTriangle, Zap, Send, ChevronUp, MapPin, Building2, Users, Eye, Search, Loader2 } from "lucide-react";
 import { type Rating, type HeatmapLead, REPORT_COLUMNS, RATING_SCORE, TIER_INTELLIGENCE, heatmapLeads, getLeadSegment, getLeadExplanation } from "./leadData";
-import { mapMarketScoresRowToHeatmapLead, type MarketScoresApiRow } from "@/lib/marketScoresHeatmap";
+import {
+  extractMarketScoreRowsFromResponse,
+  heatmapLeadFromUnknownRow,
+} from "@/lib/marketScoresHeatmap";
 import { useAuth } from "@/hooks/useAuth";
 import { useTenant } from "@/contexts/TenantContext";
 import { useToast } from "@/hooks/use-toast";
@@ -286,10 +289,21 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
         throw new Error(text || `HTTP ${res.status}`);
       }
       const data = await res.json();
-      const rawRows = data?.rows ?? data?.data?.rows;
-      const rows = (Array.isArray(rawRows) ? rawRows : []) as MarketScoresApiRow[];
-      setApiHeatmapLeads(rows.map(mapMarketScoresRowToHeatmapLead));
-      if (rows.length === 0 && data.processing_status === "processing") {
+      if (import.meta.env.DEV) {
+        console.info("[Lead Stream] market-scores response:", {
+          topKeys: data && typeof data === "object" ? Object.keys(data as object) : [],
+          processing_status: (data as { processing_status?: string })?.processing_status,
+        });
+      }
+      const rawRows = extractMarketScoreRowsFromResponse(data);
+      const mapped = rawRows
+        .map((r) => heatmapLeadFromUnknownRow(r))
+        .filter((x): x is HeatmapLead => x != null);
+      setApiHeatmapLeads(mapped);
+      if (import.meta.env.DEV) {
+        console.info("[Lead Stream] mapped heatmap rows:", mapped.length);
+      }
+      if (mapped.length === 0 && (data as { processing_status?: string })?.processing_status === "processing") {
         toast({
           title: "Scoring started",
           description: "Rows will appear when scoring completes. Try refresh again shortly.",
@@ -356,6 +370,15 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
             <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" aria-hidden />
           )}
           <h3 className="text-sm font-semibold text-foreground">Lead Intelligence Heatmap</h3>
+          {apiHeatmapLeads !== null ? (
+            <Badge variant="secondary" className="text-[10px] font-medium shrink-0">
+              Live API
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="text-[10px] text-muted-foreground font-normal shrink-0">
+              Sample data
+            </Badge>
+          )}
           <TooltipProvider delayDuration={200}>
             <Tooltip>
               <TooltipTrigger asChild>
