@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { Separator } from "@/components/ui/separator";
 import OpportunityDashboard from "./lead-stream/OpportunityDashboard";
 import LeadsTable from "./lead-stream/LeadsTable";
+import type { HeatmapLead } from "./lead-stream/leadData";
 
 // ─── Props ───────────────────────────────────────────────────────────────────
 
@@ -26,10 +27,15 @@ const ScoutLeadStream: React.FC<ScoutLeadStreamProps> = ({
   onChatAboutCoverage,
   onSendToStrategist,
 }) => {
+  const [heatmapRowsForDashboard, setHeatmapRowsForDashboard] = useState<HeatmapLead[] | null>(null);
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Zone 1: Opportunity Dashboard */}
-      <OpportunityDashboard onChatAboutCoverage={onChatAboutCoverage} />
+      <OpportunityDashboard
+        onChatAboutCoverage={onChatAboutCoverage}
+        heatmapRowsOverride={heatmapRowsForDashboard}
+      />
 
       <Separator />
 
@@ -39,6 +45,7 @@ const ScoutLeadStream: React.FC<ScoutLeadStreamProps> = ({
         onClearOpportunityFilter={onClearOpportunityFilter}
         onSendToStrategist={onSendToStrategist}
         onChatWithScout={(leads, reportFilter) => onChatWithScout?.(leads, reportFilter)}
+        onHeatmapRowsForDashboardChange={setHeatmapRowsForDashboard}
       />
     </div>
   );

@@ -1,34 +1,11 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, CartesianGrid,
   ResponsiveContainer, PieChart, Pie, Cell,
 } from "recharts";
 import { Users, BarChart3, Bot } from "lucide-react";
-import { heatmapLeads, getReportComponentScores } from "./leadData";
-
-// ─── Tier distribution from actual data ──────────────────────────────────────
-
-const tierCounts = heatmapLeads.reduce(
-  (acc, lead) => {
-    if (lead.priority === "Tier 1") acc.tier1++;
-    else if (lead.priority === "Tier 2") acc.tier2++;
-    else acc.tier3++;
-    return acc;
-  },
-  { tier1: 0, tier2: 0, tier3: 0 }
-);
-
-const tierData = [
-  { name: "Tier 1", value: tierCounts.tier1, color: "hsl(var(--chart-1))" },
-  { name: "Tier 2", value: tierCounts.tier2, color: "hsl(var(--chart-2))" },
-  { name: "Tier 3", value: tierCounts.tier3, color: "hsl(var(--chart-3))" },
-];
-const totalLeads = heatmapLeads.length;
-
-// ─── Report component scores from actual heatmap ratings ─────────────────────
-
-const reportComponentData = getReportComponentScores();
+import { type HeatmapLead, heatmapLeads, computeReportComponentScoresForLeads } from "./leadData";
 
 
 // ─── Custom tooltip ─────────────────────────────────────────────────────────
@@ -56,9 +33,39 @@ const ReportTooltip = ({ active, payload }: any) => {
 
 interface OpportunityDashboardProps {
   onChatAboutCoverage?: () => void;
+  /** When non-null, charts use these rows (POST / session heatmap). When null, demo `heatmapLeads` is used. */
+  heatmapRowsOverride?: HeatmapLead[] | null;
 }
 
-const OpportunityDashboard: React.FC<OpportunityDashboardProps> = ({ onChatAboutCoverage }) => {
+const OpportunityDashboard: React.FC<OpportunityDashboardProps> = ({
+  onChatAboutCoverage,
+  heatmapRowsOverride = null,
+}) => {
+  const { tierData, totalLeads, reportComponentData, tier1Pct } = useMemo(() => {
+    const leadsForCharts = heatmapRowsOverride ?? heatmapLeads;
+    const tierCounts = leadsForCharts.reduce(
+      (acc, lead) => {
+        if (lead.priority === "Tier 1") acc.tier1++;
+        else if (lead.priority === "Tier 2") acc.tier2++;
+        else acc.tier3++;
+        return acc;
+      },
+      { tier1: 0, tier2: 0, tier3: 0 }
+    );
+    const td = [
+      { name: "Tier 1", value: tierCounts.tier1, color: "hsl(var(--chart-1))" },
+      { name: "Tier 2", value: tierCounts.tier2, color: "hsl(var(--chart-2))" },
+      { name: "Tier 3", value: tierCounts.tier3, color: "hsl(var(--chart-3))" },
+    ];
+    const n = leadsForCharts.length;
+    return {
+      tierData: td,
+      totalLeads: n,
+      reportComponentData: computeReportComponentScoresForLeads(leadsForCharts),
+      tier1Pct: n ? Math.round((tierCounts.tier1 / n) * 100) : 0,
+    };
+  }, [heatmapRowsOverride]);
+
   return (
     <div className="space-y-4">
       <div className="flex items-start justify-between">
@@ -103,7 +110,9 @@ const OpportunityDashboard: React.FC<OpportunityDashboardProps> = ({ onChatAbout
                 </div>
               ))}
               <div className="mt-1 text-[11px] text-primary font-medium">
-                {Math.round((tierData[0].value / totalLeads) * 100)}% are Tier 1 — focus your pipeline here
+                {totalLeads === 0
+                  ? "Load lead scores to see tier coverage."
+                  : `${tier1Pct}% are Tier 1 — focus your pipeline here`}
               </div>
             </div>
           </div>

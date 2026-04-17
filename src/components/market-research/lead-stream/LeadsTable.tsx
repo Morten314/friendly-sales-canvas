@@ -265,6 +265,8 @@ interface LeadsTableProps {
   onClearOpportunityFilter?: () => void;
   onSendToStrategist?: (lead: any) => void;
   onChatWithScout?: (leads: any[], reportFilter?: string) => void;
+  /** Fires when POST/session heatmap rows change; parent charts use null → demo data, array → live counts. */
+  onHeatmapRowsForDashboardChange?: (rows: HeatmapLead[] | null) => void;
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -274,6 +276,7 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
   onClearOpportunityFilter,
   onSendToStrategist,
   onChatWithScout,
+  onHeatmapRowsForDashboardChange,
 }) => {
   const navigate = useNavigate();
   const { currentUser, orgId: authOrgId, fetchOrgId } = useAuth();
@@ -440,6 +443,10 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
     window.addEventListener("scoutLeadStreamHeatmapRefresh", onLeadStreamHeaderRefresh);
     return () => window.removeEventListener("scoutLeadStreamHeatmapRefresh", onLeadStreamHeaderRefresh);
   }, [fetchMarketScores]);
+
+  useLayoutEffect(() => {
+    onHeatmapRowsForDashboardChange?.(apiHeatmapLeads);
+  }, [apiHeatmapLeads, onHeatmapRowsForDashboardChange]);
 
   const baseLeads = apiHeatmapLeads ?? heatmapLeads;
 

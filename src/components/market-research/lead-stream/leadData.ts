@@ -371,10 +371,10 @@ export function getLeadSegment(leadId: string): LeadSegment | null {
 
 // ─── Computed report component scores ────────────────────────────────────────
 
-export function getReportComponentScores(): ReportComponentScore[] {
+export function computeReportComponentScoresForLeads(leads: HeatmapLead[]): ReportComponentScore[] {
   return REPORT_COLUMNS.map((col) => {
     let high = 0, medium = 0, low = 0;
-    heatmapLeads.forEach((lead) => {
+    leads.forEach((lead) => {
       const r = lead.ratings[col.key];
       if (r === "High") high++;
       else if (r === "Medium") medium++;
@@ -390,4 +390,8 @@ export function getReportComponentScores(): ReportComponentScore[] {
       totalScore,
     };
   }).sort((a, b) => b.totalScore - a.totalScore);
+}
+
+export function getReportComponentScores(): ReportComponentScore[] {
+  return computeReportComponentScoresForLeads(heatmapLeads);
 }
