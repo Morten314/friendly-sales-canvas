@@ -13,8 +13,8 @@ from langchain_community.document_loaders import PyPDFLoader, TextLoader
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_core.prompts import PromptTemplate
 from config import PREDEFINED_QUESTIONS, rapidapi_key
-from database import driver, query
-from llm_config import llm_transformer, graph, llm, agent_chain
+from database import driver, query, client
+from llm_config import llm_transformer, graph, llm, llm2, agent_chain
 
 # Function to load documents
 def load_document(file_path):
@@ -1751,6 +1751,8 @@ COMPONENT_FUNCTIONS = {
     "market entry & growth strategy" : Research_Market_5
 }
 
+MARKET_SCORE_COMPONENT_KEYS: List[str] = list(COMPONENT_FUNCTIONS.keys())
+
 # Helper function to fetch leads for org_id
 def fetch_leads_for_org(org_id: str, limit: int = 100) -> List[Dict[str, Any]]:
     """Fetch leads from Neo4j filtered by org_id"""
@@ -1783,6 +1785,126 @@ def fetch_leads_for_org(org_id: str, limit: int = 100) -> List[Dict[str, Any]]:
     except Exception as e:
         print(f"Warning: Could not fetch leads: {e}")
         return []
+
+
+def get_company_profile_for_org(org_id: str) -> Dict[str, Any]:
+    """Fetch a single company profile for an org."""
+    with driver.session() as session:
+        result = session.run(
+            "MATCH (c:CompanyProfile {org_id: $org_id}) RETURN c LIMIT 1",
+            org_id=org_id,
+        )
+        record = result.single()
+        if not record:
+            return {}
+        company_profile = dict(record.values()[0])
+        if "socialMediaUrls" in company_profile and isinstance(company_profile["socialMediaUrls"], str):
+            try:
+                company_profile["socialMediaUrls"] = json.loads(company_profile["socialMediaUrls"])
+            except json.JSONDecodeError:
+                pass
+        return company_profile
+
+
+def get_market_reports_for_org(user_id: str, org_id: str) -> Dict[str, Dict[str, Any]]:
+    """Fetch latest market research reports for all five components."""
+    db = client["Scout_Agent"]
+    collection = db["Market_Intelligence"]
+    reports: Dict[str, Dict[str, Any]] = {}
+    for component_name in MARKET_SCORE_COMPONENT_KEYS:
+        doc = collection.find_one(
+            {"user_id": user_id, "org_id": org_id, "component_name": component_name},
+            sort=[("timestamp", -1)],
+        )
+        if doc:
+            doc.pop("_id", None)
+            reports[component_name] = doc
+    return reports
+
+
+def _clean_and_parse_json(raw_text: str) -> Dict[str, Any]:
+    cleaned = (
+        str(raw_text)
+        .strip()
+        .removeprefix("```json")
+        .removeprefix("```")
+        .removesuffix("```")
+        .strip()
+    )
+    return json.loads(cleaned)
+
+
+def score_single_lead_against_market(
+    lead: Dict[str, Any],
+    company_profile: Dict[str, Any],
+    market_reports: Dict[str, Dict[str, Any]],
+) -> Dict[str, Any]:
+    """
+    Score one lead against all five market components with explanations.
+    Returns component_scores, component_descriptions and total score.
+    """
+    prompt = f"""
+You are scoring a sales lead fit against five market-research components.
+Return strict JSON only.
+
+Component keys (must match exactly):
+{json.dumps(MARKET_SCORE_COMPONENT_KEYS)}
+
+Company profile:
+{json.dumps(company_profile, default=str)}
+
+Lead data:
+{json.dumps(lead, default=str)}
+
+Market research component reports:
+{json.dumps(market_reports, default=str)}
+
+Return JSON schema:
+{{
+  "component_scores": {{
+    "market size & opportunity": <number 0-100>,
+    "industry trends report": <number 0-100>,
+    "competitor landscape": <number 0-100>,
+    "regulatory & compliance highlights": <number 0-100>,
+    "market entry & growth strategy": <number 0-100>
+  }},
+  "component_descriptions": {{
+    "market size & opportunity": "<short reason>",
+    "industry trends report": "<short reason>",
+    "competitor landscape": "<short reason>",
+    "regulatory & compliance highlights": "<short reason>",
+    "market entry & growth strategy": "<short reason>"
+  }}
+}}
+"""
+    response = llm2.invoke([HumanMessage(content=prompt)])
+    content = getattr(response, "content", response)
+    parsed = _clean_and_parse_json(content)
+    scores = parsed.get("component_scores", {}) if isinstance(parsed, dict) else {}
+    descriptions = parsed.get("component_descriptions", {}) if isinstance(parsed, dict) else {}
+
+    normalized_scores: Dict[str, float] = {}
+    normalized_descriptions: Dict[str, str] = {}
+    for component in MARKET_SCORE_COMPONENT_KEYS:
+        raw_score = scores.get(component, 0)
+        try:
+            score = float(raw_score)
+        except (TypeError, ValueError):
+            score = 0.0
+        score = max(0.0, min(100.0, score))
+        normalized_scores[component] = round(score, 2)
+
+        description = descriptions.get(component)
+        if not isinstance(description, str) or not description.strip():
+            description = "Score generated with limited evidence from available lead/profile context."
+        normalized_descriptions[component] = description.strip()
+
+    total_score = round(sum(normalized_scores.values()) / float(len(MARKET_SCORE_COMPONENT_KEYS)), 2)
+    return {
+        "component_scores": normalized_scores,
+        "component_descriptions": normalized_descriptions,
+        "market_total_score": total_score,
+    }
 
 # Signals Research Functions
 def search_signals_scout(pre_data) -> dict:

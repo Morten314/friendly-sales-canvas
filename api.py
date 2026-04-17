@@ -28,7 +28,8 @@ from models import (
     CompanyProfile, UserProfile, ScoutProfile, MarketRequest, EditRequest,
     CustomerProfileRequest, CustomerProfileICP, LeadCreateRequest, LeadUpdateRequest,
     SignalActionRequest, SignalAskRequest, RegistrationRequest, RegistrationResponse,
-    SuggestedICPToCustomerProfileRequest
+    SuggestedICPToCustomerProfileRequest, LeadMarketScoresRequest, LeadMarketScoresResponse,
+    LeadMarketScoreRow, LeadMarketScoreDescriptionsResponse, MARKET_SCORE_COMPONENT_KEYS
 )
 from database import driver, graph, client, upsert_node
 from llm_config import chain, chain2, llm2
@@ -36,7 +37,8 @@ from langchain_core.messages import HumanMessage
 from services import (
     grapher, create_prospect_node, convert_audio_to_text, process_prospect_list,
     ICP_FUNCTIONS, COMPONENT_FUNCTIONS, ICP_generator, SIGNALS_FUNCTIONS,
-    search_signals_scout, search_signals_profiler
+    search_signals_scout, search_signals_profiler, fetch_leads_for_org,
+    get_company_profile_for_org, get_market_reports_for_org, score_single_lead_against_market
 )
 
 # Configure logging
@@ -163,6 +165,259 @@ def _get_profiler_mongo_client() -> MongoClient:
     password = urllib.parse.quote_plus("Brewra@Best09")
     mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
     return MongoClient(mongo_uri)
+
+
+def _get_market_score_collections():
+    mongo_client = _get_profiler_mongo_client()
+    profiler_db = mongo_client["Profiler"]
+    score_coll = profiler_db["Lead_Market_Scores"]
+    run_coll = profiler_db["Lead_Market_Score_Runs"]
+    score_coll.create_index([("org_id", 1), ("lead_id", 1)], unique=True)
+    score_coll.create_index([("org_id", 1), ("updated_at", -1)])
+    run_coll.create_index([("org_id", 1), ("status", 1)])
+    run_coll.create_index([("org_id", 1), ("created_at", -1)])
+    return mongo_client, score_coll, run_coll
+
+
+def _safe_json_to_obj(value: Any) -> Any:
+    if isinstance(value, str) and value.strip().startswith(("{", "[")):
+        try:
+            return json.loads(value)
+        except json.JSONDecodeError:
+            return value
+    return value
+
+
+def _lead_to_score_row(lead_doc: Dict[str, Any]) -> LeadMarketScoreRow:
+    component_scores = lead_doc.get("component_scores", {}) if isinstance(lead_doc.get("component_scores"), dict) else {}
+    return LeadMarketScoreRow(
+        lead_id=str(lead_doc.get("lead_id")),
+        org_id=str(lead_doc.get("org_id")),
+        file_id=lead_doc.get("file_id"),
+        company_name=lead_doc.get("company_name"),
+        score_market_size_opportunity=float(component_scores.get("market size & opportunity", 0)),
+        score_industry_trends_report=float(component_scores.get("industry trends report", 0)),
+        score_competitor_landscape=float(component_scores.get("competitor landscape", 0)),
+        score_regulatory_compliance_highlights=float(component_scores.get("regulatory & compliance highlights", 0)),
+        score_market_entry_growth_strategy=float(component_scores.get("market entry & growth strategy", 0)),
+        combined_score=float(lead_doc.get("market_total_score", 0)),
+        scoring_status=str(lead_doc.get("scoring_status", "completed")),
+        scored_at=lead_doc.get("scored_at"),
+        updated_at=lead_doc.get("updated_at"),
+    )
+
+
+def _get_latest_market_score_rows(org_id: str) -> List[LeadMarketScoreRow]:
+    mongo_client = None
+    try:
+        mongo_client, score_coll, _ = _get_market_score_collections()
+        docs = list(score_coll.find({"org_id": org_id}).sort("updated_at", -1))
+        rows: List[LeadMarketScoreRow] = []
+        for doc in docs:
+            doc.pop("_id", None)
+            rows.append(_lead_to_score_row(doc))
+        return rows
+    finally:
+        if mongo_client:
+            mongo_client.close()
+
+
+def _get_latest_scoring_run(org_id: str) -> Optional[Dict[str, Any]]:
+    mongo_client = None
+    try:
+        mongo_client, _, run_coll = _get_market_score_collections()
+        run_doc = run_coll.find_one({"org_id": org_id}, sort=[("created_at", -1)])
+        if not run_doc:
+            return None
+        run_doc.pop("_id", None)
+        return run_doc
+    finally:
+        if mongo_client:
+            mongo_client.close()
+
+
+def _persist_market_score_for_lead(
+    user_id: str,
+    org_id: str,
+    lead: Dict[str, Any],
+    scoring_payload: Dict[str, Any],
+    run_id: str,
+    scoring_status: str = "completed",
+) -> None:
+    now_iso = datetime.utcnow().isoformat()
+    lead_id = str(lead.get("lead_id"))
+    file_id = lead.get("file_id")
+    company_name = lead.get("company") or lead.get("Company") or lead.get("name")
+    component_scores = scoring_payload.get("component_scores", {})
+    component_descriptions = scoring_payload.get("component_descriptions", {})
+    market_total_score = float(scoring_payload.get("market_total_score", 0))
+
+    mongo_client = None
+    try:
+        mongo_client, score_coll, _ = _get_market_score_collections()
+        score_coll.update_one(
+            {"org_id": org_id, "lead_id": lead_id},
+            {
+                "$set": {
+                    "user_id": user_id,
+                    "org_id": org_id,
+                    "lead_id": lead_id,
+                    "file_id": file_id,
+                    "company_name": company_name,
+                    "component_scores": component_scores,
+                    "component_descriptions": component_descriptions,
+                    "market_total_score": market_total_score,
+                    "scoring_status": scoring_status,
+                    "run_id": run_id,
+                    "updated_at": now_iso,
+                    "scored_at": now_iso,
+                },
+                "$setOnInsert": {"created_at": now_iso},
+            },
+            upsert=True,
+        )
+    finally:
+        if mongo_client:
+            mongo_client.close()
+
+    neo4j_update = {
+        "market_component_scores": component_scores,
+        "market_component_descriptions": component_descriptions,
+        "market_total_score": market_total_score,
+        "market_scored_at": now_iso,
+        "market_scoring_version": "v1",
+        "market_scoring_status": scoring_status,
+        "market_score_run_id": run_id,
+    }
+    with driver.session() as session:
+        session.execute_write(
+            upsert_node,
+            "Lead",
+            "lead_id",
+            lead_id,
+            neo4j_update,
+        )
+
+
+def _run_market_scoring_for_org(user_id: str, org_id: str, run_id: str) -> None:
+    mongo_client = None
+    run_coll = None
+    try:
+        mongo_client, _, run_coll = _get_market_score_collections()
+        run_coll.update_one(
+            {"run_id": run_id},
+            {"$set": {"status": "processing", "started_at": datetime.utcnow().isoformat()}},
+        )
+
+        leads = fetch_leads_for_org(org_id, limit=5000)
+        if not leads:
+            run_coll.update_one(
+                {"run_id": run_id},
+                {
+                    "$set": {
+                        "status": "failed",
+                        "error": "No leads found for org_id",
+                        "completed_at": datetime.utcnow().isoformat(),
+                    }
+                },
+            )
+            return
+
+        company_profile = get_company_profile_for_org(org_id)
+        if not company_profile:
+            run_coll.update_one(
+                {"run_id": run_id},
+                {
+                    "$set": {
+                        "status": "failed",
+                        "error": "Company profile not found for org_id",
+                        "completed_at": datetime.utcnow().isoformat(),
+                    }
+                },
+            )
+            return
+
+        market_reports = get_market_reports_for_org(user_id, org_id)
+        if len(market_reports) < len(MARKET_SCORE_COMPONENT_KEYS):
+            run_coll.update_one(
+                {"run_id": run_id},
+                {
+                    "$set": {
+                        "status": "failed",
+                        "error": "Missing market research components. Generate all 5 components first.",
+                        "completed_at": datetime.utcnow().isoformat(),
+                    }
+                },
+            )
+            return
+
+        processed_count = 0
+        failed_count = 0
+        for lead in leads:
+            lead_id = str(lead.get("lead_id") or "")
+            if not lead_id:
+                failed_count += 1
+                continue
+            try:
+                scoring_payload = score_single_lead_against_market(
+                    lead=lead,
+                    company_profile=company_profile,
+                    market_reports=market_reports,
+                )
+                _persist_market_score_for_lead(
+                    user_id=user_id,
+                    org_id=org_id,
+                    lead=lead,
+                    scoring_payload=scoring_payload,
+                    run_id=run_id,
+                    scoring_status="completed",
+                )
+                processed_count += 1
+            except Exception as lead_error:
+                failed_count += 1
+                fallback_payload = {
+                    "component_scores": {key: 0.0 for key in MARKET_SCORE_COMPONENT_KEYS},
+                    "component_descriptions": {
+                        key: f"Scoring failed: {str(lead_error)[:180]}" for key in MARKET_SCORE_COMPONENT_KEYS
+                    },
+                    "market_total_score": 0.0,
+                }
+                _persist_market_score_for_lead(
+                    user_id=user_id,
+                    org_id=org_id,
+                    lead=lead,
+                    scoring_payload=fallback_payload,
+                    run_id=run_id,
+                    scoring_status="failed",
+                )
+
+        run_coll.update_one(
+            {"run_id": run_id},
+            {
+                "$set": {
+                    "status": "completed",
+                    "processed_count": processed_count,
+                    "failed_count": failed_count,
+                    "completed_at": datetime.utcnow().isoformat(),
+                }
+            },
+        )
+    except Exception as e:
+        logger.error(f"Lead market scoring run failed for org {org_id}: {e}")
+        if run_coll is not None:
+            run_coll.update_one(
+                {"run_id": run_id},
+                {
+                    "$set": {
+                        "status": "failed",
+                        "error": str(e),
+                        "completed_at": datetime.utcnow().isoformat(),
+                    }
+                },
+            )
+    finally:
+        if mongo_client:
+            mongo_client.close()
 
 
 def _ensure_icp_id_registry_indexes(db) -> None:
@@ -797,6 +1052,95 @@ def delete_leads_by_file(file_id: str, user_id: str = Query(...), org_id: str = 
     except Exception as e:
         logger.error(f"Error deleting leads by file_id: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to delete leads by file_id: {str(e)}")
+    finally:
+        if mongo_client:
+            mongo_client.close()
+
+
+@app.post("/leads/market-scores", response_model=LeadMarketScoresResponse)
+async def get_or_refresh_lead_market_scores(
+    request: LeadMarketScoresRequest,
+    background_tasks: BackgroundTasks,
+):
+    run_doc: Optional[Dict[str, Any]] = None
+    mongo_client = None
+    try:
+        mongo_client, _, run_coll = _get_market_score_collections()
+        active_run = run_coll.find_one(
+            {"org_id": request.org_id, "status": {"$in": ["queued", "processing"]}},
+            sort=[("created_at", -1)],
+        )
+
+        if request.refresh and not active_run:
+            run_id = str(uuid.uuid4())
+            queued_at = datetime.utcnow().isoformat()
+            run_doc = {
+                "run_id": run_id,
+                "user_id": request.user_id,
+                "org_id": request.org_id,
+                "status": "queued",
+                "created_at": queued_at,
+                "started_at": None,
+                "completed_at": None,
+                "processed_count": 0,
+                "failed_count": 0,
+            }
+            run_coll.insert_one(run_doc)
+            background_tasks.add_task(_run_market_scoring_for_org, request.user_id, request.org_id, run_id)
+        elif active_run:
+            active_run.pop("_id", None)
+            run_doc = active_run
+        else:
+            run_doc = _get_latest_scoring_run(request.org_id)
+
+        rows = _get_latest_market_score_rows(request.org_id)
+        if not rows and not request.refresh:
+            raise HTTPException(status_code=404, detail="No lead market scores found for org_id")
+
+        latest_run = run_doc or _get_latest_scoring_run(request.org_id)
+        processing_status = str((latest_run or {}).get("status", "idle"))
+        last_scored_at = rows[0].updated_at if rows else None
+        return LeadMarketScoresResponse(
+            org_id=request.org_id,
+            total_leads=len(rows),
+            processing_status=processing_status,
+            active_run_id=(latest_run or {}).get("run_id"),
+            last_scored_at=last_scored_at,
+            rows=rows,
+        )
+    finally:
+        if mongo_client:
+            mongo_client.close()
+
+
+@app.get("/leads/{lead_id}/market-score-descriptions", response_model=LeadMarketScoreDescriptionsResponse)
+async def get_lead_market_score_descriptions(
+    lead_id: str,
+    user_id: str = Query(...),
+    org_id: str = Query(...),
+):
+    mongo_client = None
+    try:
+        mongo_client, score_coll, _ = _get_market_score_collections()
+        doc = score_coll.find_one({"org_id": org_id, "lead_id": lead_id, "user_id": user_id})
+        if not doc:
+            raise HTTPException(status_code=404, detail="Lead scoring descriptions not found")
+
+        descriptions = doc.get("component_descriptions", {})
+        if not isinstance(descriptions, dict):
+            descriptions = {}
+
+        normalized_descriptions = {
+            key: str(descriptions.get(key, "Description not available"))
+            for key in MARKET_SCORE_COMPONENT_KEYS
+        }
+        return LeadMarketScoreDescriptionsResponse(
+            lead_id=lead_id,
+            org_id=org_id,
+            combined_score=float(doc.get("market_total_score", 0)),
+            scored_at=doc.get("scored_at") or doc.get("updated_at"),
+            descriptions=normalized_descriptions,
+        )
     finally:
         if mongo_client:
             mongo_client.close()
