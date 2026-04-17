@@ -63,11 +63,7 @@ import { CompetitorAnalysis } from "@/components/market-research/CompetitorAnaly
 
 
 
-import { MarketSegments } from "@/components/market-research/MarketSegments";
 
-
-
-import { SwotAnalysis } from "@/components/market-research/SwotAnalysis";
 
 
 
@@ -78,10 +74,6 @@ import { EmergingTrends } from "@/components/market-research/EmergingTrends";
 import ScoutLeadStream from "@/components/market-research/ScoutLeadStream";
 import { ChatWithScout } from "@/components/market-research/ChatWithScout";
 
-
-
-
-import { TechnologyDrivers } from "@/components/market-research/TechnologyDrivers";
 
 
 

@@ -18,6 +18,10 @@ import {
   extractMarketScoreRowsFromResponse,
   heatmapLeadFromUnknownRow,
 } from "@/lib/marketScoresHeatmap";
+import {
+  getDescriptionTextForColumn,
+  type MarketScoreDescriptionsResponse,
+} from "@/lib/marketScoreDescriptions";
 import { useAuth } from "@/hooks/useAuth";
 import { useTenant } from "@/contexts/TenantContext";
 import { useToast } from "@/hooks/use-toast";
@@ -121,10 +125,27 @@ const ratingBorderColor: Record<Rating, string> = {
   Low: "border-red-200 dark:border-red-800",
 };
 
-const LeadIntelligencePanel = ({ lead, onChatWithScout }: { lead: HeatmapLead; onChatWithScout?: (leads: any[], reportFilter?: string) => void }) => {
+type LeadScoreDetailState =
+  | { status: "loading" }
+  | { status: "error"; message: string }
+  | { status: "ok"; data: MarketScoreDescriptionsResponse };
+
+const LeadIntelligencePanel = ({
+  lead,
+  onChatWithScout,
+  detail,
+}: {
+  lead: HeatmapLead;
+  onChatWithScout?: (leads: any[], reportFilter?: string) => void;
+  detail?: LeadScoreDetailState;
+}) => {
   const intel = TIER_INTELLIGENCE[lead.priority];
   const [showSegment, setShowSegment] = useState(false);
   const segment = getLeadSegment(lead.id);
+
+  const isLoadingDetail = detail?.status === "loading";
+  const detailError = detail?.status === "error" ? detail.message : null;
+  const detailData = detail?.status === "ok" ? detail.data : undefined;
 
   return (
     <div className="px-4 py-3 bg-muted/30 border-t border-border/50 space-y-3">
@@ -136,11 +157,24 @@ const LeadIntelligencePanel = ({ lead, onChatWithScout }: { lead: HeatmapLead; o
         </div>
       )}
 
+      {isLoadingDetail && (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground py-1">
+          <Loader2 className="h-4 w-4 animate-spin shrink-0" aria-hidden />
+          Loading score details…
+        </div>
+      )}
+
+      {detailError && (
+        <p className="text-[11px] text-destructive">{detailError}</p>
+      )}
+
       {/* Per-component explanations */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
         {REPORT_COLUMNS.map((col) => {
           const rating = lead.ratings[col.key];
-          const explanation = getLeadExplanation(lead.id, col.key, rating);
+          const fromApi = getDescriptionTextForColumn(detailData, col.key);
+          const explanation =
+            fromApi ?? getLeadExplanation(lead.id, col.key, rating);
           return (
             <div
               key={col.key}
@@ -247,8 +281,11 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
   const [sortAsc, setSortAsc] = useState(false);
   const [tierFilter, setTierFilter] = useState<string>("all");
   const [expandedLeads, setExpandedLeads] = useState<Set<string>>(new Set());
+  const [scoreDetailByLeadId, setScoreDetailByLeadId] = useState<
+    Record<string, LeadScoreDetailState>
+  >({});
 
-  const fetchMarketScores = useCallback(async () => {
+  const resolveUserIdOrgId = useCallback(async (): Promise<{ userId: string; orgId: string } | null> => {
     const userId = currentUser?.uid;
     let orgId = selectedTenant?.id ?? authOrgId ?? "";
     if (!orgId && userId) {
@@ -259,7 +296,13 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
       const resolved = await fetchOrgId(userId);
       orgId = resolved?.orgId ?? "";
     }
-    if (!userId || !orgId) {
+    if (!userId || !orgId) return null;
+    return { userId, orgId };
+  }, [currentUser?.uid, selectedTenant?.id, authOrgId, fetchOrgId]);
+
+  const fetchMarketScores = useCallback(async () => {
+    const ctx = await resolveUserIdOrgId();
+    if (!ctx) {
       toast({
         title: "Missing account context",
         description: "Sign in and select an organization (or ensure org is loaded) to refresh lead scores.",
@@ -267,6 +310,7 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
       });
       return;
     }
+    const { userId, orgId } = ctx;
     setMarketScoresLoading(true);
     try {
       const authHeader = await jwtManager.getAuthHeader();
@@ -318,7 +362,56 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
     } finally {
       setMarketScoresLoading(false);
     }
-  }, [currentUser?.uid, selectedTenant?.id, authOrgId, fetchOrgId, toast]);
+  }, [resolveUserIdOrgId, toast]);
+
+  const fetchMarketScoreDescriptions = useCallback(
+    async (leadId: string) => {
+      setScoreDetailByLeadId((prev) => ({ ...prev, [leadId]: { status: "loading" } }));
+      const ctx = await resolveUserIdOrgId();
+      if (!ctx) {
+        setScoreDetailByLeadId((prev) => ({
+          ...prev,
+          [leadId]: { status: "error", message: "Missing account context" },
+        }));
+        return;
+      }
+      try {
+        const authHeader = await jwtManager.getAuthHeader();
+        const qs = new URLSearchParams({
+          user_id: ctx.userId,
+          org_id: ctx.orgId,
+        });
+        const url = buildApiUrl(
+          `leads/${encodeURIComponent(leadId)}/market-score-descriptions?${qs.toString()}`
+        );
+        const res = await fetch(url, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            ...(authHeader && { Authorization: authHeader }),
+          },
+        });
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(text || `HTTP ${res.status}`);
+        }
+        const data = (await res.json()) as MarketScoreDescriptionsResponse;
+        setScoreDetailByLeadId((prev) => ({
+          ...prev,
+          [leadId]: { status: "ok", data },
+        }));
+      } catch (e) {
+        setScoreDetailByLeadId((prev) => ({
+          ...prev,
+          [leadId]: {
+            status: "error",
+            message: e instanceof Error ? e.message : "Failed to load score details",
+          },
+        }));
+      }
+    },
+    [resolveUserIdOrgId]
+  );
 
   useEffect(() => {
     const onLeadStreamHeaderRefresh = () => {
@@ -331,12 +424,16 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
   const baseLeads = apiHeatmapLeads ?? heatmapLeads;
 
   const toggleExpand = (id: string) => {
+    const willOpen = !expandedLeads.has(id);
     setExpandedLeads((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
+    if (willOpen) {
+      void fetchMarketScoreDescriptions(id);
+    }
   };
 
   // Filter by tier
@@ -543,7 +640,11 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
                     main,
                     <TableRow key={`${lead.id}-expanded`} className="hover:bg-transparent">
                       <TableCell colSpan={colSpan} className="p-0">
-                        <LeadIntelligencePanel lead={lead} onChatWithScout={onChatWithScout} />
+                        <LeadIntelligencePanel
+                          lead={lead}
+                          onChatWithScout={onChatWithScout}
+                          detail={scoreDetailByLeadId[lead.id]}
+                        />
                       </TableCell>
                     </TableRow>,
                   ];
