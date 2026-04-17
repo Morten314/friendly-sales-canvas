@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useLayoutEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,10 @@ import {
   getDescriptionTextForColumn,
   type MarketScoreDescriptionsResponse,
 } from "@/lib/marketScoreDescriptions";
+import {
+  readLeadStreamHeatmapFromSession,
+  writeLeadStreamHeatmapToSession,
+} from "@/lib/leadStreamHeatmapSession";
 import { useAuth } from "@/hooks/useAuth";
 import { useTenant } from "@/contexts/TenantContext";
 import { useToast } from "@/hooks/use-toast";
@@ -344,6 +348,7 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
         .map((r) => heatmapLeadFromUnknownRow(r))
         .filter((x): x is HeatmapLead => x != null);
       setApiHeatmapLeads(mapped);
+      writeLeadStreamHeatmapToSession(userId, orgId, mapped);
       if (import.meta.env.DEV) {
         console.info("[Lead Stream] mapped heatmap rows:", mapped.length);
       }
@@ -363,6 +368,21 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
       setMarketScoresLoading(false);
     }
   }, [resolveUserIdOrgId, toast]);
+
+  /** Restore POST /leads/market-scores result after navigation (same tab session, same user+org). */
+  useLayoutEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const ctx = await resolveUserIdOrgId();
+      if (cancelled || !ctx) return;
+      const cached = readLeadStreamHeatmapFromSession(ctx.userId, ctx.orgId);
+      if (cancelled || cached === null) return;
+      setApiHeatmapLeads(cached);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [resolveUserIdOrgId]);
 
   const fetchMarketScoreDescriptions = useCallback(
     async (leadId: string) => {
