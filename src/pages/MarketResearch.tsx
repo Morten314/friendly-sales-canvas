@@ -817,6 +817,8 @@ const MarketResearch = React.memo(() => {
 
 
   const [activeTab, setActiveTab] = useState(getActiveTabFromPath());
+  const activeTabRef = useRef(activeTab);
+  activeTabRef.current = activeTab;
   const [signalsChatContext, setSignalsChatContext] = useState<SignalsChatContext | null>(null);
   const [scoutResearchContext, setScoutResearchContext] = useState<{ leads: { name: string; company: string; jobTitle: string }[]; opportunity?: string; icp?: string; reportTraits?: string[] } | null>(null);
   const [scoutMode, setScoutMode] = useState<"selected-leads" | "full-list">("selected-leads");
@@ -3352,17 +3354,9 @@ const MarketResearch = React.memo(() => {
 
 
 
-  // Listen for custom events from header buttons
+  // Listen for custom events from header buttons (scout Refresh → Lead Stream vs full Scout: see handleRefreshRef below)
 
   useEffect(() => {
-
-    const handleScoutRefresh = () => {
-
-      handleRefresh();
-
-    };
-
-
 
     const handleScoutHistory = () => {
 
@@ -3388,8 +3382,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-    window.addEventListener('scoutRefresh', handleScoutRefresh);
-
     window.addEventListener('scoutHistory', handleScoutHistory);
 
     window.addEventListener('scoutSettings', handleScoutSettings);
@@ -3397,8 +3389,6 @@ const MarketResearch = React.memo(() => {
 
 
     return () => {
-
-      window.removeEventListener('scoutRefresh', handleScoutRefresh);
 
       window.removeEventListener('scoutHistory', handleScoutHistory);
 
@@ -9040,6 +9030,50 @@ const MarketResearch = React.memo(() => {
 
 
   };
+
+
+
+  const handleRefreshRef = useRef(handleRefresh);
+
+  handleRefreshRef.current = handleRefresh;
+
+
+
+  useEffect(() => {
+
+    const handleScoutRefresh = () => {
+
+      // URL is source of truth if React tab state lags behind the route (split Tabs roots: headers vs content).
+      const pathSegs = window.location.pathname.split("/").filter(Boolean);
+      const lastSeg = pathSegs[pathSegs.length - 1] ?? "";
+      const urlIsLeadStream = lastSeg === "leadstream";
+      const tabIsLeadStream = activeTabRef.current === "analysis";
+
+      if (tabIsLeadStream || urlIsLeadStream) {
+
+        window.dispatchEvent(new CustomEvent("scoutLeadStreamHeatmapRefresh"));
+
+        return;
+
+      }
+
+      handleRefreshRef.current();
+
+    };
+
+
+
+    window.addEventListener("scoutRefresh", handleScoutRefresh);
+
+
+
+    return () => {
+
+      window.removeEventListener("scoutRefresh", handleScoutRefresh);
+
+    };
+
+  }, []);
 
 
 
@@ -15138,7 +15172,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-              <TabsContent value="analysis" className="mt-0">
+              <TabsContent value="analysis" className="mt-0" forceMount>
 
 
 

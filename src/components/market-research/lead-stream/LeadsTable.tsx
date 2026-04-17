@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,8 +12,14 @@ import {
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Bot, ArrowRight, ArrowUpDown, Info, ChevronRight, ChevronDown, TrendingUp, AlertTriangle, Zap, Send, ChevronUp, MapPin, Building2, Users, Eye, Search } from "lucide-react";
+import { Bot, ArrowRight, ArrowUpDown, Info, ChevronRight, ChevronDown, TrendingUp, AlertTriangle, Zap, Send, ChevronUp, MapPin, Building2, Users, Eye, Search, Loader2 } from "lucide-react";
 import { type Rating, type HeatmapLead, REPORT_COLUMNS, RATING_SCORE, TIER_INTELLIGENCE, heatmapLeads, getLeadSegment, getLeadExplanation } from "./leadData";
+import { mapMarketScoresRowToHeatmapLead, type MarketScoresApiRow } from "@/lib/marketScoresHeatmap";
+import { useAuth } from "@/hooks/useAuth";
+import { useTenant } from "@/contexts/TenantContext";
+import { useToast } from "@/hooks/use-toast";
+import { buildApiUrl } from "@/lib/api";
+import jwtManager from "@/lib/jwt";
 
 // ─── Score Breakdown Popover ────────────────────────────────────────────────
 
@@ -229,10 +235,86 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
   onChatWithScout,
 }) => {
   const navigate = useNavigate();
+  const { currentUser, orgId: authOrgId, fetchOrgId } = useAuth();
+  const { selectedTenant } = useTenant();
+  const { toast } = useToast();
+  const [apiHeatmapLeads, setApiHeatmapLeads] = useState<HeatmapLead[] | null>(null);
+  const [marketScoresLoading, setMarketScoresLoading] = useState(false);
   const [sortBy, setSortBy] = useState<"score" | "priority" | null>(null);
   const [sortAsc, setSortAsc] = useState(false);
   const [tierFilter, setTierFilter] = useState<string>("all");
   const [expandedLeads, setExpandedLeads] = useState<Set<string>>(new Set());
+
+  const fetchMarketScores = useCallback(async () => {
+    const userId = currentUser?.uid;
+    let orgId = selectedTenant?.id ?? authOrgId ?? "";
+    if (!orgId && userId) {
+      const stored = localStorage.getItem(`org_id_${userId}`);
+      if (stored) orgId = stored;
+    }
+    if (!orgId && userId && fetchOrgId) {
+      const resolved = await fetchOrgId(userId);
+      orgId = resolved?.orgId ?? "";
+    }
+    if (!userId || !orgId) {
+      toast({
+        title: "Missing account context",
+        description: "Sign in and select an organization (or ensure org is loaded) to refresh lead scores.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setMarketScoresLoading(true);
+    try {
+      const authHeader = await jwtManager.getAuthHeader();
+      // Scout header Refresh on Lead Stream tab only: backend requires refresh: true to (re)generate scores.
+      const body = {
+        user_id: userId,
+        org_id: orgId,
+        refresh: true as const,
+      };
+      const res = await fetch(buildApiUrl("leads/market-scores"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(authHeader && { Authorization: authHeader }),
+        },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || `HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      const rawRows = data?.rows ?? data?.data?.rows;
+      const rows = (Array.isArray(rawRows) ? rawRows : []) as MarketScoresApiRow[];
+      setApiHeatmapLeads(rows.map(mapMarketScoresRowToHeatmapLead));
+      if (rows.length === 0 && data.processing_status === "processing") {
+        toast({
+          title: "Scoring started",
+          description: "Rows will appear when scoring completes. Try refresh again shortly.",
+        });
+      }
+    } catch (e) {
+      toast({
+        title: "Could not refresh lead scores",
+        description: e instanceof Error ? e.message : "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setMarketScoresLoading(false);
+    }
+  }, [currentUser?.uid, selectedTenant?.id, authOrgId, fetchOrgId, toast]);
+
+  useEffect(() => {
+    const onLeadStreamHeaderRefresh = () => {
+      void fetchMarketScores();
+    };
+    window.addEventListener("scoutLeadStreamHeatmapRefresh", onLeadStreamHeaderRefresh);
+    return () => window.removeEventListener("scoutLeadStreamHeatmapRefresh", onLeadStreamHeaderRefresh);
+  }, [fetchMarketScores]);
+
+  const baseLeads = apiHeatmapLeads ?? heatmapLeads;
 
   const toggleExpand = (id: string) => {
     setExpandedLeads((prev) => {
@@ -245,8 +327,8 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
 
   // Filter by tier
   const filteredLeads = tierFilter === "all"
-    ? heatmapLeads
-    : heatmapLeads.filter((l) => l.priority === tierFilter);
+    ? baseLeads
+    : baseLeads.filter((l) => l.priority === tierFilter);
 
   // Sort
   const sortedLeads = sortBy
@@ -270,6 +352,9 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-3">
+          {marketScoresLoading && (
+            <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" aria-hidden />
+          )}
           <h3 className="text-sm font-semibold text-foreground">Lead Intelligence Heatmap</h3>
           <TooltipProvider delayDuration={200}>
             <Tooltip>
@@ -385,9 +470,10 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
                   </TableCell>
                 </TableRow>
               ) : (
-                sortedLeads.map((lead) => (
-                  <React.Fragment key={lead.id}>
-                    <TableRow className="group">
+                sortedLeads.flatMap((lead) => {
+                  const colSpan = REPORT_COLUMNS.length + 5;
+                  const main = (
+                    <TableRow key={`${lead.id}-main`} className="group">
                       <TableCell className="text-sm font-medium text-foreground sticky left-0 bg-background z-10">
                         <div className="flex items-center gap-1.5">
                           <button
@@ -428,15 +514,17 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
                         </div>
                       </TableCell>
                     </TableRow>
-                    {expandedLeads.has(lead.id) && (
-                      <TableRow className="hover:bg-transparent">
-                        <TableCell colSpan={REPORT_COLUMNS.length + 5} className="p-0">
-                          <LeadIntelligencePanel lead={lead} onChatWithScout={onChatWithScout} />
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </React.Fragment>
-                ))
+                  );
+                  if (!expandedLeads.has(lead.id)) return [main];
+                  return [
+                    main,
+                    <TableRow key={`${lead.id}-expanded`} className="hover:bg-transparent">
+                      <TableCell colSpan={colSpan} className="p-0">
+                        <LeadIntelligencePanel lead={lead} onChatWithScout={onChatWithScout} />
+                      </TableCell>
+                    </TableRow>,
+                  ];
+                })
               )}
             </TableBody>
           </Table>

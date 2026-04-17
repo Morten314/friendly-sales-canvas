@@ -22,15 +22,10 @@ interface ScoutLeadStreamProps {
 const ScoutLeadStream: React.FC<ScoutLeadStreamProps> = ({
   opportunityFilter,
   onClearOpportunityFilter,
-  onResearchWithScout,
   onChatWithScout,
   onChatAboutCoverage,
   onSendToStrategist,
 }) => {
-  const handleResearchLead = (lead: any) => {
-    onResearchWithScout?.([lead]);
-  };
-
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Zone 1: Opportunity Dashboard */}
