@@ -381,14 +381,14 @@ const LeadsTable: React.FC<LeadsTableProps> = ({
     }
   }, [resolveUserIdOrgId, toast]);
 
-  /** Restore POST /leads/market-scores result after navigation (same tab session, same user+org). */
+  /** Restore cached POST /leads/market-scores rows (non-empty only — empty cache would hide sample data). */
   useLayoutEffect(() => {
     let cancelled = false;
     void (async () => {
       const ctx = await resolveUserIdOrgId();
       if (cancelled || !ctx) return;
       const cached = readLeadStreamHeatmapFromSession(ctx.userId, ctx.orgId);
-      if (cancelled || cached === null) return;
+      if (cancelled || cached === null || cached.length === 0) return;
       setApiHeatmapLeads(cached);
     })();
     return () => {

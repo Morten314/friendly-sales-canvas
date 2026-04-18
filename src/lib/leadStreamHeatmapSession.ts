@@ -16,6 +16,16 @@ function readFromStorage(
     if (raw === null) return null;
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return null;
+    // Legacy: `[]` was often saved while scoring returned no rows yet — that made the table stay empty
+    // (because `[] ?? sample` does not fall back). Treat as cache miss.
+    if (parsed.length === 0) {
+      try {
+        storage.removeItem(key);
+      } catch {
+        /* ignore */
+      }
+      return null;
+    }
     return parsed as HeatmapLead[];
   } catch {
     return null;
@@ -61,9 +71,12 @@ export function writeLeadStreamHeatmapToSession(
 ): void {
   if (typeof window === "undefined") return;
   const key = leadStreamHeatmapCacheKey(userId, orgId);
-  const payload = JSON.stringify(leads);
   try {
-    window.localStorage.setItem(key, payload);
+    if (leads.length === 0) {
+      window.localStorage.removeItem(key);
+    } else {
+      window.localStorage.setItem(key, JSON.stringify(leads));
+    }
   } catch (e) {
     console.warn("Lead stream heatmap local cache write failed:", e);
   }
