@@ -11,29 +11,9 @@ import { MarketIntelligenceTabProps } from './MarketIntelligenceTabProps';
 interface MarketIntelligenceSectionsProps extends MarketIntelligenceTabProps {}
 
 const MarketIntelligenceSections: React.FC<MarketIntelligenceSectionsProps> = (props) => {
-  // Trigger data refresh for all components when isRefreshing changes
-  React.useEffect(() => {
-    if (props.isRefreshing) {
-      
-      // Trigger refresh for Market Size if refresh handler exists
-      if (props.onMarketSizeRefresh) {
-        props.onMarketSizeRefresh();
-      }
-      
-      // Trigger refresh for Competitor Landscape if refresh handler exists
-      if (props.onCompetitorRefresh) {
-        props.onCompetitorRefresh();
-      }
-      
-      // Trigger refresh for Market Entry if refresh handler exists
-      if (props.onMarketEntryRefresh) {
-        props.onMarketEntryRefresh();
-      }
-      
-      // For other components, we can trigger their save handlers which will refetch data
-      // This ensures all components get fresh data based on updated company profile
-    }
-  }, [props.isRefreshing]);
+  // Scout Market Intelligence refresh is driven only by MarketResearch.smartRefresh (single
+  // sequential cascade). Do not fire parallel component refetches here when isRefreshing —
+  // that duplicated API work, broke context passing, and interacted badly with timeouts/retries.
   // Create scout chat panels
   const marketSizeScoutChatPanel = props.showMarketSizeScoutChat ? (
     <ScoutChatPanel

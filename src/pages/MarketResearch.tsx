@@ -1179,44 +1179,18 @@ const MarketResearch = React.memo(() => {
 
 
 
-  // Global timeout to prevent infinite loading (2 minutes max)
+  // Clear any previously scheduled global loading cap (we no longer arm a wall-clock timeout
+  // on Scout refresh — the sequential cascade may take many minutes).
 
-  const setGlobalLoadingTimeout = () => {
-
-    // Clear any existing timeout
+  const clearGlobalLoadingTimeout = () => {
 
     if (globalTimeoutId) {
 
       clearTimeout(globalTimeoutId);
 
+      setGlobalTimeoutId(null);
+
     }
-
-    
-
-    const timeoutId = setTimeout(() => {
-
-
-
-
-      
-
-      setIsRefreshing(false);
-
-      toast({
-
-        title: "Loading Complete",
-
-        description: "Maximum loading time reached. Some components may still be processing.",
-
-        duration: 5000,
-
-      });
-
-    }, 180000); // 3 minutes (align with cascading refresh)
-
-    
-
-    setGlobalTimeoutId(timeoutId);
 
   };
 
@@ -4295,19 +4269,6 @@ const MarketResearch = React.memo(() => {
 
     
 
-    // Safety timeout; can be extended when scheduling a retry run so loading stays visible
-    let refreshTimeout = setTimeout(() => {
-      setIsRefreshing(false);
-      setLoadingPhase('complete');
-      toast({
-        title: "Refresh Complete",
-        description: "Maximum loading time reached.",
-        duration: 3000,
-      });
-    }, 180000); // 3 minutes for first run; extended when we schedule smartRefresh(false) retry
-
-    
-
     try {
 
       if (isFirstRefresh) {
@@ -4453,9 +4414,7 @@ const MarketResearch = React.memo(() => {
 
       
 
-      // Set global timeout to prevent infinite loading
-
-      setGlobalLoadingTimeout();
+      clearGlobalLoadingTimeout();
 
       
 
@@ -4628,7 +4587,6 @@ const MarketResearch = React.memo(() => {
       // Process components sequentially (cascading) with context passing
 
       // Process components sequentially (cascading: each request body includes previous responses as context)
-      const componentResults: any[] = [];
       console.log(`📋 [CASCADE] Refresh started – components in order: ${componentsToFetch.map(c => c.name).join(' → ')}`);
 
       for (let index = 0; index < componentsToFetch.length; index++) {
@@ -4641,21 +4599,11 @@ const MarketResearch = React.memo(() => {
           currentStatus[component.name] = 'pending';
           setComponentStatus(prev => ({ ...prev, [component.name]: 'pending' }));
 
-          const startTime = Date.now();
-          const timeoutDuration = 60000; // 60 seconds per component (reduced partial failures for last components)
-          
-          const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error(`${component.name} API call timeout after ${timeoutDuration/1000} seconds`)), timeoutDuration);
-          });
-          
-          // Make API call with context
+          // Make API call with context (no per-component wall-clock timeout — reports may take a long time)
           // Request and response bodies will be logged inside fetch function
           let result;
           try {
-            result = await Promise.race([
-              component.fetchFn(true, false, accumulatedContext), // Pass context to fetch function
-              timeoutPromise
-            ]);
+            result = await component.fetchFn(true, false, accumulatedContext);
             
             // Extract data from result and add to accumulated context for next component
             if (result && typeof result === 'object') {
@@ -4680,7 +4628,6 @@ const MarketResearch = React.memo(() => {
             
             currentStatus[component.name] = 'success';
             setComponentStatus(prev => ({ ...prev, [component.name]: 'success' }));
-            componentResults.push({ status: 'fulfilled', value: result });
             
           } catch (apiError) {
             // Component failed - add error stub to context so next components still receive "this one failed" and backend can use fallback
@@ -4703,7 +4650,6 @@ const MarketResearch = React.memo(() => {
             }
             currentStatus[component.name] = 'failed';
             setComponentStatus(prev => ({ ...prev, [component.name]: 'failed' }));
-            componentResults.push({ status: 'rejected', value: null, reason });
           }
 
           
@@ -4720,19 +4666,10 @@ const MarketResearch = React.memo(() => {
           currentStatus[component.name] = 'failed';
           setComponentStatus(prev => ({ ...prev, [component.name]: 'failed' }));
           
-          componentResults.push({ 
-            status: 'rejected', 
-            value: null,
-            reason: error instanceof Error ? error.message : 'Unknown error'
-          });
           // Continue to next component even on outer catch
           continue;
         }
       }
-      
-      const results = componentResults;
-
-      
 
       // Update the component status state with the current status
 
@@ -4756,13 +4693,7 @@ const MarketResearch = React.memo(() => {
       if (allApiCallsComplete) {
         console.log(`📋 [CASCADE] All 5 components completed; context was passed in order.`);
         isRetryingRef.current = false;
-        clearTimeout(refreshTimeout);
-        refreshTimeout = null;
-        // Clear global loading timeout so "Maximum time reached" does not show when all 5 components have already loaded
-        if (globalTimeoutId) {
-          clearTimeout(globalTimeoutId);
-          setGlobalTimeoutId(null);
-        }
+        clearGlobalLoadingTimeout();
         setIsRefreshing(false);
         setLoadingPhase('complete');
         toast({
@@ -4772,329 +4703,25 @@ const MarketResearch = React.memo(() => {
         });
         validateAllComponentsHaveFreshData();
 
-      } else if (hasFailures && refreshAttempt < 3) {
+      } else if (hasFailures) {
 
-
-
-        // Mark that retries are in progress
-        isRetryingRef.current = true;
-
-        // Implement immediate fallback for critical components
-        // Filter out components that have failed too many times (prevent infinite loops)
-        const failedComponentNames = Object.entries(currentStatus)
-          .filter(([name, status]) => {
-            if (status === 'failed') {
-              const failureCount = componentFailureCounts[name] || 0;
-              if (failureCount >= 2) {
-                return false; // Skip components that have failed too many times
-              }
-              return true;
-            }
-            return false;
-          })
-          .map(([name]) => name);
-        
-        // If all failed components have exceeded retry limit, stop refreshing
-        if (failedComponentNames.length === 0) {
-          isRetryingRef.current = false; // Clear retry flag
-          setIsRefreshing(false);
-          setLoadingPhase('complete');
-          toast({
-            title: "Refresh Stopped",
-            description: "Some components failed repeatedly. Please try refreshing again later.",
-            duration: 5000,
-          });
-          return;
-        }
-
-        
-
-
-        
-
-        // Retry failed components with exponential backoff
-
-        failedComponentNames.forEach(async (componentName, index) => {
-
-          const component = componentsToFetch.find(c => c.name === componentName);
-
-          if (component) {
-
-            const retryDelay = 1000 + (index * 500); // 1s, 1.5s, 2s delays (paid plan allows faster)
-
-
-            
-
-            setTimeout(async () => {
-
-              try {
-
-
-                
-
-                // Force clear any cached data for this component
-
-                if (componentName === 'Competitor Landscape') {
-
-                  if (currentUser?.uid) {
-        removeUserLocalStorage('competitorData', currentUser.uid);
-      } else {
-        localStorage.removeItem('competitorData');
-      }
-
-
-                } else if (componentName === 'Market Entry') {
-
-                  if (currentUser?.uid) {
-        removeUserLocalStorage('marketEntryData', currentUser.uid);
-      } else {
-        localStorage.removeItem('marketEntryData');
-      }
-
-
-                } else if (componentName === 'Industry Trends') {
-
-                  if (currentUser?.uid) {
-        removeUserLocalStorage('industryTrendsData', currentUser.uid);
-      } else {
-        localStorage.removeItem('industryTrendsData');
-      }
-
-
-                }
-
-                
-
-                const result = await executeWithRateLimit(
-
-                  () => component.fetchFn(true, false, accumulatedContext), // Pass context so backend can use previous components' data
-
-                  `${componentName} (Fallback)`
-
-                );
-
-                
-
-
-                
-
-                // Update component status to success
-                // Reset failure count on success
-                setComponentFailureCounts(prev => {
-                  const updated = { ...prev };
-                  delete updated[componentName];
-                  return updated;
-                });
-
-                setComponentStatus(prev => {
-                  const newStatus: Record<string, 'success' | 'pending' | 'failed'> = { ...prev, [componentName]: 'success' };
-                  
-                  // Check if all components are now successful
-                  const allSuccessful = Object.values(newStatus).every(status => status === 'success');
-                  if (allSuccessful) {
-                    isRetryingRef.current = false;
-                  }
-                  
-                  return newStatus;
-                });
-
-                
-
-                // Trigger a re-validation to check if we can hide the loading screen
-
-                setTimeout(() => {
-
-                  validateAllComponentsHaveFreshData();
-
-                }, 1000);
-
-                
-
-              } catch (retryError) {
-
-                console.error(`❌ ${componentName} fallback retry failed:`, retryError);
-
-                
-
-                // Mark as failed if retry also fails
-
-                setComponentStatus(prev => ({ ...prev, [componentName]: 'failed' }));
-
-              }
-
-            }, retryDelay);
-
-          }
-
-        });
-
-        
-
-        // Also trigger an immediate retry for the first failed component
-
-        if (failedComponentNames.length > 0) {
-
-          const firstFailedComponent = componentsToFetch.find(c => c.name === failedComponentNames[0]);
-
-          if (firstFailedComponent) {
-
-
-            setTimeout(async () => {
-
-              try {
-
-
-                
-
-                // Force clear cache
-
-                if (failedComponentNames[0] === 'Competitor Landscape') {
-
-                  if (currentUser?.uid) {
-        removeUserLocalStorage('competitorData', currentUser.uid);
-      } else {
-        localStorage.removeItem('competitorData');
-      }
-
-                } else if (failedComponentNames[0] === 'Market Entry') {
-
-                  if (currentUser?.uid) {
-        removeUserLocalStorage('marketEntryData', currentUser.uid);
-      } else {
-        localStorage.removeItem('marketEntryData');
-      }
-
-                } else if (failedComponentNames[0] === 'Industry Trends') {
-
-                  if (currentUser?.uid) {
-        removeUserLocalStorage('industryTrendsData', currentUser.uid);
-      } else {
-        localStorage.removeItem('industryTrendsData');
-      }
-
-                }
-
-                
-
-                await executeWithRateLimit(
-
-                  () => firstFailedComponent.fetchFn(true, false, accumulatedContext), // Pass context for retry
-
-                  `${failedComponentNames[0]} (Immediate)`
-
-                );
-
-                
-
-
-                // Reset failure count on success
-                setComponentFailureCounts(prev => {
-                  const updated = { ...prev };
-                  delete updated[failedComponentNames[0]];
-                  return updated;
-                });
-                
-                setComponentStatus(prev => {
-                  const newStatus: Record<string, 'success' | 'pending' | 'failed'> = { ...prev, [failedComponentNames[0]]: 'success' };
-                  
-                  // Check if all components are now successful
-                  const allSuccessful = Object.values(newStatus).every(status => status === 'success');
-                  if (allSuccessful) {
-                    isRetryingRef.current = false;
-                  }
-                  
-                  return newStatus;
-                });
-
-                
-
-                setTimeout(() => {
-
-                  validateAllComponentsHaveFreshData();
-
-                }, 1000);
-
-                
-
-              } catch (immediateRetryError) {
-
-                console.error(`❌ ${failedComponentNames[0]} immediate retry failed:`, immediateRetryError);
-
-              }
-
-            }, 500); // Faster immediate retry (paid plan allows this)
-
-          }
-
-        }
-
-        
-
-        toast({
-
-          title: "Partial Update",
-
-          description: `Some components failed. Retrying failed components... (attempt ${refreshAttempt + 1}/3)`,
-
-          duration: 3000,
-
-        });
-
-        
-
-        // Retry failed components immediately
-        // Add guard to prevent infinite loops
-        // Only retry if we haven't exceeded max attempts AND there are components that haven't exceeded their failure limit
-        const retryableComponents = Object.entries(currentStatus)
-          .filter(([name, status]) => {
-            if (status === 'failed') {
-              const failureCount = componentFailureCounts[name] || 0;
-              return failureCount < 2; // Only retry components that haven't failed 2+ times
-            }
-            return false;
-          });
-        
-        if (refreshAttempt < 3 && retryableComponents.length > 0) {
-          // Extend loading window so the retry run has time to complete (another 3 min)
-          clearTimeout(refreshTimeout);
-          refreshTimeout = setTimeout(() => {
-            setIsRefreshing(false);
-            setLoadingPhase('complete');
-            toast({ title: "Refresh Complete", description: "Refresh cycle finished.", duration: 3000 });
-          }, 180000);
-          setTimeout(() => {
-            smartRefresh(false);
-          }, 2000); // Give backend time to recover before full cascade retry
-        } else {
-          isRetryingRef.current = false; // Clear retry flag since we're stopping retries
-          setIsRefreshing(false);
-          setLoadingPhase('complete');
-          toast({
-            title: "Refresh Complete",
-            description: retryableComponents.length === 0 
-              ? "Some components failed repeatedly and were skipped."
-              : "Maximum retry attempts reached. Please try refreshing again later.",
-            duration: 5000,
-          });
-        }
-
-      } else {
-
-
-        // Clear retry flag since we're stopping
+        // Single cascade pass only — no automatic re-fetch, timers, or smartRefresh(false) retries
         isRetryingRef.current = false;
-        clearTimeout(refreshTimeout);
-
+        clearGlobalLoadingTimeout();
+        setLoadingPhase('complete');
         setIsRefreshing(false);
 
+        const failedNames = Object.entries(currentStatus)
+          .filter(([, status]) => status === 'failed')
+          .map(([name]) => name);
+
         toast({
-
           title: "Refresh Incomplete",
-
-          description: "Some components could not be updated. You can try refreshing again.",
-
-          duration: 5000,
-
+          description:
+            failedNames.length > 0
+              ? `These sections did not complete: ${failedNames.join(', ')}. You can try Refresh again.`
+              : "Some components could not be updated. You can try refreshing again.",
+          duration: 6000,
         });
 
       }
@@ -5107,7 +4734,7 @@ const MarketResearch = React.memo(() => {
 
       // Clear retry flag on error
       isRetryingRef.current = false;
-      clearTimeout(refreshTimeout);
+      clearGlobalLoadingTimeout();
 
       setIsRefreshing(false);
 
