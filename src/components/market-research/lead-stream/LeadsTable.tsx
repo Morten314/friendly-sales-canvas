@@ -13,7 +13,7 @@ import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Bot, ArrowRight, ArrowUpDown, Info, ChevronRight, ChevronDown, TrendingUp, AlertTriangle, Zap, Send, ChevronUp, MapPin, Building2, Users, Eye, Search, Loader2 } from "lucide-react";
-import { type Rating, type HeatmapLead, REPORT_COLUMNS, RATING_SCORE, TIER_INTELLIGENCE, heatmapLeads, getLeadSegment, getLeadExplanation } from "./leadData";
+import { type Rating, type HeatmapLead, REPORT_COLUMNS, RATING_SCORE, TIER_INTELLIGENCE, heatmapLeads, getLeadSegment } from "./leadData";
 import {
   extractMarketScoreRowsFromResponse,
   heatmapLeadFromUnknownRow,
@@ -147,55 +147,64 @@ const LeadIntelligencePanel = ({
   const [showSegment, setShowSegment] = useState(false);
   const segment = getLeadSegment(lead.id);
 
-  const isLoadingDetail = detail?.status === "loading";
+  const isLoadingDetail = !detail || detail.status === "loading";
   const detailError = detail?.status === "error" ? detail.message : null;
   const detailData = detail?.status === "ok" ? detail.data : undefined;
+  const hasDescriptions = detail?.status === "ok";
 
   return (
     <div className="px-4 py-3 bg-muted/30 border-t border-border/50 space-y-3">
-      {/* Tier summary */}
-      {intel && (
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <PriorityBadge tier={lead.priority} />
-          <span>{intel.label} · Fit Score {intel.fitScore}%</span>
-        </div>
-      )}
-
-      {isLoadingDetail && (
-        <div className="flex items-center gap-2 text-xs text-muted-foreground py-1">
+      {isLoadingDetail ? (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground py-2">
           <Loader2 className="h-4 w-4 animate-spin shrink-0" aria-hidden />
           Loading score details…
         </div>
-      )}
-
-      {detailError && (
-        <p className="text-[11px] text-destructive">{detailError}</p>
-      )}
-
-      {/* Per-component explanations */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
-        {REPORT_COLUMNS.map((col) => {
-          const rating = lead.ratings[col.key];
-          const fromApi = getDescriptionTextForColumn(detailData, col.key);
-          const explanation =
-            fromApi ?? getLeadExplanation(lead.id, col.key, rating);
-          return (
-            <div
-              key={col.key}
-              className={`rounded-md border ${ratingBorderColor[rating]} bg-background p-2.5 space-y-1`}
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-foreground">{col.shortLabel}</span>
-                <div className="flex items-center gap-1">
-                  {ratingIcon[rating]}
-                  <RatingCell rating={rating} />
-                </div>
-              </div>
-              <p className="text-[11px] leading-relaxed text-muted-foreground">{explanation}</p>
+      ) : (
+        <>
+          {/* Tier summary */}
+          {intel && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <PriorityBadge tier={lead.priority} />
+              <span>{intel.label} · Fit Score {intel.fitScore}%</span>
             </div>
-          );
-        })}
-      </div>
+          )}
+
+          {detailError && (
+            <p className="text-[11px] text-destructive">{detailError}</p>
+          )}
+
+          {/* Per-component explanations — narrative text only from GET …/market-score-descriptions (no mock fallback). */}
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
+            {REPORT_COLUMNS.map((col) => {
+              const rating = lead.ratings[col.key];
+              const fromApi = hasDescriptions
+                ? getDescriptionTextForColumn(detailData, col.key)
+                : undefined;
+              return (
+                <div
+                  key={col.key}
+                  className={`rounded-md border ${ratingBorderColor[rating]} bg-background p-2.5 space-y-1`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold text-foreground">{col.shortLabel}</span>
+                    <div className="flex items-center gap-1">
+                      {ratingIcon[rating]}
+                      <RatingCell rating={rating} />
+                    </div>
+                  </div>
+                  {detail?.status === "error" ? (
+                    <p className="text-[11px] leading-relaxed text-muted-foreground/80">—</p>
+                  ) : (
+                    <p className="text-[11px] leading-relaxed text-muted-foreground">
+                      {(fromApi && fromApi.trim()) || "—"}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
 
       {/* View Segment Button — hidden per product request
       <div className="pt-1">
