@@ -13481,7 +13481,7 @@ const MarketResearch = React.memo(() => {
 
       <div className="flex flex-col h-full relative">
 
-
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="flex flex-col flex-1 min-h-0 w-full">
 
         {/* Fixed header section */}
 
@@ -13980,10 +13980,6 @@ const MarketResearch = React.memo(() => {
 
 
 
-            <Tabs value={activeTab} onValueChange={handleTabChange} className="mb-6">
-
-
-
               <TabsList className="w-full bg-gray-100 p-1 mb-2">
 
 
@@ -14036,10 +14032,6 @@ const MarketResearch = React.memo(() => {
 
 
               </TabsList>
-
-
-
-            </Tabs>
 
 
 
@@ -14098,9 +14090,7 @@ const MarketResearch = React.memo(() => {
 
             {!isRefreshing ? (
 
-            <Tabs value={activeTab} onValueChange={handleTabChange} className="mt-0 h-full min-h-0 flex flex-col">
-
-
+              <>
 
               <TabsContent value="intelligence" className="mt-0">
 
@@ -15164,7 +15154,7 @@ const MarketResearch = React.memo(() => {
 
 
 
-              <TabsContent value="analysis" className="mt-0" forceMount>
+              <TabsContent value="analysis" className="mt-0">
 
 
 
@@ -15195,11 +15185,7 @@ const MarketResearch = React.memo(() => {
                 <div />
               </TabsContent>
 
-
-
-
-
-            </Tabs>
+              </>
 
             ) : (
 
@@ -15228,7 +15214,7 @@ const MarketResearch = React.memo(() => {
         </ScrollArea>
         )}
 
-
+        </Tabs>
 
       </div>
 

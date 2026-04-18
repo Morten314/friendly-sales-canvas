@@ -148,6 +148,19 @@ export function heatmapLeadFromUnknownRow(raw: Record<string, unknown>): Heatmap
   const company = pickCompanyName(raw) || "—";
   const name = pickLeadDisplayName(raw, company);
 
+  if (import.meta.env.DEV && company === "—") {
+    console.warn("[Lead Stream] No company label resolved for row; check API field names.", {
+      lead_id: leadId,
+      topLevelKeys: Object.keys(raw),
+      sample: {
+        company_name: raw.company_name,
+        companyName: raw.companyName,
+        company: raw.company,
+        name: raw.name,
+      },
+    });
+  }
+
   const row: MarketScoresApiRow = {
     lead_id: String(leadId),
     org_id: String(raw.org_id ?? raw.orgId ?? ""),
