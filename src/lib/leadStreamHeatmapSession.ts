@@ -6,14 +6,13 @@ export function leadStreamHeatmapCacheKey(userId: string, orgId: string): string
   return `${PREFIX}:${userId}:${orgId}`;
 }
 
-/** Returns `null` if nothing cached; empty array means a prior refresh returned zero rows. */
-export function readLeadStreamHeatmapFromSession(
-  userId: string,
-  orgId: string
+function readFromStorage(
+  storage: Storage | undefined,
+  key: string
 ): HeatmapLead[] | null {
-  if (typeof sessionStorage === "undefined") return null;
+  if (!storage) return null;
   try {
-    const raw = sessionStorage.getItem(leadStreamHeatmapCacheKey(userId, orgId));
+    const raw = storage.getItem(key);
     if (raw === null) return null;
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return null;
@@ -23,15 +22,54 @@ export function readLeadStreamHeatmapFromSession(
   }
 }
 
+/**
+ * Last successful POST /leads/market-scores rows, keyed by user + org.
+ * Uses `localStorage` so data survives tab close, browser restart, and re-login (same account).
+ * On first read after upgrade, copies from legacy `sessionStorage` if present.
+ */
+export function readLeadStreamHeatmapFromSession(
+  userId: string,
+  orgId: string
+): HeatmapLead[] | null {
+  if (typeof window === "undefined") return null;
+  const key = leadStreamHeatmapCacheKey(userId, orgId);
+
+  const fromLocal = readFromStorage(window.localStorage, key);
+  if (fromLocal !== null) return fromLocal;
+
+  const fromSession = readFromStorage(
+    typeof sessionStorage !== "undefined" ? sessionStorage : undefined,
+    key
+  );
+  if (fromSession !== null) {
+    writeLeadStreamHeatmapToSession(userId, orgId, fromSession);
+    try {
+      sessionStorage?.removeItem(key);
+    } catch {
+      /* ignore */
+    }
+    return fromSession;
+  }
+
+  return null;
+}
+
 export function writeLeadStreamHeatmapToSession(
   userId: string,
   orgId: string,
   leads: HeatmapLead[]
 ): void {
-  if (typeof sessionStorage === "undefined") return;
+  if (typeof window === "undefined") return;
+  const key = leadStreamHeatmapCacheKey(userId, orgId);
+  const payload = JSON.stringify(leads);
   try {
-    sessionStorage.setItem(leadStreamHeatmapCacheKey(userId, orgId), JSON.stringify(leads));
+    window.localStorage.setItem(key, payload);
   } catch (e) {
-    console.warn("Lead stream heatmap session cache write failed:", e);
+    console.warn("Lead stream heatmap local cache write failed:", e);
+  }
+  try {
+    sessionStorage?.removeItem(key);
+  } catch {
+    /* ignore */
   }
 }
