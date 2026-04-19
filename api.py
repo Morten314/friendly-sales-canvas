@@ -188,6 +188,70 @@ def _safe_json_to_obj(value: Any) -> Any:
     return value
 
 
+def _normalize_non_empty_string(value: Any) -> Optional[str]:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+def _extract_company_name(lead: Dict[str, Any]) -> Optional[str]:
+    candidate_keys = [
+        "company_name",
+        "company",
+        "Company",
+        "account_name",
+        "organization",
+        "org_name",
+    ]
+    for key in candidate_keys:
+        normalized = _normalize_non_empty_string(lead.get(key))
+        if normalized:
+            return normalized
+    return None
+
+
+def _extract_lead_name(lead: Dict[str, Any]) -> Optional[str]:
+    candidate_keys = [
+        "lead_name",
+        "name",
+        "lead",
+        "contact_name",
+        "prospect_name",
+        "full_name",
+    ]
+    for key in candidate_keys:
+        normalized = _normalize_non_empty_string(lead.get(key))
+        if normalized:
+            return normalized
+
+    contact_obj = lead.get("contact")
+    if isinstance(contact_obj, dict):
+        for contact_key in ["name", "full_name", "contact_name"]:
+            normalized = _normalize_non_empty_string(contact_obj.get(contact_key))
+            if normalized:
+                return normalized
+    return None
+
+
+def _get_lead_identity_from_neo4j(org_id: str, lead_id: str) -> Dict[str, Optional[str]]:
+    query_string = """
+    MATCH (l:Lead {org_id: $org_id, lead_id: $lead_id})
+    RETURN l
+    LIMIT 1
+    """
+    with driver.session() as session:
+        record = session.run(query_string, org_id=org_id, lead_id=lead_id).single()
+        if not record:
+            return {"company_name": None, "lead_name": None}
+        lead_node = record["l"]
+        lead_data = dict(lead_node.items())
+        return {
+            "company_name": _extract_company_name(lead_data),
+            "lead_name": _extract_lead_name(lead_data),
+        }
+
+
 def _lead_to_score_row(lead_doc: Dict[str, Any]) -> LeadMarketScoreRow:
     component_scores = lead_doc.get("component_scores", {}) if isinstance(lead_doc.get("component_scores"), dict) else {}
     return LeadMarketScoreRow(
@@ -195,6 +259,7 @@ def _lead_to_score_row(lead_doc: Dict[str, Any]) -> LeadMarketScoreRow:
         org_id=str(lead_doc.get("org_id")),
         file_id=lead_doc.get("file_id"),
         company_name=lead_doc.get("company_name"),
+        lead_name=lead_doc.get("lead_name"),
         score_market_size_opportunity=float(component_scores.get("market size & opportunity", 0)),
         score_industry_trends_report=float(component_scores.get("industry trends report", 0)),
         score_competitor_landscape=float(component_scores.get("competitor landscape", 0)),
@@ -215,6 +280,22 @@ def _get_latest_market_score_rows(org_id: str) -> List[LeadMarketScoreRow]:
         rows: List[LeadMarketScoreRow] = []
         for doc in docs:
             doc.pop("_id", None)
+            has_company_name = _normalize_non_empty_string(doc.get("company_name")) is not None
+            has_lead_name = _normalize_non_empty_string(doc.get("lead_name")) is not None
+            if not has_company_name or not has_lead_name:
+                lead_identity = _get_lead_identity_from_neo4j(org_id=org_id, lead_id=str(doc.get("lead_id")))
+                updates: Dict[str, Optional[str]] = {}
+                if not has_company_name and lead_identity.get("company_name"):
+                    doc["company_name"] = lead_identity.get("company_name")
+                    updates["company_name"] = lead_identity.get("company_name")
+                if not has_lead_name and lead_identity.get("lead_name"):
+                    doc["lead_name"] = lead_identity.get("lead_name")
+                    updates["lead_name"] = lead_identity.get("lead_name")
+                if updates:
+                    score_coll.update_one(
+                        {"org_id": org_id, "lead_id": str(doc.get("lead_id"))},
+                        {"$set": updates},
+                    )
             rows.append(_lead_to_score_row(doc))
         return rows
     finally:
@@ -247,7 +328,8 @@ def _persist_market_score_for_lead(
     now_iso = datetime.utcnow().isoformat()
     lead_id = str(lead.get("lead_id"))
     file_id = lead.get("file_id")
-    company_name = lead.get("company") or lead.get("Company") or lead.get("name")
+    company_name = _extract_company_name(lead)
+    lead_name = _extract_lead_name(lead)
     component_scores = scoring_payload.get("component_scores", {})
     component_descriptions = scoring_payload.get("component_descriptions", {})
     market_total_score = float(scoring_payload.get("market_total_score", 0))
@@ -264,6 +346,7 @@ def _persist_market_score_for_lead(
                     "lead_id": lead_id,
                     "file_id": file_id,
                     "company_name": company_name,
+                    "lead_name": lead_name,
                     "component_scores": component_scores,
                     "component_descriptions": component_descriptions,
                     "market_total_score": market_total_score,
