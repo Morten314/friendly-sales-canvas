@@ -85,7 +85,7 @@ const ProfilerDashboard: React.FC<ProfilerDashboardProps> = ({ leads }) => {
       <div>
         <h2 className="text-lg font-bold text-foreground tracking-tight">Lead Stream Dashboard</h2>
         <p className="text-xs text-muted-foreground mt-0.5">
-          Visual overview of {totalLeads} leads across {icpMap.size} ICPs · Avg fit {avgFit}%
+          Visual overview of {totalLeads} leads across {icpMap.size} ICPs
         </p>
       </div>
 
