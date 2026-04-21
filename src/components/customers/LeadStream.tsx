@@ -414,7 +414,9 @@ interface LeadStreamPanelProps {
 export const LeadStreamPanel = ({ filterByICP, onClearFilter }: LeadStreamPanelProps) => {
   const [howOpen, setHowOpen] = useState(false);
   const [savedLeads, setSavedLeads] = useState<Set<string>>(new Set());
-  const [collapsedSegments, setCollapsedSegments] = useState<Set<string>>(new Set());
+  const [collapsedSegments, setCollapsedSegments] = useState<Set<string>>(
+    () => new Set(mockLeads.map((l) => l.matchedICP))
+  );
   const [localLeads, setLocalLeads] = useState<Lead[]>(mockLeads);
   const hasProspectData = true;
   const { toast } = useToast();
