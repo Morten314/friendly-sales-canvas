@@ -79,7 +79,6 @@ const ProfilerDashboard: React.FC<ProfilerDashboardProps> = ({ leads }) => {
   const icpBarData = Array.from(icpMap.entries()).map(([name, data]) => ({ name, ...data }));
 
   const totalLeads = leads.length;
-  const avgFit = totalLeads > 0 ? Math.round(leads.reduce((s, l) => s + l.fitScore, 0) / totalLeads) : 0;
 
   return (
     <div className="space-y-4">
