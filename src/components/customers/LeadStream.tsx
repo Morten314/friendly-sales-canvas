@@ -533,25 +533,6 @@ export const LeadStreamPanel = ({ filterByICP, onClearFilter }: LeadStreamPanelP
         </div>
       </div>
 
-      {/* Context Chips */}
-      <div className="flex flex-wrap gap-2">
-        {mockContextChips.map((chip) => (
-          <div
-            key={chip.label}
-            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-3 py-1 text-xs text-muted-foreground"
-          >
-            {chip.icon}
-            <span className="font-medium text-foreground">{chip.label}:</span>
-            <span>{chip.value}</span>
-          </div>
-        ))}
-        <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-3 py-1 text-xs text-muted-foreground">
-          <Layers className="h-3 w-3" />
-          <span className="font-medium text-foreground">Segments:</span>
-          <span>{segments.length}</span>
-        </div>
-      </div>
-
       {/* Segmented or Filtered View */}
       {isFiltered ? (
         <Card>
