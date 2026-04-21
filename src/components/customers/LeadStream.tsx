@@ -99,13 +99,6 @@ export function getLeadCountForICP(icpName: string): number {
   ).length;
 }
 
-const mockContextChips: ContextChip[] = [
-  { label: "Active ICPs", value: "6", icon: <Target className="h-3 w-3" /> },
-  { label: "Regions", value: "NA, EMEA, APAC, LATAM", icon: <MapPin className="h-3 w-3" /> },
-  { label: "Industries", value: "SaaS, FinTech, Healthcare, E-commerce", icon: <Briefcase className="h-3 w-3" /> },
-  { label: "Buyer Roles", value: "CTO, CIO, VP Sales, RevOps, Growth", icon: <Users className="h-3 w-3" /> },
-];
-
 const howItWorks = [
   { icon: <Database className="h-4 w-4" />, text: "Prospect lists scanned from Data Sources" },
   { icon: <Users className="h-4 w-4" />, text: "ICPs pulled from Customer Profile" },
@@ -414,7 +407,9 @@ interface LeadStreamPanelProps {
 export const LeadStreamPanel = ({ filterByICP, onClearFilter }: LeadStreamPanelProps) => {
   const [howOpen, setHowOpen] = useState(false);
   const [savedLeads, setSavedLeads] = useState<Set<string>>(new Set());
-  const [collapsedSegments, setCollapsedSegments] = useState<Set<string>>(new Set());
+  const [collapsedSegments, setCollapsedSegments] = useState<Set<string>>(
+    () => new Set(mockLeads.map((l) => l.matchedICP))
+  );
   const [localLeads, setLocalLeads] = useState<Lead[]>(mockLeads);
   const hasProspectData = true;
   const { toast } = useToast();
@@ -530,25 +525,6 @@ export const LeadStreamPanel = ({ filterByICP, onClearFilter }: LeadStreamPanelP
             <Save className="h-3.5 w-3.5" />
             Save to Workspace
           </Button>
-        </div>
-      </div>
-
-      {/* Context Chips */}
-      <div className="flex flex-wrap gap-2">
-        {mockContextChips.map((chip) => (
-          <div
-            key={chip.label}
-            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-3 py-1 text-xs text-muted-foreground"
-          >
-            {chip.icon}
-            <span className="font-medium text-foreground">{chip.label}:</span>
-            <span>{chip.value}</span>
-          </div>
-        ))}
-        <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-3 py-1 text-xs text-muted-foreground">
-          <Layers className="h-3 w-3" />
-          <span className="font-medium text-foreground">Segments:</span>
-          <span>{segments.length}</span>
         </div>
       </div>
 
