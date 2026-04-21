@@ -90,8 +90,8 @@ const ProfilerDashboard: React.FC<ProfilerDashboardProps> = ({ leads }) => {
         </p>
       </div>
 
-      {/* Row 1: Three summary cards */}
-      <div className="grid grid-cols-3 gap-3">
+      {/* Row 1: Two summary cards */}
+      <div className="grid grid-cols-2 gap-3">
         <Card className="p-4">
           <div className="flex items-center gap-2 mb-1">
             <Target className="h-4 w-4 text-primary" />
@@ -99,14 +99,6 @@ const ProfilerDashboard: React.FC<ProfilerDashboardProps> = ({ leads }) => {
           </div>
           <p className="text-2xl font-bold text-foreground">{totalLeads}</p>
           <p className="text-[11px] text-muted-foreground mt-0.5">Across {icpMap.size} ICPs</p>
-        </Card>
-        <Card className="p-4">
-          <div className="flex items-center gap-2 mb-1">
-            <BarChart3 className="h-4 w-4 text-primary" />
-            <span className="text-xs font-semibold text-foreground">Avg Fit Score</span>
-          </div>
-          <p className="text-2xl font-bold text-foreground">{avgFit}%</p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">Across all leads</p>
         </Card>
         <Card className="p-4">
           <div className="flex items-center gap-2 mb-1">
