@@ -2,12 +2,11 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  ChevronDown, ChevronRight, Sparkles, Users,
+  ChevronDown, ChevronRight, Sparkles, Users, Target, TrendingUp,
 } from "lucide-react";
 import StrategistSyncBreadcrumbs from "./StrategistSyncBreadcrumbs";
 import StrategistWhatsNewBanner from "./StrategistWhatsNewBanner";
