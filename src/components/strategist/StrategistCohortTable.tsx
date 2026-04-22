@@ -108,6 +108,18 @@ const CohortRow = ({ cohort }: { cohort: StrategyCohort }) => {
             {cohort.confidence}
           </Badge>
         </TableCell>
+        <TableCell className="py-3 text-center">
+          <div className="flex items-center justify-center gap-1">
+            <TrendingUp className="h-3 w-3 text-muted-foreground" />
+            <span className="text-xs font-bold text-foreground">{cohort.avgScore}</span>
+          </div>
+        </TableCell>
+        <TableCell className="py-3 text-center">
+          <div className="flex items-center justify-center gap-1">
+            <Target className="h-3 w-3 text-muted-foreground" />
+            <span className="text-xs font-bold text-foreground">{cohort.icpFitAvg}%</span>
+          </div>
+        </TableCell>
       </TableRow>
       {expanded && <CohortExpandedRow cohort={cohort} onLaunch={handleLaunch} />}
     </>
@@ -138,10 +150,12 @@ const StrategistCohortTable = () => {
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead className="text-[11px] font-semibold w-[32%]">Cohort</TableHead>
-              <TableHead className="text-[11px] font-semibold w-[16%]">Leads</TableHead>
-              <TableHead className="text-[11px] font-semibold w-[36%]">Play & Signal</TableHead>
-              <TableHead className="text-[11px] font-semibold text-center w-[16%]">Confidence</TableHead>
+              <TableHead className="text-[11px] font-semibold w-[28%]">Cohort</TableHead>
+              <TableHead className="text-[11px] font-semibold w-[14%]">Leads</TableHead>
+              <TableHead className="text-[11px] font-semibold w-[32%]">Play & Signal</TableHead>
+              <TableHead className="text-[11px] font-semibold text-center w-[12%]">Confidence</TableHead>
+              <TableHead className="text-[11px] font-semibold text-center w-[7%]">Score</TableHead>
+              <TableHead className="text-[11px] font-semibold text-center w-[7%]">ICP Fit</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
