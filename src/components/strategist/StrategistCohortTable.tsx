@@ -148,7 +148,6 @@ const CohortRow = ({ cohort }: { cohort: StrategyCohort }) => {
           </div>
         </TableCell>
       </TableRow>
-      {expanded && (
       {expanded && <CohortExpandedRow cohort={cohort} />}
     </>
   );
