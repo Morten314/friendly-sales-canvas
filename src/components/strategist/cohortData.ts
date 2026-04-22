@@ -105,7 +105,7 @@ export const strategyCohorts: StrategyCohort[] = [
     primaryAction: "Launch Sequence",
     leads: strikeLeads,
     isNew: true,
-    get avgScore() { return Math.round(this.leads.reduce((sum, l) => sum + (l.score || 0), 0) / this.leads.length); },
+    get avgScore() { return Math.round(this.leads.reduce((sum, l) => sum + (l.totalScore || 0), 0) / this.leads.length); },
     get icpFitAvg() { return Math.round(this.leads.reduce((sum, l) => sum + (l.icpFit || 0), 0) / this.leads.length); },
   },
   {
