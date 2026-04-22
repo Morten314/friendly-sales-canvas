@@ -7,11 +7,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  ChevronDown, ChevronRight, MoreVertical, Zap, Sparkles,
-  MessageSquare, RefreshCw, Send, Users,
+  ChevronDown, ChevronRight, Sparkles, Users,
 } from "lucide-react";
 import StrategistSyncBreadcrumbs from "./StrategistSyncBreadcrumbs";
 import StrategistWhatsNewBanner from "./StrategistWhatsNewBanner";
@@ -51,7 +47,6 @@ const CohortRow = ({ cohort }: { cohort: StrategyCohort }) => {
         })
       );
       navigate("/your-ai-team/strategist/workspace?from=cohort");
-      // Force remount with context
       window.location.reload();
     } catch {
       // ignore
@@ -60,12 +55,12 @@ const CohortRow = ({ cohort }: { cohort: StrategyCohort }) => {
 
   return (
     <>
-      <TableRow className={`group hover:bg-muted/30 ${cohortAccent[cohort.id]}`}>
+      <TableRow
+        className={`group hover:bg-muted/30 cursor-pointer ${cohortAccent[cohort.id]}`}
+        onClick={() => setExpanded(!expanded)}
+      >
         <TableCell className="py-3">
-          <button
-            onClick={() => setExpanded(!expanded)}
-            className="flex items-start gap-2 text-left"
-          >
+          <div className="flex items-start gap-2 text-left">
             {expanded ? (
               <ChevronDown className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
             ) : (
@@ -85,7 +80,7 @@ const CohortRow = ({ cohort }: { cohort: StrategyCohort }) => {
                 {cohort.description}
               </p>
             </div>
-          </button>
+          </div>
         </TableCell>
         <TableCell className="py-3">
           <div className="flex items-center gap-1.5">
@@ -114,41 +109,8 @@ const CohortRow = ({ cohort }: { cohort: StrategyCohort }) => {
             {cohort.confidence}
           </Badge>
         </TableCell>
-        <TableCell className="py-3 text-right">
-          <div className="flex items-center justify-end gap-1">
-            <Button
-              size="sm"
-              className="h-7 text-[11px] gap-1.5"
-              onClick={handleLaunch}
-            >
-              <Zap className="h-3 w-3" />
-              {cohort.primaryAction}
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-7 w-7">
-                  <MoreVertical className="h-3.5 w-3.5 text-muted-foreground" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem className="text-xs gap-2 cursor-pointer">
-                  <RefreshCw className="h-3.5 w-3.5" /> Refine Strategy
-                </DropdownMenuItem>
-                <DropdownMenuItem className="text-xs gap-2 cursor-pointer" onClick={() => setExpanded(true)}>
-                  <Users className="h-3.5 w-3.5" /> View Leads
-                </DropdownMenuItem>
-                <DropdownMenuItem className="text-xs gap-2 cursor-pointer">
-                  <Send className="h-3.5 w-3.5" /> Send to Artefacts
-                </DropdownMenuItem>
-                <DropdownMenuItem className="text-xs gap-2 cursor-pointer">
-                  <MessageSquare className="h-3.5 w-3.5" /> Ask Strategist
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </TableCell>
       </TableRow>
-      {expanded && <CohortExpandedRow cohort={cohort} />}
+      {expanded && <CohortExpandedRow cohort={cohort} onLaunch={handleLaunch} />}
     </>
   );
 };
@@ -177,11 +139,10 @@ const StrategistCohortTable = () => {
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead className="text-[11px] font-semibold w-[28%]">Cohort</TableHead>
-              <TableHead className="text-[11px] font-semibold w-[14%]">Leads</TableHead>
-              <TableHead className="text-[11px] font-semibold w-[28%]">Play & Signal</TableHead>
-              <TableHead className="text-[11px] font-semibold text-center w-[12%]">Confidence</TableHead>
-              <TableHead className="text-[11px] font-semibold text-right w-[18%]">Action</TableHead>
+              <TableHead className="text-[11px] font-semibold w-[32%]">Cohort</TableHead>
+              <TableHead className="text-[11px] font-semibold w-[16%]">Leads</TableHead>
+              <TableHead className="text-[11px] font-semibold w-[36%]">Play & Signal</TableHead>
+              <TableHead className="text-[11px] font-semibold text-center w-[16%]">Confidence</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
