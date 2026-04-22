@@ -101,7 +101,7 @@ const LeadRow = ({ lead, delay }: { lead: CohortLead; delay: number }) => {
   );
 };
 
-const CohortExpandedRow = ({ cohort }: CohortExpandedRowProps) => {
+const CohortExpandedRow = ({ cohort, onLaunch }: CohortExpandedRowProps) => {
   const [phase, setPhase] = useState<"thinking" | "brief" | "enriching" | "leads">("thinking");
 
   useEffect(() => {
@@ -117,10 +117,11 @@ const CohortExpandedRow = ({ cohort }: CohortExpandedRowProps) => {
   }, [cohort.brief.length]);
 
   const visibleLeads = cohort.leads.slice(0, 8);
+  const actionsReady = phase === "leads";
 
   return (
     <TableRow className="bg-muted/20 hover:bg-muted/20">
-      <TableCell colSpan={5} className="py-3">
+      <TableCell colSpan={4} className="py-3">
         <div className="space-y-3">
           {/* Strategist's Brief */}
           <div className="flex items-start gap-2">
@@ -181,6 +182,44 @@ const CohortExpandedRow = ({ cohort }: CohortExpandedRowProps) => {
                   </div>
                 )}
               </div>
+            </div>
+          )}
+
+          {/* Cohort-level action bar — appears once leads are ready */}
+          {actionsReady && (
+            <div className="animate-fade-in flex items-center justify-end gap-1.5 pt-1 border-t border-border/50">
+              <span className="text-[10px] text-muted-foreground mr-auto">
+                Ready to act on this cohort?
+              </span>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => e.stopPropagation()}>
+                    <MoreVertical className="h-3.5 w-3.5 text-muted-foreground" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem className="text-xs gap-2 cursor-pointer">
+                    <RefreshCw className="h-3.5 w-3.5" /> Refine Strategy
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="text-xs gap-2 cursor-pointer">
+                    <Send className="h-3.5 w-3.5" /> Send to Artefacts
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="text-xs gap-2 cursor-pointer">
+                    <MessageSquare className="h-3.5 w-3.5" /> Ask Strategist
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button
+                size="sm"
+                className="h-7 text-[11px] gap-1.5"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onLaunch();
+                }}
+              >
+                <Zap className="h-3 w-3" />
+                {cohort.primaryAction}
+              </Button>
             </div>
           )}
         </div>
