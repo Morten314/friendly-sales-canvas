@@ -10,12 +10,13 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  ChevronDown, ChevronRight, MoreVertical, Zap, Sparkles, FileText,
+  ChevronDown, ChevronRight, MoreVertical, Zap, Sparkles,
   MessageSquare, RefreshCw, Send, Users,
 } from "lucide-react";
 import StrategistSyncBreadcrumbs from "./StrategistSyncBreadcrumbs";
 import StrategistWhatsNewBanner from "./StrategistWhatsNewBanner";
 import { strategyCohorts, type StrategyCohort, type Confidence } from "./cohortData";
+import CohortExpandedRow from "./CohortExpandedRow";
 
 const confidenceStyles: Record<Confidence, string> = {
   High: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800",
@@ -148,61 +149,7 @@ const CohortRow = ({ cohort }: { cohort: StrategyCohort }) => {
         </TableCell>
       </TableRow>
       {expanded && (
-        <TableRow className="bg-muted/20 hover:bg-muted/20">
-          <TableCell colSpan={5} className="py-3">
-            <div className="space-y-3">
-              <div className="flex items-start gap-2">
-                <Sparkles className="h-3.5 w-3.5 text-primary mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-[11px] font-semibold text-foreground">Strategy reasoning</p>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">{cohort.playRationale}</p>
-                </div>
-              </div>
-              <div>
-                <p className="text-[11px] font-semibold text-foreground mb-1.5 flex items-center gap-1.5">
-                  <FileText className="h-3 w-3" />
-                  Leads in this cohort ({cohort.leads.length})
-                </p>
-                <div className="border rounded-md overflow-hidden bg-background">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="text-[10px] h-7">Name</TableHead>
-                        <TableHead className="text-[10px] h-7">Company</TableHead>
-                        <TableHead className="text-[10px] h-7 text-center">Score</TableHead>
-                        <TableHead className="text-[10px] h-7 text-center">ICP Fit</TableHead>
-                        <TableHead className="text-[10px] h-7 text-center">Source</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {cohort.leads.slice(0, 8).map((lead) => (
-                        <TableRow key={lead.id}>
-                          <TableCell className="text-[11px] py-1.5 font-medium">{lead.name}</TableCell>
-                          <TableCell className="text-[11px] py-1.5 text-muted-foreground">{lead.company}</TableCell>
-                          <TableCell className="text-[11px] py-1.5 text-center font-semibold">{lead.totalScore}</TableCell>
-                          <TableCell className="text-[11px] py-1.5 text-center">
-                            <span className="font-medium">{lead.icpFit}%</span>
-                          </TableCell>
-                          <TableCell className="text-[11px] py-1.5 text-center">
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-                              {lead.origin}
-                            </span>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                  {cohort.leads.length > 8 && (
-                    <div className="px-3 py-1.5 text-[10px] text-muted-foreground border-t bg-muted/20">
-                      + {cohort.leads.length - 8} more leads
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </TableCell>
-        </TableRow>
-      )}
+      {expanded && <CohortExpandedRow cohort={cohort} />}
     </>
   );
 };
