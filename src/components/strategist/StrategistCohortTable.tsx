@@ -7,11 +7,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  ChevronDown, ChevronRight, MoreVertical, Zap, Sparkles,
-  MessageSquare, RefreshCw, Send, Users,
+  ChevronDown, ChevronRight, Sparkles, Users,
 } from "lucide-react";
 import StrategistSyncBreadcrumbs from "./StrategistSyncBreadcrumbs";
 import StrategistWhatsNewBanner from "./StrategistWhatsNewBanner";
