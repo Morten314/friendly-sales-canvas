@@ -121,7 +121,7 @@ const CohortExpandedRow = ({ cohort, onLaunch }: CohortExpandedRowProps) => {
 
   return (
     <TableRow className="bg-muted/20 hover:bg-muted/20">
-      <TableCell colSpan={4} className="py-3">
+      <TableCell colSpan={6} className="py-3">
         <div className="space-y-3">
           {/* Strategist's Brief */}
           <div className="flex items-start gap-2">
