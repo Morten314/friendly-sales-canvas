@@ -137,7 +137,7 @@ const StrategistCohortTable = () => {
               Strategy Cohorts
             </h2>
             <p className="text-[11px] text-muted-foreground mt-0.5">
-              Pre-built plays grouped by urgency × opportunity. Drawn from Scout, Profiler, and Mission Control.
+              Cohort-level plays based on urgency and opportunity.
             </p>
           </div>
         </div>
