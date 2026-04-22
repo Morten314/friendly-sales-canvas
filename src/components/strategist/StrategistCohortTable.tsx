@@ -132,8 +132,7 @@ const StrategistCohortTable = () => {
       <div className="space-y-2">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-primary" />
+            <h2 className="text-base font-semibold text-foreground">
               Strategy Cohorts
             </h2>
             <p className="text-[11px] text-muted-foreground mt-0.5">
