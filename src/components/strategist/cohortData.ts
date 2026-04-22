@@ -133,6 +133,8 @@ export const strategyCohorts: StrategyCohort[] = [
     confidence: "Medium",
     primaryAction: "Build Campaign",
     leads: nurtureLeads,
+    get avgScore() { return Math.round(this.leads.reduce((sum, l) => sum + (l.score || 0), 0) / this.leads.length); },
+    get icpFitAvg() { return Math.round(this.leads.reduce((sum, l) => sum + (l.icpFit || 0), 0) / this.leads.length); },
   },
   {
     id: "educate",
@@ -159,6 +161,8 @@ export const strategyCohorts: StrategyCohort[] = [
     confidence: "Low",
     primaryAction: "Queue Awareness",
     leads: educateLeads,
+    get avgScore() { return Math.round(this.leads.reduce((sum, l) => sum + (l.score || 0), 0) / this.leads.length); },
+    get icpFitAvg() { return Math.round(this.leads.reduce((sum, l) => sum + (l.icpFit || 0), 0) / this.leads.length); },
   },
 ];
 
