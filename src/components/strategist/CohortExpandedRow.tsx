@@ -1,13 +1,17 @@
 import { useEffect, useState } from "react";
-import { Mail, Globe, Linkedin, Sparkles, Copy, Check, Loader2 } from "lucide-react";
+import { Mail, Globe, Linkedin, Sparkles, Copy, Check, Loader2, Zap, MoreVertical, RefreshCw, Send, MessageSquare } from "lucide-react";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { StrategyCohort, CohortLead, BriefSection } from "./cohortData";
 
 interface CohortExpandedRowProps {
   cohort: StrategyCohort;
+  onLaunch: () => void;
 }
 
 const BriefLine = ({ section, delay }: { section: BriefSection; delay: number }) => {
