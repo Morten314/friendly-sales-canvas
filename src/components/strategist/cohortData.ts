@@ -34,6 +34,8 @@ export interface StrategyCohort {
   primaryAction: string;
   leads: CohortLead[];
   isNew?: boolean;
+  avgScore: number;
+  icpFitAvg: number;
 }
 
 function slugify(s: string): string {
