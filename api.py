@@ -328,6 +328,35 @@ def _get_latest_scoring_run(org_id: str) -> Optional[Dict[str, Any]]:
             mongo_client.close()
 
 
+def _parse_iso_datetime(value: Any) -> Optional[datetime]:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    text = value.strip()
+    if text.endswith("Z"):
+        text = text[:-1] + "+00:00"
+    try:
+        parsed = datetime.fromisoformat(text)
+        if parsed.tzinfo is None:
+            return parsed.replace(tzinfo=timezone.utc)
+        return parsed.astimezone(timezone.utc)
+    except ValueError:
+        return None
+
+
+def _is_stale_queued_run(run_doc: Dict[str, Any], stale_after_seconds: int = 300) -> bool:
+    if str(run_doc.get("status", "")).lower() != "queued":
+        return False
+    if run_doc.get("started_at"):
+        return False
+
+    reference_time = _parse_iso_datetime(run_doc.get("updated_at")) or _parse_iso_datetime(run_doc.get("created_at"))
+    if reference_time is None:
+        return True
+
+    age_seconds = (datetime.now(timezone.utc) - reference_time).total_seconds()
+    return age_seconds >= stale_after_seconds
+
+
 def _persist_market_score_for_lead(
     user_id: str,
     org_id: str,
@@ -1203,6 +1232,27 @@ async def get_or_refresh_lead_market_scores(
             {"org_id": request.org_id, "status": {"$in": ["queued", "processing"]}},
             sort=[("created_at", -1)],
         )
+
+        if active_run and _is_stale_queued_run(active_run):
+            stale_run_id = str(active_run.get("run_id"))
+            now_iso = datetime.utcnow().isoformat()
+            run_coll.update_one(
+                {"run_id": stale_run_id},
+                {
+                    "$set": {
+                        "status": "failed",
+                        "error": "Run auto-failed because it remained queued without starting.",
+                        "updated_at": now_iso,
+                        "completed_at": now_iso,
+                    }
+                },
+            )
+            logger.warning(
+                "Marked stale queued market scoring run as failed. org_id=%s run_id=%s",
+                request.org_id,
+                stale_run_id,
+            )
+            active_run = None
 
         if request.refresh and not active_run:
             run_id = str(uuid.uuid4())
