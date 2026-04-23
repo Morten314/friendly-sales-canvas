@@ -204,3 +204,26 @@ class LeadMarketScoreDescriptionsResponse(BaseModel):
     combined_score: Optional[float] = None
     scored_at: Optional[str] = None
     descriptions: Dict[str, str]
+
+
+class LeadMarketScoreStatusItem(BaseModel):
+    lead_id: str
+    scoring_status: str
+    combined_score: Optional[float] = None
+    updated_at: Optional[str] = None
+    description_preview: Optional[str] = None
+
+
+class LeadMarketScoringStatusResponse(BaseModel):
+    org_id: str
+    run_id: Optional[str] = None
+    processing_status: str
+    processed_leads: int
+    total_leads: int
+    processed_with_descriptions: int
+    failed_count: int
+    progress_percent: float
+    started_at: Optional[str] = None
+    updated_at: Optional[str] = None
+    completed_at: Optional[str] = None
+    recent_items: List[LeadMarketScoreStatusItem] = Field(default_factory=list)

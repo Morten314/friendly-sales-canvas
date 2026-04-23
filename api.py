@@ -29,7 +29,8 @@ from models import (
     CustomerProfileRequest, CustomerProfileICP, LeadCreateRequest, LeadUpdateRequest,
     SignalActionRequest, SignalAskRequest, RegistrationRequest, RegistrationResponse,
     SuggestedICPToCustomerProfileRequest, LeadMarketScoresRequest, LeadMarketScoresResponse,
-    LeadMarketScoreRow, LeadMarketScoreDescriptionsResponse, MARKET_SCORE_COMPONENT_KEYS
+    LeadMarketScoreRow, LeadMarketScoreDescriptionsResponse, LeadMarketScoringStatusResponse,
+    LeadMarketScoreStatusItem, MARKET_SCORE_COMPONENT_KEYS
 )
 from database import driver, graph, client, upsert_node
 from llm_config import chain, chain2, llm2
@@ -272,6 +273,16 @@ def _lead_to_score_row(lead_doc: Dict[str, Any]) -> LeadMarketScoreRow:
     )
 
 
+def _extract_description_preview(component_descriptions: Any) -> Optional[str]:
+    if not isinstance(component_descriptions, dict):
+        return None
+    for component in MARKET_SCORE_COMPONENT_KEYS:
+        value = component_descriptions.get(component)
+        if isinstance(value, str) and value.strip():
+            return value.strip()[:220]
+    return None
+
+
 def _get_latest_market_score_rows(org_id: str) -> List[LeadMarketScoreRow]:
     mongo_client = None
     try:
@@ -324,6 +335,7 @@ def _persist_market_score_for_lead(
     scoring_payload: Dict[str, Any],
     run_id: str,
     scoring_status: str = "completed",
+    score_coll=None,
 ) -> None:
     now_iso = datetime.utcnow().isoformat()
     lead_id = str(lead.get("lead_id"))
@@ -336,8 +348,10 @@ def _persist_market_score_for_lead(
 
     mongo_client = None
     try:
-        mongo_client, score_coll, _ = _get_market_score_collections()
-        score_coll.update_one(
+        local_score_coll = score_coll
+        if local_score_coll is None:
+            mongo_client, local_score_coll, _ = _get_market_score_collections()
+        local_score_coll.update_one(
             {"org_id": org_id, "lead_id": lead_id},
             {
                 "$set": {
@@ -386,13 +400,15 @@ def _run_market_scoring_for_org(user_id: str, org_id: str, run_id: str) -> None:
     mongo_client = None
     run_coll = None
     try:
-        mongo_client, _, run_coll = _get_market_score_collections()
+        mongo_client, score_coll, run_coll = _get_market_score_collections()
+        now_iso = datetime.utcnow().isoformat()
         run_coll.update_one(
             {"run_id": run_id},
-            {"$set": {"status": "processing", "started_at": datetime.utcnow().isoformat()}},
+            {"$set": {"status": "processing", "started_at": now_iso, "updated_at": now_iso}},
         )
 
         leads = fetch_leads_for_org(org_id, limit=5000)
+        total_leads = len(leads)
         if not leads:
             run_coll.update_one(
                 {"run_id": run_id},
@@ -436,10 +452,31 @@ def _run_market_scoring_for_org(user_id: str, org_id: str, run_id: str) -> None:
 
         processed_count = 0
         failed_count = 0
+        run_coll.update_one(
+            {"run_id": run_id},
+            {
+                "$set": {
+                    "total_leads": total_leads,
+                    "processed_count": 0,
+                    "failed_count": 0,
+                    "updated_at": datetime.utcnow().isoformat(),
+                }
+            },
+        )
         for lead in leads:
             lead_id = str(lead.get("lead_id") or "")
             if not lead_id:
                 failed_count += 1
+                run_coll.update_one(
+                    {"run_id": run_id},
+                    {
+                        "$set": {
+                            "processed_count": processed_count,
+                            "failed_count": failed_count,
+                            "updated_at": datetime.utcnow().isoformat(),
+                        }
+                    },
+                )
                 continue
             try:
                 scoring_payload = score_single_lead_against_market(
@@ -454,6 +491,7 @@ def _run_market_scoring_for_org(user_id: str, org_id: str, run_id: str) -> None:
                     scoring_payload=scoring_payload,
                     run_id=run_id,
                     scoring_status="completed",
+                    score_coll=score_coll,
                 )
                 processed_count += 1
             except Exception as lead_error:
@@ -472,7 +510,18 @@ def _run_market_scoring_for_org(user_id: str, org_id: str, run_id: str) -> None:
                     scoring_payload=fallback_payload,
                     run_id=run_id,
                     scoring_status="failed",
+                    score_coll=score_coll,
                 )
+            run_coll.update_one(
+                {"run_id": run_id},
+                {
+                    "$set": {
+                        "processed_count": processed_count,
+                        "failed_count": failed_count,
+                        "updated_at": datetime.utcnow().isoformat(),
+                    }
+                },
+            )
 
         run_coll.update_one(
             {"run_id": run_id},
@@ -481,6 +530,7 @@ def _run_market_scoring_for_org(user_id: str, org_id: str, run_id: str) -> None:
                     "status": "completed",
                     "processed_count": processed_count,
                     "failed_count": failed_count,
+                    "updated_at": datetime.utcnow().isoformat(),
                     "completed_at": datetime.utcnow().isoformat(),
                 }
             },
@@ -1165,6 +1215,8 @@ async def get_or_refresh_lead_market_scores(
                 "created_at": queued_at,
                 "started_at": None,
                 "completed_at": None,
+                "updated_at": queued_at,
+                "total_leads": 0,
                 "processed_count": 0,
                 "failed_count": 0,
             }
@@ -1190,6 +1242,83 @@ async def get_or_refresh_lead_market_scores(
             active_run_id=(latest_run or {}).get("run_id"),
             last_scored_at=last_scored_at,
             rows=rows,
+        )
+    finally:
+        if mongo_client:
+            mongo_client.close()
+
+
+@app.get("/leads/market-scores/status", response_model=LeadMarketScoringStatusResponse)
+async def get_lead_market_scores_status(
+    user_id: str = Query(...),
+    org_id: str = Query(...),
+    run_id: Optional[str] = Query(None),
+    recent_items_limit: int = Query(10, ge=1, le=100),
+):
+    mongo_client = None
+    try:
+        mongo_client, score_coll, run_coll = _get_market_score_collections()
+        run_filter: Dict[str, Any] = {"org_id": org_id, "user_id": user_id}
+        if run_id:
+            run_filter["run_id"] = run_id
+        run_doc = run_coll.find_one(run_filter, sort=[("created_at", -1)])
+        if not run_doc:
+            raise HTTPException(status_code=404, detail="No market scoring run found for org_id")
+
+        run_doc.pop("_id", None)
+        target_run_id = str(run_doc.get("run_id"))
+        total_leads = int(run_doc.get("total_leads") or 0)
+        processed_leads = int(run_doc.get("processed_count") or 0)
+        failed_count = int(run_doc.get("failed_count") or 0)
+
+        if total_leads <= 0:
+            total_leads = len(fetch_leads_for_org(org_id, limit=5000))
+
+        run_score_filter = {"org_id": org_id, "user_id": user_id, "run_id": target_run_id}
+        scored_doc_count = score_coll.count_documents(run_score_filter)
+        if processed_leads < scored_doc_count:
+            processed_leads = scored_doc_count
+
+        processed_with_descriptions = score_coll.count_documents(
+            {
+                **run_score_filter,
+                "component_descriptions": {"$type": "object"},
+            }
+        )
+
+        progress_denominator = max(total_leads, 1)
+        progress_percent = round(min(100.0, (processed_leads / progress_denominator) * 100.0), 2)
+
+        recent_docs = list(
+            score_coll.find(run_score_filter, {"lead_id": 1, "scoring_status": 1, "market_total_score": 1, "updated_at": 1, "component_descriptions": 1})
+            .sort("updated_at", -1)
+            .limit(recent_items_limit)
+        )
+        recent_items: List[LeadMarketScoreStatusItem] = []
+        for doc in recent_docs:
+            recent_items.append(
+                LeadMarketScoreStatusItem(
+                    lead_id=str(doc.get("lead_id")),
+                    scoring_status=str(doc.get("scoring_status", "unknown")),
+                    combined_score=float(doc.get("market_total_score", 0)) if doc.get("market_total_score") is not None else None,
+                    updated_at=doc.get("updated_at"),
+                    description_preview=_extract_description_preview(doc.get("component_descriptions")),
+                )
+            )
+
+        return LeadMarketScoringStatusResponse(
+            org_id=org_id,
+            run_id=target_run_id,
+            processing_status=str(run_doc.get("status", "idle")),
+            processed_leads=processed_leads,
+            total_leads=total_leads,
+            processed_with_descriptions=int(processed_with_descriptions),
+            failed_count=failed_count,
+            progress_percent=progress_percent,
+            started_at=run_doc.get("started_at"),
+            updated_at=run_doc.get("updated_at"),
+            completed_at=run_doc.get("completed_at"),
+            recent_items=recent_items,
         )
     finally:
         if mongo_client:
