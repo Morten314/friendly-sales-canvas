@@ -196,6 +196,29 @@ def _normalize_non_empty_string(value: Any) -> Optional[str]:
     return text or None
 
 
+def _canonicalize_key(key: Any) -> str:
+    return "".join(ch.lower() for ch in str(key) if ch.isalnum())
+
+
+def _build_lookup_maps(payload: Dict[str, Any]) -> Dict[str, Any]:
+    lookup: Dict[str, Any] = {}
+    for key, value in payload.items():
+        canonical = _canonicalize_key(key)
+        if canonical and canonical not in lookup:
+            lookup[canonical] = value
+    return lookup
+
+
+def _first_non_empty_value_from_keys(payload: Dict[str, Any], aliases: List[str]) -> Optional[str]:
+    canonical_lookup = _build_lookup_maps(payload)
+    for alias in aliases:
+        value = canonical_lookup.get(_canonicalize_key(alias))
+        normalized = _normalize_non_empty_string(value)
+        if normalized:
+            return normalized
+    return None
+
+
 def _extract_company_name(lead: Dict[str, Any]) -> Optional[str]:
     candidate_keys = [
         "company_name",
@@ -204,12 +227,16 @@ def _extract_company_name(lead: Dict[str, Any]) -> Optional[str]:
         "account_name",
         "organization",
         "org_name",
+        "companyName",
+        "comp",
+        "comp_name",
+        "companyname",
+        "org",
+        "organization_name",
+        "account",
+        "business_name",
     ]
-    for key in candidate_keys:
-        normalized = _normalize_non_empty_string(lead.get(key))
-        if normalized:
-            return normalized
-    return None
+    return _first_non_empty_value_from_keys(lead, candidate_keys)
 
 
 def _extract_lead_name(lead: Dict[str, Any]) -> Optional[str]:
@@ -220,18 +247,40 @@ def _extract_lead_name(lead: Dict[str, Any]) -> Optional[str]:
         "contact_name",
         "prospect_name",
         "full_name",
+        "fullName",
+        "fullname",
+        "first_name",
+        "firstName",
+        "firstname",
+        "last_name",
+        "lastName",
+        "lastname",
+        "leadName",
+        "person_name",
+        "contact",
     ]
-    for key in candidate_keys:
-        normalized = _normalize_non_empty_string(lead.get(key))
-        if normalized:
-            return normalized
+    top_level_name = _first_non_empty_value_from_keys(lead, candidate_keys)
+    if top_level_name:
+        return top_level_name
 
     contact_obj = lead.get("contact")
     if isinstance(contact_obj, dict):
-        for contact_key in ["name", "full_name", "contact_name"]:
-            normalized = _normalize_non_empty_string(contact_obj.get(contact_key))
-            if normalized:
-                return normalized
+        contact_name = _first_non_empty_value_from_keys(
+            contact_obj,
+            [
+                "name",
+                "full_name",
+                "fullName",
+                "first_name",
+                "firstName",
+                "last_name",
+                "lastName",
+                "contact_name",
+                "display_name",
+            ],
+        )
+        if contact_name:
+            return contact_name
     return None
 
 
