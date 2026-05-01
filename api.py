@@ -5,6 +5,10 @@ import datetime
 import urllib.parse
 import uuid
 import logging
+import os
+import math
+import threading
+from collections import deque
 from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Any, Optional
 
@@ -21,8 +25,9 @@ from langchain_core.documents import Document
 import pandas as pd
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
+import requests
 
-from config import origins, STAGE_ORDER, STAGE_MAPPING, s3_bucket, aws_region, aws_access_key, aws_secret_key, pinecone_api_key, together_api_key
+from config import origins, STAGE_ORDER, STAGE_MAPPING, s3_bucket, aws_region, aws_access_key, aws_secret_key, pinecone_api_key, together_api_key, claude_sonnet_model, tavily_api_key, claude_signal_window_seconds, claude_signal_token_limit_5m, claude_signal_max_output_tokens
 from models import (
     ProspectData, Lead, Contact, SalesPipelineResponse, TimeframeResponse, StageStats,
     CompanyProfile, UserProfile, ScoutProfile, MarketRequest, EditRequest,
@@ -48,6 +53,14 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+CLAUDE_SIGNAL_WINDOW_SECONDS = claude_signal_window_seconds
+CLAUDE_SIGNAL_TOKEN_LIMIT_5M = claude_signal_token_limit_5m
+CLAUDE_SIGNAL_MAX_OUTPUT_TOKENS = claude_signal_max_output_tokens
+CLAUDE_API_KEY = os.getenv("ANTHROPIC_API_KEY") or ""
+_claude_signal_usage_window = deque()
+_claude_signal_usage_lock = threading.Lock()
+_claude_signal_total_runs = 0
 
 
 def _stringify_context_for_query(payload: Any) -> str:
@@ -669,6 +682,80 @@ def _release_icp_id(db, icp_id: str) -> None:
         return
     registry = db["ICP_ID_REGISTRY"]
     registry.delete_one({"id": str(icp_id)})
+
+
+def _estimate_token_count(text: str) -> int:
+    """Conservative local token estimate when provider usage metadata is unavailable."""
+    if not text:
+        return 0
+    return max(1, int(math.ceil(len(text) / 4)))
+
+
+def _prune_claude_signal_window(now_ts: float) -> None:
+    while _claude_signal_usage_window and (now_ts - _claude_signal_usage_window[0]["timestamp"]) > CLAUDE_SIGNAL_WINDOW_SECONDS:
+        _claude_signal_usage_window.popleft()
+
+
+def _reserve_claude_signal_budget(input_tokens_estimate: int, max_output_tokens: int) -> Dict[str, Any]:
+    global _claude_signal_total_runs
+
+    now_ts = datetime.utcnow().timestamp()
+    reserved_tokens = max(0, input_tokens_estimate) + max(0, max_output_tokens)
+    run_id = str(uuid.uuid4())
+
+    with _claude_signal_usage_lock:
+        _prune_claude_signal_window(now_ts)
+        current_tokens_5m = sum(int(x.get("tokens", 0)) for x in _claude_signal_usage_window)
+        if current_tokens_5m + reserved_tokens > CLAUDE_SIGNAL_TOKEN_LIMIT_5M:
+            raise HTTPException(
+                status_code=429,
+                detail={
+                    "error": "Token budget exceeded for signal_ask_claude",
+                    "token_limit_5m": CLAUDE_SIGNAL_TOKEN_LIMIT_5M,
+                    "current_tokens_5m": current_tokens_5m,
+                    "requested_tokens": reserved_tokens
+                }
+            )
+
+        _claude_signal_usage_window.append(
+            {
+                "run_id": run_id,
+                "timestamp": now_ts,
+                "tokens": reserved_tokens
+            }
+        )
+        _claude_signal_total_runs += 1
+        reserved_tokens_5m = current_tokens_5m + reserved_tokens
+        run_count_5m = len(_claude_signal_usage_window)
+        run_count_total = _claude_signal_total_runs
+
+    return {
+        "run_id": run_id,
+        "reserved_tokens": reserved_tokens,
+        "window_tokens_5m": reserved_tokens_5m,
+        "run_count_5m": run_count_5m,
+        "run_count_total": run_count_total
+    }
+
+
+def _finalize_claude_signal_budget(run_id: str, actual_total_tokens: int) -> Dict[str, int]:
+    now_ts = datetime.utcnow().timestamp()
+    with _claude_signal_usage_lock:
+        _prune_claude_signal_window(now_ts)
+        for item in _claude_signal_usage_window:
+            if item.get("run_id") == run_id:
+                item["tokens"] = max(0, int(actual_total_tokens))
+                break
+
+        window_tokens_5m = sum(int(x.get("tokens", 0)) for x in _claude_signal_usage_window)
+        run_count_5m = len(_claude_signal_usage_window)
+        run_count_total = _claude_signal_total_runs
+
+    return {
+        "window_tokens_5m": window_tokens_5m,
+        "run_count_5m": run_count_5m,
+        "run_count_total": run_count_total
+    }
 
 @app.post("/upload_file/")
 async def upload_document(file: UploadFile = File(...)):
@@ -2872,6 +2959,204 @@ Please use the WebSearch tool to gather current information and provide a detail
     except Exception as e:
         logger.error(f"Error in signal_Ask: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to answer question: {str(e)}")
+
+@app.post("/signal_ask_claude")
+async def signal_ask_claude(request: SignalAskRequest):
+    """
+    Claude-powered signal ask endpoint with local token/run limiter.
+    """
+    if not CLAUDE_API_KEY:
+        raise HTTPException(status_code=500, detail="ANTHROPIC_API_KEY is not configured")
+
+    reservation: Optional[Dict[str, Any]] = None
+    input_tokens_estimate = 0
+    output_tokens_estimate = 0
+    answer = ""
+
+    try:
+        # Fetch company profile from Neo4j
+        company_profile = None
+        try:
+            with driver.session() as session:
+                result = session.run(
+                    "MATCH (p:CompanyProfile {org_id: $org_id}) RETURN p LIMIT 1",
+                    org_id=request.org_id
+                )
+                record = result.single()
+                if record:
+                    company_profile = dict(record["p"].items())
+        except Exception as e:
+            logger.warning(f"Could not fetch company profile (Claude): {e}")
+
+        # Fetch customer profile from MongoDB
+        customer_profile = None
+        try:
+            username = urllib.parse.quote_plus("techbrewra")
+            password = urllib.parse.quote_plus("Brewra@Best09")
+            mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
+            mongo_client = MongoClient(mongo_uri)
+            db = mongo_client["Profiler"]
+            collection = db["Company_Profile"]
+
+            filter_query = {"profile_type": "company", "org_id": request.org_id}
+            document = collection.find_one(filter_query)
+
+            if document:
+                customer_profiles = document.get("customer_profiles", {})
+                icps = customer_profiles.get("icps", [])
+                for icp in icps:
+                    if "_id" in icp:
+                        del icp["_id"]
+                customer_profile = {"icps": icps}
+
+            mongo_client.close()
+        except Exception as e:
+            logger.warning(f"Could not fetch customer profile (Claude): {e}")
+
+        # Format history for prompt
+        history_text = ""
+        if request.history:
+            history_text = "\n\nCONVERSATION HISTORY:\n"
+            for i, entry in enumerate(request.history, 1):
+                if isinstance(entry, dict):
+                    user_msg = entry.get("user", entry.get("question", ""))
+                    assistant_msg = entry.get("assistant", entry.get("answer", ""))
+                    history_text += f"\nTurn {i}:\n"
+                    if user_msg:
+                        history_text += f"User: {user_msg}\n"
+                    if assistant_msg:
+                        history_text += f"Assistant: {assistant_msg}\n"
+                else:
+                    history_text += f"\nTurn {i}: {str(entry)}\n"
+
+        # Build context for prompt
+        context_parts = []
+        if company_profile:
+            company_profile_json = json.dumps(company_profile, indent=2)
+            context_parts.append(f"COMPANY PROFILE:\n{company_profile_json}")
+
+        if customer_profile:
+            customer_profile_json = json.dumps(customer_profile, indent=2)
+            context_parts.append(f"CUSTOMER PROFILE (ICPs):\n{customer_profile_json}")
+
+        context = "\n\n".join(context_parts)
+
+        web_search_results = ""
+        try:
+            from langchain_community.tools.tavily_search.tool import TavilySearchResults
+            search_tool = TavilySearchResults(k=10, tavily_api_key=tavily_api_key)
+            web_search_results = await asyncio.to_thread(search_tool.run, request.question)
+        except Exception as e:
+            logger.warning(f"WebSearch failed in signal_ask_claude: {e}")
+
+        prompt = f"""You are an intelligent assistant helping answer questions about market signals, company strategy, and customer insights.
+
+{context}
+{history_text}
+
+WEB SEARCH RESULTS:
+{web_search_results}
+
+CURRENT QUESTION:
+{request.question}
+
+INSTRUCTIONS:
+1. Use the provided web search results as the freshest external context.
+2. Consider the company profile and customer profile (ICPs) when providing context-specific answers.
+3. Reference the conversation history to maintain context and continuity.
+4. Provide a comprehensive, well-structured answer that directly addresses the question.
+5. If the question relates to market signals, trends, or industry insights, prioritize recent data (2026-2027).
+6. Cite sources if they appear in web search results.
+7. Be specific and actionable in your response.
+"""
+
+        input_tokens_estimate = _estimate_token_count(prompt)
+        reservation = _reserve_claude_signal_budget(
+            input_tokens_estimate=input_tokens_estimate,
+            max_output_tokens=CLAUDE_SIGNAL_MAX_OUTPUT_TOKENS
+        )
+
+        response = await asyncio.to_thread(
+            requests.post,
+            "https://api.anthropic.com/v1/messages",
+            headers={
+                "x-api-key": CLAUDE_API_KEY,
+                "anthropic-version": "2023-06-01",
+                "content-type": "application/json"
+            },
+            json={
+                "model": claude_sonnet_model,
+                "max_tokens": CLAUDE_SIGNAL_MAX_OUTPUT_TOKENS,
+                "temperature": 0.2,
+                "messages": [{"role": "user", "content": prompt}]
+            },
+            timeout=120
+        )
+
+        if response.status_code >= 400:
+            response_text = response.text[:1000]
+            raise HTTPException(
+                status_code=500,
+                detail=f"Claude API call failed ({response.status_code}): {response_text}"
+            )
+
+        payload = response.json()
+        content_blocks = payload.get("content", [])
+        answer_parts = []
+        for block in content_blocks:
+            if isinstance(block, dict) and block.get("type") == "text":
+                answer_parts.append(block.get("text", ""))
+        answer = "\n".join([x for x in answer_parts if x]).strip()
+
+        output_tokens_estimate = _estimate_token_count(answer)
+        finalized = _finalize_claude_signal_budget(
+            run_id=reservation["run_id"],
+            actual_total_tokens=input_tokens_estimate + output_tokens_estimate
+        )
+        reservation = None
+
+        logger.info(
+            "signal_ask_claude usage | org_id=%s | in=%s | out=%s | total=%s | window_tokens_5m=%s | run_count_5m=%s | run_count_total=%s",
+            request.org_id,
+            input_tokens_estimate,
+            output_tokens_estimate,
+            input_tokens_estimate + output_tokens_estimate,
+            finalized["window_tokens_5m"],
+            finalized["run_count_5m"],
+            finalized["run_count_total"]
+        )
+
+        return {
+            "status": "success",
+            "answer": answer,
+            "org_id": request.org_id,
+            "user_id": request.user_id,
+            "question": request.question,
+            "provider": "anthropic",
+            "model": claude_sonnet_model,
+            "usage": {
+                "estimated_input_tokens": input_tokens_estimate,
+                "estimated_output_tokens": output_tokens_estimate,
+                "estimated_total_tokens": input_tokens_estimate + output_tokens_estimate,
+                "window_total_tokens_5m": finalized["window_tokens_5m"],
+                "run_count_5m": finalized["run_count_5m"],
+                "run_count_total": finalized["run_count_total"],
+                "token_limit_5m": CLAUDE_SIGNAL_TOKEN_LIMIT_5M
+            }
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in signal_ask_claude: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to answer question (Claude): {str(e)}")
+    finally:
+        # Release reservation if we errored before final accounting.
+        if reservation and reservation.get("run_id"):
+            _finalize_claude_signal_budget(
+                run_id=reservation["run_id"],
+                actual_total_tokens=input_tokens_estimate + output_tokens_estimate
+            )
 
 @app.post("/edit")
 def process_edit(request: EditRequest):
