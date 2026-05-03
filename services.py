@@ -12,7 +12,7 @@ from typing import List, Optional, Dict, Any
 from langchain_community.document_loaders import PyPDFLoader, TextLoader
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_core.prompts import PromptTemplate
-from config import PREDEFINED_QUESTIONS, rapidapi_key
+from config import PREDEFINED_QUESTIONS, rapidapi_key, claude_sonnet_model, tavily_api_key
 from database import driver, query, client
 from llm_config import llm_transformer, graph, llm, llm2, agent_chain
 
@@ -272,8 +272,117 @@ def process_prospect_list(file_path):
 
     return {"message": f"{added_count} new prospects added."}
 
+# --- Claude-backed research (Tavily + Anthropic), same prompts as agent_chain path ---
+CLAUDE_RESEARCH_MAX_TOKENS = int(os.getenv("CLAUDE_RESEARCH_MAX_TOKENS") or "8192")
+
+
+def _tavily_context_and_urls(search_query: str, k: int = 10) -> tuple:
+    """Returns (context_text, url_list) for injection into Claude prompts."""
+    urls: List[str] = []
+    context = ""
+    try:
+        from langchain_community.tools.tavily_search.tool import TavilySearchResults
+
+        search_tool = TavilySearchResults(k=k, tavily_api_key=tavily_api_key)
+        raw = search_tool.run(search_query[:2000])
+        if isinstance(raw, str):
+            context = raw
+            urls = list(dict.fromkeys(re.findall(r'https?://[^\s<>"{}|\\^`\[\]]+', raw)))[:12]
+        elif isinstance(raw, list):
+            parts = []
+            for item in raw:
+                if isinstance(item, dict):
+                    u = item.get("url") or item.get("source", "")
+                    if isinstance(u, str) and u.startswith("http"):
+                        urls.append(u)
+                    parts.append(json.dumps(item, default=str))
+            context = "\n".join(parts)
+        else:
+            context = str(raw)
+    except Exception as e:
+        context = f"(web search unavailable: {e})"
+    return context, urls[:10]
+
+
+def _claude_messages_text(user_prompt: str, max_tokens: int = CLAUDE_RESEARCH_MAX_TOKENS) -> str:
+    api_key = os.getenv("ANTHROPIC_API_KEY") or ""
+    if not api_key:
+        raise RuntimeError("ANTHROPIC_API_KEY is not configured")
+    r = requests.post(
+        "https://api.anthropic.com/v1/messages",
+        headers={
+            "x-api-key": api_key,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+        },
+        json={
+            "model": claude_sonnet_model,
+            "max_tokens": max_tokens,
+            "temperature": 0.2,
+            "messages": [{"role": "user", "content": user_prompt}],
+        },
+        timeout=300,
+    )
+    if r.status_code >= 400:
+        raise RuntimeError(f"Claude API failed ({r.status_code}): {r.text[:800]}")
+    payload = r.json()
+    out: List[str] = []
+    for block in payload.get("content", []) or []:
+        if isinstance(block, dict) and block.get("type") == "text":
+            out.append(block.get("text", ""))
+    return "\n".join(out).strip()
+
+
+def _market_research_agent_output(prompt: str, company_profile_json: str, llm_backend: str) -> str:
+    if llm_backend != "claude":
+        raw_response = agent_chain.invoke({"input": prompt})
+        return raw_response["output"]
+    seed = " ".join(str(company_profile_json).split())[:1200]
+    web_ctx, _ = _tavily_context_and_urls(f"market research industry trends data 2026 {seed}")
+    augmented = f"""{prompt}
+
+WEB SEARCH RESULTS (primary external evidence — synthesize with company profile):
+{web_ctx}
+"""
+    return _claude_messages_text(augmented, max_tokens=CLAUDE_RESEARCH_MAX_TOKENS)
+
+
+def _signals_agent_output(prompt: str, company_profile_seed: str, llm_backend: str) -> tuple:
+    """Returns (model_output_text, tavily_urls) for signal JSON parsing."""
+    tavily_urls: List[str] = []
+    if llm_backend != "claude":
+        raw_response = agent_chain.invoke({"input": prompt})
+        response = raw_response["output"]
+        try:
+            if hasattr(raw_response, "intermediate_steps"):
+                for step in raw_response.intermediate_steps:
+                    if len(step) > 1 and isinstance(step[1], list):
+                        for result in step[1]:
+                            if isinstance(result, dict) and "url" in result:
+                                tavily_urls.append(result["url"])
+            if not tavily_urls:
+                url_pattern = r'https?://[^\s<>"{}|\\^`\[\]]+'
+                found_urls = re.findall(url_pattern, response)
+                tavily_urls = list(set(found_urls))[:5]
+        except Exception:
+            pass
+        return response, tavily_urls
+
+    seed = " ".join(str(company_profile_seed).split())[:1200]
+    web_ctx, tavily_urls = _tavily_context_and_urls(
+        f"B2B market competitor industry news ICP customer trends 2026 {seed}"
+    )
+    augmented = f"{prompt}\n\nWEB SEARCH RESULTS:\n{web_ctx}\n"
+    response = _claude_messages_text(augmented, max_tokens=CLAUDE_RESEARCH_MAX_TOKENS)
+    if not tavily_urls:
+        url_pattern = r'https?://[^\s<>"{}|\\^`\[\]]+'
+        found_urls = re.findall(url_pattern, response)
+        tavily_urls = list(set(found_urls))[:5]
+    return response, tavily_urls
+
+
 # Research Market Functions
-def Research_Market_1(pre_data) -> dict:
+def Research_Market_1(pre_data, llm_backend: str = "default") -> dict:
     # Convert company profile to JSON string (handle both dict and string inputs)
     if isinstance(pre_data, dict):
         company_profile_json = json.dumps(pre_data, indent=2)
@@ -379,8 +488,7 @@ Do not include any additional reasoning, thoughts, or steps after that.
     prompt = template.format(company_profile_json=company_profile_json)
 
     # Step 3: Get LLM response
-    raw_response = agent_chain.invoke({'input': prompt})
-    response = raw_response["output"]
+    response = _market_research_agent_output(prompt, company_profile_json, llm_backend)
 
     # Clean and escape the JSON string
     cleaned_str = response.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
@@ -393,7 +501,7 @@ Do not include any additional reasoning, thoughts, or steps after that.
     # ✅ Return the Python dict
     return parsed_json
 
-def Research_Market_2(pre_data) -> dict:
+def Research_Market_2(pre_data, llm_backend: str = "default") -> dict:
     # Convert company profile to JSON string (handle both dict and string inputs)
     if isinstance(pre_data, dict):
         company_profile_json = json.dumps(pre_data, indent=2)
@@ -516,8 +624,7 @@ Do not include any additional reasoning, thoughts, or steps after that.
     prompt = template.format(company_profile_json=company_profile_json)
 
     # Step 3: Get LLM response
-    raw_response = agent_chain.invoke({'input': prompt})
-    response = raw_response["output"]
+    response = _market_research_agent_output(prompt, company_profile_json, llm_backend)
 
     # Clean and escape the JSON string
     cleaned_str = response.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
@@ -530,7 +637,7 @@ Do not include any additional reasoning, thoughts, or steps after that.
     # ✅ Return the Python dict
     return parsed_json
 
-def Research_Market_3(pre_data) -> dict:
+def Research_Market_3(pre_data, llm_backend: str = "default") -> dict:
     # Convert company profile to JSON string (handle both dict and string inputs)
     if isinstance(pre_data, dict):
         company_profile_json = json.dumps(pre_data, indent=2)
@@ -744,8 +851,7 @@ Do not include any additional reasoning, thoughts, or steps after that.
     prompt = template.format(company_profile_json=company_profile_json)
 
     # Step 3: Get LLM response
-    raw_response = agent_chain.invoke({'input': prompt})
-    response = raw_response["output"]
+    response = _market_research_agent_output(prompt, company_profile_json, llm_backend)
 
     # Clean and escape the JSON string
     cleaned_str = response.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
@@ -758,7 +864,7 @@ Do not include any additional reasoning, thoughts, or steps after that.
     # ✅ Return the Python dict
     return parsed_json
 
-def Research_Market_4(pre_data) -> dict:
+def Research_Market_4(pre_data, llm_backend: str = "default") -> dict:
     # Convert company profile to JSON string (handle both dict and string inputs)
     if isinstance(pre_data, dict):
         company_profile_json = json.dumps(pre_data, indent=2)
@@ -959,8 +1065,7 @@ Do not include any additional reasoning, thoughts, or steps after that.
     prompt = template.format(company_profile_json=company_profile_json)
 
     # Step 3: Get LLM response
-    raw_response = agent_chain.invoke({'input': prompt})
-    response = raw_response["output"]
+    response = _market_research_agent_output(prompt, company_profile_json, llm_backend)
 
     # Clean and escape the JSON string
     cleaned_str = response.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
@@ -973,7 +1078,7 @@ Do not include any additional reasoning, thoughts, or steps after that.
     # ✅ Return the Python dict
     return parsed_json
 
-def Research_Market_5(pre_data) -> dict:
+def Research_Market_5(pre_data, llm_backend: str = "default") -> dict:
     # Convert company profile to JSON string (handle both dict and string inputs)
     if isinstance(pre_data, dict):
         company_profile_json = json.dumps(pre_data, indent=2)
@@ -1122,8 +1227,7 @@ Do not include any additional reasoning, thoughts, or steps after that.
     prompt = template.format(company_profile_json=company_profile_json)
 
     # Step 3: Get LLM response
-    raw_response = agent_chain.invoke({'input': prompt})
-    response = raw_response["output"]
+    response = _market_research_agent_output(prompt, company_profile_json, llm_backend)
 
     # Clean and escape the JSON string
     cleaned_str = response.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
@@ -1751,6 +1855,14 @@ COMPONENT_FUNCTIONS = {
     "market entry & growth strategy" : Research_Market_5
 }
 
+COMPONENT_FUNCTIONS_CLAUDE = {
+    "market size & opportunity": lambda d: Research_Market_1(d, "claude"),
+    "industry trends report": lambda d: Research_Market_2(d, "claude"),
+    "competitor landscape": lambda d: Research_Market_3(d, "claude"),
+    "regulatory & compliance highlights": lambda d: Research_Market_4(d, "claude"),
+    "market entry & growth strategy": lambda d: Research_Market_5(d, "claude"),
+}
+
 MARKET_SCORE_COMPONENT_KEYS: List[str] = list(COMPONENT_FUNCTIONS.keys())
 
 # Helper function to fetch leads for org_id
@@ -1907,7 +2019,7 @@ Return JSON schema:
     }
 
 # Signals Research Functions
-def search_signals_scout(pre_data) -> dict:
+def search_signals_scout(pre_data, llm_backend: str = "default") -> dict:
     """Search for market, competitor, and industry trend signals for Scout agent using WebSearch"""
     
     # Extract existing headlines and leads if present
@@ -2102,27 +2214,7 @@ Do not include any additional reasoning, thoughts, or steps after that.
         existing_headlines_section=existing_headlines_text
     )
     
-    # Get LLM response with WebSearch
-    raw_response = agent_chain.invoke({'input': prompt})
-    response = raw_response["output"]
-    
-    # Extract URLs from Tavily search results if available
-    tavily_urls = []
-    try:
-        # Try to extract URLs from agent chain intermediate steps
-        if hasattr(raw_response, 'intermediate_steps'):
-            for step in raw_response.intermediate_steps:
-                if len(step) > 1 and isinstance(step[1], list):
-                    for result in step[1]:
-                        if isinstance(result, dict) and 'url' in result:
-                            tavily_urls.append(result['url'])
-        # Also try to extract URLs from response text as fallback
-        if not tavily_urls:
-            url_pattern = r'https?://[^\s<>"{}|\\^`\[\]]+'
-            found_urls = re.findall(url_pattern, response)
-            tavily_urls = list(set(found_urls))[:5]  # Limit to 5 unique URLs
-    except Exception as e:
-        pass
+    response, tavily_urls = _signals_agent_output(prompt, company_profile_json, llm_backend)
     
     # Extract JSON from response
     if "Final Answer:" in response:
@@ -2210,7 +2302,7 @@ Do not include any additional reasoning, thoughts, or steps after that.
     
     return result
 
-def search_signals_profiler(pre_data) -> dict:
+def search_signals_profiler(pre_data, llm_backend: str = "default") -> dict:
     """Search for ICP and customer-related signals for Profiler agent using WebSearch"""
     
     # Extract existing headlines and leads if present
@@ -2425,33 +2517,13 @@ Do not include any additional reasoning, thoughts, or steps after that.
         leads_section=leads_text,
         existing_headlines_section=existing_headlines_text
     )
-    
-    # Get LLM response with WebSearch
-    raw_response = agent_chain.invoke({'input': prompt})
-    response = raw_response["output"]
-    
-    # Extract URLs from Tavily search results if available
-    tavily_urls = []
-    try:
-        # Try to extract URLs from agent chain intermediate steps
-        if hasattr(raw_response, 'intermediate_steps'):
-            for step in raw_response.intermediate_steps:
-                if len(step) > 1 and isinstance(step[1], list):
-                    for result in step[1]:
-                        if isinstance(result, dict) and 'url' in result:
-                            tavily_urls.append(result['url'])
-        # Also try to extract URLs from response text as fallback
-        if not tavily_urls:
-            url_pattern = r'https?://[^\s<>"{}|\\^`\[\]]+'
-            found_urls = re.findall(url_pattern, response)
-            tavily_urls = list(set(found_urls))[:5]  # Limit to 5 unique URLs
-    except Exception as e:
-        pass
-    
+
+    response, tavily_urls = _signals_agent_output(prompt, context_json, llm_backend)
+
     # Extract JSON from response
     if "Final Answer:" in response:
         response = response.split("Final Answer:")[-1].strip()
-    
+
     # Clean and escape the JSON string
     cleaned_str = response.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
     # Remove any leading/trailing text before first { or after last }
@@ -2459,25 +2531,25 @@ Do not include any additional reasoning, thoughts, or steps after that.
         cleaned_str = cleaned_str[cleaned_str.index("{"):]
     if "}" in cleaned_str:
         cleaned_str = cleaned_str[:cleaned_str.rindex("}") + 1]
-    
+
     # Escape newline and other control characters within string values
     cleaned_str = re.sub(r'\"description\": \"(.*?)\"', lambda m: '"description": "' + m.group(1).replace('\n', '\\n').replace('\r', '\\r').replace('"', '\\"') + '"', cleaned_str, flags=re.DOTALL)
     cleaned_str = re.sub(r'\"snippet\": \"(.*?)\"', lambda m: '"snippet": "' + m.group(1).replace('\n', '\\n').replace('\r', '\\r').replace('"', '\\"') + '"', cleaned_str, flags=re.DOTALL)
     cleaned_str = re.sub(r'\"headline\": \"(.*?)\"', lambda m: '"headline": "' + m.group(1).replace('\n', '\\n').replace('\r', '\\r').replace('"', '\\"') + '"', cleaned_str, flags=re.DOTALL)
-    
+
     # Parse to JSON (Python dict)
     parsed_json = json.loads(cleaned_str)
-    
+
     # Validate and fix URLs using Tavily URLs if available
     def validate_url(url, tavily_urls_list):
         """Validate URL and replace with Tavily URL if invalid"""
         if not url or not isinstance(url, str):
             return tavily_urls_list[0] if tavily_urls_list else ""
-        
+
         # Check if URL is valid format
         if not url.startswith(('http://', 'https://')):
             return tavily_urls_list[0] if tavily_urls_list else ""
-        
+
         # If Tavily URLs available, try to match or use first one
         if tavily_urls_list:
             # Check if URL domain matches any Tavily URL
@@ -2488,12 +2560,12 @@ Do not include any additional reasoning, thoughts, or steps after that.
                     return tavily_url
             # If no match, use first Tavily URL
             return tavily_urls_list[0]
-        
+
         return url
-    
+
     # Validate sourceUrl
     source_url = validate_url(parsed_json.get("sourceUrl", ""), tavily_urls)
-    
+
     # Validate source array URLs
     validated_sources = []
     source_array = parsed_json.get("source", [])
@@ -2504,7 +2576,7 @@ Do not include any additional reasoning, thoughts, or steps after that.
                 "citation": src.get("citation", ""),
                 "url": validated_url
             })
-    
+
     # If no sources validated, use Tavily URLs directly
     if not validated_sources and tavily_urls:
         for i, tavily_url in enumerate(tavily_urls[:2]):
@@ -2512,12 +2584,12 @@ Do not include any additional reasoning, thoughts, or steps after that.
                 "citation": f"Source {i+1}",
                 "url": tavily_url
             })
-    
+
     # Add metadata (ID will be generated in API layer to ensure uniqueness per org_id)
     from datetime import datetime
     hours_ago = 1  # Default, can be made dynamic based on signal recency
     timestamp = f"{hours_ago}h ago"
-    
+
     result = {
         "agent": "profiler",
         "timestamp": timestamp,
