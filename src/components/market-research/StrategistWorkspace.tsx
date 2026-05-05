@@ -844,6 +844,8 @@ Take care,
           <p className="text-[11px] text-muted-foreground truncate">
             {showSequence
               ? `Outreach sequence · ${sequenceSteps.length} steps · ${leads.length} leads`
+              : cohortContext
+              ? `Chat with Strategist · ${cohortContext.cohortName} cohort · ${cohortContext.leadCount} leads`
               : `Strategy workspace for ${leads.length} leads · ${opportunity || "Scout Research"}`}
           </p>
         </div>
