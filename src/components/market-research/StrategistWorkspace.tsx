@@ -126,7 +126,8 @@ const StrategistDashboard: React.FC<{
   strategy: ReturnType<typeof generateStrategy>;
   onAction: (prompt: string) => void;
   onCreateSequence: () => void;
-}> = ({ strategy, onAction, onCreateSequence }) => (
+  cohortContext?: CohortContext;
+}> = ({ strategy, onAction, onCreateSequence, cohortContext }) => (
   <div className="flex flex-col gap-3 overflow-y-auto p-3">
     {/* Context Banner */}
     <div className="flex items-center gap-3 text-xs text-muted-foreground bg-muted/30 rounded-md px-3 py-2 border border-border">
@@ -179,25 +180,44 @@ const StrategistDashboard: React.FC<{
 
     {/* Quick Actions */}
     <Card className="p-3 border-primary/20 bg-primary/5 space-y-2">
-      <h4 className="text-xs font-semibold text-foreground">Quick Actions</h4>
+      <h4 className="text-xs font-semibold text-foreground">
+        {cohortContext ? "Action Options" : "Quick Actions"}
+      </h4>
       <div className="flex flex-wrap gap-2">
-        <Button
-          size="sm"
-          className="text-xs gap-1.5"
-          onClick={onCreateSequence}
-        >
-          <Play className="h-3.5 w-3.5" />
-          Create an outreach sequence for these leads
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          className="text-xs gap-1.5"
-          onClick={() => onAction("Segment these leads into targeted campaign groups based on their signals, industry, and persona")}
-        >
-          <Filter className="h-3.5 w-3.5" />
-          Segment these leads for campaigns
-        </Button>
+        {cohortContext ? (
+          cohortContext.chatActions.map((action) => (
+            <Button
+              key={action.label}
+              variant="outline"
+              size="sm"
+              className="text-xs gap-1.5"
+              onClick={() => onAction(action.label)}
+            >
+              <ChevronRight className="h-3.5 w-3.5" />
+              {action.label}
+            </Button>
+          ))
+        ) : (
+          <>
+            <Button
+              size="sm"
+              className="text-xs gap-1.5"
+              onClick={onCreateSequence}
+            >
+              <Play className="h-3.5 w-3.5" />
+              Create an outreach sequence for these leads
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs gap-1.5"
+              onClick={() => onAction("Segment these leads into targeted campaign groups based on their signals, industry, and persona")}
+            >
+              <Filter className="h-3.5 w-3.5" />
+              Segment these leads for campaigns
+            </Button>
+          </>
+        )}
       </div>
     </Card>
   </div>
@@ -846,6 +866,7 @@ Take care,
               strategy={strategy}
               onAction={handleSendChat}
               onCreateSequence={handleCreateSequence}
+              cohortContext={cohortContext}
             />
           )}
         </div>
