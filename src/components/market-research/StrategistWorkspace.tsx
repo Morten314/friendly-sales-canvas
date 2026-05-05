@@ -22,11 +22,24 @@ interface LeadContext {
   signals?: string[];
 }
 
+interface CohortContext {
+  cohortName: string;
+  leadCount: number;
+  playType: string;
+  scoutSignal: string;
+  confidence: string;
+  icpFitRange: string;
+  compositeScore: number;
+  briefSummary: string;
+  chatActions: { label: string }[];
+}
+
 interface StrategistWorkspaceProps {
   leads: LeadContext[];
   opportunity?: string;
   icp?: string;
   triggerPrompt: string;
+  cohortContext?: CohortContext;
   onBack: () => void;
 }
 
@@ -458,6 +471,7 @@ const StrategistWorkspace: React.FC<StrategistWorkspaceProps> = ({
   opportunity,
   icp,
   triggerPrompt,
+  cohortContext,
   onBack,
 }) => {
   const navigate = useNavigate();
@@ -472,6 +486,55 @@ const StrategistWorkspace: React.FC<StrategistWorkspaceProps> = ({
   const [activeEmailStepId, setActiveEmailStepId] = useState<string | null>(null);
   const [emailEditMode, setEmailEditMode] = useState(false);
   const [savingEmail, setSavingEmail] = useState(false);
+
+  // ─── Auto-Plan: generate plan on landing when coming from cohort ──────────
+  useEffect(() => {
+    if (triggerPrompt !== "__AUTO_PLAN__" || !cohortContext) return;
+
+    const ctx = cohortContext;
+    const cohortType = ctx.cohortName.toLowerCase().includes("strike")
+      ? "strike"
+      : ctx.cohortName.toLowerCase().includes("nurture")
+      ? "nurture"
+      : "educate";
+
+    // Context brief
+    let contextBrief = "";
+    if (cohortType === "strike") {
+      contextBrief = `This is your ${ctx.cohortName} cohort — ${ctx.leadCount} high-intent leads with ICP fit in the ${ctx.icpFitRange} range. They're here because Scout detected fresh buying triggers (${ctx.scoutSignal}) and Profiler confirmed strong alignment with your top ICP.`;
+    } else if (cohortType === "nurture") {
+      contextBrief = `This is your ${ctx.cohortName} cohort — ${ctx.leadCount} leads showing early momentum with ICP fit in the ${ctx.icpFitRange} range. Scout flagged activity signals (${ctx.scoutSignal}) but they're not ready for a hard pitch yet.`;
+    } else {
+      contextBrief = `This is your ${ctx.cohortName} cohort — ${ctx.leadCount} strategically interesting leads with ICP fit in the ${ctx.icpFitRange} range. They sit in your expansion thesis (${ctx.scoutSignal}) but show no immediate buying signals.`;
+    }
+
+    // Recommended plan
+    let plan = "";
+    if (cohortType === "strike") {
+      plan = `I recommend a ${ctx.playType} play. With a composite score of ${ctx.compositeScore} and confidence rated ${ctx.confidence}, these leads have both the intent and the fit to convert quickly. The pricing signal from Scout gives you a natural opening — lead with migration cost and position your solution as the low-friction alternative while their renewal window is still open.`;
+    } else if (cohortType === "nurture") {
+      plan = `I recommend a ${ctx.playType} approach. These leads score ${ctx.compositeScore} on composite and are showing real activity, but pushing too hard now risks burning the relationship. Build rapport through value-led touches on LinkedIn and relevant content. Scout will alert you the moment a stronger trigger fires and moves them into Strike Now.`;
+    } else {
+      plan = `I recommend an ${ctx.playType} strategy. At a composite score of ${ctx.compositeScore} with ${ctx.confidence} confidence, direct outreach isn't warranted. Instead, run a light-touch drip that keeps you visible. Share thought leadership drawn from Scout's market insights to position you as a category expert — not a vendor — so when a signal appears, you're already on their radar.`;
+    }
+
+    const fullPlan = `**Context Brief**\n${contextBrief}\n\n**Recommended Plan**\n${plan}\n\nWhat would you like to do next?`;
+
+    // Simulate brief thinking delay then show plan
+    setIsLoading(true);
+    const timer = setTimeout(() => {
+      setChatMessages([
+        {
+          role: "assistant",
+          content: fullPlan,
+          timestamp: new Date().toLocaleTimeString(),
+        },
+      ]);
+      setIsLoading(false);
+    }, 1800);
+
+    return () => clearTimeout(timer);
+  }, [triggerPrompt, cohortContext]);
 
   // Simulate agent steps during loading
   useEffect(() => {
