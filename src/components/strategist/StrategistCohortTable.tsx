@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import StrategistSyncBreadcrumbs from "./StrategistSyncBreadcrumbs";
 import StrategistWhatsNewBanner from "./StrategistWhatsNewBanner";
+import ImmediateActionDirectives from "./ImmediateActionDirectives";
 import { strategyCohorts, type StrategyCohort, type Confidence } from "./cohortData";
 import CohortExpandedRow from "./CohortExpandedRow";
 
@@ -144,6 +145,8 @@ const StrategistCohortTable = () => {
       </div>
 
       <StrategistWhatsNewBanner />
+
+      <ImmediateActionDirectives />
 
       <Card className="overflow-hidden">
         <Table>
