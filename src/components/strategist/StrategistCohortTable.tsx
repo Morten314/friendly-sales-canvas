@@ -8,6 +8,7 @@ import {
 import {
   ChevronDown, ChevronRight, Sparkles, Users, Target, TrendingUp,
 } from "lucide-react";
+
 import StrategistSyncBreadcrumbs from "./StrategistSyncBreadcrumbs";
 import StrategistWhatsNewBanner from "./StrategistWhatsNewBanner";
 import ImmediateActionDirectives from "./ImmediateActionDirectives";
@@ -43,7 +44,18 @@ const CohortRow = ({ cohort }: { cohort: StrategyCohort }) => {
           })),
           opportunity: cohort.play,
           icp: cohort.signalSource,
-          triggerPrompt: `Generate ${cohort.play} strategy for the ${cohort.label} cohort (${cohort.leads.length} leads).`,
+          triggerPrompt: `__AUTO_PLAN__`,
+          cohortContext: {
+            cohortName: cohort.label,
+            leadCount: cohort.leads.length,
+            playType: cohort.play,
+            scoutSignal: cohort.signalSource,
+            confidence: cohort.confidence,
+            icpFitRange: `${Math.min(...cohort.leads.map(l => l.icpFit || 0))}–${Math.max(...cohort.leads.map(l => l.icpFit || 0))}%`,
+            compositeScore: cohort.avgScore,
+            briefSummary: cohort.brief.map(s => `${s.label}: ${s.body}`).join(" "),
+            chatActions: cohort.chatActions,
+          },
         })
       );
       navigate("/your-ai-team/strategist/workspace?from=cohort");

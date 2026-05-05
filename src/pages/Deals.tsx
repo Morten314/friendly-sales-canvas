@@ -13,6 +13,17 @@ interface StrategistContext {
   opportunity?: string;
   icp?: string;
   triggerPrompt: string;
+  cohortContext?: {
+    cohortName: string;
+    leadCount: number;
+    playType: string;
+    scoutSignal: string;
+    confidence: string;
+    icpFitRange: string;
+    compositeScore: number;
+    briefSummary: string;
+    chatActions: { label: string }[];
+  };
 }
 
 const Deals = () => {
@@ -63,6 +74,7 @@ const Deals = () => {
                 opportunity={context?.opportunity}
                 icp={context?.icp}
                 triggerPrompt={context?.triggerPrompt || ""}
+                cohortContext={context?.cohortContext}
                 onBack={() => navigate('/your-ai-team/scout/chatwithscout')}
               />
             ) : (

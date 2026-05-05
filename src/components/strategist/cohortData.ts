@@ -21,6 +21,11 @@ export interface BriefSection {
   body: string;
 }
 
+export interface CohortAction {
+  label: string;
+  icon: "mail" | "linkedin" | "list" | "calendar" | "search" | "users";
+}
+
 export interface StrategyCohort {
   id: CohortId;
   emoji: string;
@@ -36,6 +41,8 @@ export interface StrategyCohort {
   isNew?: boolean;
   avgScore: number;
   icpFitAvg: number;
+  leadActions: CohortAction[];
+  chatActions: { label: string }[];
 }
 
 function slugify(s: string): string {
@@ -78,6 +85,26 @@ function sourceBreakdown(leads: CohortLead[]): SourceAgent[] {
   return Array.from(set);
 }
 
+const strikeNowActions: CohortAction[] = [
+  { label: "Send Customised Email", icon: "mail" },
+  { label: "Connect on LinkedIn", icon: "linkedin" },
+  { label: "Add to Sequence", icon: "list" },
+  { label: "Book a Meeting", icon: "calendar" },
+];
+
+const nurtureActions: CohortAction[] = [
+  { label: "Find Latest Activities", icon: "search" },
+  { label: "Connect on LinkedIn", icon: "linkedin" },
+  { label: "Find Decision Maker", icon: "users" },
+  { label: "Send Customised Email", icon: "mail" },
+];
+
+const educateActions: CohortAction[] = [
+  { label: "Find Latest Activities", icon: "search" },
+  { label: "Find Decision Maker", icon: "users" },
+  { label: "Add to Sequence", icon: "list" },
+];
+
 export const strategyCohorts: StrategyCohort[] = [
   {
     id: "strike-now",
@@ -98,15 +125,29 @@ export const strategyCohorts: StrategyCohort[] = [
         label: "Why act now",
         body: "Pricing volatility creates a short defection window. Waiting beyond two weeks typically loses ~40% of this urgency.",
       },
+      {
+        label: "Channel recommendation",
+        body: "Multi-touch: open with a direct email referencing the pricing change, follow up with a LinkedIn connection request the same day. Phone only if email gets opened but no reply within 48 hours.",
+      },
+      {
+        label: "Narrative angle",
+        body: "Lead with migration cost — Scout's pricing data shows their current vendor raised mid-contract. Position your platform as the low-friction switch while their renewal window is still open.",
+      },
     ],
     signalSource: "Scout: pricing signal · Profiler: ICP 1 match",
     sources: sourceBreakdown(strikeLeads),
     confidence: "High",
-    primaryAction: "Launch Sequence",
+    primaryAction: "Plan Next Steps",
     leads: strikeLeads,
     isNew: true,
     get avgScore() { return Math.round(this.leads.reduce((sum, l) => sum + (l.totalScore || 0), 0) / this.leads.length); },
     get icpFitAvg() { return Math.round(this.leads.reduce((sum, l) => sum + (l.icpFit || 0), 0) / this.leads.length); },
+    leadActions: strikeNowActions,
+    chatActions: [
+      { label: "Start Email" },
+      { label: "Start LinkedIn Conversation" },
+      { label: "Plan a Sequence" },
+    ],
   },
   {
     id: "nurture",
@@ -127,14 +168,28 @@ export const strategyCohorts: StrategyCohort[] = [
         label: "Why act now",
         body: "Stay top-of-mind with value-led touches so they're ready when the next trigger fires and moves them into Strike Now.",
       },
+      {
+        label: "Channel recommendation",
+        body: "LinkedIn-first: these leads are actively posting and engaging. Email is secondary — use it only for sharing relevant content after a LinkedIn rapport is established.",
+      },
+      {
+        label: "Narrative angle",
+        body: "Lead with operational efficiency — Scout flagged hiring spikes suggesting growing pains. Frame your solution as the force multiplier they need as they scale, not another tool to evaluate.",
+      },
     ],
     signalSource: "Scout: hiring activity · Profiler: ICP 2 refresh",
     sources: sourceBreakdown(nurtureLeads),
     confidence: "Medium",
-    primaryAction: "Build Campaign",
+    primaryAction: "Plan Next Steps",
     leads: nurtureLeads,
     get avgScore() { return Math.round(this.leads.reduce((sum, l) => sum + (l.totalScore || 0), 0) / this.leads.length); },
     get icpFitAvg() { return Math.round(this.leads.reduce((sum, l) => sum + (l.icpFit || 0), 0) / this.leads.length); },
+    leadActions: nurtureActions,
+    chatActions: [
+      { label: "Build Warmth" },
+      { label: "Change Narrative" },
+      { label: "Set a Trigger-Based Play" },
+    ],
   },
   {
     id: "educate",
@@ -155,14 +210,28 @@ export const strategyCohorts: StrategyCohort[] = [
         label: "Why act now",
         body: "Light-touch awareness keeps the door open at near-zero cost. Scout will alert you the moment a real signal appears.",
       },
+      {
+        label: "Channel recommendation",
+        body: "Drip sequence only: no direct outreach warranted. Automated content drops every 2–3 weeks to stay visible without burning the relationship.",
+      },
+      {
+        label: "Narrative angle",
+        body: "Lead with thought leadership — these accounts are in your expansion thesis but show no active pain. Share market insights from Scout that position you as a category expert, not a vendor.",
+      },
     ],
     signalSource: "Mission Control: market expansion thesis",
     sources: sourceBreakdown(educateLeads),
     confidence: "Low",
-    primaryAction: "Queue Awareness",
+    primaryAction: "Plan Next Steps",
     leads: educateLeads,
     get avgScore() { return Math.round(this.leads.reduce((sum, l) => sum + (l.totalScore || 0), 0) / this.leads.length); },
     get icpFitAvg() { return Math.round(this.leads.reduce((sum, l) => sum + (l.icpFit || 0), 0) / this.leads.length); },
+    leadActions: educateActions,
+    chatActions: [
+      { label: "Build Warmth" },
+      { label: "Select a Sequence" },
+      { label: "Route to Marketing" },
+    ],
   },
 ];
 
