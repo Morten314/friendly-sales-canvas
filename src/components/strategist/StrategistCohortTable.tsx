@@ -8,6 +8,7 @@ import {
 import {
   ChevronDown, ChevronRight, Sparkles, Users, Target, TrendingUp,
 } from "lucide-react";
+
 import StrategistSyncBreadcrumbs from "./StrategistSyncBreadcrumbs";
 import StrategistWhatsNewBanner from "./StrategistWhatsNewBanner";
 import ImmediateActionDirectives from "./ImmediateActionDirectives";
