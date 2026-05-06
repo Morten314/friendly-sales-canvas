@@ -42,13 +42,19 @@ Branches in this repo, for orientation:
 
 ## Verification
 
-The post-refactor source/build artifacts on this branch are byte-identical to the pre-refactor snapshot at `/projects/Brewra/safety_net_1/snapshots/`. To re-verify:
+The post-refactor source/build artifacts on this branch are byte-identical to the pre-refactor snapshot at `/projects/Brewra/safety_net_1/snapshots/`. To re-verify, check this branch out in the working tree and run:
 
 ```bash
-FRONTEND_DEV_DIR=/projects/Brewra/pwa-develop \
+git -C /projects/Brewra/PWA-multi-tenancy checkout develop
+FRONTEND_DEV_DIR=/projects/Brewra/PWA-multi-tenancy \
+FRONTEND_PROD_DIR=/nonexistent \
   /projects/Brewra/safety_net_1/verify.sh source build
 ```
 
-## Working tree path
+`FRONTEND_PROD_DIR` is set to a non-existent path on purpose so the script skips the prod check (it can't be on both branches simultaneously). Run the same recipe with `production` checked out and `FRONTEND_PROD_DIR=/projects/Brewra/PWA-multi-tenancy` to verify that branch.
 
-The recommended on-disk path for this branch is `/projects/Brewra/pwa-develop/` (a `git worktree` of the PWA-multi-tenancy repo). Don't try to check out this branch in the original `PWA-multi-tenancy/` working tree — the directory layout differs and switching back and forth is confusing.
+## Working tree
+
+This branch lives in the standard `/projects/Brewra/PWA-multi-tenancy/` working tree and is accessed via `git checkout develop`. There are no worktrees — switch branches the normal way.
+
+Switching from `master` (or `refactor`) to this branch swaps the directory layout entirely: nested canvas folders disappear; canvas files appear at root. `node_modules/` is untracked so it survives the switch — but if you've previously installed deps on `master`, those were inside a nested folder and won't be at the root after switching here. Run `npm ci` once at the root after first switching to this branch.
