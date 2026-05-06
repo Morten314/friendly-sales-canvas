@@ -42,19 +42,25 @@ Branches in this repo, for orientation:
 
 ## Verification
 
-The post-refactor source/build artifacts on this branch are byte-identical to the pre-refactor snapshot at `/projects/Brewra/safety_net_1/snapshots/`. To re-verify, check this branch out in the working tree and run:
+The post-refactor build artifacts on this branch are byte-identical to the pre-refactor snapshot at `/projects/Brewra/safety_net_1/snapshots/`. To re-verify the build:
 
 ```bash
-git -C /projects/Brewra/PWA-multi-tenancy checkout develop
+git -C /projects/Brewra/PWA-multi-tenancy switch develop
+cd /projects/Brewra/PWA-multi-tenancy
+npm ci && npm run build
 FRONTEND_DEV_DIR=/projects/Brewra/PWA-multi-tenancy \
 FRONTEND_PROD_DIR=/nonexistent \
-  /projects/Brewra/safety_net_1/verify.sh source build
+  /projects/Brewra/safety_net_1/verify.sh build
 ```
 
 `FRONTEND_PROD_DIR` is set to a non-existent path on purpose so the script skips the prod check (it can't be on both branches simultaneously). Run the same recipe with `production` checked out and `FRONTEND_PROD_DIR=/projects/Brewra/PWA-multi-tenancy` to verify that branch.
 
+`verify.sh source` on the new branches will diverge by exactly one file (`BRANCHES.md`) because this file was added after the snapshot was taken. The build hash check is the deploy-correctness signal; treat the source check as expected-to-show-this-one-diff.
+
 ## Working tree
 
-This branch lives in the standard `/projects/Brewra/PWA-multi-tenancy/` working tree and is accessed via `git checkout develop`. There are no worktrees — switch branches the normal way.
+This branch lives in the standard `/projects/Brewra/PWA-multi-tenancy/` working tree and is accessed via `git switch develop` (or `git checkout develop`). There are no worktrees — switch branches the normal way.
 
 Switching from `master` (or `refactor`) to this branch swaps the directory layout entirely: nested canvas folders disappear; canvas files appear at root. `node_modules/` is untracked so it survives the switch — but if you've previously installed deps on `master`, those were inside a nested folder and won't be at the root after switching here. Run `npm ci` once at the root after first switching to this branch.
+
+After running `npm run build` on this branch, the resulting `dist/` is also untracked and will follow you across switches. If you switch back to `master` or `refactor`, you'll see a stray `dist/` at the root that doesn't belong there. Delete it before doing further work on those branches.
