@@ -347,6 +347,23 @@ WEB SEARCH RESULTS (primary external evidence — synthesize with company profil
     return _claude_messages_text(augmented, max_tokens=CLAUDE_RESEARCH_MAX_TOKENS)
 
 
+def _icp_research_agent_output(prompt: str, pre_data: str, llm_backend: str) -> str:
+    """Dispatcher for ICP research LLM call. Mirrors _market_research_agent_output."""
+    if llm_backend != "claude":
+        raw_response = agent_chain.invoke({"input": prompt})
+        return raw_response["output"]
+    seed = " ".join(str(pre_data).split())[:1200]
+    web_ctx, _ = _tavily_context_and_urls(
+        f"ICP buyer persona pain points buying triggers competitors compliance 2026 {seed}"
+    )
+    augmented = f"""{prompt}
+
+WEB SEARCH RESULTS (primary external evidence — synthesize with company profile and ICP card):
+{web_ctx}
+"""
+    return _claude_messages_text(augmented, max_tokens=CLAUDE_RESEARCH_MAX_TOKENS)
+
+
 def _signals_agent_output(prompt: str, company_profile_seed: str, llm_backend: str) -> tuple:
     """Returns (model_output_text, tavily_urls) for signal JSON parsing."""
     tavily_urls: List[str] = []
@@ -1399,7 +1416,7 @@ Do not include any additional reasoning, thoughts, or steps after that.
     # ✅ Return the Python dict
     return parsed_json
 
-def icp_research_1(pre_data: str) -> dict:
+def icp_research_1(pre_data: str, llm_backend: str = "default") -> dict:
     # Construct prompt by embedding the entire JSON string
     template = """Task: Research and compile an updated overview of icp  in the exact format given at end, based on the data below based on this ( follow this strictly and do research based on what all provided here - {pre_data}.
 
@@ -1490,8 +1507,7 @@ Do not include any additional reasoning, thoughts, or steps after that.
     ).format(pre_data=pre_data)
 
     # Step 3: Get LLM response
-    raw_response = agent_chain.invoke({'input': prompt})
-    response = raw_response["output"]
+    response = _icp_research_agent_output(prompt, pre_data, llm_backend)
 
     # Clean and escape the JSON string
     cleaned_str = response.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
@@ -1504,7 +1520,7 @@ Do not include any additional reasoning, thoughts, or steps after that.
     # ✅ Return the Python dict
     return parsed_json
 
-def icp_research_2(pre_data: str) -> dict:
+def icp_research_2(pre_data: str, llm_backend: str = "default") -> dict:
     # Construct prompt by embedding the entire JSON string
     # The pre_data contains both company_profile and icp_card (flexible data structure)
     template = """Task: Research and compile a detailed "Buyer Map & Roles, Pain Points, Triggers" analysis based on the provided company profile and ICP data.
@@ -1566,8 +1582,7 @@ Do not include any additional reasoning, thoughts, or steps after that.
     max_retries = 3
     for attempt in range(1, max_retries + 1):
         try:
-            raw_response = agent_chain.invoke({'input': prompt})
-            response = raw_response["output"]
+            response = _icp_research_agent_output(prompt, pre_data, llm_backend)
             
             # Extract JSON from response
             if "Final Answer:" in response:
@@ -1603,7 +1618,7 @@ Do not include any additional reasoning, thoughts, or steps after that.
                 raise ValueError(f"Error in icp_research_2 after {max_retries} attempts: {str(e)}")
             continue
 
-def icp_research_3(pre_data: str) -> dict:
+def icp_research_3(pre_data: str, llm_backend: str = "default") -> dict:
     # Construct prompt by embedding the entire JSON string
     # The pre_data contains both company_profile and icp_card (flexible data structure)
     template = """Task: Research and compile a detailed "Competitive Overlap & Buying Signals" analysis based on the provided company profile and ICP data.
@@ -1685,8 +1700,7 @@ Do not include any additional reasoning, thoughts, or steps after that.
     max_retries = 3
     for attempt in range(1, max_retries + 1):
         try:
-            raw_response = agent_chain.invoke({'input': prompt})
-            response = raw_response["output"]
+            response = _icp_research_agent_output(prompt, pre_data, llm_backend)
             
             # Extract JSON from response
             if "Final Answer:" in response:
@@ -1725,7 +1739,7 @@ Do not include any additional reasoning, thoughts, or steps after that.
                 raise ValueError(f"Error in icp_research_3 after {max_retries} attempts: {str(e)}")
             continue
 
-def icp_research_4(pre_data: str) -> dict:
+def icp_research_4(pre_data: str, llm_backend: str = "default") -> dict:
     # Construct prompt by embedding the entire JSON string
     # The pre_data contains both company_profile and icp_card (flexible data structure)
     template = """Task: Research and compile a detailed "Regulatory, Compliance & Recommended ICP" analysis based on the provided company profile and ICP data.
@@ -1800,8 +1814,7 @@ Do not include any additional reasoning, thoughts, or steps after that.
     max_retries = 3
     for attempt in range(1, max_retries + 1):
         try:
-            raw_response = agent_chain.invoke({'input': prompt})
-            response = raw_response["output"]
+            response = _icp_research_agent_output(prompt, pre_data, llm_backend)
             
             # Extract JSON from response
             if "Final Answer:" in response:
@@ -1845,6 +1858,13 @@ ICP_FUNCTIONS = {
     "buyer map & roles, pain points, triggers" : icp_research_2,
     "competitive overlap & buying signals" : icp_research_3,
     "regulatory, compliance & recommended icp" : icp_research_4
+}
+
+ICP_FUNCTIONS_CLAUDE = {
+    "icp summary & market opportunity": lambda d: icp_research_1(d, "claude"),
+    "buyer map & roles, pain points, triggers": lambda d: icp_research_2(d, "claude"),
+    "competitive overlap & buying signals": lambda d: icp_research_3(d, "claude"),
+    "regulatory, compliance & recommended icp": lambda d: icp_research_4(d, "claude"),
 }
 
 COMPONENT_FUNCTIONS = {
