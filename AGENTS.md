@@ -142,7 +142,7 @@ If asked to reason about architecture, product scope, or design system, **read t
 
 - `/docs/analysis/detailed-analysis/{PRODUCT_SPECIFICATION,ARCHITECTURE_DOCUMENT,DESIGN_SYSTEM,FUNCTIONALITY_INVENTORY,README}.md` — the most thorough set, with code snippets and quantified debt (1,566 console.logs, 989 hooks, 227KB MarketResearch.tsx).
 - `/docs/analysis/claude-analysis/` — Claude's reverse-engineered set, shorter and CTO-oriented; emphasizes the Scout/Profiler near-duplication and the Strategist-has-no-backend reality.
-- `/docs/dry-run-merge/` — develop-vs-production canvas drift inventory (input for Plan 05 reconciliation).
+- `/docs/dry-run-merge/` — develop-vs-production canvas drift, file-level (`dev-only.txt`, `prod-only.txt`, `differ-with-sizes.txt`, `identical.txt`). Input for Plan 05 reconciliation. For the conceptual summary of the divergence (which feature groups live where), see the "Dev/prod codebase unification" row in either `FUNCTIONALITY_INVENTORY.md` under `/docs/analysis/`.
 - `/frontend/analysis/` (subtree-imported from PWA) — earlier per-repo passes; mostly superseded by `/docs/analysis/`.
 - The backend area also contains many self-authored markdown guides at its root (`backend/API_DOCUMENTATION.md`, `backend/API_ENDPOINTS_SUMMARY.md`, `backend/ANALYSIS_MARKET_ICP_RESEARCH_ISSUES.md`). Use them as primary sources.
 - The frontend root contains integration/setup guides (`frontend/API_INTEGRATION_GUIDE.md`, `frontend/JWT_INTEGRATION_GUIDE.md`, `frontend/SCOUT_API_REQUEST_SCHEMAS.md`, `frontend/PWA_SETUP.md`, etc.) — also primary sources.
