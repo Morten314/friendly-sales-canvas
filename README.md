@@ -15,7 +15,7 @@ B2B GTM/sales-intelligence PWA. Frontend (React/Vite/TypeScript) + backend (Fast
 
 ## Branches
 
-This repo is in a **temporary parallel-branch state** during fork transition (~1–2 weeks). See `BRANCHES.md` for the temp model and `scripts/sync.sh` for syncing slow-dev work from old repos.
+This repo is in a **temporary parallel-branch state** during fork transition. Forked from old repos on 2026-05-08; cutover scheduled when Plan 05 reconciliation is complete (~1–2 weeks from 2026-05-08). See `BRANCHES.md` for the temp model and `scripts/sync.sh` for syncing slow-dev work from old repos.
 
 ## Common commands
 
