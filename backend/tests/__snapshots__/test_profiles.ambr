@@ -1,0 +1,44 @@
+# serializer version: 1
+# name: test_get_profile_company_returns_profile_with_icps
+  dict({
+    'created_at': '<scrubbed>',
+    'customer_profiles': dict({
+      'icps': list([
+      ]),
+    }),
+    'industry': 'SaaS',
+    'name': 'Test Org',
+    'org_id': 'test_org_abc',
+    'size': '50-500',
+    'website': 'https://test-org.test',
+  })
+# ---
+# name: test_get_profile_profiler_returns_profiler_settings
+  dict({
+    'agent_name': 'Profiler',
+    'icp_count': 2,
+    'org_id': 'test_org_abc',
+    'user_id': 'test_user_123',
+  })
+# ---
+# name: test_get_profile_scout_returns_scout_settings
+  dict({
+    'agent_name': 'Scout',
+    'geographic_focus': list([
+      'US',
+      'EU',
+    ]),
+    'industry_focus': 'SaaS',
+    'org_id': 'test_org_abc',
+    'user_id': 'test_user_123',
+  })
+# ---
+# name: test_get_profile_user_returns_user_settings
+  dict({
+    'display_name': 'Test User',
+    'email': 'test@brewra.test',
+    'org_id': 'test_org_abc',
+    'role': 'member',
+    'user_id': 'test_user_123',
+  })
+# ---
