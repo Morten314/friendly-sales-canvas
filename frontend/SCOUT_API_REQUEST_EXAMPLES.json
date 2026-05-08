@@ -1,0 +1,109 @@
+{
+  "api_endpoint": "POST /api/market-research",
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "note": "Company profile data is fetched by the backend using user_id. The data key must always be empty {}.",
+  "components": {
+    "1_market_size_opportunity": {
+      "component_name": "market size & opportunity",
+      "request_body": {
+        "user_id": "firebase_user_uid_here",
+        "component_name": "market size & opportunity",
+        "data": {},
+        "refresh": false
+      }
+    },
+    "2_industry_trends_report": {
+      "component_name": "industry trends report",
+      "request_body": {
+        "user_id": "firebase_user_uid_here",
+        "component_name": "industry trends report",
+        "data": {},
+        "refresh": false,
+        "_forceRefresh": false,
+        "_timestamp": 1704067200000,
+        "_cacheBust": "abc123xyz"
+      }
+    },
+    "3_regulatory_compliance_highlights": {
+      "component_name": "regulatory & compliance highlights",
+      "request_body": {
+        "user_id": "firebase_user_uid_here",
+        "component_name": "regulatory & compliance highlights",
+        "data": {},
+        "refresh": false
+      }
+    },
+    "4_competitor_landscape": {
+      "component_name": "competitor landscape",
+      "request_body": {
+        "user_id": "firebase_user_uid_here",
+        "component_name": "competitor landscape",
+        "data": {},
+        "refresh": true,
+        "_timestamp": 1704067200000,
+        "_cache_bust": "abc123xyz"
+      }
+    },
+    "5_market_entry_growth_strategy": {
+      "component_name": "market entry & growth strategy",
+      "request_body": {
+        "user_id": "firebase_user_uid_here",
+        "component_name": "market entry & growth strategy",
+        "data": {},
+        "refresh": false,
+        "_forceRefresh": false,
+        "_timestamp": 1704067200000,
+        "_cacheBust": "abc123xyz"
+      }
+    }
+  },
+  "alternative_payloads_from_components": {
+    "note": "These are the payloads used in individual component files (MarketSizeSection.tsx, MarketEntrySection.tsx, etc.)",
+    "market_size_opportunity_alternative": {
+      "user_id": "firebase_user_uid_here",
+      "component_name": "market size & opportunity",
+      "refresh": false,
+      "force_refresh": false,
+      "cache_bypass": false,
+      "bypass_all_cache": false,
+      "request_timestamp": 1704067200000,
+      "request_id": "abc123",
+      "data": {}
+    },
+    "market_entry_growth_strategy_alternative": {
+      "user_id": "firebase_user_uid_here",
+      "component_name": "Market Entry & Growth Strategy",
+      "refresh": false,
+      "force_refresh": false,
+      "cache_bypass": false,
+      "bypass_all_cache": false,
+      "request_timestamp": 1704067200000,
+      "request_id": "abc123",
+      "data": {}
+    },
+    "regulatory_compliance_highlights_alternative": {
+      "user_id": "firebase_user_uid_here",
+      "component_name": "regulatory & compliance highlights",
+      "refresh": false,
+      "force_refresh": false,
+      "cache_bypass": false,
+      "bypass_all_cache": false,
+      "request_timestamp": 1704067200000,
+      "request_id": "abc123",
+      "data": {}
+    },
+    "industry_trends_report_alternative": {
+      "user_id": "firebase_user_uid_here",
+      "component_name": "industry trends report",
+      "refresh": false,
+      "force_refresh": false,
+      "cache_bypass": false,
+      "bypass_all_cache": false,
+      "request_timestamp": 1704067200000,
+      "request_id": "abc123",
+      "data": {}
+    }
+  }
+}

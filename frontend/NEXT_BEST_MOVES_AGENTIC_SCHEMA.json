@@ -1,0 +1,403 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Next Best Moves Agentic Interaction API Schema",
+  "description": "Schema for agentic interaction when user accepts a Next Best Move from a signal",
+  
+  "definitions": {
+    "NextBestMoveAction": {
+      "type": "object",
+      "required": ["org_id", "signal_id", "next_best_move_index", "next_best_move_text", "action"],
+      "properties": {
+        "org_id": {
+          "type": "string",
+          "description": "Organization ID for multi-tenancy",
+          "example": "b75ce29e-344c-4e6c-964e-5ac236d0b49a"
+        },
+        "user_id": {
+          "type": "string",
+          "description": "User ID who is accepting the next best move",
+          "example": "0DGXbam3jDf45dxBIfpr30OhRqP2"
+        },
+        "signal_id": {
+          "type": "string",
+          "description": "Unique identifier of the signal",
+          "example": "signal-123-abc"
+        },
+        "next_best_move_index": {
+          "type": "integer",
+          "description": "Index of the next best move in the array (0-based)",
+          "minimum": 0,
+          "example": 0
+        },
+        "next_best_move_text": {
+          "type": "string",
+          "description": "The full text of the next best move question that user accepted",
+          "example": "Would you like me to check how many of your target ICPs fall under the SMB segment and could be influenced by this move?"
+        },
+        "action": {
+          "type": "string",
+          "enum": ["accept_next_best_move"],
+          "description": "Action type - always 'accept_next_best_move' for this interaction"
+        },
+        "signal_context": {
+          "type": "object",
+          "description": "Full signal context for agentic processing",
+          "properties": {
+            "headline": {
+              "type": "string",
+              "description": "Signal headline"
+            },
+            "snippet": {
+              "type": "string",
+              "description": "Signal snippet"
+            },
+            "description": {
+              "type": "string",
+              "description": "Full signal description with ICP context"
+            },
+            "agent": {
+              "type": "string",
+              "enum": ["scout", "profiler"],
+              "description": "Agent that generated the signal"
+            },
+            "sourceUrl": {
+              "type": "string",
+              "description": "Source URL of the signal"
+            },
+            "sourceLabel": {
+              "type": "string",
+              "description": "Source label"
+            },
+            "timestamp": {
+              "type": "string",
+              "description": "Signal timestamp"
+            }
+          }
+        },
+        "company_profile": {
+          "type": "object",
+          "description": "Company profile data for context-aware agentic response",
+          "properties": {
+            "company_name": {
+              "type": "string"
+            },
+            "industry": {
+              "type": "string"
+            },
+            "employee_size": {
+              "type": "string"
+            },
+            "target_markets": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "key_buyer_persona": {
+              "type": "string"
+            },
+            "strategic_goals": {
+              "type": "string"
+            },
+            "primary_gtm_model": {
+              "type": "string"
+            }
+          }
+        },
+        "user_notes": {
+          "type": "string",
+          "description": "Optional notes or comments from user",
+          "example": "Focus on North America market specifically"
+        }
+      }
+    },
+    
+    "AgenticResponse": {
+      "type": "object",
+      "required": ["status", "response_message"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["success", "processing", "error"],
+          "description": "Status of the agentic interaction"
+        },
+        "response_message": {
+          "type": "string",
+          "description": "Agent's contextual response to the next best move question",
+          "example": "Hi Alex, Noted. I'll check your pipeline and identify how many target ICPs fall under the SMB segment that could be influenced by Company X's pricing move. I'll analyze your current deals and provide a breakdown by segment."
+        },
+        "action_items": {
+          "type": "array",
+          "description": "List of action items the agent will perform",
+          "items": {
+            "type": "object",
+            "properties": {
+              "action": {
+                "type": "string",
+                "description": "Action description",
+                "example": "Analyze pipeline for SMB segment companies"
+              },
+              "status": {
+                "type": "string",
+                "enum": ["pending", "in_progress", "completed"],
+                "description": "Action status"
+              }
+            }
+          }
+        },
+        "follow_up_questions": {
+          "type": "array",
+          "description": "Follow-up questions the agent suggests",
+          "items": {
+            "type": "string",
+            "example": "Would you like me to also identify which of your current deals might be at risk?"
+          }
+        },
+        "data_insights": {
+          "type": "object",
+          "description": "Any data insights generated by the agent",
+          "properties": {
+            "summary": {
+              "type": "string",
+              "description": "Summary of insights"
+            },
+            "metrics": {
+              "type": "object",
+              "description": "Key metrics or numbers",
+              "additionalProperties": true
+            },
+            "recommendations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "interaction_id": {
+          "type": "string",
+          "description": "Unique identifier for this agentic interaction",
+          "example": "interaction-abc123-def456"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of the response"
+        }
+      }
+    },
+    
+    "AgenticMessage": {
+      "type": "object",
+      "description": "Schema for sending additional messages in the agentic conversation",
+      "required": ["org_id", "interaction_id", "message"],
+      "properties": {
+        "org_id": {
+          "type": "string"
+        },
+        "interaction_id": {
+          "type": "string",
+          "description": "ID from the initial agentic response"
+        },
+        "message": {
+          "type": "string",
+          "description": "User's message in the conversation",
+          "example": "Focus specifically on the North America market"
+        },
+        "user_id": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  
+  "endpoints": {
+    "accept_next_best_move": {
+      "method": "POST",
+      "path": "/api/next-best-move/accept",
+      "description": "Endpoint for accepting a next best move and initiating agentic interaction",
+      "request": {
+        "$ref": "#/definitions/NextBestMoveAction"
+      },
+      "response": {
+        "$ref": "#/definitions/AgenticResponse"
+      },
+      "examples": {
+        "request": {
+          "org_id": "b75ce29e-344c-4e6c-964e-5ac236d0b49a",
+          "user_id": "0DGXbam3jDf45dxBIfpr30OhRqP2",
+          "signal_id": "signal-123-abc",
+          "next_best_move_index": 0,
+          "next_best_move_text": "Would you like me to check how many of your target ICPs fall under the SMB segment and could be influenced by this move?",
+          "action": "accept_next_best_move",
+          "signal_context": {
+            "headline": "Competitor X launches SMB pricing tier.",
+            "snippet": "Likely to impact your ICP accounts in mid-market SaaS segment.",
+            "description": "This competitive pricing move by Company X directly impacts your SMB segment...",
+            "agent": "scout",
+            "sourceUrl": "https://companyx.com/press-release",
+            "sourceLabel": "Press release link",
+            "timestamp": "2026-03-01T11:32:13.647Z"
+          },
+          "company_profile": {
+            "company_name": "Example Corp",
+            "industry": "SaaS",
+            "employee_size": "50-200 employees",
+            "target_markets": ["North America", "Europe"],
+            "key_buyer_persona": "CTO",
+            "strategic_goals": "Market expansion",
+            "primary_gtm_model": "Direct sales"
+          },
+          "user_notes": "Focus on North America market specifically"
+        },
+        "response": {
+          "status": "success",
+          "response_message": "Hi Alex, Noted. I'll check your pipeline and identify how many target ICPs fall under the SMB segment (50-200 employees) that could be influenced by Company X's pricing move. Based on your company profile, I'll analyze your current deals in North America and Europe, and provide a breakdown showing which accounts might be at risk or could accelerate their decision timeline.",
+          "action_items": [
+            {
+              "action": "Analyze pipeline for SMB segment companies (50-200 employees)",
+              "status": "in_progress"
+            },
+            {
+              "action": "Identify accounts in North America and Europe markets",
+              "status": "pending"
+            },
+            {
+              "action": "Calculate impact percentage and risk assessment",
+              "status": "pending"
+            }
+          ],
+          "follow_up_questions": [
+            "Would you like me to also identify which of your current deals might be at risk?",
+            "Should I prepare competitive differentiation messaging for these accounts?",
+            "Do you want me to track early adoption signals from Company X?"
+          ],
+          "data_insights": {
+            "summary": "Initial analysis shows 40% of your pipeline falls into the SMB segment",
+            "metrics": {
+              "total_smb_deals": 12,
+              "total_pipeline": 30,
+              "percentage_impacted": 40
+            },
+            "recommendations": [
+              "Prioritize outreach to SMB accounts in final stages",
+              "Prepare competitive ROI messaging",
+              "Monitor Company X's early adoption metrics"
+            ]
+          },
+          "interaction_id": "interaction-abc123-def456",
+          "timestamp": "2026-03-01T11:35:00.000Z"
+        }
+      }
+    },
+    
+    "send_agentic_message": {
+      "method": "POST",
+      "path": "/api/next-best-move/message",
+      "description": "Endpoint for sending additional messages in the agentic conversation",
+      "request": {
+        "$ref": "#/definitions/AgenticMessage"
+      },
+      "response": {
+        "$ref": "#/definitions/AgenticResponse"
+      },
+      "examples": {
+        "request": {
+          "org_id": "b75ce29e-344c-4e6c-964e-5ac236d0b49a",
+          "interaction_id": "interaction-abc123-def456",
+          "message": "Focus specifically on the North America market",
+          "user_id": "0DGXbam3jDf45dxBIfpr30OhRqP2"
+        },
+        "response": {
+          "status": "success",
+          "response_message": "Understood. I'll focus the analysis specifically on the North America market. Let me filter the SMB segment companies to only those in North America and provide you with a targeted breakdown.",
+          "action_items": [
+            {
+              "action": "Filter pipeline analysis to North America market only",
+              "status": "in_progress"
+            }
+          ],
+          "follow_up_questions": [
+            "Would you like me to compare this with your European SMB segment as well?",
+            "Should I prepare region-specific messaging for North America accounts?"
+          ],
+          "interaction_id": "interaction-abc123-def456",
+          "timestamp": "2026-03-01T11:36:00.000Z"
+        }
+      }
+    }
+  },
+  
+  "field_descriptions": {
+    "next_best_move_index": "The index (0-based) of which next best move in the array the user accepted. This allows the backend to know exactly which question the user wants answered.",
+    "next_best_move_text": "The full text of the next best move question. This is sent to ensure the backend knows exactly what question to answer, even if the array order changes.",
+    "signal_context": "Complete signal data to provide full context for the agentic response. The agent needs to understand the signal to provide relevant answers.",
+    "company_profile": "Company profile data helps the agent provide contextually relevant responses based on the user's ICP, target markets, and business goals.",
+    "response_message": "The agent's initial response should acknowledge the request and explain what it will do. Should be conversational and personalized.",
+    "action_items": "List of specific actions the agent will perform. Helps user understand what's happening and track progress.",
+    "follow_up_questions": "Suggested follow-up questions to continue the conversation and provide more value.",
+    "interaction_id": "Unique ID for this conversation thread. Used for subsequent messages in the same interaction."
+  },
+  
+  "agentic_interaction_flow": {
+    "step_1": {
+      "description": "User clicks 'Accept' on a Next Best Move",
+      "frontend_action": "Calls POST /api/next-best-move/accept with signal context and next best move details"
+    },
+    "step_2": {
+      "description": "Backend processes the request",
+      "backend_action": "Analyzes the next best move question, signal context, and company profile to generate intelligent response"
+    },
+    "step_3": {
+      "description": "Backend returns agentic response",
+      "response_includes": [
+        "Contextual response message",
+        "Action items the agent will perform",
+        "Follow-up questions",
+        "Any immediate data insights",
+        "Interaction ID for conversation thread"
+      ]
+    },
+    "step_4": {
+      "description": "User can send additional messages",
+      "frontend_action": "Calls POST /api/next-best-move/message with interaction_id and user message"
+    },
+    "step_5": {
+      "description": "Backend responds to user message",
+      "backend_action": "Continues conversation with context from previous messages"
+    }
+  },
+  
+  "requirements": {
+    "response_message": {
+      "guidelines": [
+        "Should be conversational and personalized (use user's name if available)",
+        "Should acknowledge the specific next best move question",
+        "Should explain what the agent will do",
+        "Should be contextually relevant to the signal and company profile",
+        "Should be actionable and specific"
+      ],
+      "example_good": "Hi Alex, Noted. I'll check your pipeline and identify how many target ICPs fall under the SMB segment (50-200 employees) that could be influenced by Company X's pricing move. Based on your company profile, I'll analyze your current deals in North America and Europe.",
+      "example_bad": "Processing request." 
+    },
+    "action_items": {
+      "guidelines": [
+        "Should be specific and actionable",
+        "Should relate directly to the next best move question",
+        "Should leverage company profile data (ICP, markets, goals)",
+        "Should show progress status"
+      ]
+    },
+    "follow_up_questions": {
+      "guidelines": [
+        "Should be relevant to the current interaction",
+        "Should help user explore the signal deeper",
+        "Should be actionable questions",
+        "Typically 2-3 follow-up questions"
+      ]
+    }
+  }
+}
+
+
+
