@@ -1,0 +1,273 @@
+# serializer version: 1
+# name: test_get_customer_profile_empty_when_no_mongo_doc
+  dict({
+    'data': dict({
+      'icps': list([
+      ]),
+    }),
+    'success': True,
+  })
+# ---
+# name: test_get_customer_profile_returns_icp_list
+  dict({
+    'data': dict({
+      'icps': list([
+        dict({
+          'buyer_role': list([
+            'CTO',
+          ]),
+          'company_size': list([
+            '50-500',
+          ]),
+          'fit_confidence': 'high',
+          'id': 'icp_00000000-0000-0000-0000-000000000001',
+          'industry': list([
+            'SaaS',
+          ]),
+          'primary_region': 'US',
+          'status': 'saved',
+        }),
+      ]),
+    }),
+    'success': True,
+  })
+# ---
+# name: test_get_icp_returns_cached_suggested_icps
+  dict({
+    'suggestedICPs': list([
+      dict({
+        'buyingTriggers': list([
+        ]),
+        'companySize': '50-500',
+        'competitors': list([
+          'unknown',
+        ]),
+        'confidenceScore': '0.85',
+        'decisionMakers': list([
+          'CTO',
+        ]),
+        'firmographics': dict({
+          'company_size': '50-500',
+          'industry': 'SaaS',
+          'market_size': '',
+          'segment': 'Mid-market',
+        }),
+        'growth': '',
+        'growthIndicator': '',
+        'how_it_differs': list([
+        ]),
+        'id': 'sug_001',
+        'industry': 'SaaS',
+        'is_agentic': True,
+        'is_new': True,
+        'keyAttributes': list([
+        ]),
+        'key_decision_makers': list([
+          'CTO',
+        ]),
+        'marketSize': '',
+        'pain_points_and_triggers': dict({
+          'critical': '',
+          'others': list([
+          ]),
+        }),
+        'regions': list([
+          'global',
+        ]),
+        'segment': 'Mid-market',
+        'title': 'SaaS CTOs',
+        'topPainPoint': '',
+        'whySuggested': list([
+        ]),
+        'why_suggested': list([
+        ]),
+      }),
+    ]),
+  })
+# ---
+# name: test_post_customer_profile_creates_icp
+  dict({
+    'data': dict({
+      'icps': list([
+        dict({
+          'buyer_role': list([
+            'CTO',
+          ]),
+          'company_size': list([
+            '50-500',
+          ]),
+          'created_at': '<scrubbed>',
+          'fit_confidence': 'high',
+          'id': '<scrubbed>',
+          'industry': list([
+            'SaaS',
+          ]),
+          'primary_region': 'US',
+          'status': 'saved',
+        }),
+      ]),
+    }),
+    'message': 'Customer profiles saved successfully',
+    'success': True,
+  })
+# ---
+# name: test_post_customer_profile_from_suggested_icp_promotes
+  dict({
+    'data': dict({
+      'icp': dict({
+        'additional_context': None,
+        'buyer_role': list([
+          'CTO',
+        ]),
+        'company_size': list([
+          '50-500',
+        ]),
+        'created_at': '<scrubbed>',
+        'fit_confidence': 'high',
+        'id': '<scrubbed>',
+        'industry': list([
+          'SaaS',
+          'Mid-market',
+        ]),
+        'primary_region': 'US',
+        'source_payload': dict({
+          'companySize': '50-500',
+          'confidenceScore': 0.85,
+          'decisionMakers': list([
+            'CTO',
+          ]),
+          'id': '<scrubbed>',
+          'industry': 'SaaS',
+          'regions': list([
+            'US',
+          ]),
+          'segment': 'Mid-market',
+        }),
+        'source_suggested_icp_id': 'sug_001',
+        'source_user_id': 'test_user_123',
+        'status': 'saved',
+      }),
+    }),
+    'message': 'Suggested ICP saved to customer profile successfully',
+    'success': True,
+  })
+# ---
+# name: test_post_icp_research_buyer_map
+  dict({
+    'data': dict({
+      'component_name': 'buyer map & roles, pain points, triggers',
+      'currentData': dict({
+        '_metadata': dict({
+          'dataSource': 'api',
+        }),
+        'blurb': 'Test blurb',
+        'buyingTriggers': list([
+          dict({
+            'description': 'Rapid growth signals',
+            'trigger': 'Series B',
+          }),
+        ]),
+        'buyingTriggersIdentified': 1,
+        'coreBuyerPersonas': 1,
+        'title': 'Buyer Map & Roles, Pain Points, Triggers',
+        'topPainPoint': 'Scaling challenges',
+      }),
+      'org_id': 'test_org_abc',
+      'timestamp': '<scrubbed>',
+      'user_id': 'test_user_123',
+    }),
+    'status': 'success',
+  })
+# ---
+# name: test_post_icp_research_competitive_overlap
+  dict({
+    'data': dict({
+      'component_name': 'competitive overlap & buying signals',
+      'currentData': dict({
+        '_metadata': dict({
+          'dataSource': 'api',
+        }),
+        'activeBuyingSignals': 1,
+        'blurb': 'Test blurb',
+        'buyingSignals': list([
+          dict({
+            'description': 'Series B',
+            'recency': '2 weeks ago',
+            'signalType': 'Funding Round',
+            'source': 'Crunchbase',
+          }),
+        ]),
+        'competitiveMap': list([
+          dict({
+            'competitor': 'Competitor A',
+            'differentiators': 'Price',
+            'segment': 'SaaS',
+            'share': '20%',
+            'winsLosses': 'Mixed',
+          }),
+        ]),
+        'numberOfMainCompetitors': 1,
+        'title': 'Competitive Overlap & Buying Signals',
+      }),
+      'org_id': 'test_org_abc',
+      'timestamp': '<scrubbed>',
+      'user_id': 'test_user_123',
+    }),
+    'status': 'success',
+  })
+# ---
+# name: test_post_icp_research_icp_summary
+  dict({
+    'data': dict({
+      'component_name': 'icp summary & market opportunity',
+      'market_opportunity': 'Large TAM',
+      'org_id': 'test_org_abc',
+      'summary': 'ICP summary result',
+      'timestamp': '<scrubbed>',
+      'user_id': 'test_user_123',
+    }),
+    'status': 'success',
+  })
+# ---
+# name: test_post_icp_research_regulatory
+  dict({
+    'data': dict({
+      'component_name': 'regulatory, compliance & recommended icp',
+      'currentData': dict({
+        '_metadata': dict({
+          'dataSource': 'api',
+        }),
+        'blurb': 'Test blurb',
+        'icpFitScore': '85% match',
+        'icpRefinementRecommendations': list([
+          dict({
+            'description': 'Prioritize GDPR-compliant buyers',
+            'title': 'Focus on compliance',
+          }),
+        ]),
+        'keyComplianceFrameworks': list([
+          'GDPR',
+          'SOC2',
+        ]),
+        'recommendationConfidence': 'High',
+        'title': 'Regulatory, Compliance & Recommended ICP',
+        'upcomingMandates': 'Q4 2027 GDPR Updates',
+      }),
+      'org_id': 'test_org_abc',
+      'timestamp': '<scrubbed>',
+      'user_id': 'test_user_123',
+    }),
+    'status': 'success',
+  })
+# ---
+# name: test_post_icp_research_returns_cached_when_available
+  dict({
+    'data': dict({
+      'component_name': 'icp summary & market opportunity',
+      'market_opportunity': 'Cached TAM',
+      'summary': 'Cached summary',
+      'user_id': 'test_user_123',
+    }),
+    'status': 'success',
+  })
+# ---
