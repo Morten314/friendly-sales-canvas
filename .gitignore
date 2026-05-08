@@ -1,0 +1,45 @@
+# Node / JS / Vite
+node_modules/
+dist/
+dev-dist/
+.vite/
+*.log
+npm-debug.log*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Environment / secrets
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+.aws/
+.gcloud/
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Build / coverage / temp
+coverage/
+.coverage
+.turbo/
+.next/
+.cache/
+
+# OS-specific
+*.tmp
+*.temp
