@@ -1500,7 +1500,20 @@ cp /projects/Brewra/brewra-gtm-intelligence/CLAUDE.md /projects/Brewra/brewra-gt
 
 (Or use the `Write` tool with the same content.)
 
-- [ ] **Step 5: Backfill `CLAUDE.md` and `AGENTS.md` onto `production` branch**
+- [ ] **Step 5: Stage and commit on master**
+
+`git checkout master -- <files>` in Step 6 reads from master's index, so the new files must be committed on master *before* being backfilled to production.
+
+Run:
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence
+git status
+git add CLAUDE.md AGENTS.md
+git commit -m "docs: monorepo CLAUDE.md and AGENTS.md (adapted from parent)"
+git push origin master
+```
+
+- [ ] **Step 6: Backfill `CLAUDE.md` and `AGENTS.md` onto `production` branch**
 
 The `production` branch was created in Task 6 with master's scaffolding files at the time, but `CLAUDE.md` and `AGENTS.md` didn't exist yet on master then. Bring them onto production now:
 
@@ -1512,17 +1525,6 @@ git checkout master -- CLAUDE.md AGENTS.md
 git commit -m "production: backfill CLAUDE.md and AGENTS.md from master"
 git push origin production
 git checkout master
-```
-
-- [ ] **Step 6: Stage and commit on master**
-
-Run:
-```bash
-cd /projects/Brewra/brewra-gtm-intelligence
-git status
-git add CLAUDE.md AGENTS.md
-git commit -m "docs: monorepo CLAUDE.md and AGENTS.md (adapted from parent)"
-git push origin master
 ```
 
 ---
