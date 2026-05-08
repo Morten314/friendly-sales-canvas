@@ -1,0 +1,11 @@
+pinecone
+
+api key = pcsk_3Hv4td_HrXCeQPwZYJZT1Zf6nwtLjAC64E8WcJA1fQ6w18dGUnxsPLpoUrovVb7JCP862w
+
+
+aws
+
+access key : AKIAWSX4DVX7DHHENUWS
+secret access key : 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
+s3 bucket : brewra-data-sources
+region : eu-north-1
