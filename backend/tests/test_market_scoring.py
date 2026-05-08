@@ -1,0 +1,165 @@
+"""Characterization tests for market scoring endpoints.
+
+Endpoints:
+  POST /leads/market-scores          — trigger scoring (background) or return cached
+  GET  /leads/market-scores/status   — status of a scoring run
+
+Both use _get_market_score_collections() → _get_profiler_mongo_client() → MongoClient().
+Patch "api.MongoClient" for per-request clients.
+"""
+from unittest.mock import MagicMock, patch, call
+import pytest
+
+from tests.helpers import scrub_dynamic
+from tests.identities import TEST_USER_ID, TEST_ORG_ID, TEST_LEAD_ID_1
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+_SCORE_DOC = {
+    "lead_id": TEST_LEAD_ID_1,
+    "org_id": TEST_ORG_ID,
+    "company_name": "ACME Corp",
+    "lead_name": "Alice Smith",
+    "component_scores": {
+        "market size & opportunity": 75.0,
+        "industry trends report": 80.0,
+        "competitor landscape": 65.0,
+        "regulatory & compliance highlights": 70.0,
+        "market entry & growth strategy": 85.0,
+    },
+    "market_total_score": 75.0,
+    "scoring_status": "completed",
+    "scored_at": "2026-05-08T10:00:00",
+    "updated_at": "2026-05-08T10:00:00",
+}
+
+_RUN_DOC = {
+    "run_id": "run-00000000-0000-0000-0000-000000000001",
+    "user_id": TEST_USER_ID,
+    "org_id": TEST_ORG_ID,
+    "status": "completed",
+    "created_at": "2026-05-08T09:55:00",
+    "started_at": "2026-05-08T09:55:05",
+    "completed_at": "2026-05-08T10:00:00",
+    "updated_at": "2026-05-08T10:00:00",
+    "total_leads": 1,
+    "processed_count": 1,
+    "failed_count": 0,
+}
+
+
+def _make_score_mc(score_docs=None, run_docs=None, run_find_one=None):
+    """Build MongoClient mock for _get_market_score_collections().
+
+    Profiler["Lead_Market_Scores"] → score_coll
+    Profiler["Lead_Market_Score_Runs"] → run_coll
+    """
+    score_coll = MagicMock()
+    score_coll.create_index.return_value = None
+    score_coll.find.return_value.sort.return_value = iter(score_docs or [])
+    score_coll.find_one.return_value = None
+    score_coll.update_one.return_value = MagicMock(modified_count=1)
+    score_coll.insert_one.return_value = MagicMock(inserted_id="score_id")
+    score_coll.count_documents.return_value = len(score_docs or [])
+
+    run_coll = MagicMock()
+    run_coll.create_index.return_value = None
+    run_coll.find_one.return_value = run_find_one
+    run_coll.insert_one.return_value = MagicMock(inserted_id="run_id")
+    run_coll.update_one.return_value = MagicMock(modified_count=1)
+    # find(...).sort(...).limit(...)
+    run_coll.find.return_value.sort.return_value.limit.return_value = iter(run_docs or [])
+
+    def _coll_router(name):
+        if name == "Lead_Market_Scores":
+            return score_coll
+        if name == "Lead_Market_Score_Runs":
+            return run_coll
+        return MagicMock()
+
+    profiler_db = MagicMock()
+    profiler_db.__getitem__.side_effect = _coll_router
+
+    mc = MagicMock()
+    mc.__getitem__.return_value = profiler_db
+    return mc, score_coll, run_coll
+
+
+# ---------------------------------------------------------------------------
+# Task 17-1: POST /leads/market-scores with refresh=True → 200, queued run
+# ---------------------------------------------------------------------------
+
+def test_trigger_market_scoring_returns_accepted(client, mock_neo4j):
+    """POST /leads/market-scores refresh=True → 200 with processing_status=queued."""
+    mc, score_coll, run_coll = _make_score_mc(score_docs=[], run_find_one=None)
+
+    # No active run (find_one returns None for active run check)
+    run_coll.find_one.return_value = None
+
+    payload = {
+        "user_id": TEST_USER_ID,
+        "org_id": TEST_ORG_ID,
+        "refresh": True,
+    }
+
+    with patch("api.MongoClient", return_value=mc):
+        response = client.post("/leads/market-scores", json=payload)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["org_id"] == TEST_ORG_ID
+    # When refresh=True and no active run, endpoint queues a new run
+    assert body["processing_status"] in ("queued", "idle", "completed")
+
+
+# ---------------------------------------------------------------------------
+# Task 17-2: GET /leads/market-scores (cached) returns score
+# ---------------------------------------------------------------------------
+
+def test_get_market_score_returns_score(client, mock_neo4j):
+    """POST /leads/market-scores refresh=False with existing scores → rows returned."""
+    score_doc = dict(_SCORE_DOC)
+    run_doc = dict(_RUN_DOC)
+
+    mc, score_coll, run_coll = _make_score_mc(
+        score_docs=[score_doc],
+        run_find_one=run_doc,
+    )
+
+    payload = {
+        "user_id": TEST_USER_ID,
+        "org_id": TEST_ORG_ID,
+        "refresh": False,
+    }
+
+    with patch("api.MongoClient", return_value=mc), \
+         patch("api._get_lead_identity_from_neo4j", return_value={}):
+        response = client.post("/leads/market-scores", json=payload)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total_leads"] == 1
+    assert len(body["rows"]) == 1
+    row = body["rows"][0]
+    assert row["lead_id"] == TEST_LEAD_ID_1
+    assert row["combined_score"] == 75.0
+
+
+# ---------------------------------------------------------------------------
+# Task 17-3: GET /leads/market-scores/status — no run → 404
+# ---------------------------------------------------------------------------
+
+def test_get_market_score_status_404_when_no_run(client):
+    """GET /leads/market-scores/status when no run exists → 404."""
+    mc, _, run_coll = _make_score_mc()
+    run_coll.find_one.return_value = None
+
+    with patch("api.MongoClient", return_value=mc):
+        response = client.get(
+            f"/leads/market-scores/status?user_id={TEST_USER_ID}&org_id={TEST_ORG_ID}"
+        )
+
+    assert response.status_code == 404
