@@ -4,8 +4,56 @@ External deps (Neo4j, Mongo, Pinecone, S3, LLM, Tavily) are mocked at the
 module path where they're used (backend.api / backend.services), not where
 they're defined. This is robust against import-order variations.
 """
+import sys
+import os
 import pytest
 from unittest.mock import MagicMock
+
+# ---------------------------------------------------------------------------
+# sys.path: ensure backend/ is importable as a flat package (for internal
+# imports like `from config import ...`) AND as `backend.*` (for mocker.patch).
+# ---------------------------------------------------------------------------
+_BACKEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+_MONOREPO_ROOT = os.path.abspath(os.path.join(_BACKEND_DIR, ".."))
+for _p in (_BACKEND_DIR, _MONOREPO_ROOT):
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
+
+# ---------------------------------------------------------------------------
+# Set dummy env vars for keys that have no hardcoded fallback in config.py.
+# Must happen before config.py is imported (which happens when backend.* loads).
+# ---------------------------------------------------------------------------
+os.environ.setdefault("PINECONE_API_KEY", "test-pinecone-key")
+os.environ.setdefault("AWS_ACCESS_KEY", "test-aws-key")
+os.environ.setdefault("AWS_SECRET_KEY", "test-aws-secret")
+
+# ---------------------------------------------------------------------------
+# Pre-stub heavy / network-connecting modules so they never attempt real I/O
+# during import of database.py, llm_config.py, services.py, or api.py.
+# These stubs must be inserted BEFORE any import of backend.* modules.
+# ---------------------------------------------------------------------------
+def _make_stub(name):
+    """Return a MagicMock registered under the given dotted name and all parents."""
+    parts = name.split(".")
+    for i in range(1, len(parts) + 1):
+        key = ".".join(parts[:i])
+        if key not in sys.modules:
+            sys.modules[key] = MagicMock(name=key)
+    return sys.modules[name]
+
+
+_HEAVY_MODULES = [
+    # speech recognition (services.py: import speech_recognition as sr)
+    # Only stub if not already installed as a real package.
+    "speech_recognition",
+]
+
+for _mod in _HEAVY_MODULES:
+    _make_stub(_mod)
+
+# neo4j is a real installed package — do not stub it.
+# database.py wraps the connection attempt in try/except, so failed
+# connectivity at import time is non-fatal.
 
 
 @pytest.fixture
@@ -19,8 +67,8 @@ def mock_neo4j(mocker):
     mock_session = MagicMock()
     mock_driver.session.return_value.__enter__.return_value = mock_session
     mock_driver.session.return_value.__exit__.return_value = False
-    mocker.patch("backend.api.neo4j_driver", mock_driver, create=True)
-    mocker.patch("backend.services.neo4j_driver", mock_driver, create=True)
+    mocker.patch("backend.api.driver", mock_driver, create=True)
+    mocker.patch("backend.services.driver", mock_driver, create=True)
     return {"driver": mock_driver, "session": mock_session}
 
 
@@ -30,8 +78,8 @@ def mock_mongo(mocker):
     e.g. mock_mongo.return_value.Scout_Agent.signals.update_one.called.
     """
     mongo = MagicMock()
-    mocker.patch("backend.api.mongo_client", mongo, create=True)
-    mocker.patch("backend.services.mongo_client", mongo, create=True)
+    mocker.patch("backend.api.client", mongo, create=True)
+    mocker.patch("backend.services.client", mongo, create=True)
     return mongo
 
 
