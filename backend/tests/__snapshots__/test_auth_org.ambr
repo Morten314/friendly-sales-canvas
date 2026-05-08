@@ -1,0 +1,49 @@
+# serializer version: 1
+# name: test_get_org_returns_org_for_user
+  dict({
+    'org_id': 'test_org_abc',
+    'org_name': 'Test Org',
+    'status': 'success',
+    'user_id': 'test_user_123',
+  })
+# ---
+# name: test_get_registration_lists_entries
+  list([
+    dict({
+      'email': 'alice@brewra.test',
+      'id': '000000000000000000000001',
+      'name': 'Alice',
+      'timestamp': '<scrubbed>',
+    }),
+    dict({
+      'email': 'bob@brewra.test',
+      'id': '000000000000000000000002',
+      'name': 'Bob',
+      'timestamp': '<scrubbed>',
+    }),
+  ])
+# ---
+# name: test_post_connect_org_links_user_to_org_new_doc
+  dict({
+    'message': 'User test_user_123 connected to org test_org_abc',
+    'org_id': 'test_org_abc',
+    'status': 'success',
+    'user_id': 'test_user_123',
+  })
+# ---
+# name: test_post_org_creates_new_org
+  dict({
+    'message': 'Org created successfully',
+    'org_id': '<scrubbed>',
+    'org_name': 'Test Org',
+    'status': 'success',
+  })
+# ---
+# name: test_post_registration_creates_entry
+  dict({
+    'email': 'test@brewra.test',
+    'id': '000000000000000000000001',
+    'name': 'Test User',
+    'timestamp': '<scrubbed>',
+  })
+# ---
