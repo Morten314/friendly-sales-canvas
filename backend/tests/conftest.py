@@ -6,7 +6,6 @@ they're defined. This is robust against import-order variations.
 """
 import pytest
 from unittest.mock import MagicMock
-from fastapi.testclient import TestClient
 
 
 @pytest.fixture
@@ -82,6 +81,7 @@ def mock_tavily(mocker):
 def client(mock_neo4j, mock_mongo, mock_llm_chain, mock_groq_chat,
            mock_s3, mock_pinecone, mock_tavily):
     """All-mocks-applied TestClient. Use this in 95% of tests."""
+    from fastapi.testclient import TestClient
     from backend.main import app
     with TestClient(app) as c:
         yield c
