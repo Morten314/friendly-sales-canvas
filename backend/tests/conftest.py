@@ -67,8 +67,8 @@ def mock_neo4j(mocker):
     mock_session = MagicMock()
     mock_driver.session.return_value.__enter__.return_value = mock_session
     mock_driver.session.return_value.__exit__.return_value = False
-    mocker.patch("backend.api.driver", mock_driver, create=True)
-    mocker.patch("backend.services.driver", mock_driver, create=True)
+    mocker.patch("api.driver", mock_driver, create=True)
+    mocker.patch("services.driver", mock_driver, create=True)
     return {"driver": mock_driver, "session": mock_session}
 
 
@@ -78,8 +78,8 @@ def mock_mongo(mocker):
     e.g. mock_mongo.return_value.Scout_Agent.signals.update_one.called.
     """
     mongo = MagicMock()
-    mocker.patch("backend.api.client", mongo, create=True)
-    mocker.patch("backend.services.client", mongo, create=True)
+    mocker.patch("api.client", mongo, create=True)
+    mocker.patch("services.client", mongo, create=True)
     return mongo
 
 
@@ -90,7 +90,7 @@ def mock_llm_chain(mocker):
     Tests configure .run.return_value with canned JSON strings.
     """
     mock_chain = MagicMock()
-    mocker.patch("backend.services.agent_chain", mock_chain, create=True)
+    mocker.patch("services.agent_chain", mock_chain, create=True)
     return mock_chain
 
 
@@ -98,14 +98,14 @@ def mock_llm_chain(mocker):
 def mock_groq_chat(mocker):
     """Mock the Groq llama-3.3-70b chat used in chat endpoints."""
     mock_chat = MagicMock()
-    mocker.patch("backend.services.groq_chat", mock_chat, create=True)
+    mocker.patch("services.groq_chat", mock_chat, create=True)
     return mock_chat
 
 
 @pytest.fixture
 def mock_s3(mocker):
     s3 = MagicMock()
-    mocker.patch("backend.api.s3_client", s3, create=True)
+    mocker.patch("api.s3_client", s3, create=True)
     return s3
 
 
@@ -113,7 +113,7 @@ def mock_s3(mocker):
 def mock_pinecone(mocker):
     index = MagicMock()
     index.query.return_value = {"matches": []}
-    mocker.patch("backend.api.pinecone_index", index, create=True)
+    mocker.patch("api.pinecone_index", index, create=True)
     return index
 
 
@@ -121,7 +121,7 @@ def mock_pinecone(mocker):
 def mock_tavily(mocker):
     """Tavily is usually wrapped inside agent_chain. Provided for direct callers."""
     tavily = MagicMock()
-    mocker.patch("backend.services.tavily_search", tavily, create=True)
+    mocker.patch("services.tavily_search", tavily, create=True)
     return tavily
 
 
@@ -130,6 +130,6 @@ def client(mock_neo4j, mock_mongo, mock_llm_chain, mock_groq_chat,
            mock_s3, mock_pinecone, mock_tavily):
     """All-mocks-applied TestClient. Use this in 95% of tests."""
     from fastapi.testclient import TestClient
-    from backend.main import app
+    from main import app
     with TestClient(app) as c:
         yield c
