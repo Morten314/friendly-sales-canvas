@@ -138,13 +138,25 @@ def mock_s3(mocker):
 
 @pytest.fixture
 def mock_pinecone(mocker):
-    """Mock Pinecone. api.py:4163 binds `pc = Pinecone(...)`; api.py:123 also
-    instantiates Pinecone() inline inside a function — tests that exercise
-    that codepath should additionally `mocker.patch("api.Pinecone", ...)`.
+    """Mock Pinecone in both forms it appears in api.py:
+
+      - api.py:4163 binds `pc = Pinecone(...)` at module level.
+      - api.py:123 instantiates `Pinecone(api_key=...)` inline inside a
+        retrieval helper. The module-level `pc` patch alone wouldn't cover
+        this codepath; we also patch the `api.Pinecone` constructor so
+        inline calls return our mock.
+
+    Both forms route .Index().query() to the same canned empty-matches
+    response, which is enough for endpoints that use Pinecone for context
+    retrieval but don't depend on actual matches.
     """
     pc = MagicMock()
     pc.Index.return_value.query.return_value = {"matches": []}
     mocker.patch("api.pc", pc)
+    # api.py:123 — `Pinecone(api_key=pinecone_api_key).Index("brewra-documents")`
+    # The constructor return value's .Index().query() must also be wired.
+    pinecone_constructor = MagicMock(return_value=pc)
+    mocker.patch("api.Pinecone", pinecone_constructor)
     return pc
 
 
