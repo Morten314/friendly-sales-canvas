@@ -67,19 +67,19 @@ def mock_neo4j(mocker):
     mock_session = MagicMock()
     mock_driver.session.return_value.__enter__.return_value = mock_session
     mock_driver.session.return_value.__exit__.return_value = False
-    mocker.patch("api.driver", mock_driver, create=True)
-    mocker.patch("services.driver", mock_driver, create=True)
+    mocker.patch("api.driver", mock_driver)
+    mocker.patch("services.driver", mock_driver)
     return {"driver": mock_driver, "session": mock_session}
 
 
 @pytest.fixture
 def mock_mongo(mocker):
     """Mock MongoDB client. Returns the MagicMock so tests can assert on
-    e.g. mock_mongo.return_value.Scout_Agent.signals.update_one.called.
+    e.g. mock_mongo.Scout_Agent.signals.update_one.called.
     """
     mongo = MagicMock()
-    mocker.patch("api.client", mongo, create=True)
-    mocker.patch("services.client", mongo, create=True)
+    mocker.patch("api.client", mongo)
+    mocker.patch("services.client", mongo)
     return mongo
 
 
@@ -87,47 +87,70 @@ def mock_mongo(mocker):
 def mock_llm_chain(mocker):
     """Mock the LangChain agent_chain (Together Qwen + Tavily).
 
-    Tests configure .run.return_value with canned JSON strings.
+    Patches both the bound reference in services.py and the original in
+    llm_config.py (the latter covers deferred imports like
+    `from llm_config import agent_chain` inside api.py functions).
     """
     mock_chain = MagicMock()
-    mocker.patch("services.agent_chain", mock_chain, create=True)
+    mocker.patch("services.agent_chain", mock_chain)
+    mocker.patch("llm_config.agent_chain", mock_chain)
     return mock_chain
 
 
 @pytest.fixture
-def mock_groq_chat(mocker):
-    """Mock the Groq llama-3.3-70b chat used in chat endpoints."""
-    mock_chat = MagicMock()
-    mocker.patch("services.groq_chat", mock_chat, create=True)
-    return mock_chat
+def mock_llm_config(mocker):
+    """Mock the rest of llm_config exports (chain, chain2, llm, llm2, etc.).
+
+    api.py:41 imports `chain, chain2, llm2` (used by /text_graph, /voice_graph,
+    /test-llm). services.py:17 imports `llm_transformer, graph, llm, llm2`.
+    Plus deferred imports inside functions resolve from llm_config.* at call
+    time, so we patch all three namespaces (api.*, services.*, llm_config.*).
+
+    Without this fixture, any test that hits an endpoint using these symbols
+    would call a real LLM. agent_chain is handled separately by mock_llm_chain.
+    """
+    mocks = {}
+    for name in ("chain", "chain2", "llm", "llm2", "llm_transformer", "graph"):
+        mocks[name] = MagicMock(name=f"llm_config.{name}")
+        mocker.patch(f"llm_config.{name}", mocks[name])
+
+    # api.py module-level bound references (line 41).
+    for name in ("chain", "chain2", "llm2"):
+        mocker.patch(f"api.{name}", mocks[name])
+    # api.py also imports `graph` from database (line 40), but llm_config.graph
+    # and database.graph are the same Neo4jGraph object — patch the api.graph
+    # bound reference too so /text_graph and /voice_graph don't reach Neo4j.
+    mocker.patch("api.graph", mocks["graph"])
+
+    # services.py module-level bound references (line 17).
+    for name in ("llm_transformer", "graph", "llm", "llm2"):
+        mocker.patch(f"services.{name}", mocks[name])
+
+    return mocks
 
 
 @pytest.fixture
 def mock_s3(mocker):
     s3 = MagicMock()
-    mocker.patch("api.s3_client", s3, create=True)
+    mocker.patch("api.s3_client", s3)
     return s3
 
 
 @pytest.fixture
 def mock_pinecone(mocker):
-    index = MagicMock()
-    index.query.return_value = {"matches": []}
-    mocker.patch("api.pinecone_index", index, create=True)
-    return index
+    """Mock Pinecone. api.py:4163 binds `pc = Pinecone(...)`; api.py:123 also
+    instantiates Pinecone() inline inside a function — tests that exercise
+    that codepath should additionally `mocker.patch("api.Pinecone", ...)`.
+    """
+    pc = MagicMock()
+    pc.Index.return_value.query.return_value = {"matches": []}
+    mocker.patch("api.pc", pc)
+    return pc
 
 
 @pytest.fixture
-def mock_tavily(mocker):
-    """Tavily is usually wrapped inside agent_chain. Provided for direct callers."""
-    tavily = MagicMock()
-    mocker.patch("services.tavily_search", tavily, create=True)
-    return tavily
-
-
-@pytest.fixture
-def client(mock_neo4j, mock_mongo, mock_llm_chain, mock_groq_chat,
-           mock_s3, mock_pinecone, mock_tavily):
+def client(mock_neo4j, mock_mongo, mock_llm_chain, mock_llm_config,
+           mock_s3, mock_pinecone):
     """All-mocks-applied TestClient. Use this in 95% of tests."""
     from fastapi.testclient import TestClient
     from main import app
