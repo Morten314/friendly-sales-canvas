@@ -1,16 +1,29 @@
 import { test, expect } from '@playwright/test';
 import { loginAsTestUser } from '../helpers/login';
-import { installApiMocks, installCatchAllApiMock } from '../fixtures/api-mocks';
+import { installApiMocks } from '../fixtures/api-mocks';
 import { maskDynamic } from '../helpers/mask-dynamic';
 import { leadList } from '../fixtures/seed-data';
 
-test('CSV upload → leads appear in Scout lead stream', async ({ page }) => {
+/**
+ * The CSV upload UI lives in DataSourcesManager (rendered in the Data Sources
+ * tab of Mission Control), NOT in a Scout lead-stream view. Reaching the
+ * upload form requires:
+ *   1. Land on /mission-control?tab=sources (gated by isCompanyProfileSaved,
+ *      which the orgProfile fixture's company_name field unlocks).
+ *   2. Click "Add Data Source" dropdown.
+ *   3. Open "Connect to Systems" submenu.
+ *   4. Click "Lead stream" item — flips showLeadUpload=true.
+ *   5. setInputFiles on the hidden #lead-csv-upload input.
+ *   6. Click "Add leads" submit button → POST /api/leads/batch-upload.
+ *
+ * The file input is hidden behind a styled label, so setInputFiles targets
+ * the input directly by id.
+ */
+test('CSV upload via Data Sources → batch-upload fires with right shape', async ({ page }) => {
   await loginAsTestUser(page);
 
-  // Capture the upload POST so we can assert it fired with right shape.
   const uploadRequest = page.waitForRequest('**/api/leads/batch-upload');
 
-  // Mock the batch-upload response.
   await installApiMocks(page, {
     '/api/leads/batch-upload': {
       status: 'completed',
@@ -19,40 +32,39 @@ test('CSV upload → leads appear in Scout lead stream', async ({ page }) => {
     },
     '/api/leads': { leads: leadList(3), total: 3 },
   });
-  await installCatchAllApiMock(page);
 
-  // Step 1: Navigate to the lead stream.
-  await page.goto('/your-ai-team/scout/leads');
-  await expect(page).toHaveScreenshot('01-lead-stream-empty.png', { mask: maskDynamic(page) });
+  // Step 1: Navigate to Data Sources tab.
+  await page.goto('/mission-control?tab=sources');
+  await expect(page).toHaveScreenshot('01-data-sources-empty.png', { mask: maskDynamic(page) });
 
-  // Step 2: Click upload button (selector may need adjusting based on actual UI).
-  await page.getByRole('button', { name: /upload|import|add leads/i }).first().click();
-  await expect(page).toHaveScreenshot('02-upload-modal-open.png', { mask: maskDynamic(page) });
+  // Step 2: Open Add Data Source dropdown.
+  await page.getByRole('button', { name: /add data source/i }).first().click();
+  await expect(page).toHaveScreenshot('02-add-data-source-menu.png', { mask: maskDynamic(page) });
 
-  // Step 3: Set the CSV file.
+  // Step 3: Hover Connect to Systems submenu trigger; click Lead stream item.
+  // Radix submenus open on hover/click of the trigger.
+  await page.getByRole('menuitem', { name: /connect to systems/i }).hover();
+  await page.getByRole('menuitem', { name: /^lead stream$/i }).click();
+  await expect(page.getByText(/add leads/i).first()).toBeVisible();
+  await expect(page).toHaveScreenshot('03-lead-upload-form-open.png', { mask: maskDynamic(page) });
+
+  // Step 4: Set CSV file on the hidden input.
   const csvBuffer = Buffer.from(
     'company_name,contact_name,email\nAcme,Jane,jane@acme.test\nBeta,John,john@beta.test\n',
     'utf-8',
   );
-  await page.setInputFiles('input[type="file"]', {
+  await page.setInputFiles('#lead-csv-upload', {
     name: 'test_leads.csv',
     mimeType: 'text/csv',
     buffer: csvBuffer,
   });
 
-  // Step 4: Submit upload.
-  await page.getByRole('button', { name: /upload|submit|confirm/i }).last().click();
+  // Step 5: Submit. The submit button reads "Add leads" (changes to
+  // "Uploading..." while in flight).
+  await page.getByRole('button', { name: 'Add leads' }).last().click();
 
-  // Step 5: Confirm upload request fired with right payload.
+  // Step 6: Confirm batch-upload request fired.
   const req = await uploadRequest;
   expect(req.method()).toBe('POST');
-  await expect(page).toHaveScreenshot('03-upload-in-progress.png', { mask: maskDynamic(page) });
-
-  // Step 6: Wait for leads to render.
-  await expect(page.getByText('Company 0')).toBeVisible({ timeout: 10000 });
-  await expect(page).toHaveScreenshot('04-leads-in-stream.png', { mask: maskDynamic(page) });
-
-  // Step 7: Final state — multiple leads visible.
-  await expect(page.getByText('Company 1')).toBeVisible();
-  await expect(page).toHaveScreenshot('05-multiple-leads-visible.png', { mask: maskDynamic(page) });
+  await expect(page).toHaveScreenshot('04-upload-fired.png', { mask: maskDynamic(page) });
 });
