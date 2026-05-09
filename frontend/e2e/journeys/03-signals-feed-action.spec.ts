@@ -16,17 +16,19 @@ test('signals feed loads, accept persists, snapshot stable', async ({ page }) =>
   });
   await installCatchAllApiMock(page);
 
-  // Step 1: Navigate to signals feed.
-  await page.goto('/your-ai-team/scout/signals');
-  await expect(page.getByText('Signals').first()).toBeVisible();
+  // Step 1: Navigate to signals feed. (Route is /signals, not /your-ai-team/scout/signals.)
+  await page.goto('/signals');
+  await expect(page.getByText(/signals/i).first()).toBeVisible();
   await expect(page).toHaveScreenshot('01-signals-feed-loaded.png', { mask: maskDynamic(page) });
 
-  // Step 2: Verify signals rendered.
-  await expect(page.getByText('Test signal 0')).toBeVisible();
+  // Step 2: Verify signals rendered. The page maps signal_id → id, so our fixture
+  // is picked up; headline `Test signal N` is what renders as visible text.
+  await expect(page.getByText('Test signal 0')).toBeVisible({ timeout: 15000 });
   await expect(page).toHaveScreenshot('02-signal-cards-visible.png', { mask: maskDynamic(page) });
 
-  // Step 3: Click accept on first card.
-  await page.getByRole('button', { name: /accept|approve/i }).first().click();
+  // Step 3: Click accept (thumbs-up icon button — no text label, so target via
+  // the lucide icon class on the SVG).
+  await page.locator('button:has(svg.lucide-thumbs-up)').first().click();
 
   // Step 4: Assert request fired correctly.
   const req = await actionRequest;

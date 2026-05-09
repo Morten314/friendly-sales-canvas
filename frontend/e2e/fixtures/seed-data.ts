@@ -36,14 +36,32 @@ export const leadList = (n = 3): Lead[] =>
     }),
   );
 
+/**
+ * Signal fixture — must include FE-shape fields (timestamp, sourceLabel, etc.)
+ * because src/pages/Signals.tsx crashes on toLowerCase() of undefined when
+ * those are missing. The page maps signal_id → id but otherwise reads fields
+ * directly off the response object.
+ */
 export const signal = (overrides: Record<string, unknown> = {}) => ({
   signal_id: TEST_SIGNAL_ID_1,
+  id: TEST_SIGNAL_ID_1,
   user_id: TEST_USER_ID,
   org_id: TEST_ORG_ID,
   agent: 'scout',
+  timestamp: 'Today',
   headline: 'Acme Corp announces $50M Series B funding',
   snippet: 'Acme Corp closed a $50M Series B led by Sequoia.',
+  description: 'Detailed context on the Acme Corp funding round.',
+  sourceUrl: 'https://example.test/acme-funding',
   source_url: 'https://example.test/acme-funding',
+  sourceLabel: 'TechCrunch',
+  source: [{ citation: 'TechCrunch', url: 'https://example.test/acme-funding' }],
+  nextBestMoves: ['Reach out to CEO', 'Send congrats on LinkedIn'],
+  NBAs: [
+    { nba: 'Reach out to CEO', prompt: '' },
+    { nba: 'Send congrats on LinkedIn', prompt: '' },
+  ],
+  contextualSuggestions: [],
   next_best_actions: [
     { label: 'Reach out to CEO', type: 'email' },
     { label: 'Send congrats on LinkedIn', type: 'linkedin' },
