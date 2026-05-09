@@ -271,3 +271,31 @@ def test_post_signal_action_invalid_signal_id(client):
 
     assert response.status_code == 404
     assert "not found" in response.json()["detail"].lower()
+
+
+def test_post_signal_action_invalid_action_value(client):
+    """POST /signal_action with action other than accept/reject → 422.
+
+    SignalActionRequest's action is `Literal["accept", "reject"]`. FastAPI's
+    pydantic validation rejects anything else with 422 before the handler
+    runs (so no Mongo mock needed). Lock this in — a refactor that loosens
+    the type to `str` would silently change behavior to "no validation".
+    """
+    payload = {
+        "org_id": TEST_ORG_ID,
+        "signal_id": TEST_SIGNAL_ID_1,
+        "action": "delete",  # not in the literal set
+    }
+
+    response = client.post("/signal_action", json=payload)
+    assert response.status_code == 422
+
+
+def test_post_signal_action_missing_org_id(client):
+    """POST /signal_action without org_id → 422 (pydantic field required)."""
+    payload = {
+        "signal_id": TEST_SIGNAL_ID_1,
+        "action": "accept",
+    }
+    response = client.post("/signal_action", json=payload)
+    assert response.status_code == 422
