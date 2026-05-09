@@ -116,6 +116,7 @@ The frontend looks like it does JWT auth: `JWTManager` posts to `/api/auth/token
 This repo is structured for AI-native development: cross-cutting tasks (changes spanning both stacks) land as **atomic commits**, and work flows through a **spec → plan → implementation** pipeline.
 
 - **Cross-stack atomicity.** A feature touching both `/frontend/` and `/backend/` ships as one commit (or one PR), reviewable as one diff. Don't split FE/BE changes across separate commits "because the codebases are different" — that's the polyrepo habit, not the monorepo rule.
+- **Commit granularity: prefer small, frequent commits.** Within a multi-step task (a plan with N tasks, a refactor with several discrete pieces, a feature built in stages), ship one commit per logical step rather than batching. A single plan task = a single commit. A single fixture file or test module = its own commit. A bug fix and the test that catches it = one commit (they're one logical step), but if the same bug fix touches three unrelated call sites, those can be three commits. The bias is toward more, smaller commits — easier to review, easier to bisect, easier to revert. This rule sits beside cross-stack atomicity, not against it: a coordinated FE+BE change for one feature is still one commit, because that *is* the logical step.
 - **Spec-driven flow.**
   1. Idea → brainstorm → `/specs/YYYY-MM-DD-feature-X-design.md` (design intent)
   2. Spec → plan-write → `/plans/NN-feature-X.md` (execution intent, ordered steps)
