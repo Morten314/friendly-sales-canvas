@@ -13,7 +13,7 @@ Brewra implements a **microservices-oriented AI sales execution platform** with 
 **Architecture Style**: Multi-tier REST API with PWA frontend
 **Technology Stack**: Python FastAPI backend + React TypeScript frontend
 **Data Architecture**: Polyglot persistence (Neo4j, MongoDB, Pinecone, S3)
-**AI/LLM Integration**: LangChain with Groq and Together AI
+**AI/LLM Integration**: LangChain with Groq and Together AI; Anthropic Claude (`claude-sonnet-4-20250514`) added 2026-05 as `_claude` variants of 4 endpoints (called via raw HTTP, not the SDK)
 
 **Current Status**: 70% architecturally complete with critical security gaps
 
@@ -466,9 +466,9 @@ VitePWA({
 
 ```
 backend/
-├── api.py              # FastAPI application and routes (4,441 lines)
+├── api.py              # FastAPI application and routes (4,995 lines)
 ├── models.py           # Pydantic models and schemas (230 lines)
-├── services.py         # Business logic and agent workflows (2,540 lines)
+├── services.py         # Business logic and agent workflows (2,632 lines)
 ├── database.py         # Database connections and utilities (101 lines)
 ├── llm_config.py       # LLM configuration and prompts (312 lines)
 ├── config.py           # Configuration and credentials (81 lines)
@@ -483,7 +483,7 @@ backend/
 
 #### RESTful API Structure
 
-**Total Endpoints**: 50+ routes across 7 functional areas
+**Total Endpoints**: 50+ routes across 7 functional areas (4 Claude-backed variants added 2026-05: `POST /market-research_claude`, `POST /icp-research_claude`, `POST /generate-signals-batch_claude`, `POST /signal_ask_claude`)
 
 **Lead Management (10 endpoints)**:
 ```
@@ -1468,14 +1468,14 @@ async def health_check():
 5. Firebase API keys exposed
 
 **Architecture**:
-1. Monolithic API file (4,441 lines)
+1. Monolithic API file (4,995 lines)
 2. No service layer separation
 3. Tight coupling between components
 4. No error handling hierarchy
 5. Inconsistent error responses
 
 **Quality**:
-1. Zero test coverage
+1. Limited test coverage — pytest characterization tests (`backend/tests/`) and Playwright e2e (`frontend/e2e/`) added 2026-05-08; hand-crafted fixtures (TD-001 in `docs/TECH_DEBT.md`); no CI wiring yet
 2. Excessive console logging (1,566 statements)
 3. No code documentation
 4. No API documentation
@@ -1562,7 +1562,7 @@ The Brewra architecture demonstrates a **well-designed polyglot persistence** ap
 - No backend authentication (security risk)
 - Monolithic code structure
 - Strategist agent not implemented
-- Zero test coverage
+- Test coverage early-stage — characterization tests added 2026-05-08, hand-crafted fixtures, no CI
 - Limited observability
 
 **Recommendation**: Address critical security issues immediately, then refactor the monolithic architecture into modular components. Implement proper testing and monitoring before scaling to production.

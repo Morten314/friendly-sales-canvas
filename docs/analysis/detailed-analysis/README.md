@@ -33,8 +33,8 @@ This analysis provides a comprehensive technical assessment of the Brewra platfo
 **Key Findings**:
 - 🔴 CRITICAL: No authentication on backend endpoints
 - 🔴 CRITICAL: Hardcoded credentials in source code
-- 🔴 Monolithic structure (api.py - 4,441 lines)
-- 🟡 Zero test coverage
+- 🔴 Monolithic structure (api.py - 4,995 lines; +554 from Claude-backed endpoint additions)
+- 🟡 Limited test coverage — characterization tests added 2026-05-08 (BE pytest + FE Playwright); no CI wiring yet
 - 🟡 Limited observability
 
 ### 3. [Design System Document](DESIGN_SYSTEM.md)
@@ -62,14 +62,14 @@ This analysis provides a comprehensive technical assessment of the Brewra platfo
 
 **Architecture Issues**:
 1. **No Strategist Agent**: Orchestrator layer completely missing (see [Product Specification](PRODUCT_SPECIFICATION.md#3-strategist-agent---the-orchestrator))
-2. **Monolithic Code**: 4,441-line api.py file (see [Architecture Document](ARCHITECTURE_DOCUMENT.md#backend-directory-structure))
+2. **Monolithic Code**: 4,995-line api.py file (see [Architecture Document](ARCHITECTURE_DOCUMENT.md#backend-directory-structure))
 3. **No Agent Communication**: Agents work in isolation
 4. **Tight Coupling**: Frontend directly coupled to backend
 
 ### 🟡 High-Priority Concerns
 
 **Code Quality**:
-1. **Zero Test Coverage**: No unit or integration tests
+1. **Test Coverage Early-Stage**: Characterization tests added 2026-05-08 (10 backend pytest modules in `backend/tests/`, 5 Playwright e2e journeys in `frontend/e2e/`). Hand-crafted fixtures (TD-001 in `docs/TECH_DEBT.md`); no CI wiring yet.
 2. **Excessive Logging**: 1,566 console.log statements in production
 3. **Large Files**: Some components 227KB+
 4. **Inconsistent Error Handling**: Mixed error response formats
@@ -101,7 +101,7 @@ This analysis provides a comprehensive technical assessment of the Brewra platfo
 
 **Integrations**: See [Product Specification - Integrations](PRODUCT_SPECIFICATION.md#integration-capabilities)
 
-**Quality & Operations**: Zero test coverage, no API documentation, no monitoring/observability, no CI/CD pipeline, limited error handling
+**Quality & Operations**: Test coverage early-stage (characterization tests added 2026-05-08, no CI), no API documentation, no monitoring/observability, no CI/CD pipeline, limited error handling
 
 ---
 
@@ -119,7 +119,7 @@ This analysis provides a comprehensive technical assessment of the Brewra platfo
 
 ### Backend
 - **Framework**: FastAPI (Python)
-- **LLM**: LangChain + Groq Llama 3.3 70B + Together Qwen 235B
+- **LLM**: LangChain + Groq Llama 3.3 70B + Together Qwen 235B; Anthropic Claude (`claude-sonnet-4-20250514`) added 2026-05 for `_claude` endpoint variants (called via raw HTTP, not the SDK)
 - **Databases**: Neo4j, MongoDB, Pinecone, AWS S3
 - **External APIs**: Tavily Search, LinkedIn (RapidAPI)
 - **Deploy**: Render

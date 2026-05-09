@@ -448,12 +448,12 @@ For detailed performance analysis, see [ARCHITECTURE_DOCUMENT.md - Performance &
 
 **🔴 Architecture**: See [ARCHITECTURE_DOCUMENT.md - Technical Debt Analysis](ARCHITECTURE_DOCUMENT.md#technical-debt-analysis)
 - No Strategist agent implementation
-- Monolithic API file (4,441 lines)
+- Monolithic API file (4,995 lines as of 2026-05-09; +554 from new Claude-backed endpoints)
 - No agent orchestration or communication
 - Tight coupling between frontend and backend
 
 **🔴 Quality**: See [README.md - Critical Issues Summary](README.md#critical-issues-summary)
-- Zero test coverage
+- Limited test coverage — characterization tests (BE pytest + FE Playwright) added 2026-05-08; pre-existing 4 `backend/test_*.py` smoke scripts still hit live production. No CI wiring yet.
 - Excessive console logging (1,566 statements)
 - Inconsistent error handling
 - No API documentation
@@ -550,7 +550,7 @@ Brewra is a **feature-rich** AI-powered sales intelligence platform with strong 
 - Strategist agent not implemented
 - No agent orchestration or communication
 - Missing CRM integrations
-- Zero test coverage
+- Test coverage early-stage (characterization tests added 2026-05-08, no CI yet)
 
 **Recommendation**: Address critical security issues immediately, then focus on completing the Strategist agent and implementing proper agent orchestration to fulfill the product vision.
 

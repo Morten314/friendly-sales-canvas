@@ -1,7 +1,8 @@
 # Brewra — Functionality Inventory
 
-> Compiled 2026-05-05 from deep code inspection of `backend/api.py` (4,441 LOC),
-> `backend/services.py` (2,540 LOC), `backend/models.py`, `backend/llm_config.py`,
+> Compiled 2026-05-05 from deep code inspection of `backend/api.py` (4,441 LOC at compile time;
+> 4,995 LOC as of 2026-05-09 after Claude-backed endpoints added), `backend/services.py`
+> (2,540 LOC at compile time; 2,632 LOC as of 2026-05-09), `backend/models.py`, `backend/llm_config.py`,
 > `backend/database.py`, `backend/config.py`, and all frontend source under
 > `PWA-multi-tenancy/development/friendly-sales-canvas/src/`.
 >
@@ -248,7 +249,7 @@ These pages have UI chrome but minimal or zero backend wiring.
 | Backend error handling / retries | High | 25% | Basic FastAPI exception responses. Retry logic exists on individual LLM research calls (3 retries) but no general-purpose retry on DB writes or API calls. |
 | Pagination on list endpoints | High | 0% | `GET /api/leads` returns entire org (no LIMIT). Scoring silently caps at 5,000. |
 | Backend rate limiting / request size caps | High | 0% | No middleware. FE-side rate limiting only. `POST /api/upload-document` has no size cap. |
-| Test coverage | High | 5% | Four `test_*.py` smoke scripts hit the **live production** Render URL (`https://backend-11kr.onrender.com`) with hardcoded `USER_ID` / `ORG_ID`. No unit/integration test framework. |
+| Test coverage | High | 20% | **Backend**: 10 pytest characterization test modules in `backend/tests/` (auth/org, leads, signals, market research, ICP, profiles, documents, market scoring, smoke, helpers) using FastAPI `TestClient` with dependency-overridden fixtures for Neo4j/Mongo/Pinecone/S3/LLM clients. Snapshot-based via `__snapshots__/`. **Frontend**: Playwright e2e (`frontend/e2e/`) with 5 journey specs (login+tenant+mission, CSV upload, signals feed, market research, ICP create) + screenshot snapshots. Both added 2026-05-08. **Caveat**: Fixtures are hand-crafted (see `docs/TECH_DEBT.md` TD-001) — LLM-endpoint fixtures sketch shape rather than capture real responses. No CI wired up. The pre-existing 4 `backend/test_*.py` smoke scripts (live-production probes) remain at the backend root. |
 | API schema / OpenAPI client generation | Medium | 30% | FastAPI auto-generates `/docs`. Most endpoints lack `response_model` annotations — no client auto-generated from the schema. |
 | Environment-based configuration (FE) | Medium | 30% | Backend URL hardcoded in `vite.config.ts` and `vercel.json`. No `VITE_API_BASE_URL`. |
 | Dev/prod codebase unification | Medium | 30% | Two sibling Vite projects (`development/` vs `production/`) have diverged. Components like `MarketRankings*`, `SwotAnalysis*`, `TechnologyDrivers*` exist only in `production/`; `lead-stream/`, `strategist/`, `OpportunityMatchCard`, `ScoutDeploymentDetails` exist only in `development/`. |
@@ -257,7 +258,7 @@ These pages have UI chrome but minimal or zero backend wiring.
 
 ## 13. Backend Endpoint Inventory
 
-48 endpoints total. 41 fully implemented (90%+), 5 partially implemented (60-89%), 1 stub, 1 diagnostic.
+52 endpoints total. 45 fully implemented (90%+), 5 partially implemented (60-89%), 1 stub, 1 diagnostic. (4 Claude-backed variants added 2026-05.)
 
 ### Fully Wired Endpoints (90%+)
 
@@ -282,14 +283,18 @@ These pages have UI chrome but minimal or zero backend wiring.
 | GET | `/leads/market-scores/status` | Scoring run progress |
 | GET | `/leads/{lead_id}/market-score-descriptions` | Per-component scoring descriptions |
 | POST | `/market-research` | Run/fetch cached market research |
+| POST | `/market-research_claude` | Same as `/market-research` but research generated via Anthropic Claude (Tavily + Claude `claude-sonnet-4-20250514`) instead of LangChain `agent_chain`. Added 2026-05-04. |
 | GET | `/icp` | Get or generate suggested ICPs |
 | POST | `/icp-research` | Run ICP-specific research |
+| POST | `/icp-research_claude` | Claude-backed variant of `/icp-research`. Added 2026-05-07. |
 | DELETE | `/icp/recommended/{icp_id}` | Delete recommended ICP |
 | POST | `/signals-research` | Generate single signal |
 | POST | `/generate-signals-batch` | Generate 2 scout + 2 profiler signals |
+| POST | `/generate-signals-batch_claude` | Claude-backed variant of `/generate-signals-batch`. Added 2026-05-04. |
 | GET | `/fetch-signals` | Fetch signals for user |
 | POST | `/signal_action` | Accept or reject signal |
 | POST | `/signal_Ask` | Ask question about signals |
+| POST | `/signal_ask_claude` | Claude-backed variant of `/signal_Ask` with a 5-minute / 1M-token rolling budget enforced via in-process counters (`_claude_signal_usage_window`, `api.py:61-752`). Added 2026-05-01. |
 | POST | `/customer_profile` | Create/update customer profiles (ICPs) |
 | GET | `/customer_profile` | Get customer profiles by org |
 | POST | `/customer_profile/from_suggested_icp` | Convert suggested ICP to saved profile |

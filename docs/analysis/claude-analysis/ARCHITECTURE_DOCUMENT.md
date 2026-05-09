@@ -26,7 +26,7 @@ Brewra is a two-tier system:
     graph)   scores,    embed-                  search)
              signals)   dings)
                            │
-                           ▼  Groq (Llama 3.3 70B), Together.ai (Qwen3 235B + e5-large embeddings)
+                           ▼  Groq (Llama 3.3 70B), Together.ai (Qwen3 235B + e5-large embeddings), Anthropic Claude (claude-sonnet-4-20250514, `_claude` endpoint variants)
 ```
 
 Two repos:
@@ -78,6 +78,7 @@ Neo4j relationships of note:
 | Leads | `GET/POST /leads`, `PUT/DELETE /leads/{id}`, `POST /leads/batch-upload`, `GET/DELETE /leads/by-file`, `POST /leads/market-scores`, `GET /leads/market-scores/status` |
 | Market Research | `POST /market-research`, `POST /icp-research`, `GET /icp` |
 | Signals | `POST /signals-research`, `POST /generate-signals-batch`, `GET /fetch-signals`, `POST /signal_action`, `POST /signal_Ask`, `POST /edit` |
+| Claude-backed variants (added 2026-05) | `POST /market-research_claude`, `POST /icp-research_claude`, `POST /generate-signals-batch_claude`, `POST /signal_ask_claude` (last has 5-min/1M-token in-process budget). All four are alternate paths to the corresponding non-Claude endpoint, swapping the LangChain `agent_chain` for direct Anthropic Messages calls. |
 | Profiles | `GET/POST /profile/{type}`, `GET/POST/DELETE /customer_profile`, `POST /customer_profile/from_suggested_icp`, `POST /cleanup-company-profiles` |
 | Documents | `POST /upload-document`, `GET /document-status/{key}`, `GET /user-documents`, `PUT/DELETE /data-source/{id}` |
 | Org / Registration | `GET/POST /org`, `POST /connect_org`, `POST/GET /registration` |
@@ -92,6 +93,7 @@ Scout/Profiler/Strategist do not have dedicated routers. The dispatch happens in
 - **Vision:** Groq `llama-3.2-90b-vision-preview` (rarely invoked).
 - **Agent chain:** Together.ai `Qwen/Qwen3-235B-A22B-Instruct-2507`, used as the LangChain `ZERO_SHOT_REACT_DESCRIPTION` agent driving Tavily search (`max_iterations=20`, `max_execution_time=120s`).
 - **Embeddings:** `intfloat/multilingual-e5-large-instruct`, 1024-dim, called through `langchain_openai.OpenAIEmbeddings` pointed at TogetherAI's OpenAI-compatible API (`api.py:111-114, 3722-3734`). Indexed in Pinecone, namespaced by `org_id`.
+- **Anthropic Claude:** `claude-sonnet-4-20250514`, called via raw HTTP `POST https://api.anthropic.com/v1/messages` with `anthropic-version: 2023-06-01` (no SDK, no LangChain). Powers the four `_claude` endpoint variants: `/market-research_claude`, `/icp-research_claude`, `/generate-signals-batch_claude`, `/signal_ask_claude`. Tavily still drives external search; Claude replaces the `agent_chain` reasoning step. Signal-ask variant enforces a rolling 5-minute / 1M-token budget in-process (`api.py:61-752`) — lost on Render restart.
 - **Graph QA:** `GraphCypherQAChain` with `allow_dangerous_requests=True` — natural language → Cypher → Neo4j → answer. Used by `/ask`, `/chat`. **Risk: arbitrary Cypher generation with no validator.**
 
 Prompts are inline in `services.py` per component (5 market components × ~150 lines each, plus 4 ICP research functions, plus Scout/Profiler signal generators). Notable issues, partially documented in the repo's own `ANALYSIS_MARKET_ICP_RESEARCH_ISSUES.md`:
