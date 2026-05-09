@@ -40,6 +40,13 @@ coverage/
 .next/
 .cache/
 
+# Playwright runtime artifacts (failed-test screenshots, traces, .last-run.json).
+# Snapshot baselines live alongside spec files (e.g. e2e/journeys/*-snapshots/)
+# and ARE tracked — only test-results/ and report dirs are runtime output.
+test-results/
+playwright-report/
+playwright/.cache/
+
 # OS-specific
 *.tmp
 *.temp
