@@ -163,3 +163,15 @@ def test_get_market_score_status_404_when_no_run(client):
         )
 
     assert response.status_code == 404
+
+
+def test_trigger_market_scoring_missing_org_id(client):
+    """POST /leads/market-scores without org_id → 422.
+
+    LeadMarketScoresRequest.org_id has no default. Locks the requirement
+    so a refactor that makes org_id Optional doesn't silently allow
+    cross-tenant requests.
+    """
+    payload = {"user_id": TEST_USER_ID, "refresh": True}
+    response = client.post("/leads/market-scores", json=payload)
+    assert response.status_code == 422
