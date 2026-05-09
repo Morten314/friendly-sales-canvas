@@ -144,3 +144,16 @@ def test_post_market_research_invalid_component(client):
     body = response.json()
     assert "detail" in body
     assert "Unsupported" in body["detail"] or "unsupported" in body["detail"].lower()
+
+
+def test_post_market_research_missing_user_id(client):
+    """POST /market-research without user_id → 422 (pydantic field required).
+
+    MarketRequest.user_id has no default, so validation fires before the
+    handler. Ensures a refactor that adds a default (e.g. for an unauthed
+    fallback) doesn't silently bypass the requirement.
+    """
+    payload = _base_payload("market size & opportunity")
+    payload.pop("user_id")
+    response = client.post("/market-research", json=payload)
+    assert response.status_code == 422
