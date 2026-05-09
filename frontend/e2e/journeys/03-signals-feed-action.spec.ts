@@ -16,27 +16,33 @@ test('signals feed loads, accept persists, snapshot stable', async ({ page }) =>
   });
   await installCatchAllApiMock(page);
 
-  // Step 1: Navigate to signals feed. (Route is /signals, not /your-ai-team/scout/signals.)
-  await page.goto('/signals');
-  await expect(page.getByText(/signals/i).first()).toBeVisible();
-  await expect(page).toHaveScreenshot('01-signals-feed-loaded.png', { mask: maskDynamic(page) });
+  await test.step('navigate to signals feed', async () => {
+    // Route is /signals, not /your-ai-team/scout/signals.
+    await page.goto('/signals');
+    await expect(page.getByText(/signals/i).first()).toBeVisible();
+    await expect(page).toHaveScreenshot('01-signals-feed-loaded.png', { mask: maskDynamic(page) });
+  });
 
-  // Step 2: Verify signals rendered. The page maps signal_id → id, so our fixture
-  // is picked up; headline `Test signal N` is what renders as visible text.
-  await expect(page.getByText('Test signal 0')).toBeVisible({ timeout: 15000 });
-  await expect(page).toHaveScreenshot('02-signal-cards-visible.png', { mask: maskDynamic(page) });
+  await test.step('signals rendered from API mock', async () => {
+    // Page maps signal_id → id; headline `Test signal N` renders as visible text.
+    await expect(page.getByText('Test signal 0')).toBeVisible({ timeout: 15000 });
+    await expect(page).toHaveScreenshot('02-signal-cards-visible.png', { mask: maskDynamic(page) });
+  });
 
-  // Step 3: Click accept (thumbs-up icon button — no text label, so target via
-  // the lucide icon class on the SVG).
-  await page.locator('button:has(svg.lucide-thumbs-up)').first().click();
+  await test.step('click accept on first signal', async () => {
+    // Accept is an icon button (ThumbsUp lucide SVG) with no text label.
+    await page.locator('button:has(svg.lucide-thumbs-up)').first().click();
+  });
 
-  // Step 4: Assert request fired correctly.
-  const req = await actionRequest;
-  const payload = req.postDataJSON();
-  expect(payload.action).toBe('accept');
-  expect(payload.org_id).toBe(TEST_ORG_ID);
-  await expect(page).toHaveScreenshot('03-post-accept-loading.png', { mask: maskDynamic(page) });
+  await test.step('signal_action POST fired with right payload', async () => {
+    const req = await actionRequest;
+    const payload = req.postDataJSON();
+    expect(payload.action).toBe('accept');
+    expect(payload.org_id).toBe(TEST_ORG_ID);
+    await expect(page).toHaveScreenshot('03-post-accept-loading.png', { mask: maskDynamic(page) });
+  });
 
-  // Step 5: Final state.
-  await expect(page).toHaveScreenshot('04-post-accept-final.png', { mask: maskDynamic(page) });
+  await test.step('final post-accept state', async () => {
+    await expect(page).toHaveScreenshot('04-post-accept-final.png', { mask: maskDynamic(page) });
+  });
 });

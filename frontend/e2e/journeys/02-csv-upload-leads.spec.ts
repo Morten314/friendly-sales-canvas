@@ -33,38 +33,41 @@ test('CSV upload via Data Sources → batch-upload fires with right shape', asyn
     '/api/leads': { leads: leadList(3), total: 3 },
   });
 
-  // Step 1: Navigate to Data Sources tab.
-  await page.goto('/mission-control?tab=sources');
-  await expect(page).toHaveScreenshot('01-data-sources-empty.png', { mask: maskDynamic(page) });
-
-  // Step 2: Open Add Data Source dropdown.
-  await page.getByRole('button', { name: /add data source/i }).first().click();
-  await expect(page).toHaveScreenshot('02-add-data-source-menu.png', { mask: maskDynamic(page) });
-
-  // Step 3: Hover Connect to Systems submenu trigger; click Lead stream item.
-  // Radix submenus open on hover/click of the trigger.
-  await page.getByRole('menuitem', { name: /connect to systems/i }).hover();
-  await page.getByRole('menuitem', { name: /^lead stream$/i }).click();
-  await expect(page.getByText(/add leads/i).first()).toBeVisible();
-  await expect(page).toHaveScreenshot('03-lead-upload-form-open.png', { mask: maskDynamic(page) });
-
-  // Step 4: Set CSV file on the hidden input.
-  const csvBuffer = Buffer.from(
-    'company_name,contact_name,email\nAcme,Jane,jane@acme.test\nBeta,John,john@beta.test\n',
-    'utf-8',
-  );
-  await page.setInputFiles('#lead-csv-upload', {
-    name: 'test_leads.csv',
-    mimeType: 'text/csv',
-    buffer: csvBuffer,
+  await test.step('navigate to Data Sources tab', async () => {
+    await page.goto('/mission-control?tab=sources');
+    await expect(page).toHaveScreenshot('01-data-sources-empty.png', { mask: maskDynamic(page) });
   });
 
-  // Step 5: Submit. The submit button reads "Add leads" (changes to
-  // "Uploading..." while in flight).
-  await page.getByRole('button', { name: 'Add leads' }).last().click();
+  await test.step('open Add Data Source dropdown', async () => {
+    await page.getByRole('button', { name: /add data source/i }).first().click();
+    await expect(page).toHaveScreenshot('02-add-data-source-menu.png', { mask: maskDynamic(page) });
+  });
 
-  // Step 6: Confirm batch-upload request fired.
-  const req = await uploadRequest;
-  expect(req.method()).toBe('POST');
-  await expect(page).toHaveScreenshot('04-upload-fired.png', { mask: maskDynamic(page) });
+  await test.step('open Lead stream upload form', async () => {
+    // Radix submenus open on hover/click of the trigger.
+    await page.getByRole('menuitem', { name: /connect to systems/i }).hover();
+    await page.getByRole('menuitem', { name: /^lead stream$/i }).click();
+    await expect(page.getByText(/add leads/i).first()).toBeVisible();
+    await expect(page).toHaveScreenshot('03-lead-upload-form-open.png', { mask: maskDynamic(page) });
+  });
+
+  await test.step('set CSV file', async () => {
+    const csvBuffer = Buffer.from(
+      'company_name,contact_name,email\nAcme,Jane,jane@acme.test\nBeta,John,john@beta.test\n',
+      'utf-8',
+    );
+    await page.setInputFiles('#lead-csv-upload', {
+      name: 'test_leads.csv',
+      mimeType: 'text/csv',
+      buffer: csvBuffer,
+    });
+  });
+
+  await test.step('submit upload + assert batch-upload fired', async () => {
+    // Submit button reads "Add leads" (changes to "Uploading..." in flight).
+    await page.getByRole('button', { name: 'Add leads' }).last().click();
+    const req = await uploadRequest;
+    expect(req.method()).toBe('POST');
+    await expect(page).toHaveScreenshot('04-upload-fired.png', { mask: maskDynamic(page) });
+  });
 });
