@@ -92,9 +92,17 @@ export const icp = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
+/**
+ * Org/company profile fixture — includes `company_name` because
+ * MissionControl.tsx:871 checks `data.company_name || data.companyName` to
+ * decide whether to mark the company profile as "saved", which gates access
+ * to the Customer Profile and Data Sources tabs.
+ */
 export const orgProfile = {
   org_id: TEST_ORG_ID,
   name: 'Test Org',
+  company_name: 'Test Org',
+  companyName: 'Test Org',
   industry: 'SaaS',
   size: '50-500',
   website: 'https://test-org.test',
