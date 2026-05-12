@@ -6,28 +6,28 @@
 
 ## Goal
 
-Fork a new monorepo (`brewra-gtm-intelligence`) that lives alongside the two existing repos (`PWA-multi-tenancy`, `backend`) and absorbs both via `git subtree`. The monorepo is the CTO's working environment for AI-native, spec-driven development. The two slow devs (1 FE, 1 BE) continue working in the existing repos at their pace. After 1–2 weeks, full migration: slow devs move to the monorepo, old repos archived, deploy targets flipped.
+Fork a new monorepo (`brewra-gtm-intelligence`) that lives alongside the two existing repos (`PWA-multi-tenancy`, `backend`) and absorbs both via `git subtree`. The monorepo is the CTO's working environment for AI-native, spec-driven development. The two Brewra devs (1 FE, 1 BE) continue working in the existing repos at their pace. After 1–2 weeks, full migration: Brewra devs move to the monorepo, old repos archived, deploy targets flipped.
 
 ## Motivation
 
 - **Cross-stack atomicity.** Brewra features routinely span `/api/*` (FastAPI) and the React PWA. Today these ship as two coordinated commits across two repos. AI agents struggle with cross-repo atomicity. A monorepo enables one commit, one PR, one diff for the full change.
 - **Spec-driven workflow.** Specs (`/specs/`) and plans (`/plans/`) at the repo root, alongside both stacks, make brainstorm → spec → plan → implementation a first-class flow.
-- **Velocity asymmetry.** The CTO operates at AI-native speed (10–100× the slow devs). Forcing a synchronous monorepo migration on the team would either slow the CTO to the team's pace or overwhelm the team. The fork pattern lets the CTO move fast in the monorepo while the team continues unaffected.
+- **Velocity asymmetry.** The CTO operates at AI-native speed (10–100× the Brewra devs). Forcing a synchronous monorepo migration on the team would either slow the CTO to the team's pace or overwhelm the team. The fork pattern lets the CTO move fast in the monorepo while the team continues unaffected.
 
 ## Constraints
 
 - **MVP, 0 live users (as of 2026-05-08).** Brief downtime during cutover is acceptable. Deployment ceremony is not a constraint.
 - **Plan 05 reconciliation** of PWA's divergent `development/` and `production/` folder content is scheduled for the week of 2026-05-15. This spec assumes parallel tracker branches in the monorepo for ~1 week, then collapse onto `master` via Plan 05.
-- **Sync direction is one-way: slow devs → CTO.** Bidirectional sync between divergent layouts (canvas-at-root inside synthetic branches vs. `/frontend/` in the monorepo) is a quagmire. The CTO's monorepo work doesn't need to ship via the old repos before cutover (MVP, 0 users).
-- **Slow devs' actual workflow (verified 2026-05-08):** push to PWA `master` (which has both `development/friendly-sales-canvas/` and `production/friendly-sales-canvas/` folders that have diverged in content) and to backend's `main` branch. **PWA's `develop` and `production` branches are local-only on the CTO's machine** — they are subtree-split outputs from Plan 01 (`development/` folder → `develop` branch with canvas at root; `production/` folder → `production` branch with canvas at root). They serve as private synthetic sources for the monorepo's subtree imports. Backend's `dev` branch is old/stale; ignore.
+- **Sync direction is one-way: Brewra devs → CTO.** Bidirectional sync between divergent layouts (canvas-at-root inside synthetic branches vs. `/frontend/` in the monorepo) is a quagmire. The CTO's monorepo work doesn't need to ship via the old repos before cutover (MVP, 0 users).
+- **Brewra devs' actual workflow (verified 2026-05-08):** push to PWA `master` (which has both `development/friendly-sales-canvas/` and `production/friendly-sales-canvas/` folders that have diverged in content) and to backend's `main` branch. **PWA's `develop` and `production` branches are local-only on the CTO's machine** — they are subtree-split outputs from Plan 01 (`development/` folder → `develop` branch with canvas at root; `production/` folder → `production` branch with canvas at root). They serve as private synthetic sources for the monorepo's subtree imports. Backend's `dev` branch is old/stale; ignore.
 - **Sync is a 2-stage process (consequence of the above):** stage 1 refreshes PWA's local `develop`/`production` synthetic branches by pulling `origin/master` and re-running `git subtree split` on each folder. Stage 2 subtree-pulls from those refreshed local branches into the monorepo's tracker branches.
 
 ## Design at a glance
 
 ```
 /projects/Brewra/
-├── PWA-multi-tenancy/                  ← slow devs continue here (untouched)
-├── backend/                            ← slow devs continue here (untouched)
+├── PWA-multi-tenancy/                  ← Brewra devs continue here (untouched)
+├── backend/                            ← Brewra devs continue here (untouched)
 └── brewra-gtm-intelligence/            ← NEW. CTO's monorepo.
     ├── frontend/                          subtree from PWA-multi-tenancy
     ├── backend/                           subtree from backend repo
@@ -39,9 +39,9 @@ Fork a new monorepo (`brewra-gtm-intelligence`) that lives alongside the two exi
     └── (branches: master, develop, production, pwa-master-history)
 ```
 
-Slow devs push to old repos. CTO runs `bash scripts/sync.sh` to pull their changes onto monorepo's `develop` and `production` tracker branches. CTO works on `master` (which started from PWA's `develop` + backend), absorbing FE updates by `git merge develop` when ready.
+Brewra devs push to old repos. CTO runs `bash scripts/sync.sh` to pull their changes onto monorepo's `develop` and `production` tracker branches. CTO works on `master` (which started from PWA's `develop` + backend), absorbing FE updates by `git merge develop` when ready.
 
-After ~1 week: Plan 05 collapses `develop`/`production` divergence onto `master` via cherry-pick. Slow devs migrate. Old repos archived. Vercel + Render switched to the monorepo.
+After ~1 week: Plan 05 collapses `develop`/`production` divergence onto `master` via cherry-pick. Brewra devs migrate. Old repos archived. Vercel + Render switched to the monorepo.
 
 ## Architecture
 
@@ -70,7 +70,7 @@ After ~1 week: Plan 05 collapses `develop`/`production` divergence onto `master`
 | `production` | from PWA local `production` (= subtree-split of `production/`) + `backend main` | Tracker mirror of `production/` folder content. **Only `sync.sh`'s commits land here.** | Yes: `pwa production` (local synthetic) + `backend main`. |
 | `pwa-master-history` | from `pwa master` (no subtree path rewrite — keeps canvas-nested layout) | Read-only archive. Never write. | No. |
 
-`pwa develop` and `pwa production` here always mean the **CTO's local synthetic branches** in `/projects/Brewra/PWA-multi-tenancy/`. They are NOT on PWA origin and never will be. Slow devs continue to push only to PWA `master`. The monorepo's `pwa` remote points at the on-disk PWA repo, so subtree commands see those local synthetic branches.
+`pwa develop` and `pwa production` here always mean the **CTO's local synthetic branches** in `/projects/Brewra/PWA-multi-tenancy/`. They are NOT on PWA origin and never will be. Brewra devs continue to push only to PWA `master`. The monorepo's `pwa` remote points at the on-disk PWA repo, so subtree commands see those local synthetic branches.
 
 **Why this shape:**
 
@@ -222,7 +222,7 @@ In each old repo: `pre-monorepo-fork-<YYYY-MM-DD>` (push to origin).
 
 ### Two-stage sync (consequence of corrected branch reality)
 
-Slow devs push to PWA `master` (where the divergent `development/` and `production/` folders live) and to backend's `main`. The monorepo's tracker branches need updates from these. Because PWA's `develop` and `production` synthetic branches are local-only and produced via subtree split (not direct slow-dev work), **stage 1 of sync refreshes them**, then **stage 2 pulls into the monorepo**.
+Brewra devs push to PWA `master` (where the divergent `development/` and `production/` folders live) and to backend's `main`. The monorepo's tracker branches need updates from these. Because PWA's `develop` and `production` synthetic branches are local-only and produced via subtree split (not direct Brewra-dev work), **stage 1 of sync refreshes them**, then **stage 2 pulls into the monorepo**.
 
 ### How content flows
 
@@ -236,7 +236,7 @@ Slow devs push to PWA `master` (where the divergent `development/` and `producti
 | **Stage 2** | `backend main` | monorepo `master`, `develop`, `production` | `git subtree pull --prefix=backend backend main` per branch |
 | **Manual, after sync** | monorepo `develop` | monorepo `master` | `git checkout master && git merge develop` |
 
-`master` does **not** receive frontend subtree pulls. Frontend updates arrive via `git merge develop`, which is the CTO's "absorb slow-dev FE work into my branch" lever.
+`master` does **not** receive frontend subtree pulls. Frontend updates arrive via `git merge develop`, which is the CTO's "absorb Brewra-dev FE work into my branch" lever.
 
 **Re-split mechanics (Plan 01 didn't use `--rejoin`):** every re-split is a full rebuild. For this repo size, ~5–20 minutes total per sync. Splits are deterministic — same source produces same SHAs — so unchanged folders re-emerge with the same branch tips.
 
@@ -244,7 +244,7 @@ Slow devs push to PWA `master` (where the divergent `development/` and `producti
 
 ### Backend cherry-pick policy (during temp week)
 
-- **Backend changes originating in old `backend` repo (slow dev pushes to `main`):** sync.sh handles. Same commit appears on monorepo's master/develop/production via three independent subtree pulls.
+- **Backend changes originating in old `backend` repo (Brewra dev pushes to `main`):** sync.sh handles. Same commit appears on monorepo's master/develop/production via three independent subtree pulls.
 - **Backend changes originating in monorepo on master (CTO writes them):** do **NOT** propagate to tracker branches automatically. Default policy: **don't bother** — these ship at cutover. If a backend change must run in PWA-deployed land before cutover (rare given MVP/0-users), the CTO commits it to old `backend` repo additionally. Manual dual-commit, low frequency.
 
 ### `scripts/sync.sh`
@@ -509,7 +509,7 @@ log_stage "Sync complete"
 cat <<EOF
 
   PWA local refreshed:
-    master       <- origin/master (slow-dev work)
+    master       <- origin/master (Brewra-dev work)
     develop      = subtree-split(development/friendly-sales-canvas/)
     production   = subtree-split(production/friendly-sales-canvas/)
 
@@ -518,7 +518,7 @@ cat <<EOF
     production   <- pwa/production + backend/main
     master       <- backend/main   (frontend stays put)
 
-  To absorb slow-devs' frontend updates into your master working branch:
+  To absorb Brewra devs' frontend updates into your master working branch:
     git checkout master
     git merge develop -m "merge: absorb FE updates from devs"
 
@@ -543,7 +543,7 @@ EOF
 
 ### Sync frequency
 
-CTO's call. Sensible default: once per slow-dev push cycle (~daily during temp week with 2 slow devs at MVP velocity). Alternative: "before each work session" — run sync.sh, decide whether to merge develop into master.
+CTO's call. Sensible default: once per Brewra-dev push cycle (~daily during temp week with 2 Brewra devs at MVP velocity). Alternative: "before each work session" — run sync.sh, decide whether to merge develop into master.
 
 ## Branch protection during temp week
 
@@ -562,7 +562,7 @@ Convention only — solo dev + MVP doesn't justify GitHub branch-protection rule
 
 | Branch | Discipline rule |
 |---|---|
-| `master` | Only fast-forward pulls from origin (slow-dev work). No CTO commits. |
+| `master` | Only fast-forward pulls from origin (Brewra-dev work). No CTO commits. |
 | `develop` (local synthetic) | **Will be deleted and re-created on every sync.sh run.** Don't commit here — anything you add is destroyed. |
 | `production` (local synthetic) | Same as `develop` — deleted and re-created. Don't commit here. |
 | `refactor`, `backend_refactor`, etc. | CTO's analysis branches; orthogonal to sync workflow; safe to use freely. |
@@ -571,9 +571,9 @@ Convention only — solo dev + MVP doesn't justify GitHub branch-protection rule
 
 ## Cutover endgame (week 2)
 
-Sequence when ready to migrate the slow devs:
+Sequence when ready to migrate the Brewra devs:
 
-1. **Freeze + final sync.** Tell slow devs: "stop pushing for the next hour." They push any in-flight work, then CTO runs `bash scripts/sync.sh` one last time. Tracker branches reflect final state of old repos.
+1. **Freeze + final sync.** Tell Brewra devs: "stop pushing for the next hour." They push any in-flight work, then CTO runs `bash scripts/sync.sh` one last time. Tracker branches reflect final state of old repos.
 
 2. **Plan 05 — reconciliation on `master`.** Cherry-pick production-exclusive files from `production` tracker branch onto `master`:
    - `frontend/src/components/market-research/{MarketRankings,MarketRankingDrawer,MarketSegments,MarketSegmentsDrawer,SwotAnalysis,SwotAnalysisDrawer,TechnologyDrivers,TechnologyDriversDrawer}.tsx`
@@ -582,7 +582,7 @@ Sequence when ready to migrate the slow devs:
    - Resolve integration conflicts (likely some — routing/menus need to know about both feature groups)
    - Plan 05 has its own brainstorm/spec/plan when ready. The **cutover phase** (this section, executed separately from the monorepo-creation phase of Plan 02) gates on Plan 05 producing a `master` containing everything. Plan 02's monorepo-creation phase itself does NOT gate on Plan 05 — it can run today.
 
-3. **Communicate cutover.** Tell slow devs:
+3. **Communicate cutover.** Tell Brewra devs:
    - "Stop pushing to PWA-multi-tenancy and backend — final state captured."
    - "Clone `brewra-gtm-intelligence`, branch off `master`."
    - Onboard them on the new flow (feature branches → PR to `master`, instead of direct commits to `develop`/`production`).
@@ -611,7 +611,7 @@ Sequence when ready to migrate the slow devs:
    - `pwa-master-history` branch in monorepo provides in-repo access to PWA's pre-Plan-01 SHAs.
 
 7. **Clean up monorepo tracker branches** (optional, no rush):
-   - `develop`, `production`: served their purpose. Delete after ~1–2 weeks post-cutover (in case a slow dev needs to look up "where did X go") then delete.
+   - `develop`, `production`: served their purpose. Delete after ~1–2 weeks post-cutover (in case a Brewra dev needs to look up "where did X go") then delete.
    - `pwa-master-history`: keep indefinitely.
 
 8. **Future branch model takes over.** `master` + `dev` (+ maybe `stage`). Branch `dev` off `master`; re-establish workflow (feature branches → PR to `dev` → release-time merge to `master`, or whatever). Outside Plan 02's scope.
@@ -620,7 +620,7 @@ Sequence when ready to migrate the slow devs:
 
 - Smooth path: half a day.
 - With Plan 05 conflicts: ~1–2 days for cherry-picks, then a few hours for everything else.
-- Main timing variable: slow devs' availability to validate the migration.
+- Main timing variable: Brewra devs' availability to validate the migration.
 
 ## Directory structure inside the monorepo
 
@@ -666,15 +666,15 @@ Spec-driven flow:
 | `analysis/` (most thorough set per CLAUDE.md) | `/docs/analysis/` | Primary reference. |
 | `claude-analysis/`, `detailed-analysis/`, `PWA-multi-tenancy/analysis/`, `backend/analysis/` | Triage: keep unique content under `/docs/analysis/legacy/`, drop redundant duplicates | CLAUDE.md says these are "mostly superseded." One-time prune. |
 | `safety_net_1/` (verify.sh + snapshots) | `/scripts/safety_net/` | Verification tool; conceptually a script. Snapshots stay. **Note:** `verify.sh`'s hardcoded default paths (`/projects/Brewra/backend`, `/projects/Brewra/PWA-multi-tenancy/...`) reference the parent layout. Plan-writing must update these defaults to point at the monorepo's `/backend/` and `/frontend/`, or document the env-var override pattern that's already supported. |
-| `CLAUDE.md`, `AGENTS.md` | Adapted into monorepo's `/CLAUDE.md`, `/AGENTS.md`; **parent files DELETED** | Slow devs don't use agents; parent files have no remaining audience post-fork. |
+| `CLAUDE.md`, `AGENTS.md` | Adapted into monorepo's `/CLAUDE.md`, `/AGENTS.md`; **parent files DELETED** | Brewra devs don't use agents; parent files have no remaining audience post-fork. |
 
 ### What does NOT move
 
-- Sibling repos (`PWA-multi-tenancy/`, `backend/`) — slow devs' workspaces. Archived at cutover.
+- Sibling repos (`PWA-multi-tenancy/`, `backend/`) — Brewra devs' workspaces. Archived at cutover.
 - Frontend's root `.md` docs (`CRM_API_INTEGRATION_GUIDE.md`, `JWT_INTEGRATION_GUIDE.md`, `SCOUT_API_REQUEST_SCHEMAS.md`, etc.) — these subtree-import into `/frontend/` along with the canvas. **Leave them in `/frontend/` during temp week** so subtree pulls stay clean. Optional post-cutover hoist to `/docs/` if desired.
 - Backend's self-authored guides at its root (`API_DOCUMENTATION.md`, etc.) — same: stay in `/backend/` during temp week, optional hoist post-cutover.
 
-**Why we don't hoist subtree contents during temp week:** every file moved out of `/frontend/` or `/backend/` is a file that won't subtree-pull cleanly anymore. Slow devs' updates to those root-level docs need to land somewhere; if hoisted, the subtree pull can't update both copies automatically.
+**Why we don't hoist subtree contents during temp week:** every file moved out of `/frontend/` or `/backend/` is a file that won't subtree-pull cleanly anymore. Brewra devs' updates to those root-level docs need to land somewhere; if hoisted, the subtree pull can't update both copies automatically.
 
 ## CLAUDE.md / AGENTS.md adaptation
 
@@ -707,7 +707,7 @@ Skeleton (actual prose written during plan execution):
 >   2. Spec → plan-write → `/plans/NN-feature-X.md` (execution intent, ordered steps)
 >   3. Plan → commits referencing the plan
 > - **Spec and plan persist** — canonical record of *why* and *how*. Don't delete after execution.
-> - **Sync workflow** (during temp week only): `bash scripts/sync.sh` pulls slow-dev changes from old repos. `git merge develop` on master absorbs FE updates. Removed from CLAUDE.md after cutover.
+> - **Sync workflow** (during temp week only): `bash scripts/sync.sh` pulls Brewra-dev changes from old repos. `git merge develop` on master absorbs FE updates. Removed from CLAUDE.md after cutover.
 
 ### Single root CLAUDE.md (no per-stack split)
 
@@ -715,7 +715,7 @@ Single root file matches the parent pattern and is simpler for MVP. Splitting in
 
 ### Parent CLAUDE.md / AGENTS.md fate
 
-**Removed at monorepo creation.** Slow devs don't use agentic dev; parent files have no audience after fork. No pointer files; no temp-week retention.
+**Removed at monorepo creation.** Brewra devs don't use agentic dev; parent files have no audience after fork. No pointer files; no temp-week retention.
 
 ## Recovery anchors + rollback strategy
 
@@ -727,7 +727,7 @@ Single root file matches the parent pattern and is simpler for MVP. Splitting in
 | `develop-initial-2026-05-05`, `production-initial-2026-05-05` | PWA repo, on origin (pushed 2026-05-08) | First commits on PWA's local synthetic branches post-Plan-01. Originally local-only; pushed during Plan 02 Task 1. |
 | `pre-monorepo-fork-2026-05-08` | PWA repo (at master tip) + backend repo (at main tip), on origin | State of each old repo at fork moment. Created during Plan 02 Task 1. |
 | `fork-point-2026-05-08` | Monorepo, on origin | Tagged after subtree adds + scripts/sync.sh, before any CTO work. |
-| `pwa-master-history` branch | Monorepo | PWA's master at fork moment (canvas-nested layout preserved). Recovery anchor for "what slow devs see." |
+| `pwa-master-history` branch | Monorepo | PWA's master at fork moment (canvas-nested layout preserved). Recovery anchor for "what Brewra devs see." |
 | `cutover-<YYYY-MM-DD>` | Monorepo, on origin | Tagged at cutover (future). |
 | `pre-monorepo-cutover-<YYYY-MM-DD>` | PWA repo + backend repo, on origin | Tagged at cutover before old repos archived (future). |
 | Old repos on origin | GitHub | Independent and complete throughout temp week. Archived at cutover, never deleted. |
@@ -740,11 +740,11 @@ Single root file matches the parent pattern and is simpler for MVP. Splitting in
 
 **Level 3 — subtree pull conflict, unfixable mid-operation.** WT dirty with markers. Find pre-pull SHA from sync.sh log or reflog. `git reset --hard <pre-pull-sha>`. Investigate why upstream conflicts (probably an accidental tracker commit). ~30 min.
 
-**Level 4 — fundamental issue with the monorepo.** Nuke local clone (`rm -rf brewra-gtm-intelligence/`). If GitHub state also wrong: delete GitHub repo, recreate, redo Plan 02 from `pre-monorepo-fork-<YYYY-MM-DD>` anchors. Slow devs unaffected. Half a day.
+**Level 4 — fundamental issue with the monorepo.** Nuke local clone (`rm -rf brewra-gtm-intelligence/`). If GitHub state also wrong: delete GitHub repo, recreate, redo Plan 02 from `pre-monorepo-fork-<YYYY-MM-DD>` anchors. Brewra devs unaffected. Half a day.
 
-**Level 5 — cutover deploy fails.** Old projects/services not disabled until new ones verified (per cutover step 4). Investigate new. Re-attempt cutover when fixed. Slow devs back to "stop pushing" → "resume pushing." Hours to days.
+**Level 5 — cutover deploy fails.** Old projects/services not disabled until new ones verified (per cutover step 4). Investigate new. Re-attempt cutover when fixed. Brewra devs back to "stop pushing" → "resume pushing." Hours to days.
 
-**Level 6 — full retreat: monorepo doesn't fit, abandon Plan 02.** Old repos un-archived if archived. Slow devs continue. CTO's monorepo work cherry-picked back into old repos manually, or abandoned. Pre-cutover: ~1 week of CTO work lost. Post-cutover: much higher cost (re-onboarding, deploy reverse-flip).
+**Level 6 — full retreat: monorepo doesn't fit, abandon Plan 02.** Old repos un-archived if archived. Brewra devs continue. CTO's monorepo work cherry-picked back into old repos manually, or abandoned. Pre-cutover: ~1 week of CTO work lost. Post-cutover: much higher cost (re-onboarding, deploy reverse-flip).
 
 ### Key invariant
 
@@ -773,8 +773,8 @@ Post-cutover, this invariant softens (old repos archived, monorepo canonical). R
 ## Open questions / dependencies
 
 - **Plan 05 timing.** Spec assumes Plan 05 happens within ~1 week of monorepo creation. If Plan 05 slips significantly, Plan 02's tracker branches grow stale and backend cherry-pick burden compounds. Re-evaluate after 2 weeks if Plan 05 not complete.
-- **Slow-dev availability for cutover.** Half-day to two-day cutover requires their availability for validation. Schedule explicitly.
-- **GitHub repo:** Plan 02 uses CTO's personal account `dicemanx/brewra-gtm-intelligence` initially. Transfer to org later via GitHub's "Transfer ownership" (preserves history, issues, PRs, and remote URLs via redirect). Slow-dev onboarding at cutover should happen against whichever origin is canonical at that moment.
+- **Brewra-dev availability for cutover.** Half-day to two-day cutover requires their availability for validation. Schedule explicitly.
+- **GitHub repo:** Plan 02 uses CTO's personal account `dicemanx/brewra-gtm-intelligence` initially. Transfer to org later via GitHub's "Transfer ownership" (preserves history, issues, PRs, and remote URLs via redirect). Brewra-dev onboarding at cutover should happen against whichever origin is canonical at that moment.
 - **Re-split mechanics resolved (Plan 01 didn't use `--rejoin`).** Re-splits in `sync.sh` stage 1 are full rebuilds. Deterministic — same source produces same SHAs — so unchanged folders re-emerge with the same branch tips. Cost per sync: 5–20 min for repo of this size. Acceptable.
 - **Existing PWA local synthetic branches.** Plan 01 already produced `develop` and `production` branches on the CTO's PWA local repo. Plan 02 uses these as initial subtree-add sources. Future syncs delete-and-recreate them — any commits the CTO accidentally added (e.g., Plan 01's BRANCHES.md commits on those branches) are lost on first re-sync. This is acceptable per the "discipline rule: don't commit to PWA's local develop/production."
 
@@ -799,4 +799,4 @@ What "done" does NOT include (handled by Plan 05 / cutover, not Plan 02):
 - Tracker branches deleted.
 - Old repos archived on GitHub.
 - Vercel / Render deploy targets switched.
-- Slow devs onboarded onto monorepo.
+- Brewra devs onboarded onto monorepo.

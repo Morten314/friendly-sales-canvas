@@ -618,7 +618,7 @@ npm run test:e2e:update-snapshots      # accept visual diffs (deliberate use)
 - **No CI gate.** Discipline is the developer's responsibility. If a refactor commits land without running the suite, nothing catches it. Per Q7=A.
 - **Single OS canonical.** Goldens are WSL2/Linux only. A contributor on macOS or native Windows will get spurious visual diffs and must regenerate locally on Linux to commit.
 - **Multi-tenancy enforcement is not characterized** — the `WHERE org_id` filter is mocked away. A refactor that drops the filter clause silently will pass these tests.
-- **The two-PWA reality.** Playwright tests target the monorepo `/frontend/` only. The `PWA-multi-tenancy/development/` and `PWA-multi-tenancy/production/` workspaces (slow-dev sources during the temp week) are out of scope and will not be characterized.
+- **The two-PWA reality.** Playwright tests target the monorepo `/frontend/` only. The `PWA-multi-tenancy/development/` and `PWA-multi-tenancy/production/` workspaces (Brewra-dev sources during the temp week) are out of scope and will not be characterized.
 
 ---
 

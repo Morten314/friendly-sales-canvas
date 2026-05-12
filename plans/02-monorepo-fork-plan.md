@@ -4,7 +4,7 @@
 
 **Goal:** Create the `brewra-gtm-intelligence` monorepo locally and on GitHub. Populate four branches (`master`, `develop`, `production`, `pwa-master-history`) via `git subtree` imports from the existing `PWA-multi-tenancy` and `backend` repos (no `--squash` — full history preserved). Install `scripts/sync.sh`. Migrate plans, specs, analyses, and `safety_net_1` from `/projects/Brewra/` parent into the monorepo. Adapt `CLAUDE.md` and `AGENTS.md` for the monorepo. Delete the parent `CLAUDE.md` and `AGENTS.md`.
 
-**Architecture:** Fork pattern via `git subtree`. Old repos remain independent and continue to serve as the slow devs' workspaces during a temp window of ~1–2 weeks. The `production` tracker branch is built in a temporary `git worktree` (option c from spec) for clean subtree metadata. The `sync.sh` script enables ongoing devs→CTO syncs during temp week.
+**Architecture:** Fork pattern via `git subtree`. Old repos remain independent and continue to serve as the Brewra devs' workspaces during a temp window of ~1–2 weeks. The `production` tracker branch is built in a temporary `git worktree` (option c from spec) for clean subtree metadata. The `sync.sh` script enables ongoing devs→CTO syncs during temp week.
 
 **Tech Stack:** git (subtree, worktree, tags, fetch); bash; GitHub (CLI or web).
 
@@ -12,7 +12,7 @@
 
 **Out of scope (future plans):**
 - Plan 05 (PWA `develop`/`production` reconciliation onto `master`)
-- Cutover (Vercel/Render reconfig, slow-dev onboarding, old-repo archival)
+- Cutover (Vercel/Render reconfig, Brewra-dev onboarding, old-repo archival)
 
 ---
 
@@ -25,7 +25,7 @@ Throughout this plan, `<TODAY>` is the actual execution date in `YYYY-MM-DD` for
 Before executing, agents must understand the current branch state:
 
 - **PWA (`/projects/Brewra/PWA-multi-tenancy/`):**
-  - On origin: `master` (slow-dev workspace; contains `development/friendly-sales-canvas/` and `production/friendly-sales-canvas/` folders that have diverged), `feature/panels` (a slow dev's WIP — ignore until merged).
+  - On origin: `master` (Brewra-dev workspace; contains `development/friendly-sales-canvas/` and `production/friendly-sales-canvas/` folders that have diverged), `feature/panels` (a Brewra dev's WIP — ignore until merged).
   - **Local-only on the CTO's machine: `develop`, `production`** — synthetic branches produced by Plan 01's subtree splits of `development/` and `production/` folders respectively. These are NOT on PWA origin and are NOT to be pushed there.
 - **backend (`/projects/Brewra/backend/`):**
   - Primary branch: **`main`** (NOT `master`).
@@ -41,7 +41,7 @@ Verify all of these are true before starting Task 1:
 - [ ] `/projects/Brewra/PWA-multi-tenancy/` exists, is a git repo, and has local-only `develop` and `production` branches (Plan 01 outputs).
 - [ ] `/projects/Brewra/backend/` exists, is a git repo, has `main` branch.
 - [ ] `/projects/Brewra/plans/02-monorepo-fork-spec.md` exists and you have read it.
-- [ ] No critical work in flight from slow devs (the next ~1–2 hours of monorepo creation should not race with their pushes).
+- [ ] No critical work in flight from Brewra devs (the next ~1–2 hours of monorepo creation should not race with their pushes).
 
 If any of these fail, stop and resolve before proceeding.
 
@@ -86,7 +86,7 @@ Expected: three lines (one per tag).
 
 - [ ] **Step 4: Create `pre-monorepo-fork-<TODAY>` tag on PWA at master tip**
 
-Tag is placed on PWA `master` — that's where the slow devs actually push. Anchors "what slow devs see at fork moment." (Recovery of synthetic develop/production state is via `develop-initial-2026-05-05` and `production-initial-2026-05-05` tags pushed in Step 2.)
+Tag is placed on PWA `master` — that's where the Brewra devs actually push. Anchors "what Brewra devs see at fork moment." (Recovery of synthetic develop/production state is via `develop-initial-2026-05-05` and `production-initial-2026-05-05` tags pushed in Step 2.)
 
 Run:
 ```bash
@@ -97,7 +97,7 @@ Expected: `* [new tag]` line.
 
 - [ ] **Step 5: Verify backend repo working tree is clean and bring local `main` up to date**
 
-Backend's primary branch is `main` (not `master`). Local `main` may be behind origin if slow devs have pushed; fast-forward it before tagging.
+Backend's primary branch is `main` (not `master`). Local `main` may be behind origin if Brewra devs have pushed; fast-forward it before tagging.
 
 Run:
 ```bash
@@ -288,7 +288,7 @@ B2B GTM/sales-intelligence PWA. Frontend (React/Vite/TypeScript) + backend (Fast
 
 ## Branches
 
-This repo is in a **temporary parallel-branch state** during fork transition (~1–2 weeks). See `BRANCHES.md` for the temp model and `scripts/sync.sh` for syncing slow-dev work from old repos.
+This repo is in a **temporary parallel-branch state** during fork transition (~1–2 weeks). See `BRANCHES.md` for the temp model and `scripts/sync.sh` for syncing Brewra-dev work from old repos.
 
 ## Common commands
 
@@ -299,7 +299,7 @@ cd frontend && npm install && npm run dev
 # backend
 cd backend && pip install -r requirements.txt && python main.py
 
-# sync slow-dev work from old repos (temp week only)
+# sync Brewra-dev work from old repos (temp week only)
 bash scripts/sync.sh
 ```
 
@@ -313,7 +313,7 @@ Create file `/projects/Brewra/brewra-gtm-intelligence/BRANCHES.md` with content:
 ```markdown
 # Branches
 
-This repo is in a **temporary parallel-branch state** during the fork transition. After Plan 05 reconciliation and slow-dev migration, this file gets rewritten for the future `master`/`dev`(/`stage`) model.
+This repo is in a **temporary parallel-branch state** during the fork transition. After Plan 05 reconciliation and Brewra-dev migration, this file gets rewritten for the future `master`/`dev`(/`stage`) model.
 
 ## Current branches (temp week)
 
@@ -330,11 +330,11 @@ Only `master` gets your hand-typed commits. `sync.sh` updates `develop`/`product
 
 ## Workflows
 
-**Sync from slow devs:** `bash scripts/sync.sh` — pulls latest from old PWA + backend repos onto tracker branches.
+**Sync from Brewra devs:** `bash scripts/sync.sh` — pulls latest from old PWA + backend repos onto tracker branches.
 
 **Absorb FE updates into master:** `git checkout master && git merge develop`.
 
-**Backend changes:** if originated in old `backend` repo (slow dev pushes to `main`), `sync.sh` propagates to all three monorepo branches automatically. If originated on monorepo's `master`, they don't propagate to trackers — they ship via cutover (this is intentional per spec).
+**Backend changes:** if originated in old `backend` repo (Brewra dev pushes to `main`), `sync.sh` propagates to all three monorepo branches automatically. If originated on monorepo's `master`, they don't propagate to trackers — they ship via cutover (this is intentional per spec).
 
 ## Future state (post-cutover)
 
@@ -995,7 +995,7 @@ log_stage "Sync complete"
 cat <<EOF
 
   PWA local refreshed:
-    master       <- origin/master (slow-dev work)
+    master       <- origin/master (Brewra-dev work)
     develop      = subtree-split(development/friendly-sales-canvas/)
     production   = subtree-split(production/friendly-sales-canvas/)
 
@@ -1004,7 +1004,7 @@ cat <<EOF
     production   <- pwa/production + backend/main
     master       <- backend/main   (frontend stays put)
 
-  To absorb slow-devs' frontend updates into your master working branch:
+  To absorb Brewra devs' frontend updates into your master working branch:
     git checkout master
     git merge develop -m "merge: absorb FE updates from devs"
 
@@ -1206,7 +1206,7 @@ Repeat the diff-and-decide pattern from Step 7. Move unique content to `docs/ana
 
 - [ ] **Step 9: Note the per-repo analyses inside subtreed content**
 
-`/projects/Brewra/PWA-multi-tenancy/analysis/` and `/projects/Brewra/backend/analysis/` (if they exist) are inside the slow devs' workspaces — DO NOT touch them. They're separate from the monorepo. They'll be subsumed when those repos are eventually archived (post-cutover, future plan).
+`/projects/Brewra/PWA-multi-tenancy/analysis/` and `/projects/Brewra/backend/analysis/` (if they exist) are inside the Brewra devs' workspaces — DO NOT touch them. They're separate from the monorepo. They'll be subsumed when those repos are eventually archived (post-cutover, future plan).
 
 If they have unique content the CTO wants in the monorepo, copy (don't move) into `docs/analysis/legacy/`:
 ```bash
@@ -1360,7 +1360,7 @@ brewra-gtm-intelligence/
 ├── frontend/                # React/Vite/TypeScript PWA (subtree from PWA-multi-tenancy)
 ├── backend/                 # FastAPI Python service (subtree from backend repo)
 ├── scripts/
-│   ├── sync.sh              # pull slow-dev work from old repos (temp week only)
+│   ├── sync.sh              # pull Brewra-dev work from old repos (temp week only)
 │   └── safety_net/          # verification snapshots + verify.sh
 ├── specs/                   # design intent (output of brainstorming)
 ├── plans/                   # execution intent (output of plan-writing)
@@ -1380,7 +1380,7 @@ The two stacks share only an HTTP contract. They live in one repo so cross-cutti
 ```markdown
 ## Monorepo Branch Model (during temp week ending ~2026-05-22)
 
-This repo is in a temporary parallel-branch state during the fork transition. After Plan 05 reconciliation and slow-dev migration, this section gets rewritten for the future `master`/`dev`(/`stage`) model.
+This repo is in a temporary parallel-branch state during the fork transition. After Plan 05 reconciliation and Brewra-dev migration, this section gets rewritten for the future `master`/`dev`(/`stage`) model.
 
 | Branch | Role | Policy |
 |---|---|---|
@@ -1391,7 +1391,7 @@ This repo is in a temporary parallel-branch state during the fork transition. Af
 
 **Discipline rule:** only `master` gets your hand-typed commits. `sync.sh` updates `develop`/`production` automatically; manual commits there will conflict with the next sync.
 
-**Sync workflow (slow devs → CTO):**
+**Sync workflow (Brewra devs → CTO):**
 ```bash
 bash scripts/sync.sh                         # pulls latest from old PWA + backend repos
 git checkout master && git merge develop     # absorb FE updates into master (manual, when ready)
@@ -1400,7 +1400,7 @@ git checkout master && git merge develop     # absorb FE updates into master (ma
 `sync.sh` is robust (preflight checks, dry-run mode, restores caller's branch, reports per-pull diffs). Read its head comment for usage.
 
 **Backend changes during temp week:**
-- Originating in old `backend` repo (slow dev pushes to `main`): `sync.sh` propagates to all three monorepo branches automatically.
+- Originating in old `backend` repo (Brewra dev pushes to `main`): `sync.sh` propagates to all three monorepo branches automatically.
 - Originating on monorepo's `master` (CTO writes): do NOT propagate to tracker branches. They ship via cutover. Per spec, this is intentional.
 
 **Future state (post-cutover):** `master` + `dev` (+ optional `stage`). Tracker branches deleted. `pwa-master-history` retained as long-term archive.
@@ -1444,7 +1444,7 @@ bash scripts/sync.sh             # full sync (develop, production, master)
 bash scripts/sync.sh --dry-run   # preview without changes
 
 git checkout master
-git merge develop                # absorb slow-dev FE updates into master
+git merge develop                # absorb Brewra-dev FE updates into master
 ```
 ```
 
@@ -1461,7 +1461,7 @@ This repo is structured for AI-native development: cross-cutting tasks (changes 
   2. Spec → plan-write → `/plans/NN-feature-X.md` (execution intent, ordered steps)
   3. Plan → commits referencing the plan in commit messages
 - **Spec and plan persist** — canonical record of *why* and *how*. Don't delete after execution; agents reference them.
-- **Sync workflow** (during temp week only): `bash scripts/sync.sh` pulls slow-dev changes from old repos. `git merge develop` on master absorbs FE updates. After cutover (Plan 05 + Plan 06), this section is removed.
+- **Sync workflow** (during temp week only): `bash scripts/sync.sh` pulls Brewra-dev changes from old repos. `git merge develop` on master absorbs FE updates. After cutover (Plan 05 + Plan 06), this section is removed.
 ```
 
 6. **Update "Gotchas" section** — change path references:
@@ -1531,7 +1531,7 @@ git checkout master
 
 ## Task 13: Delete parent `CLAUDE.md` and `AGENTS.md`
 
-Per spec: parent files have no audience post-fork. Slow devs don't use agentic dev.
+Per spec: parent files have no audience post-fork. Brewra devs don't use agentic dev.
 
 **Files:**
 - Delete: `/projects/Brewra/CLAUDE.md`
@@ -1721,13 +1721,13 @@ git push origin master
 
 ## Done
 
-The monorepo is created. Slow devs continue working in the old PWA-multi-tenancy and backend repos. CTO's AI-native work happens in `brewra-gtm-intelligence/` on `master`.
+The monorepo is created. Brewra devs continue working in the old PWA-multi-tenancy and backend repos. CTO's AI-native work happens in `brewra-gtm-intelligence/` on `master`.
 
 **Next steps (separate plans, not part of Plan 02):**
 
-1. **Run `bash scripts/sync.sh` regularly** during the temp week to keep tracker branches current with slow-dev work.
+1. **Run `bash scripts/sync.sh` regularly** during the temp week to keep tracker branches current with Brewra-dev work.
 2. **Plan 05** — brainstorm/spec/plan for `develop`/`production` reconciliation onto `master`.
-3. **Cutover plan** — Vercel/Render reconfig, slow-dev onboarding, old-repo archival. Gated on Plan 05 completion.
+3. **Cutover plan** — Vercel/Render reconfig, Brewra-dev onboarding, old-repo archival. Gated on Plan 05 completion.
 
 **Recovery path if anything went wrong during Plan 02 execution:**
 

@@ -255,7 +255,7 @@ log_stage "Sync complete"
 cat <<EOF
 
   PWA local refreshed:
-    master       <- origin/master (slow-dev work)
+    master       <- origin/master (Brewra-dev work)
     develop      = subtree-split(development/friendly-sales-canvas/)
     production   = subtree-split(production/friendly-sales-canvas/)
 
@@ -264,7 +264,7 @@ cat <<EOF
     production   <- pwa/production + backend/main
     master       <- backend/main   (frontend stays put)
 
-  To absorb slow-devs' frontend updates into your master working branch:
+  To absorb Brewra devs' frontend updates into your master working branch:
     git checkout master
     git merge develop -m "merge: absorb FE updates from devs"
 

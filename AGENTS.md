@@ -11,7 +11,7 @@ brewra-gtm-intelligence/
 ├── frontend/                # React/Vite/TypeScript PWA (subtree from PWA-multi-tenancy)
 ├── backend/                 # FastAPI Python service (subtree from backend repo)
 ├── scripts/
-│   ├── sync.sh              # pull slow-dev work from old repos (temp week only)
+│   ├── sync.sh              # pull Brewra-dev work from old repos (temp week only)
 │   └── safety_net/          # verification snapshots + verify.sh
 ├── specs/                   # design intent (output of brainstorming)
 ├── plans/                   # execution intent (output of plan-writing)
@@ -32,7 +32,7 @@ The frontend was subtree-imported from `PWA-multi-tenancy/develop` (which is a `
 
 ## Monorepo Branch Model (during temp week ending ~2026-05-22)
 
-This repo is in a temporary parallel-branch state during the fork transition. After Plan 05 reconciliation and slow-dev migration, this section gets rewritten for the future `master`/`dev`(/`stage`) model.
+This repo is in a temporary parallel-branch state during the fork transition. After Plan 05 reconciliation and Brewra-dev migration, this section gets rewritten for the future `master`/`dev`(/`stage`) model.
 
 | Branch | Role | Policy |
 |---|---|---|
@@ -43,9 +43,9 @@ This repo is in a temporary parallel-branch state during the fork transition. Af
 
 **Discipline rule:** only `master` gets your hand-typed commits. `sync.sh` updates `develop`/`production` automatically; manual commits there will conflict with the next sync.
 
-**Slow-dev workflow during temp week:** the old repos (`/projects/Brewra/PWA-multi-tenancy/`, `/projects/Brewra/backend/`) remain the slow devs' workspaces and the deploy sources. They push to `PWA master` and `backend main` as usual. The CTO syncs into the monorepo via `sync.sh`.
+**Brewra-dev workflow during temp week:** the old repos (`/projects/Brewra/PWA-multi-tenancy/`, `/projects/Brewra/backend/`) remain the Brewra devs' workspaces and the deploy sources. They push to `PWA master` and `backend main` as usual. The CTO syncs into the monorepo via `sync.sh`.
 
-**Sync workflow (slow devs → CTO):**
+**Sync workflow (Brewra devs → CTO):**
 ```bash
 bash scripts/sync.sh                         # pulls latest from old PWA + backend repos
 git checkout master && git merge develop     # absorb FE updates into master (manual, when ready)
@@ -54,7 +54,7 @@ git checkout master && git merge develop     # absorb FE updates into master (ma
 `sync.sh` is robust (preflight checks, dry-run mode, restores caller's branch, reports per-pull diffs). Read its head comment for usage.
 
 **Backend changes during temp week:**
-- Originating in old `backend` repo (slow dev pushes to `main`): `sync.sh` propagates to all three monorepo branches automatically.
+- Originating in old `backend` repo (Brewra dev pushes to `main`): `sync.sh` propagates to all three monorepo branches automatically.
 - Originating on monorepo's `master` (CTO writes): do NOT propagate to tracker branches. They ship via cutover. Per spec, this is intentional.
 
 **Recovery anchors:**
@@ -122,7 +122,7 @@ This repo is structured for AI-native development: cross-cutting tasks (changes 
   2. Spec → plan-write → `/plans/NN-feature-X.md` (execution intent, ordered steps)
   3. Plan → commits referencing the plan in commit messages
 - **Spec and plan persist** — canonical record of *why* and *how*. Don't delete after execution; agents reference them.
-- **Sync workflow** (during temp week only): `bash scripts/sync.sh` pulls slow-dev changes from old repos. `git merge develop` on master absorbs FE updates. After cutover (Plan 05 + Plan 06), this section is removed.
+- **Sync workflow** (during temp week only): `bash scripts/sync.sh` pulls Brewra-dev changes from old repos. `git merge develop` on master absorbs FE updates. After cutover (Plan 05 + Plan 06), this section is removed.
 
 ## Gotchas (things you can't infer from the code)
 
