@@ -1,93 +1,26 @@
-import { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
 import { Layout } from "@/components/layout/Layout";
 import { usePageTitle } from "@/hooks/usePageTitle";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MessageSquare, Users } from "lucide-react";
-import StrategistWorkspace from "@/components/market-research/StrategistWorkspace";
-import StrategistLeadStream from "@/components/strategist/StrategistLeadStream";
-import StrategistCohortTable from "@/components/strategist/StrategistCohortTable";
+import BoardPage from "@/components/strategist/board/BoardPage";
+import CohortPage from "@/components/strategist/cohort/CohortPage";
+import PackagePage from "@/components/strategist/package/PackagePage";
+import { useParams } from "react-router-dom";
 
-interface StrategistContext {
-  leads: { name: string; company: string; jobTitle: string; email?: string; tenure?: string; source?: string; signals?: string[] }[];
-  opportunity?: string;
-  icp?: string;
-  triggerPrompt: string;
-  cohortContext?: {
-    cohortName: string;
-    leadCount: number;
-    playType: string;
-    scoutSignal: string;
-    confidence: string;
-    icpFitRange: string;
-    compositeScore: number;
-    briefSummary: string;
-    chatActions: { label: string }[];
-  };
+type View = "board" | "cohort" | "package";
+
+interface Props {
+  view?: View;
 }
 
-const Deals = () => {
+const Deals = ({ view = "board" }: Props) => {
   usePageTitle("🧭 Strategist - Brewra");
-  const navigate = useNavigate();
-  const { tab } = useParams<{ tab?: string }>();
-  const activeTab = tab || "workspace";
-  const [context, setContext] = useState<StrategistContext | null>(null);
-
-  useEffect(() => {
-    try {
-      const stored = sessionStorage.getItem('strategistContext');
-      if (stored) {
-        const parsed = JSON.parse(stored) as StrategistContext;
-        setContext(parsed);
-        sessionStorage.removeItem('strategistContext');
-      }
-    } catch {
-      // ignore parse errors
-    }
-  }, []);
-
-  const handleTabChange = (value: string) => {
-    navigate(`/your-ai-team/strategist/${value}`, { replace: true });
-  };
-
+  // tab param may be 'board' or legacy 'workspace'/'leadstream'
+  useParams();
   return (
     <Layout>
-      <div className="animate-fade-in h-[calc(100vh-4rem)] flex flex-col">
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="flex-1 flex flex-col">
-          <div className="px-4 pt-3 pb-0">
-            <TabsList className="bg-muted/50">
-              <TabsTrigger value="workspace" className="gap-1.5 text-xs">
-                <MessageSquare className="h-3.5 w-3.5" />
-                Workspace
-              </TabsTrigger>
-              <TabsTrigger value="leadstream" className="gap-1.5 text-xs">
-                <Users className="h-3.5 w-3.5" />
-                Your Lead Stream
-              </TabsTrigger>
-            </TabsList>
-          </div>
-
-          <TabsContent value="workspace" className="flex-1 mt-0 overflow-hidden">
-            {context?.leads?.length ? (
-              <StrategistWorkspace
-                leads={context.leads}
-                opportunity={context?.opportunity}
-                icp={context?.icp}
-                triggerPrompt={context?.triggerPrompt || ""}
-                cohortContext={context?.cohortContext}
-                onBack={() => navigate('/your-ai-team/scout/chatwithscout')}
-              />
-            ) : (
-              <div className="h-full overflow-auto">
-                <StrategistCohortTable />
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="leadstream" className="flex-1 mt-0 overflow-auto px-4 py-4">
-            <StrategistLeadStream />
-          </TabsContent>
-        </Tabs>
+      <div className="animate-fade-in h-[calc(100vh-4rem)] overflow-auto">
+        {view === "board" && <BoardPage />}
+        {view === "cohort" && <CohortPage />}
+        {view === "package" && <PackagePage />}
       </div>
     </Layout>
   );

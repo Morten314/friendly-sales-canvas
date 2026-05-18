@@ -67,13 +67,24 @@ const App = () => (
                   <Customers />
                 </ProtectedRoute>
               } />
-              <Route path="/deals" element={<Navigate to="/your-ai-team/strategist/workspace" replace />} />
-              <Route path="/your-ai-team/strategist/:tab" element={
+              <Route path="/deals" element={<Navigate to="/your-ai-team/strategist/board" replace />} />
+              <Route path="/your-ai-team/strategist" element={<Navigate to="/your-ai-team/strategist/board" replace />} />
+              <Route path="/your-ai-team/strategist/board" element={
                 <ProtectedRoute requireTenant>
-                  <Deals />
+                  <Deals view="board" />
                 </ProtectedRoute>
               } />
-              <Route path="/your-ai-team/strategist" element={<Navigate to="/your-ai-team/strategist/workspace" replace />} />
+              <Route path="/your-ai-team/strategist/cohort/:cohortId" element={
+                <ProtectedRoute requireTenant>
+                  <Deals view="cohort" />
+                </ProtectedRoute>
+              } />
+              <Route path="/your-ai-team/strategist/package/:packageId" element={
+                <ProtectedRoute requireTenant>
+                  <Deals view="package" />
+                </ProtectedRoute>
+              } />
+              <Route path="/your-ai-team/strategist/:tab" element={<Navigate to="/your-ai-team/strategist/board" replace />} />
               <Route path="/calendar" element={
                 <ProtectedRoute requireTenant>
                   <Calendar />
