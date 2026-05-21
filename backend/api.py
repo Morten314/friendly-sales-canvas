@@ -44,113 +44,23 @@ from services import (
     get_company_profile_for_org, get_market_reports_for_org, score_single_lead_against_market
 )
 from app.main import app, logger
+from app.services._retrieval import (
+    _stringify_context_for_query,
+    _build_market_context_queries,
+    _build_signal_context_queries,
+    _fetch_pinecone_supporting_context,
+)
+from app.services._claude_budget import (
+    CLAUDE_SIGNAL_WINDOW_SECONDS,
+    CLAUDE_SIGNAL_TOKEN_LIMIT_5M,
+    CLAUDE_SIGNAL_MAX_OUTPUT_TOKENS,
+    CLAUDE_API_KEY,
+    _estimate_token_count,
+    _prune_claude_signal_window,
+    _reserve_claude_signal_budget,
+    _finalize_claude_signal_budget,
+)
 
-CLAUDE_SIGNAL_WINDOW_SECONDS = claude_signal_window_seconds
-CLAUDE_SIGNAL_TOKEN_LIMIT_5M = claude_signal_token_limit_5m
-CLAUDE_SIGNAL_MAX_OUTPUT_TOKENS = claude_signal_max_output_tokens
-CLAUDE_API_KEY = os.getenv("ANTHROPIC_API_KEY") or ""
-_claude_signal_usage_window = deque()
-_claude_signal_usage_lock = threading.Lock()
-_claude_signal_total_runs = 0
-
-
-def _stringify_context_for_query(payload: Any) -> str:
-    """Convert payload into compact text for context query generation."""
-    try:
-        if isinstance(payload, str):
-            return payload
-        if isinstance(payload, dict):
-            parts = []
-            for key, value in payload.items():
-                if isinstance(value, (str, int, float, bool)):
-                    parts.append(f"{key}: {value}")
-            if parts:
-                return " | ".join(parts)
-            return json.dumps(payload, default=str)[:1500]
-        return json.dumps(payload, default=str)[:1500]
-    except Exception:
-        return str(payload)
-
-
-def _build_market_context_queries(component_name: str, context_payload: Any) -> List[str]:
-    """Generate lightweight Pinecone queries for market research support."""
-    base_text = _stringify_context_for_query(context_payload)
-    trimmed = " ".join(base_text.split())[:220]
-    if not trimmed:
-        trimmed = "company profile and market context"
-    return [
-        f"{component_name} market context {trimmed}",
-        f"{component_name} buyer pain points and triggers {trimmed}",
-    ][:2]
-
-
-def _build_signal_context_queries(agent_name: str, context_payload: Any) -> List[str]:
-    """Generate 1-2 Pinecone queries for signal support context."""
-    base_text = _stringify_context_for_query(context_payload)
-    trimmed = " ".join(base_text.split())[:220]
-    if not trimmed:
-        trimmed = "company profile and signals context"
-    return [
-        f"{agent_name} signal opportunities and trigger events {trimmed}",
-        f"{agent_name} expansion intent risk changes {trimmed}",
-    ][:2]
-
-
-def _fetch_pinecone_supporting_context(
-    queries: List[str],
-    org_id: Optional[str],
-    top_k: int = 3
-) -> List[Dict[str, Any]]:
-    """
-    Best-effort Pinecone retrieval.
-    Never raises; returns [] on any issue.
-    """
-    if not queries or not pinecone_api_key:
-        return []
-    if not org_id:
-        return []
-
-    try:
-        index = database.pc.Index("brewra-documents")
-        embeddings = OpenAIEmbeddings(
-            openai_api_key=together_api_key,
-            openai_api_base="https://api.together.xyz/v1",
-            model="intfloat/multilingual-e5-large-instruct"
-        )
-
-        results: List[Dict[str, Any]] = []
-        seen_ids = set()
-        for q in queries:
-            try:
-                vector = embeddings.embed_query(q)
-                response = index.query(
-                    vector=vector,
-                    top_k=top_k,
-                    namespace=org_id,
-                    include_metadata=True
-                )
-                matches = getattr(response, "matches", []) or []
-                for match in matches:
-                    match_id = getattr(match, "id", None)
-                    if match_id and match_id in seen_ids:
-                        continue
-                    if match_id:
-                        seen_ids.add(match_id)
-                    metadata = getattr(match, "metadata", {}) or {}
-                    results.append({
-                        "query": q,
-                        "id": match_id,
-                        "score": getattr(match, "score", None),
-                        "content": metadata.get("text") or metadata.get("page_content") or "",
-                        "metadata": metadata,
-                    })
-            except Exception as query_error:
-                logger.warning(f"Pinecone support query failed, continuing: {query_error}")
-                continue
-        return results
-    except Exception as e:
-        logger.warning(f"Pinecone support context unavailable, continuing without it: {e}")
-        return []
 
 def _get_profiler_mongo_client() -> MongoClient:
     username = urllib.parse.quote_plus("techbrewra")
@@ -661,79 +571,6 @@ def _release_icp_id(db, icp_id: str) -> None:
     registry = db["ICP_ID_REGISTRY"]
     registry.delete_one({"id": str(icp_id)})
 
-
-def _estimate_token_count(text: str) -> int:
-    """Conservative local token estimate when provider usage metadata is unavailable."""
-    if not text:
-        return 0
-    return max(1, int(math.ceil(len(text) / 4)))
-
-
-def _prune_claude_signal_window(now_ts: float) -> None:
-    while _claude_signal_usage_window and (now_ts - _claude_signal_usage_window[0]["timestamp"]) > CLAUDE_SIGNAL_WINDOW_SECONDS:
-        _claude_signal_usage_window.popleft()
-
-
-def _reserve_claude_signal_budget(input_tokens_estimate: int, max_output_tokens: int) -> Dict[str, Any]:
-    global _claude_signal_total_runs
-
-    now_ts = datetime.utcnow().timestamp()
-    reserved_tokens = max(0, input_tokens_estimate) + max(0, max_output_tokens)
-    run_id = str(uuid.uuid4())
-
-    with _claude_signal_usage_lock:
-        _prune_claude_signal_window(now_ts)
-        current_tokens_5m = sum(int(x.get("tokens", 0)) for x in _claude_signal_usage_window)
-        if current_tokens_5m + reserved_tokens > CLAUDE_SIGNAL_TOKEN_LIMIT_5M:
-            raise HTTPException(
-                status_code=429,
-                detail={
-                    "error": "Token budget exceeded for signal_ask_claude",
-                    "token_limit_5m": CLAUDE_SIGNAL_TOKEN_LIMIT_5M,
-                    "current_tokens_5m": current_tokens_5m,
-                    "requested_tokens": reserved_tokens
-                }
-            )
-
-        _claude_signal_usage_window.append(
-            {
-                "run_id": run_id,
-                "timestamp": now_ts,
-                "tokens": reserved_tokens
-            }
-        )
-        _claude_signal_total_runs += 1
-        reserved_tokens_5m = current_tokens_5m + reserved_tokens
-        run_count_5m = len(_claude_signal_usage_window)
-        run_count_total = _claude_signal_total_runs
-
-    return {
-        "run_id": run_id,
-        "reserved_tokens": reserved_tokens,
-        "window_tokens_5m": reserved_tokens_5m,
-        "run_count_5m": run_count_5m,
-        "run_count_total": run_count_total
-    }
-
-
-def _finalize_claude_signal_budget(run_id: str, actual_total_tokens: int) -> Dict[str, int]:
-    now_ts = datetime.utcnow().timestamp()
-    with _claude_signal_usage_lock:
-        _prune_claude_signal_window(now_ts)
-        for item in _claude_signal_usage_window:
-            if item.get("run_id") == run_id:
-                item["tokens"] = max(0, int(actual_total_tokens))
-                break
-
-        window_tokens_5m = sum(int(x.get("tokens", 0)) for x in _claude_signal_usage_window)
-        run_count_5m = len(_claude_signal_usage_window)
-        run_count_total = _claude_signal_total_runs
-
-    return {
-        "window_tokens_5m": window_tokens_5m,
-        "run_count_5m": run_count_5m,
-        "run_count_total": run_count_total
-    }
 
 @app.post("/leads/market-scores", response_model=LeadMarketScoresResponse)
 async def get_or_refresh_lead_market_scores(
