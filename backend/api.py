@@ -39,7 +39,6 @@ from app.core.database import upsert_node  # function — local binding ok
 from app.core import llm_config
 from langchain_core.messages import HumanMessage
 from services import (
-    create_prospect_node, convert_audio_to_text,
     ICP_FUNCTIONS, ICP_FUNCTIONS_CLAUDE, COMPONENT_FUNCTIONS, COMPONENT_FUNCTIONS_CLAUDE, ICP_generator, SIGNALS_FUNCTIONS,
     search_signals_scout, search_signals_profiler, fetch_leads_for_org,
     get_company_profile_for_org, get_market_reports_for_org, score_single_lead_against_market
@@ -735,106 +734,6 @@ def _finalize_claude_signal_budget(run_id: str, actual_total_tokens: int) -> Dic
         "run_count_5m": run_count_5m,
         "run_count_total": run_count_total
     }
-
-@app.post("/create-company/")
-async def create_prospect(data: ProspectData):
-    if not data.Name or not data.Company or not data.answers:
-        raise HTTPException(status_code=400, detail="Missing name, company, or answers")
-
-    try:
-        node = create_prospect_node(data.Name, data.Company, data.answers)
-        return {"message": "Prospect node created", "node": node}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-        
-@app.get("/ask/")
-async def ask_question(question: str):
-    response = llm_config.chain.run(question)
-    return {response}
-
-@app.get("/chat/")
-async def ask_question(question: str):
-    response = llm_config.chain2.run(question)
-    return {"response": response}
-
-@app.get("/query/")
-async def run_query(cypher_query: str):
-    from app.core.database import query
-    result = query(cypher_query)
-    return {"result": result}
-
-@app.post("/voice_graph/")
-async def add_engagement_voice(
-    prospect_name: str = Form(...), 
-    update_type: str = Form(...),  # Can be note, offline meeting, email, online meeting
-    voice_file: UploadFile = File(...)
-):
-    audio_path = f"temp_{voice_file.filename}"
-    
-    with open(audio_path, "wb") as buffer:
-        shutil.copyfileobj(voice_file.file, buffer)
-    
-    text = convert_audio_to_text(audio_path)
-    
-    now_utc = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
-    import pytz
-    ist = pytz.timezone("Asia/Kolkata")
-    now_ist = now_utc.astimezone(ist)
-    
-    newId = int(now_ist.timestamp())
-    current_time_str = now_ist.strftime("%Y-%m-%d %H:%M:%S")
-    
-    # Ensure the prospect node exists
-    from app.core.database import query
-    query(f"MERGE (p:Prospect {{Name: '{prospect_name}'}})")
-    
-    # Create a generic Engagement node and link it to the prospect
-    query(f"""
-    CREATE (e:Engagement {{
-        text: '{text}', 
-        id: {newId}, 
-        created_at: '{current_time_str}',
-        type: '{update_type}'
-    }})
-    WITH e
-    MATCH (p:Prospect {{Name: '{prospect_name}'}})
-    CREATE (p)-[:HAS_ENGAGEMENT]->(e)""")
-    
-    return {"message": f"Engagement of type '{update_type}' added for {prospect_name}"}
-
-@app.post("/text_graph/")
-async def add_engagement_text(
-    prospect_name: str = Form(...), 
-    update_type: str = Form(...),  # note, offline meeting, email, online meeting
-    text: str = Form(...)
-):
-    now_utc = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
-    import pytz
-    ist = pytz.timezone("Asia/Kolkata")
-    now_ist = now_utc.astimezone(ist)
-
-    newId = int(now_ist.timestamp())
-    current_time_str = now_ist.strftime("%Y-%m-%d %H:%M:%S")
-
-    # Ensure the prospect node exists
-    from app.core.database import query
-    query(f"MERGE (p:Prospect {{Name: '{prospect_name}'}})")
-
-    # Create Engagement node and link to Prospect
-    query(f"""
-    CREATE (e:Engagement {{
-        text: '{text}', 
-        id: {newId}, 
-        created_at: '{current_time_str}',
-        type: '{update_type}'
-    }})
-    WITH e
-    MATCH (p:Prospect {{Name: '{prospect_name}'}})
-    CREATE (p)-[:HAS_ENGAGEMENT]->(e)
-    """)
-
-    return {"message": f"Engagement of type '{update_type}' added for {prospect_name}"}
-
 
 @app.post("/leads/market-scores", response_model=LeadMarketScoresResponse)
 async def get_or_refresh_lead_market_scores(

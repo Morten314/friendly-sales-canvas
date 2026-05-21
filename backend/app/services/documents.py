@@ -3,9 +3,9 @@
 Extracted from services.py during phase A modularization. These functions
 are the reusable, non-route pieces of the documents domain.
 
-Phase-A: `score_prospect` remains in services.py (LLM-bound scoring helper
-shared with other prospect-handling paths). Imported lazily inside
-`process_prospect_list` to avoid pulling all of services.py at module load.
+`score_prospect` (LLM-bound scoring helper) lives in app.services.graph_chat
+(extracted in commit 10/16). It is imported lazily inside
+`process_prospect_list` to avoid a load-time dependency on graph_chat.
 """
 import pandas as pd
 from langchain_community.document_loaders import PyPDFLoader, TextLoader
@@ -31,7 +31,7 @@ def grapher(file_path):
 
 def process_prospect_list(file_path):
     """Process the prospect list and add data to Neo4j."""
-    from services import score_prospect  # lazy: shared helper still in services.py
+    from app.services.graph_chat import score_prospect  # lazy: avoid load-time dep
 
     # Read file based on extension
     if file_path.endswith('.csv'):
