@@ -61,6 +61,10 @@ from app.routers import documents
 
 app.include_router(documents.router)
 
+from app.routers import leads
+
+app.include_router(leads.router)
+
 # Preserve original boot-time Neo4j schema refresh (was in pre-Task-2 main.py).
 # Guarded so BREWRA_SKIP_DB_INIT=1 (and any future None-graph mode) is safe.
 if database.graph is not None:

@@ -1790,38 +1790,10 @@ COMPONENT_FUNCTIONS_CLAUDE = {
 
 MARKET_SCORE_COMPONENT_KEYS: List[str] = list(COMPONENT_FUNCTIONS.keys())
 
-# Helper function to fetch leads for org_id
-def fetch_leads_for_org(org_id: str, limit: int = 100) -> List[Dict[str, Any]]:
-    """Fetch leads from Neo4j filtered by org_id"""
-    try:
-        query_string = """
-        MATCH (l:Lead)
-        WHERE l.org_id = $org_id
-        RETURN l
-        ORDER BY l.created_at DESC
-        LIMIT $limit
-        """
-        with database.driver.session() as session:
-            results = session.run(query_string, org_id=org_id, limit=limit)
-            leads = []
-            for record in results:
-                lead_node = record["l"]
-                lead_dict = dict(lead_node.items())
-                # Convert JSON strings back to objects if needed
-                processed_lead = {}
-                for key, value in lead_dict.items():
-                    if isinstance(value, str) and value.strip().startswith(('{', '[')):
-                        try:
-                            processed_lead[key] = json.loads(value)
-                        except json.JSONDecodeError:
-                            processed_lead[key] = value
-                    else:
-                        processed_lead[key] = value
-                leads.append(processed_lead)
-        return leads
-    except Exception as e:
-        print(f"Warning: Could not fetch leads: {e}")
-        return []
+# Temporary alias — function moved to app.services.leads in commit 9/16.
+# This alias keeps services.py callers (e.g. score_single_lead_against_market)
+# working until they themselves move in commit 15/16.
+from app.services.leads import fetch_leads_for_org  # noqa: F401
 
 
 def get_company_profile_for_org(org_id: str) -> Dict[str, Any]:
