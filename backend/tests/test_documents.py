@@ -164,8 +164,8 @@ def test_post_document_upload_no_file_or_url(client, mock_s3):
 def test_get_document_status_unknown_file_key(client):
     """GET /document-status/<key> for an unknown key → 404.
 
-    The endpoint creates its own per-request MongoClient (api.py:4598-4601),
-    so we patch api.MongoClient to return an empty file_status collection.
+    The endpoint creates its own per-request MongoClient, so we patch
+    app.routers.documents.MongoClient to return an empty file_status collection.
     Locks the 404-on-missing behavior — a refactor that returns 200 with
     `status: not_found` would break FE polling logic that distinguishes
     "still processing" (200) from "never existed" (404).

@@ -1,8 +1,10 @@
 """Shared pytest fixtures for backend characterization tests.
 
-External deps (Neo4j, Mongo, Pinecone, S3, LLM, Tavily) are mocked at the
-module path where they're used (backend.api / backend.services), not where
-they're defined. This is robust against import-order variations.
+External deps (Neo4j, Mongo, Pinecone, S3, LLM, Tavily) are source-patched
+at `app.core.database.*` and `app.core.llm_config.*`. Inline `MongoClient(...)`
+constructions in routers are patched at each `app.routers.<domain>.MongoClient`
+binding (see `mock_mongo` below). This convention is documented in
+specs/2026-05-12-backend-modularization-design.md §6.
 """
 import sys
 import os

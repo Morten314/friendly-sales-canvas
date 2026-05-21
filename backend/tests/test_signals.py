@@ -6,7 +6,8 @@ Endpoints covered:
   POST /signal_action             — accept / reject a signal
   POST /signal_Ask                — ask AI about signals
 
-All three use per-request MongoClient, so we patch "api.MongoClient".
+All three use per-request MongoClient, so we patch
+"app.routers.signals.MongoClient".
 """
 import json
 from unittest.mock import MagicMock, patch, call

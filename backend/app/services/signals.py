@@ -5,18 +5,10 @@ Phase B will dedupe search_signals_scout and search_signals_profiler
 """
 import json
 import re
-import asyncio
-import urllib.parse
-import uuid
 from datetime import datetime
 from typing import List
 
-import requests
-from fastapi import HTTPException
-from pymongo import MongoClient
-
 from app.core import llm_config
-from app.core.config import tavily_api_key
 from app.services.market_research import (
     CLAUDE_RESEARCH_MAX_TOKENS,
     _tavily_context_and_urls,

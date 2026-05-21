@@ -5,7 +5,7 @@ Endpoints:
   GET  /leads/market-scores/status   — status of a scoring run
 
 Both use _get_market_score_collections() → _get_profiler_mongo_client() → MongoClient().
-Patch "api.MongoClient" for per-request clients.
+Patch "app.services.market_scoring.MongoClient" for per-request clients.
 """
 from unittest.mock import MagicMock, patch, call
 import pytest

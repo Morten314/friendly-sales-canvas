@@ -15,20 +15,17 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.core.config import origins  # noqa: F401 — kept for backwards compat if any code reads it
 from app.core import database
 
-# Logging configuration (moved from api.py)
+# Logging configuration.
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
-# FastAPI app construction (moved from api.py:164)
 app = FastAPI()
 
-# CORS middleware (moved from api.py:167-173)
 # NOTE: allow_origins=["*"] with allow_credentials=True is preserved from
 # original behavior. Phase B tightens this.
 app.add_middleware(

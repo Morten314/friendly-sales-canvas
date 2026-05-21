@@ -1,8 +1,11 @@
 """Characterization tests for ICP endpoints.
 
-All endpoints that use _get_profiler_mongo_client() (local MongoClient) are
-patched via `patch("api.MongoClient")` per-test. MagicMock __getitem__ returns
-the same mock for every key, so we configure a shared collection mock or route
+All endpoints that resolve their Mongo client via _get_profiler_mongo_client()
+(now in app.services.market_scoring) are patched per-test via
+`patch("app.services.market_scoring.MongoClient")`. Endpoints with an inline
+`MongoClient(mongo_uri)` in the router (POST /icp-research[_claude]) are
+patched at `app.routers.icp.MongoClient`. MagicMock __getitem__ returns the
+same mock for every key, so we configure a shared collection mock or route
 by side_effect when multiple collections need different behaviour.
 
 Endpoints:

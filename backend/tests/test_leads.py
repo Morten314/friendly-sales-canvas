@@ -8,9 +8,10 @@ Endpoints:
   POST /leads/batch-upload      — CSV batch upload
   GET  /leads/by-file           — leads filtered by file_id
 
-GET /leads and GET /leads/by-file use module-level driver (api.driver).
-POST/PUT/DELETE /leads use module-level driver.
-POST /leads/batch-upload uses _get_profiler_mongo_client() — patch api.MongoClient.
+GET /leads and GET /leads/by-file use the module-level driver
+(app.core.database.driver). POST/PUT/DELETE /leads use the same driver.
+POST /leads/batch-upload uses _get_profiler_mongo_client() — patch
+app.services.market_scoring.MongoClient.
 """
 import io
 from unittest.mock import MagicMock, patch
