@@ -77,6 +77,10 @@ from app.routers import icp
 
 app.include_router(icp.router)
 
+from app.routers import signals
+
+app.include_router(signals.router)
+
 # Preserve original boot-time Neo4j schema refresh (was in pre-Task-2 main.py).
 # Guarded so BREWRA_SKIP_DB_INIT=1 (and any future None-graph mode) is safe.
 if database.graph is not None:

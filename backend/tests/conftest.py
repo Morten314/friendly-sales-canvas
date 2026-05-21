@@ -75,15 +75,25 @@ def mock_mongo(mocker):
     """Mock MongoDB client. Source-patches `app.core.database.client` so
     `database.client[...]` lookups in api.py / services.py return the mock.
 
-    Also patches `api.MongoClient` because ~26 endpoint handlers in api.py
-    construct fresh `MongoClient(mongo_uri)` instances inline — those bypass
-    the module-level `client` symbol and would otherwise open real connections.
+    Also patches `MongoClient` in each module where endpoint handlers construct
+    fresh `MongoClient(mongo_uri)` instances inline — those bypass the
+    module-level `client` symbol and would otherwise open real connections.
     The inline-constructor pattern survives phase A (replacement is out of
-    scope per spec §2.2); this patch is the temporary bridge.
+    scope per spec §2.2); these patches are the temporary bridge.
     """
     mongo = MagicMock()
+    mock_constructor = MagicMock(return_value=mongo)
     mocker.patch("app.core.database.client", mongo)
-    mocker.patch("api.MongoClient", MagicMock(return_value=mongo))
+    mocker.patch("api.MongoClient", mock_constructor)
+    # Phase-A routers that inline-construct MongoClient (extracted from api.py):
+    for mod in (
+        "app.routers.org_auth",
+        "app.routers.profiles",
+        "app.routers.documents",
+        "app.routers.icp",
+        "app.routers.signals",
+    ):
+        mocker.patch(f"{mod}.MongoClient", mock_constructor)
     return mongo
 
 
