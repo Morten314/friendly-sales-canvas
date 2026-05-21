@@ -61,111 +61,72 @@ for _mod in _HEAVY_MODULES:
 
 @pytest.fixture
 def mock_neo4j(mocker):
-    """Mock Neo4j driver used in api.py and services.py.
-
-    Returns a dict with `driver` and `session` so tests can assert on
-    .session().run.call_args_list.
-    """
+    """Mock Neo4j driver — single source-patch at app.core.database.driver."""
     mock_driver = MagicMock()
     mock_session = MagicMock()
     mock_driver.session.return_value.__enter__.return_value = mock_session
     mock_driver.session.return_value.__exit__.return_value = False
-    mocker.patch("api.driver", mock_driver)
-    mocker.patch("services.driver", mock_driver)
+    mocker.patch("app.core.database.driver", mock_driver)
     return {"driver": mock_driver, "session": mock_session}
 
 
 @pytest.fixture
 def mock_mongo(mocker):
-    """Mock MongoDB client. Returns the MagicMock so tests can assert on
-    e.g. mock_mongo.Scout_Agent.signals.update_one.called.
+    """Mock MongoDB client. Source-patches `app.core.database.client` so
+    `database.client[...]` lookups in api.py / services.py return the mock.
 
-    Also patches the `MongoClient` constructor in api.py / services.py because
-    api.py creates fresh `MongoClient(mongo_uri)` instances inline inside ~26
-    endpoint handlers — those bypass the module-level `client` symbol and would
-    otherwise spawn real connections.
+    Also patches `api.MongoClient` because ~26 endpoint handlers in api.py
+    construct fresh `MongoClient(mongo_uri)` instances inline — those bypass
+    the module-level `client` symbol and would otherwise open real connections.
+    The inline-constructor pattern survives phase A (replacement is out of
+    scope per spec §2.2); this patch is the temporary bridge.
     """
     mongo = MagicMock()
-    mocker.patch("api.client", mongo)
-    mocker.patch("services.client", mongo)
+    mocker.patch("app.core.database.client", mongo)
     mocker.patch("api.MongoClient", MagicMock(return_value=mongo))
     return mongo
 
 
 @pytest.fixture
 def mock_llm_chain(mocker):
-    """Mock the LangChain agent_chain (Together Qwen + Tavily).
-
-    Patches both the bound reference in services.py and the original in
-    llm_config.py (the latter covers deferred imports like
-    `from llm_config import agent_chain` inside api.py functions).
-    """
     mock_chain = MagicMock()
-    mocker.patch("services.agent_chain", mock_chain)
-    mocker.patch("llm_config.agent_chain", mock_chain)
+    mocker.patch("app.core.llm_config.agent_chain", mock_chain)
     return mock_chain
 
 
 @pytest.fixture
 def mock_llm_config(mocker):
-    """Mock the rest of llm_config exports (chain, chain2, llm, llm2, etc.).
+    """Source-patch all llm_config globals + the shared `graph` Neo4jGraph.
 
-    api.py:41 imports `chain, chain2, llm2` (used by /text_graph, /voice_graph,
-    /test-llm). services.py:17 imports `llm_transformer, graph, llm, llm2`.
-    Plus deferred imports inside functions resolve from llm_config.* at call
-    time, so we patch all three namespaces (api.*, services.*, llm_config.*).
-
-    Without this fixture, any test that hits an endpoint using these symbols
-    would call a real LLM. agent_chain is handled separately by mock_llm_chain.
+    Note: after Task 2, llm_config no longer holds its own `graph` attribute —
+    it accesses `database.graph` directly. So `graph` is only patched on
+    `app.core.database`. The other names (chain, chain2, llm, llm2,
+    llm_transformer) remain module-level attrs of app.core.llm_config.
     """
     mocks = {}
-    for name in ("chain", "chain2", "llm", "llm2", "llm_transformer", "graph"):
+    for name in ("chain", "chain2", "llm", "llm2", "llm_transformer"):
         mocks[name] = MagicMock(name=f"llm_config.{name}")
-        mocker.patch(f"llm_config.{name}", mocks[name])
-
-    # api.py module-level bound references (line 41).
-    for name in ("chain", "chain2", "llm2"):
-        mocker.patch(f"api.{name}", mocks[name])
-    # api.py also imports `graph` from database (line 40), but llm_config.graph
-    # and database.graph are the same Neo4jGraph object — patch the api.graph
-    # bound reference too so /text_graph and /voice_graph don't reach Neo4j.
-    mocker.patch("api.graph", mocks["graph"])
-
-    # services.py module-level bound references (line 17).
-    for name in ("llm_transformer", "graph", "llm", "llm2"):
-        mocker.patch(f"services.{name}", mocks[name])
-
+        mocker.patch(f"app.core.llm_config.{name}", mocks[name])
+    # graph lives only on app.core.database now (llm_config uses database.graph).
+    mocks["graph"] = MagicMock(name="database.graph")
+    mocker.patch("app.core.database.graph", mocks["graph"])
     return mocks
 
 
 @pytest.fixture
 def mock_s3(mocker):
     s3 = MagicMock()
-    mocker.patch("api.s3_client", s3)
+    mocker.patch("app.core.database.s3_client", s3)
     return s3
 
 
 @pytest.fixture
 def mock_pinecone(mocker):
-    """Mock Pinecone in both forms it appears in api.py:
-
-      - api.py:4163 binds `pc = Pinecone(...)` at module level.
-      - api.py:123 instantiates `Pinecone(api_key=...)` inline inside a
-        retrieval helper. The module-level `pc` patch alone wouldn't cover
-        this codepath; we also patch the `api.Pinecone` constructor so
-        inline calls return our mock.
-
-    Both forms route .Index().query() to the same canned empty-matches
-    response, which is enough for endpoints that use Pinecone for context
-    retrieval but don't depend on actual matches.
-    """
+    """Source-patch the database.pc singleton. The inline Pinecone constructor
+    in api.py is gone (replaced with database.pc.Index in Task 2)."""
     pc = MagicMock()
     pc.Index.return_value.query.return_value = {"matches": []}
-    mocker.patch("api.pc", pc)
-    # api.py:123 — `Pinecone(api_key=pinecone_api_key).Index("brewra-documents")`
-    # The constructor return value's .Index().query() must also be wired.
-    pinecone_constructor = MagicMock(return_value=pc)
-    mocker.patch("api.Pinecone", pinecone_constructor)
+    mocker.patch("app.core.database.pc", pc)
     return pc
 
 

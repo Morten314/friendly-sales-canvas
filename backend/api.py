@@ -17,8 +17,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pymongo import MongoClient
 from pymongo.errors import DuplicateKeyError
-import boto3
-from pinecone import Pinecone
 from langchain_pinecone import PineconeVectorStore
 from langchain_community.document_loaders import PyPDFLoader, TextLoader, CSVLoader, UnstructuredExcelLoader
 from langchain_core.documents import Document
@@ -27,8 +25,8 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 import requests
 
-from config import origins, STAGE_ORDER, STAGE_MAPPING, s3_bucket, aws_region, aws_access_key, aws_secret_key, pinecone_api_key, together_api_key, claude_sonnet_model, tavily_api_key, claude_signal_window_seconds, claude_signal_token_limit_5m, claude_signal_max_output_tokens
-from models import (
+from app.core.config import origins, STAGE_ORDER, STAGE_MAPPING, s3_bucket, aws_region, aws_access_key, aws_secret_key, pinecone_api_key, together_api_key, claude_sonnet_model, tavily_api_key, claude_signal_window_seconds, claude_signal_token_limit_5m, claude_signal_max_output_tokens
+from app.models import (
     ProspectData, Lead, Contact, SalesPipelineResponse, TimeframeResponse, StageStats,
     CompanyProfile, UserProfile, ScoutProfile, MarketRequest, EditRequest,
     CustomerProfileRequest, CustomerProfileICP, LeadCreateRequest, LeadUpdateRequest,
@@ -37,8 +35,9 @@ from models import (
     LeadMarketScoreRow, LeadMarketScoreDescriptionsResponse, LeadMarketScoringStatusResponse,
     LeadMarketScoreStatusItem, MARKET_SCORE_COMPONENT_KEYS
 )
-from database import driver, graph, client, upsert_node
-from llm_config import chain, chain2, llm2
+from app.core import database
+from app.core.database import upsert_node  # function — local binding ok
+from app.core import llm_config
 from langchain_core.messages import HumanMessage
 from services import (
     grapher, create_prospect_node, convert_audio_to_text, process_prospect_list,
@@ -120,7 +119,7 @@ def _fetch_pinecone_supporting_context(
         return []
 
     try:
-        index = Pinecone(api_key=pinecone_api_key).Index("brewra-documents")
+        index = database.pc.Index("brewra-documents")
         embeddings = OpenAIEmbeddings(
             openai_api_key=together_api_key,
             openai_api_base="https://api.together.xyz/v1",
@@ -303,7 +302,7 @@ def _get_lead_identity_from_neo4j(org_id: str, lead_id: str) -> Dict[str, Option
     RETURN l
     LIMIT 1
     """
-    with driver.session() as session:
+    with database.driver.session() as session:
         record = session.run(query_string, org_id=org_id, lead_id=lead_id).single()
         if not record:
             return {"company_name": None, "lead_name": None}
@@ -477,7 +476,7 @@ def _persist_market_score_for_lead(
         "market_scoring_status": scoring_status,
         "market_score_run_id": run_id,
     }
-    with driver.session() as session:
+    with database.driver.session() as session:
         session.execute_write(
             upsert_node,
             "Lead",
@@ -778,17 +777,17 @@ async def create_prospect(data: ProspectData):
         
 @app.get("/ask/")
 async def ask_question(question: str):
-    response = chain.run(question)
+    response = llm_config.chain.run(question)
     return {response}
 
 @app.get("/chat/")
 async def ask_question(question: str):
-    response = chain2.run(question)
+    response = llm_config.chain2.run(question)
     return {"response": response}
 
 @app.get("/query/")
 async def run_query(cypher_query: str):
-    from database import query
+    from app.core.database import query
     result = query(cypher_query)
     return {"result": result}
 
@@ -814,7 +813,7 @@ async def add_engagement_voice(
     current_time_str = now_ist.strftime("%Y-%m-%d %H:%M:%S")
     
     # Ensure the prospect node exists
-    from database import query
+    from app.core.database import query
     query(f"MERGE (p:Prospect {{Name: '{prospect_name}'}})")
     
     # Create a generic Engagement node and link it to the prospect
@@ -846,7 +845,7 @@ async def add_engagement_text(
     current_time_str = now_ist.strftime("%Y-%m-%d %H:%M:%S")
 
     # Ensure the prospect node exists
-    from database import query
+    from app.core.database import query
     query(f"MERGE (p:Prospect {{Name: '{prospect_name}'}})")
 
     # Create Engagement node and link to Prospect
@@ -889,7 +888,7 @@ def get_all_leads(org_id: str = Query(...)):
         """
         
         # Execute query with parameters
-        with driver.session() as session:
+        with database.driver.session() as session:
             results = session.run(query_string, org_id=org_id)
             leads = []
             for record in results:
@@ -944,7 +943,7 @@ async def add_lead(request: LeadCreateRequest):
             lead_data["stage"] = "Initial Outreach"
         
         # Create Lead node with all data as-is (no extraction, no mapping)
-        with driver.session() as session:
+        with database.driver.session() as session:
             session.execute_write(
                 upsert_node,
                 "Lead",
@@ -976,7 +975,7 @@ async def update_lead(lead_id: str, request: LeadUpdateRequest):
     try:
         from datetime import datetime
         
-        with driver.session() as session:
+        with database.driver.session() as session:
             # Verify lead exists and belongs to user/org
             verify_query = """
                 MATCH (l:Lead {lead_id: $lead_id})
@@ -1019,7 +1018,7 @@ async def delete_lead(lead_id: str, user_id: str = Query(...), org_id: str = Que
     Verifies multitenancy (user_id and org_id) before deletion.
     """
     try:
-        with driver.session() as session:
+        with database.driver.session() as session:
             # Verify lead exists and belongs to user/org
             verify_query = """
                 MATCH (l:Lead {lead_id: $lead_id})
@@ -1170,7 +1169,7 @@ async def batch_upload_leads(
                     lead_data = {k: str(v) if not isinstance(v, (dict, list)) else v for k, v in lead_data.items()}
                     
                     # Create Lead node with all data as-is (no extraction, no mapping)
-                    with driver.session() as session:
+                    with database.driver.session() as session:
                         session.execute_write(
                             upsert_node,
                             "Lead",
@@ -1234,7 +1233,7 @@ def get_leads_by_file(org_id: str = Query(...), file_id: str = Query(...)):
         WHERE l.org_id = $org_id AND l.file_id = $file_id
         RETURN l
         """
-        with driver.session() as session:
+        with database.driver.session() as session:
             results = session.run(query_string, org_id=org_id, file_id=file_id)
             leads: List[Dict[str, Any]] = []
             for record in results:
@@ -1301,7 +1300,7 @@ def delete_leads_by_file(file_id: str, user_id: str = Query(...), org_id: str = 
             WHERE l.user_id = $user_id AND l.org_id = $org_id AND l.file_id = $file_id
             RETURN count(l) AS total
         """
-        with driver.session() as session:
+        with database.driver.session() as session:
             count_result = session.run(count_query, user_id=user_id, org_id=org_id, file_id=file_id)
             count_record = count_result.single()
             total = int(count_record["total"]) if count_record and count_record["total"] is not None else 0
@@ -1554,7 +1553,7 @@ def get_sales_pipeline(user_id: str = Query(...), timeframe: int = Query(...)):
     RETURN l.stage AS stage, count(*) AS count
     """
 
-    with driver.session() as session:
+    with database.driver.session() as session:
         results = session.run(query_string, {
             "start_date": start_date.isoformat(),
             "end_date": end_date.isoformat()
@@ -1647,7 +1646,7 @@ async def create_or_update_profile(
                 # Convert everything else to string
                 data[key] = str(value)
         
-        with driver.session() as session:
+        with database.driver.session() as session:
             # Map profile_type to Neo4j label (handle case differences)
             neo4j_label = profile_type
             if profile_type == "company":
@@ -1717,7 +1716,7 @@ async def get_single_profile(
     For company profiles, also includes customer profiles from MongoDB.
     """
     try:
-        with driver.session() as session:
+        with database.driver.session() as session:
             # For company profiles, filter by org_id (required for multi-org support)
             if profile_type == "company":
                 if not org_id:
@@ -1810,7 +1809,7 @@ async def cleanup_company_profiles():
     Keeps the first one found and deletes all others.
     """
     try:
-        with driver.session() as session:
+        with database.driver.session() as session:
             # Get all company profiles
             result = session.run("MATCH (c:CompanyProfile) RETURN c, id(c) as node_id ORDER BY id(c)")
             records = list(result)
@@ -1853,7 +1852,7 @@ async def market_research(request: MarketRequest):
         )
 
     # MongoDB (pymongo client)
-    db = client["Scout_Agent"]
+    db = database.client["Scout_Agent"]
     collection = db["Market_Intelligence"]
 
     # Filter by user_id only for multitenancy
@@ -1873,7 +1872,7 @@ async def market_research(request: MarketRequest):
 
     # --- Neo4j query inside a thread - get company profile by org_id ---
     def fetch_company_profile():
-        with driver.session() as session:
+        with database.driver.session() as session:
             # Get the company profile filtered by org_id (if provided)
             if request.org_id:
                 result = session.run(
@@ -1957,7 +1956,7 @@ async def market_research_claude(request: MarketRequest):
             detail=f"Unsupported component_name: {request.component_name}"
         )
 
-    db = client["Scout_Agent"]
+    db = database.client["Scout_Agent"]
     collection = db["Market_Intelligence"]
 
     query = {
@@ -1974,7 +1973,7 @@ async def market_research_claude(request: MarketRequest):
             return {"status": "success", "data": latest_report}
 
     def fetch_company_profile():
-        with driver.session() as session:
+        with database.driver.session() as session:
             if request.org_id:
                 result = session.run(
                     "MATCH (c:CompanyProfile {org_id: $org_id}) RETURN c LIMIT 1",
@@ -2202,7 +2201,7 @@ async def get_or_create_icp_config(user_id: str = Query(...), refresh: bool = Qu
         print(f"[ICP] Generating new ICPs for user_id: {user_id}")
 
         # Generate new ICPs from Neo4j company profile - get shared company profile
-        with driver.session() as session:
+        with database.driver.session() as session:
             result = session.run(
                 "MATCH (c:CompanyProfile) RETURN c LIMIT 1"
             )
@@ -2299,7 +2298,7 @@ async def icp_research(request: MarketRequest):
 
         # --- Neo4j query inside a thread - get company profile by org_id ---
         def fetch_company_profile():
-            with driver.session() as session:
+            with database.driver.session() as session:
                 # Get the company profile filtered by org_id (if provided)
                 if request.org_id:
                     result = session.run(
@@ -2419,7 +2418,7 @@ async def icp_research_claude(request: MarketRequest):
                 return {"status": "success", "data": latest_report}
 
         def fetch_company_profile():
-            with driver.session() as session:
+            with database.driver.session() as session:
                 if request.org_id:
                     result = session.run(
                         "MATCH (c:CompanyProfile {org_id: $org_id}) RETURN c LIMIT 1",
@@ -2921,12 +2920,11 @@ async def generate_signals_batch_claude(request: MarketRequest):
 async def test_llm():
     """Test if LLM is working"""
     try:
-        from llm_config import llm2
         from langchain_core.messages import HumanMessage
-        
+
         test_prompt = "Generate a simple JSON: {\"test\": \"hello\"}"
         messages = [HumanMessage(content=test_prompt)]
-        response = llm2.invoke(messages)
+        response = llm_config.llm2.invoke(messages)
         return {"status": "success", "response": str(response.content)}
     except Exception as e:
         return {"status": "error", "error": str(e)}
@@ -3070,7 +3068,7 @@ async def signal_ask(request: SignalAskRequest):
         # Fetch company profile from Neo4j
         company_profile = None
         try:
-            with driver.session() as session:
+            with database.driver.session() as session:
                 result = session.run(
                     "MATCH (p:CompanyProfile {org_id: $org_id}) RETURN p LIMIT 1",
                     org_id=request.org_id
@@ -3157,10 +3155,8 @@ INSTRUCTIONS:
 Please use the WebSearch tool to gather current information and provide a detailed answer."""
 
         # Use agent_chain to answer with WebSearch
-        from llm_config import agent_chain
-        
         raw_response = await asyncio.to_thread(
-            agent_chain.invoke,
+            llm_config.agent_chain.invoke,
             {'input': prompt}
         )
         
@@ -3197,7 +3193,7 @@ async def signal_ask_claude(request: SignalAskRequest):
         # Fetch company profile from Neo4j
         company_profile = None
         try:
-            with driver.session() as session:
+            with database.driver.session() as session:
                 result = session.run(
                     "MATCH (p:CompanyProfile {org_id: $org_id}) RETURN p LIMIT 1",
                     org_id=request.org_id
@@ -3384,7 +3380,7 @@ def process_edit(request: EditRequest):
     password = urllib.parse.quote_plus("Brewra@Best09")
     mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
     client = MongoClient(mongo_uri)
-    db = client["Scout_Agent"]
+    db = database.client["Scout_Agent"]
     collection = db["Market_Intelligence"]
     
     try:
@@ -3424,7 +3420,7 @@ async def create_or_update_customer_profile(request: CustomerProfileRequest):
         
         # Get company profile from Neo4j to include in MongoDB document (filter by org_id)
         company_profile_data = {}
-        with driver.session() as session:
+        with database.driver.session() as session:
             result = session.run(
                 "MATCH (c:CompanyProfile {org_id: $org_id}) RETURN c LIMIT 1",
                 org_id=request.org_id
@@ -3558,7 +3554,7 @@ async def get_customer_profile(org_id: str = Query(...)):
         
         if not document:
             # If no MongoDB document exists, try to get from Neo4j and return empty customer profiles
-            with driver.session() as session:
+            with database.driver.session() as session:
                 result = session.run(
                     "MATCH (c:CompanyProfile {org_id: $org_id}) RETURN c LIMIT 1",
                     org_id=org_id
@@ -3743,7 +3739,7 @@ async def save_suggested_icp_as_customer_profile(request: SuggestedICPToCustomer
         # Get company profile from Neo4j to include (reuse existing if present)
         company_profile_data = existing_doc.get("company_profile") or {}
         if not company_profile_data:
-            with driver.session() as session:
+            with database.driver.session() as session:
                 result = session.run(
                     "MATCH (c:CompanyProfile {org_id: $org_id}) RETURN c LIMIT 1",
                     org_id=request.org_id
@@ -4095,7 +4091,7 @@ async def create_registration(registration: RegistrationRequest):
     """
     try:
         # Connect to separate registration database
-        db = client["Registration_DB"]
+        db = database.client["Registration_DB"]
         collection = db["registrations"]
         
         # Create registration document with timestamp
@@ -4129,7 +4125,7 @@ async def get_registrations():
     """
     try:
         # Connect to separate registration database
-        db = client["Registration_DB"]
+        db = database.client["Registration_DB"]
         collection = db["registrations"]
         
         # Fetch all registrations ordered by timestamp (descending - most recent first)
@@ -4150,17 +4146,6 @@ async def get_registrations():
     except Exception as e:
         logger.error(f"Error fetching registrations: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to fetch registrations: {str(e)}")
-
-# Initialize S3 client
-s3_client = boto3.client(
-    's3',
-    aws_access_key_id=aws_access_key,
-    aws_secret_access_key=aws_secret_key,
-    region_name=aws_region
-)
-
-# Initialize Pinecone
-pc = Pinecone(api_key=pinecone_api_key)
 
 async def process_file_to_embeddings(file_key: str, user_id: str, file_name: str, org_id: str, file_id: str):
     """Background task to convert file to embeddings and store in Pinecone with org_id namespace.
@@ -4195,7 +4180,7 @@ async def process_file_to_embeddings(file_key: str, user_id: str, file_name: str
         
         # Download file from S3
         local_file_path = f"/tmp/{file_name}"
-        s3_client.download_file(s3_bucket, file_key, local_file_path)
+        database.s3_client.download_file(s3_bucket, file_key, local_file_path)
         
         # Load document based on file type
         if file_name.lower().endswith('.pdf'):
@@ -4283,7 +4268,7 @@ async def process_file_to_embeddings(file_key: str, user_id: str, file_name: str
         # Create or get Pinecone index
         index_name = "brewra-documents"
         try:
-            pc.create_index(
+            database.pc.create_index(
                 name=index_name,
                 dimension=1024,  # multilingual-e5-large-instruct embedding dimension (1024)
                 metric="cosine"
@@ -4476,7 +4461,7 @@ async def upload_document(
         # Upload to S3
         try:
             file_content = await file.read()
-            s3_client.put_object(
+            database.s3_client.put_object(
                 Bucket=s3_bucket,
                 Key=file_key,
                 Body=file_content,
@@ -4758,7 +4743,7 @@ async def delete_data_source(file_id: str):
         # 1. Delete from AWS S3 (only for file data sources, not URLs)
         if not is_url_data_source and file_key:
             try:
-                s3_client.delete_object(Bucket=s3_bucket, Key=file_key)
+                database.s3_client.delete_object(Bucket=s3_bucket, Key=file_key)
                 logger.info(f"Deleted file from S3: {file_key}")
             except Exception as e:
                 error_msg = str(e)
@@ -4777,7 +4762,7 @@ async def delete_data_source(file_id: str):
         if not is_url_data_source and org_id and file_key:
             try:
                 index_name = "brewra-documents"
-                index = pc.Index(index_name)
+                index = database.pc.Index(index_name)
                 
                 # Check if namespace exists first and log what we're searching for
                 logger.info(f"Attempting Pinecone deletion: namespace='{org_id}', file_id='{actual_file_id}', file_key='{file_key}'")

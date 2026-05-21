@@ -235,13 +235,13 @@ def test_post_signal_ask_returns_answer(client, mock_neo4j, mock_llm_chain):
         "history": [],
     }
 
-    # The endpoint does `from llm_config import agent_chain` locally —
-    # so we must patch llm_config.agent_chain (the source), not api.*.
+    # The endpoint accesses `llm_config.agent_chain` via the qualified-import
+    # convention, so patch the source attribute on `app.core.llm_config`.
     chain_mock = MagicMock()
     chain_mock.invoke.return_value = {"output": "This is the AI answer."}
 
     with patch("api.MongoClient", return_value=mc), \
-         patch("llm_config.agent_chain", chain_mock):
+         patch("app.core.llm_config.agent_chain", chain_mock):
         response = client.post("/signal_Ask", json=payload)
 
     assert response.status_code == 200

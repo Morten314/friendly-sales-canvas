@@ -148,7 +148,7 @@ def test_post_connect_org_links_user_to_org_existing_doc(client):
 
 
 # ---------------------------------------------------------------------------
-# POST /registration — uses module-level api.client (not MongoClient inline)
+# POST /registration — uses module-level database.client (not MongoClient inline)
 # ---------------------------------------------------------------------------
 
 def test_post_registration_creates_entry(client, snapshot):
@@ -158,11 +158,11 @@ def test_post_registration_creates_entry(client, snapshot):
 
     inserted_id = ObjectId("000000000000000000000001")
 
-    # api.client["Registration_DB"]["registrations"].insert_one(...)
+    # database.client["Registration_DB"]["registrations"].insert_one(...)
     col_mock = MagicMock()
     col_mock.insert_one.return_value.inserted_id = inserted_id
 
-    with patch("api.client") as mock_client:
+    with patch("app.core.database.client") as mock_client:
         mock_client.__getitem__.return_value.__getitem__.return_value = col_mock
 
         payload = {"name": "Test User", "email": "test@brewra.test"}
@@ -181,7 +181,7 @@ def test_post_registration_missing_fields_422(client):
 
 
 # ---------------------------------------------------------------------------
-# GET /registration — uses module-level api.client
+# GET /registration — uses module-level database.client
 # ---------------------------------------------------------------------------
 
 def test_get_registration_lists_entries(client, snapshot):
@@ -210,7 +210,7 @@ def test_get_registration_lists_entries(client, snapshot):
     col_mock = MagicMock()
     col_mock.find.return_value.sort.return_value = mock_sort
 
-    with patch("api.client") as mock_client:
+    with patch("app.core.database.client") as mock_client:
         mock_client.__getitem__.return_value.__getitem__.return_value = col_mock
 
         response = client.get("/registration")
@@ -229,7 +229,7 @@ def test_get_registration_empty_returns_list(client):
     col_mock = MagicMock()
     col_mock.find.return_value.sort.return_value = mock_sort
 
-    with patch("api.client") as mock_client:
+    with patch("app.core.database.client") as mock_client:
         mock_client.__getitem__.return_value.__getitem__.return_value = col_mock
 
         response = client.get("/registration")

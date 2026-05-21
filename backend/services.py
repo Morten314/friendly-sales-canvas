@@ -12,9 +12,10 @@ from typing import List, Optional, Dict, Any
 from langchain_community.document_loaders import PyPDFLoader, TextLoader
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_core.prompts import PromptTemplate
-from config import PREDEFINED_QUESTIONS, rapidapi_key, claude_sonnet_model, tavily_api_key
-from database import driver, query, client
-from llm_config import llm_transformer, graph, llm, llm2, agent_chain
+from app.core.config import PREDEFINED_QUESTIONS, rapidapi_key, claude_sonnet_model, tavily_api_key
+from app.core.database import query  # function — local binding ok
+from app.core import database
+from app.core import llm_config
 
 # Function to load documents
 def load_document(file_path):
@@ -27,8 +28,8 @@ def load_document(file_path):
 # Function to process documents and update Neo4j graph
 def grapher(file_path):
     text = load_document(file_path)
-    graph_documents = llm_transformer.convert_to_graph_documents(text)
-    graph.add_graph_documents(graph_documents)
+    graph_documents = llm_config.llm_transformer.convert_to_graph_documents(text)
+    database.graph.add_graph_documents(graph_documents)
 
 def convert_audio_to_text(file):
     recognizer = sr.Recognizer()
@@ -144,7 +145,7 @@ def get_ranked_prospects():
     ORDER BY p.prospect_score DESC
     """
     
-    with driver.session() as session:
+    with database.driver.session() as session:
         results = session.run(query_string).data()
 
     if not results:
@@ -186,7 +187,7 @@ def score_prospect(cypher_query):
         HumanMessage(content=f"Cypher Query:\n{cypher_query}\n\nOnly give me the number , nothing else at all , not even punctuation marks:")
     ]
 
-    response = llm(messages)
+    response = llm_config.llm(messages)
     response = extract_number(response)
     return response
 
@@ -335,7 +336,7 @@ def _claude_messages_text(user_prompt: str, max_tokens: int = CLAUDE_RESEARCH_MA
 
 def _market_research_agent_output(prompt: str, company_profile_json: str, llm_backend: str) -> str:
     if llm_backend != "claude":
-        raw_response = agent_chain.invoke({"input": prompt})
+        raw_response = llm_config.agent_chain.invoke({"input": prompt})
         return raw_response["output"]
     seed = " ".join(str(company_profile_json).split())[:1200]
     web_ctx, _ = _tavily_context_and_urls(f"market research industry trends data 2026 {seed}")
@@ -350,7 +351,7 @@ WEB SEARCH RESULTS (primary external evidence — synthesize with company profil
 def _icp_research_agent_output(prompt: str, pre_data: str, llm_backend: str) -> str:
     """Dispatcher for ICP research LLM call. Mirrors _market_research_agent_output."""
     if llm_backend != "claude":
-        raw_response = agent_chain.invoke({"input": prompt})
+        raw_response = llm_config.agent_chain.invoke({"input": prompt})
         return raw_response["output"]
     seed = " ".join(str(pre_data).split())[:1200]
     web_ctx, _ = _tavily_context_and_urls(
@@ -368,7 +369,7 @@ def _signals_agent_output(prompt: str, company_profile_seed: str, llm_backend: s
     """Returns (model_output_text, tavily_urls) for signal JSON parsing."""
     tavily_urls: List[str] = []
     if llm_backend != "claude":
-        raw_response = agent_chain.invoke({"input": prompt})
+        raw_response = llm_config.agent_chain.invoke({"input": prompt})
         response = raw_response["output"]
         try:
             if hasattr(raw_response, "intermediate_steps"):
@@ -1376,7 +1377,7 @@ Do not include any additional reasoning, thoughts, or steps after that.
     ).format(pre_data=pre_data)
 
     def _invoke_generator(pmt: str) -> dict:
-        raw_response = agent_chain.invoke({'input': pmt})
+        raw_response = llm_config.agent_chain.invoke({'input': pmt})
         response = raw_response["output"]
         try:
             print("[ICP_generator] Raw LLM output (first 500 chars):", str(response)[:500])
@@ -1896,7 +1897,7 @@ def fetch_leads_for_org(org_id: str, limit: int = 100) -> List[Dict[str, Any]]:
         ORDER BY l.created_at DESC
         LIMIT $limit
         """
-        with driver.session() as session:
+        with database.driver.session() as session:
             results = session.run(query_string, org_id=org_id, limit=limit)
             leads = []
             for record in results:
@@ -1921,7 +1922,7 @@ def fetch_leads_for_org(org_id: str, limit: int = 100) -> List[Dict[str, Any]]:
 
 def get_company_profile_for_org(org_id: str) -> Dict[str, Any]:
     """Fetch a single company profile for an org."""
-    with driver.session() as session:
+    with database.driver.session() as session:
         result = session.run(
             "MATCH (c:CompanyProfile {org_id: $org_id}) RETURN c LIMIT 1",
             org_id=org_id,
@@ -1940,7 +1941,7 @@ def get_company_profile_for_org(org_id: str) -> Dict[str, Any]:
 
 def get_market_reports_for_org(user_id: str, org_id: str) -> Dict[str, Dict[str, Any]]:
     """Fetch latest market research reports for all five components."""
-    db = client["Scout_Agent"]
+    db = database.client["Scout_Agent"]
     collection = db["Market_Intelligence"]
     reports: Dict[str, Dict[str, Any]] = {}
     for component_name in MARKET_SCORE_COMPONENT_KEYS:
@@ -2009,7 +2010,7 @@ Return JSON schema:
   }}
 }}
 """
-    response = llm2.invoke([HumanMessage(content=prompt)])
+    response = llm_config.llm2.invoke([HumanMessage(content=prompt)])
     content = getattr(response, "content", response)
     parsed = _clean_and_parse_json(content)
     scores = parsed.get("component_scores", {}) if isinstance(parsed, dict) else {}

@@ -3,7 +3,7 @@ import os
 from neo4j import GraphDatabase
 from langchain_community.graphs.neo4j_graph import Neo4jGraph
 from pymongo import MongoClient
-from config import neo4j_uri, neo4j_username, neo4j_password, mongo_uri
+from app.core.config import neo4j_uri, neo4j_username, neo4j_password, mongo_uri
 
 # Setting BREWRA_SKIP_DB_INIT=1 skips eager Neo4j/Mongo connection attempts at
 # import time. Pytest's conftest sets it so test sessions don't block on SRV
@@ -121,3 +121,23 @@ def upsert_node(tx, label, match_field, match_value, data: dict):
         MERGE (n:{label} {{ {escaped_match_field}: $match_value }})
         """
         tx.run(query, match_value=match_value)
+
+
+# S3 + Pinecone clients (moved from api.py during phase A modularization)
+import boto3
+from pinecone import Pinecone
+from app.core.config import (
+    aws_access_key,
+    aws_secret_key,
+    aws_region,
+    pinecone_api_key,
+)
+
+s3_client = boto3.client(
+    's3',
+    aws_access_key_id=aws_access_key,
+    aws_secret_access_key=aws_secret_key,
+    region_name=aws_region,
+)
+
+pc = Pinecone(api_key=pinecone_api_key)

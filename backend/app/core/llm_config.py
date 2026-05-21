@@ -7,8 +7,8 @@ from langchain_classic.memory import ConversationBufferMemory
 from langchain_classic.agents import initialize_agent, Tool
 from langchain_classic.agents.agent_types import AgentType
 from langchain_community.tools.tavily_search.tool import TavilySearchResults
-from config import groq_api_key, together_api_key, tavily_api_key
-from database import graph
+from app.core.config import groq_api_key, together_api_key, tavily_api_key
+from app.core import database
 
 # Initialize LLM models
 llm = ChatGroq(model="llama-3.3-70b-versatile", api_key=groq_api_key)
@@ -159,9 +159,9 @@ qa_prompt = PromptTemplate(
 # Initialize LangChain QA Chain
 # Guarded so a missing graph (BREWRA_SKIP_DB_INIT in tests, or unreachable
 # Neo4j at boot) doesn't crash module import. Conftest patches llm_config.chain.
-if graph is not None:
+if database.graph is not None:
     chain = GraphCypherQAChain.from_llm(
-        llm=llm2, graph=graph, cypher_prompt=Cypher_Prompt, qa_prompt=qa_prompt ,verbose=True, memory=memory, allow_dangerous_requests=True
+        llm=llm2, graph=database.graph, cypher_prompt=Cypher_Prompt, qa_prompt=qa_prompt ,verbose=True, memory=memory, allow_dangerous_requests=True
     )
 else:
     chain = None
@@ -287,9 +287,9 @@ qa_prompt2 = PromptTemplate(
 )
 
 # Initialize LangChain QA Chain
-if graph is not None:
+if database.graph is not None:
     chain2 = GraphCypherQAChain.from_llm(
-        llm=llm2, graph=graph, cypher_prompt=Cypher_Prompt2, qa_prompt=qa_prompt2 ,verbose=True, memory=memory, allow_dangerous_requests=True
+        llm=llm2, graph=database.graph, cypher_prompt=Cypher_Prompt2, qa_prompt=qa_prompt2 ,verbose=True, memory=memory, allow_dangerous_requests=True
     )
 else:
     chain2 = None
