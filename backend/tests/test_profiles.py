@@ -188,7 +188,7 @@ def test_get_profile_company_returns_profile_with_icps(client, mock_neo4j, snaps
     mock_mongo_client = MagicMock()
     mock_mongo_client.__getitem__.return_value.__getitem__.return_value.find_one.return_value = mongo_doc
 
-    with patch("api.MongoClient", return_value=mock_mongo_client):
+    with patch("app.routers.profiles.MongoClient", return_value=mock_mongo_client):
         response = client.get(
             "/profile/company",
             params={"org_id": TEST_ORG_ID},
