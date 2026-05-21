@@ -29,7 +29,7 @@ DEFAULT_ORG_ID = "b06907ac-b9aa-46ae-9535-8f735614b365"
 # Same default API host as test_lead_market_scoring.py / test_upload_embedding.py
 BASE_URL = "https://backend-11kr.onrender.com"
 
-from services import get_company_profile_for_org  # noqa: E402
+from app.services.market_scoring import get_company_profile_for_org  # noqa: E402
 
 
 def main() -> int:

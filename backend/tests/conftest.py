@@ -58,6 +58,17 @@ for _mod in _HEAVY_MODULES:
 # database.py wraps the connection attempt in try/except, so failed
 # connectivity at import time is non-fatal.
 
+# ---------------------------------------------------------------------------
+# Eagerly import `app.main` at conftest load time so routers are fully wired
+# before any fixture-level `mocker.patch("app.routers.X.MongoClient", ...)` runs.
+# Without this, the first patch triggers a standalone router import whose
+# `from app.main import logger` re-enters app.main mid-load, leaving sibling
+# routers partially loaded when `app.include_router(...)` runs against them.
+# (Pre-deletion this was masked by `mocker.patch("api.MongoClient", ...)`
+# triggering full app.main load through api.py's `from app.main import app`.)
+# ---------------------------------------------------------------------------
+from app.main import app as _app  # noqa: F401, E402
+
 
 @pytest.fixture
 def mock_neo4j(mocker):
@@ -84,7 +95,6 @@ def mock_mongo(mocker):
     mongo = MagicMock()
     mock_constructor = MagicMock(return_value=mongo)
     mocker.patch("app.core.database.client", mongo)
-    mocker.patch("api.MongoClient", mock_constructor)
     # Phase-A routers that inline-construct MongoClient (extracted from api.py):
     for mod in (
         "app.routers.org_auth",
