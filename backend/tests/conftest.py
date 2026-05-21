@@ -26,6 +26,9 @@ for _p in (_BACKEND_DIR, _MONOREPO_ROOT):
 os.environ.setdefault("PINECONE_API_KEY", "test-pinecone-key")
 os.environ.setdefault("AWS_ACCESS_KEY", "test-aws-key")
 os.environ.setdefault("AWS_SECRET_KEY", "test-aws-secret")
+# Tells database.py to skip eager Neo4j/Mongo init at import time so mocks below
+# can land before any real network I/O is attempted.
+os.environ.setdefault("BREWRA_SKIP_DB_INIT", "1")
 
 # ---------------------------------------------------------------------------
 # Pre-stub heavy / network-connecting modules so they never attempt real I/O
@@ -76,10 +79,16 @@ def mock_neo4j(mocker):
 def mock_mongo(mocker):
     """Mock MongoDB client. Returns the MagicMock so tests can assert on
     e.g. mock_mongo.Scout_Agent.signals.update_one.called.
+
+    Also patches the `MongoClient` constructor in api.py / services.py because
+    api.py creates fresh `MongoClient(mongo_uri)` instances inline inside ~26
+    endpoint handlers — those bypass the module-level `client` symbol and would
+    otherwise spawn real connections.
     """
     mongo = MagicMock()
     mocker.patch("api.client", mongo)
     mocker.patch("services.client", mongo)
+    mocker.patch("api.MongoClient", MagicMock(return_value=mongo))
     return mongo
 
 

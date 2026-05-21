@@ -157,9 +157,14 @@ qa_prompt = PromptTemplate(
 )
 
 # Initialize LangChain QA Chain
-chain = GraphCypherQAChain.from_llm(
-    llm=llm2, graph=graph, cypher_prompt=Cypher_Prompt, qa_prompt=qa_prompt ,verbose=True, memory=memory, allow_dangerous_requests=True
-)
+# Guarded so a missing graph (BREWRA_SKIP_DB_INIT in tests, or unreachable
+# Neo4j at boot) doesn't crash module import. Conftest patches llm_config.chain.
+if graph is not None:
+    chain = GraphCypherQAChain.from_llm(
+        llm=llm2, graph=graph, cypher_prompt=Cypher_Prompt, qa_prompt=qa_prompt ,verbose=True, memory=memory, allow_dangerous_requests=True
+    )
+else:
+    chain = None
 
 Cypher_gen_prompt2 = """
 You are a Neo4j Cypher expert. Your task is to return a single clean, executable Cypher query — with no markdown, no commentary, no prefixes or suffixes, and no text outside the Cypher code.
@@ -282,9 +287,12 @@ qa_prompt2 = PromptTemplate(
 )
 
 # Initialize LangChain QA Chain
-chain2 = GraphCypherQAChain.from_llm(
-    llm=llm2, graph=graph, cypher_prompt=Cypher_Prompt2, qa_prompt=qa_prompt2 ,verbose=True, memory=memory, allow_dangerous_requests=True
-)
+if graph is not None:
+    chain2 = GraphCypherQAChain.from_llm(
+        llm=llm2, graph=graph, cypher_prompt=Cypher_Prompt2, qa_prompt=qa_prompt2 ,verbose=True, memory=memory, allow_dangerous_requests=True
+    )
+else:
+    chain2 = None
 
 # Search tool configuration
 search_tool = TavilySearchResults(

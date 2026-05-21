@@ -7,7 +7,8 @@ from services import *
 from api import app
 
 # Refresh Graph Schema
-graph.refresh_schema()
+if graph is not None:
+    graph.refresh_schema()
 
 # Run FastAPI server
 if __name__ == "__main__":

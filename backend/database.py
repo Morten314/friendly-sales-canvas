@@ -1,21 +1,44 @@
+import os
+
 from neo4j import GraphDatabase
 from langchain_community.graphs.neo4j_graph import Neo4jGraph
 from pymongo import MongoClient
 from config import neo4j_uri, neo4j_username, neo4j_password, mongo_uri
 
+# Setting BREWRA_SKIP_DB_INIT=1 skips eager Neo4j/Mongo connection attempts at
+# import time. Pytest's conftest sets it so test sessions don't block on SRV
+# DNS / Bolt handshake when the sandbox can't reach the prod clusters; mocks
+# replace `client` / `graph` before any test touches them. Production leaves
+# this unset.
+_SKIP_DB_INIT = bool(os.getenv("BREWRA_SKIP_DB_INIT"))
+
 # Connect to Neo4j Database
-try:
-    driver = GraphDatabase.driver(neo4j_uri, auth=(neo4j_username, neo4j_password))
-    driver.verify_connectivity()
-    print("Connected to Neo4j successfully!")
-except Exception as e:
-    print("Neo4j Connection failed:", e)
+driver = None
+if not _SKIP_DB_INIT:
+    try:
+        driver = GraphDatabase.driver(neo4j_uri, auth=(neo4j_username, neo4j_password))
+        driver.verify_connectivity()
+        print("Connected to Neo4j successfully!")
+    except Exception as e:
+        print("Neo4j Connection failed:", e)
 
 # Initialize Neo4j Graph
-graph = Neo4jGraph(url=neo4j_uri, username=neo4j_username, password=neo4j_password)
+graph = None
+if not _SKIP_DB_INIT:
+    try:
+        graph = Neo4jGraph(url=neo4j_uri, username=neo4j_username, password=neo4j_password)
+    except Exception as e:
+        print("Neo4jGraph init failed:", e)
 
 # MongoDB connection
-client = MongoClient(mongo_uri)
+# pymongo 4.x eagerly resolves mongodb+srv URIs during construction, which
+# blocks on DNS in sandboxes with restricted outbound. Skip when gated.
+client = None
+if not _SKIP_DB_INIT:
+    try:
+        client = MongoClient(mongo_uri)
+    except Exception as e:
+        print("MongoDB Connection failed:", e)
 
 # Function to execute a Cypher query
 def query(query_string):
