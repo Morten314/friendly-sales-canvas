@@ -41,6 +41,9 @@ app.add_middleware(
 
 # Router registrations are added incrementally in Tasks 4-15.
 # Each Task N adds one line: app.include_router(<domain>.router)
+from app.routers import pipeline
+
+app.include_router(pipeline.router)
 
 # Preserve original boot-time Neo4j schema refresh (was in pre-Task-2 main.py).
 # Guarded so BREWRA_SKIP_DB_INIT=1 (and any future None-graph mode) is safe.
