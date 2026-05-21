@@ -53,6 +53,10 @@ from app.routers import profiles
 
 app.include_router(profiles.router)
 
+from app.routers import customer_profile
+
+app.include_router(customer_profile.router)
+
 # Preserve original boot-time Neo4j schema refresh (was in pre-Task-2 main.py).
 # Guarded so BREWRA_SKIP_DB_INIT=1 (and any future None-graph mode) is safe.
 if database.graph is not None:
