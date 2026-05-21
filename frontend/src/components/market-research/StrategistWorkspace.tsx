@@ -8,6 +8,7 @@ import {
   Bot, CheckCircle2, Loader2, Mail, MessageSquare, Users,
   ArrowLeft, Clock, Target, Send, Linkedin, Filter,
   Play, Eye, MousePointerClick, FileCheck, ChevronRight, Save,
+  Compass,
 } from "lucide-react";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -606,7 +607,7 @@ Take care,
         detail: {
           id: `strat-email-${activeEmailStepId}-${Date.now()}`,
           agentName: "Strategist",
-          agentIcon: "🧭",
+          agentIcon: Compass,
           agentColor: "bg-indigo-500",
           taskNumber: `STR-${new Date().getFullYear()}-${Math.floor(Math.random() * 900) + 100}`,
           timestamp: "Just now",
@@ -660,7 +661,7 @@ Take care,
         detail: {
           id: `strat-li-${step.id}-${Date.now()}`,
           agentName: "Strategist",
-          agentIcon: "🧭",
+          agentIcon: Compass,
           agentColor: "bg-indigo-500",
           taskNumber: `STR-${new Date().getFullYear()}-${Math.floor(Math.random() * 900) + 100}`,
           timestamp: "Just now",

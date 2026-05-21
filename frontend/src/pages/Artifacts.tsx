@@ -6,12 +6,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { FileText, TrendingUp, Users, Target, BarChart, Clock, AlertCircle, CheckCircle, Lightbulb, Download, Bot, Edit, Trash2, FolderOpen, ChevronRight, Mail } from 'lucide-react';
+import { FileText, TrendingUp, Users, Target, BarChart, Clock, AlertCircle, CheckCircle, Lightbulb, Download, Bot, Edit, Trash2, FolderOpen, ChevronRight, Mail, Satellite, Compass } from 'lucide-react';
 
 interface ArtefactItem {
   id: string;
   agentName: string;
-  agentIcon: string;
+  // SVG icon component (lucide-react) so test snapshots are pixel-stable
+  // across OSes — emoji glyphs vary by OS/font version. See agent → icon map
+  // in mockArtefacts and StrategistWorkspace.tsx.
+  agentIcon: React.ComponentType<{ className?: string }>;
   agentColor: string;
   taskNumber: string;
   timestamp: string;
@@ -38,7 +41,7 @@ const mockArtefacts: ArtefactItem[] = [
   {
     id: '1',
     agentName: 'Scout',
-    agentIcon: '🛰',
+    agentIcon: Satellite,
     agentColor: 'bg-blue-500',
     taskNumber: 'SCT-2024-001',
     timestamp: '2h ago',
@@ -70,7 +73,7 @@ const mockArtefacts: ArtefactItem[] = [
   {
     id: '2',
     agentName: 'Profiler',
-    agentIcon: '🎯',
+    agentIcon: Target,
     agentColor: 'bg-purple-500',
     taskNumber: 'PRF-2024-028',
     timestamp: '4h ago',
@@ -102,7 +105,7 @@ const mockArtefacts: ArtefactItem[] = [
   {
     id: '3',
     agentName: 'Scout',
-    agentIcon: '🛰',
+    agentIcon: Satellite,
     agentColor: 'bg-blue-500',
     taskNumber: 'SCT-2024-045',
     timestamp: '2d ago',
@@ -405,7 +408,7 @@ startxref
           <div className="flex items-center gap-3 mb-3">
             <Avatar className="h-10 w-10">
               <AvatarFallback className={`text-white text-sm font-medium ${artefact.agentColor}`}>
-                {artefact.agentIcon}
+                <artefact.agentIcon className="h-5 w-5" />
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
