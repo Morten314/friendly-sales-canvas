@@ -94,6 +94,11 @@ def mock_mongo(mocker):
         "app.routers.signals",
     ):
         mocker.patch(f"{mod}.MongoClient", mock_constructor)
+    # Phase-A services that inline-construct MongoClient (e.g. Profiler
+    # cluster connection in _get_profiler_mongo_client). Routers/services that
+    # import this helper resolve it at call time, so patching the source
+    # module is sufficient.
+    mocker.patch("app.services.market_scoring.MongoClient", mock_constructor)
     return mongo
 
 

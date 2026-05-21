@@ -208,7 +208,7 @@ def test_post_upload_csv_parses_file(client, mock_neo4j):
     csv_content = "company_name,lead_name\nACME,Alice\nBeta Corp,Bob\n"
     mc = _make_profiler_mc()
 
-    with patch("api.MongoClient", return_value=mc):
+    with patch("app.services.market_scoring.MongoClient", return_value=mc):
         response = client.post(
             "/leads/batch-upload",
             data={"user_id": TEST_USER_ID, "org_id": TEST_ORG_ID},

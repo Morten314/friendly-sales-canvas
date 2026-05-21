@@ -10,11 +10,9 @@ from app.models import CustomerProfileRequest, SuggestedICPToCustomerProfileRequ
 # Phase-A:
 #   - ICP-id-registry helpers (_ensure_icp_id_registry_indexes, _reserve_unique_icp_id,
 #     _release_icp_id) moved to app.services.icp in commit 13/16.
-#   - _get_profiler_mongo_client remains inline in api.py; moves to its own service
-#     in commit 15/16.
-#   _get_profiler_mongo_client is imported lazily inside handlers to avoid a
-#   circular import at module load (api.py imports app.main, which includes
-#   this router).
+#   - _get_profiler_mongo_client moved to app.services.market_scoring in commit 15/16.
+#   Both helpers are imported lazily inside handlers to keep import order simple
+#   (no circular risk now that they live in app.services).
 
 router = APIRouter()
 
@@ -25,7 +23,7 @@ async def create_or_update_customer_profile(request: CustomerProfileRequest):
     Create or update customer profiles (ICPs) in MongoDB.
     Customer profiles are stored within the company profile document.
     """
-    from api import _get_profiler_mongo_client
+    from app.services.market_scoring import _get_profiler_mongo_client
     from app.services.icp import _ensure_icp_id_registry_indexes, _reserve_unique_icp_id
     try:
         # MongoDB connection
@@ -156,7 +154,7 @@ async def get_customer_profile(org_id: str = Query(...)):
     Returns both company profile and associated customer profiles from the same document.
     Filtered by org_id for multi-org support.
     """
-    from api import _get_profiler_mongo_client
+    from app.services.market_scoring import _get_profiler_mongo_client
     from app.services.icp import _ensure_icp_id_registry_indexes, _reserve_unique_icp_id
     mongo_client = None
     try:
@@ -252,7 +250,7 @@ async def save_suggested_icp_as_customer_profile(request: SuggestedICPToCustomer
     Convert a suggested/recommended ICP (from GET /icp) into a Customer Profile ICP and save it.
     Enforces uniqueness by source suggested ICP id within the org's saved customer profiles.
     """
-    from api import _get_profiler_mongo_client
+    from app.services.market_scoring import _get_profiler_mongo_client
     from app.services.icp import _ensure_icp_id_registry_indexes, _reserve_unique_icp_id
     try:
         # --- Load suggested ICPs for this user_id ---
@@ -404,7 +402,7 @@ async def delete_customer_profile_icp(icp_id: str, org_id: str = Query(...)):
     """
     Delete a single saved customer profile ICP by icp_id for a given org_id.
     """
-    from api import _get_profiler_mongo_client
+    from app.services.market_scoring import _get_profiler_mongo_client
     from app.services.icp import _ensure_icp_id_registry_indexes, _release_icp_id
     mongo_client = None
     try:

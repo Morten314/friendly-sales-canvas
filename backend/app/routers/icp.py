@@ -153,7 +153,7 @@ async def get_or_create_icp_config(user_id: str = Query(...), refresh: bool = Qu
             return {"suggestedICPs": normalized_icps}
 
         # MongoDB connection setup
-        from api import _get_profiler_mongo_client
+        from app.services.market_scoring import _get_profiler_mongo_client
         client = _get_profiler_mongo_client()
         db = client["Profiler"]
         icp_service._ensure_icp_id_registry_indexes(db)
@@ -490,7 +490,7 @@ async def delete_recommended_icp(icp_id: str, user_id: str = Query(...)):
     """
     mongo_client = None
     try:
-        from api import _get_profiler_mongo_client
+        from app.services.market_scoring import _get_profiler_mongo_client
         mongo_client = _get_profiler_mongo_client()
         db = mongo_client["Profiler"]
         icp_service._ensure_icp_id_registry_indexes(db)

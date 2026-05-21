@@ -105,7 +105,7 @@ def test_trigger_market_scoring_returns_accepted(client, mock_neo4j):
         "refresh": True,
     }
 
-    with patch("api.MongoClient", return_value=mc):
+    with patch("app.services.market_scoring.MongoClient", return_value=mc):
         response = client.post("/leads/market-scores", json=payload)
 
     assert response.status_code == 200
@@ -135,8 +135,8 @@ def test_get_market_score_returns_score(client, mock_neo4j):
         "refresh": False,
     }
 
-    with patch("api.MongoClient", return_value=mc), \
-         patch("api._get_lead_identity_from_neo4j", return_value={}):
+    with patch("app.services.market_scoring.MongoClient", return_value=mc), \
+         patch("app.services.market_scoring._get_lead_identity_from_neo4j", return_value={}):
         response = client.post("/leads/market-scores", json=payload)
 
     assert response.status_code == 200
@@ -157,7 +157,7 @@ def test_get_market_score_status_404_when_no_run(client):
     mc, _, run_coll = _make_score_mc()
     run_coll.find_one.return_value = None
 
-    with patch("api.MongoClient", return_value=mc):
+    with patch("app.services.market_scoring.MongoClient", return_value=mc):
         response = client.get(
             f"/leads/market-scores/status?user_id={TEST_USER_ID}&org_id={TEST_ORG_ID}"
         )

@@ -208,7 +208,7 @@ async def batch_upload_leads(
     Works exactly like company profile endpoint - completely flexible.
     """
     try:
-        from api import _get_profiler_mongo_client
+        from app.services.market_scoring import _get_profiler_mongo_client
         import pandas as pd
         import uuid
         from datetime import datetime
@@ -402,7 +402,7 @@ def get_lead_stream_status(org_id: str = Query(...)):
     """
     List lead-stream uploads (file_id registry/status) for an org.
     """
-    from api import _get_profiler_mongo_client
+    from app.services.market_scoring import _get_profiler_mongo_client
     mongo_client = None
     try:
         mongo_client = _get_profiler_mongo_client()
@@ -436,7 +436,7 @@ def delete_leads_by_file(file_id: str, user_id: str = Query(...), org_id: str = 
     Delete all leads belonging to a specific file_id (scoped by user_id and org_id).
     Also updates lead-stream tracking status in MongoDB.
     """
-    from api import _get_profiler_mongo_client
+    from app.services.market_scoring import _get_profiler_mongo_client
     mongo_client = None
     try:
         # First count matching leads
