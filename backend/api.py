@@ -12,8 +12,7 @@ from collections import deque
 from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Any, Optional
 
-from fastapi import FastAPI, UploadFile, File, Form, Query, HTTPException, Body, APIRouter, BackgroundTasks
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import UploadFile, File, Form, Query, HTTPException, Body, APIRouter, BackgroundTasks
 from fastapi.responses import JSONResponse
 from pymongo import MongoClient
 from pymongo.errors import DuplicateKeyError
@@ -45,13 +44,7 @@ from services import (
     search_signals_scout, search_signals_profiler, fetch_leads_for_org,
     get_company_profile_for_org, get_market_reports_for_org, score_single_lead_against_market
 )
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+from app.main import app, logger
 
 CLAUDE_SIGNAL_WINDOW_SECONDS = claude_signal_window_seconds
 CLAUDE_SIGNAL_TOKEN_LIMIT_5M = claude_signal_token_limit_5m
@@ -159,19 +152,6 @@ def _fetch_pinecone_supporting_context(
     except Exception as e:
         logger.warning(f"Pinecone support context unavailable, continuing without it: {e}")
         return []
-
-# Create FastAPI app
-app = FastAPI()
-
-# Add CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 
 def _get_profiler_mongo_client() -> MongoClient:
     username = urllib.parse.quote_plus("techbrewra")

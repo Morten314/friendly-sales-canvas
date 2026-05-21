@@ -1,15 +1,6 @@
-"""Transitional backend entrypoint.
-
-After Task 2 the core files live under app/core/. The FastAPI() instance
-and routers still live in api.py until Task 3 moves them to app/main.py.
-This file's job during Tasks 2-15 is just to import api.py so its
-@app.X decorators register on the shared FastAPI instance.
-"""
-from app.core import database
-from api import app  # registers @app.X routes by import side-effect
-
-if database.graph is not None:
-    database.graph.refresh_schema()
+"""Backend entrypoint shim — preserves `uvicorn main:app` for Render and local dev."""
+from app.main import app
+import api  # noqa: F401 — registers routes by import side-effect (interim; routers replace this in Tasks 4-15)
 
 if __name__ == "__main__":
     import uvicorn
