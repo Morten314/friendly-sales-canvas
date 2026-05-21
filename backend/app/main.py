@@ -69,6 +69,10 @@ from app.routers import graph_chat
 
 app.include_router(graph_chat.router)
 
+from app.routers import market_research
+
+app.include_router(market_research.router)
+
 # Preserve original boot-time Neo4j schema refresh (was in pre-Task-2 main.py).
 # Guarded so BREWRA_SKIP_DB_INIT=1 (and any future None-graph mode) is safe.
 if database.graph is not None:

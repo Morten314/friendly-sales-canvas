@@ -81,11 +81,13 @@ def test_post_market_research_all_components(client, mock_neo4j, mock_mongo, com
     # Neo4j returns a CompanyProfile record
     mock_neo4j["session"].run.return_value.single.return_value = _make_neo4j_record()
 
-    # api.py imports COMPONENT_FUNCTIONS from services, so we must patch api.COMPONENT_FUNCTIONS
-    # (the already-bound name in api's namespace), not services.COMPONENT_FUNCTIONS.
-    # _fetch_pinecone_supporting_context is defined and called in api.py, so patch there too.
-    with patch("api.COMPONENT_FUNCTIONS", {component_name: lambda _: dict(_CANNED_RESULT)}), \
-         patch("api._fetch_pinecone_supporting_context", return_value=[]):
+    # COMPONENT_FUNCTIONS lives in app.services.market_research (post-commit 12/16).
+    # The router accesses it via `market_research_service.COMPONENT_FUNCTIONS`, so
+    # patching the source module is the canonical target.
+    # _fetch_pinecone_supporting_context is imported by the router as a local binding;
+    # patch the binding in the router module to override the call site.
+    with patch("app.services.market_research.COMPONENT_FUNCTIONS", {component_name: lambda _: dict(_CANNED_RESULT)}), \
+         patch("app.routers.market_research._fetch_pinecone_supporting_context", return_value=[]):
         response = client.post("/market-research", json=_base_payload(component_name))
 
     assert response.status_code == 200
@@ -121,7 +123,7 @@ def test_post_market_research_cached_path(client, mock_neo4j, mock_mongo):
 
     # The research function should never be called
     research_fn = MagicMock()
-    with patch("services.COMPONENT_FUNCTIONS", {component_name: research_fn}):
+    with patch("app.services.market_research.COMPONENT_FUNCTIONS", {component_name: research_fn}):
         response = client.post("/market-research", json=_base_payload(component_name, refresh=False))
 
     assert response.status_code == 200
