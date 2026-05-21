@@ -301,7 +301,7 @@ Single feature branch off `master`: `refactor/backend-modularization-phase-a`. M
 Warm-up: inline-only handlers, no services.py content to move.
 
 4. **Extract `pipeline`** (2 routes — smallest first).
-5. **Extract `org_auth`** (4 routes).
+5. **Extract `org_auth`** (5 routes).
 6. **Extract `profiles`** (4 routes).
 7. **Extract `customer_profile`** (4 routes).
 
@@ -314,8 +314,8 @@ Warm-up: inline-only handlers, no services.py content to move.
 ### Phase 4 — Shared helpers + LLM-heavy domains (5 commits)
 
 11. **Create shared helper modules.** Move `_retrieval` helpers → `app/services/_retrieval.py`. Move `_claude_budget` helpers + module-level globals → `app/services/_claude_budget.py`. No domain extraction in this commit — isolates the move so any breakage is unambiguous.
-12. **Extract `icp`** (4 routes + `ICP_generator`, `icp_research_1..4`, ICP-id registry helpers).
-13. **Extract `market_research`** (2 routes + `Research_Market_1..5`).
+12. **Extract `market_research`** (2 routes + `Research_Market_1..5`). Extracted before `icp` so the shared helpers `_tavily_context_and_urls` and `_claude_messages_text` land in their final home (`app/services/market_research.py`) first — `icp` can then import them directly without a temporary `from services import ...` alias.
+13. **Extract `icp`** (4 routes + `ICP_generator`, `icp_research_1..4`, ICP-id registry helpers).
 14. **Extract `signals`** (7 routes + Scout/Profiler search functions + `_generate_signals_batch_core`).
 15. **Extract `market_scoring`** (3 routes + the entire scoring helper cluster — largest, most-stateful, last).
 
@@ -371,6 +371,7 @@ Captured here so the inventory isn't lost; not in scope for phase A.
 6. **Dependency injection for clients** — replace globals (`database.driver`, `database.client`) with FastAPI `Depends` providers; rework conftest accordingly.
 7. **Security hardening pass** — parametrize Cypher `f`-strings in `/voice_graph`, `/text_graph`, `/query/`; add `LIMIT` to `/leads`; tighten CORS off `*`.
 8. **Pagination convention** for `/leads` and other list endpoints.
+9. **Centralize inline Mongo clients.** Beyond `_get_profiler_mongo_client` (moved with `market_scoring` in phase A), there are ~9 inline `MongoClient(mongo_uri)` constructions scattered across handlers (e.g., `get_document_status`, `_generate_signals_batch_core`, several inside `/leads/batch-upload` and signal/ICP routes). They share the same hardcoded-credential surface and should consolidate into a single `database.profiler_client` (or per-cluster) singleton.
 
 ---
 

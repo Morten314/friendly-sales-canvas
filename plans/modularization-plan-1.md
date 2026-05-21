@@ -16,6 +16,20 @@
 
 ---
 
+## Note on line numbers
+
+Hard line numbers in this plan (`api.py:NNNN-MMMM`, `services.py:NNNN-MMMM`) reference the **pre-refactor** state captured at plan-writing time. They are accurate for Tasks 0-4. After Task 4 deletes the first route block, every subsequent line number shifts.
+
+**Locate every route, helper, or function via grep before deletion:**
+
+- Routes: `grep -nE '^@app\.(get|post|put|delete)\("<path>"' backend/api.py`
+- Functions: `grep -nE '^(async )?def <name>' backend/api.py backend/services.py`
+- Module-level constants: `grep -nE '^<NAME> = ' backend/services.py`
+
+The verification grep at the end of each task's delete-step is the source of truth for "did I delete the right thing." Line numbers in the plan are hints, not coordinates.
+
+---
+
 ## Pre-flight: Census and Baseline
 
 Before any moves, build the patch-target census and capture a clean test baseline. This is **not** a commit — it's a 15-minute exercise that surfaces hidden import sites and prevents silent test no-ops mid-refactor.
@@ -217,7 +231,12 @@ Then search for any usage of bare `graph` within `llm_config.py` and replace wit
 
 - [ ] **Step 5: Update `backend/api.py` imports**
 
-Find the imports at the top of `backend/api.py` (lines 30-48 currently). Replace the block:
+Find the imports at the top of `backend/api.py` (lines 30-41 currently — verify with `head -50 backend/api.py`). **Scope of this step:** replace the four-line block that imports from `config`, `models`, `database`, `llm_config`. Do NOT touch the two lines that follow it:
+
+- `from langchain_core.messages import HumanMessage` (third-party — unchanged)
+- `from services import (grapher, create_prospect_node, ...)` — sibling module still at `backend/services.py` throughout phase A; the import stays valid until `services.py` is split (Tasks 8-15) and finally deleted (Task 16)
+
+Replace the block:
 
 ```python
 from config import origins, STAGE_ORDER, STAGE_MAPPING, s3_bucket, aws_region, aws_access_key, aws_secret_key, pinecone_api_key, together_api_key, claude_sonnet_model, tavily_api_key, claude_signal_window_seconds, claude_signal_token_limit_5m, claude_signal_max_output_tokens
@@ -269,13 +288,21 @@ In the body of `backend/api.py`, every bare reference like `driver.session()`, `
 | `chain2` | `llm_config.chain2` |
 | `llm2` | `llm_config.llm2` |
 
-Use a careful search-and-replace. Verify with grep:
+Use a careful search-and-replace. Verify with a **tight** grep that looks for the symbol followed by a method call or attribute access — this filters out string-literal `"client"` keys and `client: MongoClient` parameter annotations:
 
 ```bash
-grep -nE "^[^#]*\b(driver|graph|client|s3_client|pc|chain|chain2|llm2)\b" backend/api.py | grep -v "database\.\|llm_config\." | head -20
+grep -nE "(^|[^a-zA-Z0-9_.])(driver|graph|client|s3_client|pc|chain|chain2|llm2)\.(session|run|refresh_schema|Scout_Agent|Profiler|MarketReports|Index|upload_fileobj|invoke|stream)" backend/api.py | grep -v "database\.\|llm_config\.\|self\.\|test_client\." | head -30
 ```
 
-Expected: Only matches inside string literals (e.g., `"client"` as a dict key) or function parameters (e.g., a function that takes `client: MongoClient`). No bare module-global references.
+Expected: Zero matches. Every remaining reference like `driver.session()` should now read `database.driver.session()`.
+
+**Why a tight pattern:** the bare-word regex `\b(driver|client|...)\b` matches too aggressively — parameter names (`def fn(client: MongoClient):`), dict keys (`{"driver": ...}`), and FastAPI `TestClient` usages all hit. The method-attached pattern above only flags real call sites that need rewriting.
+
+After the tight grep, do a final sanity pass with the broad pattern but treat any hits as needing manual review rather than auto-fix:
+
+```bash
+grep -nE "(^|[^a-zA-Z0-9_.])(driver|graph|client|s3_client|pc|chain|chain2|llm2)([^a-zA-Z0-9_]|$)" backend/api.py | grep -v "database\.\|llm_config\.\|\"client\"\|'client'\|MongoClient\|TestClient" | head -30
+```
 
 - [ ] **Step 7: Remove module-level `s3_client` and `pc` bindings from `api.py`**
 
@@ -350,6 +377,51 @@ grep -nE "^[^#]*\b(driver|graph|client|llm_transformer|llm|llm2|agent_chain)\b" 
 
 Expected: Only string-literal / parameter matches.
 
+- [ ] **Step 9b: Rewrite deferred imports inside function bodies**
+
+`api.py` and `services.py` contain `from X import Y` statements **inside `def` blocks** — these execute at call time, not module-load time, and were not caught by Steps 5/6/9. After Task 2, `backend/database.py` / `backend/config.py` / `backend/llm_config.py` / `backend/models.py` no longer exist; any deferred import referencing them will raise `ModuleNotFoundError` the first time its enclosing handler is invoked. Tests with full mocks may not exercise these code paths, so the failure surfaces only in integration/prod.
+
+Find them:
+
+```bash
+grep -nE "^\s+(from|import) (config|database|llm_config|models)( |$)" backend/api.py backend/services.py
+```
+
+Expected hits in `backend/api.py` (line numbers approximate — verify):
+- 3× `from database import query` inside `/query/`, `/voice_graph/`, `/text_graph/` handlers
+- 1× `from llm_config import llm2` inside `/test-llm` handler
+- 1× `from llm_config import agent_chain` inside `/signal_Ask` handler
+
+Plus `from services import fetch_leads_for_org` (2 sites) — leave those for now; `backend/services.py` still exists throughout phase A and gets a re-export alias in Task 9. They are rewritten when `signals` extracts in Task 14.
+
+Rewrite the imports inline (keep them inside the function bodies — moving them to module level would change `api.py`'s import-time semantics):
+
+| Original | After |
+|---|---|
+| `from database import query` | `from app.core.database import query` |
+| `from llm_config import llm2` | `from app.core import llm_config` (then references become `llm_config.llm2`) |
+| `from llm_config import agent_chain` | `from app.core import llm_config` (references become `llm_config.agent_chain`) |
+
+For the two `llm_config` cases, prefer the qualified module import so source-patching works in tests (consistent with Task 2's qualified-import convention).
+
+Verify the rewrites:
+
+```bash
+grep -nE "^\s+from (config|database|llm_config|models) import" backend/api.py backend/services.py
+```
+
+Expected: Zero matches. Any `from services import ...` deferred-import sites remain — they're handled when their host handler moves.
+
+- [ ] **Step 9c: Sweep stale `__pycache__/`**
+
+After `git mv` of `database.py`, `config.py`, `llm_config.py`, `models.py`, the stale `backend/__pycache__/database.cpython-*.pyc` (etc.) can satisfy a `from database import ...` import in confusing ways — Python's import system will load the cached bytecode if it finds it. Wipe all `__pycache__` under `backend/`:
+
+```bash
+find backend/ -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null
+```
+
+This is idempotent and safe — Python regenerates the cache on next import. Do this before running tests in Step 13.
+
 - [ ] **Step 10: Update `backend/main.py` imports**
 
 The current 16-line `backend/main.py`:
@@ -363,24 +435,36 @@ from services import *
 from api import app
 ```
 
-Replace with:
+Replace with a minimal transitional shim — drop the `from X import *` chain. The original star-imports existed to hoist every symbol into `main`'s namespace, but no caller relies on `main.X` for any of these names; the moves to `app/core/*` and `app/models` mean their callers now import from the new paths directly. Carrying the star-imports forward would silently mask any missed migration — a name resolved via `main.foo` instead of the proper module would look fine until the shim is removed.
 
 ```python
-from app.core.config import *  # noqa: F401,F403 — preserves side-effect imports
-from app.models import *  # noqa: F401,F403
-from app.core.database import *  # noqa: F401,F403
-from app.core.llm_config import *  # noqa: F401,F403
-from services import *  # noqa: F401,F403 — moved to app/ in later tasks; stays at backend root for now
-from api import app  # FastAPI app still defined in api.py; moved to app/main.py in Task 3
+"""Transitional backend entrypoint.
 
-graph.refresh_schema()
+After Task 2 the core files live under app/core/. The FastAPI() instance
+and routers still live in api.py until Task 3 moves them to app/main.py.
+This file's job during Tasks 2-15 is just to import api.py so its
+@app.X decorators register on the shared FastAPI instance.
+"""
+from app.core import database
+from api import app  # registers @app.X routes by import side-effect
+
+database.graph.refresh_schema()
 
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8000)
 ```
 
-The `from services import *` and `from api import app` continue working because both files still exist at `backend/` root with their current contents (only their imports changed). They'll move in subsequent tasks.
+Why: the `graph.refresh_schema()` call at module load (originally in the old `main.py`) is preserved via the qualified `database.graph.refresh_schema()`. After Task 3 moves FastAPI construction to `app/main.py`, this file shrinks further (Task 3 Step 5).
+
+**Verify no callers depend on `main.X` star-imported symbols:**
+
+```bash
+git grep -nE "from main import [^a]" -- ':!backend/api.py' ':!backend/services.py' ':!backend/main.py'
+git grep -n "import main\b" -- ':!backend/api.py' ':!backend/services.py' ':!backend/main.py'
+```
+
+Expected: the only meaningful match is `from main import app` (allowed). If anything else turns up (`from main import driver`, etc.), that caller needs to be updated to import from `app.core.database` directly before this step lands.
 
 - [ ] **Step 11: Rewrite `backend/tests/conftest.py` fixtures to source-patch new paths**
 
@@ -680,7 +764,7 @@ These four domains have inline-only handlers — no `services.py` content to mov
 - Modify: `backend/app/main.py` (add `include_router`)
 - Modify: `backend/api.py` (delete routes)
 
-**Routes:** `GET /Sales_Pipeline` (api.py:1546-1599), `GET /test-llm` (api.py:2920-2933).
+**Routes:** `GET /Sales_Pipeline`, `GET /test-llm` — locate with `grep -nE '^@app\.get\("/(Sales_Pipeline|test-llm)"' backend/api.py`.
 
 - [ ] **Step 1: Create empty service module**
 
@@ -719,7 +803,7 @@ router = APIRouter()
 # Change @app.get(...) → @router.get(...).
 ```
 
-Then **copy the handler bodies** from `backend/api.py` lines 1546-1599 (`/Sales_Pipeline`) and 2920-2933 (`/test-llm`) into this file. Change `@app.get(...)` to `@router.get(...)` for both. Leave everything else (including the handler function names and signatures) unchanged.
+Then **copy the handler bodies** for `/Sales_Pipeline` and `/test-llm` from `backend/api.py` (locate via the grep above) into this file. Change `@app.get(...)` to `@router.get(...)` for both. Leave everything else (including the handler function names and signatures) unchanged.
 
 - [ ] **Step 3: Verify the router file is well-formed**
 
@@ -741,7 +825,13 @@ app.include_router(pipeline.router)
 
 - [ ] **Step 5: Delete the extracted routes from `backend/api.py`**
 
-Delete lines 1546-1599 (`/Sales_Pipeline` handler) and lines 2920-2933 (`/test-llm` handler) from `backend/api.py`. The line numbers shift after the first deletion — verify by grepping:
+Locate each handler via grep and delete its full decorator + function body (decorator line through to next `@app.` or end of function). For `/Sales_Pipeline`:
+
+```bash
+grep -nE '^@app\.get\("/Sales_Pipeline"' backend/api.py
+```
+
+Find the matching `def ` two lines below; delete from `@app.get(...)` through the last line before the next module-level definition. Same for `/test-llm`. Verify:
 
 ```bash
 grep -nE '^@app\.(get|post|put|delete)\("/Sales_Pipeline"|^@app\.get\("/test-llm"' backend/api.py
@@ -789,7 +879,7 @@ git commit -m "refactor(be): extract pipeline router [phase A, commit 4/16]"
 - Modify: `backend/app/main.py` (add `include_router`)
 - Modify: `backend/api.py` (delete routes)
 
-**Routes:** `GET /org` (api.py:3900-3958), `POST /org` (api.py:3959-4034), `POST /connect_org` (api.py:4035-4088), `POST /registration` (api.py:4089-4122), `GET /registration` (api.py:4123-4352).
+**Routes:** `GET /org`, `POST /org`, `POST /connect_org`, `POST /registration`, `GET /registration` — locate with `grep -nE '^@app\.(get|post)\("/(org|connect_org|registration)"' backend/api.py`.
 
 - [ ] **Step 1: Create empty service module**
 
@@ -819,11 +909,9 @@ from app.models import RegistrationRequest, RegistrationResponse
 router = APIRouter()
 
 
-# Copy /org GET handler from api.py:3900-3958
-# Copy /org POST handler from api.py:3959-4034
-# Copy /connect_org POST handler from api.py:4035-4088
-# Copy /registration POST handler from api.py:4089-4122
-# Copy /registration GET handler from api.py:4123-4352
+# Copy /org GET / POST handlers              — grep '^@app\.(get|post)\("/org"' backend/api.py
+# Copy /connect_org POST handler              — grep '^@app\.post\("/connect_org"' backend/api.py
+# Copy /registration POST / GET handlers     — grep '^@app\.(get|post)\("/registration"' backend/api.py
 #
 # For each: change @app.X(...) → @router.X(...). Keep handler bodies unchanged.
 ```
@@ -890,7 +978,7 @@ git commit -m "refactor(be): extract org_auth router [phase A, commit 5/16]"
 - Modify: `backend/app/main.py`
 - Modify: `backend/api.py`
 
-**Routes:** `POST /profile/{profile_type}` (api.py:1600-1707), `GET /profile/{profile_type}` (api.py:1708-1805), `POST /cleanup-company-profiles` (api.py:1806-1842), `POST /edit` (api.py:3381-3411).
+**Routes:** `POST /profile/{profile_type}`, `GET /profile/{profile_type}`, `POST /cleanup-company-profiles`, `POST /edit` — locate with `grep -nE '^@app\.(get|post)\("/(profile/|cleanup-company-profiles|edit)' backend/api.py`.
 
 - [ ] **Step 1: Create empty service module**
 
@@ -918,10 +1006,9 @@ from app.models import CompanyProfile, UserProfile, ScoutProfile, EditRequest
 router = APIRouter()
 
 
-# Copy /profile/{profile_type} POST from api.py:1600-1707
-# Copy /profile/{profile_type} GET from api.py:1708-1805
-# Copy /cleanup-company-profiles POST from api.py:1806-1842
-# Copy /edit POST from api.py:3381-3411
+# Copy /profile/{profile_type} POST / GET    — grep '^@app\.(get|post)\("/profile/' backend/api.py
+# Copy /cleanup-company-profiles POST         — grep '^@app\.post\("/cleanup-company-profiles' backend/api.py
+# Copy /edit POST                             — grep '^@app\.post\("/edit"' backend/api.py
 #
 # For each: change @app.X → @router.X, keep body unchanged.
 ```
@@ -981,7 +1068,7 @@ git commit -m "refactor(be): extract profiles router [phase A, commit 6/16]"
 - Modify: `backend/app/main.py`
 - Modify: `backend/api.py`
 
-**Routes:** `POST /customer_profile` (api.py:3412-3539), `GET /customer_profile` (api.py:3540-3634), `POST /customer_profile/from_suggested_icp` (api.py:3635-3785), `DELETE /customer_profile/icp/{icp_id}` (api.py:3786-3837).
+**Routes:** `POST /customer_profile`, `GET /customer_profile`, `POST /customer_profile/from_suggested_icp`, `DELETE /customer_profile/icp/{icp_id}` — locate with `grep -nE '^@app\.(get|post|delete)\("/customer_profile' backend/api.py`.
 
 - [ ] **Step 1: Create empty service module**
 
@@ -1009,12 +1096,8 @@ from app.models import (
 router = APIRouter()
 
 
-# Copy /customer_profile POST from api.py:3412-3539
-# Copy /customer_profile GET from api.py:3540-3634
-# Copy /customer_profile/from_suggested_icp POST from api.py:3635-3785
-# Copy /customer_profile/icp/{icp_id} DELETE from api.py:3786-3837
-#
-# For each: change @app.X → @router.X, keep body unchanged.
+# Locate each handler with the grep in the task header. For each:
+# change @app.X → @router.X, keep body unchanged.
 ```
 
 Copy the four handler bodies in.
@@ -1077,11 +1160,11 @@ These domains have matching `services.py` functions that move alongside the rout
 - Modify: `backend/api.py`
 - Modify: `backend/services.py`
 
-**Routes:** `POST /upload_file/` (api.py:760-767), `POST /upload` (api.py:867-875), `POST /upload-document` (api.py:4353-4591), `GET /document-status/{file_key:path}` (api.py:4592-4622), `GET /user-documents` (api.py:4623-4674), `DELETE /data-source/{file_id}` (api.py:4675-4930), `PUT /data-source/{file_id}` (api.py:4931-4995).
+**Routes:** `POST /upload_file/`, `POST /upload`, `POST /upload-document`, `GET /document-status/{file_key:path}`, `GET /user-documents`, `DELETE /data-source/{file_id}`, `PUT /data-source/{file_id}` — locate with `grep -nE '^@app\.(get|post|delete|put)\("/(upload|upload_file|upload-document|document-status|user-documents|data-source)' backend/api.py`.
 
-**Service functions:** `load_document` (services.py:20-27), `grapher` (services.py:28-32), `process_prospect_list` (services.py:193-262).
+**Service functions:** `load_document`, `grapher`, `process_prospect_list` — locate with `grep -nE '^(async )?def (load_document|grapher|process_prospect_list)' backend/services.py`.
 
-Also: the `process_file_to_embeddings` async helper (api.py starting around 4165) is used internally by `/upload-document` as a BackgroundTask. It's inline in the router handler, not in services.py. It moves with the router.
+Also: the `process_file_to_embeddings` async helper is used internally by `/upload-document` as a BackgroundTask. It's inline in the router handler, not in services.py — locate with `grep -n 'async def process_file_to_embeddings' backend/api.py`. It moves with the router.
 
 - [ ] **Step 1: Create service module**
 
@@ -1094,10 +1177,10 @@ Extracted from services.py during phase A modularization.
 """
 ```
 
-Then **copy the three functions verbatim** from `backend/services.py`:
-- `load_document` (lines 20-27)
-- `grapher` (lines 28-32) — note this depends on `llm_transformer` which is in `llm_config`; uses qualified reference
-- `process_prospect_list` (lines 193-262)
+Then **copy the three functions verbatim** from `backend/services.py` (locate via grep):
+- `load_document`
+- `grapher` — note this depends on `llm_transformer` which is in `llm_config`; uses qualified reference
+- `process_prospect_list`
 
 Required imports at top of `app/services/documents.py`:
 
@@ -1148,15 +1231,8 @@ from app.services import documents as documents_service
 router = APIRouter()
 
 
-# Copy /upload_file/ from api.py:760-767
-# Copy /upload from api.py:867-875
-# Copy /upload-document from api.py:4353-4591
-# Copy /document-status/{file_key:path} from api.py:4592-4622
-# Copy /user-documents from api.py:4623-4674
-# Copy /data-source/{file_id} DELETE from api.py:4675-4930
-# Copy /data-source/{file_id} PUT from api.py:4931-4995
-#
-# Also copy the process_file_to_embeddings async helper (around api.py:4165-4350)
+# Locate each handler with the grep in the task header. Also copy the
+# process_file_to_embeddings async helper (`grep -n 'async def process_file_to_embeddings' backend/api.py`)
 # — this is a BackgroundTask used inside /upload-document.
 #
 # For each route: @app.X → @router.X. For internal service calls like
@@ -1227,9 +1303,9 @@ git commit -m "refactor(be): extract documents router and service [phase A, comm
 - Modify: `backend/api.py`
 - Modify: `backend/services.py`
 
-**Routes:** `GET /leads` (api.py:876-919), `POST /leads` (api.py:920-967), `PUT /leads/{lead_id}` (api.py:968-1014), `DELETE /leads/{lead_id}` (api.py:1015-1055), `POST /leads/batch-upload` (api.py:1056-1224), `GET /leads/by-file` (api.py:1225-1257), `GET /leads/stream/status` (api.py:1258-1289), `DELETE /leads/by-file/{file_id}` (api.py:1290-1357).
+**Routes:** `GET /leads`, `POST /leads`, `PUT /leads/{lead_id}`, `DELETE /leads/{lead_id}`, `POST /leads/batch-upload`, `GET /leads/by-file`, `GET /leads/stream/status`, `DELETE /leads/by-file/{file_id}` — locate with `grep -nE '^@app\.(get|post|put|delete)\("/leads' backend/api.py` (filter out `/leads/market-scores` lines — they go to Task 15).
 
-**Service functions:** `fetch_leads_for_org` (services.py:1889-1921).
+**Service functions:** `fetch_leads_for_org` — locate with `grep -n '^def fetch_leads_for_org' backend/services.py`.
 
 Note: `/leads/market-scores`, `/leads/market-scores/status`, and `/leads/{lead_id}/market-score-descriptions` are NOT in this task — they go to `market_scoring` (Task 15).
 
@@ -1247,7 +1323,7 @@ from typing import List, Dict, Any
 from app.core import database
 ```
 
-Copy `fetch_leads_for_org` (services.py:1889-1921) into this file.
+Copy `fetch_leads_for_org` into this file (locate via grep).
 
 - [ ] **Step 2: Create router module**
 
@@ -1299,7 +1375,7 @@ app.include_router(leads.router)
 
 - [ ] **Step 5: Replace `fetch_leads_for_org` in `services.py` with a temporary alias**
 
-`services.py` still contains `score_single_lead_against_market` (until Task 15) which calls `fetch_leads_for_org`. Rather than rewriting every call site, replace the original function definition at `backend/services.py:1889-1921` with a single re-export line:
+`services.py` still contains `score_single_lead_against_market` (until Task 15) which calls `fetch_leads_for_org`. Rather than rewriting every call site, replace the original function definition in `backend/services.py` (locate via the grep in the task header) with a single re-export line:
 
 ```python
 # Temporary alias — function moved to app.services.leads in commit 9/16.
@@ -1347,9 +1423,9 @@ git commit -m "refactor(be): extract leads router and service [phase A, commit 9
 - Modify: `backend/api.py`
 - Modify: `backend/services.py`
 
-**Routes:** `POST /create-company/` (api.py:768-778), `GET /ask/` (api.py:779-783), `GET /chat/` (api.py:784-788), `GET /query/` (api.py:789-794), `POST /voice_graph/` (api.py:795-833), `POST /text_graph/` (api.py:834-866).
+**Routes:** `POST /create-company/`, `GET /ask/`, `GET /chat/`, `GET /query/`, `POST /voice_graph/`, `POST /text_graph/` — locate with `grep -nE '^@app\.(get|post)\("/(create-company|ask|chat|query|voice_graph|text_graph)' backend/api.py`.
 
-**Service functions:** `create_prospect_node` (services.py:49-67), `convert_audio_to_text` (services.py:33-48), `get_linkedin_followers` (services.py:68-85), `get_linkedin_recent_activity` (services.py:86-103), `extract_linkedin_username` (services.py:104-108), `calculate_prospect_score` (services.py:109-139), `get_ranked_prospects` (services.py:140-158), `extract_number` (services.py:159-162), `score_prospect` (services.py:163-192).
+**Service functions:** `create_prospect_node`, `convert_audio_to_text`, `get_linkedin_followers`, `get_linkedin_recent_activity`, `extract_linkedin_username`, `calculate_prospect_score`, `get_ranked_prospects`, `extract_number`, `score_prospect` — locate with `grep -nE '^def (create_prospect_node|convert_audio_to_text|get_linkedin_|extract_linkedin_username|calculate_prospect_score|get_ranked_prospects|extract_number|score_prospect)' backend/services.py`.
 
 - [ ] **Step 1: Create service module**
 
@@ -1382,7 +1458,7 @@ from app.core import llm_config
 from app.core.config import PREDEFINED_QUESTIONS, rapidapi_key
 ```
 
-Copy the nine functions verbatim from `services.py`. Adjust any bare `driver` / `client` / `llm` / `agent_chain` / `query` references to qualified form (`database.driver`, `database.client`, `llm_config.llm`, `llm_config.agent_chain`, `database.query`).
+Copy the nine functions verbatim from `services.py` (locate each via grep). Adjust any bare `driver` / `client` / `llm` / `agent_chain` / `query` references to qualified form (`database.driver`, `database.client`, `llm_config.llm`, `llm_config.agent_chain`, `database.query`).
 
 - [ ] **Step 2: Create router module**
 
@@ -1400,12 +1476,7 @@ from app.services import graph_chat as graph_chat_service
 router = APIRouter()
 
 
-# Copy /create-company/ from api.py:768-778
-# Copy /ask/ from api.py:779-783
-# Copy /chat/ from api.py:784-788
-# Copy /query/ from api.py:789-794
-# Copy /voice_graph/ from api.py:795-833
-# Copy /text_graph/ from api.py:834-866
+# Locate each handler with the grep in the task header.
 #
 # Service calls inside these handlers (e.g., create_prospect_node, score_prospect)
 # become graph_chat_service.create_prospect_node, etc.
@@ -1431,7 +1502,7 @@ app.include_router(graph_chat.router)
 
 - [ ] **Step 5: Remove functions from `services.py`**
 
-Delete the nine functions from `backend/services.py` (line ranges 33-48, 49-67, 68-85, 86-103, 104-108, 109-139, 140-158, 159-162, 163-192).
+Delete the nine functions from `backend/services.py` (locate each via grep).
 
 - [ ] **Step 6: Delete extracted routes from `api.py`**
 
@@ -1472,15 +1543,15 @@ Isolates the shared-helper move so any breakage is unambiguous. No domain extrac
 - Create: `backend/app/services/_claude_budget.py`
 - Modify: `backend/api.py` (replace inline definitions with imports)
 
-**Retrieval helpers (move from api.py:66-162):**
+**Retrieval helpers (locate with `grep -nE '^def (_stringify_context_for_query|_build_market_context_queries|_build_signal_context_queries|_fetch_pinecone_supporting_context)' backend/api.py`):**
 - `_stringify_context_for_query`
 - `_build_market_context_queries`
 - `_build_signal_context_queries`
 - `_fetch_pinecone_supporting_context`
 
-**Claude budget helpers + module-level globals (move from api.py:57-63, 687-758):**
-- Module-level: `CLAUDE_SIGNAL_WINDOW_SECONDS`, `CLAUDE_SIGNAL_TOKEN_LIMIT_5M`, `CLAUDE_SIGNAL_MAX_OUTPUT_TOKENS`, `CLAUDE_API_KEY`, `_claude_signal_usage_window`, `_claude_signal_usage_lock`, `_claude_signal_total_runs`
-- Functions: `_estimate_token_count`, `_prune_claude_signal_window`, `_reserve_claude_signal_budget`, `_finalize_claude_signal_budget`
+**Claude budget helpers + module-level globals — locate with the relevant greps:**
+- Module-level constants and globals: `grep -nE '^(CLAUDE_SIGNAL_|CLAUDE_API_KEY|_claude_signal_usage_window|_claude_signal_usage_lock|_claude_signal_total_runs)' backend/api.py`
+- Functions: `grep -nE '^def (_estimate_token_count|_prune_claude_signal_window|_reserve_claude_signal_budget|_finalize_claude_signal_budget)' backend/api.py`
 
 - [ ] **Step 1: Create `app/services/_retrieval.py`**
 
@@ -1503,7 +1574,7 @@ from app.core.config import pinecone_api_key, together_api_key
 logger = logging.getLogger(__name__)
 ```
 
-Copy the four functions verbatim from `backend/api.py:66-162`:
+Copy the four functions verbatim from `backend/api.py` (locate via grep — see task header):
 - `_stringify_context_for_query`
 - `_build_market_context_queries`
 - `_build_signal_context_queries`
@@ -1542,20 +1613,20 @@ _claude_signal_usage_lock = threading.Lock()
 _claude_signal_total_runs = 0
 ```
 
-Then copy the four functions verbatim from `backend/api.py`:
-- `_estimate_token_count` (api.py:687-693)
-- `_prune_claude_signal_window` (api.py:694-698)
-- `_reserve_claude_signal_budget` (api.py:699-740)
-- `_finalize_claude_signal_budget` (api.py:741-758)
+Then copy the four functions verbatim from `backend/api.py` (locate via grep — see task header):
+- `_estimate_token_count`
+- `_prune_claude_signal_window`
+- `_reserve_claude_signal_budget`
+- `_finalize_claude_signal_budget`
 
 Inside these functions, `_claude_signal_total_runs` is mutated via `global _claude_signal_total_runs` (verify presence). The mutation pattern works identically with the module-level globals now living in `_claude_budget.py`.
 
 - [ ] **Step 3: Replace inline definitions in `api.py` with imports**
 
-In `backend/api.py`, delete:
-- Lines 57-63 (CLAUDE constants + globals)
-- Lines 66-162 (retrieval helpers)
-- Lines 687-758 (claude budget helpers)
+In `backend/api.py`, delete (locate each block via the greps in the task header):
+- CLAUDE constants + module-level globals
+- The four retrieval helpers
+- The four claude budget helpers
 
 At the top of `api.py`, add:
 
@@ -1610,7 +1681,139 @@ git commit -m "refactor(be): extract _retrieval and _claude_budget shared helper
 
 ---
 
-### Task 12: Extract `icp` router and service (4 routes + 5 service functions + 3 ICP-id registry helpers)
+### Task 12: Extract `market_research` router and service (2 routes + 6 service functions)
+
+**Why before `icp`:** market_research owns the helpers `_tavily_context_and_urls` and `_claude_messages_text` that `icp` (and later `signals`) also need. Extracting market_research first lets `icp` import these from their final location (`app.services.market_research`) on day one, without a temporary `from services import ...` alias.
+
+**Files:**
+- Create: `backend/app/routers/market_research.py`
+- Create: `backend/app/services/market_research.py`
+- Modify: `backend/app/main.py`
+- Modify: `backend/api.py`
+- Modify: `backend/services.py`
+
+**Routes:** `POST /market-research`, `POST /market-research_claude` — locate with `grep -nE '^@app\.post\("/market-research' backend/api.py`.
+
+**Service functions from services.py:** `Research_Market_1..5`, `_market_research_agent_output`. Locate with `grep -nE '^def (Research_Market_|_market_research_agent_output)' backend/services.py`.
+
+Also: `COMPONENT_FUNCTIONS` and `COMPONENT_FUNCTIONS_CLAUDE` dispatch dicts — `grep -nE '^COMPONENT_FUNCTIONS' backend/services.py`.
+
+Also: shared helpers `_tavily_context_and_urls` and `_claude_messages_text` — they're used by market_research, icp, and signals. Per spec §4.2, only `_retrieval.py` and `_claude_budget.py` are forced shared modules. Decision: co-locate in `app/services/market_research.py` since market_research is their primary user; `icp` (Task 13) and `signals` (Task 14) import from there. Phase B may promote them into `_retrieval` / `_claude_budget` if appropriate.
+
+- [ ] **Step 1: Create service module**
+
+Write `backend/app/services/market_research.py`:
+
+```python
+"""Market research service: 5-component report generation.
+
+Owns the shared helpers _tavily_context_and_urls and _claude_messages_text,
+which are also imported by app/services/icp.py (Task 13) and
+app/services/signals.py (Task 14).
+"""
+import json
+from typing import List, Dict, Any, Tuple
+
+from langchain_core.messages import HumanMessage, SystemMessage
+
+from app.core import database
+from app.core import llm_config
+from app.core.config import claude_sonnet_model, tavily_api_key
+from app.services._retrieval import (
+    _build_market_context_queries,
+    _fetch_pinecone_supporting_context,
+)
+from app.services._claude_budget import (
+    _estimate_token_count,
+    _reserve_claude_signal_budget,
+    _finalize_claude_signal_budget,
+    CLAUDE_API_KEY,
+    CLAUDE_SIGNAL_MAX_OUTPUT_TOKENS,
+)
+```
+
+Copy from `services.py` (locate via grep):
+- `_tavily_context_and_urls`
+- `_claude_messages_text`
+- `_market_research_agent_output`
+- `Research_Market_1..5`
+- `COMPONENT_FUNCTIONS` and `COMPONENT_FUNCTIONS_CLAUDE` dispatch dicts
+
+- [ ] **Step 2: Create router module**
+
+Write `backend/app/routers/market_research.py`:
+
+```python
+"""Market research endpoints: 5-component report (Groq + Claude variants)."""
+from fastapi import APIRouter
+
+from app.core import database
+from app.models import MarketRequest
+from app.services import market_research as market_research_service
+
+router = APIRouter()
+
+
+# Copy /market-research handler — grep '^@app\.post\("/market-research"' backend/api.py
+# Copy /market-research_claude handler — grep '^@app\.post\("/market-research_claude"' backend/api.py
+#
+# Service calls (Research_Market_1..5, _market_research_agent_output) become
+# market_research_service.Research_Market_1, etc.
+```
+
+Copy the two route handlers, applying qualified-call substitution.
+
+- [ ] **Step 3: Verify**
+
+```bash
+cd backend && python -c "from app.routers import market_research; print(len(market_research.router.routes), 'routes')"
+```
+
+Expected: `2 routes`.
+
+- [ ] **Step 4: Wire into `app/main.py`**
+
+```python
+from app.routers import market_research
+
+app.include_router(market_research.router)
+```
+
+- [ ] **Step 5: Remove functions from `services.py`**
+
+Delete the following from `backend/services.py` (locate each via grep):
+- `_tavily_context_and_urls`, `_claude_messages_text`, `_market_research_agent_output`
+- `Research_Market_1..5`
+- `COMPONENT_FUNCTIONS`, `COMPONENT_FUNCTIONS_CLAUDE` dispatch dicts
+
+- [ ] **Step 6: Delete extracted routes from `api.py`**
+
+```bash
+grep -nE '^@app\.post\("/market-research' backend/api.py
+```
+
+Expected: Zero matches.
+
+- [ ] **Step 7: Run market_research tests**
+
+```bash
+cd backend && pytest tests/test_market_research.py -q 2>&1 | tail -10
+cd backend && pytest tests/ -q 2>&1 | tail -5
+```
+
+Expected: All pass; full suite same count.
+
+- [ ] **Step 8: Commit**
+
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence
+git add -A backend/
+git commit -m "refactor(be): extract market_research router and service [phase A, commit 12/16]"
+```
+
+---
+
+### Task 13: Extract `icp` router and service (4 routes + 5 service functions + 3 ICP-id registry helpers)
 
 **Files:**
 - Create: `backend/app/routers/icp.py`
@@ -1619,13 +1822,13 @@ git commit -m "refactor(be): extract _retrieval and _claude_budget shared helper
 - Modify: `backend/api.py`
 - Modify: `backend/services.py`
 
-**Routes:** `GET /icp` (api.py:2039-2263), `POST /icp-research` (api.py:2264-2384), `POST /icp-research_claude` (api.py:2385-2497), `DELETE /icp/recommended/{icp_id}` (api.py:3838-3899).
+**Routes:** `GET /icp`, `POST /icp-research`, `POST /icp-research_claude`, `DELETE /icp/recommended/{icp_id}` — locate with `grep -nE '^@app\.(get|post|delete)\("/icp' backend/api.py`.
 
-**Service functions from services.py:** `ICP_generator` (services.py:1260-1418), `icp_research_1` (services.py:1419-1522), `icp_research_2` (services.py:1523-1620), `icp_research_3` (services.py:1621-1741), `icp_research_4` (services.py:1742-1888), `_icp_research_agent_output` (services.py:350-366).
+**Service functions from services.py:** `ICP_generator`, `icp_research_1..4`, `_icp_research_agent_output` — locate with `grep -nE '^def (ICP_generator|icp_research_|_icp_research_agent_output)' backend/services.py`.
 
-**Helpers from api.py:** `_ensure_icp_id_registry_indexes` (api.py:647-652), `_reserve_unique_icp_id` (api.py:653-679), `_release_icp_id` (api.py:680-686).
+**Helpers from api.py:** `_ensure_icp_id_registry_indexes`, `_reserve_unique_icp_id`, `_release_icp_id` — `grep -nE '^def (_ensure_icp_id_registry_indexes|_reserve_unique_icp_id|_release_icp_id)' backend/api.py`.
 
-**Module-level constants from api.py to move into service:** `ICP_FUNCTIONS`, `ICP_FUNCTIONS_CLAUDE`, `COMPONENT_FUNCTIONS`, `COMPONENT_FUNCTIONS_CLAUDE` — these are dispatch dicts. Find their definitions in `services.py` (they're referenced in api.py imports at line 45). They stay in `app/services/icp.py` since they map components to icp_research functions.
+**Module-level constants from services.py to move into service:** `ICP_FUNCTIONS`, `ICP_FUNCTIONS_CLAUDE` — `grep -n 'ICP_FUNCTIONS' backend/services.py`. They stay in `app/services/icp.py` since they map components to icp_research functions.
 
 - [ ] **Step 1: Create service module**
 
@@ -1661,27 +1864,24 @@ from app.services._claude_budget import (
     _reserve_claude_signal_budget,
     _finalize_claude_signal_budget,
 )
-
-# TEMPORARY: _tavily_context_and_urls and _claude_messages_text are referenced by
-# _icp_research_agent_output. They currently live in backend/services.py and move
-# to app/services/market_research.py in Task 13. After Task 13, this import
-# becomes: `from app.services.market_research import _tavily_context_and_urls, _claude_messages_text`
-from services import _tavily_context_and_urls, _claude_messages_text  # noqa: E402
+from app.services.market_research import (
+    _tavily_context_and_urls,
+    _claude_messages_text,
+)
 ```
 
-Copy these from `services.py`:
-- `_icp_research_agent_output` (lines 350-366)
-- `ICP_generator` (lines 1260-1418)
-- `icp_research_1` (lines 1419-1522)
-- `icp_research_2` (lines 1523-1620)
-- `icp_research_3` (lines 1621-1741)
-- `icp_research_4` (lines 1742-1888)
-- Plus the `ICP_FUNCTIONS` and `ICP_FUNCTIONS_CLAUDE` dispatch-dict definitions (locate them in services.py — grep for `ICP_FUNCTIONS = `).
+Note: because Task 12 extracted `market_research` first, the `_tavily_context_and_urls` / `_claude_messages_text` imports point at their final home — no temporary alias needed.
+
+Copy from `services.py` (locate each via grep):
+- `_icp_research_agent_output`
+- `ICP_generator`
+- `icp_research_1..4`
+- `ICP_FUNCTIONS` and `ICP_FUNCTIONS_CLAUDE` dispatch-dict definitions
 
 Copy from `api.py`:
-- `_ensure_icp_id_registry_indexes` (lines 647-652)
-- `_reserve_unique_icp_id` (lines 653-679)
-- `_release_icp_id` (lines 680-686)
+- `_ensure_icp_id_registry_indexes`
+- `_reserve_unique_icp_id`
+- `_release_icp_id`
 
 - [ ] **Step 2: Create router module**
 
@@ -1698,10 +1898,10 @@ from app.services import icp as icp_service
 router = APIRouter()
 
 
-# Copy /icp from api.py:2039-2263
-# Copy /icp-research from api.py:2264-2384
-# Copy /icp-research_claude from api.py:2385-2497
-# Copy /icp/recommended/{icp_id} DELETE from api.py:3838-3899
+# Copy /icp                         — grep '^@app\.get\("/icp"' backend/api.py
+# Copy /icp-research                — grep '^@app\.post\("/icp-research"' backend/api.py
+# Copy /icp-research_claude         — grep '^@app\.post\("/icp-research_claude"' backend/api.py
+# Copy /icp/recommended/{icp_id}    — grep '^@app\.delete\("/icp/recommended' backend/api.py
 #
 # Service calls (ICP_generator, icp_research_1..4, _reserve_unique_icp_id, etc.)
 # become icp_service.ICP_generator, icp_service._reserve_unique_icp_id, etc.
@@ -1727,11 +1927,11 @@ app.include_router(icp.router)
 
 - [ ] **Step 5: Remove ICP functions from `services.py`**
 
-Delete the six ICP-related function definitions (and `ICP_FUNCTIONS` / `ICP_FUNCTIONS_CLAUDE` dispatch dicts) from `backend/services.py`.
+Delete the five ICP-related function definitions (and `ICP_FUNCTIONS` / `ICP_FUNCTIONS_CLAUDE` dispatch dicts) from `backend/services.py`. Locate via grep.
 
 - [ ] **Step 6: Remove ICP-id helpers from `api.py`**
 
-Delete `_ensure_icp_id_registry_indexes`, `_reserve_unique_icp_id`, `_release_icp_id` from `backend/api.py:647-686`.
+Delete `_ensure_icp_id_registry_indexes`, `_reserve_unique_icp_id`, `_release_icp_id` from `backend/api.py` (locate via grep).
 
 - [ ] **Step 7: Delete ICP routes from `api.py`**
 
@@ -1755,157 +1955,7 @@ Expected: All pass; full suite same count.
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence
 git add -A backend/
-git commit -m "refactor(be): extract icp router and service [phase A, commit 12/16]"
-```
-
----
-
-### Task 13: Extract `market_research` router and service (2 routes + 6 service functions)
-
-**Files:**
-- Create: `backend/app/routers/market_research.py`
-- Create: `backend/app/services/market_research.py`
-- Modify: `backend/app/main.py`
-- Modify: `backend/api.py`
-- Modify: `backend/services.py`
-
-**Routes:** `POST /market-research` (api.py:1843-1944), `POST /market-research_claude` (api.py:1945-2038).
-
-**Service functions from services.py:** `Research_Market_1` (services.py:402-520), `Research_Market_2` (services.py:521-656), `Research_Market_3` (services.py:657-883), `Research_Market_4` (services.py:884-1097), `Research_Market_5` (services.py:1098-1259), `_market_research_agent_output` (services.py:336-349).
-
-Also: `COMPONENT_FUNCTIONS` and `COMPONENT_FUNCTIONS_CLAUDE` dispatch dicts (grep their definitions in services.py).
-
-Also: shared helpers `_tavily_context_and_urls` (services.py:279-306) and `_claude_messages_text` (services.py:307-335) — these are used by market_research, icp, AND signals. They go to market_research's service module **only if** icp and signals don't already use them via cross-domain import. Per spec §4.2, only `_retrieval.py` and `_claude_budget.py` are forced shared modules. So `_tavily_context_and_urls` and `_claude_messages_text` are not forced-shared. Decision: put them in `app/services/market_research.py` and have `app/services/icp.py` + `app/services/signals.py` import from there. This is consistent with "no extracting helpers in phase A" — we put them where their primary user (market_research) lives.
-
-- [ ] **Step 1: Create service module**
-
-Write `backend/app/services/market_research.py`:
-
-```python
-"""Market research service: 5-component report generation.
-
-Owns the shared helpers _tavily_context_and_urls and _claude_messages_text,
-which are also imported by app/services/icp.py and app/services/signals.py.
-This co-location is a phase-A tradeoff; phase B may promote them into
-_retrieval / _claude_budget if appropriate.
-"""
-import json
-from typing import List, Dict, Any, Tuple
-
-from langchain_core.messages import HumanMessage, SystemMessage
-
-from app.core import database
-from app.core import llm_config
-from app.core.config import claude_sonnet_model, tavily_api_key
-from app.services._retrieval import (
-    _build_market_context_queries,
-    _fetch_pinecone_supporting_context,
-)
-from app.services._claude_budget import (
-    _estimate_token_count,
-    _reserve_claude_signal_budget,
-    _finalize_claude_signal_budget,
-    CLAUDE_API_KEY,
-    CLAUDE_SIGNAL_MAX_OUTPUT_TOKENS,
-)
-```
-
-Copy from `services.py`:
-- `_tavily_context_and_urls` (lines 279-306)
-- `_claude_messages_text` (lines 307-335)
-- `_market_research_agent_output` (lines 336-349)
-- `Research_Market_1..5` (lines 402-1259)
-- `COMPONENT_FUNCTIONS` and `COMPONENT_FUNCTIONS_CLAUDE` dispatch dicts
-
-- [ ] **Step 2: Update `app/services/icp.py` to import shared helpers from market_research**
-
-Task 12 left a temporary `from services import _tavily_context_and_urls, _claude_messages_text` in `app/services/icp.py`. Now that these helpers live in `app/services/market_research.py`, replace that line with:
-
-```python
-from app.services.market_research import (
-    _tavily_context_and_urls,
-    _claude_messages_text,
-)
-```
-
-Verify with grep:
-
-```bash
-grep -n "from services import" backend/app/services/icp.py
-```
-
-Expected: Zero matches (no more legacy-module imports).
-
-- [ ] **Step 3: Create router module**
-
-Write `backend/app/routers/market_research.py`:
-
-```python
-"""Market research endpoints: 5-component report (Groq + Claude variants)."""
-from fastapi import APIRouter
-
-from app.core import database
-from app.models import MarketRequest
-from app.services import market_research as market_research_service
-
-router = APIRouter()
-
-
-# Copy /market-research from api.py:1843-1944
-# Copy /market-research_claude from api.py:1945-2038
-#
-# Service calls (Research_Market_1..5, _market_research_agent_output) become
-# market_research_service.Research_Market_1, etc.
-```
-
-Copy the two route handlers, applying qualified-call substitution.
-
-- [ ] **Step 4: Verify**
-
-```bash
-cd backend && python -c "from app.routers import market_research; print(len(market_research.router.routes), 'routes')"
-```
-
-Expected: `2 routes`.
-
-- [ ] **Step 5: Wire into `app/main.py`**
-
-```python
-from app.routers import market_research
-
-app.include_router(market_research.router)
-```
-
-- [ ] **Step 6: Remove functions from `services.py`**
-
-Delete from `backend/services.py`:
-- `_tavily_context_and_urls`, `_claude_messages_text`, `_market_research_agent_output` (lines 279-349)
-- `Research_Market_1..5` (lines 402-1259)
-- `COMPONENT_FUNCTIONS`, `COMPONENT_FUNCTIONS_CLAUDE` dispatch dicts
-
-- [ ] **Step 7: Delete extracted routes from `api.py`**
-
-```bash
-grep -nE '^@app\.post\("/market-research' backend/api.py
-```
-
-Expected: Zero matches.
-
-- [ ] **Step 8: Run market_research tests**
-
-```bash
-cd backend && pytest tests/test_market_research.py -q 2>&1 | tail -10
-cd backend && pytest tests/ -q 2>&1 | tail -5
-```
-
-Expected: All pass; full suite same count.
-
-- [ ] **Step 9: Commit**
-
-```bash
-cd /projects/Brewra/brewra-gtm-intelligence
-git add -A backend/
-git commit -m "refactor(be): extract market_research router and service [phase A, commit 13/16]"
+git commit -m "refactor(be): extract icp router and service [phase A, commit 13/16]"
 ```
 
 ---
@@ -1919,13 +1969,13 @@ git commit -m "refactor(be): extract market_research router and service [phase A
 - Modify: `backend/api.py`
 - Modify: `backend/services.py`
 
-**Routes:** `POST /signals-research` (api.py:2498-2674), `POST /generate-signals-batch` (api.py:2906-2911), `POST /generate-signals-batch_claude` (api.py:2912-2919), `GET /fetch-signals` (api.py:2934-2970), `POST /signal_action` (api.py:2971-3061), `POST /signal_Ask` (api.py:3062-3182), `POST /signal_ask_claude` (api.py:3183-3380).
+**Routes:** `POST /signals-research`, `POST /generate-signals-batch`, `POST /generate-signals-batch_claude`, `GET /fetch-signals`, `POST /signal_action`, `POST /signal_Ask`, `POST /signal_ask_claude` — locate with `grep -nE '^@app\.(get|post)\("/(signals-research|generate-signals-batch|fetch-signals|signal_action|signal_Ask|signal_ask_claude)' backend/api.py`.
 
-**Service functions:** `_signals_agent_output` (services.py:367-401), `search_signals_scout` (services.py:2042-2324), `search_signals_profiler` (services.py:2325-2631).
+**Service functions:** `_signals_agent_output`, `search_signals_scout`, `search_signals_profiler` — locate with `grep -nE '^def (_signals_agent_output|search_signals_scout|search_signals_profiler)' backend/services.py`.
 
-**Module-level constants:** `SIGNALS_FUNCTIONS` dispatch dict (grep its definition in services.py — line range varies).
+**Module-level constants:** `SIGNALS_FUNCTIONS` dispatch dict — `grep -n '^SIGNALS_FUNCTIONS' backend/services.py`.
 
-**Router-internal helper:** `_generate_signals_batch_core` (api.py:2675-2905) — moves to the router file since it's an async dispatch wrapper around the `/generate-signals-batch` endpoints. Alternative: place in service module. Decision: place in `app/services/signals.py` because it calls service functions and is reused by two routes.
+**Router-internal helper:** `_generate_signals_batch_core` — `grep -n '^async def _generate_signals_batch_core' backend/api.py`. It's an async dispatch wrapper around the `/generate-signals-batch` endpoints. Decision: place in `app/services/signals.py` because it calls service functions and is reused by two routes.
 
 - [ ] **Step 1: Create service module**
 
@@ -1964,14 +2014,16 @@ from app.services.market_research import (
 )
 ```
 
-Copy from `services.py`:
-- `_signals_agent_output` (lines 367-401)
-- `search_signals_scout` (lines 2042-2324)
-- `search_signals_profiler` (lines 2325-2631)
+Copy from `services.py` (locate each via grep — see task header):
+- `_signals_agent_output`
+- `search_signals_scout`
+- `search_signals_profiler`
 - `SIGNALS_FUNCTIONS` dispatch dict
 
 Copy from `api.py`:
-- `_generate_signals_batch_core` (lines 2675-2905) — change all bare service function calls (e.g., `search_signals_scout(...)`) to module-qualified form. Since they're now in this same `signals.py` module, the local references work without prefix.
+- `_generate_signals_batch_core` — change all bare service function calls (e.g., `search_signals_scout(...)`) to module-qualified form. Since they're now in this same `signals.py` module, the local references work without prefix.
+
+**Inside `_generate_signals_batch_core`** there is a deferred `from services import fetch_leads_for_org`. After this task, `app/services/leads.py` is the canonical home — rewrite the deferred import to `from app.services.leads import fetch_leads_for_org` as part of the copy. (The duplicate deferred import inside `/signals-research` likewise becomes `from app.services.leads import fetch_leads_for_org`.)
 
 - [ ] **Step 2: Create router module**
 
@@ -1988,13 +2040,7 @@ from app.services import signals as signals_service
 router = APIRouter()
 
 
-# Copy /signals-research from api.py:2498-2674
-# Copy /generate-signals-batch from api.py:2906-2911
-# Copy /generate-signals-batch_claude from api.py:2912-2919
-# Copy /fetch-signals from api.py:2934-2970
-# Copy /signal_action from api.py:2971-3061
-# Copy /signal_Ask from api.py:3062-3182
-# Copy /signal_ask_claude from api.py:3183-3380
+# Locate each handler with the grep in the task header.
 #
 # Service calls (search_signals_scout, search_signals_profiler,
 # _generate_signals_batch_core, _signals_agent_output) become
@@ -2021,15 +2067,15 @@ app.include_router(signals.router)
 
 - [ ] **Step 5: Remove signal functions from `services.py`**
 
-Delete from `backend/services.py`:
-- `_signals_agent_output` (lines 367-401)
-- `search_signals_scout` (lines 2042-2324)
-- `search_signals_profiler` (lines 2325-2631)
+Delete from `backend/services.py` (locate each via grep):
+- `_signals_agent_output`
+- `search_signals_scout`
+- `search_signals_profiler`
 - `SIGNALS_FUNCTIONS` dispatch dict
 
 - [ ] **Step 6: Remove `_generate_signals_batch_core` from `api.py`**
 
-Delete lines 2675-2905 from `backend/api.py`.
+Locate via `grep -n '^async def _generate_signals_batch_core' backend/api.py` and delete the function.
 
 - [ ] **Step 7: Delete signal routes from `api.py`**
 
@@ -2069,29 +2115,17 @@ The largest, most-stateful extraction — last. Includes the entire `_run_market
 - Modify: `backend/api.py`
 - Modify: `backend/services.py`
 
-**Routes:** `POST /leads/market-scores` (api.py:1358-1436), `GET /leads/market-scores/status` (api.py:1437-1513), `GET /leads/{lead_id}/market-score-descriptions` (api.py:1514-1545).
+**Routes:** `POST /leads/market-scores`, `GET /leads/market-scores/status`, `GET /leads/{lead_id}/market-score-descriptions` — locate with `grep -nE '^@app\.(get|post)\("/leads/(market-scores|\{lead_id\}/market-score)' backend/api.py`.
 
-**Service functions from services.py:** `fetch_leads_for_org` (already moved in Task 9 — re-export from `app.services.leads`), `get_company_profile_for_org` (services.py:1922-1940), `get_market_reports_for_org` (services.py:1941-1956), `_clean_and_parse_json` (services.py:1957-1968), `score_single_lead_against_market` (services.py:1969-2041).
+**Service functions from services.py:** `fetch_leads_for_org` (already moved in Task 9 — re-export from `app.services.leads`), `get_company_profile_for_org`, `get_market_reports_for_org`, `_clean_and_parse_json`, `score_single_lead_against_market` — locate with `grep -nE '^def (get_company_profile_for_org|get_market_reports_for_org|_clean_and_parse_json|score_single_lead_against_market)' backend/services.py`.
 
-**Helpers from api.py:1**77-490 (move all):
-- `_get_profiler_mongo_client` (177-182)
-- `_get_market_score_collections` (184-195)
-- `_safe_json_to_obj` (196-204)
-- `_normalize_non_empty_string` (205-211)
-- `_canonicalize_key` (212-215)
-- `_build_lookup_maps` (216-224)
-- `_first_non_empty_value_from_keys` (225-234)
-- `_extract_company_name` (235-254)
-- `_extract_lead_name` (255-299)
-- `_get_lead_identity_from_neo4j` (300-317)
-- `_lead_to_score_row` (318-337)
-- `_extract_description_preview` (338-347)
-- `_get_latest_market_score_rows` (348-378)
-- `_get_latest_scoring_run` (379-392)
-- `_parse_iso_datetime` (393-407)
-- `_is_stale_queued_run` (408-421)
-- `_persist_market_score_for_lead` (422-489)
-- `_run_market_scoring_for_org` (490-646) — the background task
+**Helpers from api.py (move all 18) — locate with the grep below:**
+
+```bash
+grep -nE '^(async )?def (_get_profiler_mongo_client|_get_market_score_collections|_safe_json_to_obj|_normalize_non_empty_string|_canonicalize_key|_build_lookup_maps|_first_non_empty_value_from_keys|_extract_company_name|_extract_lead_name|_get_lead_identity_from_neo4j|_lead_to_score_row|_extract_description_preview|_get_latest_market_score_rows|_get_latest_scoring_run|_parse_iso_datetime|_is_stale_queued_run|_persist_market_score_for_lead|_run_market_scoring_for_org)' backend/api.py
+```
+
+Expected: 18 matches covering the helper cluster + the `_run_market_scoring_for_org` background task at the bottom.
 
 - [ ] **Step 1: Create service module**
 
@@ -2128,14 +2162,14 @@ from app.models import (
 from app.services.leads import fetch_leads_for_org
 ```
 
-Copy from `api.py`:
-- All 18 helpers from lines 177-646 (Mongo connection + lead-identity + scoring + background task)
+Copy from `api.py` (locate via the 18-name grep in the task header):
+- All 18 helpers (Mongo connection + lead-identity + scoring + background task)
 
-Copy from `services.py`:
-- `get_company_profile_for_org` (1922-1940)
-- `get_market_reports_for_org` (1941-1956)
-- `_clean_and_parse_json` (1957-1968)
-- `score_single_lead_against_market` (1969-2041)
+Copy from `services.py` (locate via grep):
+- `get_company_profile_for_org`
+- `get_market_reports_for_org`
+- `_clean_and_parse_json`
+- `score_single_lead_against_market`
 
 - [ ] **Step 2: Create router module**
 
@@ -2157,9 +2191,7 @@ from app.services import market_scoring as market_scoring_service
 router = APIRouter()
 
 
-# Copy /leads/market-scores from api.py:1358-1436
-# Copy /leads/market-scores/status from api.py:1437-1513
-# Copy /leads/{lead_id}/market-score-descriptions from api.py:1514-1545
+# Locate each handler with the grep in the task header.
 #
 # Service calls (_run_market_scoring_for_org, _get_latest_market_score_rows,
 # _get_latest_scoring_run, score_single_lead_against_market, etc.) become
@@ -2186,17 +2218,17 @@ app.include_router(market_scoring.router)
 
 - [ ] **Step 5: Remove scoring functions from `services.py`**
 
-Delete from `backend/services.py`:
-- `get_company_profile_for_org` (1922-1940)
-- `get_market_reports_for_org` (1941-1956)
-- `_clean_and_parse_json` (1957-1968)
-- `score_single_lead_against_market` (1969-2041)
+Delete from `backend/services.py` (locate each via grep):
+- `get_company_profile_for_org`
+- `get_market_reports_for_org`
+- `_clean_and_parse_json`
+- `score_single_lead_against_market`
 
 Also remove the temporary `fetch_leads_for_org` alias added in Task 9 step 5.
 
 - [ ] **Step 6: Remove scoring helpers from `api.py`**
 
-Delete lines 177-646 from `backend/api.py` (the 18 helpers).
+Delete the 18 helpers from `backend/api.py` (locate via the grep in the task header).
 
 - [ ] **Step 7: Delete scoring routes from `api.py`**
 
