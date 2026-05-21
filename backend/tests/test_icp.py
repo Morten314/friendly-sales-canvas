@@ -271,7 +271,7 @@ def test_get_icp_refresh_true_calls_neo4j_and_llm(client, mock_neo4j):
     mock_generator = MagicMock(return_value={"suggestedICPs": []})
 
     with patch("api.MongoClient", return_value=mc), \
-         patch("api.ICP_generator", mock_generator):
+         patch("app.services.icp.ICP_generator", mock_generator):
         response = client.get("/icp", params={"user_id": TEST_USER_ID, "refresh": "true"})
 
     assert response.status_code == 200
@@ -459,7 +459,7 @@ def test_post_icp_research_icp_summary(client, mock_neo4j, mock_llm_chain, mock_
         "icp_id_registry": _make_coll(find_one=None),
     })
 
-    with patch("api.MongoClient", return_value=mc):
+    with patch("app.routers.icp.MongoClient", return_value=mc):
         response = client.post(
             "/icp-research",
             json=_icp_research_payload("icp summary & market opportunity"),
@@ -493,7 +493,7 @@ def test_post_icp_research_buyer_map(client, mock_neo4j, mock_llm_chain, mock_pi
         "icp_id_registry": _make_coll(find_one=None),
     })
 
-    with patch("api.MongoClient", return_value=mc):
+    with patch("app.routers.icp.MongoClient", return_value=mc):
         response = client.post(
             "/icp-research",
             json=_icp_research_payload("buyer map & roles, pain points, triggers"),
@@ -525,7 +525,7 @@ def test_post_icp_research_competitive_overlap(client, mock_neo4j, mock_llm_chai
         "icp_id_registry": _make_coll(find_one=None),
     })
 
-    with patch("api.MongoClient", return_value=mc):
+    with patch("app.routers.icp.MongoClient", return_value=mc):
         response = client.post(
             "/icp-research",
             json=_icp_research_payload("competitive overlap & buying signals"),
@@ -558,7 +558,7 @@ def test_post_icp_research_regulatory(client, mock_neo4j, mock_llm_chain, mock_p
         "icp_id_registry": _make_coll(find_one=None),
     })
 
-    with patch("api.MongoClient", return_value=mc):
+    with patch("app.routers.icp.MongoClient", return_value=mc):
         response = client.post(
             "/icp-research",
             json=_icp_research_payload("regulatory, compliance & recommended icp"),
@@ -572,7 +572,7 @@ def test_post_icp_research_regulatory(client, mock_neo4j, mock_llm_chain, mock_p
 def test_post_icp_research_invalid_component_returns_400(client):
     """Unsupported component_name returns 400."""
     mc = _mc_factory({})
-    with patch("api.MongoClient", return_value=mc):
+    with patch("app.routers.icp.MongoClient", return_value=mc):
         response = client.post(
             "/icp-research",
             json=_icp_research_payload("invalid_component"),
@@ -593,7 +593,7 @@ def test_post_icp_research_returns_cached_when_available(client, mock_neo4j, moc
         "icp_id_registry": _make_coll(find_one=None),
     })
 
-    with patch("api.MongoClient", return_value=mc):
+    with patch("app.routers.icp.MongoClient", return_value=mc):
         response = client.post(
             "/icp-research",
             json=_icp_research_payload("icp summary & market opportunity", refresh=False),
