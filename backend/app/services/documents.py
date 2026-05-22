@@ -20,7 +20,7 @@ from datetime import datetime, timezone
 from typing import List, Optional
 
 import pandas as pd
-from fastapi import BackgroundTasks, HTTPException
+from fastapi import BackgroundTasks
 from fastapi.responses import JSONResponse
 from langchain_community.document_loaders import (
     CSVLoader,
@@ -37,6 +37,7 @@ from app.core import clients
 from app.core import llm_config
 from app.core.clients import query  # function — local binding ok
 from app.core.config import pinecone_api_key, s3_bucket, together_api_key
+from app.core.exceptions import DocumentNotFoundError, DocumentValidationError
 from app.core.logging import logger
 
 
@@ -553,25 +554,19 @@ async def get_document_status(file_key: str) -> dict:
     Get the processing status of a document.
     Returns status: processing, completed, or failed
     """
-    try:
-        db = clients.client["File_Processing"]
-        collection = db["file_status"]
+    db = clients.client["File_Processing"]
+    collection = db["file_status"]
 
-        status_doc = collection.find_one({"file_key": file_key})
+    status_doc = collection.find_one({"file_key": file_key})
 
-        if not status_doc:
-            raise HTTPException(status_code=404, detail="File not found")
+    if not status_doc:
+        raise DocumentNotFoundError("File not found")
 
-        status_doc.pop("_id", None)
-        return {
-            "status": "success",
-            "data": status_doc
-        }
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    status_doc.pop("_id", None)
+    return {
+        "status": "success",
+        "data": status_doc
+    }
 
 
 async def list_user_documents(org_id: str) -> dict:
@@ -580,44 +575,40 @@ async def list_user_documents(org_id: str) -> dict:
     Returns list of files and URLs with file_name, file_id, and other metadata.
     Filtered by org_id for multi-org support.
     """
-    try:
-        db = clients.client["File_Processing"]
-        collection = db["file_status"]
+    db = clients.client["File_Processing"]
+    collection = db["file_status"]
 
-        # Find all data sources (files and URLs) for this org
-        files = collection.find({"org_id": org_id}).sort("uploaded_at", -1)
+    # Find all data sources (files and URLs) for this org
+    files = collection.find({"org_id": org_id}).sort("uploaded_at", -1)
 
-        file_list = []
-        for file_doc in files:
-            file_item = {
-                "file_id": file_doc.get("file_id") or file_doc.get("file_key"),
-                "file_key": file_doc.get("file_key"),
-                "file_name": file_doc.get("file_name"),
-                "status": file_doc.get("status", "unknown"),
-                "uploaded_at": file_doc.get("uploaded_at"),
-                "data_source_type": file_doc.get("data_source_type", "file")  # "file" or "url"
-            }
-
-            # Include URL if it's a URL data source
-            if file_doc.get("url"):
-                file_item["url"] = file_doc.get("url")
-
-            # Include tags and description if they exist
-            if "tags" in file_doc:
-                file_item["tags"] = file_doc.get("tags")
-            if "description" in file_doc:
-                file_item["description"] = file_doc.get("description")
-
-            file_list.append(file_item)
-
-        return {
-            "status": "success",
-            "count": len(file_list),
-            "files": file_list
+    file_list = []
+    for file_doc in files:
+        file_item = {
+            "file_id": file_doc.get("file_id") or file_doc.get("file_key"),
+            "file_key": file_doc.get("file_key"),
+            "file_name": file_doc.get("file_name"),
+            "status": file_doc.get("status", "unknown"),
+            "uploaded_at": file_doc.get("uploaded_at"),
+            "data_source_type": file_doc.get("data_source_type", "file")  # "file" or "url"
         }
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        # Include URL if it's a URL data source
+        if file_doc.get("url"):
+            file_item["url"] = file_doc.get("url")
+
+        # Include tags and description if they exist
+        if "tags" in file_doc:
+            file_item["tags"] = file_doc.get("tags")
+        if "description" in file_doc:
+            file_item["description"] = file_doc.get("description")
+
+        file_list.append(file_item)
+
+    return {
+        "status": "success",
+        "count": len(file_list),
+        "files": file_list
+    }
 
 
 async def delete_data_source(file_id: str) -> dict:
@@ -672,7 +663,7 @@ async def delete_data_source(file_id: str) -> dict:
                 # Log some sample documents to help debug
                 sample_docs = list(collection.find({}, {"file_id": 1, "file_key": 1, "_id": 0}).limit(3))
                 logger.error(f"File not found. Searched for file_id='{search_file_id}' and file_key='{file_id}'. Sample documents: {sample_docs}")
-                raise HTTPException(status_code=404, detail=f"File with id '{file_id}' not found")
+                raise DocumentNotFoundError(f"File with id '{file_id}' not found")
 
         file_key = file_doc.get("file_key")
         url = file_doc.get("url")
@@ -861,67 +852,59 @@ async def delete_data_source(file_id: str) -> dict:
             "file_key": file_key
         }
 
-    except HTTPException:
-        raise
     except Exception as e:
         logger.error(f"Error deleting file {file_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to delete file: {str(e)}")
+        raise
 
 
 async def update_data_source(file_id: str, request: dict) -> dict:
     """
     Update tags and description for a data source file.
     """
-    try:
-        file_id = file_id.rstrip('/')
+    file_id = file_id.rstrip('/')
 
-        tags = request.get("tags")
-        description = request.get("description")
+    tags = request.get("tags")
+    description = request.get("description")
 
-        if tags is None and description is None:
-            raise HTTPException(status_code=400, detail="At least one of 'tags' or 'description' must be provided")
+    if tags is None and description is None:
+        raise DocumentValidationError("At least one of 'tags' or 'description' must be provided")
 
-        db = clients.client["File_Processing"]
-        collection = db["file_status"]
+    db = clients.client["File_Processing"]
+    collection = db["file_status"]
 
-        file_doc = collection.find_one({"file_id": file_id})
+    file_doc = collection.find_one({"file_id": file_id})
+    if not file_doc:
+        file_doc = collection.find_one({"file_key": file_id})
         if not file_doc:
-            file_doc = collection.find_one({"file_key": file_id})
-            if not file_doc:
-                raise HTTPException(status_code=404, detail=f"File with id '{file_id}' not found")
+            raise DocumentNotFoundError(f"File with id '{file_id}' not found")
 
-        update_doc = {}
+    update_doc = {}
 
-        if tags is not None:
-            if isinstance(tags, str):
-                try:
-                    tags_list = json.loads(tags)
-                    if not isinstance(tags_list, list):
-                        tags_list = [tag.strip() for tag in tags.split(",") if tag.strip()]
-                except (json.JSONDecodeError, AttributeError):
+    if tags is not None:
+        if isinstance(tags, str):
+            try:
+                tags_list = json.loads(tags)
+                if not isinstance(tags_list, list):
                     tags_list = [tag.strip() for tag in tags.split(",") if tag.strip()]
-            elif isinstance(tags, list):
-                tags_list = tags
-            else:
-                raise HTTPException(status_code=400, detail="tags must be a list or comma-separated string")
-            update_doc["tags"] = tags_list
+            except (json.JSONDecodeError, AttributeError):
+                tags_list = [tag.strip() for tag in tags.split(",") if tag.strip()]
+        elif isinstance(tags, list):
+            tags_list = tags
+        else:
+            raise DocumentValidationError("tags must be a list or comma-separated string")
+        update_doc["tags"] = tags_list
 
-        if description is not None:
-            if not isinstance(description, str):
-                raise HTTPException(status_code=400, detail="description must be a string")
-            update_doc["description"] = description
+    if description is not None:
+        if not isinstance(description, str):
+            raise DocumentValidationError("description must be a string")
+        update_doc["description"] = description
 
-        collection.update_one(
-            {"file_id": file_doc.get("file_id") or file_doc.get("file_key")},
-            {"$set": update_doc}
-        )
+    collection.update_one(
+        {"file_id": file_doc.get("file_id") or file_doc.get("file_key")},
+        {"$set": update_doc}
+    )
 
-        return {
-            "status": "success",
-            "message": "Data source updated successfully"
-        }
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to update file: {str(e)}")
+    return {
+        "status": "success",
+        "message": "Data source updated successfully"
+    }
