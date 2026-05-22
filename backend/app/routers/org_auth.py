@@ -9,7 +9,7 @@ from pymongo import MongoClient
 
 from app.core import clients
 from app.core.logging import logger
-from app.models import RegistrationRequest, RegistrationResponse
+from app.models.org_auth import RegistrationRequest, RegistrationResponse
 
 router = APIRouter()
 

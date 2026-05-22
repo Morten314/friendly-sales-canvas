@@ -13,7 +13,8 @@ from pymongo import MongoClient
 
 from app.core import clients
 from app.core.config import tavily_api_key, claude_sonnet_model
-from app.models import MarketRequest, SignalActionRequest, SignalAskRequest
+from app.models.market_research import MarketRequest
+from app.models.signals import SignalActionRequest, SignalAskRequest
 from app.core import llm_config
 from app.services import signals as signals_service
 from app.services._retrieval import (

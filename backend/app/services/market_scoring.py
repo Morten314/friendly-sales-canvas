@@ -20,7 +20,7 @@ from pymongo import MongoClient
 from app.core import clients
 from app.core import llm_config
 from app.core.clients import upsert_node
-from app.models import (
+from app.models.market_scoring import (
     LeadMarketScoreRow,
     MARKET_SCORE_COMPONENT_KEYS,
 )

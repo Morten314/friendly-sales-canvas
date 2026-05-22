@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, Query
 
 from app.core import clients
-from app.models import CustomerProfileRequest, SuggestedICPToCustomerProfileRequest
+from app.models.customer_profile import CustomerProfileRequest, SuggestedICPToCustomerProfileRequest
 
 # Phase-A:
 #   - ICP-id-registry helpers (_ensure_icp_id_registry_indexes, _reserve_unique_icp_id,

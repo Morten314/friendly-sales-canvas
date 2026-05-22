@@ -6,7 +6,7 @@ from datetime import datetime
 from fastapi import APIRouter, HTTPException
 
 from app.core import clients
-from app.models import MarketRequest
+from app.models.market_research import MarketRequest
 from app.services import market_research as market_research_service
 from app.services._claude_budget import CLAUDE_API_KEY
 from app.services._retrieval import (

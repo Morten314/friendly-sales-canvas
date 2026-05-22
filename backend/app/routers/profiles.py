@@ -8,7 +8,7 @@ from pymongo import MongoClient
 
 from app.core import clients
 from app.core.clients import upsert_node
-from app.models import EditRequest
+from app.models.profiles import EditRequest
 
 router = APIRouter()
 

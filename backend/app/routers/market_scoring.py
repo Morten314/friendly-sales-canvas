@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
 
-from app.models import (
+from app.models.market_scoring import (
     LeadMarketScoresRequest,
     LeadMarketScoresResponse,
     LeadMarketScoreDescriptionsResponse,

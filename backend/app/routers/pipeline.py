@@ -7,7 +7,7 @@ from fastapi import APIRouter, Query
 from app.core import clients
 from app.core import llm_config
 from app.core.config import STAGE_ORDER, STAGE_MAPPING
-from app.models import SalesPipelineResponse, TimeframeResponse, StageStats  # noqa: F401 — kept for response-shape parity with api.py
+from app.models.pipeline import SalesPipelineResponse, TimeframeResponse, StageStats  # noqa: F401 — kept for response-shape parity with api.py
 
 router = APIRouter()
 
