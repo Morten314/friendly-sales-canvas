@@ -1,6 +1,7 @@
 # serializer version: 1
 # name: test_get_org_returns_org_for_user
   dict({
+    'message': None,
     'org_id': 'test_org_abc',
     'org_name': 'Test Org',
     'status': 'success',
@@ -27,6 +28,7 @@
   dict({
     'message': 'User test_user_123 connected to org test_org_abc',
     'org_id': 'test_org_abc',
+    'org_name': None,
     'status': 'success',
     'user_id': 'test_user_123',
   })
@@ -37,6 +39,7 @@
     'org_id': '<scrubbed>',
     'org_name': 'Test Org',
     'status': 'success',
+    'user_id': None,
   })
 # ---
 # name: test_post_registration_creates_entry

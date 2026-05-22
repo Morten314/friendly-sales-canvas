@@ -5,13 +5,18 @@ import shutil
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
 from app.core import llm_config
-from app.models.graph_chat import ProspectData
+from app.models.graph_chat import (
+    CreateProspectResponse,
+    GraphChatResponse,
+    GraphMessageResponse,
+    ProspectData,
+)
 from app.services import graph_chat as graph_chat_service
 
 router = APIRouter(tags=["graph-chat"])
 
 
-@router.post("/create-company/")
+@router.post("/create-company/", response_model=CreateProspectResponse)
 async def create_prospect(data: ProspectData):
     if not data.Name or not data.Company or not data.answers:
         raise HTTPException(status_code=400, detail="Missing name, company, or answers")
@@ -22,23 +27,26 @@ async def create_prospect(data: ProspectData):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# /ask/ returns a set literal `{response}` (pre-existing quirk); response shape
+# is unstable — annotation deferred until the handler is normalized.
 @router.get("/ask/")
 async def ask_question(question: str):
     response = llm_config.chain.run(question)
     return {response}
 
-@router.get("/chat/")
+@router.get("/chat/", response_model=GraphChatResponse)
 async def ask_question(question: str):
     response = llm_config.chain2.run(question)
     return {"response": response}
 
+# /query/ is a raw Cypher debug endpoint; result shape varies per query.
 @router.get("/query/")
 async def run_query(cypher_query: str):
     from app.core.clients import query
     result = query(cypher_query)
     return {"result": result}
 
-@router.post("/voice_graph/")
+@router.post("/voice_graph/", response_model=GraphMessageResponse)
 async def add_engagement_voice(
     prospect_name: str = Form(...),
     update_type: str = Form(...),  # Can be note, offline meeting, email, online meeting
@@ -77,7 +85,7 @@ async def add_engagement_voice(
 
     return {"message": f"Engagement of type '{update_type}' added for {prospect_name}"}
 
-@router.post("/text_graph/")
+@router.post("/text_graph/", response_model=GraphMessageResponse)
 async def add_engagement_text(
     prospect_name: str = Form(...),
     update_type: str = Form(...),  # note, offline meeting, email, online meeting
