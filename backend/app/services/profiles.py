@@ -1,6 +1,7 @@
 """Profiles service — profile CRUD, bulk cleanup, and generic edit dispatch."""
 import json
 from datetime import datetime
+from typing import Optional
 
 from fastapi import HTTPException
 
@@ -113,7 +114,7 @@ def upsert_profile(profile_type: str, payload: dict) -> dict:
     return {"message": f"{profile_type} profile processed successfully"}
 
 
-def get_profile(profile_type: str, user_id: str | None, org_id: str | None) -> dict:
+def get_profile(profile_type: str, user_id: Optional[str], org_id: Optional[str]) -> dict:
     """Fetch a profile node from Neo4j (and MongoDB for company profiles)."""
     try:
         with clients.driver.session() as session:
@@ -200,7 +201,7 @@ def get_profile(profile_type: str, user_id: str | None, org_id: str | None) -> d
         raise HTTPException(status_code=500, detail=str(e))
 
 
-def cleanup_company_profiles(org_id: str | None = None) -> dict:
+def cleanup_company_profiles(org_id: Optional[str] = None) -> dict:
     """Ensure only one CompanyProfile exists in Neo4j. Keeps the first (oldest by node ID)."""
     try:
         with clients.driver.session() as session:
