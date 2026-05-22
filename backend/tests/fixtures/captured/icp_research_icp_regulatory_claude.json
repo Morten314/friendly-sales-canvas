@@ -1,14 +1,17 @@
 {
-  "summary": "ICP stub for icp_regulatory (claude). REGENERATE.",
-  "suggestedICPs": [
-    {
-      "id": "icp_stub_1",
-      "title": "Stub ICP 1",
-      "firmographics": {"industry": "Stub", "company_size": "200-1000"},
-      "key_decision_makers": ["VP Stub"],
-      "pain_points_and_triggers": {"critical": "Stub pain", "others": []}
-    }
-  ],
+  "currentData": {
+    "title": "Regulatory, Compliance & Recommended ICP",
+    "blurb": "Stub for icp_regulatory (claude). REGENERATE with capture_fixtures.py.",
+    "_metadata": {"dataSource": "stub"},
+    "keyComplianceFrameworks": ["Stub Framework 1", "Stub Framework 2"],
+    "upcomingMandates": "Stub mandate description",
+    "icpFitScore": "0% match",
+    "recommendationConfidence": "Low",
+    "icpRefinementRecommendations": [
+      {"title": "Stub recommendation 1", "description": "Stub description"},
+      {"title": "Stub recommendation 2", "description": "Stub description"}
+    ]
+  },
   "_stub": true,
   "_stub_note": "Replace by running tests/capture_fixtures.py with real API keys."
 }

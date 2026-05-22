@@ -157,22 +157,28 @@
 # name: test_post_icp_research_buyer_map
   dict({
     'data': dict({
+      '_stub': True,
+      '_stub_note': 'Replace by running tests/capture_fixtures.py with real API keys.',
       'component_name': 'buyer map & roles, pain points, triggers',
       'currentData': dict({
         '_metadata': dict({
-          'dataSource': 'api',
+          'dataSource': 'stub',
         }),
-        'blurb': 'Test blurb',
+        'blurb': 'Stub for icp_buyer_map (groq). REGENERATE with capture_fixtures.py.',
         'buyingTriggers': list([
           dict({
-            'description': 'Rapid growth signals',
-            'trigger': 'Series B',
+            'description': 'Stub description',
+            'trigger': 'Stub trigger 1',
+          }),
+          dict({
+            'description': 'Stub description',
+            'trigger': 'Stub trigger 2',
           }),
         ]),
-        'buyingTriggersIdentified': 1,
-        'coreBuyerPersonas': 1,
+        'buyingTriggersIdentified': 2,
+        'coreBuyerPersonas': 3,
         'title': 'Buyer Map & Roles, Pain Points, Triggers',
-        'topPainPoint': 'Scaling challenges',
+        'topPainPoint': 'Stub pain point',
       }),
       'org_id': 'test_org_abc',
       'timestamp': '<scrubbed>',
@@ -184,31 +190,41 @@
 # name: test_post_icp_research_competitive_overlap
   dict({
     'data': dict({
+      '_stub': True,
+      '_stub_note': 'Replace by running tests/capture_fixtures.py with real API keys.',
       'component_name': 'competitive overlap & buying signals',
       'currentData': dict({
         '_metadata': dict({
-          'dataSource': 'api',
+          'dataSource': 'stub',
         }),
         'activeBuyingSignals': 1,
-        'blurb': 'Test blurb',
+        'blurb': 'Stub for icp_competitive (groq). REGENERATE with capture_fixtures.py.',
         'buyingSignals': list([
           dict({
-            'description': 'Series B',
-            'recency': '2 weeks ago',
-            'signalType': 'Funding Round',
-            'source': 'Crunchbase',
+            'description': 'Stub signal description',
+            'recency': 'stub',
+            'signalType': 'Stub',
+            'source': 'Stub',
           }),
         ]),
         'competitiveMap': list([
           dict({
-            'competitor': 'Competitor A',
-            'differentiators': 'Price',
-            'segment': 'SaaS',
-            'share': '20%',
-            'winsLosses': 'Mixed',
+            'competitor': 'Stub Competitor',
+            'differentiators': 'Stub differentiators',
+            'segment': 'Stub segment',
+            'share': '0%',
+            'winsLosses': 'Stub pattern',
           }),
         ]),
-        'numberOfMainCompetitors': 1,
+        'competitiveNewsAndEvents': list([
+          dict({
+            'date': '2026-05-22',
+            'headline': 'Stub headline',
+            'source': 'Stub',
+          }),
+        ]),
+        'numberOfMainCompetitors': 3,
+        'recentWinLossChange': '+0%',
         'title': 'Competitive Overlap & Buying Signals',
       }),
       'org_id': 'test_org_abc',
@@ -253,26 +269,32 @@
 # name: test_post_icp_research_regulatory
   dict({
     'data': dict({
+      '_stub': True,
+      '_stub_note': 'Replace by running tests/capture_fixtures.py with real API keys.',
       'component_name': 'regulatory, compliance & recommended icp',
       'currentData': dict({
         '_metadata': dict({
-          'dataSource': 'api',
+          'dataSource': 'stub',
         }),
-        'blurb': 'Test blurb',
-        'icpFitScore': '85% match',
+        'blurb': 'Stub for icp_regulatory (groq). REGENERATE with capture_fixtures.py.',
+        'icpFitScore': '0% match',
         'icpRefinementRecommendations': list([
           dict({
-            'description': 'Prioritize GDPR-compliant buyers',
-            'title': 'Focus on compliance',
+            'description': 'Stub description',
+            'title': 'Stub recommendation 1',
+          }),
+          dict({
+            'description': 'Stub description',
+            'title': 'Stub recommendation 2',
           }),
         ]),
         'keyComplianceFrameworks': list([
-          'GDPR',
-          'SOC2',
+          'Stub Framework 1',
+          'Stub Framework 2',
         ]),
-        'recommendationConfidence': 'High',
+        'recommendationConfidence': 'Low',
         'title': 'Regulatory, Compliance & Recommended ICP',
-        'upcomingMandates': 'Q4 2027 GDPR Updates',
+        'upcomingMandates': 'Stub mandate description',
       }),
       'org_id': 'test_org_abc',
       'timestamp': '<scrubbed>',

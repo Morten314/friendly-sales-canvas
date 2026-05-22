@@ -474,19 +474,9 @@ def test_post_icp_research_icp_summary(client, mock_neo4j, mock_llm_chain, mock_
 def test_post_icp_research_buyer_map(client, mock_neo4j, mock_llm_chain, mock_pinecone, snapshot):
     """icp-research: buyer map & roles, pain points, triggers component."""
     _setup_icp_research_neo4j(mock_neo4j)
-    # TODO(Phase E): swap to load_captured("icp_research_icp_buyer_map_groq") once API keys available.
-    # icp_research_2 requires {"currentData": {...}}; the stub lacks that key and causes ValueError.
     _set_invoke_output(
         mock_llm_chain,
-        json.dumps({"currentData": {
-            "title": "Buyer Map & Roles, Pain Points, Triggers",
-            "blurb": "Test blurb",
-            "_metadata": {"dataSource": "api"},
-            "coreBuyerPersonas": 1,
-            "topPainPoint": "Scaling challenges",
-            "buyingTriggersIdentified": 1,
-            "buyingTriggers": [{"trigger": "Series B", "description": "Rapid growth signals"}],
-        }}),
+        json.dumps(load_captured("icp_research_icp_buyer_map_groq")),
     )
 
     mc = _mc_factory({
@@ -508,19 +498,9 @@ def test_post_icp_research_buyer_map(client, mock_neo4j, mock_llm_chain, mock_pi
 def test_post_icp_research_competitive_overlap(client, mock_neo4j, mock_llm_chain, mock_pinecone, snapshot):
     """icp-research: competitive overlap & buying signals component."""
     _setup_icp_research_neo4j(mock_neo4j)
-    # TODO(Phase E): swap to load_captured("icp_research_icp_competitive_groq") once API keys available.
-    # icp_research_3 requires {"currentData": {...}}; the stub lacks that key and causes ValueError.
     _set_invoke_output(
         mock_llm_chain,
-        json.dumps({"currentData": {
-            "title": "Competitive Overlap & Buying Signals",
-            "blurb": "Test blurb",
-            "_metadata": {"dataSource": "api"},
-            "numberOfMainCompetitors": 1,
-            "activeBuyingSignals": 1,
-            "competitiveMap": [{"competitor": "Competitor A", "segment": "SaaS", "share": "20%", "winsLosses": "Mixed", "differentiators": "Price"}],
-            "buyingSignals": [{"signalType": "Funding Round", "description": "Series B", "source": "Crunchbase", "recency": "2 weeks ago"}],
-        }}),
+        json.dumps(load_captured("icp_research_icp_competitive_groq")),
     )
 
     mc = _mc_factory({
@@ -542,20 +522,9 @@ def test_post_icp_research_competitive_overlap(client, mock_neo4j, mock_llm_chai
 def test_post_icp_research_regulatory(client, mock_neo4j, mock_llm_chain, mock_pinecone, snapshot):
     """icp-research: regulatory, compliance & recommended icp component."""
     _setup_icp_research_neo4j(mock_neo4j)
-    # TODO(Phase E): swap to load_captured("icp_research_icp_regulatory_groq") once API keys available.
-    # icp_research_4 requires {"currentData": {...}}; the stub lacks that key and causes ValueError.
     _set_invoke_output(
         mock_llm_chain,
-        json.dumps({"currentData": {
-            "title": "Regulatory, Compliance & Recommended ICP",
-            "blurb": "Test blurb",
-            "_metadata": {"dataSource": "api"},
-            "keyComplianceFrameworks": ["GDPR", "SOC2"],
-            "upcomingMandates": "Q4 2027 GDPR Updates",
-            "icpFitScore": "85% match",
-            "recommendationConfidence": "High",
-            "icpRefinementRecommendations": [{"title": "Focus on compliance", "description": "Prioritize GDPR-compliant buyers"}],
-        }}),
+        json.dumps(load_captured("icp_research_icp_regulatory_groq")),
     )
 
     mc = _mc_factory({
