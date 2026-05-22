@@ -2,14 +2,13 @@
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Query
 
 from app.models.market_scoring import (
     LeadMarketScoresRequest,
     LeadMarketScoresResponse,
     LeadMarketScoreDescriptionsResponse,
     LeadMarketScoringStatusResponse,
-    MARKET_SCORE_COMPONENT_KEYS,
 )
 from app.services import market_scoring as market_scoring_service
 
@@ -44,23 +43,6 @@ async def get_lead_market_score_descriptions(
     user_id: str = Query(...),
     org_id: str = Query(...),
 ):
-    score_coll, _ = market_scoring_service._get_market_score_collections()
-    doc = score_coll.find_one({"org_id": org_id, "lead_id": lead_id, "user_id": user_id})
-    if not doc:
-        raise HTTPException(status_code=404, detail="Lead scoring descriptions not found")
-
-    descriptions = doc.get("component_descriptions", {})
-    if not isinstance(descriptions, dict):
-        descriptions = {}
-
-    normalized_descriptions = {
-        key: str(descriptions.get(key, "Description not available"))
-        for key in MARKET_SCORE_COMPONENT_KEYS
-    }
-    return LeadMarketScoreDescriptionsResponse(
-        lead_id=lead_id,
-        org_id=org_id,
-        combined_score=float(doc.get("market_total_score", 0)),
-        scored_at=doc.get("scored_at") or doc.get("updated_at"),
-        descriptions=normalized_descriptions,
+    return market_scoring_service.get_lead_market_score_descriptions(
+        lead_id=lead_id, user_id=user_id, org_id=org_id,
     )

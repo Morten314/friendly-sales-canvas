@@ -421,6 +421,38 @@ def get_market_scores_status(
     }
 
 
+def get_lead_market_score_descriptions(
+    lead_id: str,
+    user_id: str,
+    org_id: str,
+) -> Dict[str, Any]:
+    """Return the component descriptions for a single lead's scoring.
+
+    Returns a dict matching the LeadMarketScoreDescriptionsResponse schema.
+    Raises HTTPException(404) if the lead has no scoring document.
+    """
+    score_coll, _ = _get_market_score_collections()
+    doc = score_coll.find_one({"org_id": org_id, "lead_id": lead_id, "user_id": user_id})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Lead scoring descriptions not found")
+
+    descriptions = doc.get("component_descriptions", {})
+    if not isinstance(descriptions, dict):
+        descriptions = {}
+
+    normalized_descriptions = {
+        key: str(descriptions.get(key, "Description not available"))
+        for key in MARKET_SCORE_COMPONENT_KEYS
+    }
+    return {
+        "lead_id": lead_id,
+        "org_id": org_id,
+        "combined_score": float(doc.get("market_total_score", 0)),
+        "scored_at": doc.get("scored_at") or doc.get("updated_at"),
+        "descriptions": normalized_descriptions,
+    }
+
+
 def get_company_profile_for_org(org_id: str) -> Dict[str, Any]:
     """Fetch a single company profile for an org."""
     with clients.driver.session() as session:
