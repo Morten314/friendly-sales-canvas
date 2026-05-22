@@ -148,6 +148,10 @@ If asked to reason about architecture, product scope, or design system, **read t
 - The backend area also contains many self-authored markdown guides at its root (`backend/API_DOCUMENTATION.md`, `backend/API_ENDPOINTS_SUMMARY.md`, `backend/ANALYSIS_MARKET_ICP_RESEARCH_ISSUES.md`). Use them as primary sources.
 - The frontend root contains integration/setup guides (`frontend/API_INTEGRATION_GUIDE.md`, `frontend/JWT_INTEGRATION_GUIDE.md`, `frontend/SCOUT_API_REQUEST_SCHEMAS.md`, `frontend/PWA_SETUP.md`, etc.) — also primary sources.
 
+## Technical Debt Register
+
+`/docs/TECH_DEBT.md` is the living register of debt the team has consciously accepted. Each entry names the current state, what it should be, why deferred, and the trigger that should pull it forward. Consult before starting work that might be affected by a tracked item; add a new entry whenever you accept a quality compromise future agents/devs need to know about.
+
 ## Plans / Specs Reference
 
 - `/plans/01-pwa-folder-to-branch.md` — folder→branch refactor of PWA (executed 2026-05-05).
