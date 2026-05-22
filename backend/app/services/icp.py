@@ -28,6 +28,7 @@ from pymongo.errors import DuplicateKeyError
 
 from app.core import clients, llm_config
 from app.core.exceptions import ICPIdRegistryError
+from app.core.logging import logger
 from app.services._llm_helpers import (
     CLAUDE_RESEARCH_MAX_TOKENS,
     _tavily_context_and_urls,
@@ -174,7 +175,7 @@ Do not include any additional reasoning, thoughts, or steps after that.
         raw_response = llm_config.agent_chain.invoke({'input': pmt})
         response = raw_response["output"]
         try:
-            print("[ICP_generator] Raw LLM output (first 500 chars):", str(response)[:500])
+            logger.debug("[ICP_generator] Raw LLM output (first 500 chars): %s", str(response)[:500])
         except Exception:
             pass
         cleaned_str = response.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
@@ -204,7 +205,7 @@ Do not include any additional reasoning, thoughts, or steps after that.
 
     try:
         if isinstance(parsed_json, dict) and "suggestedICPs" in parsed_json:
-            print("[ICP_generator] Parsed suggestedICPs count:", len(parsed_json.get("suggestedICPs", [])))
+            logger.debug("[ICP_generator] Parsed suggestedICPs count: %s", len(parsed_json.get("suggestedICPs", [])))
     except Exception:
         pass
 
@@ -680,7 +681,7 @@ def list_icps(user_id: str, refresh: bool = False) -> Dict[str, Any]:
         _fetch_pinecone_supporting_context,
     )
 
-    print(f"[ICP] Request - user_id: {user_id}, refresh: {refresh}")
+    logger.info(f"[ICP] Request - user_id: {user_id}, refresh: {refresh}")
 
     def normalize_icp_response(payload: Any) -> Dict[str, Any]:
         """
@@ -819,18 +820,18 @@ def list_icps(user_id: str, refresh: bool = False) -> Dict[str, Any]:
         existing_icp = collection.find_one({"user_id": user_id})
 
         if existing_icp:
-            print(f"[ICP] Found existing ICP for user_id: {user_id}")
+            logger.info(f"[ICP] Found existing ICP for user_id: {user_id}")
             if existing_icp.get("icps"):
                 icps_data = existing_icp.get("icps")
                 if isinstance(icps_data, dict) and "suggestedICPs" in icps_data:
-                    print(f"[ICP] Existing ICP count: {len(icps_data.get('suggestedICPs', []))}")
+                    logger.debug(f"[ICP] Existing ICP count: {len(icps_data.get('suggestedICPs', []))}")
                 elif isinstance(icps_data, list):
-                    print(f"[ICP] Existing ICP count (list): {len(icps_data)}")
+                    logger.debug(f"[ICP] Existing ICP count (list): {len(icps_data)}")
         else:
-            print(f"[ICP] No existing ICP found for user_id: {user_id}")
+            logger.info(f"[ICP] No existing ICP found for user_id: {user_id}")
 
         if existing_icp and not refresh:
-            print(f"[ICP] Returning cached ICP for user_id: {user_id}")
+            logger.info(f"[ICP] Returning cached ICP for user_id: {user_id}")
             normalized_cached = normalize_icp_response(existing_icp.get("icps", {"suggestedICPs": []}))
             # Persist normalized payload so ids/shape remain stable for subsequent fetches.
             collection.update_one(
@@ -840,7 +841,7 @@ def list_icps(user_id: str, refresh: bool = False) -> Dict[str, Any]:
             )
             return normalized_cached
 
-        print(f"[ICP] Generating new ICPs for user_id: {user_id}")
+        logger.info(f"[ICP] Generating new ICPs for user_id: {user_id}")
 
         # Generate new ICPs from Neo4j company profile - get shared company profile
         with clients.driver.session() as session:
@@ -850,11 +851,11 @@ def list_icps(user_id: str, refresh: bool = False) -> Dict[str, Any]:
             record = result.single()
 
             if not record:
-                print(f"[ICP] ERROR: No company profile in Neo4j")
+                logger.error(f"[ICP] ERROR: No company profile in Neo4j")
                 raise HTTPException(status_code=404, detail="No company profile found in Neo4j")
 
             company_profile = dict(record.values()[0])
-            print(f"[ICP] Company profile retrieved from Neo4j")
+            logger.info(f"[ICP] Company profile retrieved from Neo4j")
 
             # Convert JSON string if needed
             if "socialMediaUrls" in company_profile and isinstance(company_profile["socialMediaUrls"], str):
@@ -864,38 +865,38 @@ def list_icps(user_id: str, refresh: bool = False) -> Dict[str, Any]:
                     pass
 
             # Generate ICPs
-            print(f"[ICP] Calling ICP_generator() for user_id: {user_id}")
+            logger.info(f"[ICP] Calling ICP_generator() for user_id: {user_id}")
             try:
                 icp_result = ICP_generator(company_profile)
                 if isinstance(icp_result, dict) and "suggestedICPs" in icp_result:
-                    print(f"[ICP] Generated {len(icp_result.get('suggestedICPs', []))} ICPs for user_id: {user_id}")
+                    logger.info(f"[ICP] Generated {len(icp_result.get('suggestedICPs', []))} ICPs for user_id: {user_id}")
                 else:
-                    print(f"[ICP] ICP_generator returned: {type(icp_result)}")
+                    logger.debug(f"[ICP] ICP_generator returned: {type(icp_result)}")
                 icp_result = normalize_icp_response(icp_result)
             except Exception as gen_error:
-                print(f"[ICP] ERROR in ICP_generator: {str(gen_error)}")
+                logger.error(f"[ICP] ERROR in ICP_generator: {str(gen_error)}")
                 raise HTTPException(status_code=500, detail=f"ICP generation failed: {str(gen_error)}")
 
             # Upsert the result in MongoDB - filter by user_id only
-            print(f"[ICP] Saving to MongoDB for user_id: {user_id}")
+            logger.info(f"[ICP] Saving to MongoDB for user_id: {user_id}")
             try:
                 update_result = collection.update_one(
                     {"user_id": user_id},
                     {"$set": {"user_id": user_id, "icps": icp_result}},
                     upsert=True
                 )
-                print(f"[ICP] Saved to MongoDB - matched: {update_result.matched_count}, modified: {update_result.modified_count}")
+                logger.info(f"[ICP] Saved to MongoDB - matched: {update_result.matched_count}, modified: {update_result.modified_count}")
             except Exception as save_error:
-                print(f"[ICP] ERROR saving to MongoDB: {str(save_error)}")
+                logger.error(f"[ICP] ERROR saving to MongoDB: {str(save_error)}")
                 raise HTTPException(status_code=500, detail=f"Failed to save ICP: {str(save_error)}")
 
-            print(f"[ICP] Successfully returned ICPs for user_id: {user_id}")
+            logger.info(f"[ICP] Successfully returned ICPs for user_id: {user_id}")
             return icp_result
 
     except HTTPException:
         raise
     except Exception as e:
-        print(f"[ICP] ERROR: {str(e)}")
+        logger.error(f"[ICP] ERROR: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
 

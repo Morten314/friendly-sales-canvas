@@ -3,7 +3,6 @@ import json
 import re
 import asyncio
 import uuid
-import logging
 from datetime import datetime
 from typing import Any, Dict, List, Literal, Optional
 
@@ -33,7 +32,7 @@ from app.services._claude_budget import (
     _finalize_claude_signal_budget,
 )
 
-logger = logging.getLogger(__name__)
+from app.core.logging import logger
 
 
 def _signals_agent_output(prompt: str, company_profile_seed: str, llm_backend: str) -> tuple:
@@ -387,7 +386,7 @@ def search_signals(
     signal_label = "ICP signal" if persona == "profiler" else "signal"
     leads_text = ""
     if leads_data:
-        print(f"[DEBUG {persona.capitalize()}] Processing {len(leads_data)} leads for signal generation")
+        logger.debug(f"[DEBUG {persona.capitalize()}] Processing {len(leads_data)} leads for signal generation")
         try:
             leads_json = json.dumps(leads_data[:50], indent=2, default=str)
             leads_text = f"""
@@ -407,7 +406,7 @@ CRITICAL INSTRUCTIONS:
 - This will make the {signal_label}s more actionable for your sales team
 """
         except Exception as e:
-            print(f"[ERROR] Failed to format leads data: {e}")
+            logger.error(f"[ERROR] Failed to format leads data: {e}")
             leads_text = f"""
 STEP 1.2 - LEADS DATA:
 Your organization has {len(leads_data)} active leads in your pipeline. Use this information to prioritize {signal_label}s relevant to your actual sales pipeline.
@@ -791,7 +790,7 @@ async def _generate_signals_batch_impl(request: MarketRequest, llm_backend: str)
     # Generate 2 signals for scout
     for i in range(2):
         try:
-            print(f"Generating scout signal {i+1}...")
+            logger.info(f"Generating scout signal {i+1}...")
             signals_result = await asyncio.to_thread(search_signals, pre_data, "scout", llm_backend)
             signal_id = str(uuid.uuid4())
             signals_result.update({
@@ -831,10 +830,10 @@ async def _generate_signals_batch_impl(request: MarketRequest, llm_backend: str)
                     pre_data["existing_headlines"].append(signals_result.get("headline"))
             signals_result.pop("_id", None)
             generated_signals.append(signals_result)
-            print(f"Successfully generated scout signal {i+1}")
+            logger.info(f"Successfully generated scout signal {i+1}")
 
         except Exception as e:
-            print(f"Error generating scout signal {i+1}: {e}")
+            logger.error(f"Error generating scout signal {i+1}: {e}")
             raise HTTPException(
                 status_code=500,
                 detail=f"Failed to generate scout signal {i+1}: {str(e)}"
@@ -843,7 +842,7 @@ async def _generate_signals_batch_impl(request: MarketRequest, llm_backend: str)
     # Generate 2 signals for profiler
     for i in range(2):
         try:
-            print(f"Generating profiler signal {i+1}...")
+            logger.info(f"Generating profiler signal {i+1}...")
             signals_result = await asyncio.to_thread(search_signals, profiler_pre_data, "profiler", llm_backend)
             signal_id = str(uuid.uuid4())
             signals_result.update({
@@ -883,10 +882,10 @@ async def _generate_signals_batch_impl(request: MarketRequest, llm_backend: str)
                     profiler_pre_data["existing_headlines"].append(signals_result.get("headline"))
             signals_result.pop("_id", None)
             generated_signals.append(signals_result)
-            print(f"Successfully generated profiler signal {i+1}")
+            logger.info(f"Successfully generated profiler signal {i+1}")
 
         except Exception as e:
-            print(f"Error generating profiler signal {i+1}: {e}")
+            logger.error(f"Error generating profiler signal {i+1}: {e}")
             raise HTTPException(
                 status_code=500,
                 detail=f"Failed to generate profiler signal {i+1}: {str(e)}"
