@@ -31,6 +31,8 @@ A **hybrid**: hand-crafted fixtures for simple CRUD endpoints, captured-once fix
 
 **Owner:** TBD (likely whoever first hits a "fixtures lied" incident).
 
+**Resolved 2026-05-22 by Phase E (`refactor-backend-modularization-phase-e`).** `backend/tests/capture_fixtures.py` produces ~24 deterministic JSON captures in `backend/tests/fixtures/captured/`. Three integration test files (`test_market_research.py`, `test_icp.py`, `test_signals.py`) now consume these via `load_captured(...)`. Re-capture triggers are documented in the script header.
+
 ---
 
 ## TD-002 — No direct unit tests for service functions
@@ -59,6 +61,8 @@ Service functions get a layer of direct unit tests — `pytest.raises(LeadNotFou
 - When `_get_market_score_collections` or similar helper needs to be tested independently to validate a query change.
 
 **Owner:** TBD.
+
+**Resolved 2026-05-22 by Phase E (`refactor-backend-modularization-phase-e`).** `backend/tests/unit/` adds ~110-130 direct unit tests across 9 service files. Each typed-exception leaf in `app/core/exceptions.py` is asserted via `pytest.raises(...)`. `pytest tests/unit/` runs in under 2s.
 
 ---
 
