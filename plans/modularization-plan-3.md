@@ -107,7 +107,7 @@ documents._process_prospect_row) is unchanged."
 - Modify: `app/services/customer_profile.py:236,240` (function `create_from_suggested_icp`)
 - Modify: `app/services/customer_profile.py:384,387` (function `delete_icp_from_customer_profile`)
 - Modify: `app/services/market_scoring.py:43` (internal helper `_get_market_score_collections`)
-- Modify: `tests/conftest.py:98-101` (mock fixture)
+- Modify: `tests/conftest.py:6-7` (module-level docstring) and `tests/conftest.py:85-101` (mock fixture + its docstring)
 - Modify: `tests/test_icp.py:148, 167, 194, 333` (4 patch sites)
 - Modify: `tests/test_market_scoring.py:9 (docstring), 110, 141, 164` (3 patch sites + 1 docstring)
 
@@ -160,7 +160,23 @@ Note: `clients` is already imported in `market_scoring.py` at line 20 (`from app
 grep -n "from app.core import clients\|import clients" app/services/market_scoring.py | head -3
 ```
 
-- [ ] **Step 4: Update `tests/conftest.py:mock_mongo` fixture**
+- [ ] **Step 4: Update `tests/conftest.py` module docstring (lines 1-9)**
+
+Read the current docstring at the top of `tests/conftest.py`. It currently contains (lines 6-7):
+```
+`app.core.clients.client` (and `profiler_client`), so all Mongo mocking
+happens via `app.core.clients.client` / `app.core.clients.profiler_client`.
+```
+
+Update to drop the `profiler_client` references — the Profiler databases live on the same cluster as everything else, so the dual name was always misleading. Replace lines 6-7 with:
+```
+`app.core.clients.client`, so all Mongo mocking happens via
+`app.core.clients.client`. (The Profiler databases live on the same cluster.)
+```
+
+The rest of the module docstring (lines 1-5, 8-9) remains unchanged.
+
+- [ ] **Step 5: Update `tests/conftest.py:mock_mongo` fixture**
 
 In `tests/conftest.py:85-101`, the `mock_mongo` fixture patches both `client` and `profiler_client` because both names referenced the same singleton. After Task 3 deletes `profiler_client`, the second patch becomes invalid. Update now to remove the redundancy.
 
@@ -203,7 +219,7 @@ def mock_mongo(mocker):
     return mongo
 ```
 
-- [ ] **Step 5: Update `tests/test_icp.py` — four patch sites**
+- [ ] **Step 6: Update `tests/test_icp.py` — four patch sites**
 
 In `tests/test_icp.py`, the four lines (148, 167, 194, 333) each contain:
 ```python
@@ -220,15 +236,15 @@ grep -c "app.core.clients.profiler_client" tests/test_icp.py
 ```
 Expected: `4`. Then apply the replacement to all 4.
 
-- [ ] **Step 6: Update `tests/test_market_scoring.py` — three patch sites + docstring**
+- [ ] **Step 7: Update `tests/test_market_scoring.py` — three patch sites + docstring**
 
 In `tests/test_market_scoring.py`:
 - Line 9 docstring mentions `profiler_client` — update the wording to refer only to `client`. Read the current docstring and rewrite to omit the `profiler_client` reference. Example replacement:
   - Before (around line 9): `... and profiler_client from app.core.clients. Patch "app.core.clients.client" for mocking.`
   - After: `... from app.core.clients. Patch "app.core.clients.client" for mocking.`
-- Lines 110, 141, 164: same change as in Step 5 — replace `profiler_client` with `client` in each `patch("app.core.clients.profiler_client", ...)` call.
+- Lines 110, 141, 164: same change as in Step 6 — replace `profiler_client` with `client` in each `patch("app.core.clients.profiler_client", ...)` call.
 
-- [ ] **Step 7: Verify the production grep is clean**
+- [ ] **Step 8: Verify the production grep is clean**
 
 ```bash
 grep -rn "_get_profiler_mongo_client" app/
@@ -240,14 +256,14 @@ grep -rn "profiler_client" tests/
 ```
 Expected: no matches.
 
-- [ ] **Step 8: Run tests**
+- [ ] **Step 9: Run tests**
 
 ```bash
 pytest 2>&1 | tail -3
 ```
 Expected: `93 passed`. If any test fails, the most likely cause is a missed call site — re-grep and fix.
 
-- [ ] **Step 9: Commit**
+- [ ] **Step 10: Commit**
 
 From monorepo root:
 ```bash
@@ -358,7 +374,12 @@ Also locate the two callers of `fetch_leads_for_org`:
 ```bash
 grep -rn "fetch_leads_for_org" app/
 ```
-Expected: 4 hits — definition (`leads.py:21`), and 3 callers in `market_scoring.py` (background task) and `routers/market_scoring.py` (router fallback at line ~119) plus the import in `routers/market_scoring.py`.
+Expected: 5 hits —
+1. `app/services/leads.py:21` — definition
+2. `app/services/market_scoring.py:26` — module-level import
+3. `app/services/market_scoring.py:462` — call inside `_run_market_scoring_for_org`
+4. `app/routers/market_scoring.py:18` — module-level import
+5. `app/routers/market_scoring.py:126` — call inside `get_lead_market_scores_status` fallback path
 
 - [ ] **Step 2: Add the unified function**
 
@@ -456,7 +477,7 @@ Locate:
 ```bash
 grep -n "fetch_leads_for_org" app/routers/market_scoring.py
 ```
-Two locations expected: an import and a call site at line ~119 (`total_leads = len(fetch_leads_for_org(org_id, limit=5000))`).
+Two locations expected: the module-level import at line 18 and a call site at line 126 (`total_leads = len(fetch_leads_for_org(org_id, limit=5000))`).
 
 Change the import similarly. Change the call to:
 ```python
@@ -509,7 +530,7 @@ behavior they need:
 - [ ] **Step 1: Verify the catch sites**
 
 ```bash
-grep -n "BudgetExhaustedError\|ICPIdRegistryError" app/routers/
+grep -rn "BudgetExhaustedError\|ICPIdRegistryError" app/routers/
 ```
 Expected: 6 catch sites — 2 in `signals.py` (lines 40, 71), 1 in `market_research.py` (line 24), 3 in `icp.py` (lines 16, 24, 36). Plus their imports at the top of each router file.
 
@@ -517,7 +538,17 @@ The 3 `ICPIdRegistryError` catches in `icp.py` already use `detail=str(e)` corre
 
 Only the 3 `BudgetExhaustedError` catches need updating — those pass `str(e)` on an exception whose `args[0]` is a dict, producing Python-repr.
 
-- [ ] **Step 2: Reparent the two surviving exception classes**
+- [ ] **Step 2: Verify the BudgetExhaustedError payload shape**
+
+Before applying the `e.args[0]` fix, confirm the exception is raised with a dict (not a string). Run:
+```bash
+grep -A8 "raise BudgetExhaustedError" app/services/_claude_budget.py
+```
+Expected: the raise constructs the exception with a dict literal containing keys `error`, `token_limit_5m`, `current_tokens_5m`, `requested_tokens`. The first arg to the constructor (`args[0]`) is that dict — so `e.args[0]` in the router catch will return the dict and FastAPI will serialize it as JSON.
+
+If the raise instead constructs `BudgetExhaustedError("some string", {...})` or similar, stop and revise the fix — `e.args[0]` may not be the dict.
+
+- [ ] **Step 3: Reparent the two surviving exception classes**
 
 In `app/core/exceptions.py`, replace the entire file contents with:
 ```python
@@ -540,7 +571,7 @@ class ICPIdRegistryError(Exception):
 
 Note: `BrewraError` is gone. `BudgetExhaustedError` and `ICPIdRegistryError` both inherit directly from `Exception`.
 
-- [ ] **Step 3: Fix the 429 catch in `signals.py:40`**
+- [ ] **Step 4: Fix the 429 catch in `signals.py:40`**
 
 In `app/routers/signals.py`, change line 40-41 from:
 ```python
@@ -555,7 +586,7 @@ to:
 
 `e.args[0]` is the dict that `services/_claude_budget.py:54-61` passes to the exception constructor. FastAPI serializes dict `detail` values to JSON automatically.
 
-- [ ] **Step 4: Fix the 429 catch in `signals.py:71`**
+- [ ] **Step 5: Fix the 429 catch in `signals.py:71`**
 
 In the same file, change lines 71-72 from:
 ```python
@@ -568,7 +599,7 @@ to:
         raise HTTPException(status_code=429, detail=e.args[0])
 ```
 
-- [ ] **Step 5: Fix the 429 catch in `market_research.py:24`**
+- [ ] **Step 6: Fix the 429 catch in `market_research.py:24`**
 
 In `app/routers/market_research.py`, change lines 24-25 from:
 ```python
@@ -581,14 +612,14 @@ to:
         raise HTTPException(status_code=429, detail=e.args[0])
 ```
 
-- [ ] **Step 6: Verify no stale references to BrewraError remain**
+- [ ] **Step 7: Verify no stale references to BrewraError remain**
 
 ```bash
 grep -rn "BrewraError" app/ tests/
 ```
 Expected: no output.
 
-- [ ] **Step 7: Run tests**
+- [ ] **Step 8: Run tests**
 
 ```bash
 pytest 2>&1 | tail -3
@@ -600,12 +631,12 @@ pytest 2>&1 | tail -3
 ```
 After the update, re-run pytest and confirm 93 passed. Inspect the updated snapshot file (`tests/__snapshots__/`) to confirm the new body is a JSON object containing the `error`, `token_limit_5m`, `current_tokens_5m`, `requested_tokens` fields. If it isn't, stop and investigate.
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 9: Commit**
 
 From monorepo root:
 ```bash
 git add backend/app/core/exceptions.py backend/app/routers/signals.py backend/app/routers/market_research.py
-# also add any updated snapshot file in backend/tests/__snapshots__/ if step 7 produced one
+# also add any updated snapshot file in backend/tests/__snapshots__/ if step 8 produced one
 git status --short  # review what's staged
 git commit -m "fix(be): delete unused BrewraError base; emit 429 detail as JSON object
 
@@ -644,7 +675,9 @@ Read `app/routers/market_scoring.py` end-to-end to see what the handler does (af
 
 - [ ] **Step 2: Add the service function**
 
-In `app/services/market_scoring.py`, near where other public functions live (after the private helpers section, near `get_company_profile_for_org` around line 278), add:
+In `app/services/market_scoring.py`, near where other public functions live (after the private helpers section, near `get_company_profile_for_org` around line 278), add the function below.
+
+Note on `import uuid`: it is placed *inside the function body* intentionally — `uuid` is used only here in the service file, and a function-local import keeps the module's top-of-file import block focused. Do not add a module-level `import uuid` to `market_scoring.py`.
 
 ```python
 def trigger_or_get_market_scores(
@@ -657,7 +690,7 @@ def trigger_or_get_market_scores(
       org_id, total_leads, processing_status, active_run_id, last_scored_at, rows.
     Raises HTTPException(404) if no rows exist and no refresh was requested.
     """
-    import uuid
+    import uuid  # function-local: uuid is used only in this function
 
     _, run_coll = _get_market_score_collections()
     active_run = run_coll.find_one(
@@ -1012,7 +1045,13 @@ Expected: ~30 (target per spec §6). If significantly larger, double-check that 
 
 - [ ] **Step 3: Remove now-unused router imports**
 
-After the three handlers are all thin wrappers, the router likely has imports it no longer needs. Common candidates: `uuid`, `datetime`, `timezone`, `LeadMarketScoreStatusItem`. Visually scan and delete any that have no remaining usage. Use Python parsing or just grep each candidate name within the file.
+After all three handlers are thin wrappers, several router-side imports become unused. Concrete candidates to check and remove (each verified by `grep <name> app/routers/market_scoring.py` returning only the import line):
+- `uuid` (was used only inside the first handler's body)
+- `datetime`, `timezone` (used only by stale-run timestamping inside the first handler)
+- `LeadMarketScoreStatusItem` (was constructed only inside the second handler — service now returns plain dicts)
+- `MARKET_SCORE_COMPONENT_KEYS` (used only inside the third handler — service now uses it directly)
+
+After deletion, the router's import block should contain only: `APIRouter`, `BackgroundTasks`, `HTTPException`, `Query` (from FastAPI); `Optional` (from typing); the three `*Response` and one `*Request` Pydantic models; `app.services.market_scoring as market_scoring_service`; `app.services.leads.fetch_leads_for_org` (already removed in Task 4 — verify it's gone); and `logging`/`logger`.
 
 - [ ] **Step 4: Run tests**
 
@@ -1073,15 +1112,18 @@ def _get_market_score_collections():
 
 - [ ] **Step 2: Add a startup event in `app/main.py`**
 
-At the end of `app/main.py` (after the existing `clients.graph.refresh_schema()` guard at lines 81-82), add:
+At the end of `app/main.py` (after the existing `clients.graph.refresh_schema()` guard at lines 81-82), add the following. Two guards are used: `BREWRA_SKIP_DB_INIT` (matches the precedent in `clients.py:25`) and `clients.client is None` (defensive). Either one being truthy skips the startup body.
 
 ```python
-# Phase C: one-time index creation on startup. Guarded same as
-# graph.refresh_schema() above so test sandboxes (BREWRA_SKIP_DB_INIT=1,
-# client mocked to None) don't try to issue real Mongo round-trips.
+import os  # if not already imported at the top of main.py
+
+
+# Phase C: one-time index creation on startup. Guarded by BREWRA_SKIP_DB_INIT
+# (test/sandbox env var, also honored by app.core.clients) and a defensive
+# clients.client is None check.
 @app.on_event("startup")
 def _ensure_market_scoring_indexes() -> None:
-    if clients.client is None:
+    if os.getenv("BREWRA_SKIP_DB_INIT") or clients.client is None:
         return
     profiler_db = clients.client["Profiler"]
     score_coll = profiler_db["Lead_Market_Scores"]
@@ -1092,6 +1134,8 @@ def _ensure_market_scoring_indexes() -> None:
     run_coll.create_index([("org_id", 1), ("created_at", -1)])
 ```
 
+Check whether `import os` is already at the top of `main.py` and only add the import line if missing.
+
 Note: `@app.on_event("startup")` is deprecated in FastAPI 0.93+ in favor of the lifespan context manager pattern, but the rest of this codebase has not migrated to lifespan yet, and the deprecation warning is non-fatal. Using `on_event` here matches the file's existing style (the `refresh_schema()` call at line 82 is implicitly module-level, not a lifespan handler — even more divergent). A future phase can migrate the whole file to lifespan.
 
 - [ ] **Step 3: Run tests**
@@ -1099,19 +1143,11 @@ Note: `@app.on_event("startup")` is deprecated in FastAPI 0.93+ in favor of the 
 ```bash
 pytest 2>&1 | tail -3
 ```
-Expected: `93 passed`. The mocked `clients.client` in `mock_mongo` fixture is a `MagicMock`, not `None`, so the guard's `if clients.client is None` returns False and the startup function runs against the mock. The mock's `create_index` calls succeed silently. Verify this with:
+Expected: `93 passed`. `conftest.py` sets `BREWRA_SKIP_DB_INIT=1` at module level (line 34), so the first guard short-circuits the startup body entirely during tests — no MongoClient access happens, even when the `client` fixture has patched `clients.client` to a MagicMock.
+
+Sanity check the targeted tests:
 ```bash
 pytest tests/test_market_scoring.py -v 2>&1 | tail -10
-```
-
-If the mock setup causes a problem (e.g., the `[...]` subscript on a `MagicMock` doesn't return the chain expected by `create_index`), then the guard should be tightened. Safe form to use instead:
-```python
-@app.on_event("startup")
-def _ensure_market_scoring_indexes() -> None:
-    import os
-    if os.getenv("BREWRA_SKIP_DB_INIT") or clients.client is None:
-        return
-    # ... body unchanged
 ```
 
 - [ ] **Step 4: Commit**
@@ -1146,9 +1182,11 @@ wc -l app/routers/market_scoring.py
 grep "class " app/core/exceptions.py
 # Expected: two lines, both inheriting (Exception), no BrewraError
 
-# Criterion 3.3: profiler_client + helper fully gone
+# Criterion 3.3: profiler_client + helper fully gone (production + tests + docstrings)
 grep -rn "profiler_client\|_get_profiler_mongo_client" app/ tests/
 # Expected: no output
+grep -n "profiler_client" app/core/clients.py
+# Expected: no output (confirms Task 3 Step 1 docstring update shipped)
 
 # Criterion 3.4: fetch_leads_for_org gone, single get_leads_for_org
 grep -rn "fetch_leads_for_org" app/
