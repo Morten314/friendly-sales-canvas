@@ -26,7 +26,7 @@
 git checkout master && git checkout -b refactor-backend-modularization-phase-d
 ```
 
-- [ ] **Step 2: Verify clean tree and baseline tests**
+- [ ] **Step 2: Verify clean tree and capture baseline tests**
 
 ```bash
 git status --short
@@ -36,7 +36,23 @@ Expected: empty (clean tree).
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence/backend && pytest 2>&1 | tail -3
 ```
-Expected: `93 passed, 11 warnings`. If the count differs, note the actual baseline and confirm with the user before proceeding.
+Expected at plan-writing time: `93 passed, 11 warnings`. **Capture the actual count from your run** — this becomes the baseline. Throughout this plan, "93 passed" refers to this baseline; if your number differs, substitute it everywhere. The validation logic is "tests still pass and count unchanged," not the literal number 93.
+
+If `pytest` is not found, the backend virtualenv is not active. Activate it before continuing (`source <venv-path>/bin/activate` or equivalent for the project's setup).
+
+- [ ] **Step 3: Verify Phase C is complete (defensive)**
+
+This plan assumes Phase C's post-state. Verify:
+
+```bash
+cat backend/app/core/exceptions.py
+```
+Expected: a 2-class file with `BudgetExhaustedError(Exception)` and `ICPIdRegistryError(Exception)` plus the post-Phase-C module docstring. If the file already contains `BrewraError`, `NotFoundError`, etc., Phase D has been partially started — stop and verify state before proceeding.
+
+```bash
+cd backend && grep -rn "raise_on_error" app/services/
+```
+Expected: hits in `leads.py` (function definition + body, ~3 lines), `market_scoring.py` (2 call sites), `signals.py` (2 call sites). If `raise_on_error` doesn't exist, Phase C wasn't applied — stop.
 
 ---
 
@@ -81,35 +97,83 @@ cd backend && grep -B1 -A2 "except HTTPException:" app/services/ | grep -B1 "rai
 ```
 Mark each as a "re-raise boilerplate site to be deleted." Expected count: ~20.
 
-- [ ] **Step 5: Consolidate leaf classes**
+- [ ] **Step 5: Audit `except Exception as e:` blocks for side effects (cleanup, status updates)**
+
+Some `except Exception as e:` blocks do more than wrap-and-rethrow — they close connections, mark a run as failed in MongoDB, decrement counters, etc. Those side effects MUST be preserved during migration, even when the surrounding wrapper is deleted.
+
+For each wrap-and-rethrow site found in Step 3, read the full except block. If it contains anything beyond `logger.<level>(...)` and `raise HTTPException(...)` — flag it as "SIDE-EFFECT BLOCK — preserve cleanup logic during migration." Examples to watch for:
+- `mongo_client.close()` or `session.close()`
+- `run_coll.update_one(... status: 'failed' ...)` (run-status updates)
+- `cleanup_partial_state()` or similar
+- Any database write before the raise
+
+The per-service migration (Tasks 4-12) handles flagged blocks by keeping the body, replacing the raise, and removing the catch-and-rethrow boilerplate around it.
+
+- [ ] **Step 6: Identify standalone 500 raises (not in wrap-and-rethrow blocks)**
+
+Most `status_code=500` raises are inside wrap-and-rethrow blocks (caught by Step 3). But some are standalone — e.g., configuration checks like `raise HTTPException(500, "ANTHROPIC_API_KEY is not configured")` at `signals.py:1137`. These won't be deleted by the wrap-and-rethrow pattern; they need a typed leaf class.
+
+```bash
+cd backend && grep -B5 "raise HTTPException(.*status_code=500\|raise HTTPException(500" app/services/ | grep -v "except Exception"
+```
+
+For each standalone 500 raise, decide the leaf class:
+- Configuration / missing dependency → `ConfigurationError(BrewraError)` (add to hierarchy in Task 2; maps to 500)
+- Anything else → judge case-by-case; if it's truly catch-all "something went wrong server-side," consider whether it should propagate to FastAPI's default 500 instead of having a typed exception.
+
+Add any new leaf class to the Task 1 inventory and the Task 2 hierarchy.
+
+- [ ] **Step 7: Consolidate leaf classes**
 
 From Step 2, collapse the per-line list into the unique leaf classes needed. Resource types that have just one raise (e.g., `RunNotFoundError` if only one site needs it) still get their own class — per-resource granularity is the spec convention.
 
 Expected output: ~15-20 unique leaf classes across the status families. Compare to the spec §3.1 examples — your list should be a superset of the named leaves (`LeadNotFoundError`, `ICPNotFoundError`, etc.) and may include additional resource types the spec didn't enumerate.
 
-- [ ] **Step 6: Write the inventory as a reference artifact**
+- [ ] **Step 8: Persist the inventory to `/tmp/phase-d-leaf-inventory.txt`**
 
-Save the leaf-class list as a comment block intended for the top of `app/core/exceptions.py` and a long-form inventory intended for Task 2's commit message. Format:
+Write the full inventory + the Step 5 side-effect-block list + the Step 6 standalone-500 list to a durable file that subsequent tasks (especially Task 2 and the per-service migrations) can read back. This protects against context resets between subagent dispatches.
+
+Use the Write tool, not Bash heredoc:
 
 ```
-# Phase D leaf-class inventory (discovery 2026-05-22):
-# 404 NotFoundError (17 raises across 8 files):
-#   - LeadNotFoundError                  : leads.py:42,56,142; market_scoring.py:...
-#   - ICPNotFoundError                   : icp.py:33,67,...
-#   - DocumentNotFoundError              : documents.py:...
-#   ...
-# 400 ValidationError (6 raises):
-#   - LeadValidationError                : leads.py:89
-#   ...
-# 409 ConflictError (1 raise):
-#   - ICPAlreadyExistsError              : customer_profile.py:331
-# 401 AuthenticationError: 0 (reserved for future JWT auth)
-# 403 AuthorizationError: 0 (reserved for future use)
-# 429 BudgetExhaustedError (retained)
-# 500 ICPIdRegistryError (retained)
+Target path: /tmp/phase-d-leaf-inventory.txt
+
+Content format:
+
+# Phase D leaf-class inventory (discovery YYYY-MM-DD):
+
+## 404 NotFoundError (N raises across M files):
+  - LeadNotFoundError                  : leads.py:42,56,142; market_scoring.py:...
+  - ICPNotFoundError                   : icp.py:33,67,...
+  - DocumentNotFoundError              : documents.py:...
+  ...
+
+## 400 ValidationError (N raises):
+  - LeadValidationError                : leads.py:89
+  ...
+
+## 409 ConflictError (1 raise):
+  - ICPAlreadyExistsError              : customer_profile.py:331
+
+## 500 ConfigurationError (N raises, if any standalone 500s identified in Step 6):
+  - <leaf class>                       : <file>:<line>
+  ...
+
+## 401 AuthenticationError: 0 (reserved for future JWT auth)
+## 403 AuthorizationError: 0 (reserved for future use)
+## 429 BudgetExhaustedError (retained)
+## 500 ICPIdRegistryError (retained)
+
+# Side-effect-bearing except blocks (preserve cleanup during migration):
+  - <file>:<line> — <description of side effect>
+  ...
+
+# Standalone 500 raises (not in wrap-and-rethrow):
+  - <file>:<line> — <reason>
+  ...
 ```
 
-This artifact will be embedded in Task 2 in two places: the `app/core/exceptions.py` header comment and the commit message body.
+This file is the source of truth for Tasks 2-12. Task 2 also copies the leaf-class summary into the `app/core/exceptions.py` header comment and the commit message body.
 
 ---
 
@@ -174,13 +238,17 @@ class AuthorizationError(BrewraError):
 
 
 # ─── 404 NotFoundError leaves ───
-# [Add one class per leaf identified in Task 1. Each is one line:
-#  `class LeadNotFoundError(NotFoundError): """Lead not found."""`
-#  Follow this pattern for every NotFound leaf from the inventory.]
+# Populate every leaf identified in /tmp/phase-d-leaf-inventory.txt's
+# "404 NotFoundError" section. Each is one line, e.g.:
+class LeadNotFoundError(NotFoundError):
+    """Lead not found in Neo4j."""
+
+# Add the remaining NotFoundError leaves here, one class per resource type.
 
 
 # ─── 400 ValidationError leaves ───
-# [Same pattern for each ValidationError leaf]
+# Populate every leaf identified in /tmp/phase-d-leaf-inventory.txt's
+# "400 ValidationError" section.
 
 
 # ─── 409 ConflictError leaves ───
@@ -202,12 +270,12 @@ class ICPIdRegistryError(BrewraError):
     """ICP id reservation could not be acquired. Maps to HTTP 500."""
 ```
 
-**Important:** This template is a skeleton. The placeholder comments (`# [Add one class per leaf identified in Task 1...]`) must be replaced with the actual leaf classes from the Task 1 inventory before committing. No placeholders in the committed file.
+**Important:** Before committing, replace the two "Populate every leaf..." comments with the actual leaf class definitions from `/tmp/phase-d-leaf-inventory.txt` (written in Task 1 Step 8). The committed file must contain **zero "Populate..." comments and zero `[bracketed]` placeholders** — the comments are guidance for the writer, not content for the file.
 
-For each leaf, the body is a single-line docstring describing the resource missing:
+For each leaf, follow the `LeadNotFoundError` example shape — one-line docstring describing what's missing:
 ```python
-class LeadNotFoundError(NotFoundError):
-    """Lead not found in Neo4j."""
+class ICPNotFoundError(NotFoundError):
+    """ICP not found."""
 ```
 
 - [ ] **Step 3: Verify the file parses**
@@ -280,7 +348,7 @@ from app.core.exceptions import (
 
 - [ ] **Step 3: Add the 7 handler functions**
 
-Place after the CORS middleware block (around line 33), before the first `from app.routers import ...` import:
+Place after the CORS middleware configuration block (where `app.add_middleware(CORSMiddleware, ...)` ends) and before the first `app.include_router(...)` call. (The `from app.routers import ...` lines are interleaved with `include_router()` calls in this file's existing style — place the handlers in that same code region.)
 
 ```python
 # Phase D: domain-exception handlers. Map each BrewraError base to its HTTP
@@ -331,6 +399,8 @@ async def _handle_icp_registry(request, exc):
 ```
 
 `logger` is already imported in `main.py` (re-exported from `app/core/logging.py`).
+
+**Response-shape note:** The `BudgetExhaustedError` handler returns `{"detail": <dict>}` (the dict payload from `exc.args[0]`), while every other handler returns `{"detail": <string>}`. This asymmetry is intentional — it matches the response shape Phase C's router catches produced, and the frontend already consumes both forms. Do not "fix" the inconsistency by stringifying the budget dict.
 
 - [ ] **Step 4: Verify handler count**
 
@@ -400,6 +470,21 @@ except Exception as e:
     logger.error(f"Failed to do work: {e}")
     raise
 ```
+
+**Cross-service transition safety:** During Tasks 4-12, already-migrated services call yet-to-be-migrated services. This is safe by construction because:
+
+1. The hierarchy and handlers are in place (Tasks 2-3) before any per-service migration begins.
+2. Each migration only changes what the service *raises*, not what it *catches* from other services.
+3. `HTTPException` raised by unmigrated services is still caught by FastAPI's built-in handler.
+4. Domain exceptions raised by migrated services are caught by the registered handlers from Task 3.
+
+The migration order doesn't create cross-service breakage — don't worry about which file is called by which.
+
+**Line-number drift:** All line numbers in Tasks 4-12 are approximate. Phase C changed line numbers; this plan was written from a point-in-time snapshot. Re-locate every raise by function name and surrounding context, not by line number alone.
+
+**If no test file exists for a service:** Step 5 (targeted tests) of each per-service task runs `pytest tests/test_<service>.py`. If the test file doesn't exist for a given service, skip Step 5 and proceed to Step 6 (full suite). The full suite is the binding validation.
+
+**Side-effect preservation:** Some `except Exception as e:` blocks do cleanup beyond logging+rethrowing (status updates, connection closing, etc.) — these were flagged in Task 1 Step 5. When migrating a file, check Task 1's `/tmp/phase-d-leaf-inventory.txt` for flagged blocks in that file. For each flagged block: keep the side-effect body, replace the raise with the typed exception, and remove only the catch-and-rethrow boilerplate. Do not delete the whole block.
 
 ---
 
@@ -779,6 +864,8 @@ except Exception as e:
 # The entire if/else block becomes a bare raise, no parameter.
 ```
 
+**Bare-raise semantics:** The bare `raise` in the `if raise_on_error:` branch propagates whatever `e` was caught — which could be a Neo4j driver exception (`neo4j.exceptions.ClientError`, etc.), a typed domain exception, or any unhandled error. Non-`BrewraError` exceptions propagate to FastAPI's default error handler, which returns HTTP 500. **This is correct.** Do NOT wrap Neo4j or other 3rd-party driver errors in a `BrewraError` subclass — the spec §2.2 explicitly defers third-party error mapping.
+
 - [ ] **Step 1: Read the file end-to-end**
 
 ```bash
@@ -1018,8 +1105,8 @@ def get_leads_for_org(
 ```
 
 Notes:
-- The outer `try/except` is gone. Neo4j driver exceptions propagate to the registered handler (catch-all 500), matching the Phase D principle (don't wrap-and-rethrow).
-- Logging on storage failure happens at the handler level via the `logger.debug` call there. If service-level logging is desired for visibility, add a `logger.error(...)` before the propagation in a future cleanup pass — out of scope for Phase D.
+- The outer `try/except` is gone. Neo4j driver exceptions propagate unhandled; **FastAPI's default error handler returns HTTP 500.** This is correct — Phase D does not register a catch-all 500 handler for non-`BrewraError` exceptions (per spec §2.2 "third-party error mapping" is out of scope). Background-task callers wrap with `try/except BrewraError:` in Task 15 if they want silent failure.
+- No service-level logging happens on storage failure here. If oncall visibility into Neo4j errors is desired, add a `logger.error(...)` before propagation in a future cleanup pass — out of scope for Phase D.
 
 - [ ] **Step 3: Update the 4 callers**
 
@@ -1166,6 +1253,8 @@ cd backend && pytest tests/test_market_scoring.py tests/test_leads.py -v 2>&1 | 
 ```
 Expected: all pass.
 
+**Coverage caveat:** Existing tests mock storage and exercise the happy path. They almost certainly don't exercise the `BrewraError` catch path in `_run_market_scoring_for_org` or `process_file_to_embeddings`. The validation here is **structural** — tests still pass, code still parses, the catch is syntactically present — not behavioral. A future test-improvement phase (Phase E candidate, see TD-002 in `docs/TECH_DEBT.md`) should add tests that mock `get_leads_for_org` to raise `BrewraError` and assert the run is marked failed.
+
 - [ ] **Step 8: Commit**
 
 ```bash
@@ -1230,7 +1319,10 @@ Expected: `7`
 
 - [ ] **Step 6: Find and remove dead `HTTPException` imports**
 
+Run from the monorepo root (`/projects/Brewra/brewra-gtm-intelligence/`):
+
 ```bash
+cd /projects/Brewra/brewra-gtm-intelligence
 for f in backend/app/services/*.py; do
   if grep -q "HTTPException" "$f"; then
     other_uses=$(grep -v "^from fastapi import" "$f" | grep -c "HTTPException")
@@ -1294,7 +1386,15 @@ pytest 2>&1 | tail -3                                       # expect: 93 passed
 
 - HTTP response shape: spot-check 1 endpoint per status family via FastAPI `/docs` on a running instance.
 - Background tasks: tail logs during a trigger of `_run_market_scoring_for_org` and `process_file_to_embeddings`; confirm `BrewraError` log lines appear, no traceback leak.
-- LOC drops per migrated file: `git diff master..HEAD --stat -- backend/app/services/` should show net negative lines on each of the 9 migrated files.
+
+- [ ] **Diffstat check (spec §6 soft criterion 10):**
+
+Confirm net-negative LOC for every migrated service file:
+
+```bash
+git diff master..HEAD --stat -- backend/app/services/
+```
+Expected: each of the 9 migrated files shows more deletions than insertions (try/except wrappers and HTTPException imports gone; typed-exception imports added are typically fewer lines). If any file shows net positive LOC, inspect — that file may have an unintended addition.
 
 - [ ] **Commit shape:**
 
