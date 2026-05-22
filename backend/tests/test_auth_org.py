@@ -1,16 +1,16 @@
 """Characterization tests for auth/org endpoints.
 
 IMPORTANT — module identity:
-  After commit 5/16 of the modularization, the org/connect_org/registration
-  handlers live in `app.routers.org_auth`. Inline-constructed `MongoClient`
-  references must be patched at `app.routers.org_auth.MongoClient`. The
-  /registration handlers use the module-level `app.core.clients.client`,
-  which is patched directly.
+  After Phase B Task 5 (centralize MongoClient), the org/connect_org/registration
+  handlers live in `app.routers.org_auth` and import `client` from
+  `app.core.clients`. All Mongo mocking is done via
+  `patch("app.core.clients.client", mongo_instance)`.
+  The /registration handlers also use the module-level `app.core.clients.client`.
 
 Endpoints covered:
-  GET  /org              — user→org lookup (creates its own MongoClient)
-  POST /org              — create org (creates its own MongoClient)
-  POST /connect_org      — link user to org (creates its own MongoClient)
+  GET  /org              — user→org lookup (uses clients.client)
+  POST /org              — create org (uses clients.client)
+  POST /connect_org      — link user to org (uses clients.client)
   POST /registration     — create registration (uses clients.client)
   GET  /registration     — list registrations (uses clients.client)
   POST /api/auth/token   — does not exist; lock the 404/405 behaviour
@@ -61,7 +61,7 @@ def test_get_org_returns_org_for_user(client, snapshot):
     }
     mongo_instance, _ = _mongo_client_mock_returning(users_doc, orgs_doc)
 
-    with patch("app.routers.org_auth.MongoClient", return_value=mongo_instance):
+    with patch("app.core.clients.client", mongo_instance):
         response = client.get("/org", params={"user_id": TEST_USER_ID})
 
     assert response.status_code == 200
@@ -74,7 +74,7 @@ def test_get_org_returns_404_for_missing_users_doc(client):
     """users document absent → 404."""
     mongo_instance, _ = _mongo_client_mock_returning(None)
 
-    with patch("app.routers.org_auth.MongoClient", return_value=mongo_instance):
+    with patch("app.core.clients.client", mongo_instance):
         response = client.get("/org", params={"user_id": TEST_USER_ID})
 
     assert response.status_code == 404
@@ -85,7 +85,7 @@ def test_get_org_returns_404_for_unknown_user(client):
     users_doc = {"_id": "users", "user_mappings": {}}
     mongo_instance, _ = _mongo_client_mock_returning(users_doc)
 
-    with patch("app.routers.org_auth.MongoClient", return_value=mongo_instance):
+    with patch("app.core.clients.client", mongo_instance):
         response = client.get("/org", params={"user_id": TEST_USER_ID})
 
     assert response.status_code == 404
@@ -99,7 +99,7 @@ def test_post_org_creates_new_org(client, snapshot):
     """Creates an org when no orgs document pre-exists."""
     mongo_instance, orgs_col = _mongo_client_mock_returning(None)
 
-    with patch("app.routers.org_auth.MongoClient", return_value=mongo_instance):
+    with patch("app.core.clients.client", mongo_instance):
         response = client.post("/org", json={"org_name": "Test Org"})
 
     assert response.status_code == 200
@@ -119,7 +119,7 @@ def test_post_connect_org_links_user_to_org_new_doc(client, snapshot):
     """No existing users document → insert_one called."""
     mongo_instance, users_col = _mongo_client_mock_returning(None)
 
-    with patch("app.routers.org_auth.MongoClient", return_value=mongo_instance):
+    with patch("app.core.clients.client", mongo_instance):
         response = client.post(
             "/connect_org",
             json={"user_id": TEST_USER_ID, "org_id": TEST_ORG_ID},
@@ -139,7 +139,7 @@ def test_post_connect_org_links_user_to_org_existing_doc(client):
     }
     mongo_instance, users_col = _mongo_client_mock_returning(existing_doc)
 
-    with patch("app.routers.org_auth.MongoClient", return_value=mongo_instance):
+    with patch("app.core.clients.client", mongo_instance):
         response = client.post(
             "/connect_org",
             json={"user_id": TEST_USER_ID, "org_id": TEST_ORG_ID},

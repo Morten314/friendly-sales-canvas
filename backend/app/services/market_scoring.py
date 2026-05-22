@@ -10,7 +10,6 @@ Largest service module in phase A.
 """
 import json
 import logging
-import urllib.parse
 from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional
 
@@ -31,10 +30,11 @@ logger = logging.getLogger(__name__)
 
 
 def _get_profiler_mongo_client() -> MongoClient:
-    username = urllib.parse.quote_plus("techbrewra")
-    password = urllib.parse.quote_plus("Brewra@Best09")
-    mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
-    return MongoClient(mongo_uri)
+    """Return the shared Mongo singleton. Kept as a thin alias for callers in this service.
+    Migrated from per-call construction to singleton in Phase B Task 5.
+    """
+    from app.core.clients import profiler_client
+    return profiler_client
 
 
 def _get_market_score_collections():

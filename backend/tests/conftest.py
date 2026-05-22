@@ -1,10 +1,11 @@
 """Shared pytest fixtures for backend characterization tests.
 
 External deps (Neo4j, Mongo, Pinecone, S3, LLM, Tavily) are source-patched
-at `app.core.clients.*` and `app.core.llm_config.*`. Inline `MongoClient(...)`
-constructions in routers are patched at each `app.routers.<domain>.MongoClient`
-binding (see `mock_mongo` below). This convention is documented in
-specs/2026-05-12-backend-modularization-design.md §6.
+at `app.core.clients.*` and `app.core.llm_config.*`. After Phase B Task 5,
+all inline MongoClient constructions in routers have been replaced with
+`app.core.clients.client` (and `profiler_client`), so all Mongo mocking
+happens via `app.core.clients.client` / `app.core.clients.profiler_client`.
+This convention is documented in specs/2026-05-12-backend-modularization-design.md §6.
 """
 import sys
 import os
@@ -62,12 +63,10 @@ for _mod in _HEAVY_MODULES:
 
 # ---------------------------------------------------------------------------
 # Eagerly import `app.main` at conftest load time so routers are fully wired
-# before any fixture-level `mocker.patch("app.routers.X.MongoClient", ...)` runs.
-# Without this, the first patch triggers a standalone router import whose
-# `from app.main import logger` re-enters app.main mid-load, leaving sibling
-# routers partially loaded when `app.include_router(...)` runs against them.
-# (Pre-deletion this was masked by `mocker.patch("api.MongoClient", ...)`
-# triggering full app.main load through api.py's `from app.main import app`.)
+# before any fixture-level mocker.patch runs. Without this, the first patch
+# triggers a standalone router import whose `from app.main import logger`
+# re-enters app.main mid-load, leaving sibling routers partially loaded when
+# `app.include_router(...)` runs against them.
 # ---------------------------------------------------------------------------
 from app.main import app as _app  # noqa: F401, E402
 
@@ -86,31 +85,19 @@ def mock_neo4j(mocker):
 @pytest.fixture
 def mock_mongo(mocker):
     """Mock MongoDB client. Source-patches `app.core.clients.client` so
-    `clients.client[...]` lookups in api.py / services.py return the mock.
+    all router and service code that imports `client` from `app.core.clients`
+    uses the mock.
 
-    Also patches `MongoClient` in each module where endpoint handlers construct
-    fresh `MongoClient(mongo_uri)` instances inline — those bypass the
-    module-level `client` symbol and would otherwise open real connections.
-    The inline-constructor pattern survives phase A (replacement is out of
-    scope per spec §2.2); these patches are the temporary bridge.
+    Phase B Task 5: per-router MongoClient patches removed. All 26 inline
+    MongoClient constructions have been replaced with imports from
+    app.core.clients. A single patch of `app.core.clients.client` is now
+    sufficient for the primary cluster. `profiler_client` is also patched
+    since it is the same mock (same cluster alias).
     """
     mongo = MagicMock()
-    mock_constructor = MagicMock(return_value=mongo)
     mocker.patch("app.core.clients.client", mongo)
-    # Phase-A routers that inline-construct MongoClient (extracted from api.py):
-    for mod in (
-        "app.routers.org_auth",
-        "app.routers.profiles",
-        "app.routers.documents",
-        "app.routers.icp",
-        "app.routers.signals",
-    ):
-        mocker.patch(f"{mod}.MongoClient", mock_constructor)
-    # Phase-A services that inline-construct MongoClient (e.g. Profiler
-    # cluster connection in _get_profiler_mongo_client). Routers/services that
-    # import this helper resolve it at call time, so patching the source
-    # module is sufficient.
-    mocker.patch("app.services.market_scoring.MongoClient", mock_constructor)
+    # profiler_client is an alias for client on the same cluster.
+    mocker.patch("app.core.clients.profiler_client", mongo)
     return mongo
 
 

@@ -1,11 +1,9 @@
 """Org and registration endpoints."""
-import urllib.parse
 import uuid
 from datetime import datetime
 from typing import List
 
 from fastapi import APIRouter, Body, HTTPException, Query
-from pymongo import MongoClient
 
 from app.core import clients
 from app.core.logging import logger
@@ -21,12 +19,7 @@ async def get_org_by_user(user_id: str = Query(...)):
     Fetches from MongoDB users collection (single document) and orgs collection for org_name.
     """
     try:
-        # MongoDB connection
-        username = urllib.parse.quote_plus("techbrewra")
-        password = urllib.parse.quote_plus("Brewra@Best09")
-        mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
-        mongo_client = MongoClient(mongo_uri)
-        db = mongo_client["Org_Management"]
+        db = clients.client["Org_Management"]
         users_collection = db["users"]
         orgs_collection = db["orgs"]
 
@@ -34,7 +27,6 @@ async def get_org_by_user(user_id: str = Query(...)):
         users_doc = users_collection.find_one({"_id": "users"})
 
         if not users_doc:
-            mongo_client.close()
             raise HTTPException(status_code=404, detail="Users document not found")
 
         # Get user_id to org_id mapping
@@ -42,7 +34,6 @@ async def get_org_by_user(user_id: str = Query(...)):
         org_id = user_mappings.get(user_id)
 
         if not org_id:
-            mongo_client.close()
             raise HTTPException(
                 status_code=404,
                 detail=f"No org_id found for user_id: {user_id}"
@@ -54,8 +45,6 @@ async def get_org_by_user(user_id: str = Query(...)):
         if orgs_doc:
             org_names = orgs_doc.get("org_names", {})
             org_name = org_names.get(org_id)
-
-        mongo_client.close()
 
         response = {
             "status": "success",
@@ -89,12 +78,7 @@ async def create_org(request: dict = Body(None)):
         # Generate new org_id
         new_org_id = str(uuid.uuid4())
 
-        # MongoDB connection
-        username = urllib.parse.quote_plus("techbrewra")
-        password = urllib.parse.quote_plus("Brewra@Best09")
-        mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
-        mongo_client = MongoClient(mongo_uri)
-        db = mongo_client["Org_Management"]
+        db = clients.client["Org_Management"]
         collection = db["orgs"]
 
         # Get or create the single orgs document
@@ -133,8 +117,6 @@ async def create_org(request: dict = Body(None)):
                 org_data["org_names"] = {new_org_id: org_name}
             collection.insert_one(org_data)
 
-        mongo_client.close()
-
         response = {
             "status": "success",
             "message": "Org created successfully",
@@ -156,12 +138,7 @@ async def connect_user_to_org(user_id: str = Body(...), org_id: str = Body(...))
     Saves the mapping in MongoDB users collection (single document).
     """
     try:
-        # MongoDB connection
-        username = urllib.parse.quote_plus("techbrewra")
-        password = urllib.parse.quote_plus("Brewra@Best09")
-        mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
-        mongo_client = MongoClient(mongo_uri)
-        db = mongo_client["Org_Management"]
+        db = clients.client["Org_Management"]
         collection = db["users"]
 
         # Get or create the single users document
@@ -189,8 +166,6 @@ async def connect_user_to_org(user_id: str = Body(...), org_id: str = Body(...))
                 "created_at": datetime.utcnow(),
                 "updated_at": datetime.utcnow()
             })
-
-        mongo_client.close()
 
         return {
             "status": "success",

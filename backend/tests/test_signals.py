@@ -1,13 +1,13 @@
 """Characterization tests for Signals endpoints.
 
 Endpoints covered:
-  GET  /fetch-signals             — list signals from Mongo (per-request MongoClient)
+  GET  /fetch-signals             — list signals from Mongo
   POST /generate-signals-batch    — generate 4 signals via LLM
   POST /signal_action             — accept / reject a signal
   POST /signal_Ask                — ask AI about signals
 
-All three use per-request MongoClient, so we patch
-"app.routers.signals.MongoClient".
+After Phase B Task 5, all endpoints use the singleton client imported from
+app.core.clients. Patch "app.core.clients.client" for Mongo mocking.
 """
 import json
 from unittest.mock import MagicMock, patch, call
@@ -77,7 +77,7 @@ def test_get_signals_returns_list(client):
     sig = _make_signal()
     mc, coll = _make_mc_for_signals([sig])
 
-    with patch("app.routers.signals.MongoClient", return_value=mc):
+    with patch("app.core.clients.client", mc):
         response = client.get(f"/fetch-signals?user_id={TEST_USER_ID}")
 
     assert response.status_code == 200
@@ -96,7 +96,7 @@ def test_get_signals_empty_when_no_docs(client):
     """GET /fetch-signals with empty Mongo → empty list."""
     mc, _ = _make_mc_for_signals([])
 
-    with patch("app.routers.signals.MongoClient", return_value=mc):
+    with patch("app.core.clients.client", mc):
         response = client.get(f"/fetch-signals?user_id={TEST_USER_ID}")
 
     assert response.status_code == 200
@@ -118,7 +118,7 @@ def test_post_generate_signals_batch_calls_llm(client):
     scout_result = {"headline": "Scout signal", "summary": "Scout summary"}
     profiler_result = {"headline": "Profiler signal", "summary": "Profiler summary"}
 
-    with patch("app.routers.signals.MongoClient", return_value=mc), \
+    with patch("app.core.clients.client", mc), \
          patch("app.services.signals.search_signals_scout", return_value=dict(scout_result)) as mock_scout, \
          patch("app.services.signals.search_signals_profiler", return_value=dict(profiler_result)) as mock_profiler, \
          patch("app.routers.signals._fetch_pinecone_supporting_context", return_value=[]):
@@ -141,7 +141,7 @@ def test_post_generate_signals_batch_returns_signals(client):
     scout_result = {"headline": "Scout signal A", "summary": "Summary A"}
     profiler_result = {"headline": "Profiler signal B", "summary": "Summary B"}
 
-    with patch("app.routers.signals.MongoClient", return_value=mc), \
+    with patch("app.core.clients.client", mc), \
          patch("app.services.signals.search_signals_scout", return_value=dict(scout_result)), \
          patch("app.services.signals.search_signals_profiler", return_value=dict(profiler_result)), \
          patch("app.routers.signals._fetch_pinecone_supporting_context", return_value=[]):
@@ -170,7 +170,7 @@ def test_post_signal_action_accept(client):
         "action": "accept",
     }
 
-    with patch("app.routers.signals.MongoClient", return_value=mc):
+    with patch("app.core.clients.client", mc):
         response = client.post("/signal_action", json=payload)
 
     assert response.status_code == 200
@@ -195,7 +195,7 @@ def test_post_signal_action_dismiss(client):
         "action": "reject",
     }
 
-    with patch("app.routers.signals.MongoClient", return_value=mc):
+    with patch("app.core.clients.client", mc):
         response = client.post("/signal_action", json=payload)
 
     assert response.status_code == 200
@@ -241,7 +241,7 @@ def test_post_signal_ask_returns_answer(client, mock_neo4j, mock_llm_chain):
     chain_mock = MagicMock()
     chain_mock.invoke.return_value = {"output": "This is the AI answer."}
 
-    with patch("app.routers.signals.MongoClient", return_value=mc), \
+    with patch("app.core.clients.client", mc), \
          patch("app.core.llm_config.agent_chain", chain_mock):
         response = client.post("/signal_Ask", json=payload)
 
@@ -267,7 +267,7 @@ def test_post_signal_action_invalid_signal_id(client):
         "action": "accept",
     }
 
-    with patch("app.routers.signals.MongoClient", return_value=mc):
+    with patch("app.core.clients.client", mc):
         response = client.post("/signal_action", json=payload)
 
     assert response.status_code == 404

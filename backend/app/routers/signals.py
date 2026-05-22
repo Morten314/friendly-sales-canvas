@@ -1,7 +1,6 @@
 """Signals endpoints: research, batch generation, signal feed, signal Q&A."""
 import json
 import asyncio
-import urllib.parse
 import uuid
 import logging
 from datetime import datetime
@@ -9,7 +8,6 @@ from typing import Any, Dict, Optional
 
 import requests
 from fastapi import APIRouter, HTTPException, Query
-from pymongo import MongoClient
 
 from app.core import clients
 from app.core.config import tavily_api_key, claude_sonnet_model
@@ -47,399 +45,378 @@ async def signals_research(request: MarketRequest):
             detail=f"Unsupported agent: {request.component_name}. Supported agents: scout, profiler"
         )
 
-    # MongoDB connection for Signals DB
-    username = urllib.parse.quote_plus("techbrewra")
-    password = urllib.parse.quote_plus("Brewra@Best09")
-    mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
-    client = MongoClient(mongo_uri)
-    db = client["Signals"]
+    db = clients.client["Signals"]
     collection = db["signals"]
 
-    try:
-        # Filter by user_id only for multitenancy
-        query = {
-            "user_id": request.user_id,
-            "agent": agent_name
-        }
+    # Filter by user_id only for multitenancy
+    query = {
+        "user_id": request.user_id,
+        "agent": agent_name
+    }
 
-        # If refresh is False, fetch the latest signal
-        if not request.refresh:
-            latest_signal = await asyncio.to_thread(
-                collection.find_one, query, sort=[("timestamp", -1)]
-            )
-            if latest_signal:
-                latest_signal.pop("_id", None)
-                return {"status": "success", "data": latest_signal}
-
-        # Prepare data for the signals function
-        pre_data = request.data
-
-        # Fetch existing headlines from signal_track collection
-        existing_headlines = []
-        if request.org_id or request.user_id:
-            track_db = client["Signals"]
-            track_collection = track_db["signal_track"]
-            track_key = request.org_id if request.org_id else f"user_{request.user_id}"
-
-            def fetch_existing_headlines():
-                track_doc = track_collection.find_one({"_id": track_key})
-                if track_doc and track_doc.get("headlines"):
-                    return track_doc.get("headlines", [])
-                return []
-
-            existing_headlines = await asyncio.to_thread(fetch_existing_headlines)
-
-        # Add existing headlines to pre_data for prompt injection
-        if isinstance(pre_data, dict):
-            pre_data["existing_headlines"] = existing_headlines
-        else:
-            # If pre_data is a string, convert to dict
-            try:
-                pre_data_dict = json.loads(pre_data) if isinstance(pre_data, str) else {}
-                pre_data_dict["existing_headlines"] = existing_headlines
-                pre_data = pre_data_dict
-            except:
-                pre_data = {"company_profile": pre_data, "existing_headlines": existing_headlines}
-
-        signal_context_queries = _build_signal_context_queries(agent_name, pre_data)
-        pinecone_context = await asyncio.to_thread(
-            _fetch_pinecone_supporting_context,
-            signal_context_queries,
-            request.org_id,
-            3
+    # If refresh is False, fetch the latest signal
+    if not request.refresh:
+        latest_signal = await asyncio.to_thread(
+            collection.find_one, query, sort=[("timestamp", -1)]
         )
-        if isinstance(pre_data, dict):
-            pre_data["pinecone_context_queries"] = signal_context_queries
-            pre_data["pinecone_supporting_context"] = pinecone_context
+        if latest_signal:
+            latest_signal.pop("_id", None)
+            return {"status": "success", "data": latest_signal}
 
-        # Fetch leads for org_id if available
-        leads_data = []
-        if request.org_id:
-            try:
-                from app.services.leads import fetch_leads_for_org
-                leads_data = fetch_leads_for_org(request.org_id, limit=100)
-                if isinstance(pre_data, dict):
-                    pre_data["leads_data"] = leads_data
-                else:
-                    if not isinstance(pre_data, dict):
-                        try:
-                            pre_data = json.loads(pre_data) if isinstance(pre_data, str) else {}
-                        except:
-                            pre_data = {}
-                    pre_data["leads_data"] = leads_data
-                    if "company_profile" not in pre_data:
-                        pre_data["company_profile"] = request.data
-            except Exception as e:
-                logger.warning(f"Could not fetch leads: {e}")
+    # Prepare data for the signals function
+    pre_data = request.data
 
-        # For profiler agent, also include ICP data if available - filter by user_id
-        if agent_name == "profiler":
-            # Try to get ICP data from Profiler database
-            try:
-                profiler_client = MongoClient(mongo_uri)
-                profiler_db = profiler_client["Profiler"]
-                icp_collection = profiler_db["ICP_config"]
-                icp_data = icp_collection.find_one({"user_id": request.user_id})
-                if icp_data:
-                    if isinstance(pre_data, dict):
-                        pre_data["icp_data"] = icp_data.get("icps", {})
-                        if "company_profile" not in pre_data:
-                            pre_data["company_profile"] = request.data
-                    else:
-                        pre_data = {
-                            "company_profile": request.data,
-                            "icp_data": icp_data.get("icps", {}),
-                            "existing_headlines": existing_headlines,
-                            "leads_data": leads_data
-                        }
-                profiler_client.close()
-            except Exception as e:
-                logger.warning(f"Could not fetch ICP data: {e}")
+    # Fetch existing headlines from signal_track collection
+    existing_headlines = []
+    if request.org_id or request.user_id:
+        track_db = clients.client["Signals"]
+        track_collection = track_db["signal_track"]
+        track_key = request.org_id if request.org_id else f"user_{request.user_id}"
 
-        # Run signals research with retries (max 2 attempts)
-        max_retries = 2
-        for attempt in range(1, max_retries + 1):
-            try:
-                signals_result = await asyncio.to_thread(signals_function, pre_data)
-                break
-            except Exception as e:
-                if attempt == max_retries:
-                    raise HTTPException(
-                        status_code=500,
-                        detail=f"Signals research failed after {max_retries} attempts: {str(e)}"
-                    )
-                await asyncio.sleep(1)  # retry delay
+        def fetch_existing_headlines():
+            track_doc = track_collection.find_one({"_id": track_key})
+            if track_doc and track_doc.get("headlines"):
+                return track_doc.get("headlines", [])
+            return []
 
-        # Generate unique ID for signal
-        signal_id = str(uuid.uuid4())
+        existing_headlines = await asyncio.to_thread(fetch_existing_headlines)
 
-        # Add metadata - filter by user_id only
-        signals_result.update({
-            "id": signal_id,
-            "signal_id": signal_id,  # Ensure signal_id is also present
-            "user_id": request.user_id,
-            "agent": agent_name,
-            "timestamp": datetime.utcnow()
-        })
-        if request.org_id:
-            signals_result["org_id"] = request.org_id
-
-        # Save to Signals DB
-        await asyncio.to_thread(collection.insert_one, signals_result)
-
-        # Store headline in signal_track collection
-        if signals_result.get("headline") and (request.org_id or request.user_id):
-            track_db = client["Signals"]
-            track_collection = track_db["signal_track"]
-            track_key = request.org_id if request.org_id else f"user_{request.user_id}"
-
-            def update_signal_track():
-                track_collection.update_one(
-                    {"_id": track_key},
-                    {
-                        "$addToSet": {"headlines": signals_result.get("headline")},
-                        "$set": {"last_updated": datetime.utcnow()}
-                    },
-                    upsert=True
-                )
-
-            await asyncio.to_thread(update_signal_track)
-
-        signals_result.pop("_id", None)
-        return {"status": "success", "data": signals_result}
-
-    finally:
-        client.close()
-
-async def _generate_signals_batch_core(request: MarketRequest, llm_backend: str):
-    try:
-        # MongoDB connection for Signals DB
-        username = urllib.parse.quote_plus("techbrewra")
-        password = urllib.parse.quote_plus("Brewra@Best09")
-        mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
-        client = MongoClient(mongo_uri)
-        db = client["Signals"]
-        collection = db["signals"]
-
-        # Prepare data for the signals functions
-        pre_data = request.data
-
-        # Fetch existing headlines from signal_track collection
-        existing_headlines = []
-        if request.org_id or request.user_id:
-            track_db = client["Signals"]
-            track_collection = track_db["signal_track"]
-            track_key = request.org_id if request.org_id else f"user_{request.user_id}"
-
-            def fetch_existing_headlines():
-                track_doc = track_collection.find_one({"_id": track_key})
-                if track_doc and track_doc.get("headlines"):
-                    return track_doc.get("headlines", [])
-                return []
-
-            existing_headlines = await asyncio.to_thread(fetch_existing_headlines)
-
-        # Add existing headlines to pre_data
-        if isinstance(pre_data, dict):
-            pre_data["existing_headlines"] = existing_headlines
-        else:
-            try:
-                pre_data_dict = json.loads(pre_data) if isinstance(pre_data, str) else {}
-                pre_data_dict["existing_headlines"] = existing_headlines
-                pre_data = pre_data_dict
-            except:
-                pre_data = {"company_profile": pre_data, "existing_headlines": existing_headlines}
-
-        scout_signal_context_queries = _build_signal_context_queries("scout", pre_data)
-        scout_pinecone_context = await asyncio.to_thread(
-            _fetch_pinecone_supporting_context,
-            scout_signal_context_queries,
-            request.org_id,
-            3
-        )
-        if isinstance(pre_data, dict):
-            pre_data["pinecone_context_queries"] = scout_signal_context_queries
-            pre_data["pinecone_supporting_context"] = scout_pinecone_context
-
-        # Fetch leads for org_id if available
-        leads_data = []
-        if request.org_id:
-            try:
-                from app.services.leads import fetch_leads_for_org
-                leads_data = fetch_leads_for_org(request.org_id, limit=100)
-                logger.info(f"[Batch Signals] Fetched {len(leads_data)} leads for org_id: {request.org_id}")
-                if isinstance(pre_data, dict):
-                    pre_data["leads_data"] = leads_data
-                else:
-                    if not isinstance(pre_data, dict):
-                        try:
-                            pre_data = json.loads(pre_data) if isinstance(pre_data, str) else {}
-                        except:
-                            pre_data = {}
-                    pre_data["leads_data"] = leads_data
-                    if "company_profile" not in pre_data:
-                        pre_data["company_profile"] = request.data
-            except Exception as e:
-                logger.warning(f"Could not fetch leads: {e}")
-        else:
-            logger.warning(f"[Batch Signals] No org_id provided, skipping leads fetch for user_id: {request.user_id}")
-
-        # For profiler agent, also include ICP data if available - filter by user_id
-        profiler_pre_data = pre_data.copy() if isinstance(pre_data, dict) else pre_data
+    # Add existing headlines to pre_data for prompt injection
+    if isinstance(pre_data, dict):
+        pre_data["existing_headlines"] = existing_headlines
+    else:
+        # If pre_data is a string, convert to dict
         try:
-            profiler_client = MongoClient(mongo_uri)
-            profiler_db = profiler_client["Profiler"]
+            pre_data_dict = json.loads(pre_data) if isinstance(pre_data, str) else {}
+            pre_data_dict["existing_headlines"] = existing_headlines
+            pre_data = pre_data_dict
+        except:
+            pre_data = {"company_profile": pre_data, "existing_headlines": existing_headlines}
+
+    signal_context_queries = _build_signal_context_queries(agent_name, pre_data)
+    pinecone_context = await asyncio.to_thread(
+        _fetch_pinecone_supporting_context,
+        signal_context_queries,
+        request.org_id,
+        3
+    )
+    if isinstance(pre_data, dict):
+        pre_data["pinecone_context_queries"] = signal_context_queries
+        pre_data["pinecone_supporting_context"] = pinecone_context
+
+    # Fetch leads for org_id if available
+    leads_data = []
+    if request.org_id:
+        try:
+            from app.services.leads import fetch_leads_for_org
+            leads_data = fetch_leads_for_org(request.org_id, limit=100)
+            if isinstance(pre_data, dict):
+                pre_data["leads_data"] = leads_data
+            else:
+                if not isinstance(pre_data, dict):
+                    try:
+                        pre_data = json.loads(pre_data) if isinstance(pre_data, str) else {}
+                    except:
+                        pre_data = {}
+                pre_data["leads_data"] = leads_data
+                if "company_profile" not in pre_data:
+                    pre_data["company_profile"] = request.data
+        except Exception as e:
+            logger.warning(f"Could not fetch leads: {e}")
+
+    # For profiler agent, also include ICP data if available - filter by user_id
+    if agent_name == "profiler":
+        # Try to get ICP data from Profiler database
+        try:
+            profiler_db = clients.client["Profiler"]
             icp_collection = profiler_db["ICP_config"]
             icp_data = icp_collection.find_one({"user_id": request.user_id})
             if icp_data:
-                if isinstance(profiler_pre_data, dict):
-                    profiler_pre_data["icp_data"] = icp_data.get("icps", {})
-                    if "company_profile" not in profiler_pre_data:
-                        profiler_pre_data["company_profile"] = request.data
-                    # Ensure leads_data is included
-                    if leads_data and "leads_data" not in profiler_pre_data:
-                        profiler_pre_data["leads_data"] = leads_data
+                if isinstance(pre_data, dict):
+                    pre_data["icp_data"] = icp_data.get("icps", {})
+                    if "company_profile" not in pre_data:
+                        pre_data["company_profile"] = request.data
                 else:
-                    profiler_pre_data = {
+                    pre_data = {
                         "company_profile": request.data,
                         "icp_data": icp_data.get("icps", {}),
                         "existing_headlines": existing_headlines,
                         "leads_data": leads_data
                     }
-            else:
-                # Even if no ICP data, ensure leads_data is included
-                if isinstance(profiler_pre_data, dict) and leads_data and "leads_data" not in profiler_pre_data:
-                    profiler_pre_data["leads_data"] = leads_data
-            profiler_client.close()
         except Exception as e:
             logger.warning(f"Could not fetch ICP data: {e}")
 
-        profiler_signal_context_queries = _build_signal_context_queries("profiler", profiler_pre_data)
-        profiler_pinecone_context = await asyncio.to_thread(
-            _fetch_pinecone_supporting_context,
-            profiler_signal_context_queries,
-            request.org_id,
-            3
-        )
-        if isinstance(profiler_pre_data, dict):
-            profiler_pre_data["pinecone_context_queries"] = profiler_signal_context_queries
-            profiler_pre_data["pinecone_supporting_context"] = profiler_pinecone_context
-
-        generated_signals = []
-        batch_id = f"batch_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
-
-        # Generate 2 signals for scout
-        for i in range(2):
-            try:
-                print(f"Generating scout signal {i+1}...")
-                signals_result = await asyncio.to_thread(signals_service.search_signals_scout, pre_data, llm_backend)
-                signal_id = str(uuid.uuid4())
-                signals_result.update({
-                    "id": signal_id,
-                    "signal_id": signal_id,  # Ensure signal_id is also present
-                    "user_id": request.user_id,
-                    "agent": "scout",
-                    "timestamp": datetime.utcnow(),
-                    "batch_id": batch_id
-                })
-                if request.org_id:
-                    signals_result["org_id"] = request.org_id
-
-                # Save to Signals DB
-                await asyncio.to_thread(collection.insert_one, signals_result)
-
-                # Store headline in signal_track collection
-                if signals_result.get("headline") and (request.org_id or request.user_id):
-                    track_db = client["Signals"]
-                    track_collection = track_db["signal_track"]
-                    track_key = request.org_id if request.org_id else f"user_{request.user_id}"
-
-                    def update_signal_track():
-                        track_collection.update_one(
-                            {"_id": track_key},
-                            {
-                                "$addToSet": {"headlines": signals_result.get("headline")},
-                                "$set": {"last_updated": datetime.utcnow()}
-                            },
-                            upsert=True
-                        )
-
-                    await asyncio.to_thread(update_signal_track)
-
-                    # Update existing_headlines list for next iteration
-                    if isinstance(pre_data, dict):
-                        pre_data["existing_headlines"].append(signals_result.get("headline"))
-                signals_result.pop("_id", None)
-                generated_signals.append(signals_result)
-                print(f"Successfully generated scout signal {i+1}")
-
-            except Exception as e:
-                print(f"Error generating scout signal {i+1}: {e}")
+    # Run signals research with retries (max 2 attempts)
+    max_retries = 2
+    for attempt in range(1, max_retries + 1):
+        try:
+            signals_result = await asyncio.to_thread(signals_function, pre_data)
+            break
+        except Exception as e:
+            if attempt == max_retries:
                 raise HTTPException(
                     status_code=500,
-                    detail=f"Failed to generate scout signal {i+1}: {str(e)}"
+                    detail=f"Signals research failed after {max_retries} attempts: {str(e)}"
                 )
+            await asyncio.sleep(1)  # retry delay
 
-        # Generate 2 signals for profiler
-        for i in range(2):
-            try:
-                print(f"Generating profiler signal {i+1}...")
-                signals_result = await asyncio.to_thread(signals_service.search_signals_profiler, profiler_pre_data, llm_backend)
-                signal_id = str(uuid.uuid4())
-                signals_result.update({
-                    "id": signal_id,
-                    "signal_id": signal_id,  # Ensure signal_id is also present
-                    "user_id": request.user_id,
-                    "agent": "profiler",
-                    "timestamp": datetime.utcnow(),
-                    "batch_id": batch_id
-                })
-                if request.org_id:
-                    signals_result["org_id"] = request.org_id
+    # Generate unique ID for signal
+    signal_id = str(uuid.uuid4())
 
-                # Save to Signals DB
-                await asyncio.to_thread(collection.insert_one, signals_result)
+    # Add metadata - filter by user_id only
+    signals_result.update({
+        "id": signal_id,
+        "signal_id": signal_id,  # Ensure signal_id is also present
+        "user_id": request.user_id,
+        "agent": agent_name,
+        "timestamp": datetime.utcnow()
+    })
+    if request.org_id:
+        signals_result["org_id"] = request.org_id
 
-                # Store headline in signal_track collection
-                if signals_result.get("headline") and (request.org_id or request.user_id):
-                    track_db = client["Signals"]
-                    track_collection = track_db["signal_track"]
-                    track_key = request.org_id if request.org_id else f"user_{request.user_id}"
+    # Save to Signals DB
+    await asyncio.to_thread(collection.insert_one, signals_result)
 
-                    def update_signal_track():
-                        track_collection.update_one(
-                            {"_id": track_key},
-                            {
-                                "$addToSet": {"headlines": signals_result.get("headline")},
-                                "$set": {"last_updated": datetime.utcnow()}
-                            },
-                            upsert=True
-                        )
+    # Store headline in signal_track collection
+    if signals_result.get("headline") and (request.org_id or request.user_id):
+        track_db = clients.client["Signals"]
+        track_collection = track_db["signal_track"]
+        track_key = request.org_id if request.org_id else f"user_{request.user_id}"
 
-                    await asyncio.to_thread(update_signal_track)
+        def update_signal_track():
+            track_collection.update_one(
+                {"_id": track_key},
+                {
+                    "$addToSet": {"headlines": signals_result.get("headline")},
+                    "$set": {"last_updated": datetime.utcnow()}
+                },
+                upsert=True
+            )
 
-                    # Update existing_headlines list for next iteration
-                    if isinstance(profiler_pre_data, dict):
-                        profiler_pre_data["existing_headlines"].append(signals_result.get("headline"))
-                signals_result.pop("_id", None)
-                generated_signals.append(signals_result)
-                print(f"Successfully generated profiler signal {i+1}")
+        await asyncio.to_thread(update_signal_track)
 
-            except Exception as e:
-                print(f"Error generating profiler signal {i+1}: {e}")
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"Failed to generate profiler signal {i+1}: {str(e)}"
-                )
+    signals_result.pop("_id", None)
+    return {"status": "success", "data": signals_result}
 
-        return {
-            "status": "success",
-            "message": f"Generated {len(generated_signals)} signals",
-            "data": generated_signals
-        }
 
-    finally:
-        client.close()
+async def _generate_signals_batch_core(request: MarketRequest, llm_backend: str):
+    db = clients.client["Signals"]
+    collection = db["signals"]
+
+    # Prepare data for the signals functions
+    pre_data = request.data
+
+    # Fetch existing headlines from signal_track collection
+    existing_headlines = []
+    if request.org_id or request.user_id:
+        track_db = clients.client["Signals"]
+        track_collection = track_db["signal_track"]
+        track_key = request.org_id if request.org_id else f"user_{request.user_id}"
+
+        def fetch_existing_headlines():
+            track_doc = track_collection.find_one({"_id": track_key})
+            if track_doc and track_doc.get("headlines"):
+                return track_doc.get("headlines", [])
+            return []
+
+        existing_headlines = await asyncio.to_thread(fetch_existing_headlines)
+
+    # Add existing headlines to pre_data
+    if isinstance(pre_data, dict):
+        pre_data["existing_headlines"] = existing_headlines
+    else:
+        try:
+            pre_data_dict = json.loads(pre_data) if isinstance(pre_data, str) else {}
+            pre_data_dict["existing_headlines"] = existing_headlines
+            pre_data = pre_data_dict
+        except:
+            pre_data = {"company_profile": pre_data, "existing_headlines": existing_headlines}
+
+    scout_signal_context_queries = _build_signal_context_queries("scout", pre_data)
+    scout_pinecone_context = await asyncio.to_thread(
+        _fetch_pinecone_supporting_context,
+        scout_signal_context_queries,
+        request.org_id,
+        3
+    )
+    if isinstance(pre_data, dict):
+        pre_data["pinecone_context_queries"] = scout_signal_context_queries
+        pre_data["pinecone_supporting_context"] = scout_pinecone_context
+
+    # Fetch leads for org_id if available
+    leads_data = []
+    if request.org_id:
+        try:
+            from app.services.leads import fetch_leads_for_org
+            leads_data = fetch_leads_for_org(request.org_id, limit=100)
+            logger.info(f"[Batch Signals] Fetched {len(leads_data)} leads for org_id: {request.org_id}")
+            if isinstance(pre_data, dict):
+                pre_data["leads_data"] = leads_data
+            else:
+                if not isinstance(pre_data, dict):
+                    try:
+                        pre_data = json.loads(pre_data) if isinstance(pre_data, str) else {}
+                    except:
+                        pre_data = {}
+                pre_data["leads_data"] = leads_data
+                if "company_profile" not in pre_data:
+                    pre_data["company_profile"] = request.data
+        except Exception as e:
+            logger.warning(f"Could not fetch leads: {e}")
+    else:
+        logger.warning(f"[Batch Signals] No org_id provided, skipping leads fetch for user_id: {request.user_id}")
+
+    # For profiler agent, also include ICP data if available - filter by user_id
+    profiler_pre_data = pre_data.copy() if isinstance(pre_data, dict) else pre_data
+    try:
+        profiler_db = clients.client["Profiler"]
+        icp_collection = profiler_db["ICP_config"]
+        icp_data = icp_collection.find_one({"user_id": request.user_id})
+        if icp_data:
+            if isinstance(profiler_pre_data, dict):
+                profiler_pre_data["icp_data"] = icp_data.get("icps", {})
+                if "company_profile" not in profiler_pre_data:
+                    profiler_pre_data["company_profile"] = request.data
+                # Ensure leads_data is included
+                if leads_data and "leads_data" not in profiler_pre_data:
+                    profiler_pre_data["leads_data"] = leads_data
+            else:
+                profiler_pre_data = {
+                    "company_profile": request.data,
+                    "icp_data": icp_data.get("icps", {}),
+                    "existing_headlines": existing_headlines,
+                    "leads_data": leads_data
+                }
+        else:
+            # Even if no ICP data, ensure leads_data is included
+            if isinstance(profiler_pre_data, dict) and leads_data and "leads_data" not in profiler_pre_data:
+                profiler_pre_data["leads_data"] = leads_data
+    except Exception as e:
+        logger.warning(f"Could not fetch ICP data: {e}")
+
+    profiler_signal_context_queries = _build_signal_context_queries("profiler", profiler_pre_data)
+    profiler_pinecone_context = await asyncio.to_thread(
+        _fetch_pinecone_supporting_context,
+        profiler_signal_context_queries,
+        request.org_id,
+        3
+    )
+    if isinstance(profiler_pre_data, dict):
+        profiler_pre_data["pinecone_context_queries"] = profiler_signal_context_queries
+        profiler_pre_data["pinecone_supporting_context"] = profiler_pinecone_context
+
+    generated_signals = []
+    batch_id = f"batch_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
+
+    # Generate 2 signals for scout
+    for i in range(2):
+        try:
+            print(f"Generating scout signal {i+1}...")
+            signals_result = await asyncio.to_thread(signals_service.search_signals_scout, pre_data, llm_backend)
+            signal_id = str(uuid.uuid4())
+            signals_result.update({
+                "id": signal_id,
+                "signal_id": signal_id,  # Ensure signal_id is also present
+                "user_id": request.user_id,
+                "agent": "scout",
+                "timestamp": datetime.utcnow(),
+                "batch_id": batch_id
+            })
+            if request.org_id:
+                signals_result["org_id"] = request.org_id
+
+            # Save to Signals DB
+            await asyncio.to_thread(collection.insert_one, signals_result)
+
+            # Store headline in signal_track collection
+            if signals_result.get("headline") and (request.org_id or request.user_id):
+                track_db = clients.client["Signals"]
+                track_collection = track_db["signal_track"]
+                track_key = request.org_id if request.org_id else f"user_{request.user_id}"
+
+                def update_signal_track():
+                    track_collection.update_one(
+                        {"_id": track_key},
+                        {
+                            "$addToSet": {"headlines": signals_result.get("headline")},
+                            "$set": {"last_updated": datetime.utcnow()}
+                        },
+                        upsert=True
+                    )
+
+                await asyncio.to_thread(update_signal_track)
+
+                # Update existing_headlines list for next iteration
+                if isinstance(pre_data, dict):
+                    pre_data["existing_headlines"].append(signals_result.get("headline"))
+            signals_result.pop("_id", None)
+            generated_signals.append(signals_result)
+            print(f"Successfully generated scout signal {i+1}")
+
+        except Exception as e:
+            print(f"Error generating scout signal {i+1}: {e}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to generate scout signal {i+1}: {str(e)}"
+            )
+
+    # Generate 2 signals for profiler
+    for i in range(2):
+        try:
+            print(f"Generating profiler signal {i+1}...")
+            signals_result = await asyncio.to_thread(signals_service.search_signals_profiler, profiler_pre_data, llm_backend)
+            signal_id = str(uuid.uuid4())
+            signals_result.update({
+                "id": signal_id,
+                "signal_id": signal_id,  # Ensure signal_id is also present
+                "user_id": request.user_id,
+                "agent": "profiler",
+                "timestamp": datetime.utcnow(),
+                "batch_id": batch_id
+            })
+            if request.org_id:
+                signals_result["org_id"] = request.org_id
+
+            # Save to Signals DB
+            await asyncio.to_thread(collection.insert_one, signals_result)
+
+            # Store headline in signal_track collection
+            if signals_result.get("headline") and (request.org_id or request.user_id):
+                track_db = clients.client["Signals"]
+                track_collection = track_db["signal_track"]
+                track_key = request.org_id if request.org_id else f"user_{request.user_id}"
+
+                def update_signal_track():
+                    track_collection.update_one(
+                        {"_id": track_key},
+                        {
+                            "$addToSet": {"headlines": signals_result.get("headline")},
+                            "$set": {"last_updated": datetime.utcnow()}
+                        },
+                        upsert=True
+                    )
+
+                await asyncio.to_thread(update_signal_track)
+
+                # Update existing_headlines list for next iteration
+                if isinstance(profiler_pre_data, dict):
+                    profiler_pre_data["existing_headlines"].append(signals_result.get("headline"))
+            signals_result.pop("_id", None)
+            generated_signals.append(signals_result)
+            print(f"Successfully generated profiler signal {i+1}")
+
+        except Exception as e:
+            print(f"Error generating profiler signal {i+1}: {e}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to generate profiler signal {i+1}: {str(e)}"
+            )
+
+    return {
+        "status": "success",
+        "message": f"Generated {len(generated_signals)} signals",
+        "data": generated_signals
+    }
 
 
 @router.post("/generate-signals-batch")
@@ -459,39 +436,30 @@ async def generate_signals_batch_claude(request: MarketRequest):
 @router.get("/fetch-signals")
 async def fetch_signals(user_id: str = Query(...), limit: int = Query(10)):
     """Fetch signals and return them in a simple list format - filtered by user_id only"""
-    try:
-        # MongoDB connection for Signals DB
-        username = urllib.parse.quote_plus("techbrewra")
-        password = urllib.parse.quote_plus("Brewra@Best09")
-        mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
-        client = MongoClient(mongo_uri)
-        db = client["Signals"]
-        collection = db["signals"]
+    db = clients.client["Signals"]
+    collection = db["signals"]
 
-        # Fetch signals for the user only (multitenancy), ordered by timestamp (newest first)
-        signals_cursor = collection.find(
-            {"user_id": user_id}
-        ).sort("timestamp", -1).limit(limit)
+    # Fetch signals for the user only (multitenancy), ordered by timestamp (newest first)
+    signals_cursor = collection.find(
+        {"user_id": user_id}
+    ).sort("timestamp", -1).limit(limit)
 
-        signals_list = []
-        for signal in signals_cursor:
-            # Remove MongoDB _id and format for simple list
-            signal.pop("_id", None)
-            # Ensure signal_id is present (use "id" if signal_id doesn't exist)
-            if "signal_id" not in signal and "id" in signal:
-                signal["signal_id"] = signal["id"]
-            elif "id" not in signal and "signal_id" in signal:
-                signal["id"] = signal["signal_id"]
-            signals_list.append(signal)
+    signals_list = []
+    for signal in signals_cursor:
+        # Remove MongoDB _id and format for simple list
+        signal.pop("_id", None)
+        # Ensure signal_id is present (use "id" if signal_id doesn't exist)
+        if "signal_id" not in signal and "id" in signal:
+            signal["signal_id"] = signal["id"]
+        elif "id" not in signal and "signal_id" in signal:
+            signal["id"] = signal["signal_id"]
+        signals_list.append(signal)
 
-        return {
-            "status": "success",
-            "count": len(signals_list),
-            "signals": signals_list
-        }
-
-    finally:
-        client.close()
+    return {
+        "status": "success",
+        "count": len(signals_list),
+        "signals": signals_list
+    }
 
 @router.post("/signal_action")
 async def signal_action(request: SignalActionRequest):
@@ -501,12 +469,7 @@ async def signal_action(request: SignalActionRequest):
     - If action is "reject": Delete the signal
     """
     try:
-        # MongoDB connection for Signals DB
-        username = urllib.parse.quote_plus("techbrewra")
-        password = urllib.parse.quote_plus("Brewra@Best09")
-        mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
-        client = MongoClient(mongo_uri)
-        db = client["Signals"]
+        db = clients.client["Signals"]
         collection = db["signals"]
 
         # Find the signal by signal_id (check both "id" and "signal_id" fields)
@@ -580,9 +543,6 @@ async def signal_action(request: SignalActionRequest):
     except Exception as e:
         logger.error(f"Error processing signal action: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to process signal action: {str(e)}")
-    finally:
-        if 'client' in locals():
-            client.close()
 
 @router.post("/signal_Ask")
 async def signal_ask(request: SignalAskRequest):
@@ -609,11 +569,7 @@ async def signal_ask(request: SignalAskRequest):
         # Fetch customer profile from MongoDB
         customer_profile = None
         try:
-            username = urllib.parse.quote_plus("techbrewra")
-            password = urllib.parse.quote_plus("Brewra@Best09")
-            mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
-            mongo_client = MongoClient(mongo_uri)
-            db = mongo_client["Profiler"]
+            db = clients.client["Profiler"]
             collection = db["Company_Profile"]
 
             filter_query = {"profile_type": "company", "org_id": request.org_id}
@@ -628,7 +584,6 @@ async def signal_ask(request: SignalAskRequest):
                         del icp["_id"]
                 customer_profile = {"icps": icps}
 
-            mongo_client.close()
         except Exception as e:
             logger.warning(f"Could not fetch customer profile: {e}")
 
@@ -734,11 +689,7 @@ async def signal_ask_claude(request: SignalAskRequest):
         # Fetch customer profile from MongoDB
         customer_profile = None
         try:
-            username = urllib.parse.quote_plus("techbrewra")
-            password = urllib.parse.quote_plus("Brewra@Best09")
-            mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
-            mongo_client = MongoClient(mongo_uri)
-            db = mongo_client["Profiler"]
+            db = clients.client["Profiler"]
             collection = db["Company_Profile"]
 
             filter_query = {"profile_type": "company", "org_id": request.org_id}
@@ -752,7 +703,6 @@ async def signal_ask_claude(request: SignalAskRequest):
                         del icp["_id"]
                 customer_profile = {"icps": icps}
 
-            mongo_client.close()
         except Exception as e:
             logger.warning(f"Could not fetch customer profile (Claude): {e}")
 

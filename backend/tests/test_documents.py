@@ -6,7 +6,8 @@ Endpoints:
   GET  /user-documents      — list all docs/URLs for an org
 
 S3 is patched by the `mock_s3` fixture (app.core.clients.s3_client).
-MongoDB is per-request MongoClient — patch "app.routers.documents.MongoClient".
+After Phase B Task 5, MongoDB is accessed via the singleton client imported
+from app.core.clients. Patch "app.core.clients.client" for Mongo mocking.
 """
 import io
 from unittest.mock import MagicMock, patch
@@ -52,7 +53,7 @@ def test_post_document_upload_stores_in_s3(client, mock_s3):
     """POST /upload-document → s3_client.put_object called."""
     mc, _ = _make_doc_mc()
 
-    with patch("app.routers.documents.MongoClient", return_value=mc):
+    with patch("app.core.clients.client", mc):
         response = client.post(
             "/upload-document",
             data={"user_id": TEST_USER_ID, "org_id": TEST_ORG_ID},
@@ -75,7 +76,7 @@ def test_post_document_upload_returns_file_id(client, mock_s3):
     """POST /upload-document response includes file_id and file_key."""
     mc, _ = _make_doc_mc()
 
-    with patch("app.routers.documents.MongoClient", return_value=mc):
+    with patch("app.core.clients.client", mc):
         response = client.post(
             "/upload-document",
             data={"user_id": TEST_USER_ID, "org_id": TEST_ORG_ID},
@@ -107,7 +108,7 @@ def test_get_document_list_returns_uploaded_docs(client):
     }
     mc, _ = _make_doc_mc(find_results=[doc])
 
-    with patch("app.routers.documents.MongoClient", return_value=mc):
+    with patch("app.core.clients.client", mc):
         response = client.get(f"/user-documents?org_id={TEST_ORG_ID}")
 
     assert response.status_code == 200
@@ -133,7 +134,7 @@ def test_get_document_status_returns_status(client):
     }
     mc, _ = _make_doc_mc(find_one_result=status_doc)
 
-    with patch("app.routers.documents.MongoClient", return_value=mc):
+    with patch("app.core.clients.client", mc):
         response = client.get(f"/document-status/{TEST_FILE_KEY}")
 
     assert response.status_code == 200
@@ -164,8 +165,8 @@ def test_post_document_upload_no_file_or_url(client, mock_s3):
 def test_get_document_status_unknown_file_key(client):
     """GET /document-status/<key> for an unknown key → 404.
 
-    The endpoint creates its own per-request MongoClient, so we patch
-    app.routers.documents.MongoClient to return an empty file_status collection.
+    After Phase B Task 5, the endpoint uses the singleton client from
+    app.core.clients. Patch it to return an empty file_status collection.
     Locks the 404-on-missing behavior — a refactor that returns 200 with
     `status: not_found` would break FE polling logic that distinguishes
     "still processing" (200) from "never existed" (404).
@@ -177,7 +178,7 @@ def test_get_document_status_unknown_file_key(client):
     mc = MagicMock()
     mc.__getitem__.return_value = db
 
-    with patch("app.routers.documents.MongoClient", return_value=mc):
+    with patch("app.core.clients.client", mc):
         response = client.get("/document-status/test_org_abc/nonexistent.pdf")
 
     assert response.status_code == 404

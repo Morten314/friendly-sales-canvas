@@ -4,8 +4,9 @@ Endpoints:
   POST /leads/market-scores          — trigger scoring (background) or return cached
   GET  /leads/market-scores/status   — status of a scoring run
 
-Both use _get_market_score_collections() → _get_profiler_mongo_client() → MongoClient().
-Patch "app.services.market_scoring.MongoClient" for per-request clients.
+Both use _get_market_score_collections() → _get_profiler_mongo_client().
+After Phase B Task 5, _get_profiler_mongo_client() returns the singleton
+profiler_client from app.core.clients. Patch "app.core.clients.client" for mocking.
 """
 from unittest.mock import MagicMock, patch, call
 import pytest
@@ -105,7 +106,8 @@ def test_trigger_market_scoring_returns_accepted(client, mock_neo4j):
         "refresh": True,
     }
 
-    with patch("app.services.market_scoring.MongoClient", return_value=mc):
+    with patch("app.core.clients.client", mc), \
+         patch("app.core.clients.profiler_client", mc):
         response = client.post("/leads/market-scores", json=payload)
 
     assert response.status_code == 200
@@ -135,7 +137,8 @@ def test_get_market_score_returns_score(client, mock_neo4j):
         "refresh": False,
     }
 
-    with patch("app.services.market_scoring.MongoClient", return_value=mc), \
+    with patch("app.core.clients.client", mc), \
+         patch("app.core.clients.profiler_client", mc), \
          patch("app.services.market_scoring._get_lead_identity_from_neo4j", return_value={}):
         response = client.post("/leads/market-scores", json=payload)
 
@@ -157,7 +160,8 @@ def test_get_market_score_status_404_when_no_run(client):
     mc, _, run_coll = _make_score_mc()
     run_coll.find_one.return_value = None
 
-    with patch("app.services.market_scoring.MongoClient", return_value=mc):
+    with patch("app.core.clients.client", mc), \
+         patch("app.core.clients.profiler_client", mc):
         response = client.get(
             f"/leads/market-scores/status?user_id={TEST_USER_ID}&org_id={TEST_ORG_ID}"
         )

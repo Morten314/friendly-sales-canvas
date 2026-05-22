@@ -1,10 +1,8 @@
 """Profile (org/user/scout/profiler) endpoints + bulk cleanup + generic edit."""
 import json
-import urllib.parse
 from datetime import datetime
 
 from fastapi import APIRouter, Body, HTTPException, Query
-from pymongo import MongoClient
 
 from app.core import clients
 from app.core.clients import upsert_node
@@ -184,19 +182,12 @@ async def get_single_profile(
             # For company profiles, also fetch customer profiles from MongoDB
             if profile_type == "company":
                 try:
-                    # MongoDB connection
-                    username = urllib.parse.quote_plus("techbrewra")
-                    password = urllib.parse.quote_plus("Brewra@Best09")
-                    mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
-                    mongo_client = MongoClient(mongo_uri)
-                    db = mongo_client["Profiler"]
+                    db = clients.client["Profiler"]
                     collection = db["Company_Profile"]
 
                     # Find the company profile document with customer profiles (filter by org_id)
                     filter_query = {"profile_type": "company", "org_id": org_id}
                     document = collection.find_one(filter_query)
-
-                    mongo_client.close()
 
                     if document:
                         customer_profiles = document.get("customer_profiles", {})
@@ -258,10 +249,6 @@ async def cleanup_company_profiles():
 
 @router.post("/edit")
 def process_edit(request: EditRequest):
-    username = urllib.parse.quote_plus("techbrewra")
-    password = urllib.parse.quote_plus("Brewra@Best09")
-    mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
-    client = MongoClient(mongo_uri)
     db = clients.client["Scout_Agent"]
     collection = db["Market_Intelligence"]
 
@@ -284,5 +271,5 @@ def process_edit(request: EditRequest):
             return {"status": "feature coming soon"}
         else:
             return {"error": "Invalid edit_type. Must be 'comment' or 'modification'."}
-    finally:
-        client.close()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

@@ -1,7 +1,6 @@
 """Document upload, status, and data-source management endpoints."""
 import json
 import shutil
-import urllib.parse
 import uuid
 from datetime import datetime
 
@@ -18,7 +17,6 @@ from langchain_core.documents import Document
 from langchain_openai import OpenAIEmbeddings
 from langchain_pinecone import PineconeVectorStore
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from pymongo import MongoClient
 
 from app.core import clients
 from app.core.config import pinecone_api_key, s3_bucket, together_api_key
@@ -56,11 +54,7 @@ async def process_file_to_embeddings(file_key: str, user_id: str, file_name: str
             logger.info(f"Skipping Pinecone embedding for unsupported file type: {file_name}")
             # Update status to completed (not embedded)
             try:
-                username = urllib.parse.quote_plus("techbrewra")
-                password = urllib.parse.quote_plus("Brewra@Best09")
-                mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
-                mongo_client = MongoClient(mongo_uri)
-                db = mongo_client["File_Processing"]
+                db = clients.client["File_Processing"]
                 collection = db["file_status"]
 
                 collection.update_one(
@@ -72,7 +66,6 @@ async def process_file_to_embeddings(file_key: str, user_id: str, file_name: str
                     }},
                     upsert=True
                 )
-                mongo_client.close()
             except Exception as e:
                 logger.warning(f"Failed to update status: {str(e)}")
             return
@@ -186,11 +179,7 @@ async def process_file_to_embeddings(file_key: str, user_id: str, file_name: str
         )
 
         # Update status in MongoDB (optional - for tracking)
-        username = urllib.parse.quote_plus("techbrewra")
-        password = urllib.parse.quote_plus("Brewra@Best09")
-        mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
-        mongo_client = MongoClient(mongo_uri)
-        db = mongo_client["File_Processing"]
+        db = clients.client["File_Processing"]
         collection = db["file_status"]
 
         collection.update_one(
@@ -203,7 +192,6 @@ async def process_file_to_embeddings(file_key: str, user_id: str, file_name: str
             }},
             upsert=True
         )
-        mongo_client.close()
 
         # Clean up local file
         import os
@@ -213,11 +201,7 @@ async def process_file_to_embeddings(file_key: str, user_id: str, file_name: str
     except Exception as e:
         # Update status with error
         try:
-            username = urllib.parse.quote_plus("techbrewra")
-            password = urllib.parse.quote_plus("Brewra@Best09")
-            mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
-            mongo_client = MongoClient(mongo_uri)
-            db = mongo_client["File_Processing"]
+            db = clients.client["File_Processing"]
             collection = db["file_status"]
 
             collection.update_one(
@@ -229,7 +213,6 @@ async def process_file_to_embeddings(file_key: str, user_id: str, file_name: str
                 }},
                 upsert=True
             )
-            mongo_client.close()
         except:
             pass
         logger.error(f"Error processing file {file_key}: {str(e)}")
@@ -297,11 +280,7 @@ async def upload_document(
 
             # Save URL data source to MongoDB
             try:
-                username = urllib.parse.quote_plus("techbrewra")
-                password = urllib.parse.quote_plus("Brewra@Best09")
-                mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
-                mongo_client = MongoClient(mongo_uri)
-                db = mongo_client["File_Processing"]
+                db = clients.client["File_Processing"]
                 collection = db["file_status"]
 
                 doc = {
@@ -322,7 +301,6 @@ async def upload_document(
                     doc["description"] = description
 
                 collection.insert_one(doc)
-                mongo_client.close()
             except Exception as e:
                 logger.error(f"Failed to save URL data source to MongoDB: {str(e)}")
                 return JSONResponse(
@@ -391,11 +369,7 @@ async def upload_document(
 
         # Store initial status in MongoDB
         try:
-            username = urllib.parse.quote_plus("techbrewra")
-            password = urllib.parse.quote_plus("Brewra@Best09")
-            mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
-            mongo_client = MongoClient(mongo_uri)
-            db = mongo_client["File_Processing"]
+            db = clients.client["File_Processing"]
             collection = db["file_status"]
 
             doc = {
@@ -417,7 +391,6 @@ async def upload_document(
                 doc["description"] = description
 
             collection.insert_one(doc)
-            mongo_client.close()
         except Exception as e:
             logger.warning(f"Failed to store status in MongoDB: {str(e)}")
 
@@ -427,11 +400,7 @@ async def upload_document(
         else:
             # For non-embeddable files, mark as completed immediately
             try:
-                username = urllib.parse.quote_plus("techbrewra")
-                password = urllib.parse.quote_plus("Brewra@Best09")
-                mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
-                mongo_client = MongoClient(mongo_uri)
-                db = mongo_client["File_Processing"]
+                db = clients.client["File_Processing"]
                 collection = db["file_status"]
 
                 collection.update_one(
@@ -443,7 +412,6 @@ async def upload_document(
                     }},
                     upsert=True
                 )
-                mongo_client.close()
             except Exception as e:
                 logger.warning(f"Failed to update status for non-embeddable file: {str(e)}")
 
@@ -480,15 +448,10 @@ async def get_document_status(file_key: str):
     Returns status: processing, completed, or failed
     """
     try:
-        username = urllib.parse.quote_plus("techbrewra")
-        password = urllib.parse.quote_plus("Brewra@Best09")
-        mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
-        mongo_client = MongoClient(mongo_uri)
-        db = mongo_client["File_Processing"]
+        db = clients.client["File_Processing"]
         collection = db["file_status"]
 
         status_doc = collection.find_one({"file_key": file_key})
-        mongo_client.close()
 
         if not status_doc:
             raise HTTPException(status_code=404, detail="File not found")
@@ -512,11 +475,7 @@ async def get_user_documents(org_id: str = Query(...)):
     Filtered by org_id for multi-org support.
     """
     try:
-        username = urllib.parse.quote_plus("techbrewra")
-        password = urllib.parse.quote_plus("Brewra@Best09")
-        mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
-        mongo_client = MongoClient(mongo_uri)
-        db = mongo_client["File_Processing"]
+        db = clients.client["File_Processing"]
         collection = db["file_status"]
 
         # Find all data sources (files and URLs) for this org
@@ -545,8 +504,6 @@ async def get_user_documents(org_id: str = Query(...)):
 
             file_list.append(file_item)
 
-        mongo_client.close()
-
         return {
             "status": "success",
             "count": len(file_list),
@@ -573,12 +530,7 @@ async def delete_data_source(file_id: str):
         if original_file_id != file_id:
             logger.warning(f"Stripped trailing slash from file_id: '{original_file_id}' -> '{file_id}'")
 
-        # MongoDB connection
-        username = urllib.parse.quote_plus("techbrewra")
-        password = urllib.parse.quote_plus("Brewra@Best09")
-        mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
-        mongo_client = MongoClient(mongo_uri)
-        db = mongo_client["File_Processing"]
+        db = clients.client["File_Processing"]
         collection = db["file_status"]
 
         # Log what we're searching for
@@ -614,7 +566,6 @@ async def delete_data_source(file_id: str):
                 # Log some sample documents to help debug
                 sample_docs = list(collection.find({}, {"file_id": 1, "file_key": 1, "_id": 0}).limit(3))
                 logger.error(f"File not found. Searched for file_id='{search_file_id}' and file_key='{file_id}'. Sample documents: {sample_docs}")
-                mongo_client.close()
                 raise HTTPException(status_code=404, detail=f"File with id '{file_id}' not found")
 
         file_key = file_doc.get("file_key")
@@ -787,8 +738,6 @@ async def delete_data_source(file_id: str):
             deletion_errors.append(f"MongoDB deletion failed: {str(e)}")
             logger.error(f"Failed to delete from MongoDB: {str(e)}")
 
-        mongo_client.close()
-
         # Return success even if some deletions failed (partial success)
         if deletion_errors:
             return {
@@ -826,18 +775,13 @@ async def update_data_source(file_id: str, request: dict = Body(...)):
         if tags is None and description is None:
             raise HTTPException(status_code=400, detail="At least one of 'tags' or 'description' must be provided")
 
-        username = urllib.parse.quote_plus("techbrewra")
-        password = urllib.parse.quote_plus("Brewra@Best09")
-        mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
-        mongo_client = MongoClient(mongo_uri)
-        db = mongo_client["File_Processing"]
+        db = clients.client["File_Processing"]
         collection = db["file_status"]
 
         file_doc = collection.find_one({"file_id": file_id})
         if not file_doc:
             file_doc = collection.find_one({"file_key": file_id})
             if not file_doc:
-                mongo_client.close()
                 raise HTTPException(status_code=404, detail=f"File with id '{file_id}' not found")
 
         update_doc = {}
@@ -865,8 +809,6 @@ async def update_data_source(file_id: str, request: dict = Body(...)):
             {"file_id": file_doc.get("file_id") or file_doc.get("file_key")},
             {"$set": update_doc}
         )
-
-        mongo_client.close()
 
         return {
             "status": "success",

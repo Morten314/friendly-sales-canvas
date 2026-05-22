@@ -1,12 +1,10 @@
 """ICP endpoints: synthesis, multi-component research, and saved-ICP delete."""
 import asyncio
 import json
-import urllib.parse
 from datetime import datetime
 from typing import Any, Dict
 
 from fastapi import APIRouter, HTTPException, Query
-from pymongo import MongoClient
 
 from app.core import clients
 from app.models.market_research import MarketRequest
@@ -23,7 +21,6 @@ router = APIRouter(tags=["icp"])
 @router.get("/icp")
 async def get_or_create_icp_config(user_id: str = Query(...), refresh: bool = Query(False)):
     print(f"[ICP] Request - user_id: {user_id}, refresh: {refresh}")
-    client = None
     try:
         def normalize_icp_response(payload: Any) -> Dict[str, Any]:
             """
@@ -152,10 +149,8 @@ async def get_or_create_icp_config(user_id: str = Query(...), refresh: bool = Qu
 
             return {"suggestedICPs": normalized_icps}
 
-        # MongoDB connection setup
-        from app.services.market_scoring import _get_profiler_mongo_client
-        client = _get_profiler_mongo_client()
-        db = client["Profiler"]
+        # MongoDB connection — use singleton from app.core.clients
+        db = clients.client["Profiler"]
         icp_service._ensure_icp_id_registry_indexes(db)
         collection = db["ICP_config"]
 
@@ -195,7 +190,6 @@ async def get_or_create_icp_config(user_id: str = Query(...), refresh: bool = Qu
 
             if not record:
                 print(f"[ICP] ERROR: No company profile in Neo4j")
-                client.close()
                 raise HTTPException(status_code=404, detail="No company profile found in Neo4j")
 
             company_profile = dict(record.values()[0])
@@ -242,9 +236,6 @@ async def get_or_create_icp_config(user_id: str = Query(...), refresh: bool = Qu
     except Exception as e:
         print(f"[ICP] ERROR: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
-    finally:
-        if client:
-            client.close()
 
 
 @router.post("/icp-research")
@@ -259,114 +250,105 @@ async def icp_research(request: MarketRequest):
             detail=f"Unsupported component_name: {request.component_name}"
         )
 
-    # MongoDB connection
-    username = urllib.parse.quote_plus("techbrewra")
-    password = urllib.parse.quote_plus("Brewra@Best09")
-    mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
-    client = MongoClient(mongo_uri)
-    db = client["Profiler"]
+    db = clients.client["Profiler"]
     collection = db["ICPs"]
 
-    try:
-        # Filter by user_id only for multitenancy
-        query = {
-            "user_id": request.user_id,
-            "component_name": component_name
-        }
+    # Filter by user_id only for multitenancy
+    query = {
+        "user_id": request.user_id,
+        "component_name": component_name
+    }
 
-        # If refresh is False, fetch the latest report
-        if not request.refresh:
-            latest_report = await asyncio.to_thread(
-                collection.find_one, query, sort=[("timestamp", -1)]
-            )
-            if latest_report:
-                latest_report.pop("_id", None)
-                return {"status": "success", "data": latest_report}
-
-        # --- Neo4j query inside a thread - get company profile by org_id ---
-        def fetch_company_profile():
-            with clients.driver.session() as session:
-                # Get the company profile filtered by org_id (if provided)
-                if request.org_id:
-                    result = session.run(
-                        "MATCH (c:CompanyProfile {org_id: $org_id}) RETURN c LIMIT 1",
-                        org_id=request.org_id
-                    )
-                else:
-                    # Fallback: get any company profile (backward compatibility)
-                    result = session.run(
-                        "MATCH (c:CompanyProfile) RETURN c LIMIT 1"
-                    )
-                record = result.single()
-                return record
-
-        record = await asyncio.to_thread(fetch_company_profile)
-        if not record:
-            org_msg = f" for org_id: {request.org_id}" if request.org_id else ""
-            raise HTTPException(status_code=404, detail=f"No company profile found in Neo4j{org_msg}")
-
-        company_profile = dict(record.values()[0])
-        if "socialMediaUrls" in company_profile and isinstance(company_profile["socialMediaUrls"], str):
-            try:
-                company_profile["socialMediaUrls"] = json.loads(company_profile["socialMediaUrls"])
-            except json.JSONDecodeError:
-                pass
-
-        # --- Get ICP card/data from request body (flexible data field) ---
-        # Prepare combined context data with company profile and ICP card from request
-        context_data = {
-            "company_profile": company_profile
-        }
-
-        # Add ICP card data from request body if available
-        if request.data:
-            # The request.data is flexible and should contain ICP card data
-            context_data["icp_card"] = request.data
-
-        market_context_queries = _build_market_context_queries(component_name, context_data)
-        pinecone_context = await asyncio.to_thread(
-            _fetch_pinecone_supporting_context,
-            market_context_queries,
-            request.org_id,
-            3
+    # If refresh is False, fetch the latest report
+    if not request.refresh:
+        latest_report = await asyncio.to_thread(
+            collection.find_one, query, sort=[("timestamp", -1)]
         )
-        context_data["pinecone_context_queries"] = market_context_queries
-        context_data["pinecone_supporting_context"] = pinecone_context
+        if latest_report:
+            latest_report.pop("_id", None)
+            return {"status": "success", "data": latest_report}
 
-        # Convert to JSON string for the research function
-        context_json = json.dumps(context_data)
+    # --- Neo4j query inside a thread - get company profile by org_id ---
+    def fetch_company_profile():
+        with clients.driver.session() as session:
+            # Get the company profile filtered by org_id (if provided)
+            if request.org_id:
+                result = session.run(
+                    "MATCH (c:CompanyProfile {org_id: $org_id}) RETURN c LIMIT 1",
+                    org_id=request.org_id
+                )
+            else:
+                # Fallback: get any company profile (backward compatibility)
+                result = session.run(
+                    "MATCH (c:CompanyProfile) RETURN c LIMIT 1"
+                )
+            record = result.single()
+            return record
 
-        # --- Run research with retries (max 2 attempts) ---
-        max_retries = 2
-        for attempt in range(1, max_retries + 1):
-            try:
-                research_result = await asyncio.to_thread(research_function, context_json)
-                break
-            except Exception as e:
-                if attempt == max_retries:
-                    raise HTTPException(
-                        status_code=500,
-                        detail=f"Research function failed after {max_retries} attempts: {str(e)}"
-                    )
-                await asyncio.sleep(1)  # retry delay
+    record = await asyncio.to_thread(fetch_company_profile)
+    if not record:
+        org_msg = f" for org_id: {request.org_id}" if request.org_id else ""
+        raise HTTPException(status_code=404, detail=f"No company profile found in Neo4j{org_msg}")
 
-        # Add metadata - filter by user_id only
-        research_result.update({
-            "user_id": request.user_id,
-            "component_name": component_name,
-            "timestamp": datetime.utcnow()
-        })
-        if request.org_id:
-            research_result["org_id"] = request.org_id
+    company_profile = dict(record.values()[0])
+    if "socialMediaUrls" in company_profile and isinstance(company_profile["socialMediaUrls"], str):
+        try:
+            company_profile["socialMediaUrls"] = json.loads(company_profile["socialMediaUrls"])
+        except json.JSONDecodeError:
+            pass
 
-        # Save to DB
-        await asyncio.to_thread(collection.insert_one, research_result)
+    # --- Get ICP card/data from request body (flexible data field) ---
+    # Prepare combined context data with company profile and ICP card from request
+    context_data = {
+        "company_profile": company_profile
+    }
 
-        research_result.pop("_id", None)
-        return {"status": "success", "data": research_result}
+    # Add ICP card data from request body if available
+    if request.data:
+        # The request.data is flexible and should contain ICP card data
+        context_data["icp_card"] = request.data
 
-    finally:
-        client.close()
+    market_context_queries = _build_market_context_queries(component_name, context_data)
+    pinecone_context = await asyncio.to_thread(
+        _fetch_pinecone_supporting_context,
+        market_context_queries,
+        request.org_id,
+        3
+    )
+    context_data["pinecone_context_queries"] = market_context_queries
+    context_data["pinecone_supporting_context"] = pinecone_context
+
+    # Convert to JSON string for the research function
+    context_json = json.dumps(context_data)
+
+    # --- Run research with retries (max 2 attempts) ---
+    max_retries = 2
+    for attempt in range(1, max_retries + 1):
+        try:
+            research_result = await asyncio.to_thread(research_function, context_json)
+            break
+        except Exception as e:
+            if attempt == max_retries:
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Research function failed after {max_retries} attempts: {str(e)}"
+                )
+            await asyncio.sleep(1)  # retry delay
+
+    # Add metadata - filter by user_id only
+    research_result.update({
+        "user_id": request.user_id,
+        "component_name": component_name,
+        "timestamp": datetime.utcnow()
+    })
+    if request.org_id:
+        research_result["org_id"] = request.org_id
+
+    # Save to DB
+    await asyncio.to_thread(collection.insert_one, research_result)
+
+    research_result.pop("_id", None)
+    return {"status": "success", "data": research_result}
 
 
 @router.post("/icp-research_claude")
@@ -384,103 +366,95 @@ async def icp_research_claude(request: MarketRequest):
             detail=f"Unsupported component_name: {request.component_name}"
         )
 
-    username = urllib.parse.quote_plus("techbrewra")
-    password = urllib.parse.quote_plus("Brewra@Best09")
-    mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
-    client = MongoClient(mongo_uri)
-    db = client["Profiler"]
+    db = clients.client["Profiler"]
     collection = db["ICPs"]
 
-    try:
-        query = {
-            "user_id": request.user_id,
-            "component_name": component_name
-        }
+    query = {
+        "user_id": request.user_id,
+        "component_name": component_name
+    }
 
-        if not request.refresh:
-            latest_report = await asyncio.to_thread(
-                collection.find_one, query, sort=[("timestamp", -1)]
-            )
-            if latest_report:
-                latest_report.pop("_id", None)
-                return {"status": "success", "data": latest_report}
-
-        def fetch_company_profile():
-            with clients.driver.session() as session:
-                if request.org_id:
-                    result = session.run(
-                        "MATCH (c:CompanyProfile {org_id: $org_id}) RETURN c LIMIT 1",
-                        org_id=request.org_id
-                    )
-                else:
-                    result = session.run(
-                        "MATCH (c:CompanyProfile) RETURN c LIMIT 1"
-                    )
-                record = result.single()
-                return record
-
-        record = await asyncio.to_thread(fetch_company_profile)
-        if not record:
-            org_msg = f" for org_id: {request.org_id}" if request.org_id else ""
-            raise HTTPException(status_code=404, detail=f"No company profile found in Neo4j{org_msg}")
-
-        company_profile = dict(record.values()[0])
-        if "socialMediaUrls" in company_profile and isinstance(company_profile["socialMediaUrls"], str):
-            try:
-                company_profile["socialMediaUrls"] = json.loads(company_profile["socialMediaUrls"])
-            except json.JSONDecodeError:
-                pass
-
-        context_data = {
-            "company_profile": company_profile
-        }
-
-        if request.data:
-            context_data["icp_card"] = request.data
-
-        market_context_queries = _build_market_context_queries(component_name, context_data)
-        pinecone_context = await asyncio.to_thread(
-            _fetch_pinecone_supporting_context,
-            market_context_queries,
-            request.org_id,
-            3
+    if not request.refresh:
+        latest_report = await asyncio.to_thread(
+            collection.find_one, query, sort=[("timestamp", -1)]
         )
-        context_data["pinecone_context_queries"] = market_context_queries
-        context_data["pinecone_supporting_context"] = pinecone_context
+        if latest_report:
+            latest_report.pop("_id", None)
+            return {"status": "success", "data": latest_report}
 
-        context_json = json.dumps(context_data)
+    def fetch_company_profile():
+        with clients.driver.session() as session:
+            if request.org_id:
+                result = session.run(
+                    "MATCH (c:CompanyProfile {org_id: $org_id}) RETURN c LIMIT 1",
+                    org_id=request.org_id
+                )
+            else:
+                result = session.run(
+                    "MATCH (c:CompanyProfile) RETURN c LIMIT 1"
+                )
+            record = result.single()
+            return record
 
-        max_retries = 2
-        for attempt in range(1, max_retries + 1):
-            try:
-                research_result = await asyncio.to_thread(research_function, context_json)
-                break
-            except Exception as e:
-                if attempt == max_retries:
-                    raise HTTPException(
-                        status_code=500,
-                        detail=f"Research function failed after {max_retries} attempts: {str(e)}"
-                    )
-                await asyncio.sleep(1)
+    record = await asyncio.to_thread(fetch_company_profile)
+    if not record:
+        org_msg = f" for org_id: {request.org_id}" if request.org_id else ""
+        raise HTTPException(status_code=404, detail=f"No company profile found in Neo4j{org_msg}")
 
-        if not isinstance(research_result, dict):
-            research_result = {"data": research_result}
+    company_profile = dict(record.values()[0])
+    if "socialMediaUrls" in company_profile and isinstance(company_profile["socialMediaUrls"], str):
+        try:
+            company_profile["socialMediaUrls"] = json.loads(company_profile["socialMediaUrls"])
+        except json.JSONDecodeError:
+            pass
 
-        research_result.update({
-            "user_id": request.user_id,
-            "component_name": component_name,
-            "timestamp": datetime.utcnow()
-        })
-        if request.org_id:
-            research_result["org_id"] = request.org_id
+    context_data = {
+        "company_profile": company_profile
+    }
 
-        await asyncio.to_thread(collection.insert_one, research_result)
+    if request.data:
+        context_data["icp_card"] = request.data
 
-        research_result.pop("_id", None)
-        return {"status": "success", "data": research_result}
+    market_context_queries = _build_market_context_queries(component_name, context_data)
+    pinecone_context = await asyncio.to_thread(
+        _fetch_pinecone_supporting_context,
+        market_context_queries,
+        request.org_id,
+        3
+    )
+    context_data["pinecone_context_queries"] = market_context_queries
+    context_data["pinecone_supporting_context"] = pinecone_context
 
-    finally:
-        client.close()
+    context_json = json.dumps(context_data)
+
+    max_retries = 2
+    for attempt in range(1, max_retries + 1):
+        try:
+            research_result = await asyncio.to_thread(research_function, context_json)
+            break
+        except Exception as e:
+            if attempt == max_retries:
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Research function failed after {max_retries} attempts: {str(e)}"
+                )
+            await asyncio.sleep(1)
+
+    if not isinstance(research_result, dict):
+        research_result = {"data": research_result}
+
+    research_result.update({
+        "user_id": request.user_id,
+        "component_name": component_name,
+        "timestamp": datetime.utcnow()
+    })
+    if request.org_id:
+        research_result["org_id"] = request.org_id
+
+    await asyncio.to_thread(collection.insert_one, research_result)
+
+    research_result.pop("_id", None)
+    return {"status": "success", "data": research_result}
 
 
 @router.delete("/icp/recommended/{icp_id}")
@@ -488,11 +462,8 @@ async def delete_recommended_icp(icp_id: str, user_id: str = Query(...)):
     """
     Delete a single recommended ICP from ICP_config by icp_id for a given user_id.
     """
-    mongo_client = None
     try:
-        from app.services.market_scoring import _get_profiler_mongo_client
-        mongo_client = _get_profiler_mongo_client()
-        db = mongo_client["Profiler"]
+        db = clients.client["Profiler"]
         icp_service._ensure_icp_id_registry_indexes(db)
         collection = db["ICP_config"]
 
@@ -538,6 +509,3 @@ async def delete_recommended_icp(icp_id: str, user_id: str = Query(...)):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        if mongo_client:
-            mongo_client.close()

@@ -2,7 +2,8 @@
 
 Renamed from `app/core/database.py` in Phase B (Task 2) — the file holds
 multiple external clients (not just "the database"). After Task 5 (B1),
-this module also exposes `profiler_client` for the secondary Mongo cluster.
+all 26 inline MongoClient constructions in routers/services are replaced by
+importing `client` (or `profiler_client`) from this module.
 """
 import os
 
@@ -36,7 +37,7 @@ if not _SKIP_DB_INIT:
     except Exception as e:
         print("Neo4jGraph init failed:", e)
 
-# MongoDB connection
+# MongoDB connection — primary cluster (brewra-db.d3hvuf8.mongodb.net).
 # pymongo 4.x eagerly resolves mongodb+srv URIs during construction, which
 # blocks on DNS in sandboxes with restricted outbound. Skip when gated.
 client = None
@@ -45,6 +46,13 @@ if not _SKIP_DB_INIT:
         client = MongoClient(mongo_uri)
     except Exception as e:
         print("MongoDB Connection failed:", e)
+
+# Secondary "Profiler" alias — the Profiler databases (ICP_config, Lead_Market_Scores,
+# Company_Profile, etc.) live on the same primary cluster as all other Mongo databases.
+# Migrated from app/services/market_scoring.py:_get_profiler_mongo_client() in Phase B Task 5.
+# Exposed as a separate name so callers that conceptually talk to the "Profiler cluster"
+# can import `profiler_client` without knowing it resolves to the same connection.
+profiler_client = client
 
 # Function to execute a Cypher query
 def query(query_string):
