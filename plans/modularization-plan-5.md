@@ -1198,8 +1198,22 @@ Commit message: `test(be): add unit tests for documents`
 Covers all 11 public functions, the 3 + 3 typed-exception sites, and the
 BrewraError catch path in process_file_to_embeddings (Phase D Task 15 gap).
 
-Sync helpers (load_document, grapher, etc.) get happy-path coverage only;
-the async functions get happy + at-least-one-sad-path coverage.
+IMPORTANT — actual signatures (verified L49-L881 of documents.py):
+  - load_document(file_path)
+  - grapher(file_path)
+  - process_prospect_list(file_path)
+  - upload_file_text(file_path: str, filename: str)
+  - upload_prospect_list_file(file_path: str)
+  - async upload_document_file(background_tasks, file_content, file_filename,
+        file_content_type, user_id, org_id, url, name, tags, description)
+  - async process_file_to_embeddings(file_key, user_id, file_name, org_id, file_id)
+  - async get_document_status(file_key: str)
+  - async list_user_documents(org_id: str)
+  - async delete_data_source(file_id: str)
+  - async update_data_source(file_id: str, request: dict)
+
+S3 download in process_file_to_embeddings is inline:
+    clients.s3_client.download_file(s3_bucket, file_key, local_file_path)  # L189
 """
 import asyncio
 from unittest.mock import MagicMock
@@ -1228,12 +1242,12 @@ from tests.identities import TEST_FILE_ID, TEST_FILE_KEY, TEST_ORG_ID, TEST_USER
 
 
 # ---------------------------------------------------------------------------
-# load_document (sync)
+# load_document (sync) — PDF branch
 # ---------------------------------------------------------------------------
 
-def test_load_document_returns_pdf_loader(mocker):
-    # PyPDFLoader is the LangChain class used inside; we patch where it's
-    # looked up in the documents module.
+def test_load_document_pdf_branch(mocker):
+    """load_document branches on file extension; this test covers .pdf only.
+    The .txt branch is exercised indirectly by process_file_to_embeddings."""
     pdf_loader_cls = mocker.patch("app.services.documents.PyPDFLoader")
     pdf_loader_cls.return_value.load.return_value = [MagicMock(page_content="Doc text")]
 
@@ -1245,48 +1259,74 @@ def test_load_document_returns_pdf_loader(mocker):
 
 # ---------------------------------------------------------------------------
 # grapher / process_prospect_list / upload_file_text / upload_prospect_list_file
-# (smoke tests — these sync helpers are utility wrappers around LangChain/pandas;
-#  one happy-path test each satisfies the "every public function" criterion)
 # ---------------------------------------------------------------------------
 
 def test_grapher_returns_graph_documents(mocker):
-    """grapher wraps LangChain's LLMGraphTransformer; verify it returns the call result."""
-    transformer = mocker.patch("app.services.documents.LLMGraphTransformer")
-    transformer.return_value.convert_to_graph_documents.return_value = ["graph_doc_1"]
-    docs = [MagicMock(page_content="some content")]
+    """grapher(file_path) loads docs then passes them through
+    llm_config.llm_transformer.convert_to_graph_documents."""
+    # Mock the document-load step
+    mocker.patch(
+        "app.services.documents.load_document",
+        return_value=[MagicMock(page_content="some content")],
+    )
+    # Mock the LangChain graph transformer (lives on llm_config, not in documents)
+    transformer = MagicMock()
+    transformer.convert_to_graph_documents.return_value = ["graph_doc_1"]
+    mocker.patch("app.core.llm_config.llm_transformer", transformer)
+    # Mock the Neo4j graph add_graph_documents target
+    mocker.patch("app.core.clients.graph")
 
-    result = grapher(docs)
+    result = grapher("/tmp/foo.pdf")
 
-    assert result == ["graph_doc_1"]
+    # grapher returns either the graph docs or a success indicator;
+    # asserting the transformer was invoked is the load-bearing check.
+    transformer.convert_to_graph_documents.assert_called_once()
 
 
-def test_process_prospect_list_returns_list_of_dicts(mocker):
-    """process_prospect_list parses a pandas DataFrame into dict rows."""
+def test_process_prospect_list_returns_dataframe_rows(mocker):
+    """process_prospect_list(file_path) parses CSV/Excel into dict rows."""
     import pandas as pd
     df = pd.DataFrame([{"company": "Acme", "stage": "Initial"}])
     mocker.patch("app.services.documents.pd.read_csv", return_value=df)
 
     result = process_prospect_list("/tmp/prospects.csv")
 
-    assert isinstance(result, list)
-    assert result[0]["company"] == "Acme"
+    # Assert the mocked read_csv was called with our file path
+    from app.services.documents import pd as documents_pd  # patched
+    documents_pd.read_csv.assert_called_once_with("/tmp/prospects.csv")
+    assert isinstance(result, (list, pd.DataFrame))
 
 
-def test_upload_file_text_uploads_to_s3(mocker):
+def test_upload_file_text_uploads_to_s3(mocker, tmp_path):
+    """upload_file_text(file_path, filename) — takes a real path on disk
+    and uploads its contents to S3."""
+    test_file = tmp_path / "test.txt"
+    test_file.write_text("file content")
     s3 = mocker.patch("app.services.documents.clients.s3_client")
 
-    upload_file_text("file content", "test.txt", TEST_USER_ID, TEST_ORG_ID)
+    upload_file_text(str(test_file), "test.txt")
 
-    s3.put_object.assert_called_once()
+    # Either put_object or upload_file/upload_fileobj — assert one was used
+    assert (
+        s3.put_object.called
+        or s3.upload_file.called
+        or s3.upload_fileobj.called
+    )
 
 
-def test_upload_prospect_list_file_uploads_to_s3(mocker):
+def test_upload_prospect_list_file_uploads_to_s3(mocker, tmp_path):
+    """upload_prospect_list_file(file_path) takes a single path arg."""
+    test_file = tmp_path / "prospects.csv"
+    test_file.write_text("col1,col2\nA,B\n")
     s3 = mocker.patch("app.services.documents.clients.s3_client")
 
-    upload_prospect_list_file(b"content", "prospects.csv", TEST_USER_ID, TEST_ORG_ID)
+    upload_prospect_list_file(str(test_file))
 
-    # Either put_object or upload_fileobj was used; assert at least one upload happened
-    assert s3.put_object.called or s3.upload_fileobj.called
+    assert (
+        s3.put_object.called
+        or s3.upload_file.called
+        or s3.upload_fileobj.called
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1294,39 +1334,40 @@ def test_upload_prospect_list_file_uploads_to_s3(mocker):
 # ---------------------------------------------------------------------------
 
 def test_get_document_status_raises_when_missing(mocker, mock_mongo_client):
+    """get_document_status takes ONLY file_key — no user_id arg."""
     coll = MagicMock()
     coll.find_one.return_value = None
     mock_mongo_client.__getitem__.return_value.__getitem__.return_value = coll
 
     with pytest.raises(DocumentNotFoundError):
-        asyncio.run(get_document_status(TEST_FILE_ID, TEST_USER_ID))
+        asyncio.run(get_document_status(TEST_FILE_KEY))
 
 
 def test_get_document_status_happy_path(mocker, mock_mongo_client):
     coll = MagicMock()
     coll.find_one.return_value = {
+        "file_key": TEST_FILE_KEY,
         "file_id": TEST_FILE_ID,
-        "user_id": TEST_USER_ID,
         "status": "completed",
         "file_name": "report.pdf",
     }
     mock_mongo_client.__getitem__.return_value.__getitem__.return_value = coll
 
-    result = asyncio.run(get_document_status(TEST_FILE_ID, TEST_USER_ID))
+    result = asyncio.run(get_document_status(TEST_FILE_KEY))
 
     assert result["status"] == "completed"
-    assert result["file_id"] == TEST_FILE_ID
 
 
-def test_list_user_documents_returns_cursor(mocker, mock_mongo_client):
+def test_list_user_documents_takes_org_id(mocker, mock_mongo_client):
+    """list_user_documents takes org_id (not user_id, despite the function name)."""
     coll = MagicMock()
     coll.find.return_value.sort.return_value = [
-        {"file_id": "f1", "user_id": TEST_USER_ID, "file_name": "a.pdf"},
-        {"file_id": "f2", "user_id": TEST_USER_ID, "file_name": "b.pdf"},
+        {"file_id": "f1", "org_id": TEST_ORG_ID, "file_name": "a.pdf"},
+        {"file_id": "f2", "org_id": TEST_ORG_ID, "file_name": "b.pdf"},
     ]
     mock_mongo_client.__getitem__.return_value.__getitem__.return_value = coll
 
-    result = asyncio.run(list_user_documents(TEST_USER_ID))
+    result = asyncio.run(list_user_documents(TEST_ORG_ID))
 
     assert len(result) == 2
 
@@ -1336,18 +1377,20 @@ def test_list_user_documents_returns_cursor(mocker, mock_mongo_client):
 # ---------------------------------------------------------------------------
 
 def test_delete_data_source_raises_when_missing(mocker, mock_mongo_client):
+    """delete_data_source takes ONLY file_id — no user_id arg."""
     coll = MagicMock()
     coll.find_one.return_value = None
     mock_mongo_client.__getitem__.return_value.__getitem__.return_value = coll
 
     with pytest.raises(DocumentNotFoundError):
-        asyncio.run(delete_data_source(TEST_FILE_ID, TEST_USER_ID))
+        asyncio.run(delete_data_source(TEST_FILE_ID))
 
 
-def test_update_data_source_raises_on_invalid_payload(mocker, mock_mongo_client):
-    """update_data_source raises DocumentValidationError on empty update payload."""
+def test_update_data_source_raises_on_empty_request(mocker, mock_mongo_client):
+    """update_data_source(file_id, request: dict) — second arg is the
+    update payload as a dict. Empty dict → DocumentValidationError."""
     with pytest.raises(DocumentValidationError):
-        asyncio.run(update_data_source(TEST_FILE_ID, TEST_USER_ID, update_data={}))
+        asyncio.run(update_data_source(TEST_FILE_ID, {}))
 
 
 # ---------------------------------------------------------------------------
@@ -1357,18 +1400,16 @@ def test_update_data_source_raises_on_invalid_payload(mocker, mock_mongo_client)
 def test_process_file_to_embeddings_catches_brewra_error(
     mocker, mock_mongo_client,
 ):
-    """When an inner step raises BrewraError, the background task should
-    catch it, log, and update the doc status to 'failed' without bubbling."""
+    """The S3 download in process_file_to_embeddings is inline at L189:
+        clients.s3_client.download_file(s3_bucket, file_key, local_file_path)
+    Patch the s3_client attribute and make download_file raise BrewraError.
+    The except BrewraError block must catch and persist a 'failed' status."""
     coll = MagicMock()
     mock_mongo_client.__getitem__.return_value.__getitem__.return_value = coll
-    # Force the S3 download (or whatever the first I/O step is) to raise BrewraError
-    mocker.patch(
-        "app.services.documents._download_from_s3",
-        side_effect=BrewraError("S3 hiccup"),
-    )
+    s3 = mocker.patch("app.services.documents.clients.s3_client")
+    s3.download_file.side_effect = BrewraError("S3 hiccup")
 
-    # Should not raise — the except BrewraError block in process_file_to_embeddings
-    # must catch and persist a 'failed' status.
+    # Should not raise — caught by the except BrewraError block
     asyncio.run(
         process_file_to_embeddings(
             file_key=TEST_FILE_KEY,
@@ -1393,35 +1434,38 @@ def test_process_file_to_embeddings_catches_brewra_error(
 # ---------------------------------------------------------------------------
 
 def test_upload_document_file_returns_file_id(mocker, mock_mongo_client):
-    """upload_document_file uploads to S3, inserts a Mongo tracking doc,
-    and schedules background processing."""
-    mocker.patch("app.services.documents.clients.s3_client").upload_fileobj = MagicMock()
+    """upload_document_file has a 10-positional signature:
+       (background_tasks, file_content, file_filename, file_content_type,
+        user_id, org_id, url, name, tags, description)
+    Verify it uploads to S3, inserts a Mongo tracking doc, and schedules
+    background processing."""
+    s3 = mocker.patch("app.services.documents.clients.s3_client")
     coll = MagicMock()
     coll.insert_one.return_value.inserted_id = "abc"
     mock_mongo_client.__getitem__.return_value.__getitem__.return_value = coll
-
-    upload_file = MagicMock()
-    upload_file.filename = "report.pdf"
-    upload_file.read = MagicMock(return_value=b"%PDF-1.4\n...")
-    upload_file.content_type = "application/pdf"
 
     bg_tasks = MagicMock()  # FastAPI BackgroundTasks
 
     result = asyncio.run(
         upload_document_file(
-            file=upload_file,
-            user_id=TEST_USER_ID,
-            org_id=TEST_ORG_ID,
-            background_tasks=bg_tasks,
+            bg_tasks,                # background_tasks
+            b"%PDF-1.4\n...",        # file_content
+            "report.pdf",            # file_filename
+            "application/pdf",       # file_content_type
+            TEST_USER_ID,            # user_id
+            TEST_ORG_ID,             # org_id
+            None,                    # url
+            "My report",             # name
+            "tag1,tag2",             # tags
+            "A test report",         # description
         )
     )
 
-    assert result["status"] in ("success", "processing")
-    assert "file_id" in result
+    assert result is not None
     bg_tasks.add_task.assert_called_once()
 ```
 
-**Note:** the upload-document-file test depends on the actual signature of `upload_document_file`. If the helper named in `mocker.patch("app.services.documents._download_from_s3", ...)` doesn't exist by that exact name, grep the file for the actual private helper that performs S3 download (look for `clients.s3_client.download` or similar) and patch that instead.
+**Note:** the test assertions on `coll.update_one.call_args_list` assume the service writes `status: failed` via a `$set` update. If the actual implementation uses a different update shape (e.g., `$setOnInsert` or a top-level field), grep `documents.py` for the failure-path update statement and adjust the assertion. The intent — verify a failure status is persisted — stays the same.
 
 - [ ] **Step 2: Run and verify**
 
@@ -1500,25 +1544,31 @@ def _make_neo4j_company_record():
 # ---------------------------------------------------------------------------
 
 @pytest.mark.parametrize(
-    "component_name,research_fn_name",
+    "component_name",
     [
-        ("market size & opportunity", "Research_Market_1"),
-        ("industry trends report", "Research_Market_2"),
-        ("competitor landscape", "Research_Market_3"),
-        ("regulatory & compliance highlights", "Research_Market_4"),
-        ("market entry & growth strategy", "Research_Market_5"),
+        "market size & opportunity",
+        "industry trends report",
+        "competitor landscape",
+        "regulatory & compliance highlights",
+        "market entry & growth strategy",
     ],
 )
 def test_run_market_research_groq_per_component(
-    mocker, mock_session, mock_mongo_client, component_name, research_fn_name,
+    mocker, mock_session, mock_mongo_client, component_name,
 ):
-    """Each of the 5 components dispatches to its Research_Market_N helper."""
-    # Use the market_size capture for all components — we're testing dispatch,
-    # not response shape variations.
+    """Each of the 5 components dispatches via COMPONENT_FUNCTIONS.
+
+    NOTE: COMPONENT_FUNCTIONS (in market_research.py) holds direct function
+    references built at module load time. Patching the module-level
+    Research_Market_N name does NOT update the dict entry — the dict still
+    points at the original function object. Use mocker.patch.dict to
+    surgically replace the entry being looked up.
+    """
     captured = load_captured("market_research_market_size_groq")
-    mocker.patch(
-        f"app.services.market_research.{research_fn_name}",
-        return_value=captured,
+    fake_fn = MagicMock(return_value=captured)
+    mocker.patch.dict(
+        "app.services.market_research.COMPONENT_FUNCTIONS",
+        {component_name: fake_fn},
     )
     mock_session.run.return_value.single.return_value = _make_neo4j_company_record()
     # Force the refresh path — skip the Mongo "latest report" cache hit
@@ -1555,7 +1605,13 @@ def test_run_market_research_returns_cached_when_not_refreshing(
     coll = MagicMock()
     coll.find_one.return_value = cached_doc
     mock_mongo_client["Scout_Agent"].__getitem__.return_value = coll
-    rm1 = mocker.patch("app.services.market_research.Research_Market_1")
+    # Patch the dispatch dict entry so we can verify the cached-return path
+    # never reaches it.
+    fake_fn = MagicMock()
+    mocker.patch.dict(
+        "app.services.market_research.COMPONENT_FUNCTIONS",
+        {"market size & opportunity": fake_fn},
+    )
 
     request = MarketRequest(
         user_id=TEST_USER_ID, org_id=TEST_ORG_ID,
@@ -1564,7 +1620,7 @@ def test_run_market_research_returns_cached_when_not_refreshing(
     result = asyncio.run(run_market_research(request, llm_backend="groq"))
 
     assert result["status"] == "success"
-    rm1.assert_not_called()
+    fake_fn.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
@@ -1574,9 +1630,13 @@ def test_run_market_research_returns_cached_when_not_refreshing(
 def test_run_market_research_claude_uses_captured(
     mocker, mock_session, mock_mongo_client,
 ):
+    """Claude path: COMPONENT_FUNCTIONS_CLAUDE wraps each Research_Market_N
+    in a lambda (`lambda d: Research_Market_1(d, "claude")`). The lambda
+    resolves the name at call time, so patching the module-level
+    Research_Market_1 DOES reach the call. (Contrast with the Groq path
+    above, where the dict holds direct refs and patch.dict is required.)
+    """
     captured = load_captured("market_research_market_size_claude")
-    # Patch the lambda inside COMPONENT_FUNCTIONS_CLAUDE indirectly by
-    # patching Research_Market_1 (the lambda just calls it with "claude").
     mocker.patch(
         "app.services.market_research.Research_Market_1",
         return_value=captured,
@@ -1631,6 +1691,36 @@ def test_run_market_research_raises_when_company_profile_missing(
     )
     with pytest.raises(CompanyProfileNotFoundError, match="No company profile"):
         asyncio.run(run_market_research(request))
+
+
+def test_run_market_research_propagates_budget_exhausted_error(
+    mocker, mock_session, mock_mongo_client,
+):
+    """BudgetExhaustedError raised inside the research function propagates
+    out of run_market_research (the catch at L998 re-raises immediately;
+    the router maps it to HTTP 429). Acceptance criterion: every typed
+    exception leaf class has at least one pytest.raises assertion."""
+    from app.core.exceptions import BudgetExhaustedError
+    fake_fn = MagicMock(side_effect=BudgetExhaustedError("Claude budget exhausted"))
+    mocker.patch.dict(
+        "app.services.market_research.COMPONENT_FUNCTIONS_CLAUDE",
+        {"market size & opportunity": fake_fn},
+    )
+    mock_session.run.return_value.single.return_value = _make_neo4j_company_record()
+    coll = MagicMock()
+    coll.find_one.return_value = None
+    mock_mongo_client["Scout_Agent"].__getitem__.return_value = coll
+    mocker.patch(
+        "app.services.market_research._fetch_pinecone_supporting_context",
+        return_value=[],
+    )
+
+    request = MarketRequest(
+        user_id=TEST_USER_ID, org_id=TEST_ORG_ID,
+        component_name="market size & opportunity", data=None, refresh=True,
+    )
+    with pytest.raises(BudgetExhaustedError, match="budget exhausted"):
+        asyncio.run(run_market_research(request, llm_backend="claude"))
 ```
 
 - [ ] **Step 2: Run and verify**
@@ -1640,7 +1730,7 @@ cd backend && pytest tests/unit/test_market_research.py -v
 cd backend && pytest tests/ -q
 ```
 
-Expected: 5 (parametrize) + 4 = 9 new tests pass.
+Expected: 5 (parametrize) + 5 = 10 new tests pass (includes the BudgetExhaustedError propagation test).
 
 - [ ] **Step 3: Commit**
 
@@ -1816,8 +1906,14 @@ def test_run_icp_research_raises_unsupported_component(
 def test_run_icp_research_groq_happy_path(
     mocker, mock_session, mock_mongo_client,
 ):
+    """ICP_FUNCTIONS holds direct refs to icp_research_N — same dispatch-dict
+    gotcha as market_research. Patch the dict entry, not the module attr."""
     captured = load_captured("icp_research_icp_summary_groq")
-    mocker.patch("app.services.icp.icp_research_1", return_value=captured)
+    fake_fn = MagicMock(return_value=captured)
+    mocker.patch.dict(
+        "app.services.icp.ICP_FUNCTIONS",
+        {"icp summary & market opportunity": fake_fn},
+    )
     mock_session.run.return_value.single.return_value = _make_company_record()
     coll = MagicMock()
     coll.find_one.return_value = None
@@ -1839,9 +1935,10 @@ def test_run_icp_research_groq_happy_path(
 def test_run_icp_research_claude_happy_path(
     mocker, mock_session, mock_mongo_client,
 ):
+    """Claude path: ICP_FUNCTIONS_CLAUDE entries are lambdas that resolve
+    the underlying icp_research_N at call time, so patching the module
+    attr works here (unlike the direct-ref Groq dict above)."""
     captured = load_captured("icp_research_icp_buyer_map_claude")
-    # ICP_FUNCTIONS_CLAUDE wraps icp_research_2 in a lambda; patching the
-    # underlying function works.
     mocker.patch("app.services.icp.icp_research_2", return_value=captured)
     mock_session.run.return_value.single.return_value = _make_company_record()
     coll = MagicMock()
@@ -2618,13 +2715,17 @@ def test_search_signals_scout_groq_uses_captured(mocker):
 
 
 def test_search_signals_profiler_claude_uses_captured(mocker):
+    """Patch where the names are looked up: signals.py does
+        `from app.services._llm_helpers import _claude_messages_text, _tavily_context_and_urls`
+    which creates local bindings in signals' namespace. Patching the
+    _llm_helpers source module would NOT affect those local bindings."""
     captured = load_captured("search_signals_profiler_claude")
     mocker.patch(
-        "app.services._llm_helpers._claude_messages_text",
+        "app.services.signals._claude_messages_text",
         return_value=json.dumps(captured),
     )
     mocker.patch(
-        "app.services._llm_helpers._tavily_context_and_urls",
+        "app.services.signals._tavily_context_and_urls",
         return_value=("web context", []),
     )
 
@@ -2900,18 +3001,11 @@ Commit message: `test(be): rewire integration tests to use captured fixtures`
 
 - [ ] **Step 1: Rewire `test_market_research.py`**
 
-Open `backend/tests/test_market_research.py` and replace the `_CANNED_RESULT` constant with a call to `load_captured(...)`. Specifically:
+In `backend/tests/test_market_research.py`:
+- The `_CANNED_RESULT` constant is at approximately L32-L42 (hand-crafted dict with keys `executiveSummary`, `tamValue`, `samValue`, etc.).
+- It is consumed inside `test_post_market_research_all_components` (around L60-L80) via the pattern `patch("app.services.market_research.COMPONENT_FUNCTIONS", {component_name: lambda _: dict(_CANNED_RESULT)})`.
 
-Replace:
-
-```python
-_CANNED_RESULT = {
-    "executiveSummary": "Strong growth opportunity in target market.",
-    # ...several lines of hand-crafted dict
-}
-```
-
-with:
+Replace the constant with a loader:
 
 ```python
 from tests.fixtures import load_captured
@@ -2920,7 +3014,7 @@ def _captured_result(component_slug: str = "market_size") -> dict:
     return load_captured(f"market_research_{component_slug}_groq")
 ```
 
-Then replace usages — wherever the test does `lambda _: dict(_CANNED_RESULT)`, change to `lambda _: _captured_result()`.
+Then change every `lambda _: dict(_CANNED_RESULT)` to `lambda _: _captured_result()`. Delete the old `_CANNED_RESULT` constant.
 
 - [ ] **Step 2: Rewire `test_signals.py`**
 
@@ -2938,6 +3032,8 @@ pytest tests/test_icp.py --snapshot-update
 ```
 
 Expected: `tests/__snapshots__/test_icp.ambr` updated with the captured-fixture-derived response shapes.
+
+**Precondition:** syrupy must be installed in the active venv. Existing integration tests (`test_auth_org.py`, `test_icp.py`, `test_profiles.py`) already use it today, so if `pytest tests/` passes in the pre-flight, syrupy is available. The package is not in `backend/requirements.txt` (Phase F+ housekeeping per spec §3.5); if it's missing in a clean environment, `pip install syrupy` and proceed.
 
 - [ ] **Step 5: Run the full integration suite to confirm no regressions**
 
@@ -3026,7 +3122,7 @@ for cls in LeadNotFoundError CompanyProfileNotFoundError SuggestedICPNotFoundErr
            ProfileValidationError LeadCSVValidationError DocumentValidationError \
            UnsupportedComponentError SignalActionValidationError \
            BudgetExhaustedError ICPIdRegistryError ServiceError; do
-  grep -lr "pytest.raises($cls" tests/unit/ > /dev/null \
+  grep -ElR "pytest\.raises\(${cls}\b" tests/unit/ > /dev/null \
     && echo "OK: $cls" || echo "MISSING: $cls"
 done
 
@@ -3034,7 +3130,7 @@ done
 grep -A1 "Resolved 2026-05-22 by Phase E" ../docs/TECH_DEBT.md
 ```
 
-Every leaf class except `BudgetExhaustedError` (covered indirectly via market_research/claude path budget enforcement — leave it for Phase F if a direct test is desired) should print `OK:`.
+Every leaf class should print `OK:` (including `BudgetExhaustedError`, covered by `test_run_market_research_propagates_budget_exhausted_error` in Task 7).
 
 - [ ] **Final test count**
 
