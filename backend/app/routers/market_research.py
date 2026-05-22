@@ -6,6 +6,7 @@ from datetime import datetime
 from fastapi import APIRouter, HTTPException
 
 from app.core import clients
+from app.core.exceptions import BudgetExhaustedError
 from app.models.market_research import MarketRequest
 from app.services import market_research as market_research_service
 from app.services._claude_budget import CLAUDE_API_KEY
@@ -192,6 +193,8 @@ async def market_research_claude(request: MarketRequest):
         try:
             research_result = await asyncio.to_thread(research_function, company_profile)
             break
+        except BudgetExhaustedError as e:
+            raise HTTPException(status_code=429, detail=str(e))
         except Exception as e:
             if attempt == max_retries:
                 raise HTTPException(

@@ -27,6 +27,7 @@ from langchain_core.prompts import PromptTemplate
 from pymongo.errors import DuplicateKeyError
 
 from app.core import clients, llm_config
+from app.core.exceptions import ICPIdRegistryError
 from app.services.market_research import (
     CLAUDE_RESEARCH_MAX_TOKENS,
     _tavily_context_and_urls,
@@ -1132,7 +1133,7 @@ def _reserve_unique_icp_id(db, id_type: str, owner_key: str = "", preferred_id: 
             if existing and str(existing.get("id_type")) == str(id_type) and str(existing.get("owner_key")) == str(owner_key):
                 return candidate
             candidate = ""
-    raise HTTPException(status_code=500, detail="Failed to generate globally unique ICP id.")
+    raise ICPIdRegistryError("Failed to generate globally unique ICP id.")
 
 
 def _release_icp_id(db, icp_id: str) -> None:

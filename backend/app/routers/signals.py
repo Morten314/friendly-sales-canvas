@@ -1,6 +1,7 @@
 """Signals endpoints: research, batch generation, signal feed, signal Q&A."""
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
 
+from app.core.exceptions import BudgetExhaustedError
 from app.models.market_research import MarketRequest
 from app.models.signals import SignalActionRequest, SignalAskRequest
 from app.services import signals as signals_service
@@ -23,7 +24,10 @@ async def generate_signals_batch(request: MarketRequest):
 @router.post("/generate-signals-batch_claude")
 async def generate_signals_batch_claude(request: MarketRequest):
     """Same as /generate-signals-batch but signal text is produced with Claude (Tavily + Anthropic)."""
-    return await signals_service.generate_signals_batch_claude(request)
+    try:
+        return await signals_service.generate_signals_batch_claude(request)
+    except BudgetExhaustedError as e:
+        raise HTTPException(status_code=429, detail=str(e))
 
 
 @router.get("/fetch-signals")
@@ -51,4 +55,7 @@ async def signal_ask_claude(request: SignalAskRequest):
     """
     Claude-powered signal ask endpoint with local token/run limiter.
     """
-    return await signals_service.signal_ask_claude(request)
+    try:
+        return await signals_service.signal_ask_claude(request)
+    except BudgetExhaustedError as e:
+        raise HTTPException(status_code=429, detail=str(e))

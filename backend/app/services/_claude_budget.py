@@ -11,13 +11,12 @@ from collections import deque
 from datetime import datetime
 from typing import Any, Dict
 
-from fastapi import HTTPException
-
 from app.core.config import (
     claude_signal_window_seconds,
     claude_signal_token_limit_5m,
     claude_signal_max_output_tokens,
 )
+from app.core.exceptions import BudgetExhaustedError
 
 CLAUDE_SIGNAL_WINDOW_SECONDS = claude_signal_window_seconds
 CLAUDE_SIGNAL_TOKEN_LIMIT_5M = claude_signal_token_limit_5m
@@ -52,9 +51,8 @@ def _reserve_claude_signal_budget(input_tokens_estimate: int, max_output_tokens:
         _prune_claude_signal_window(now_ts)
         current_tokens_5m = sum(int(x.get("tokens", 0)) for x in _claude_signal_usage_window)
         if current_tokens_5m + reserved_tokens > CLAUDE_SIGNAL_TOKEN_LIMIT_5M:
-            raise HTTPException(
-                status_code=429,
-                detail={
+            raise BudgetExhaustedError(
+                {
                     "error": "Token budget exceeded for signal_ask_claude",
                     "token_limit_5m": CLAUDE_SIGNAL_TOKEN_LIMIT_5M,
                     "current_tokens_5m": current_tokens_5m,
