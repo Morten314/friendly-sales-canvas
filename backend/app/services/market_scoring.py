@@ -1,7 +1,7 @@
 """Lead market scoring service.
 
 Owns:
-  - Profiler Mongo connection (separate cluster from Scout)
+  - Profiler Mongo collections (shared primary cluster via app.core.clients.client)
   - Lead identity extraction (cross-source name normalization)
   - Single-lead scoring against market reports
   - Bulk scoring background task with stale-run detection
@@ -14,8 +14,6 @@ from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional
 
 from langchain_core.messages import HumanMessage
-from pymongo import MongoClient
-
 from app.core import clients
 from app.core import llm_config
 from app.core.clients import upsert_node
@@ -27,14 +25,6 @@ from app.services.leads import fetch_leads_for_org
 
 
 logger = logging.getLogger(__name__)
-
-
-def _get_profiler_mongo_client() -> MongoClient:
-    """Return the shared Mongo singleton. Kept as a thin alias for callers in this service.
-    Migrated from per-call construction to singleton in Phase B Task 5.
-    """
-    from app.core.clients import profiler_client
-    return profiler_client
 
 
 def _get_market_score_collections():

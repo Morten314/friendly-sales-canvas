@@ -3,7 +3,7 @@
 Renamed from `app/core/database.py` in Phase B (Task 2) — the file holds
 multiple external clients (not just "the database"). After Task 5 (B1),
 all 26 inline MongoClient constructions in routers/services are replaced by
-importing `client` (or `profiler_client`) from this module.
+importing `client` from this module.
 """
 import logging
 import os
@@ -51,13 +51,6 @@ if not _SKIP_DB_INIT:
         client = MongoClient(mongo_uri)
     except Exception as e:
         logger.error("MongoDB Connection failed: %s", e)
-
-# Secondary "Profiler" alias — the Profiler databases (ICP_config, Lead_Market_Scores,
-# Company_Profile, etc.) live on the same primary cluster as all other Mongo databases.
-# Migrated from app/services/market_scoring.py:_get_profiler_mongo_client() in Phase B Task 5.
-# Exposed as a separate name so callers that conceptually talk to the "Profiler cluster"
-# can import `profiler_client` without knowing it resolves to the same connection.
-profiler_client = client
 
 # Function to execute a Cypher query
 def query(query_string):

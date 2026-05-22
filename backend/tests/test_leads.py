@@ -10,8 +10,8 @@ Endpoints:
 
 GET /leads and GET /leads/by-file use the module-level driver
 (app.core.clients.driver). POST/PUT/DELETE /leads use the same driver.
-POST /leads/batch-upload uses _get_profiler_mongo_client() — patch
-app.services.market_scoring.MongoClient.
+POST /leads/batch-upload accesses Mongo via app.core.clients.client — patch
+that symbol to inject the mock.
 """
 import io
 from unittest.mock import MagicMock, patch
@@ -60,7 +60,7 @@ def _csv_upload_file(content: str = "company_name,lead_name\nACME,Alice\nBeta,Bo
 
 
 def _make_profiler_mc():
-    """MongoClient mock for _get_profiler_mongo_client() in batch-upload."""
+    """MongoClient mock for the batch-upload endpoint's Mongo access."""
     lead_stream_coll = MagicMock()
     lead_stream_coll.create_index.return_value = None
     lead_stream_coll.insert_one.return_value = MagicMock(inserted_id="test")
@@ -209,7 +209,7 @@ def test_post_upload_csv_parses_file(client, mock_neo4j):
     csv_content = "company_name,lead_name\nACME,Alice\nBeta Corp,Bob\n"
     mc = _make_profiler_mc()
 
-    with patch("app.services.market_scoring.MongoClient", return_value=mc):
+    with patch("app.core.clients.client", mc):
         response = client.post(
             "/leads/batch-upload",
             data={"user_id": TEST_USER_ID, "org_id": TEST_ORG_ID},
