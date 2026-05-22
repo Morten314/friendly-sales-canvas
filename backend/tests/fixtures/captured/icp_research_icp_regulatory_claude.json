@@ -1,0 +1,14 @@
+{
+  "summary": "ICP stub for icp_regulatory (claude). REGENERATE.",
+  "suggestedICPs": [
+    {
+      "id": "icp_stub_1",
+      "title": "Stub ICP 1",
+      "firmographics": {"industry": "Stub", "company_size": "200-1000"},
+      "key_decision_makers": ["VP Stub"],
+      "pain_points_and_triggers": {"critical": "Stub pain", "others": []}
+    }
+  ],
+  "_stub": true,
+  "_stub_note": "Replace by running tests/capture_fixtures.py with real API keys."
+}

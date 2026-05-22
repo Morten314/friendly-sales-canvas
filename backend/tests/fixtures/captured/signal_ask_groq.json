@@ -1,0 +1,5 @@
+{
+  "output": "Stub signal ask answer (groq). REGENERATE with capture_fixtures.py.",
+  "_stub": true,
+  "_stub_note": "Replace by running tests/capture_fixtures.py with real API keys."
+}
