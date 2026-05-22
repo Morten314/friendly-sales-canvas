@@ -14,7 +14,7 @@ Phase F closes the dependency-injection deferral chain that Phase A introduced a
 
 The work also retires TD-003: the deprecated `@app.on_event("startup")` hook and the module-import-time `clients.graph.refresh_schema()` call both move into `lifespan`. After Phase F, the backend has one construction site (lifespan), one substitution mechanism (dependency overrides), and one rule for services (clients in, results out).
 
-The characterization test suite is again the safety net. Test count is unchanged from Phase E (~203). Every commit is independently green; the branch is bisectable.
+The characterization test suite is again the safety net. Test count is unchanged from Phase E baseline (pytest reports 203 PASSED including parametrized variants; 195 distinct `def test_` function definitions). Every commit is independently green; the branch is bisectable.
 
 ---
 
@@ -24,18 +24,18 @@ The characterization test suite is again the safety net. Test count is unchanged
 
 1. **New `app/core/dependencies.py` with 13 providers** — one per injected resource:
    - **5 client providers:** `get_neo4j_driver`, `get_neo4j_graph`, `get_mongo`, `get_s3`, `get_pinecone`.
-   - **8 LLM providers:** `get_llm`, `get_llm2`, `get_llm_transformer`, `get_vision`, `get_memory`, `get_agent_chain`, `get_cypher_chain` (today's `chain`), `get_cypher_chain2` (today's `chain2`).
+   - **8 LLM providers:** `get_llm`, `get_llm2`, `get_llm_transformer`, `get_vision`, `get_memory`, `get_agent_chain`, `get_chain`, `get_chain2`. (Provider names match the `LLMBundle` field names; no rename boundary.)
 2. **`lifespan` in `app/main.py`** — an `@asynccontextmanager` function that builds both bundles, stashes them on `app.state.clients` and `app.state.llm`, and runs the existing `_ensure_market_scoring_indexes` + `graph.refresh_schema()` setup. Passed to `FastAPI(lifespan=...)`. The deprecated `@app.on_event("startup")` is removed.
 3. **Refactor `app/core/clients.py` and `app/core/llm_config.py` into factory-only modules.** Each exposes a `build_*` factory function and a `*Bundle` dataclass. No module-level state, no construction at import time. The `BREWRA_SKIP_DB_INIT` env var continues to gate connection attempts, but the check moves from module top to inside `build_clients()`.
-4. **Convert all 12 service-layer files** (11 domain services — `pipeline`, `org_auth`, `profiles`, `customer_profile`, `documents`, `leads`, `graph_chat`, `market_research`, `icp`, `signals`, `market_scoring` — plus the `_retrieval` shared helper) to take clients/LLMs as explicit function arguments. ~84 service-side usage sites converted.
-5. **Convert the one router with direct client access (`graph_chat.py`)** — 2 sites — to use `Depends()` providers. Where appropriate, the direct router-side data access is pushed into the corresponding service (matching the Phase B layer rule).
+4. **Convert all 12 service-layer files** (11 domain services — `pipeline`, `org_auth`, `profiles`, `customer_profile`, `documents`, `leads`, `graph_chat`, `market_research`, `icp`, `signals`, `market_scoring` — plus the `_retrieval` shared helper) to take clients/LLMs as explicit function arguments. **Total ~94 service-side usage sites: ~75 qualified `clients.*` accesses + ~11 qualified `llm_config.*` accesses + 8 direct-import sites for `query` / `upsert_node`** (which the qualified-access greps miss and must be tracked separately). **Explicitly excluded:** `_claude_budget.py` and `_llm_helpers.py` — verified by grep, neither references `clients.*` or `llm_config.*`. They convert via no-op (no signature changes needed).
+5. **Convert the one router with direct client/LLM access (`graph_chat.py`)** — **5 sites total** (3 `from app.core.clients import query` direct imports at lines 45, 71, 103 + 2 `llm_config.chain*.run(...)` calls at lines 34, 39) — to use `Depends()` providers. Where appropriate, the direct router-side data access is pushed into the corresponding service (matching the Phase B layer rule).
 6. **Wire every router endpoint** that today reaches module globals (either directly or transitively through service calls) to use `Depends()` providers and pass the injected clients to its services.
 7. **Background-task pattern:** routers acquire clients via `Depends()` and pass them positionally to the task function (`_run_market_scoring_for_org`, `process_file_to_embeddings`). Tasks become pure functions taking clients as args. The Phase D `except BrewraError: log+continue` outer wrappers remain.
 8. **Rewrite test fixtures** in `tests/conftest.py` and `tests/unit/conftest.py`:
    - Integration fixtures switch from `mocker.patch("app.core.clients.X", ...)` to `app.dependency_overrides[get_X] = lambda: mock`. Cleanup via `yield … ; app.dependency_overrides.pop(get_X, None)`.
    - Unit fixtures stay as mock-builders; tests pass mocks directly as positional args to service functions.
    - One new session-scope autouse fixture asserts `app.dependency_overrides == {}` at session teardown (leak-detection).
-9. **Move pure-Cypher helpers** (`query`, `results_to_string`, `escape_property_name`, plus any companion Mongo-shaping helpers) out of `clients.py` into `app/services/_neo4j_helpers.py`. They are query utilities, not clients. Pattern matches existing underscore-prefixed shared helper modules (`_retrieval`, `_claude_budget`, `_llm_helpers`).
+9. **Move all non-client functions** out of `clients.py` into `app/services/_neo4j_helpers.py`: `query`, `results_to_string`, `escape_property_name`, and **`upsert_node`** (the latter is currently in `clients.py:81-136` and imported by `services/leads.py`, `services/market_scoring.py`, `services/profiles.py`; uses `escape_property_name` internally so the two must move together). These are query utilities, not clients. Pattern matches existing underscore-prefixed shared helper modules (`_retrieval`, `_claude_budget`, `_llm_helpers`).
 10. **Mark TD-003 closed** in `docs/TECH_DEBT.md` with a "Resolved by Phase F" line.
 
 ### 2.2 Out of scope (deferred)
@@ -53,14 +53,15 @@ The characterization test suite is again the safety net. Test count is unchanged
 - Redis-backed Claude budget.
 - Inline prompts → `app/prompts/`.
 - Shared `memory` audit.
-- Pagination convention.
+
+(Pagination convention is tracked in §8 Phase G+ inventory; not duplicated here.)
 
 ### 2.3 Non-goals
 
 - **No API contract changes.** No new endpoints, no removed endpoints, no response-shape changes. Routers' externally visible behavior is identical pre- and post-Phase F.
 - **No service-class wrappers.** Services remain pure functions; only their inputs are injected. We considered and rejected the `LeadsService(driver, mongo, llm)` style in brainstorm.
 - **No DI for service-function calls.** Routers `Depends()` their clients and pass them to services as plain args. Services do not `Depends()` themselves.
-- **No new test coverage.** Phase F is a mechanism swap, not a coverage expansion. Test count stays at the Phase E baseline (~203).
+- **No new test coverage.** Phase F is a mechanism swap, not a coverage expansion. Test count stays at the Phase E baseline (203 pytest-passed; 195 `def test_` definitions).
 - **No removal of `BREWRA_SKIP_DB_INIT`.** The env var stays; only its read location moves (module top → inside `build_clients`).
 
 ---
@@ -101,56 +102,107 @@ class ClientBundle:
 
 
 def build_clients(skip_db_init: Optional[bool] = None) -> ClientBundle:
-    """Construct all external clients. Call once at app startup."""
+    """Construct all external clients. Call once at app startup.
+
+    Behavior preserves current code semantics exactly:
+    - Neo4j driver / graph / Mongo are gated by `skip_db_init` AND wrapped in
+      `try/except` (today: gated by module-level `_SKIP_DB_INIT` + try/except).
+    - S3 and Pinecone are constructed UNCONDITIONALLY and NOT wrapped in
+      try/except — matching `clients.py:148-155` today. Construction is lazy
+      for both (no network call), so this is safe in test environments.
+    """
     if skip_db_init is None:
         skip_db_init = bool(os.getenv("BREWRA_SKIP_DB_INIT"))
 
-    if skip_db_init:
-        return ClientBundle(driver=None, graph=None, client=None, s3_client=None, pc=None)
+    driver, graph, client = None, None, None
 
-    driver = None
-    try:
-        driver = GraphDatabase.driver(neo4j_uri, auth=(neo4j_username, neo4j_password))
-        driver.verify_connectivity()
-        logger.info("Connected to Neo4j successfully!")
-    except Exception as e:
-        logger.error("Neo4j Connection failed: %s", e)
+    if not skip_db_init:
+        try:
+            driver = GraphDatabase.driver(neo4j_uri, auth=(neo4j_username, neo4j_password))
+            driver.verify_connectivity()
+            logger.info("Connected to Neo4j successfully!")
+        except Exception as e:
+            logger.error("Neo4j Connection failed: %s", e)
 
-    graph = None
-    try:
-        graph = Neo4jGraph(url=neo4j_uri, username=neo4j_username, password=neo4j_password)
-    except Exception as e:
-        logger.error("Neo4jGraph init failed: %s", e)
+        try:
+            graph = Neo4jGraph(url=neo4j_uri, username=neo4j_username, password=neo4j_password)
+        except Exception as e:
+            logger.error("Neo4jGraph init failed: %s", e)
 
-    client = None
-    try:
-        client = MongoClient(mongo_uri)
-    except Exception as e:
-        logger.error("MongoDB Connection failed: %s", e)
+        try:
+            client = MongoClient(mongo_uri)
+        except Exception as e:
+            logger.error("MongoDB Connection failed: %s", e)
 
-    s3_client = None
-    try:
-        s3_client = boto3.client(
-            "s3",
-            aws_access_key_id=aws_access_key,
-            aws_secret_access_key=aws_secret_key,
-            region_name=aws_region,
-        )
-    except Exception as e:
-        logger.error("S3 client init failed: %s", e)
-
-    pc = None
-    try:
-        pc = Pinecone(api_key=pinecone_api_key)
-    except Exception as e:
-        logger.error("Pinecone init failed: %s", e)
+    # S3 + Pinecone constructed unconditionally — matches current code.
+    # boto3.client() and Pinecone() are lazy; no network call at construction.
+    s3_client = boto3.client(
+        "s3",
+        aws_access_key_id=aws_access_key,
+        aws_secret_access_key=aws_secret_key,
+        region_name=aws_region,
+    )
+    pc = Pinecone(api_key=pinecone_api_key)
 
     return ClientBundle(driver=driver, graph=graph, client=client, s3_client=s3_client, pc=pc)
 ```
 
-No module-level state. Pure-Cypher helpers (`query`, `results_to_string`, `escape_property_name`) have been moved out to `app/services/_neo4j_helpers.py` (Task 10 above).
+No module-level state. All non-client functions (`query`, `results_to_string`, `escape_property_name`, `upsert_node`) have been moved out to `app/services/_neo4j_helpers.py` (item 9 above).
 
-`app/core/llm_config.py` follows the same shape: `LLMBundle` dataclass + `build_llm_config()` factory that constructs all chains/LLMs and returns the bundle.
+`app/core/llm_config.py` exposes an `LLMBundle` dataclass + a `build_llm_config(clients: ClientBundle) -> LLMBundle` factory. The factory **takes the `ClientBundle` as input** because `chain` and `chain2` (the two `GraphCypherQAChain` instances) are constructed conditionally on `clients.graph is not None` (today: `llm_config.py:162` and the analogous site for `chain2`). The bundle and factory:
+
+```python
+@dataclass
+class LLMBundle:
+    llm: ChatGroq
+    vision: ChatGroq
+    llm2: ChatOpenAI
+    llm_transformer: LLMGraphTransformer
+    memory: ConversationBufferMemory
+    chain: Optional[GraphCypherQAChain]      # None when clients.graph is None
+    chain2: Optional[GraphCypherQAChain]     # None when clients.graph is None
+    agent_chain: Any                          # LangChain AgentExecutor
+
+
+def build_llm_config(clients: ClientBundle) -> LLMBundle:
+    llm = ChatGroq(model="llama-3.3-70b-versatile", api_key=groq_api_key)
+    vision = ChatGroq(model="llama-3.2-90b-vision-preview", api_key=groq_api_key)
+    llm2 = ChatOpenAI(...)  # Together-via-OpenAI-compat
+    llm_transformer = LLMGraphTransformer(llm=llm)
+    memory = ConversationBufferMemory(return_messages=True)
+
+    # Conditional — preserves current guarded construction.
+    chain = None
+    chain2 = None
+    if clients.graph is not None:
+        chain = GraphCypherQAChain.from_llm(
+            llm=llm2, graph=clients.graph,
+            cypher_prompt=Cypher_Prompt, qa_prompt=qa_prompt,
+            verbose=True, memory=memory, allow_dangerous_requests=True,
+        )
+        chain2 = GraphCypherQAChain.from_llm(
+            llm=llm2, graph=clients.graph,
+            cypher_prompt=Cypher_Prompt2, qa_prompt=qa_prompt2,
+            verbose=True, memory=memory, allow_dangerous_requests=True,
+        )
+
+    # agent_chain construction (TavilySearchResults + Tool + initialize_agent)
+    # is identical to today; omitted here for brevity.
+    tools = [...]  # TavilySearchResults wrapped in Tool, as today
+    agent_chain = initialize_agent(
+        tools=tools, llm=llm2,
+        agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
+        verbose=True, max_iterations=20, max_execution_time=120,
+    )
+
+    return LLMBundle(
+        llm=llm, vision=vision, llm2=llm2,
+        llm_transformer=llm_transformer, memory=memory,
+        chain=chain, chain2=chain2, agent_chain=agent_chain,
+    )
+```
+
+Note that the two inline Cypher prompt templates (~150 lines each, currently at `llm_config.py:29-96, 169-…`) stay in `llm_config.py` as module-level string constants — they have no state and no construction cost. Phase H+ inventory item 10 ("Inline prompts → `app/prompts/`") is the eventual home for them.
 
 ### 3.2 Lifespan + `app.state`
 
@@ -168,7 +220,7 @@ from app.services.market_scoring import _ensure_market_scoring_indexes
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.clients = build_clients()
-    app.state.llm = build_llm_config()
+    app.state.llm = build_llm_config(app.state.clients)   # needs clients.graph for chain/chain2
 
     # Post-construction setup that needs live clients
     if app.state.clients.graph is not None:
@@ -221,8 +273,8 @@ def get_llm_transformer(request: Request):      return request.app.state.llm.llm
 def get_vision(request: Request):               return request.app.state.llm.vision
 def get_memory(request: Request):               return request.app.state.llm.memory
 def get_agent_chain(request: Request):          return request.app.state.llm.agent_chain
-def get_cypher_chain(request: Request):         return request.app.state.llm.chain
-def get_cypher_chain2(request: Request):        return request.app.state.llm.chain2
+def get_chain(request: Request):                return request.app.state.llm.chain
+def get_chain2(request: Request):               return request.app.state.llm.chain2
 ```
 
 Providers use the `Request`-bound form (`request.app.state.…`) rather than reading a module global. This works in both request and background-task contexts.
@@ -306,6 +358,35 @@ def trigger_market_scores(
 
 Background-task functions become pure functions taking clients as args. The Phase D `except BrewraError: log+continue` outer wrapper stays.
 
+**Worked example: `_run_market_scoring_for_org`.** This is the most complex conversion because the background task has 5 internal client-access sites today (`market_scoring.py:155, 467, 486, 555, 638`) plus the `_get_market_score_collections` helper (`market_scoring.py:37-42`) that reads `clients.client` and is called from multiple sites within the same module.
+
+```python
+# app/services/market_scoring.py — internal helper after Phase F
+def _get_market_score_collections(mongo):
+    # Was: profiler_db = clients.client["Profiler"]
+    profiler_db = mongo["Profiler"]
+    return profiler_db["Lead_Market_Scores"], profiler_db["Lead_Market_Score_Runs"]
+
+
+# app/services/market_scoring.py — background task after Phase F
+def _run_market_scoring_for_org(driver, mongo, llm, user_id: str, org_id: str, run_id: str) -> None:
+    # Every internal access to clients.* / llm_config.* becomes a parameter
+    # reference. The function's outer try/except BrewraError wrapper (Phase D)
+    # stays exactly as it is.
+    scores_col, runs_col = _get_market_score_collections(mongo)   # threaded through
+
+    with driver.session() as session:                              # was: clients.driver.session()
+        ...
+
+    leads_db = mongo["Scout_Agent"]["leads"]                       # was: clients.client["Scout_Agent"]
+    leads = leads_db.find(...)
+
+    response = llm.invoke([HumanMessage(content=prompt)])          # was: llm_config.llm2.invoke(...)
+    ...
+```
+
+Every caller of `_get_market_score_collections` inside `market_scoring.py` (~5 sites) now passes `mongo` explicitly. The same shape applies to `process_file_to_embeddings` in `services/documents.py` — it takes `(driver, mongo, s3, pinecone, …)` and threads them through its internal calls.
+
 ---
 
 ## 4. Migration sequencing
@@ -333,11 +414,11 @@ Per-commit blast radius reflects the count from `grep -rn "clients\.…|llm_conf
 | 8 | `_retrieval` | 1 | Pinecone-only shared helper. Consumed by `market_research`, `signals`, `icp` — those services pass `pc` through. |
 | 9 | `documents` | 18 | LLM (`llm_transformer`) + Mongo + S3. Largest non-LLM-heavy file. |
 | 10 | `leads` | 10 | Includes background-task wiring through `_run_market_scoring_for_org` call from the router. |
-| 11 | `graph_chat` | 2 + 2 (router) | Router-side direct access (`graph_chat.py:routers/graph_chat.py`) pushed into `services/graph_chat.py` first, then converted. |
+| 11 | `graph_chat` | 2 (svc) + 5 (router) | Router has 5 direct sites: 3 `from app.core.clients import query` (lines 45, 71, 103) + 2 `llm_config.chain*.run(...)` (lines 34, 39). Router-side data access pushed into `services/graph_chat.py` first, then converted. |
 | 12 | `market_research` | 3 | LLM. |
 | 13 | `icp` | 7 | LLM. |
 | 14 | `signals` | 17 | LLM, largest LLM file. |
-| 15 | `market_scoring` | 7 | Stateful, background-task heavy. Last per Phase A precedent. |
+| 15 | `market_scoring` | 7 + internal helper | Stateful, background-task heavy. Commit must also refactor `_get_market_score_collections(mongo)` (was: read `clients.client` directly; now: take `mongo` as parameter; threaded through ~5 internal callers within this file). Worked example in §3.6. Last per Phase A precedent. |
 
 Each conversion commit:
 - Rewrites service function signatures to take clients/LLMs as explicit args.
@@ -440,13 +521,15 @@ def _verify_no_dependency_override_leak(request):
     )
 ```
 
+This fixture catches bugs in our own fixture code — e.g., a future fixture that sets up an override but forgets to `.pop()` it in cleanup. It does not exercise production code paths. The cost of a leak is test-suite-wide pollution (later tests inherit the override and pass/fail for the wrong reasons), which is the failure mode this safety net is designed for.
+
 ---
 
 ## 6. Risks
 
 | # | Risk | Likelihood | Mitigation |
 |---|---|---|---|
-| 1 | Lifespan tries to construct real clients during tests (network hit, sandbox timeout) | Medium | `BREWRA_SKIP_DB_INIT=1` stays set in `tests/conftest.py`; `build_clients()` honors it and returns a Bundle of `None`s. Override fixtures ensure tests never reach `app.state.clients.*` for real values. |
+| 1 | Lifespan tries to construct real clients during tests (network hit, sandbox timeout) | Medium | `BREWRA_SKIP_DB_INIT=1` stays set in `tests/conftest.py`. `build_clients()` honors it for Neo4j (`driver`, `graph`) and Mongo (`client`) — these become `None`. S3 (`s3_client`) and Pinecone (`pc`) stay constructed unconditionally (preserves current behavior; `boto3.client()` and `Pinecone()` are both lazy and do not hit the network at construction time). Override fixtures substitute mocks for whatever subset a given test exercises. |
 | 2 | `app.dependency_overrides` leaks across tests | Medium | Every override fixture uses `yield … ; app.dependency_overrides.pop(...)`. Session-scope autouse fixture (§5.4) asserts the dict is empty at teardown. |
 | 3 | A `backend/scripts/*.py` script imports module globals (`from app.core.clients import driver`) | Low-Medium | Grep before commit 16: `git grep -E "from app\.core\.(clients\|llm_config) import"`. Update any callsite to construct clients via `build_clients()` directly. |
 | 4 | `graph_chat.py` router-side direct usage missed during conversion | Low | Commit 11 explicitly moves the router-side access into the service first, then converts. Final grep on `clients.` / `llm_config.` inside `app/routers/` catches strays. |
@@ -454,6 +537,7 @@ def _verify_no_dependency_override_leak(request):
 | 6 | Commit 16 (delete module globals) is the only irreversible-feeling step; a hidden consumer breaks | Medium | Final grep + run full test suite *before* deleting. If anything in `backend/scripts/` or admin tools (`admin_panel.html` server-side handler chain) reaches into globals, refactor those alongside commit 16. |
 | 7 | `BackgroundTasks` functions close over stale module-globals | Low | Test the two background-task entry points (`_run_market_scoring_for_org`, `process_file_to_embeddings`) explicitly in commits 10 and 15. Their unit tests already exist from Phase E. |
 | 8 | Lifespan failure (e.g., Neo4j unreachable in prod) prevents the app from starting | Low | Existing module-level construction already swallows exceptions with `try/except`; `build_clients()` preserves that semantics. Lifespan does not raise. A missing client surfaces as `None` and the first request relying on it fails with a clear `AttributeError` — same observable behavior as today. |
+| 9 | Coexistence period (commits 2–15) constructs clients **twice** in production: once at module import and once in lifespan. Doubles Neo4j Bolt handshakes, doubles MongoClient connection-pool reservations, plus a second `verify_connectivity()` call at boot | Medium (impact) × Low (duration) | Cost per boot is ~hundreds of KB of pooled connections plus one extra Bolt handshake — not a degradation, but visible in logs. **Posture:** merge each conversion commit to `master` immediately; do not let the coexistence branch accumulate. The CTO's solo-write cadence on `master` makes this the natural mode anyway. Commit 16 collapses the dual-construction in one step. |
 
 ---
 
@@ -471,6 +555,10 @@ git grep -E "^import app\.core\.(clients|llm_config)( |$)" backend/app/         
 # 2. No qualified module-access in services or routers
 git grep -E "(^|[ (])clients\.(driver|client|s3_client|pc|graph)" backend/app/services backend/app/routers   # empty
 git grep -E "(^|[ (])llm_config\.(llm|llm2|llm_transformer|vision|memory|agent_chain|chain|chain2)" backend/app/services backend/app/routers   # empty
+
+# 2b. No direct-import sites of moved helper functions from `clients` module
+#     (after item 9 of §2.1, these live in app/services/_neo4j_helpers.py)
+git grep -E "from app\.core\.clients import (query|upsert_node|results_to_string|escape_property_name)" backend/app/   # empty
 
 # 3. TD-003 retired
 git grep "@app.on_event" backend/app/   # empty
@@ -505,8 +593,9 @@ cd backend && pytest tests/        # green; same test count as Phase E baseline
 
 1. **Are there `backend/scripts/*.py` callers that import `app.core.clients` or `app.core.llm_config`?** Grep on commit 1. Likely zero (Phase A's analogous audit found none) but worth confirming. If found, refactor those callsites to invoke factories directly.
 2. **Does any admin tool (`admin_panel.html`, `registration_admin_panel.html` server-side request paths) reach into module globals?** Same audit. Admin panels are static HTML served by FastAPI; if their backing endpoints touch globals, they're caught by the service conversion commits.
-3. **Final naming of the moved helper module:** `app/services/_neo4j_helpers.py` matches the `_retrieval`/`_claude_budget`/`_llm_helpers` precedent. Alternative `app/core/neo4j_helpers.py` is also defensible. Pick during execution based on import-call-graph cleanliness.
-4. **Position of the leak-detection autouse fixture:** root `tests/conftest.py` (applies to both layers) vs unit-only. Default to root.
+3. **`BREWRA_SKIP_DB_INIT` reference audit.** Today `clients.py` defines a module-level `_SKIP_DB_INIT` constant. Grep on commit 1 for `_SKIP_DB_INIT` references outside `clients.py` (likely zero, but if any exist they must be updated since the constant disappears after commit 16). The env-var name itself stays — only the read site moves into `build_clients()`.
+4. **`LLMBundle.vision` field necessity.** Grep on commit 1 for `llm_config.vision` and `from app.core.llm_config import vision` across `backend/`. If no consumer exists, the field and provider can be dropped from `LLMBundle` / `dependencies.py`. Verified at spec-write time: no qualified `llm_config.vision` access in services/routers, but should re-grep on entry to confirm.
+5. **Position of the leak-detection autouse fixture:** root `tests/conftest.py` (applies to both layers) vs unit-only. Default to root.
 
 ---
 
