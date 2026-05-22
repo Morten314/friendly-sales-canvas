@@ -24,6 +24,9 @@ async def generate_signals_batch(request: MarketRequest):
 @router.post("/generate-signals-batch_claude")
 async def generate_signals_batch_claude(request: MarketRequest):
     """Same as /generate-signals-batch but signal text is produced with Claude (Tavily + Anthropic)."""
+    from app.services._claude_budget import CLAUDE_API_KEY
+    if not CLAUDE_API_KEY:
+        raise HTTPException(status_code=500, detail="ANTHROPIC_API_KEY is not configured")
     try:
         return await signals_service.generate_signals_batch_claude(request)
     except BudgetExhaustedError as e:

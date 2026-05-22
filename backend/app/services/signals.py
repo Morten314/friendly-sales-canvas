@@ -1066,9 +1066,13 @@ async def generate_signals_batch(request: MarketRequest) -> dict:
 
 
 async def generate_signals_batch_claude(request: MarketRequest) -> dict:
-    """Same as generate_signals_batch but signal text is produced with Claude."""
-    if not CLAUDE_API_KEY:
-        raise HTTPException(status_code=500, detail="ANTHROPIC_API_KEY is not configured")
+    """Same as generate_signals_batch but signal text is produced with Claude.
+
+    Task 18 (B2.3): CLAUDE_API_KEY guard moved to the router for boundary
+    consistency with Task 14/16/17. The signal_ask / signal_ask_claude pair
+    stays parallel — Groq uses agent_chain; Claude does direct HTTP with
+    per-window budget tracking — divergence too large to collapse cleanly.
+    """
     return await _generate_signals_batch_impl(request, "claude")
 
 
