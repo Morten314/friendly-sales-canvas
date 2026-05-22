@@ -2,7 +2,7 @@
 
 **Date:** 2026-05-22
 **Status:** Approved for plan-writing
-**Branch:** `master` (per monorepo `CLAUDE.md` "master is the CTO's working branch"). Optional `refactor-backend-modularization-phase-c` branch if reviewer-isolation is wanted — matches Phase A/B precedent but isn't required.
+**Branch:** `refactor-backend-modularization-phase-c`, branched from `master`. Matches Phase A/B precedent (reviewer-isolation), merges back to master when complete.
 **Plan file (next):** `/plans/modularization-plan-3.md`
 
 ---
@@ -182,7 +182,7 @@ Router shrinks to ~30 LOC (HTTP wiring only) matching the pattern established fo
 
 ## 4. Branch & Commit Strategy
 
-**Branch:** Defaults to `master` per monorepo `CLAUDE.md` policy. A dedicated `refactor-backend-modularization-phase-c` branch is optional and only worth it if a human reviewer wants to see the phase as one isolated unit (Phase A and B used branches for this). Phase B's branch has already been merged forward; phase C builds on top.
+**Branch:** `refactor-backend-modularization-phase-c`, branched from `master`. Phase B was merged into master before this phase began; the stale `refactor-backend-modularization-phase-b` branch was deleted. Phase C merges back to master when complete, following the Phase A/B pattern.
 
 **Commit policy:** Follows monorepo `CLAUDE.md` "commit granularity: prefer small, frequent commits." Each plan task = 1 commit. Items 1-3 are 1 commit each (item 2 may be 2); items 4-5 are 1-5 commits each. Expected total: 7-12 commits.
 
