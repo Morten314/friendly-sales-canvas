@@ -121,7 +121,7 @@ def test_post_generate_signals_batch_calls_llm(client):
     with patch("app.core.clients.client", mc), \
          patch("app.services.signals.search_signals_scout", return_value=dict(scout_result)) as mock_scout, \
          patch("app.services.signals.search_signals_profiler", return_value=dict(profiler_result)) as mock_profiler, \
-         patch("app.routers.signals._fetch_pinecone_supporting_context", return_value=[]):
+         patch("app.services.signals._fetch_pinecone_supporting_context", return_value=[]):
         response = client.post("/generate-signals-batch", json=_base_market_request())
 
     assert response.status_code == 200
@@ -144,7 +144,7 @@ def test_post_generate_signals_batch_returns_signals(client):
     with patch("app.core.clients.client", mc), \
          patch("app.services.signals.search_signals_scout", return_value=dict(scout_result)), \
          patch("app.services.signals.search_signals_profiler", return_value=dict(profiler_result)), \
-         patch("app.routers.signals._fetch_pinecone_supporting_context", return_value=[]):
+         patch("app.services.signals._fetch_pinecone_supporting_context", return_value=[]):
         response = client.post("/generate-signals-batch", json=_base_market_request())
 
     assert response.status_code == 200
