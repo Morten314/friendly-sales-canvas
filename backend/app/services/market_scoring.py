@@ -13,11 +13,15 @@ import logging
 from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional
 
-from fastapi import BackgroundTasks, HTTPException
+from fastapi import BackgroundTasks
 from langchain_core.messages import HumanMessage
 from app.core import clients
 from app.core import llm_config
 from app.core.clients import upsert_node
+from app.core.exceptions import (
+    MarketScoreNotFoundError,
+    MarketScoringRunNotFoundError,
+)
 from app.models.market_scoring import (
     LeadMarketScoreRow,
     LeadMarketScoresRequest,
@@ -324,7 +328,7 @@ def trigger_or_get_market_scores(
 
     rows = _get_latest_market_score_rows(request.org_id)
     if not rows and not request.refresh:
-        raise HTTPException(status_code=404, detail="No lead market scores found for org_id")
+        raise MarketScoreNotFoundError("No lead market scores found for org_id")
 
     latest_run = run_doc or _get_latest_scoring_run(request.org_id)
     processing_status = str((latest_run or {}).get("status", "idle"))
@@ -348,7 +352,7 @@ def get_market_scores_status(
     """Return progress + recent items for a market-scoring run.
 
     Returns a dict matching the LeadMarketScoringStatusResponse schema.
-    Raises HTTPException(404) if no run is found for the given filter.
+    Raises MarketScoringRunNotFoundError if no run is found for the given filter.
     """
     score_coll, run_coll = _get_market_score_collections()
     run_filter: Dict[str, Any] = {"org_id": org_id, "user_id": user_id}
@@ -356,7 +360,7 @@ def get_market_scores_status(
         run_filter["run_id"] = run_id
     run_doc = run_coll.find_one(run_filter, sort=[("created_at", -1)])
     if not run_doc:
-        raise HTTPException(status_code=404, detail="No market scoring run found for org_id")
+        raise MarketScoringRunNotFoundError("No market scoring run found for org_id")
 
     run_doc.pop("_id", None)
     target_run_id = str(run_doc.get("run_id"))
@@ -424,12 +428,12 @@ def get_lead_market_score_descriptions(
     """Return the component descriptions for a single lead's scoring.
 
     Returns a dict matching the LeadMarketScoreDescriptionsResponse schema.
-    Raises HTTPException(404) if the lead has no scoring document.
+    Raises MarketScoreNotFoundError if the lead has no scoring document.
     """
     score_coll, _ = _get_market_score_collections()
     doc = score_coll.find_one({"org_id": org_id, "lead_id": lead_id, "user_id": user_id})
     if not doc:
-        raise HTTPException(status_code=404, detail="Lead scoring descriptions not found")
+        raise MarketScoreNotFoundError("Lead scoring descriptions not found")
 
     descriptions = doc.get("component_descriptions", {})
     if not isinstance(descriptions, dict):
