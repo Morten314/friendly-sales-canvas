@@ -50,16 +50,16 @@ def _mock_market_collection(mock_mongo_client, find_one_return=None):
 # Happy paths — Groq backend
 # ---------------------------------------------------------------------------
 
-@pytest.mark.parametrize(
-    "component_name",
-    [
-        "market size & opportunity",
-        "industry trends report",
-        "competitor landscape",
-        "regulatory & compliance highlights",
-        "market entry & growth strategy",
-    ],
-)
+_COMPONENT_FIXTURE_SLUG = {
+    "market size & opportunity": "market_size",
+    "industry trends report": "industry_trends",
+    "competitor landscape": "competitor_landscape",
+    "regulatory & compliance highlights": "regulatory_compliance",
+    "market entry & growth strategy": "market_entry",
+}
+
+
+@pytest.mark.parametrize("component_name", list(_COMPONENT_FIXTURE_SLUG))
 def test_run_market_research_groq_per_component(
     mocker, mock_session, mock_mongo_client, component_name,
 ):
@@ -71,7 +71,8 @@ def test_run_market_research_groq_per_component(
     points at the original function object. Use mocker.patch.dict to
     surgically replace the entry being looked up.
     """
-    captured = load_captured("market_research_market_size_groq")
+    slug = _COMPONENT_FIXTURE_SLUG[component_name]
+    captured = load_captured(f"market_research_{slug}_groq")
     fake_fn = MagicMock(return_value=captured)
     mocker.patch.dict(
         "app.services.market_research.COMPONENT_FUNCTIONS",
