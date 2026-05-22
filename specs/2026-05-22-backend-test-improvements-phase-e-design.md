@@ -31,14 +31,14 @@ After Phase E, the test count grows from 93 to ~210+, all green, with `pytest te
 - ~110–130 new tests total: every public function gets a happy-path test plus at least one error/typed-exception path test.
 - Coverage of all typed-exception raise sites in Phase D's inventory — each `raise <FooNotFoundError>` site is asserted somewhere via `pytest.raises(...)`.
 - Coverage of the two background-task BrewraError catch paths (`_run_market_scoring_for_org`, `process_file_to_embeddings`) — the Phase D Task 15 "structural-only" gap.
-- A `tests/unit/conftest.py` providing lightweight mocks for `app.core.clients.driver`, `app.core.clients.client`, and the LLM helpers.
+- A `tests/unit/conftest.py` providing two shared fixtures (`mock_session`, `mock_mongo_client`) that patch `app.core.clients.driver` and `app.core.clients.client`. LLM-call mocking happens per-test via `mocker.patch(...)`; no shared LLM fixture (each test mocks the specific helper it exercises).
 
 **TD-001 (Captured LLM fixtures):**
 - A `backend/tests/capture_fixtures.py` script that imports service helpers and invokes them in-process to capture LLM outputs.
 - `backend/tests/fixtures/captured/` populated with ~24 JSON files covering market_research (5 components × 2 backends = 10), icp_research (~4 components × 2 backends ≈ 8), signals (scout/profiler × 2 backends = 4), signal_ask (2 backends).
 - `backend/tests/fixtures/seed/` populated with the test payloads the capture script feeds into the helpers: `company_profile.json`, `icp_card.json`, `leads_sample.json`.
 - A `backend/tests/fixtures/__init__.py` helper module exposing `load_captured(name)` and `load_seed(name)`.
-- Existing integration tests (`test_market_research.py`, `test_icp.py`, `test_signals.py`) rewired to use `load_captured(...)` instead of hand-crafted dicts. Syrupy snapshots re-baselined against the captured data.
+- Existing integration tests (`test_market_research.py`, `test_icp.py`, `test_signals.py`) rewired to use `load_captured(...)` instead of hand-crafted dicts. Of the three, only `test_icp.py` uses syrupy snapshots; its `.ambr` file is re-baselined against the captured data in the same commit.
 
 **Cleanup:**
 - `docs/TECH_DEBT.md` updated to mark TD-001 and TD-002 as closed (with a "resolved by Phase E" marker line in each).
@@ -185,7 +185,7 @@ python tests/capture_fixtures.py [--llm-backend {groq,claude,both}] \
 
 **Valid `--components` values** (capture script validates against this set, errors on unknown):
 - For market_research: `market_size`, `industry_trends`, `competitor_landscape`, `regulatory_compliance`, `market_entry` (one per `Research_Market_1..5`)
-- For icp_research: `icp_segments`, `icp_decision_makers`, `icp_buying_signals`, `icp_competition` (TBD against `ICP_FUNCTIONS` keys at implementation; discovery resolves the final set)
+- For icp_research: `icp_summary`, `icp_buyer_map`, `icp_competitive`, `icp_regulatory` (matching the 4 keys in `app.services.icp.ICP_FUNCTIONS`: "icp summary & market opportunity", "buyer map & roles, pain points, triggers", "competitive overlap & buying signals", "regulatory, compliance & recommended icp" → `icp_research_1..4`)
 - For signals: `signals_scout`, `signals_profiler`
 - For signal_ask: `signal_ask`
 - Special: `all` (default if `--components` omitted), or any comma-list.
@@ -270,7 +270,7 @@ The rollout mirrors Phase D's per-service cadence — one commit per service for
 | 9 | `test(be): add unit tests for leads` | `tests/unit/test_leads.py`. ~16-20 tests, includes post-`raise_on_error` propagation test. |
 | 10 | `test(be): add unit tests for market_scoring` | `tests/unit/test_market_scoring.py`. ~10-13 tests, includes `_run_market_scoring_for_org` BrewraError catch test. |
 | 11 | `test(be): add unit tests for signals` | `tests/unit/test_signals.py`. ~14-18 tests, includes ServiceError paths (signal-delete race, ANTHROPIC_API_KEY guard, Claude API failure). |
-| 12 | `test(be): rewire integration tests to use captured fixtures` | Replace hand-crafted dicts with `load_captured(...)` in `test_market_research.py`, `test_icp.py`, `test_signals.py`. Re-baseline syrupy snapshots. |
+| 12 | `test(be): rewire integration tests to use captured fixtures` | Replace hand-crafted dicts with `load_captured(...)` in `test_market_research.py`, `test_icp.py`, `test_signals.py`. Re-baseline `test_icp.ambr` only (the other two files use plain assertions, not snapshots — see §3.5). |
 | 13 | `chore(docs): close TD-001 and TD-002 in TECH_DEBT.md` | Add "Resolved 2026-05-22 by Phase E (`refactor-backend-modularization-phase-e`)" line to both entries. |
 
 **Migration order rationale:** smallest services first (`org_auth`, `profiles`) to validate the unit-test pattern; LLM-using services after captured fixtures land (commit 2 must precede commits 7, 8, 11, **and 12** — the integration rewire also consumes `load_captured(...)`); the rewire (commit 12) needs both captured fixtures and the unit test layer in place because some integration tests will be replaced by unit tests where appropriate.
