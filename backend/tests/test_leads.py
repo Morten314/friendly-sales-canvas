@@ -9,7 +9,7 @@ Endpoints:
   GET  /leads/by-file           — leads filtered by file_id
 
 GET /leads and GET /leads/by-file use the module-level driver
-(app.core.database.driver). POST/PUT/DELETE /leads use the same driver.
+(app.core.clients.driver). POST/PUT/DELETE /leads use the same driver.
 POST /leads/batch-upload uses _get_profiler_mongo_client() — patch
 app.services.market_scoring.MongoClient.
 """

@@ -1,3 +1,9 @@
+"""External service clients: Neo4j driver, Mongo client(s), S3 client, Pinecone client.
+
+Renamed from `app/core/database.py` in Phase B (Task 2) — the file holds
+multiple external clients (not just "the database"). After Task 5 (B1),
+this module also exposes `profiler_client` for the secondary Mongo cluster.
+"""
 import os
 
 from neo4j import GraphDatabase

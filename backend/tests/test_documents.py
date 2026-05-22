@@ -5,7 +5,7 @@ Endpoints:
   GET  /document-status/{file_key:path}  — get processing status
   GET  /user-documents      — list all docs/URLs for an org
 
-S3 is patched by the `mock_s3` fixture (app.core.database.s3_client).
+S3 is patched by the `mock_s3` fixture (app.core.clients.s3_client).
 MongoDB is per-request MongoClient — patch "app.routers.documents.MongoClient".
 """
 import io

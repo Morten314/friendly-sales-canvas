@@ -8,7 +8,7 @@ from typing import Any, Dict
 from fastapi import APIRouter, HTTPException, Query
 from pymongo import MongoClient
 
-from app.core import database
+from app.core import clients
 from app.models import MarketRequest
 from app.services import icp as icp_service
 from app.services._claude_budget import CLAUDE_API_KEY
@@ -187,7 +187,7 @@ async def get_or_create_icp_config(user_id: str = Query(...), refresh: bool = Qu
         print(f"[ICP] Generating new ICPs for user_id: {user_id}")
 
         # Generate new ICPs from Neo4j company profile - get shared company profile
-        with database.driver.session() as session:
+        with clients.driver.session() as session:
             result = session.run(
                 "MATCH (c:CompanyProfile) RETURN c LIMIT 1"
             )
@@ -285,7 +285,7 @@ async def icp_research(request: MarketRequest):
 
         # --- Neo4j query inside a thread - get company profile by org_id ---
         def fetch_company_profile():
-            with database.driver.session() as session:
+            with clients.driver.session() as session:
                 # Get the company profile filtered by org_id (if provided)
                 if request.org_id:
                     result = session.run(
@@ -406,7 +406,7 @@ async def icp_research_claude(request: MarketRequest):
                 return {"status": "success", "data": latest_report}
 
         def fetch_company_profile():
-            with database.driver.session() as session:
+            with clients.driver.session() as session:
                 if request.org_id:
                     result = session.run(
                         "MATCH (c:CompanyProfile {org_id: $org_id}) RETURN c LIMIT 1",

@@ -15,7 +15,7 @@ app/routers/<domain>.py.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.core import database
+from app.core import clients
 from app.core.logging import logger  # noqa: F401 — re-exported for backward compat within Phase B
 
 app = FastAPI()
@@ -78,5 +78,5 @@ app.include_router(market_scoring.router)
 
 # Preserve original boot-time Neo4j schema refresh (was in pre-Task-2 main.py).
 # Guarded so BREWRA_SKIP_DB_INIT=1 (and any future None-graph mode) is safe.
-if database.graph is not None:
-    database.graph.refresh_schema()
+if clients.graph is not None:
+    clients.graph.refresh_schema()

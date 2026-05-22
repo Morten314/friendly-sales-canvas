@@ -17,9 +17,9 @@ from typing import List, Dict, Any, Optional
 from langchain_core.messages import HumanMessage
 from pymongo import MongoClient
 
-from app.core import database
+from app.core import clients
 from app.core import llm_config
-from app.core.database import upsert_node
+from app.core.clients import upsert_node
 from app.models import (
     LeadMarketScoreRow,
     MARKET_SCORE_COMPONENT_KEYS,
@@ -159,7 +159,7 @@ def _get_lead_identity_from_neo4j(org_id: str, lead_id: str) -> Dict[str, Option
     RETURN l
     LIMIT 1
     """
-    with database.driver.session() as session:
+    with clients.driver.session() as session:
         record = session.run(query_string, org_id=org_id, lead_id=lead_id).single()
         if not record:
             return {"company_name": None, "lead_name": None}
@@ -277,7 +277,7 @@ def _is_stale_queued_run(run_doc: Dict[str, Any], stale_after_seconds: int = 300
 
 def get_company_profile_for_org(org_id: str) -> Dict[str, Any]:
     """Fetch a single company profile for an org."""
-    with database.driver.session() as session:
+    with clients.driver.session() as session:
         result = session.run(
             "MATCH (c:CompanyProfile {org_id: $org_id}) RETURN c LIMIT 1",
             org_id=org_id,
@@ -296,7 +296,7 @@ def get_company_profile_for_org(org_id: str) -> Dict[str, Any]:
 
 def get_market_reports_for_org(user_id: str, org_id: str) -> Dict[str, Dict[str, Any]]:
     """Fetch latest market research reports for all five components."""
-    db = database.client["Scout_Agent"]
+    db = clients.client["Scout_Agent"]
     collection = db["Market_Intelligence"]
     reports: Dict[str, Dict[str, Any]] = {}
     for component_name in MARKET_SCORE_COMPONENT_KEYS:
@@ -453,7 +453,7 @@ def _persist_market_score_for_lead(
         "market_scoring_status": scoring_status,
         "market_score_run_id": run_id,
     }
-    with database.driver.session() as session:
+    with clients.driver.session() as session:
         session.execute_write(
             upsert_node,
             "Lead",

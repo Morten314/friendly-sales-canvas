@@ -11,7 +11,7 @@ import requests
 from fastapi import APIRouter, HTTPException, Query
 from pymongo import MongoClient
 
-from app.core import database
+from app.core import clients
 from app.core.config import tavily_api_key, claude_sonnet_model
 from app.models import MarketRequest, SignalActionRequest, SignalAskRequest
 from app.core import llm_config
@@ -594,7 +594,7 @@ async def signal_ask(request: SignalAskRequest):
         # Fetch company profile from Neo4j
         company_profile = None
         try:
-            with database.driver.session() as session:
+            with clients.driver.session() as session:
                 result = session.run(
                     "MATCH (p:CompanyProfile {org_id: $org_id}) RETURN p LIMIT 1",
                     org_id=request.org_id
@@ -719,7 +719,7 @@ async def signal_ask_claude(request: SignalAskRequest):
         # Fetch company profile from Neo4j
         company_profile = None
         try:
-            with database.driver.session() as session:
+            with clients.driver.session() as session:
                 result = session.run(
                     "MATCH (p:CompanyProfile {org_id: $org_id}) RETURN p LIMIT 1",
                     org_id=request.org_id

@@ -6,8 +6,8 @@ from typing import Any, Dict, List
 
 from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
 
-from app.core import database
-from app.core.database import upsert_node
+from app.core import clients
+from app.core.clients import upsert_node
 from app.core.logging import logger
 from app.models import LeadCreateRequest, LeadUpdateRequest
 
@@ -30,7 +30,7 @@ def get_all_leads(org_id: str = Query(...)):
         """
 
         # Execute query with parameters
-        with database.driver.session() as session:
+        with clients.driver.session() as session:
             results = session.run(query_string, org_id=org_id)
             leads = []
             for record in results:
@@ -85,7 +85,7 @@ async def add_lead(request: LeadCreateRequest):
             lead_data["stage"] = "Initial Outreach"
 
         # Create Lead node with all data as-is (no extraction, no mapping)
-        with database.driver.session() as session:
+        with clients.driver.session() as session:
             session.execute_write(
                 upsert_node,
                 "Lead",
@@ -117,7 +117,7 @@ async def update_lead(lead_id: str, request: LeadUpdateRequest):
     try:
         from datetime import datetime
 
-        with database.driver.session() as session:
+        with clients.driver.session() as session:
             # Verify lead exists and belongs to user/org
             verify_query = """
                 MATCH (l:Lead {lead_id: $lead_id})
@@ -160,7 +160,7 @@ async def delete_lead(lead_id: str, user_id: str = Query(...), org_id: str = Que
     Verifies multitenancy (user_id and org_id) before deletion.
     """
     try:
-        with database.driver.session() as session:
+        with clients.driver.session() as session:
             # Verify lead exists and belongs to user/org
             verify_query = """
                 MATCH (l:Lead {lead_id: $lead_id})
@@ -312,7 +312,7 @@ async def batch_upload_leads(
                     lead_data = {k: str(v) if not isinstance(v, (dict, list)) else v for k, v in lead_data.items()}
 
                     # Create Lead node with all data as-is (no extraction, no mapping)
-                    with database.driver.session() as session:
+                    with clients.driver.session() as session:
                         session.execute_write(
                             upsert_node,
                             "Lead",
@@ -376,7 +376,7 @@ def get_leads_by_file(org_id: str = Query(...), file_id: str = Query(...)):
         WHERE l.org_id = $org_id AND l.file_id = $file_id
         RETURN l
         """
-        with database.driver.session() as session:
+        with clients.driver.session() as session:
             results = session.run(query_string, org_id=org_id, file_id=file_id)
             leads: List[Dict[str, Any]] = []
             for record in results:
@@ -445,7 +445,7 @@ def delete_leads_by_file(file_id: str, user_id: str = Query(...), org_id: str = 
             WHERE l.user_id = $user_id AND l.org_id = $org_id AND l.file_id = $file_id
             RETURN count(l) AS total
         """
-        with database.driver.session() as session:
+        with clients.driver.session() as session:
             count_result = session.run(count_query, user_id=user_id, org_id=org_id, file_id=file_id)
             count_record = count_result.single()
             total = int(count_record["total"]) if count_record and count_record["total"] is not None else 0

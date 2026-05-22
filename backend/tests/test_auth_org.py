@@ -4,15 +4,15 @@ IMPORTANT — module identity:
   After commit 5/16 of the modularization, the org/connect_org/registration
   handlers live in `app.routers.org_auth`. Inline-constructed `MongoClient`
   references must be patched at `app.routers.org_auth.MongoClient`. The
-  /registration handlers use the module-level `app.core.database.client`,
+  /registration handlers use the module-level `app.core.clients.client`,
   which is patched directly.
 
 Endpoints covered:
   GET  /org              — user→org lookup (creates its own MongoClient)
   POST /org              — create org (creates its own MongoClient)
   POST /connect_org      — link user to org (creates its own MongoClient)
-  POST /registration     — create registration (uses database.client)
-  GET  /registration     — list registrations (uses database.client)
+  POST /registration     — create registration (uses clients.client)
+  GET  /registration     — list registrations (uses clients.client)
   POST /api/auth/token   — does not exist; lock the 404/405 behaviour
 """
 from unittest.mock import MagicMock, patch
@@ -150,7 +150,7 @@ def test_post_connect_org_links_user_to_org_existing_doc(client):
 
 
 # ---------------------------------------------------------------------------
-# POST /registration — uses module-level database.client (not MongoClient inline)
+# POST /registration — uses module-level clients.client (not MongoClient inline)
 # ---------------------------------------------------------------------------
 
 def test_post_registration_creates_entry(client, snapshot):
@@ -160,11 +160,11 @@ def test_post_registration_creates_entry(client, snapshot):
 
     inserted_id = ObjectId("000000000000000000000001")
 
-    # database.client["Registration_DB"]["registrations"].insert_one(...)
+    # clients.client["Registration_DB"]["registrations"].insert_one(...)
     col_mock = MagicMock()
     col_mock.insert_one.return_value.inserted_id = inserted_id
 
-    with patch("app.core.database.client") as mock_client:
+    with patch("app.core.clients.client") as mock_client:
         mock_client.__getitem__.return_value.__getitem__.return_value = col_mock
 
         payload = {"name": "Test User", "email": "test@brewra.test"}
@@ -183,7 +183,7 @@ def test_post_registration_missing_fields_422(client):
 
 
 # ---------------------------------------------------------------------------
-# GET /registration — uses module-level database.client
+# GET /registration — uses module-level clients.client
 # ---------------------------------------------------------------------------
 
 def test_get_registration_lists_entries(client, snapshot):
@@ -212,7 +212,7 @@ def test_get_registration_lists_entries(client, snapshot):
     col_mock = MagicMock()
     col_mock.find.return_value.sort.return_value = mock_sort
 
-    with patch("app.core.database.client") as mock_client:
+    with patch("app.core.clients.client") as mock_client:
         mock_client.__getitem__.return_value.__getitem__.return_value = col_mock
 
         response = client.get("/registration")
@@ -231,7 +231,7 @@ def test_get_registration_empty_returns_list(client):
     col_mock = MagicMock()
     col_mock.find.return_value.sort.return_value = mock_sort
 
-    with patch("app.core.database.client") as mock_client:
+    with patch("app.core.clients.client") as mock_client:
         mock_client.__getitem__.return_value.__getitem__.return_value = col_mock
 
         response = client.get("/registration")

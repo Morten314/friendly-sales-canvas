@@ -5,7 +5,7 @@ Extracted from services.py during phase A modularization.
 import json
 from typing import List, Dict, Any
 
-from app.core import database
+from app.core import clients
 
 
 def fetch_leads_for_org(org_id: str, limit: int = 100) -> List[Dict[str, Any]]:
@@ -18,7 +18,7 @@ def fetch_leads_for_org(org_id: str, limit: int = 100) -> List[Dict[str, Any]]:
         ORDER BY l.created_at DESC
         LIMIT $limit
         """
-        with database.driver.session() as session:
+        with clients.driver.session() as session:
             results = session.run(query_string, org_id=org_id, limit=limit)
             leads = []
             for record in results:

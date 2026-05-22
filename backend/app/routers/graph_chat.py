@@ -34,7 +34,7 @@ async def ask_question(question: str):
 
 @router.get("/query/")
 async def run_query(cypher_query: str):
-    from app.core.database import query
+    from app.core.clients import query
     result = query(cypher_query)
     return {"result": result}
 
@@ -60,7 +60,7 @@ async def add_engagement_voice(
     current_time_str = now_ist.strftime("%Y-%m-%d %H:%M:%S")
 
     # Ensure the prospect node exists
-    from app.core.database import query
+    from app.core.clients import query
     query(f"MERGE (p:Prospect {{Name: '{prospect_name}'}})")
 
     # Create a generic Engagement node and link it to the prospect
@@ -92,7 +92,7 @@ async def add_engagement_text(
     current_time_str = now_ist.strftime("%Y-%m-%d %H:%M:%S")
 
     # Ensure the prospect node exists
-    from app.core.database import query
+    from app.core.clients import query
     query(f"MERGE (p:Prospect {{Name: '{prospect_name}'}})")
 
     # Create Engagement node and link to Prospect

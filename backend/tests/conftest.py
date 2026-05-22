@@ -1,7 +1,7 @@
 """Shared pytest fixtures for backend characterization tests.
 
 External deps (Neo4j, Mongo, Pinecone, S3, LLM, Tavily) are source-patched
-at `app.core.database.*` and `app.core.llm_config.*`. Inline `MongoClient(...)`
+at `app.core.clients.*` and `app.core.llm_config.*`. Inline `MongoClient(...)`
 constructions in routers are patched at each `app.routers.<domain>.MongoClient`
 binding (see `mock_mongo` below). This convention is documented in
 specs/2026-05-12-backend-modularization-design.md §6.
@@ -74,19 +74,19 @@ from app.main import app as _app  # noqa: F401, E402
 
 @pytest.fixture
 def mock_neo4j(mocker):
-    """Mock Neo4j driver — single source-patch at app.core.database.driver."""
+    """Mock Neo4j driver — single source-patch at app.core.clients.driver."""
     mock_driver = MagicMock()
     mock_session = MagicMock()
     mock_driver.session.return_value.__enter__.return_value = mock_session
     mock_driver.session.return_value.__exit__.return_value = False
-    mocker.patch("app.core.database.driver", mock_driver)
+    mocker.patch("app.core.clients.driver", mock_driver)
     return {"driver": mock_driver, "session": mock_session}
 
 
 @pytest.fixture
 def mock_mongo(mocker):
-    """Mock MongoDB client. Source-patches `app.core.database.client` so
-    `database.client[...]` lookups in api.py / services.py return the mock.
+    """Mock MongoDB client. Source-patches `app.core.clients.client` so
+    `clients.client[...]` lookups in api.py / services.py return the mock.
 
     Also patches `MongoClient` in each module where endpoint handlers construct
     fresh `MongoClient(mongo_uri)` instances inline — those bypass the
@@ -96,7 +96,7 @@ def mock_mongo(mocker):
     """
     mongo = MagicMock()
     mock_constructor = MagicMock(return_value=mongo)
-    mocker.patch("app.core.database.client", mongo)
+    mocker.patch("app.core.clients.client", mongo)
     # Phase-A routers that inline-construct MongoClient (extracted from api.py):
     for mod in (
         "app.routers.org_auth",
@@ -126,34 +126,34 @@ def mock_llm_config(mocker):
     """Source-patch all llm_config globals + the shared `graph` Neo4jGraph.
 
     Note: after Task 2, llm_config no longer holds its own `graph` attribute —
-    it accesses `database.graph` directly. So `graph` is only patched on
-    `app.core.database`. The other names (chain, chain2, llm, llm2,
+    it accesses `clients.graph` directly. So `graph` is only patched on
+    `app.core.clients`. The other names (chain, chain2, llm, llm2,
     llm_transformer) remain module-level attrs of app.core.llm_config.
     """
     mocks = {}
     for name in ("chain", "chain2", "llm", "llm2", "llm_transformer"):
         mocks[name] = MagicMock(name=f"llm_config.{name}")
         mocker.patch(f"app.core.llm_config.{name}", mocks[name])
-    # graph lives only on app.core.database now (llm_config uses database.graph).
-    mocks["graph"] = MagicMock(name="database.graph")
-    mocker.patch("app.core.database.graph", mocks["graph"])
+    # graph lives only on app.core.clients now (llm_config uses clients.graph).
+    mocks["graph"] = MagicMock(name="clients.graph")
+    mocker.patch("app.core.clients.graph", mocks["graph"])
     return mocks
 
 
 @pytest.fixture
 def mock_s3(mocker):
     s3 = MagicMock()
-    mocker.patch("app.core.database.s3_client", s3)
+    mocker.patch("app.core.clients.s3_client", s3)
     return s3
 
 
 @pytest.fixture
 def mock_pinecone(mocker):
-    """Source-patch the database.pc singleton. The inline Pinecone constructor
-    in api.py is gone (replaced with database.pc.Index in Task 2)."""
+    """Source-patch the clients.pc singleton. The inline Pinecone constructor
+    in api.py is gone (replaced with clients.pc.Index in Task 2)."""
     pc = MagicMock()
     pc.Index.return_value.query.return_value = {"matches": []}
-    mocker.patch("app.core.database.pc", pc)
+    mocker.patch("app.core.clients.pc", pc)
     return pc
 
 

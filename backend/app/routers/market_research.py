@@ -5,7 +5,7 @@ from datetime import datetime
 
 from fastapi import APIRouter, HTTPException
 
-from app.core import database
+from app.core import clients
 from app.models import MarketRequest
 from app.services import market_research as market_research_service
 from app.services._claude_budget import CLAUDE_API_KEY
@@ -30,7 +30,7 @@ async def market_research(request: MarketRequest):
         )
 
     # MongoDB (pymongo client)
-    db = database.client["Scout_Agent"]
+    db = clients.client["Scout_Agent"]
     collection = db["Market_Intelligence"]
 
     # Filter by user_id only for multitenancy
@@ -50,7 +50,7 @@ async def market_research(request: MarketRequest):
 
     # --- Neo4j query inside a thread - get company profile by org_id ---
     def fetch_company_profile():
-        with database.driver.session() as session:
+        with clients.driver.session() as session:
             # Get the company profile filtered by org_id (if provided)
             if request.org_id:
                 result = session.run(
@@ -135,7 +135,7 @@ async def market_research_claude(request: MarketRequest):
             detail=f"Unsupported component_name: {request.component_name}"
         )
 
-    db = database.client["Scout_Agent"]
+    db = clients.client["Scout_Agent"]
     collection = db["Market_Intelligence"]
 
     query = {
@@ -152,7 +152,7 @@ async def market_research_claude(request: MarketRequest):
             return {"status": "success", "data": latest_report}
 
     def fetch_company_profile():
-        with database.driver.session() as session:
+        with clients.driver.session() as session:
             if request.org_id:
                 result = session.run(
                     "MATCH (c:CompanyProfile {org_id: $org_id}) RETURN c LIMIT 1",

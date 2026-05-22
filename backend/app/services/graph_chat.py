@@ -17,10 +17,10 @@ import speech_recognition as sr
 
 from langchain_core.messages import SystemMessage, HumanMessage
 
-from app.core import database
+from app.core import clients
 from app.core import llm_config
 from app.core.config import PREDEFINED_QUESTIONS, rapidapi_key
-from app.core.database import query  # function — local binding ok
+from app.core.clients import query  # function — local binding ok
 
 
 def convert_audio_to_text(file):
@@ -137,7 +137,7 @@ def get_ranked_prospects():
     ORDER BY p.prospect_score DESC
     """
 
-    with database.driver.session() as session:
+    with clients.driver.session() as session:
         results = session.run(query_string).data()
 
     if not results:

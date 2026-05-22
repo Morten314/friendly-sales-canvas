@@ -6,8 +6,8 @@ from datetime import datetime
 from fastapi import APIRouter, Body, HTTPException, Query
 from pymongo import MongoClient
 
-from app.core import database
-from app.core.database import upsert_node
+from app.core import clients
+from app.core.clients import upsert_node
 from app.models import EditRequest
 
 router = APIRouter()
@@ -63,7 +63,7 @@ async def create_or_update_profile(
                 # Convert everything else to string
                 data[key] = str(value)
 
-        with database.driver.session() as session:
+        with clients.driver.session() as session:
             # Map profile_type to Neo4j label (handle case differences)
             neo4j_label = profile_type
             if profile_type == "company":
@@ -133,7 +133,7 @@ async def get_single_profile(
     For company profiles, also includes customer profiles from MongoDB.
     """
     try:
-        with database.driver.session() as session:
+        with clients.driver.session() as session:
             # For company profiles, filter by org_id (required for multi-org support)
             if profile_type == "company":
                 if not org_id:
@@ -226,7 +226,7 @@ async def cleanup_company_profiles():
     Keeps the first one found and deletes all others.
     """
     try:
-        with database.driver.session() as session:
+        with clients.driver.session() as session:
             # Get all company profiles
             result = session.run("MATCH (c:CompanyProfile) RETURN c, id(c) as node_id ORDER BY id(c)")
             records = list(result)
@@ -262,7 +262,7 @@ def process_edit(request: EditRequest):
     password = urllib.parse.quote_plus("Brewra@Best09")
     mongo_uri = f"mongodb+srv://{username}:{password}@brewra-db.d3hvuf8.mongodb.net/?retryWrites=true&w=majority&appName=brewra-db"
     client = MongoClient(mongo_uri)
-    db = database.client["Scout_Agent"]
+    db = clients.client["Scout_Agent"]
     collection = db["Market_Intelligence"]
 
     try:

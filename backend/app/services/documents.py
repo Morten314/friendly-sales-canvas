@@ -10,8 +10,8 @@ are the reusable, non-route pieces of the documents domain.
 import pandas as pd
 from langchain_community.document_loaders import PyPDFLoader, TextLoader
 
-from app.core.database import query  # function — local binding ok
-from app.core import database
+from app.core.clients import query  # function — local binding ok
+from app.core import clients
 from app.core import llm_config
 
 
@@ -27,7 +27,7 @@ def load_document(file_path):
 def grapher(file_path):
     text = load_document(file_path)
     graph_documents = llm_config.llm_transformer.convert_to_graph_documents(text)
-    database.graph.add_graph_documents(graph_documents)
+    clients.graph.add_graph_documents(graph_documents)
 
 def process_prospect_list(file_path):
     """Process the prospect list and add data to Neo4j."""

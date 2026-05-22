@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, Query
 
-from app.core import database
+from app.core import clients
 from app.models import CustomerProfileRequest, SuggestedICPToCustomerProfileRequest
 
 # Phase-A:
@@ -34,7 +34,7 @@ async def create_or_update_customer_profile(request: CustomerProfileRequest):
 
         # Get company profile from Neo4j to include in MongoDB document (filter by org_id)
         company_profile_data = {}
-        with database.driver.session() as session:
+        with clients.driver.session() as session:
             result = session.run(
                 "MATCH (c:CompanyProfile {org_id: $org_id}) RETURN c LIMIT 1",
                 org_id=request.org_id
@@ -170,7 +170,7 @@ async def get_customer_profile(org_id: str = Query(...)):
 
         if not document:
             # If no MongoDB document exists, try to get from Neo4j and return empty customer profiles
-            with database.driver.session() as session:
+            with clients.driver.session() as session:
                 result = session.run(
                     "MATCH (c:CompanyProfile {org_id: $org_id}) RETURN c LIMIT 1",
                     org_id=org_id
@@ -357,7 +357,7 @@ async def save_suggested_icp_as_customer_profile(request: SuggestedICPToCustomer
         # Get company profile from Neo4j to include (reuse existing if present)
         company_profile_data = existing_doc.get("company_profile") or {}
         if not company_profile_data:
-            with database.driver.session() as session:
+            with clients.driver.session() as session:
                 result = session.run(
                     "MATCH (c:CompanyProfile {org_id: $org_id}) RETURN c LIMIT 1",
                     org_id=request.org_id

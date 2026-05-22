@@ -4,7 +4,7 @@ from typing import Dict
 
 from fastapi import APIRouter, Query
 
-from app.core import database
+from app.core import clients
 from app.core import llm_config
 from app.core.config import STAGE_ORDER, STAGE_MAPPING
 from app.models import SalesPipelineResponse, TimeframeResponse, StageStats  # noqa: F401 — kept for response-shape parity with api.py
@@ -23,7 +23,7 @@ def get_sales_pipeline(user_id: str = Query(...), timeframe: int = Query(...)):
     RETURN l.stage AS stage, count(*) AS count
     """
 
-    with database.driver.session() as session:
+    with clients.driver.session() as session:
         results = session.run(query_string, {
             "start_date": start_date.isoformat(),
             "end_date": end_date.isoformat()

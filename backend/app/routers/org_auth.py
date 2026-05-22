@@ -7,7 +7,7 @@ from typing import List
 from fastapi import APIRouter, Body, HTTPException, Query
 from pymongo import MongoClient
 
-from app.core import database
+from app.core import clients
 from app.core.logging import logger
 from app.models import RegistrationRequest, RegistrationResponse
 
@@ -212,7 +212,7 @@ async def create_registration(registration: RegistrationRequest):
     """
     try:
         # Connect to separate registration database
-        db = database.client["Registration_DB"]
+        db = clients.client["Registration_DB"]
         collection = db["registrations"]
 
         # Create registration document with timestamp
@@ -246,7 +246,7 @@ async def get_registrations():
     """
     try:
         # Connect to separate registration database
-        db = database.client["Registration_DB"]
+        db = clients.client["Registration_DB"]
         collection = db["registrations"]
 
         # Fetch all registrations ordered by timestamp (descending - most recent first)

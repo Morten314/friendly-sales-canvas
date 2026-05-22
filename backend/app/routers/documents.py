@@ -20,7 +20,7 @@ from langchain_pinecone import PineconeVectorStore
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from pymongo import MongoClient
 
-from app.core import database
+from app.core import clients
 from app.core.config import pinecone_api_key, s3_bucket, together_api_key
 from app.core.logging import logger
 from app.services import documents as documents_service
@@ -79,7 +79,7 @@ async def process_file_to_embeddings(file_key: str, user_id: str, file_name: str
 
         # Download file from S3
         local_file_path = f"/tmp/{file_name}"
-        database.s3_client.download_file(s3_bucket, file_key, local_file_path)
+        clients.s3_client.download_file(s3_bucket, file_key, local_file_path)
 
         # Load document based on file type
         if file_name.lower().endswith('.pdf'):
@@ -167,7 +167,7 @@ async def process_file_to_embeddings(file_key: str, user_id: str, file_name: str
         # Create or get Pinecone index
         index_name = "brewra-documents"
         try:
-            database.pc.create_index(
+            clients.pc.create_index(
                 name=index_name,
                 dimension=1024,  # multilingual-e5-large-instruct embedding dimension (1024)
                 metric="cosine"
@@ -360,7 +360,7 @@ async def upload_document(
         # Upload to S3
         try:
             file_content = await file.read()
-            database.s3_client.put_object(
+            clients.s3_client.put_object(
                 Bucket=s3_bucket,
                 Key=file_key,
                 Body=file_content,
@@ -642,7 +642,7 @@ async def delete_data_source(file_id: str):
         # 1. Delete from AWS S3 (only for file data sources, not URLs)
         if not is_url_data_source and file_key:
             try:
-                database.s3_client.delete_object(Bucket=s3_bucket, Key=file_key)
+                clients.s3_client.delete_object(Bucket=s3_bucket, Key=file_key)
                 logger.info(f"Deleted file from S3: {file_key}")
             except Exception as e:
                 error_msg = str(e)
@@ -661,7 +661,7 @@ async def delete_data_source(file_id: str):
         if not is_url_data_source and org_id and file_key:
             try:
                 index_name = "brewra-documents"
-                index = database.pc.Index(index_name)
+                index = clients.pc.Index(index_name)
 
                 # Check if namespace exists first and log what we're searching for
                 logger.info(f"Attempting Pinecone deletion: namespace='{org_id}', file_id='{actual_file_id}', file_key='{file_key}'")
