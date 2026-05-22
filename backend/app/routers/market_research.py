@@ -22,4 +22,4 @@ async def market_research_claude(request: MarketRequest):
     try:
         return await mr_service.run_market_research(request, llm_backend="claude")
     except BudgetExhaustedError as e:
-        raise HTTPException(status_code=429, detail=str(e))
+        raise HTTPException(status_code=429, detail=e.args[0])

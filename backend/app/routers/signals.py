@@ -38,7 +38,7 @@ async def generate_signals_batch_claude(request: MarketRequest):
     try:
         return await signals_service.generate_signals_batch_claude(request)
     except BudgetExhaustedError as e:
-        raise HTTPException(status_code=429, detail=str(e))
+        raise HTTPException(status_code=429, detail=e.args[0])
 
 
 @router.get("/fetch-signals", response_model=FetchSignalsResponse)
@@ -69,4 +69,4 @@ async def signal_ask_claude(request: SignalAskRequest):
     try:
         return await signals_service.signal_ask_claude(request)
     except BudgetExhaustedError as e:
-        raise HTTPException(status_code=429, detail=str(e))
+        raise HTTPException(status_code=429, detail=e.args[0])
