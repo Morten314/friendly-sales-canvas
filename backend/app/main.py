@@ -10,19 +10,11 @@ This module owns:
 Domain routers register themselves here. Routes themselves live in
 app/routers/<domain>.py.
 """
-import logging
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core import database
-
-# Logging configuration.
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+from app.core.logging import logger  # noqa: F401 — re-exported for backward compat within Phase B
 
 app = FastAPI()
 

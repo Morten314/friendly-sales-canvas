@@ -22,7 +22,7 @@ from pymongo import MongoClient
 
 from app.core import database
 from app.core.config import pinecone_api_key, s3_bucket, together_api_key
-from app.main import logger
+from app.core.logging import logger
 from app.services import documents as documents_service
 
 router = APIRouter()

@@ -8,7 +8,7 @@ from fastapi import APIRouter, Body, HTTPException, Query
 from pymongo import MongoClient
 
 from app.core import database
-from app.main import logger
+from app.core.logging import logger
 from app.models import RegistrationRequest, RegistrationResponse
 
 router = APIRouter()

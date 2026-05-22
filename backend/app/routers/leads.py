@@ -8,7 +8,7 @@ from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
 
 from app.core import database
 from app.core.database import upsert_node
-from app.main import logger
+from app.core.logging import logger
 from app.models import LeadCreateRequest, LeadUpdateRequest
 
 router = APIRouter()
