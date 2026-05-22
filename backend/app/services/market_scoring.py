@@ -266,7 +266,7 @@ def trigger_or_get_market_scores(
 
     Returns a dict matching the LeadMarketScoresResponse schema:
       org_id, total_leads, processing_status, active_run_id, last_scored_at, rows.
-    Raises HTTPException(404) if no rows exist and no refresh was requested.
+    Raises MarketScoreNotFoundError if no rows exist and no refresh was requested.
     """
     import uuid  # function-local: uuid is used only in this function
 
