@@ -22,9 +22,9 @@ The characterization test suite is again the safety net. Test count is unchanged
 
 ### 2.1 In scope
 
-1. **New `app/core/dependencies.py` with 13 providers** — one per injected resource:
+1. **New `app/core/dependencies.py` with 12 providers** — one per injected resource:
    - **5 client providers:** `get_neo4j_driver`, `get_neo4j_graph`, `get_mongo`, `get_s3`, `get_pinecone`.
-   - **8 LLM providers:** `get_llm`, `get_llm2`, `get_llm_transformer`, `get_vision`, `get_memory`, `get_agent_chain`, `get_chain`, `get_chain2`. (Provider names match the `LLMBundle` field names; no rename boundary.)
+   - **7 LLM providers:** `get_llm`, `get_llm2`, `get_llm_transformer`, `get_memory`, `get_agent_chain`, `get_chain`, `get_chain2`. (Provider names match the `LLMBundle` field names; no rename boundary. `vision` is intentionally excluded — `grep -rn "llm_config\.vision"` across `backend/` finds zero consumers; constructing the heavy `llama-3.2-90b-vision-preview` instance at every startup for a field no one reads is unjustified. If a consumer surfaces during execution, add the field back.)
 2. **`lifespan` in `app/main.py`** — an `@asynccontextmanager` function that builds both bundles, stashes them on `app.state.clients` and `app.state.llm`, and runs the existing `_ensure_market_scoring_indexes` + `graph.refresh_schema()` setup. Passed to `FastAPI(lifespan=...)`. The deprecated `@app.on_event("startup")` is removed.
 3. **Refactor `app/core/clients.py` and `app/core/llm_config.py` into factory-only modules.** Each exposes a `build_*` factory function and a `*Bundle` dataclass. No module-level state, no construction at import time. The `BREWRA_SKIP_DB_INIT` env var continues to gate connection attempts, but the check moves from module top to inside `build_clients()`.
 4. **Convert all 12 service-layer files** (11 domain services — `pipeline`, `org_auth`, `profiles`, `customer_profile`, `documents`, `leads`, `graph_chat`, `market_research`, `icp`, `signals`, `market_scoring` — plus the `_retrieval` shared helper) to take clients/LLMs as explicit function arguments. **Total ~94 service-side usage sites: ~75 qualified `clients.*` accesses + ~11 qualified `llm_config.*` accesses + 8 direct-import sites for `query` / `upsert_node`** (which the qualified-access greps miss and must be tracked separately). **Explicitly excluded:** `_claude_budget.py` and `_llm_helpers.py` — verified by grep, neither references `clients.*` or `llm_config.*`. They convert via no-op (no signature changes needed).
@@ -36,7 +36,11 @@ The characterization test suite is again the safety net. Test count is unchanged
    - Unit fixtures stay as mock-builders; tests pass mocks directly as positional args to service functions.
    - One new session-scope autouse fixture asserts `app.dependency_overrides == {}` at session teardown (leak-detection).
 9. **Move all non-client functions** out of `clients.py` into `app/services/_neo4j_helpers.py`: `query`, `results_to_string`, `escape_property_name`, and **`upsert_node`** (the latter is currently in `clients.py:81-136` and imported by `services/leads.py`, `services/market_scoring.py`, `services/profiles.py`; uses `escape_property_name` internally so the two must move together). These are query utilities, not clients. Pattern matches existing underscore-prefixed shared helper modules (`_retrieval`, `_claude_budget`, `_llm_helpers`).
-10. **Mark TD-003 closed** in `docs/TECH_DEBT.md` with a "Resolved by Phase F" line.
+
+   **Signature change for `query`:** the current `query(query_string)` in `clients.py:56-59` reads the module-level `driver` via closure. After relocation that closure breaks, so the new signature is **`query(driver, query_string)`**. All 5 caller sites — 3 in `routers/graph_chat.py` (lines 45, 71, 103) and 2 in `services/documents.py:38` + `services/graph_chat.py:24` — must pass `driver` (acquired via `Depends(get_neo4j_driver)` in routers, threaded through service args otherwise). `upsert_node` already takes `tx` as its first parameter and does not need a new arg.
+
+10. **Move `_ensure_market_scoring_indexes` from `app/main.py:158` into `app/services/market_scoring.py`** with new signature `_ensure_market_scoring_indexes(mongo)`. Today it lives in `main.py` and reads `clients.client` internally through `_get_market_score_collections()`. After Phase F, lifespan calls `_ensure_market_scoring_indexes(app.state.clients.client)` from its new home in market_scoring.py. The move happens in commit 15 (alongside the `market_scoring` service conversion).
+11. **Mark TD-003 closed** in `docs/TECH_DEBT.md` with a "Resolved by Phase F" line.
 
 ### 2.2 Out of scope (deferred)
 
@@ -151,11 +155,12 @@ No module-level state. All non-client functions (`query`, `results_to_string`, `
 
 `app/core/llm_config.py` exposes an `LLMBundle` dataclass + a `build_llm_config(clients: ClientBundle) -> LLMBundle` factory. The factory **takes the `ClientBundle` as input** because `chain` and `chain2` (the two `GraphCypherQAChain` instances) are constructed conditionally on `clients.graph is not None` (today: `llm_config.py:162` and the analogous site for `chain2`). The bundle and factory:
 
+All third-party imports (`ChatGroq`, `ChatOpenAI`, `LLMGraphTransformer`, `GraphCypherQAChain`, `ConversationBufferMemory`, `initialize_agent`, `AgentType`, `Tool`, `TavilySearchResults`, `PromptTemplate`) and the two inline Cypher prompt-template string constants stay at module scope in `llm_config.py`. Only the *construction calls* move into the `build_llm_config()` factory body.
+
 ```python
 @dataclass
 class LLMBundle:
     llm: ChatGroq
-    vision: ChatGroq
     llm2: ChatOpenAI
     llm_transformer: LLMGraphTransformer
     memory: ConversationBufferMemory
@@ -166,7 +171,6 @@ class LLMBundle:
 
 def build_llm_config(clients: ClientBundle) -> LLMBundle:
     llm = ChatGroq(model="llama-3.3-70b-versatile", api_key=groq_api_key)
-    vision = ChatGroq(model="llama-3.2-90b-vision-preview", api_key=groq_api_key)
     llm2 = ChatOpenAI(...)  # Together-via-OpenAI-compat
     llm_transformer = LLMGraphTransformer(llm=llm)
     memory = ConversationBufferMemory(return_messages=True)
@@ -196,7 +200,7 @@ def build_llm_config(clients: ClientBundle) -> LLMBundle:
     )
 
     return LLMBundle(
-        llm=llm, vision=vision, llm2=llm2,
+        llm=llm, llm2=llm2,
         llm_transformer=llm_transformer, memory=memory,
         chain=chain, chain2=chain2, agent_chain=agent_chain,
     )
@@ -214,7 +218,7 @@ from fastapi import FastAPI
 
 from app.core.clients import build_clients
 from app.core.llm_config import build_llm_config
-from app.services.market_scoring import _ensure_market_scoring_indexes
+from app.services.market_scoring import _ensure_market_scoring_indexes   # moved here from app/main.py (item 10 in §2.1)
 
 
 @asynccontextmanager
@@ -229,7 +233,7 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             logger.error("Neo4j refresh_schema failed: %s", e)
     if app.state.clients.client is not None:
-        _ensure_market_scoring_indexes(app.state.clients.client)
+        _ensure_market_scoring_indexes(app.state.clients.client)   # new signature: takes mongo
 
     yield
     # No teardown; clients are process-lifetime singletons.
@@ -270,7 +274,6 @@ def get_pinecone(request: Request):
 def get_llm(request: Request):                  return request.app.state.llm.llm
 def get_llm2(request: Request):                 return request.app.state.llm.llm2
 def get_llm_transformer(request: Request):      return request.app.state.llm.llm_transformer
-def get_vision(request: Request):               return request.app.state.llm.vision
 def get_memory(request: Request):               return request.app.state.llm.memory
 def get_agent_chain(request: Request):          return request.app.state.llm.agent_chain
 def get_chain(request: Request):                return request.app.state.llm.chain
@@ -348,11 +351,11 @@ def trigger_market_scores(
     bg: BackgroundTasks,
     driver=Depends(get_neo4j_driver),
     mongo=Depends(get_mongo),
-    llm=Depends(get_llm),
+    llm2=Depends(get_llm2),
 ):
     bg.add_task(
         services.market_scoring._run_market_scoring_for_org,
-        driver, mongo, llm, org_id,
+        driver, mongo, llm2, org_id,
     )
 ```
 
@@ -369,7 +372,7 @@ def _get_market_score_collections(mongo):
 
 
 # app/services/market_scoring.py — background task after Phase F
-def _run_market_scoring_for_org(driver, mongo, llm, user_id: str, org_id: str, run_id: str) -> None:
+def _run_market_scoring_for_org(driver, mongo, llm2, user_id: str, org_id: str, run_id: str) -> None:
     # Every internal access to clients.* / llm_config.* becomes a parameter
     # reference. The function's outer try/except BrewraError wrapper (Phase D)
     # stays exactly as it is.
@@ -381,11 +384,59 @@ def _run_market_scoring_for_org(driver, mongo, llm, user_id: str, org_id: str, r
     leads_db = mongo["Scout_Agent"]["leads"]                       # was: clients.client["Scout_Agent"]
     leads = leads_db.find(...)
 
-    response = llm.invoke([HumanMessage(content=prompt)])          # was: llm_config.llm2.invoke(...)
+    response = llm2.invoke([HumanMessage(content=prompt)])         # was: llm_config.llm2.invoke(...)
     ...
 ```
 
 Every caller of `_get_market_score_collections` inside `market_scoring.py` (~5 sites) now passes `mongo` explicitly. The same shape applies to `process_file_to_embeddings` in `services/documents.py` — it takes `(driver, mongo, s3, pinecone, …)` and threads them through its internal calls.
+
+### 3.7 Backward-compatible fallback during coexistence (commits 4–15)
+
+Several converted service functions are called by services that haven't been converted yet — the call-chain crosses commit boundaries. Without mitigation, the first commit that converts a callee breaks every unconverted caller's call signature and the test suite goes red until all callers catch up. The §4.5 bisectability guarantee would be violated.
+
+The fix: during the coexistence period (commits 4–15), **every converted service function whose callees-or-callers span multiple commits accepts its client/LLM args with `None` defaults and falls back to the module global**. Because the prep commits (1–3) keep the module globals alive, the fallback works for unconverted callers without any change to their code. Each subsequent conversion commit (4–15) updates the caller sites it owns to pass the explicit arg. Commit 16 removes the defaults and the fallback together with deleting the globals.
+
+```python
+# app/services/_retrieval.py — after commit 8 (with fallback)
+def _fetch_pinecone_supporting_context(pc=None, queries=None, org_id=None, top_k=5):
+    if pc is None:
+        # Fallback for unconverted callers (commits 9–14 still call old signature).
+        # Module global is alive throughout commits 1–15; commit 16 removes both
+        # the default and this fallback.
+        from app.core import clients
+        pc = clients.pc
+    ...
+```
+
+```python
+# app/services/leads.py — after commit 10 (with fallback)
+def get_leads_for_org(driver=None, org_id=None, limit=None, order_by_recent=False):
+    if driver is None:
+        from app.core import clients
+        driver = clients.driver
+    ...
+```
+
+```python
+# app/services/leads.py — after commit 16 (fallback removed)
+def get_leads_for_org(driver, org_id, limit=None, order_by_recent=False):
+    ...
+```
+
+Functions that have **no cross-commit callers** (leaf services like `pipeline`, `org_auth`, `profiles`, `customer_profile` once their internal calls to other domains are sorted) use the simple form from §3.4 — no fallback needed. The fallback is targeted, not blanket.
+
+**Greppable invariant:** during commits 4–15, the pattern `(driver|mongo|llm|pc|s3|graph)=None` should appear at the start of every cross-commit-callable function. After commit 16, that grep against `backend/app/services/` should be empty (added as a §7.1 acceptance criterion).
+
+**Confirmed cross-commit call paths requiring the fallback** (verified by grep):
+
+| Callee | In commit | Callers | In commits |
+|---|---|---|---|
+| `_retrieval._fetch_pinecone_supporting_context` | 8 | `services/icp.py` (3 sites), `services/signals.py` (3 sites), `services/market_research.py` (1 site) | 12, 13, 14 |
+| `leads.get_leads_for_org` | 10 | `services/signals.py` (2 sites), `services/market_scoring.py` (1 site) | 14, 15 |
+| `graph_chat.score_prospect` | 11 | `services/documents.py:64` (lazy import) | 9 (already converted) |
+| `icp._reserve_unique_icp_id`, `_ensure_icp_id_registry_indexes`, `_release_icp_id` | 13 | `services/customer_profile.py` (7 sites at lines 21, 25, 77, 86, 104, 143, 147, 183, 193, 224, 229, 292, 365, 368, 392) | 7 (already converted) |
+
+For the reverse-direction cases (callee converted *after* caller — `score_prospect`, the `icp` helpers), the converting commit must also update the already-converted caller to pass the explicit arg. The §4.2 commit table notes this in the row for each affected commit.
 
 ---
 
@@ -395,30 +446,30 @@ Single feature branch off `master`: `refactor-backend-modularization-phase-f`. ~
 
 ### 4.1 Prep (3 commits)
 
-1. **Introduce `ClientBundle`, `LLMBundle` dataclasses + `build_clients()`, `build_llm_config()` factories.** Module-level construction stays — the factories are also called at module import to populate the existing module globals (`clients.driver`, `llm_config.llm`, etc.). No test changes. Behavior identical. This commit introduces the new shape without changing anything yet.
+1. **Introduce `ClientBundle`, `LLMBundle` dataclasses + `build_clients()`, `build_llm_config()` factories.** Module-level construction stays — the factories are also called at module import to populate the existing module globals (`clients.driver`, `llm_config.llm`, etc.). No test changes. Behavior identical. This commit introduces the new shape without changing anything yet. **The kept-alive module globals are the substrate the backward-compat fallback pattern (§3.7) relies on during the coexistence period; they must remain available through commit 15.**
 
-2. **Add `app/core/dependencies.py` (all 13 providers) + lifespan in `app/main.py`.** Lifespan constructs bundles and stores on `app.state`. Module-level construction in `clients.py`/`llm_config.py` is still alive (factories called both in lifespan AND in module body). `BREWRA_SKIP_DB_INIT` is now honored in two places — both honor the same flag, no behavior drift. Verify in this commit that triggering a TestClient request actually invokes lifespan and populates `app.state` (FastAPI runs lifespan on first request).
+2. **Add `app/core/dependencies.py` (all 12 providers) + lifespan in `app/main.py`.** Lifespan constructs bundles and stores on `app.state`. Module-level construction in `clients.py`/`llm_config.py` is still alive (factories called both in lifespan AND in module body). `BREWRA_SKIP_DB_INIT` is now honored in two places — both honor the same flag, no behavior drift. Verify in this commit that triggering a TestClient request actually invokes lifespan and populates `app.state` (FastAPI runs lifespan on first request).
 
 3. **Add `app.dependency_overrides`-based fixtures to `tests/conftest.py` and `tests/unit/conftest.py` alongside existing `mocker.patch` fixtures.** Both fixture sets work simultaneously. Add the session-scope autouse leak-detection fixture. No service or test-body rewrites yet.
 
 ### 4.2 Service conversions (12 commits, easy → hard, mirroring Phase A order)
 
-Per-commit blast radius reflects the count from `grep -rn "clients\.…|llm_config\.…" backend/app/services/X.py`.
+Per-commit blast radius reflects the count from `grep -rn "clients\.…|llm_config\.…" backend/app/services/X.py`. Functions with cross-commit callers use the backward-compat fallback pattern (§3.7); functions used only within their own domain use the simple form (§3.4). The fallback keeps the test suite green at every commit boundary — §4.5 bisectability holds.
 
 | # | Commit | Usages | Notes |
 |---|---|---|---|
-| 4 | `pipeline` | 2 | Warm-up. No LLM. |
-| 5 | `org_auth` | 5 | No LLM. |
-| 6 | `profiles` | 5 | No LLM. |
-| 7 | `customer_profile` | 7 | No LLM. |
-| 8 | `_retrieval` | 1 | Pinecone-only shared helper. Consumed by `market_research`, `signals`, `icp` — those services pass `pc` through. |
-| 9 | `documents` | 18 | LLM (`llm_transformer`) + Mongo + S3. Largest non-LLM-heavy file. |
-| 10 | `leads` | 10 | Includes background-task wiring through `_run_market_scoring_for_org` call from the router. |
-| 11 | `graph_chat` | 2 (svc) + 5 (router) | Router has 5 direct sites: 3 `from app.core.clients import query` (lines 45, 71, 103) + 2 `llm_config.chain*.run(...)` (lines 34, 39). Router-side data access pushed into `services/graph_chat.py` first, then converted. |
-| 12 | `market_research` | 3 | LLM. |
-| 13 | `icp` | 7 | LLM. |
-| 14 | `signals` | 17 | LLM, largest LLM file. |
-| 15 | `market_scoring` | 7 + internal helper | Stateful, background-task heavy. Commit must also refactor `_get_market_score_collections(mongo)` (was: read `clients.client` directly; now: take `mongo` as parameter; threaded through ~5 internal callers within this file). Worked example in §3.6. Last per Phase A precedent. |
+| 4 | `pipeline` | 2 | Warm-up. No LLM. No cross-commit callers. Uses simple §3.4 form. |
+| 5 | `org_auth` | 5 | No LLM. No cross-commit callers. Simple form. |
+| 6 | `profiles` | 5 | Imports `upsert_node` from clients (commit 16 moves it). No cross-commit callers. Simple form. |
+| 7 | `customer_profile` | 7 | Calls `icp._reserve_unique_icp_id` / `_ensure_icp_id_registry_indexes` / `_release_icp_id` (callee converted in commit 13). Until then, customer_profile passes nothing extra and the icp helpers fall back to globals (§3.7). **Commit 13 then patches these 7 call sites** in customer_profile.py to pass `mongo` explicitly. |
+| 8 | `_retrieval` | 1 | Pinecone-only shared helper. **Uses §3.7 fallback form** (`pc=None` default) because consumers in commits 12, 13, 14 still call old signature. |
+| 9 | `documents` | 18 | LLM (`llm_transformer`) + Mongo + S3. Largest non-LLM-heavy file. Calls `graph_chat.score_prospect` (callee converted in commit 11); falls back until then. **Commit 11 patches `documents.py:64`** to pass `driver`. |
+| 10 | `leads` | 10 | Includes background-task wiring through `_run_market_scoring_for_org` call from the router. **`get_leads_for_org` uses §3.7 fallback form** because callers in commits 14, 15 still call old signature. |
+| 11 | `graph_chat` | 2 (svc) + 5 (router) | Router has 5 direct sites: 3 `from app.core.clients import query` (lines 45, 71, 103) + 2 `llm_config.chain*.run(...)` (lines 34, 39). Router-side data access pushed into `services/graph_chat.py` first, then converted. **Commit also updates `documents.py:64`** to pass `driver` to `score_prospect`. |
+| 12 | `market_research` | 3 | LLM. **Updates its 1 call site** to `_fetch_pinecone_supporting_context` to pass `pc`. |
+| 13 | `icp` | 7 | LLM. **Updates 3 call sites** to `_fetch_pinecone_supporting_context` (pass `pc`) **and patches `customer_profile.py`'s 7 call sites** to pass `mongo` to icp's helpers. The icp helpers' fallback can be removed in this same commit. |
+| 14 | `signals` | 17 | LLM, largest LLM file. **Updates 3 call sites** to `_fetch_pinecone_supporting_context` (pass `pc`) **and 2 call sites** to `get_leads_for_org` (pass `driver`). |
+| 15 | `market_scoring` | 7 + internal helpers | Stateful, background-task heavy. Commit must also refactor `_get_market_score_collections(mongo)` (now takes `mongo`; threaded through ~5 internal callers within this file). **Moves `_ensure_market_scoring_indexes` from `app/main.py` to `market_scoring.py`** with `mongo` parameter. **Updates 1 call site** to `get_leads_for_org` (pass `driver`). Worked example in §3.6. Last per Phase A precedent. If diff exceeds ~500 LOC, split into 15a (internal helpers + `_get_market_score_collections` + index relocation) and 15b (`_run_market_scoring_for_org` + router wiring). |
 
 Each conversion commit:
 - Rewrites service function signatures to take clients/LLMs as explicit args.
@@ -430,7 +481,7 @@ Each conversion commit:
 
 ### 4.3 Cleanup (1 commit)
 
-16. **Remove module-level state from `clients.py` and `llm_config.py`.** Factories are no longer called at module import. Module globals (`clients.driver`, `llm_config.llm`, etc.) deleted. Lifespan is now the only construction site. Pure-Cypher helpers move to `app/services/_neo4j_helpers.py`. Any straggler `mocker.patch("app.core.clients.…")` calls in tests are deleted. Final grep proves nothing in `app/` reaches into module globals (see §7.1 hard criteria).
+16. **Remove module-level state and fallback defaults in one step.** Factories are no longer called at module import. Module globals (`clients.driver`, `llm_config.llm`, etc.) deleted. Lifespan is now the only construction site. The non-client functions (`query`, `results_to_string`, `escape_property_name`, `upsert_node`) move to `app/services/_neo4j_helpers.py` (with `query` gaining its `driver` parameter — see §2.1 item 9). **Every `=None` default and `if X is None: from app.core import clients; X = clients.X` fallback added in commits 4–15 is removed in this same commit** — the two changes must land together so no intermediate state has globals deleted but fallbacks still pointing at them. Any straggler `mocker.patch("app.core.clients.…")` calls in tests are deleted. Final grep proves nothing in `app/` reaches into module globals AND no `=None` defaults remain on service-function client parameters (see §7.1 hard criteria).
 
 ### 4.4 Per-commit validation
 
@@ -560,6 +611,11 @@ git grep -E "(^|[ (])llm_config\.(llm|llm2|llm_transformer|vision|memory|agent_c
 #     (after item 9 of §2.1, these live in app/services/_neo4j_helpers.py)
 git grep -E "from app\.core\.clients import (query|upsert_node|results_to_string|escape_property_name)" backend/app/   # empty
 
+# 2c. No backward-compat fallback defaults remain in service-function signatures
+#     (§3.7 fallback pattern; defaults are added in commits 4–15, removed in commit 16)
+git grep -E "def \w+\([^)]*\b(driver|mongo|llm|llm2|pc|s3|graph)=None" backend/app/services/   # empty after commit 16
+git grep -E "if (driver|mongo|llm|llm2|pc|s3|graph) is None:" backend/app/services/             # empty after commit 16
+
 # 3. TD-003 retired
 git grep "@app.on_event" backend/app/   # empty
 git grep "lifespan" backend/app/main.py   # 1+ hits
@@ -575,10 +631,11 @@ cd backend && pytest tests/        # green; same test count as Phase E baseline
 
 - `app/core/clients.py` contains only `ClientBundle`, `build_clients`, and imports. No module-level construction.
 - `app/core/llm_config.py` contains only `LLMBundle`, `build_llm_config`, and imports. No module-level construction.
-- `app/core/dependencies.py` exists with all 13 providers (5 client + 8 LLM).
+- `app/core/dependencies.py` exists with all 12 providers (5 client + 7 LLM; `vision` excluded — no consumer).
+- `_ensure_market_scoring_indexes` lives in `app/services/market_scoring.py` with `(mongo)` signature; lifespan imports it from there.
+- `app/services/_neo4j_helpers.py` exists with `query(driver, query_string)`, `results_to_string`, `escape_property_name`, and `upsert_node` (moved from `clients.py`).
 - `app/main.py` defines `lifespan` and passes it to `FastAPI(lifespan=...)`.
 - `_ensure_market_scoring_indexes` runs inside `lifespan`, not via `@app.on_event`.
-- `app/services/_neo4j_helpers.py` holds the moved Cypher utility functions.
 - Session-scope autouse leak-detection fixture is in `tests/conftest.py`.
 - `docs/TECH_DEBT.md` TD-003 has a "Resolved 2026-05-22 by Phase F" line.
 
@@ -594,8 +651,7 @@ cd backend && pytest tests/        # green; same test count as Phase E baseline
 1. **Are there `backend/scripts/*.py` callers that import `app.core.clients` or `app.core.llm_config`?** Grep on commit 1. Likely zero (Phase A's analogous audit found none) but worth confirming. If found, refactor those callsites to invoke factories directly.
 2. **Does any admin tool (`admin_panel.html`, `registration_admin_panel.html` server-side request paths) reach into module globals?** Same audit. Admin panels are static HTML served by FastAPI; if their backing endpoints touch globals, they're caught by the service conversion commits.
 3. **`BREWRA_SKIP_DB_INIT` reference audit.** Today `clients.py` defines a module-level `_SKIP_DB_INIT` constant. Grep on commit 1 for `_SKIP_DB_INIT` references outside `clients.py` (likely zero, but if any exist they must be updated since the constant disappears after commit 16). The env-var name itself stays — only the read site moves into `build_clients()`.
-4. **`LLMBundle.vision` field necessity.** Grep on commit 1 for `llm_config.vision` and `from app.core.llm_config import vision` across `backend/`. If no consumer exists, the field and provider can be dropped from `LLMBundle` / `dependencies.py`. Verified at spec-write time: no qualified `llm_config.vision` access in services/routers, but should re-grep on entry to confirm.
-5. **Position of the leak-detection autouse fixture:** root `tests/conftest.py` (applies to both layers) vs unit-only. Default to root.
+4. **Position of the leak-detection autouse fixture:** root `tests/conftest.py` (applies to both layers) vs unit-only. Default to root.
 
 ---
 
@@ -605,7 +661,7 @@ Phase D's §8 listed twelve Phase E+ candidates. Phase E consumed #2 (test impro
 
 ### Phase G candidates (most likely next phase)
 
-1. **Security hardening.** Cypher injection parameterization (`graph_chat.voice_graph`/`text_graph`, `profiles.py:87,94,104`), missing `LIMIT` on `/leads`, CORS off `*`, raw Cypher endpoint guard. Both Phase D §8 and Phase E §2.2 anchored this as Phase F+. Aligns with "before launch" gate per repo CLAUDE.md "Business State".
+1. **Security hardening.** Cypher injection parameterization (`graph_chat.voice_graph`/`text_graph`, `profiles.py:87,94,104`), missing `LIMIT` on `/leads`, CORS off `*`, raw Cypher endpoint guard. Both Phase D §8 and Phase E §2.2 anchored this as Phase F+. Aligns with "before launch" gate per repo CLAUDE.md "Business State". Note: after Phase F, the raw `query()` function lives at `app/services/_neo4j_helpers.py` with signature `query(driver, query_string)` — parameterization work in Phase G targets that location.
 2. **Pagination convention.** Project-wide bounded-query approach for list endpoints.
 3. **`create_index`-on-hot-path audit.** Confirmed site: `leads.py:255-256` in `batch_upload_leads`. Likely more in `customer_profile.py`. Move each to lifespan or to a migration script.
 4. **B4 small-pattern dedup audit.** JSON detection ×6, company-profile-fetch ×8, `validate_url` ×2, `update_signal_track` ×3.
