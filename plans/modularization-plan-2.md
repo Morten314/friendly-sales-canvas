@@ -12,7 +12,7 @@
 - Reference spec: `specs/2026-05-21-backend-modularization-phase-b-design.md`
 - Naming series: `modularization-plan-1.md` (Phase A, complete), `modularization-plan-2.md` (this), future `modularization-plan-3.md` (Phase C).
 
-**Branch:** `refactor/backend-modularization-phase-b` off `master`. No squash on merge.
+**Branch:** `refactor-backend-modularization-phase-b` off `master` (flat naming matches Phase A's `refactor-backend-modularization-phase-a`; the slash-namespaced form collides with a stale top-level `refactor` ref). No squash on merge.
 
 ---
 
@@ -43,7 +43,7 @@ Before any moves, capture a clean test baseline and inventory the patch targets 
 cd /projects/Brewra/brewra-gtm-intelligence
 git checkout master
 git status   # must be clean
-git checkout -b refactor/backend-modularization-phase-b
+git checkout -b refactor-backend-modularization-phase-b
 ```
 
 - [ ] **Step 2: Capture baseline test result**
@@ -2834,7 +2834,7 @@ cd /projects/Brewra/brewra-gtm-intelligence
 git log --oneline master..HEAD | wc -l
 ```
 
-Expected: 25 commits since branch-off. Spot-check a few via `git checkout <SHA> && pytest backend/tests/ -q && git checkout refactor/backend-modularization-phase-b`.
+Expected: 25 commits since branch-off. Spot-check a few via `git checkout <SHA> && pytest backend/tests/ -q && git checkout refactor-backend-modularization-phase-b`.
 
 - [ ] **Confirm clean working tree.**
 
