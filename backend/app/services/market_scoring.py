@@ -370,8 +370,17 @@ def get_market_scores_status(
     failed_count = int(run_doc.get("failed_count") or 0)
 
     if total_leads <= 0:
-        # get_leads_for_org is already imported at module top (updated in Task 4 Step 6).
-        total_leads = len(get_leads_for_org(org_id, limit=5000, order_by_recent=True))
+        # Degrade-on-failure: status endpoint must stay responsive even if
+        # Neo4j hiccups. total_leads=0 yields a progress_percent of 0 — UI
+        # shows "no progress" rather than a hard 500.
+        try:
+            total_leads = len(get_leads_for_org(org_id, limit=5000, order_by_recent=True))
+        except Exception as e:
+            logger.warning(
+                "Could not fetch leads for scoring status (org_id=%s): %s; defaulting total_leads=0",
+                org_id, e,
+            )
+            total_leads = 0
 
     run_score_filter = {"org_id": org_id, "user_id": user_id, "run_id": target_run_id}
     scored_doc_count = score_coll.count_documents(run_score_filter)
