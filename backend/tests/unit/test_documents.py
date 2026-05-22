@@ -137,19 +137,19 @@ def test_upload_prospect_list_file_uploads_to_s3(mocker, tmp_path):
 # get_document_status / list_user_documents (async)
 # ---------------------------------------------------------------------------
 
-def test_get_document_status_raises_when_missing(mocker, mock_mongo):
+def test_get_document_status_raises_when_missing(mocker, mock_mongo_client):
     """get_document_status takes ONLY file_key — no user_id arg.
     Returns {"status": "success", "data": ...}; raises DocumentNotFoundError
     when the Mongo find_one returns None."""
     coll = MagicMock()
     coll.find_one.return_value = None
-    mock_mongo.__getitem__.return_value.__getitem__.return_value = coll
+    mock_mongo_client.__getitem__.return_value.__getitem__.return_value = coll
 
     with pytest.raises(DocumentNotFoundError):
         asyncio.run(get_document_status(TEST_FILE_KEY))
 
 
-def test_get_document_status_happy_path(mocker, mock_mongo):
+def test_get_document_status_happy_path(mocker, mock_mongo_client):
     """get_document_status wraps the doc in {"status": "success", "data": ...}."""
     coll = MagicMock()
     coll.find_one.return_value = {
@@ -158,7 +158,7 @@ def test_get_document_status_happy_path(mocker, mock_mongo):
         "status": "completed",
         "file_name": "report.pdf",
     }
-    mock_mongo.__getitem__.return_value.__getitem__.return_value = coll
+    mock_mongo_client.__getitem__.return_value.__getitem__.return_value = coll
 
     result = asyncio.run(get_document_status(TEST_FILE_KEY))
 
@@ -167,7 +167,7 @@ def test_get_document_status_happy_path(mocker, mock_mongo):
     assert result["data"]["status"] == "completed"
 
 
-def test_list_user_documents_takes_org_id(mocker, mock_mongo):
+def test_list_user_documents_takes_org_id(mocker, mock_mongo_client):
     """list_user_documents takes org_id (not user_id, despite the function name).
     The implementation uses collection.find().sort() — mock the chain."""
     coll = MagicMock()
@@ -175,7 +175,7 @@ def test_list_user_documents_takes_org_id(mocker, mock_mongo):
         {"file_id": "f1", "org_id": TEST_ORG_ID, "file_name": "a.pdf"},
         {"file_id": "f2", "org_id": TEST_ORG_ID, "file_name": "b.pdf"},
     ]
-    mock_mongo.__getitem__.return_value.__getitem__.return_value = coll
+    mock_mongo_client.__getitem__.return_value.__getitem__.return_value = coll
 
     result = asyncio.run(list_user_documents(TEST_ORG_ID))
 
@@ -187,7 +187,7 @@ def test_list_user_documents_takes_org_id(mocker, mock_mongo):
 # delete_data_source / update_data_source
 # ---------------------------------------------------------------------------
 
-def test_delete_data_source_raises_when_missing(mocker, mock_mongo):
+def test_delete_data_source_raises_when_missing(mocker, mock_mongo_client):
     """delete_data_source(file_id) raises DocumentNotFoundError when the doc
     is absent from MongoDB.  The implementation calls find_one twice (once by
     file_id, once by file_key) and then calls collection.find().limit() for
@@ -196,13 +196,13 @@ def test_delete_data_source_raises_when_missing(mocker, mock_mongo):
     coll.find_one.return_value = None
     # collection.find({}, ...).limit(3) for debug sampling — return empty list
     coll.find.return_value.limit.return_value = []
-    mock_mongo.__getitem__.return_value.__getitem__.return_value = coll
+    mock_mongo_client.__getitem__.return_value.__getitem__.return_value = coll
 
     with pytest.raises(DocumentNotFoundError):
         asyncio.run(delete_data_source(TEST_FILE_ID))
 
 
-def test_update_data_source_raises_on_empty_request(mocker, mock_mongo):
+def test_update_data_source_raises_on_empty_request(mocker, mock_mongo_client):
     """update_data_source(file_id, request: dict) — second arg is the
     update payload as a dict. Empty dict (tags=None, description=None)
     → DocumentValidationError before any Mongo access."""
@@ -216,14 +216,14 @@ def test_update_data_source_raises_on_empty_request(mocker, mock_mongo):
 
 def test_process_file_to_embeddings_catches_brewra_error(
     mocker,
-    mock_mongo,
+    mock_mongo_client,
 ):
     """The S3 download in process_file_to_embeddings is inline at L189:
         clients.s3_client.download_file(s3_bucket, file_key, local_file_path)
     Patch the s3_client attribute and make download_file raise BrewraError.
     The except BrewraError block must catch it and persist a 'failed' status."""
     coll = MagicMock()
-    mock_mongo.__getitem__.return_value.__getitem__.return_value = coll
+    mock_mongo_client.__getitem__.return_value.__getitem__.return_value = coll
     s3 = mocker.patch("app.services.documents.clients.s3_client")
     s3.download_file.side_effect = BrewraError("S3 hiccup")
 
@@ -251,7 +251,7 @@ def test_process_file_to_embeddings_catches_brewra_error(
 # upload_document_file — async happy path
 # ---------------------------------------------------------------------------
 
-def test_upload_document_file_returns_file_id(mocker, mock_mongo):
+def test_upload_document_file_returns_file_id(mocker, mock_mongo_client):
     """upload_document_file has a 10-positional signature:
        (background_tasks, file_content, file_filename, file_content_type,
         user_id, org_id, url, name, tags, description)
@@ -260,7 +260,7 @@ def test_upload_document_file_returns_file_id(mocker, mock_mongo):
     s3 = mocker.patch("app.services.documents.clients.s3_client")
     coll = MagicMock()
     coll.insert_one.return_value.inserted_id = "abc"
-    mock_mongo.__getitem__.return_value.__getitem__.return_value = coll
+    mock_mongo_client.__getitem__.return_value.__getitem__.return_value = coll
 
     bg_tasks = MagicMock()  # FastAPI BackgroundTasks
 
