@@ -137,7 +137,7 @@ def test_trigger_or_get_market_scores_returns_existing_when_present(
     result = trigger_or_get_market_scores(request, bg_tasks)
 
     assert isinstance(result, dict)
-    assert "org_id" in result or "processing_status" in result
+    assert "org_id" in result and "processing_status" in result
 
 
 # ---------------------------------------------------------------------------
@@ -182,7 +182,7 @@ def test_get_lead_market_score_descriptions_happy_path(
 
     result = get_lead_market_score_descriptions(TEST_LEAD_ID_1, TEST_USER_ID, TEST_ORG_ID)
 
-    assert "descriptions" in result or isinstance(result, dict)
+    assert "descriptions" in result
     assert result.get("lead_id") == TEST_LEAD_ID_1
 
 
@@ -206,7 +206,7 @@ def test_get_company_profile_for_org_returns_empty_when_missing(mock_session):
 
     result = get_company_profile_for_org(TEST_ORG_ID)
 
-    assert result == {} or result is None
+    assert result == {}
 
 
 def test_get_market_reports_for_org_returns_dict(mock_mongo_client):
@@ -273,8 +273,8 @@ def test_score_single_lead_against_market_returns_score(mocker):
 
     result = score_single_lead_against_market(lead, company_profile, market_reports)
 
-    assert "market_total_score" in result or "score" in result
-    assert "component_scores" in result or "score" in result
+    assert "market_total_score" in result
+    assert "component_scores" in result
 
 
 # ---------------------------------------------------------------------------

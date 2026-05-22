@@ -67,7 +67,7 @@ def test_upsert_customer_profile_happy_path(mocker, mock_session, mock_mongo_cli
     )
     result = upsert_customer_profile(request)
 
-    assert result.get("success") is True or "message" in result
+    assert result.get("success") is True
     coll.update_one.assert_called_once()
 
 
@@ -274,5 +274,5 @@ def test_delete_icp_happy_path_releases_id(mock_mongo_client, mocker):
 
     result = delete_icp_from_customer_profile(TEST_ICP_ID_1, TEST_ORG_ID)
 
-    assert result.get("success") is True or "message" in result
+    assert result.get("success") is True
     release_mock.assert_called_once()
