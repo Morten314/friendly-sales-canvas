@@ -1,0 +1,17 @@
+{
+  "id": "icp_seed_0001",
+  "title": "Mid-market 3PL operators modernizing dispatch",
+  "firmographics": {
+    "industry": "Logistics & Supply Chain",
+    "segment": "Third-party logistics (3PL)",
+    "company_size": "200-1000 employees",
+    "market_size": "€8.4B"
+  },
+  "key_decision_makers": ["VP Operations", "Head of Fleet", "CIO"],
+  "regions": ["DACH", "EU"],
+  "pain_points_and_triggers": {
+    "critical": "Manual dispatch decisions limit throughput",
+    "others": ["Driver retention crisis", "Diesel price volatility"]
+  },
+  "competitors": ["Onfleet", "Bringg", "Convoy"]
+}

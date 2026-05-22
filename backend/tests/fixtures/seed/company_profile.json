@@ -1,0 +1,17 @@
+{
+  "name": "Acme Logistics GmbH",
+  "industry": "Logistics & Supply Chain",
+  "subIndustry": "Last-mile delivery",
+  "targetMarkets": ["DACH", "EU"],
+  "regions": ["Germany", "Austria", "Switzerland"],
+  "companySize": "51-200",
+  "businessModel": "B2B SaaS",
+  "stage": "Growth",
+  "yearFounded": 2018,
+  "technologyStack": ["Python", "Kubernetes", "PostgreSQL"],
+  "focusAreas": ["dispatch automation", "fleet optimization"],
+  "complianceRequirements": ["GDPR", "ADR (dangerous goods)"],
+  "socialMediaUrls": {"linkedin": "https://linkedin.com/company/acme-logistics-gmbh"},
+  "user_id": "test_user_123",
+  "org_id": "test_org_abc"
+}
