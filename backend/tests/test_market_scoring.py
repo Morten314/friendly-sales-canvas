@@ -59,7 +59,6 @@ def _make_score_mc(score_docs=None, run_docs=None, run_find_one=None):
     Profiler["Lead_Market_Score_Runs"] → run_coll
     """
     score_coll = MagicMock()
-    score_coll.create_index.return_value = None
     score_coll.find.return_value.sort.return_value = iter(score_docs or [])
     score_coll.find_one.return_value = None
     score_coll.update_one.return_value = MagicMock(modified_count=1)
@@ -67,7 +66,6 @@ def _make_score_mc(score_docs=None, run_docs=None, run_find_one=None):
     score_coll.count_documents.return_value = len(score_docs or [])
 
     run_coll = MagicMock()
-    run_coll.create_index.return_value = None
     run_coll.find_one.return_value = run_find_one
     run_coll.insert_one.return_value = MagicMock(inserted_id="run_id")
     run_coll.update_one.return_value = MagicMock(modified_count=1)

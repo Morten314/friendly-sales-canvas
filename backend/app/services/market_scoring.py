@@ -32,14 +32,9 @@ logger = logging.getLogger(__name__)
 def _get_market_score_collections():
     # Returns only the collections — never the client. Callers MUST NOT close
     # the underlying connection; it is the shared singleton from app.core.clients.
+    # Index creation has moved to a startup event in app/main.py.
     profiler_db = clients.client["Profiler"]
-    score_coll = profiler_db["Lead_Market_Scores"]
-    run_coll = profiler_db["Lead_Market_Score_Runs"]
-    score_coll.create_index([("org_id", 1), ("lead_id", 1)], unique=True)
-    score_coll.create_index([("org_id", 1), ("updated_at", -1)])
-    run_coll.create_index([("org_id", 1), ("status", 1)])
-    run_coll.create_index([("org_id", 1), ("created_at", -1)])
-    return score_coll, run_coll
+    return profiler_db["Lead_Market_Scores"], profiler_db["Lead_Market_Score_Runs"]
 
 
 def _safe_json_to_obj(value: Any) -> Any:
