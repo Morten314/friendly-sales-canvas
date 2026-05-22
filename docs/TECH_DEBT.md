@@ -90,3 +90,31 @@ A single `@asynccontextmanager`-decorated `lifespan` function passed to `FastAPI
 - Next time someone needs to add a startup or shutdown hook — do the migration alongside it.
 
 **Owner:** TBD.
+
+---
+
+## TD-004 — Captured LLM fixtures are stubs, not real responses
+
+**Date logged:** 2026-05-22
+**Origin:** Phase E implementation review (`docs/reviews/2026-05-22-phase-e-implementation-review.md` §H1).
+
+**Current state:**
+`backend/tests/fixtures/captured/*.json` (24 files) are placeholder stubs with `"_stub": true` and a 4–6 key minimal shape. They were produced by hand during Phase E because `ANTHROPIC_API_KEY`, `TOGETHER_API_KEY`, and `TAVILY_API_KEY` were not available in the implementation environment. Unit and integration tests assert against this stub shape rather than real LLM output.
+
+**What it should be:**
+Run `cd backend && python tests/capture_fixtures.py` on a machine with all three API keys set. The script overwrites each stub with a real LLM response (10–30+ keys typical). Verify the suite still passes against the real shapes; update assertions or models if drift is exposed.
+
+**Why we deferred:**
+- The Phase E refactor was structured so that the capture script, the test harness, and the assertion sites are all in place — only the JSON content is stubbed. Switching to real captures is a content swap, not a code change.
+- Running the script requires live API credentials with budget; doing it inside the test-writing phase would gate test-writing on key procurement.
+
+**What we lose by staying as-is:**
+- Tests don't assert against actual response shape. A service parsing change that produces a different real output can pass tests silently ("the fixtures lied"). This is the exact risk TD-001 was meant to retire.
+- The `test_icp.ambr` snapshot encodes stub shape, not real shape — it will need re-baselining after the first real capture.
+
+**Pull-forward triggers:**
+- First time someone with API keys runs the suite locally and observes a mismatch between stub assertions and real service behavior.
+- Before any production release that depends on the captured-fixture acceptance criterion in `docs/TECH_DEBT.md` TD-001.
+- When the capture pipeline (`tests/capture_fixtures.py`) is modified — re-run to validate the change end-to-end.
+
+**Owner:** CTO (has API key access).
