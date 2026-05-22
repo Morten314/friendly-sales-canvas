@@ -14,7 +14,7 @@ Route-logic functions (`upload_file_text`, `upload_prospect_list_file`,
 extracted from the documents router in commit 13/25 (phase B).
 """
 import json
-import shutil
+import os
 import uuid
 from datetime import datetime
 from typing import List, Optional
@@ -307,7 +307,6 @@ async def process_file_to_embeddings(file_key: str, user_id: str, file_name: str
         )
 
         # Clean up local file
-        import os
         if os.path.exists(local_file_path):
             os.remove(local_file_path)
 
