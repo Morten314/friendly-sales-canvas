@@ -7,11 +7,15 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Literal, Optional
 
 import requests
-from fastapi import HTTPException
 
 from app.core import clients
 from app.core import llm_config
 from app.core.config import tavily_api_key, claude_sonnet_model
+from app.core.exceptions import (
+    SignalActionValidationError,
+    SignalNotFoundError,
+    UnsupportedComponentError,
+)
 from app.models.market_research import MarketRequest
 from app.models.signals import SignalActionRequest, SignalAskRequest
 from app.services._llm_helpers import (
@@ -518,9 +522,8 @@ async def run_signals_research(request: MarketRequest) -> dict:
     agent_name = request.component_name.strip().lower()
 
     if agent_name not in ("scout", "profiler"):
-        raise HTTPException(
-            status_code=400,
-            detail=f"Unsupported agent: {request.component_name}. Supported agents: scout, profiler"
+        raise UnsupportedComponentError(
+            f"Unsupported agent: {request.component_name}. Supported agents: scout, profiler"
         )
 
     db = clients.client["Signals"]
@@ -630,12 +633,9 @@ async def run_signals_research(request: MarketRequest) -> dict:
         try:
             signals_result = await asyncio.to_thread(search_signals, pre_data, agent_name)
             break
-        except Exception as e:
+        except Exception:
             if attempt == max_retries:
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"Signals research failed after {max_retries} attempts: {str(e)}"
-                )
+                raise
             await asyncio.sleep(1)  # retry delay
 
     # Generate unique ID for signal
@@ -834,10 +834,7 @@ async def _generate_signals_batch_impl(request: MarketRequest, llm_backend: str)
 
         except Exception as e:
             logger.error(f"Error generating scout signal {i+1}: {e}")
-            raise HTTPException(
-                status_code=500,
-                detail=f"Failed to generate scout signal {i+1}: {str(e)}"
-            )
+            raise
 
     # Generate 2 signals for profiler
     for i in range(2):
@@ -886,10 +883,7 @@ async def _generate_signals_batch_impl(request: MarketRequest, llm_backend: str)
 
         except Exception as e:
             logger.error(f"Error generating profiler signal {i+1}: {e}")
-            raise HTTPException(
-                status_code=500,
-                detail=f"Failed to generate profiler signal {i+1}: {str(e)}"
-            )
+            raise
 
     return {
         "status": "success",
@@ -944,81 +938,67 @@ async def fetch_signals(user_id: str, limit: int = 10) -> dict:
 
 async def record_signal_action(request: SignalActionRequest) -> dict:
     """Accept or reject a signal."""
-    try:
-        db = clients.client["Signals"]
-        collection = db["signals"]
+    db = clients.client["Signals"]
+    collection = db["signals"]
 
-        # Find the signal by signal_id (check both "id" and "signal_id" fields)
-        signal = collection.find_one({
-            "$or": [
-                {"id": request.signal_id},
-                {"signal_id": request.signal_id}
-            ]
-        })
+    # Find the signal by signal_id (check both "id" and "signal_id" fields)
+    signal = collection.find_one({
+        "$or": [
+            {"id": request.signal_id},
+            {"signal_id": request.signal_id}
+        ]
+    })
 
-        if not signal:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Signal with signal_id {request.signal_id} not found"
-            )
+    if not signal:
+        raise SignalNotFoundError(f"Signal with signal_id {request.signal_id} not found")
 
-        if request.action == "accept":
-            # Update the signal to ensure it has the org_id
-            update_result = collection.update_one(
-                {"_id": signal["_id"]},
-                {
-                    "$set": {
-                        "org_id": request.org_id,
-                        "status": "accepted",
-                        "actioned_at": datetime.now(timezone.utc)
-                    }
-                }
-            )
-
-            if update_result.modified_count > 0:
-                return {
-                    "status": "success",
-                    "message": f"Signal {request.signal_id} accepted and assigned to org {request.org_id}",
-                    "signal_id": request.signal_id,
+    if request.action == "accept":
+        # Update the signal to ensure it has the org_id
+        update_result = collection.update_one(
+            {"_id": signal["_id"]},
+            {
+                "$set": {
                     "org_id": request.org_id,
-                    "action": "accept"
+                    "status": "accepted",
+                    "actioned_at": datetime.now(timezone.utc)
                 }
-            else:
-                return {
-                    "status": "success",
-                    "message": f"Signal {request.signal_id} already has org_id {request.org_id}",
-                    "signal_id": request.signal_id,
-                    "org_id": request.org_id,
-                    "action": "accept"
-                }
+            }
+        )
 
-        elif request.action == "reject":
-            # Delete the signal
-            delete_result = collection.delete_one({"_id": signal["_id"]})
-
-            if delete_result.deleted_count > 0:
-                return {
-                    "status": "success",
-                    "message": f"Signal {request.signal_id} rejected and deleted",
-                    "signal_id": request.signal_id,
-                    "action": "reject"
-                }
-            else:
-                raise HTTPException(
-                    status_code=500,
-                    detail="Failed to delete signal"
-                )
+        if update_result.modified_count > 0:
+            return {
+                "status": "success",
+                "message": f"Signal {request.signal_id} accepted and assigned to org {request.org_id}",
+                "signal_id": request.signal_id,
+                "org_id": request.org_id,
+                "action": "accept"
+            }
         else:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Invalid action: {request.action}. Must be 'accept' or 'reject'"
-            )
+            return {
+                "status": "success",
+                "message": f"Signal {request.signal_id} already has org_id {request.org_id}",
+                "signal_id": request.signal_id,
+                "org_id": request.org_id,
+                "action": "accept"
+            }
 
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error processing signal action: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to process signal action: {str(e)}")
+    elif request.action == "reject":
+        # Delete the signal
+        delete_result = collection.delete_one({"_id": signal["_id"]})
+
+        if delete_result.deleted_count > 0:
+            return {
+                "status": "success",
+                "message": f"Signal {request.signal_id} rejected and deleted",
+                "signal_id": request.signal_id,
+                "action": "reject"
+            }
+        else:
+            raise RuntimeError("Failed to delete signal")
+    else:
+        raise SignalActionValidationError(
+            f"Invalid action: {request.action}. Must be 'accept' or 'reject'"
+        )
 
 
 async def signal_ask(request: SignalAskRequest) -> dict:
@@ -1124,17 +1104,15 @@ Please use the WebSearch tool to gather current information and provide a detail
             "question": request.question
         }
 
-    except HTTPException:
-        raise
     except Exception as e:
         logger.error(f"Error in signal_Ask: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to answer question: {str(e)}")
+        raise
 
 
 async def signal_ask_claude(request: SignalAskRequest) -> dict:
     """Claude-powered signal ask endpoint with local token/run limiter."""
     if not CLAUDE_API_KEY:
-        raise HTTPException(status_code=500, detail="ANTHROPIC_API_KEY is not configured")
+        raise RuntimeError("ANTHROPIC_API_KEY is not configured")
 
     reservation: Optional[Dict[str, Any]] = None
     input_tokens_estimate = 0
@@ -1258,9 +1236,8 @@ INSTRUCTIONS:
 
         if response.status_code >= 400:
             response_text = response.text[:1000]
-            raise HTTPException(
-                status_code=500,
-                detail=f"Claude API call failed ({response.status_code}): {response_text}"
+            raise RuntimeError(
+                f"Claude API call failed ({response.status_code}): {response_text}"
             )
 
         payload = response.json()
@@ -1308,11 +1285,9 @@ INSTRUCTIONS:
             }
         }
 
-    except HTTPException:
-        raise
     except Exception as e:
         logger.error(f"Error in signal_ask_claude: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to answer question (Claude): {str(e)}")
+        raise
     finally:
         # Release reservation if we errored before final accounting.
         if reservation and reservation.get("run_id"):
