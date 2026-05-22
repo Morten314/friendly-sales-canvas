@@ -5,12 +5,17 @@ multiple external clients (not just "the database"). After Task 5 (B1),
 all 26 inline MongoClient constructions in routers/services are replaced by
 importing `client` (or `profiler_client`) from this module.
 """
+import logging
 import os
 
 from neo4j import GraphDatabase
 from langchain_community.graphs.neo4j_graph import Neo4jGraph
 from pymongo import MongoClient
 from app.core.config import neo4j_uri, neo4j_username, neo4j_password, mongo_uri
+
+# Local logger — uses logging.getLogger(__name__) rather than `app.core.logging.logger`
+# to avoid an import-order coupling between this module and the project logger setup.
+logger = logging.getLogger(__name__)
 
 # Setting BREWRA_SKIP_DB_INIT=1 skips eager Neo4j/Mongo connection attempts at
 # import time. Pytest's conftest sets it so test sessions don't block on SRV
@@ -25,9 +30,9 @@ if not _SKIP_DB_INIT:
     try:
         driver = GraphDatabase.driver(neo4j_uri, auth=(neo4j_username, neo4j_password))
         driver.verify_connectivity()
-        print("Connected to Neo4j successfully!")
+        logger.info("Connected to Neo4j successfully!")
     except Exception as e:
-        print("Neo4j Connection failed:", e)
+        logger.error("Neo4j Connection failed: %s", e)
 
 # Initialize Neo4j Graph
 graph = None
@@ -35,7 +40,7 @@ if not _SKIP_DB_INIT:
     try:
         graph = Neo4jGraph(url=neo4j_uri, username=neo4j_username, password=neo4j_password)
     except Exception as e:
-        print("Neo4jGraph init failed:", e)
+        logger.error("Neo4jGraph init failed: %s", e)
 
 # MongoDB connection — primary cluster (brewra-db.d3hvuf8.mongodb.net).
 # pymongo 4.x eagerly resolves mongodb+srv URIs during construction, which
@@ -45,7 +50,7 @@ if not _SKIP_DB_INIT:
     try:
         client = MongoClient(mongo_uri)
     except Exception as e:
-        print("MongoDB Connection failed:", e)
+        logger.error("MongoDB Connection failed: %s", e)
 
 # Secondary "Profiler" alias — the Profiler databases (ICP_config, Lead_Market_Scores,
 # Company_Profile, etc.) live on the same primary cluster as all other Mongo databases.

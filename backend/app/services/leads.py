@@ -47,7 +47,7 @@ def fetch_leads_for_org(org_id: str, limit: int = 100) -> List[Dict[str, Any]]:
                 leads.append(processed_lead)
         return leads
     except Exception as e:
-        print(f"Warning: Could not fetch leads: {e}")
+        logger.warning(f"Could not fetch leads: {e}")
         return []
 
 
