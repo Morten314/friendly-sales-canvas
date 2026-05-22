@@ -1,8 +1,13 @@
 """Domain exception hierarchy.
 
-Service-layer functions raise these. Routers catch and convert to
-HTTPException at the HTTP boundary. This keeps the services layer
-free of FastAPI specifics for the cases that warrant it.
+For errors that map 1:1 to an HTTP status, services raise
+fastapi.HTTPException directly — FastAPI catches it at the boundary.
+That is the convention across the services layer (~77 sites).
+
+The exceptions below exist for errors where the router needs context to
+decide the response: BudgetExhaustedError carries a dict payload that
+becomes the 429 body; ICPIdRegistryError carries a message that becomes
+a 500 detail.
 """
 
 

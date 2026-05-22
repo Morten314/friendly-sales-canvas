@@ -91,9 +91,9 @@ if clients.graph is not None:
 def _ensure_market_scoring_indexes() -> None:
     if os.getenv("BREWRA_SKIP_DB_INIT") or clients.client is None:
         return
-    profiler_db = clients.client["Profiler"]
-    score_coll = profiler_db["Lead_Market_Scores"]
-    run_coll = profiler_db["Lead_Market_Score_Runs"]
+    from app.services.market_scoring import _get_market_score_collections
+
+    score_coll, run_coll = _get_market_score_collections()
     score_coll.create_index([("org_id", 1), ("lead_id", 1)], unique=True)
     score_coll.create_index([("org_id", 1), ("updated_at", -1)])
     run_coll.create_index([("org_id", 1), ("status", 1)])
