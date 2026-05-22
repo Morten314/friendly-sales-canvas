@@ -5,9 +5,13 @@ directly and mock at the same source-level layer the integration tests do:
 `app.core.clients.driver`, `app.core.clients.client`, and per-module LLM
 helper imports.
 
-CRITICAL: this conftest must NOT import `app.main` or trigger any router
-import chain. Routers are slow to import and bring in the full FastAPI app
-load that integration tests need but unit tests must avoid.
+Note on `app.main` import:
+The parent `tests/conftest.py` imports `app.main` eagerly (so integration
+tests' router fixtures are wired before any mocker.patch lands). pytest
+discovers parent conftest files first, so unit tests inherit that import.
+This file itself does NOT import `app.main` and unit tests should not
+request router-dependent fixtures — but the import happens at collection
+time regardless of which subdirectory the test lives in.
 """
 import os
 import sys
