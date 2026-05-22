@@ -370,7 +370,7 @@ def get_market_scores_status(
 
     if total_leads <= 0:
         # get_leads_for_org is already imported at module top (updated in Task 4 Step 6).
-        total_leads = len(get_leads_for_org(org_id, limit=5000, order_by_recent=True, raise_on_error=False))
+        total_leads = len(get_leads_for_org(org_id, limit=5000, order_by_recent=True))
 
     run_score_filter = {"org_id": org_id, "user_id": user_id, "run_id": target_run_id}
     scored_doc_count = score_coll.count_documents(run_score_filter)
@@ -645,7 +645,7 @@ def _run_market_scoring_for_org(user_id: str, org_id: str, run_id: str) -> None:
             {"$set": {"status": "processing", "started_at": now_iso, "updated_at": now_iso}},
         )
 
-        leads = get_leads_for_org(org_id, limit=5000, order_by_recent=True, raise_on_error=False)
+        leads = get_leads_for_org(org_id, limit=5000, order_by_recent=True)
         total_leads = len(leads)
         if not leads:
             run_coll.update_one(

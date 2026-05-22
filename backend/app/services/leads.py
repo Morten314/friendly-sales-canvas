@@ -21,7 +21,6 @@ def get_leads_for_org(
     org_id: str,
     limit: Optional[int] = None,
     order_by_recent: bool = False,
-    raise_on_error: bool = True,
 ) -> List[Dict[str, Any]]:
     """Fetch leads from Neo4j for a given org.
 
@@ -29,29 +28,23 @@ def get_leads_for_org(
         org_id: tenant scope.
         limit: max rows to return; None for no LIMIT clause.
         order_by_recent: if True, adds ``ORDER BY l.created_at DESC``.
-        raise_on_error: if True, propagates the underlying exception; if False,
-            logs a warning and returns [] (background-task path).
-            Task 14 removes this parameter; the function will then always raise.
+
+    Raises on storage or query failures. Callers that want silent failure
+    (e.g. background tasks) wrap with ``try/except BrewraError`` or
+    ``except Exception``; see Task 15.
     """
-    try:
-        clauses = ["MATCH (l:Lead)", "WHERE l.org_id = $org_id"]
-        params: Dict[str, Any] = {"org_id": org_id}
-        clauses.append("RETURN l")
-        if order_by_recent:
-            clauses.append("ORDER BY l.created_at DESC")
-        if limit is not None:
-            clauses.append("LIMIT $limit")
-            params["limit"] = limit
-        query_string = "\n".join(clauses)
-        with clients.driver.session() as session:
-            results = session.run(query_string, **params)
-            return _process_neo4j_lead_records(results)
-    except Exception as e:
-        if raise_on_error:
-            logger.error(f"Error fetching leads: {str(e)}")
-            raise
-        logger.warning(f"Could not fetch leads: {e}")
-        return []
+    clauses = ["MATCH (l:Lead)", "WHERE l.org_id = $org_id"]
+    params: Dict[str, Any] = {"org_id": org_id}
+    clauses.append("RETURN l")
+    if order_by_recent:
+        clauses.append("ORDER BY l.created_at DESC")
+    if limit is not None:
+        clauses.append("LIMIT $limit")
+        params["limit"] = limit
+    query_string = "\n".join(clauses)
+    with clients.driver.session() as session:
+        results = session.run(query_string, **params)
+        return _process_neo4j_lead_records(results)
 
 
 # ---------------------------------------------------------------------------
