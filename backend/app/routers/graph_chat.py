@@ -30,12 +30,12 @@ async def create_prospect(data: ProspectData):
 # /ask/ returns a set literal `{response}` (pre-existing quirk); response shape
 # is unstable — annotation deferred until the handler is normalized.
 @router.get("/ask/")
-async def ask_question(question: str):
+async def ask_chain(question: str):
     response = llm_config.chain.run(question)
     return {response}
 
 @router.get("/chat/", response_model=GraphChatResponse)
-async def ask_question(question: str):
+async def ask_chain2(question: str):
     response = llm_config.chain2.run(question)
     return {"response": response}
 
