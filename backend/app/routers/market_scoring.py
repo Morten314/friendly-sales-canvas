@@ -15,7 +15,7 @@ from app.models.market_scoring import (
     MARKET_SCORE_COMPONENT_KEYS,
 )
 from app.services import market_scoring as market_scoring_service
-from app.services.leads import fetch_leads_for_org
+from app.services.leads import get_leads_for_org
 
 
 router = APIRouter(tags=["market-scoring"])
@@ -123,7 +123,7 @@ async def get_lead_market_scores_status(
     failed_count = int(run_doc.get("failed_count") or 0)
 
     if total_leads <= 0:
-        total_leads = len(fetch_leads_for_org(org_id, limit=5000))
+        total_leads = len(get_leads_for_org(org_id, limit=5000, order_by_recent=True, raise_on_error=False))
 
     run_score_filter = {"org_id": org_id, "user_id": user_id, "run_id": target_run_id}
     scored_doc_count = score_coll.count_documents(run_score_filter)

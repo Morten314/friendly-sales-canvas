@@ -4,7 +4,7 @@ Extracted from app/routers/leads.py during phase B modularization.
 """
 import json
 from datetime import datetime, timezone
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from fastapi import HTTPException
 
@@ -15,44 +15,47 @@ from app.models.leads import LeadCreateRequest, LeadUpdateRequest
 
 
 # ---------------------------------------------------------------------------
-# Existing helper (used by market-scoring background task)
+# Unified lead-fetch helper
 # ---------------------------------------------------------------------------
 
-def fetch_leads_for_org(org_id: str, limit: int = 100) -> List[Dict[str, Any]]:
-    """Fetch leads from Neo4j filtered by org_id"""
+def get_leads_for_org(
+    org_id: str,
+    limit: Optional[int] = None,
+    order_by_recent: bool = False,
+    raise_on_error: bool = True,
+) -> List[Dict[str, Any]]:
+    """Fetch leads from Neo4j for a given org.
+
+    Args:
+        org_id: tenant scope.
+        limit: max rows to return; None for no LIMIT clause.
+        order_by_recent: if True, adds ``ORDER BY l.created_at DESC``.
+        raise_on_error: if True, raises HTTPException(500); if False,
+            logs a warning and returns [] (background-task path).
+    """
     try:
-        query_string = """
-        MATCH (l:Lead)
-        WHERE l.org_id = $org_id
-        RETURN l
-        ORDER BY l.created_at DESC
-        LIMIT $limit
-        """
+        clauses = ["MATCH (l:Lead)", "WHERE l.org_id = $org_id"]
+        params: Dict[str, Any] = {"org_id": org_id}
+        clauses.append("RETURN l")
+        if order_by_recent:
+            clauses.append("ORDER BY l.created_at DESC")
+        if limit is not None:
+            clauses.append("LIMIT $limit")
+            params["limit"] = limit
+        query_string = "\n".join(clauses)
         with clients.driver.session() as session:
-            results = session.run(query_string, org_id=org_id, limit=limit)
-            leads = []
-            for record in results:
-                lead_node = record["l"]
-                lead_dict = dict(lead_node.items())
-                # Convert JSON strings back to objects if needed
-                processed_lead = {}
-                for key, value in lead_dict.items():
-                    if isinstance(value, str) and value.strip().startswith(('{', '[')):
-                        try:
-                            processed_lead[key] = json.loads(value)
-                        except json.JSONDecodeError:
-                            processed_lead[key] = value
-                    else:
-                        processed_lead[key] = value
-                leads.append(processed_lead)
-        return leads
+            results = session.run(query_string, **params)
+            return _process_neo4j_lead_records(results)
     except Exception as e:
+        if raise_on_error:
+            logger.error(f"Error fetching leads: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Failed to fetch leads: {str(e)}")
         logger.warning(f"Could not fetch leads: {e}")
         return []
 
 
 # ---------------------------------------------------------------------------
-# Private Neo4j result processor (shared by get_all_leads and list_leads_by_file)
+# Private Neo4j result processor (shared by get_leads_for_org and list_leads_by_file)
 # ---------------------------------------------------------------------------
 
 def _process_neo4j_lead_records(results) -> List[Dict[str, Any]]:
@@ -77,26 +80,6 @@ def _process_neo4j_lead_records(results) -> List[Dict[str, Any]]:
 # ---------------------------------------------------------------------------
 # Service functions
 # ---------------------------------------------------------------------------
-
-def get_all_leads(org_id: str) -> List[Dict[str, Any]]:
-    """
-    Get all leads filtered by org_id (multitenant).
-    Returns all lead properties directly - completely flexible like company profile.
-    Uses parameterized queries for security.
-    """
-    try:
-        query_string = """
-        MATCH (l:Lead)
-        WHERE l.org_id = $org_id
-        RETURN l
-        """
-        with clients.driver.session() as session:
-            results = session.run(query_string, org_id=org_id)
-            leads = _process_neo4j_lead_records(results)
-        return leads
-    except Exception as e:
-        logger.error(f"Error fetching leads: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to fetch leads: {str(e)}")
 
 
 def create_lead(request: LeadCreateRequest) -> Dict[str, Any]:
@@ -401,7 +384,7 @@ def batch_upload_leads(
 def list_leads_by_file(org_id: str, file_id: str) -> List[Dict[str, Any]]:
     """
     Fetch leads filtered by file_id within an org.
-    Returns full lead records with all properties similar to get_all_leads.
+    Returns full lead records with all properties similar to get_leads_for_org.
     """
     try:
         query_string = """

@@ -586,8 +586,8 @@ async def run_signals_research(request: MarketRequest) -> dict:
     leads_data = []
     if request.org_id:
         try:
-            from app.services.leads import fetch_leads_for_org
-            leads_data = fetch_leads_for_org(request.org_id, limit=100)
+            from app.services.leads import get_leads_for_org
+            leads_data = get_leads_for_org(request.org_id, limit=100, order_by_recent=True, raise_on_error=False)
             if isinstance(pre_data, dict):
                 pre_data["leads_data"] = leads_data
             else:
@@ -726,8 +726,8 @@ async def _generate_signals_batch_impl(request: MarketRequest, llm_backend: str)
     leads_data = []
     if request.org_id:
         try:
-            from app.services.leads import fetch_leads_for_org
-            leads_data = fetch_leads_for_org(request.org_id, limit=100)
+            from app.services.leads import get_leads_for_org
+            leads_data = get_leads_for_org(request.org_id, limit=100, order_by_recent=True, raise_on_error=False)
             logger.info(f"[Batch Signals] Fetched {len(leads_data)} leads for org_id: {request.org_id}")
             if isinstance(pre_data, dict):
                 pre_data["leads_data"] = leads_data

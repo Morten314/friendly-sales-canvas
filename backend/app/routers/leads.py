@@ -19,7 +19,7 @@ router = APIRouter(prefix="/leads", tags=["leads"])
 @router.get("", response_model=List[Dict[str, Any]])
 def get_all_leads(org_id: str = Query(...)):
     """Get all leads filtered by org_id (multitenant)."""
-    return leads_service.get_all_leads(org_id)
+    return leads_service.get_leads_for_org(org_id)
 
 
 @router.post("", response_model=LeadMutationResponse)

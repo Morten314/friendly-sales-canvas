@@ -21,7 +21,7 @@ from app.models.market_scoring import (
     LeadMarketScoreRow,
     MARKET_SCORE_COMPONENT_KEYS,
 )
-from app.services.leads import fetch_leads_for_org
+from app.services.leads import get_leads_for_org
 
 
 logger = logging.getLogger(__name__)
@@ -449,7 +449,7 @@ def _run_market_scoring_for_org(user_id: str, org_id: str, run_id: str) -> None:
             {"$set": {"status": "processing", "started_at": now_iso, "updated_at": now_iso}},
         )
 
-        leads = fetch_leads_for_org(org_id, limit=5000)
+        leads = get_leads_for_org(org_id, limit=5000, order_by_recent=True, raise_on_error=False)
         total_leads = len(leads)
         if not leads:
             run_coll.update_one(
