@@ -40,7 +40,7 @@ def _get_profiler_mongo_client() -> MongoClient:
 def _get_market_score_collections():
     # Returns only the collections — never the client. Callers MUST NOT close
     # the underlying connection; it is the shared singleton from app.core.clients.
-    profiler_db = _get_profiler_mongo_client()["Profiler"]
+    profiler_db = clients.client["Profiler"]
     score_coll = profiler_db["Lead_Market_Scores"]
     run_coll = profiler_db["Lead_Market_Score_Runs"]
     score_coll.create_index([("org_id", 1), ("lead_id", 1)], unique=True)

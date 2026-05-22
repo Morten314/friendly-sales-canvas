@@ -144,8 +144,7 @@ def test_get_customer_profile_returns_icp_list(client, mock_neo4j, snapshot):
         "icp_id_registry": _make_coll(find_one=None),
     })
 
-    with patch("app.core.clients.client", mc), \
-         patch("app.core.clients.profiler_client", mc):
+    with patch("app.core.clients.client", mc):
         response = client.get("/customer_profile", params={"org_id": TEST_ORG_ID})
 
     assert response.status_code == 200
@@ -163,8 +162,7 @@ def test_get_customer_profile_empty_when_no_mongo_doc(client, mock_neo4j, snapsh
     })
     mock_neo4j["session"].run.return_value.single.return_value = MagicMock()
 
-    with patch("app.core.clients.client", mc), \
-         patch("app.core.clients.profiler_client", mc):
+    with patch("app.core.clients.client", mc):
         response = client.get("/customer_profile", params={"org_id": TEST_ORG_ID})
 
     assert response.status_code == 200
@@ -190,8 +188,7 @@ def test_delete_customer_profile_icp_removes_from_mongo(client):
         "icp_id_registry": _make_coll(find_one=None),
     })
 
-    with patch("app.core.clients.client", mc), \
-         patch("app.core.clients.profiler_client", mc):
+    with patch("app.core.clients.client", mc):
         response = client.delete(
             f"/customer_profile/icp/{TEST_ICP_ID_1}",
             params={"org_id": TEST_ORG_ID},
@@ -329,8 +326,7 @@ def test_post_customer_profile_from_suggested_icp_promotes(client, mock_neo4j, s
         "icp_id": "sug_001",
     }
 
-    with patch("app.core.clients.client", mc), \
-         patch("app.core.clients.profiler_client", mc):
+    with patch("app.core.clients.client", mc):
         response = client.post("/customer_profile/from_suggested_icp", json=payload)
 
     assert response.status_code in (200, 201)

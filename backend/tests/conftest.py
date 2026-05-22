@@ -3,8 +3,8 @@
 External deps (Neo4j, Mongo, Pinecone, S3, LLM, Tavily) are source-patched
 at `app.core.clients.*` and `app.core.llm_config.*`. After Phase B Task 5,
 all inline MongoClient constructions in routers have been replaced with
-`app.core.clients.client` (and `profiler_client`), so all Mongo mocking
-happens via `app.core.clients.client` / `app.core.clients.profiler_client`.
+`app.core.clients.client`, so all Mongo mocking happens via
+`app.core.clients.client`. (The Profiler databases live on the same cluster.)
 This convention is documented in specs/2026-05-12-backend-modularization-design.md §6.
 """
 import sys
@@ -90,14 +90,11 @@ def mock_mongo(mocker):
 
     Phase B Task 5: per-router MongoClient patches removed. All 26 inline
     MongoClient constructions have been replaced with imports from
-    app.core.clients. A single patch of `app.core.clients.client` is now
-    sufficient for the primary cluster. `profiler_client` is also patched
-    since it is the same mock (same cluster alias).
+    app.core.clients. A single patch of `app.core.clients.client` is
+    sufficient — the Profiler databases live on the same cluster.
     """
     mongo = MagicMock()
     mocker.patch("app.core.clients.client", mongo)
-    # profiler_client is an alias for client on the same cluster.
-    mocker.patch("app.core.clients.profiler_client", mongo)
     return mongo
 
 

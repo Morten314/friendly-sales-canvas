@@ -246,7 +246,6 @@ def batch_upload_leads(
     Works exactly like company profile endpoint - completely flexible.
     """
     try:
-        from app.services.market_scoring import _get_profiler_mongo_client
         import pandas as pd
         import uuid
         import tempfile
@@ -267,7 +266,7 @@ def batch_upload_leads(
 
         try:
             # Prepare lead stream tracking (Mongo)
-            mongo_client = _get_profiler_mongo_client()
+            mongo_client = clients.client
             profiler_db = mongo_client["Profiler"]
             lead_stream_coll = profiler_db["Lead_Stream_Files"]
             lead_stream_coll.create_index("file_id", unique=True)
@@ -423,9 +422,8 @@ def get_stream_status(org_id: str) -> Dict[str, Any]:
     """
     List lead-stream uploads (file_id registry/status) for an org.
     """
-    from app.services.market_scoring import _get_profiler_mongo_client
     try:
-        mongo_client = _get_profiler_mongo_client()
+        mongo_client = clients.client
         profiler_db = mongo_client["Profiler"]
         coll = profiler_db["Lead_Stream_Files"]
         cursor = coll.find({"org_id": org_id}).sort("uploaded_at", -1)
@@ -453,7 +451,6 @@ def delete_leads_by_file(file_id: str, user_id: str, org_id: str) -> Dict[str, A
     Delete all leads belonging to a specific file_id (scoped by user_id and org_id).
     Also updates lead-stream tracking status in MongoDB.
     """
-    from app.services.market_scoring import _get_profiler_mongo_client
     try:
         # First count matching leads
         count_query = """
@@ -484,7 +481,7 @@ def delete_leads_by_file(file_id: str, user_id: str, org_id: str) -> Dict[str, A
             session.run(delete_query, user_id=user_id, org_id=org_id, file_id=file_id)
 
         # Update lead stream tracking document if present
-        mongo_client = _get_profiler_mongo_client()
+        mongo_client = clients.client
         profiler_db = mongo_client["Profiler"]
         coll = profiler_db["Lead_Stream_Files"]
         coll.update_one(

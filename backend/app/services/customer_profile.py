@@ -13,11 +13,10 @@ def upsert_customer_profile(request: CustomerProfileRequest) -> dict:
     Create or update customer profiles (ICPs) in MongoDB.
     Customer profiles are stored within the company profile document.
     """
-    from app.services.market_scoring import _get_profiler_mongo_client
     from app.services.icp import _ensure_icp_id_registry_indexes, _reserve_unique_icp_id
     try:
         # MongoDB connection
-        mongo_client = _get_profiler_mongo_client()
+        mongo_client = clients.client
         db = mongo_client["Profiler"]
         _ensure_icp_id_registry_indexes(db)
         collection = db["Company_Profile"]
@@ -142,11 +141,10 @@ def get_customer_profile(org_id: str) -> dict:
     Returns both company profile and associated customer profiles from the same document.
     Filtered by org_id for multi-org support.
     """
-    from app.services.market_scoring import _get_profiler_mongo_client
     from app.services.icp import _ensure_icp_id_registry_indexes, _reserve_unique_icp_id
     try:
         # MongoDB connection
-        mongo_client = _get_profiler_mongo_client()
+        mongo_client = clients.client
         db = mongo_client["Profiler"]
         _ensure_icp_id_registry_indexes(db)
         collection = db["Company_Profile"]
@@ -233,11 +231,10 @@ def create_from_suggested_icp(request: SuggestedICPToCustomerProfileRequest) -> 
     Convert a suggested/recommended ICP (from GET /icp) into a Customer Profile ICP and save it.
     Enforces uniqueness by source suggested ICP id within the org's saved customer profiles.
     """
-    from app.services.market_scoring import _get_profiler_mongo_client
     from app.services.icp import _ensure_icp_id_registry_indexes, _reserve_unique_icp_id
     try:
         # --- Load suggested ICPs for this user_id ---
-        mongo_client = _get_profiler_mongo_client()
+        mongo_client = clients.client
 
         profiler_db = mongo_client["Profiler"]
         _ensure_icp_id_registry_indexes(profiler_db)
@@ -381,10 +378,9 @@ def delete_icp_from_customer_profile(icp_id: str, org_id: str) -> dict:
     """
     Delete a single saved customer profile ICP by icp_id for a given org_id.
     """
-    from app.services.market_scoring import _get_profiler_mongo_client
     from app.services.icp import _ensure_icp_id_registry_indexes, _release_icp_id
     try:
-        mongo_client = _get_profiler_mongo_client()
+        mongo_client = clients.client
         db = mongo_client["Profiler"]
         _ensure_icp_id_registry_indexes(db)
         collection = db["Company_Profile"]
