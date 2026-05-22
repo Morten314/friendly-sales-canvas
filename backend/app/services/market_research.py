@@ -11,10 +11,12 @@ import re
 from datetime import datetime, timezone
 from typing import List
 
-from fastapi import HTTPException
-
 from app.core import clients, llm_config
-from app.core.exceptions import BudgetExhaustedError
+from app.core.exceptions import (
+    BudgetExhaustedError,
+    CompanyProfileNotFoundError,
+    UnsupportedComponentError,
+)
 from app.models.market_research import MarketRequest
 from app.services._retrieval import (
     _build_market_context_queries,
@@ -934,9 +936,8 @@ async def run_market_research(request: MarketRequest, llm_backend: str = "groq")
     components = COMPONENT_FUNCTIONS_CLAUDE if llm_backend == "claude" else COMPONENT_FUNCTIONS
     research_function = components.get(component_name)
     if not research_function:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Unsupported component_name: {request.component_name}",
+        raise UnsupportedComponentError(
+            f"Unsupported component_name: {request.component_name}"
         )
 
     db = clients.client["Scout_Agent"]
@@ -969,7 +970,7 @@ async def run_market_research(request: MarketRequest, llm_backend: str = "groq")
     record = await asyncio.to_thread(fetch_company_profile)
     if not record:
         org_msg = f" for org_id: {request.org_id}" if request.org_id else ""
-        raise HTTPException(status_code=404, detail=f"No company profile found in Neo4j{org_msg}")
+        raise CompanyProfileNotFoundError(f"No company profile found in Neo4j{org_msg}")
 
     company_profile = dict(record.values()[0])
     if "socialMediaUrls" in company_profile and isinstance(company_profile["socialMediaUrls"], str):
@@ -997,12 +998,9 @@ async def run_market_research(request: MarketRequest, llm_backend: str = "groq")
         except BudgetExhaustedError:
             # Re-raise immediately — caller (router) catches and maps to HTTP 429
             raise
-        except Exception as e:
+        except Exception:
             if attempt == max_retries:
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"Research function failed after {max_retries} attempts: {str(e)}",
-                )
+                raise
             await asyncio.sleep(1)
 
     if not isinstance(research_result, dict):
