@@ -21,14 +21,14 @@ This unblocks three latent improvements that Phase C surfaced:
 
 ### 2.1 In scope
 
-1. Add a typed exception hierarchy in `app/core/exceptions.py` (~25-30 leaf classes under 4 status-family bases + 2 retained domain-specific classes).
-2. Register one FastAPI `@app.exception_handler(...)` per base type in `app/main.py` (6 handlers total).
-3. Migrate all ~77 `raise HTTPException` sites in `app/services/` (9 files) to raise typed exceptions.
-4. Delete the ~20 `except HTTPException: raise` re-raise boilerplate sites (Phase B review H5).
-5. Delete the ~30 `except Exception as e: raise HTTPException(500, ...)` wrap-and-rethrow sites where they exist only to convert unknown errors. Let those propagate to FastAPI's default 500 handler.
+1. Add a typed exception hierarchy in `app/core/exceptions.py` (~15-20 leaf classes under 5 status-family bases + 2 retained domain-specific classes).
+2. Register one FastAPI `@app.exception_handler(...)` per base type in `app/main.py` (7 handlers total).
+3. Migrate all 77 `raise HTTPException` sites in `app/services/` (9 files) to raise typed exceptions.
+4. Delete the 20 `except HTTPException: raise` re-raise boilerplate sites (Phase B review H5).
+5. Delete the ~34 `except Exception as e: raise HTTPException(500, ...)` wrap-and-rethrow sites where they exist only to convert unknown errors. Let those propagate to FastAPI's default 500 handler. (32 of the 33 `status_code=500` raises sit inside such blocks; the rest of the ~34 are catch-all wrappers in services that don't raise 500 explicitly.)
 6. Delete the 6 router-side catches of `BudgetExhaustedError` / `ICPIdRegistryError` (now handled by the registered handler).
-7. Remove the `raise_on_error` parameter from `get_leads_for_org` and update callers (the workaround is no longer needed).
-8. Update background-task code paths (`_run_market_scoring_for_org` and any others) to catch `BrewraError` and log+continue instead of relying on caller-side raise suppression.
+7. Remove the `raise_on_error` parameter from `get_leads_for_org` and update all 4 caller sites (`services/market_scoring.py:369, 644` and `services/signals.py:590, 730`). The workaround is no longer needed.
+8. Update background-task code paths to catch `BrewraError` and log+continue instead of relying on caller-side raise suppression. Two dispatchers are in scope: `_run_market_scoring_for_org` (`services/market_scoring.py:313`) and `process_file_to_embeddings` (`services/documents.py:505`). The latter has self-contained error handling today; the change is to ensure its outermost `try/except` catches `BrewraError` cleanly once `documents.py` migrates to domain exceptions.
 
 ### 2.2 Out of scope (deferred)
 
@@ -43,6 +43,9 @@ This unblocks three latent improvements that Phase C surfaced:
 
 **Other refactor work in Phase D+ inventory (see §8):**
 - Dependency injection, security hardening, pagination convention, `lifespan` migration, etc.
+
+**Service files with zero `raise HTTPException` sites (no migration needed, listed for audit completeness):**
+- `app/services/__init__.py`, `_claude_budget.py`, `_llm_helpers.py`, `_retrieval.py`, `graph_chat.py`, `pipeline.py`. These 6 files are out of scope by virtue of having nothing to migrate.
 
 ### 2.3 Why this isn't bigger
 
@@ -61,7 +64,7 @@ File: `app/core/exceptions.py` (expansion of existing 2-class file).
 
 ```
 BrewraError(Exception)                      # base; never raised directly
-├── NotFoundError(BrewraError)              # status-family base → 404
+├── NotFoundError(BrewraError)              # status-family base → 404; ~17 current raises
 │   ├── LeadNotFoundError
 │   ├── ICPNotFoundError
 │   ├── MarketScoreNotFoundError
@@ -71,27 +74,30 @@ BrewraError(Exception)                      # base; never raised directly
 │   ├── OrgNotFoundError
 │   ├── SignalNotFoundError
 │   ├── RunNotFoundError
-│   └── … (~15-20 leaves, finalized by §4 discovery)
-├── ValidationError(BrewraError)            # status-family base → 400
+│   └── … (~10-12 distinct resource types, finalized by §4.1 discovery)
+├── ValidationError(BrewraError)            # status-family base → 400; ~6 current raises
 │   ├── ICPValidationError
 │   ├── LeadValidationError
-│   └── … (leaves as discovered)
-├── ConflictError(BrewraError)              # status-family base → 409
-│   ├── ICPAlreadyExistsError
-│   ├── RunAlreadyRunningError
-│   └── … (leaves as discovered)
-├── AuthorizationError(BrewraError)         # status-family base → 403
-│   └── … (leaves as discovered)
+│   └── … (~3-4 leaves, finalized by §4.1 discovery)
+├── ConflictError(BrewraError)              # status-family base → 409; 1 current raise
+│   └── ICPAlreadyExistsError                 # (customer_profile.py:331)
+├── AuthenticationError(BrewraError)        # status-family base → 401; 0 current raises
+│   └── (no leaves — reserved for future JWT auth, per §8 security hardening)
+├── AuthorizationError(BrewraError)         # status-family base → 403; 0 current raises
+│   └── (no leaves — reserved for future use)
 ├── BudgetExhaustedError(BrewraError)       # → 429, args[0] is dict (retained)
 └── ICPIdRegistryError(BrewraError)         # → 500 (retained)
 ```
 
+Realistic leaf count: **~15-20** (down from an earlier ~25-30 estimate that incorrectly included the catch-all 500 wrappers, which are *deleted* not mapped).
+
 **Conventions:**
 - All leaves end in `Error` (PEP 8 compliance).
 - Leaves take a string message: `raise LeadNotFoundError(f"Lead {lead_id} not found")`.
-- Status-family bases are abstract — services raise leaves, not bases.
+- Status-family bases are abstract **by convention, not enforced by ABC** — services raise leaves, not bases. Enforcement deferred as YAGNI for an MVP codebase with ~15-20 leaves.
 - Resource type lives in the class name, not the message — tests can `pytest.raises(LeadNotFoundError)` rather than parsing strings.
 - The two retained classes (`BudgetExhaustedError`, `ICPIdRegistryError`) reparent from their current `Exception` base to `BrewraError`. Their existing semantics (dict payload in `args[0]` for budget, string message for ICP registry) are preserved.
+- **Per-service import style:** import leaf classes explicitly (`from app.core.exceptions import LeadNotFoundError, ICPNotFoundError`), not via namespace, so usage is greppable.
 
 ### 3.2 Exception handler registration
 
@@ -100,36 +106,54 @@ File: `app/main.py` — add after `app = FastAPI()`, before `include_router` cal
 ```python
 from fastapi.responses import JSONResponse
 from app.core.exceptions import (
-    NotFoundError, ValidationError, ConflictError, AuthorizationError,
+    NotFoundError, ValidationError, ConflictError,
+    AuthenticationError, AuthorizationError,
     BudgetExhaustedError, ICPIdRegistryError,
 )
 
 @app.exception_handler(NotFoundError)
 async def _handle_not_found(request, exc):
+    logger.debug(f"{type(exc).__name__}: {exc}")
     return JSONResponse(status_code=404, content={"detail": str(exc)})
 
 @app.exception_handler(ValidationError)
 async def _handle_validation(request, exc):
+    logger.debug(f"{type(exc).__name__}: {exc}")
     return JSONResponse(status_code=400, content={"detail": str(exc)})
 
 @app.exception_handler(ConflictError)
 async def _handle_conflict(request, exc):
+    logger.debug(f"{type(exc).__name__}: {exc}")
     return JSONResponse(status_code=409, content={"detail": str(exc)})
+
+@app.exception_handler(AuthenticationError)
+async def _handle_unauthorized(request, exc):
+    logger.debug(f"{type(exc).__name__}: {exc}")
+    return JSONResponse(status_code=401, content={"detail": str(exc)})
 
 @app.exception_handler(AuthorizationError)
 async def _handle_forbidden(request, exc):
+    logger.debug(f"{type(exc).__name__}: {exc}")
     return JSONResponse(status_code=403, content={"detail": str(exc)})
 
 @app.exception_handler(BudgetExhaustedError)
 async def _handle_budget(request, exc):
+    logger.debug(f"{type(exc).__name__}: {exc.args[0]}")
     return JSONResponse(status_code=429, content={"detail": exc.args[0]})
 
 @app.exception_handler(ICPIdRegistryError)
 async def _handle_icp_registry(request, exc):
+    logger.debug(f"{type(exc).__name__}: {exc}")
     return JSONResponse(status_code=500, content={"detail": str(exc)})
 ```
 
 Python's exception MRO makes inheritance work — registering against `NotFoundError` catches any `LeadNotFoundError`, `ICPNotFoundError`, etc.
+
+**Canonical error response shape:**
+All domain-exception HTTP responses are JSON: `{"detail": <string-or-dict>}`. This matches FastAPI's default `HTTPException` shape, so no frontend changes are required.
+
+**Handler-level logging rationale:**
+Each handler logs the exception at `debug` level. This is the basic observability floor — it ensures no domain-exception path is silently invisible in server logs, even if the service that raised it didn't log first. Structured/Sentry integration is deferred (see §2.3).
 
 ### 3.3 Per-service migration shape
 
@@ -160,8 +184,9 @@ Net per-file: -1 import (`HTTPException`), +1 import (typed exception), several 
 ### 3.4 Background-task pattern
 
 ```python
-# Before (Phase C workaround)
-leads = fetch_leads_for_org(org_id, limit=5000, raise_on_error=False)
+# Before (Phase C workaround — pattern appears in 4 call sites:
+# market_scoring.py:369, market_scoring.py:644, signals.py:590, signals.py:730)
+leads = get_leads_for_org(org_id, limit=5000, order_by_recent=True, raise_on_error=False)
 # `raise_on_error` flag suppresses HTTPException because the BackgroundTasks
 # runner would swallow it.
 
@@ -185,6 +210,10 @@ Before code changes, audit every `raise HTTPException` in `app/services/` (~77 s
 
 Output: the finalized leaf class list. This goes into the first hierarchy commit so the hierarchy doesn't grow ad-hoc during migration.
 
+**Output artifact:** The discovery pass produces (a) an inventory inside the commit message of commit 1, listing every leaf class with its target status code, and (b) a brief comment block at the top of `app/core/exceptions.py` summarizing the status-family → leaf-count mapping. The leaf class definitions themselves are the canonical source of truth.
+
+**Hierarchy amendment during migration:** If a per-service migration reveals a missing class (a status/resource combination not anticipated during discovery), add it in a focused commit *before* the file-migration commit that needs it. Don't amend commit 1 retroactively — the hierarchy file's git history should show its growth honestly.
+
 ### 4.2 Commit order
 
 | # | Type | Scope |
@@ -192,12 +221,12 @@ Output: the finalized leaf class list. This goes into the first hierarchy commit
 | 1 | `refactor(be):` | Add hierarchy classes from §4.1 discovery |
 | 2 | `refactor(be):` | Register exception handlers in `app/main.py` |
 | 3-11 | `refactor(be):` | Migrate one service file per commit (9 files) |
-| 12 | `refactor(be):` | Delete router-side catches of retained domain exceptions (6 sites across signals/market_research/icp) |
-| 13 | `refactor(be):` | Remove `raise_on_error` flag from `get_leads_for_org` and update callers |
-| 14 | `refactor(be):` | Background tasks: catch `BrewraError`, log+continue (`_run_market_scoring_for_org`, any others) |
+| 12 | `refactor(be):` | Delete router-side catches of retained domain exceptions (6 sites in signals/market_research/icp). Commit message verifies response-shape parity: `BudgetExhaustedError` → 429 with dict payload, `ICPIdRegistryError` → 500 with string message — both match what the registered handlers produce. |
+| 13 | `refactor(be):` | Remove `raise_on_error` flag from `get_leads_for_org` and update 4 callers (market_scoring.py:369, 644; signals.py:590, 730) |
+| 14 | `refactor(be):` | Background tasks: catch `BrewraError`, log+continue. Two dispatchers: `_run_market_scoring_for_org` (`services/market_scoring.py:313`) and `process_file_to_embeddings` (`services/documents.py:505`). |
 | 15 | `chore(be):` | Final sweep — grep-based validation, delete dead imports if any |
 
-Estimated 14-16 commits total. Each is small enough to review in isolation and to bisect if a regression appears.
+Total: **15 commits.** Each is small enough to review in isolation and to bisect if a regression appears.
 
 ### 4.3 Order within service-file commits
 
@@ -253,15 +282,17 @@ If a service raises a leaf class but two handlers could match (e.g., if a class 
 2. `grep -rn "except HTTPException" app/services/` → **0 hits**
 3. `grep -rn "raise_on_error" app/services/ app/routers/` → **0 hits**
 4. `grep -rn "except BudgetExhaustedError\|except ICPIdRegistryError" app/routers/` → **0 hits**
-5. `app/main.py` contains exactly 6 `@app.exception_handler(...)` registrations.
-6. **All 93 existing tests pass without modification** (subject to §5.2 mitigation if asserts on 500 detail content are found).
+5. `app/main.py` contains exactly **7** `@app.exception_handler(...)` registrations (5 status-family bases + 2 retained domain-specific).
+6. **All 93 existing tests pass** (pytest's collected count; subject to §5.2 mitigation if asserts on 500 detail content are found).
 7. Test warning count ≤ 11 (current baseline post Phase C).
 
 ### Soft (verifiable manually)
 
-8. HTTP response shape unchanged for all known endpoints — spot-check via FastAPI `/docs` on a running instance.
-9. `_run_market_scoring_for_org` catches `BrewraError` and logs; no exceptions leak to the BackgroundTasks runner.
+8. HTTP response shape unchanged for all known endpoints — spot-check via FastAPI `/docs` on a running instance. Canonical shape per §3.2: `{"detail": <string-or-dict>}`.
+9. `_run_market_scoring_for_org` and `process_file_to_embeddings` catch `BrewraError` and log; no exceptions leak to the BackgroundTasks runner.
 10. Per-service LOC drops in every migrated file (`wc -l` before/after each migration commit).
+11. **No new `raise HTTPException` added to `app/services/`** during the migration. Routers may still raise `HTTPException` for transport-only concerns — that boundary is preserved.
+12. All domain-exception HTTP responses match the canonical shape (§3.2). Verify by sampling one representative endpoint per status family during commit 12 validation.
 
 ### Phase complete when
 

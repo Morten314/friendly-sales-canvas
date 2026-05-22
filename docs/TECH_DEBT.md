@@ -30,3 +30,59 @@ A **hybrid**: hand-crafted fixtures for simple CRUD endpoints, captured-once fix
 - When LLM provider/model changes (Groq, Together) — captured fixtures would re-baseline the system at the new model's output shape.
 
 **Owner:** TBD (likely whoever first hits a "fixtures lied" incident).
+
+---
+
+## TD-002 — No direct unit tests for service functions
+
+**Date logged:** 2026-05-22
+**Origin:** Phase C code review N7 (`docs/code-review-backend-modularization-phase-c.md`); Phase D design §2.2 (`specs/2026-05-22-backend-modularization-phase-d-design.md`).
+
+**Current state:**
+All backend tests exercise services *through* the FastAPI `TestClient` and assert on HTTP status codes / JSON bodies. There are no tests that call service functions directly and assert on their return values or raised exceptions.
+
+**What it should be:**
+Service functions get a layer of direct unit tests — `pytest.raises(LeadNotFoundError)` style — complementing the existing integration tests. Especially valuable for the three Phase C service extractions (`trigger_or_get_market_scores`, `get_market_scores_status`, `get_lead_market_score_descriptions`) and any future service that's reused outside HTTP.
+
+**Why we deferred:**
+- Phase D establishes the precondition (services raise typed exceptions instead of `HTTPException`), but adding the tests in the same phase would balloon scope.
+- Existing 93 tests already cover HTTP-level behavior; adding service-level tests is a quality improvement, not a regression fix.
+
+**What we lose by staying as-is:**
+- A bug introduced *inside* a service function (logic, query construction) is only caught if the integration test happens to exercise that path with the right data.
+- Refactors inside a service are riskier than they should be — no fast feedback loop independent of FastAPI.
+- The typed-exception convention is harder to enforce without tests pinning it.
+
+**Pull-forward triggers:**
+- First bug found in a service that the integration tests missed because mock setup hid it.
+- First non-HTTP caller (background task, CLI command, LangChain chain) that calls a service and exposes a behavior the integration tests don't.
+- When `_get_market_score_collections` or similar helper needs to be tested independently to validate a query change.
+
+**Owner:** TBD.
+
+---
+
+## TD-003 — Startup hooks use deprecated `@app.on_event` API
+
+**Date logged:** 2026-05-22
+**Origin:** Phase C code review C2 (`docs/code-review-backend-modularization-phase-c.md`); Phase D design §8 item 6.
+
+**Current state:**
+`app/main.py` uses `@app.on_event("startup")` for `_ensure_market_scoring_indexes` (added in Phase C). The pre-existing `clients.graph.refresh_schema()` runs at module-import time (even more dated). FastAPI 0.93+ recommends a `lifespan` context manager and emits a deprecation warning for `on_event`. The test suite shows this warning (count rose from 9 to 11 after Phase C).
+
+**What it should be:**
+A single `@asynccontextmanager`-decorated `lifespan` function passed to `FastAPI(lifespan=...)` that wraps both the Neo4j schema refresh and the Mongo index creation, guarded by `BREWRA_SKIP_DB_INIT` / `clients.client is None`.
+
+**Why we deferred:**
+- Phase C scope was cleanup closure; Phase D scope is the exception convention. A `lifespan` migration is its own small phase to keep diffs reviewable.
+- Migrating only the new hook while leaving the pre-existing one untouched would make `main.py` more inconsistent, not less.
+
+**What we lose by staying as-is:**
+- 2 deprecation warnings per test run (will become errors when FastAPI removes `on_event`).
+- Pattern inconsistency for future contributors — module-level startup vs `on_event` vs `lifespan` is three forms in one file.
+
+**Pull-forward triggers:**
+- FastAPI release notes announce removal of `on_event` (any major version bump in `requirements.txt`).
+- Next time someone needs to add a startup or shutdown hook — do the migration alongside it.
+
+**Owner:** TBD.
