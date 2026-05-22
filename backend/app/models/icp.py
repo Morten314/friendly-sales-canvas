@@ -1,6 +1,6 @@
 """ICP response models."""
 from typing import Any, Dict, List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class ICPListResponse(BaseModel):
@@ -23,13 +23,12 @@ class ICPResearchData(BaseModel):
     filtering.
     """
 
+    model_config = ConfigDict(extra="allow")
+
     user_id: Optional[str] = None
     org_id: Optional[str] = None
     component_name: Optional[str] = None
     timestamp: Optional[Any] = None
-
-    class Config:
-        extra = "allow"
 
 
 class ICPResearchResponse(BaseModel):

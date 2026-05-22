@@ -1,6 +1,6 @@
 """Response models for the documents domain."""
 from typing import Any, Dict, List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class MessageResponse(BaseModel):
@@ -26,7 +26,7 @@ class UploadDocumentResponse(BaseModel):
 
 class DocumentStatusData(BaseModel):
     """Inner data object returned by GET /document-status/{file_key}."""
-    model_config = {"extra": "allow"}
+    model_config = ConfigDict(extra="allow")
 
     file_key: Optional[str] = None
     file_id: Optional[str] = None
