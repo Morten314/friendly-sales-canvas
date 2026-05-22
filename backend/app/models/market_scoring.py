@@ -1,6 +1,6 @@
 """Lead market scoring models."""
 from typing import Dict, List, Optional, Any
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field
 
 
 MARKET_SCORE_COMPONENT_KEYS: List[str] = [

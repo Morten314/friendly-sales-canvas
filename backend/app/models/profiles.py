@@ -1,6 +1,6 @@
 """User, company, scout profile models. Includes EditRequest (per-domain edit handler payload)."""
 from typing import Dict, List, Literal, Optional, Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
 # Social Media model
