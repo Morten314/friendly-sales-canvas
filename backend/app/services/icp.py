@@ -22,12 +22,17 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict
 
-from fastapi import HTTPException
 from langchain_core.prompts import PromptTemplate
 from pymongo.errors import DuplicateKeyError
 
 from app.core import clients, llm_config
-from app.core.exceptions import ICPIdRegistryError
+from app.core.exceptions import (
+    CompanyProfileNotFoundError,
+    ICPConfigNotFoundError,
+    ICPIdRegistryError,
+    RecommendedICPNotFoundError,
+    UnsupportedComponentError,
+)
 from app.core.logging import logger
 from app.services._llm_helpers import (
     CLAUDE_RESEARCH_MAX_TOKENS,
@@ -852,7 +857,7 @@ def list_icps(user_id: str, refresh: bool = False) -> Dict[str, Any]:
 
             if not record:
                 logger.error(f"[ICP] ERROR: No company profile in Neo4j")
-                raise HTTPException(status_code=404, detail="No company profile found in Neo4j")
+                raise CompanyProfileNotFoundError("No company profile found in Neo4j")
 
             company_profile = dict(record.values()[0])
             logger.info(f"[ICP] Company profile retrieved from Neo4j")
@@ -875,7 +880,7 @@ def list_icps(user_id: str, refresh: bool = False) -> Dict[str, Any]:
                 icp_result = normalize_icp_response(icp_result)
             except Exception as gen_error:
                 logger.error(f"[ICP] ERROR in ICP_generator: {str(gen_error)}")
-                raise HTTPException(status_code=500, detail=f"ICP generation failed: {str(gen_error)}")
+                raise
 
             # Upsert the result in MongoDB - filter by user_id only
             logger.info(f"[ICP] Saving to MongoDB for user_id: {user_id}")
@@ -888,16 +893,14 @@ def list_icps(user_id: str, refresh: bool = False) -> Dict[str, Any]:
                 logger.info(f"[ICP] Saved to MongoDB - matched: {update_result.matched_count}, modified: {update_result.modified_count}")
             except Exception as save_error:
                 logger.error(f"[ICP] ERROR saving to MongoDB: {str(save_error)}")
-                raise HTTPException(status_code=500, detail=f"Failed to save ICP: {str(save_error)}")
+                raise
 
             logger.info(f"[ICP] Successfully returned ICPs for user_id: {user_id}")
             return icp_result
 
-    except HTTPException:
-        raise
     except Exception as e:
         logger.error(f"[ICP] ERROR: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+        raise
 
 
 async def _run_icp_research_impl(request: Any, llm_backend: str) -> Dict[str, Any]:
@@ -924,9 +927,8 @@ async def _run_icp_research_impl(request: Any, llm_backend: str) -> Dict[str, An
         research_function = ICP_FUNCTIONS.get(component_name)
 
     if not research_function:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Unsupported component_name: {request.component_name}"
+        raise UnsupportedComponentError(
+            f"Unsupported component_name: {request.component_name}"
         )
 
     db = clients.client["Profiler"]
@@ -967,7 +969,7 @@ async def _run_icp_research_impl(request: Any, llm_backend: str) -> Dict[str, An
     record = await asyncio.to_thread(fetch_company_profile)
     if not record:
         org_msg = f" for org_id: {request.org_id}" if request.org_id else ""
-        raise HTTPException(status_code=404, detail=f"No company profile found in Neo4j{org_msg}")
+        raise CompanyProfileNotFoundError(f"No company profile found in Neo4j{org_msg}")
 
     company_profile = dict(record.values()[0])
     if "socialMediaUrls" in company_profile and isinstance(company_profile["socialMediaUrls"], str):
@@ -1007,12 +1009,9 @@ async def _run_icp_research_impl(request: Any, llm_backend: str) -> Dict[str, An
         try:
             research_result = await asyncio.to_thread(research_function, context_json)
             break
-        except Exception as e:
+        except Exception:
             if attempt == max_retries:
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"Research function failed after {max_retries} attempts: {str(e)}"
-                )
+                raise
             await asyncio.sleep(1)  # retry delay
 
     # Coerce to dict (Claude variant guard)
@@ -1054,53 +1053,48 @@ async def run_icp_research(request: Any, llm_backend: str = "groq") -> Dict[str,
 
 def delete_recommended_icp(icp_id: str, user_id: str) -> Dict[str, Any]:
     """Delete a single recommended ICP from ICP_config by icp_id for a given user_id."""
-    try:
-        db = clients.client["Profiler"]
-        _ensure_icp_id_registry_indexes(db)
-        collection = db["ICP_config"]
+    db = clients.client["Profiler"]
+    _ensure_icp_id_registry_indexes(db)
+    collection = db["ICP_config"]
 
-        document = collection.find_one({"user_id": user_id})
-        if not document:
-            raise HTTPException(status_code=404, detail=f"No ICP config found for user_id: {user_id}")
+    document = collection.find_one({"user_id": user_id})
+    if not document:
+        raise ICPConfigNotFoundError(f"No ICP config found for user_id: {user_id}")
 
-        icps_payload = document.get("icps") or {}
-        suggested = []
-        if isinstance(icps_payload, dict) and isinstance(icps_payload.get("suggestedICPs"), list):
-            suggested = icps_payload.get("suggestedICPs", [])
-        elif isinstance(icps_payload, list):
-            suggested = icps_payload
+    icps_payload = document.get("icps") or {}
+    suggested = []
+    if isinstance(icps_payload, dict) and isinstance(icps_payload.get("suggestedICPs"), list):
+        suggested = icps_payload.get("suggestedICPs", [])
+    elif isinstance(icps_payload, list):
+        suggested = icps_payload
 
-        updated_suggested = []
-        deleted_icp = None
-        for icp in suggested:
-            if isinstance(icp, dict) and str(icp.get("id")) == str(icp_id):
-                deleted_icp = icp
-                continue
-            updated_suggested.append(icp)
+    updated_suggested = []
+    deleted_icp = None
+    for icp in suggested:
+        if isinstance(icp, dict) and str(icp.get("id")) == str(icp_id):
+            deleted_icp = icp
+            continue
+        updated_suggested.append(icp)
 
-        if not deleted_icp:
-            raise HTTPException(status_code=404, detail=f"Recommended ICP not found for icp_id: {icp_id}")
+    if not deleted_icp:
+        raise RecommendedICPNotFoundError(f"Recommended ICP not found for icp_id: {icp_id}")
 
-        new_payload = {"suggestedICPs": updated_suggested}
-        collection.update_one(
-            {"user_id": user_id},
-            {"$set": {"user_id": user_id, "icps": new_payload}},
-            upsert=True
-        )
-        _release_icp_id(db, icp_id)
+    new_payload = {"suggestedICPs": updated_suggested}
+    collection.update_one(
+        {"user_id": user_id},
+        {"$set": {"user_id": user_id, "icps": new_payload}},
+        upsert=True
+    )
+    _release_icp_id(db, icp_id)
 
-        return {
-            "success": True,
-            "message": "Recommended ICP deleted successfully",
-            "data": {
-                "deleted_icp_id": str(icp_id),
-                "remaining_count": len(updated_suggested)
-            }
+    return {
+        "success": True,
+        "message": "Recommended ICP deleted successfully",
+        "data": {
+            "deleted_icp_id": str(icp_id),
+            "remaining_count": len(updated_suggested)
         }
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    }
 
 
 # --- ICP-id registry helpers (moved from api.py in commit 13/16) ---
