@@ -19,6 +19,7 @@ from app.core import clients
 from app.core import llm_config
 from app.core.clients import upsert_node
 from app.core.exceptions import (
+    BrewraError,
     MarketScoreNotFoundError,
     MarketScoringRunNotFoundError,
 )
@@ -773,7 +774,27 @@ def _run_market_scoring_for_org(user_id: str, org_id: str, run_id: str) -> None:
                 }
             },
         )
+    except BrewraError as e:
+        # Typed domain failure — expected category, log at warning.
+        logger.warning(
+            "Market scoring run failed for org_id=%s run_id=%s: %s",
+            org_id, run_id, e,
+        )
+        if run_coll is not None:
+            run_coll.update_one(
+                {"run_id": run_id},
+                {
+                    "$set": {
+                        "status": "failed",
+                        "error": str(e),
+                        "completed_at": datetime.now(timezone.utc).isoformat(),
+                    }
+                },
+            )
     except Exception as e:
+        # Unexpected failure (Neo4j driver, LLM call, etc.) — log at error
+        # then mark run failed so the BackgroundTasks runner doesn't
+        # swallow the failure silently.
         logger.error(f"Lead market scoring run failed for org {org_id}: {e}")
         if run_coll is not None:
             run_coll.update_one(

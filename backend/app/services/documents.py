@@ -37,7 +37,7 @@ from app.core import clients
 from app.core import llm_config
 from app.core.clients import query  # function — local binding ok
 from app.core.config import pinecone_api_key, s3_bucket, together_api_key
-from app.core.exceptions import DocumentNotFoundError, DocumentValidationError
+from app.core.exceptions import BrewraError, DocumentNotFoundError, DocumentValidationError
 from app.core.logging import logger
 
 
@@ -311,8 +311,29 @@ async def process_file_to_embeddings(file_key: str, user_id: str, file_name: str
         if os.path.exists(local_file_path):
             os.remove(local_file_path)
 
+    except BrewraError as e:
+        # Typed domain failure — expected category, log at warning.
+        logger.warning(
+            "File processing failed for file_id=%s file_key=%s: %s",
+            file_id, file_key, e,
+        )
+        try:
+            db = clients.client["File_Processing"]
+            collection = db["file_status"]
+            collection.update_one(
+                {"file_key": file_key},
+                {"$set": {
+                    "status": "failed",
+                    "error": str(e),
+                    "failed_at": datetime.now(timezone.utc)
+                }},
+                upsert=True
+            )
+        except Exception:
+            pass
     except Exception as e:
-        # Update status with error
+        # Unexpected failure — log at error then mark status failed so
+        # the BackgroundTasks runner doesn't swallow it silently.
         try:
             db = clients.client["File_Processing"]
             collection = db["file_status"]
