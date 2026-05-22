@@ -16,6 +16,7 @@ import json
 from unittest.mock import MagicMock, patch, AsyncMock
 import pytest
 
+from tests.fixtures import load_captured
 from tests.helpers import scrub_dynamic
 from tests.identities import TEST_USER_ID, TEST_ORG_ID
 
@@ -32,20 +33,19 @@ VALID_COMPONENTS = [
     "market entry & growth strategy",
 ]
 
-# Minimal valid LLM output — Research_Market_N just calls json.loads on the
-# agent output, so the function itself must succeed. We patch the function
-# directly on services to bypass the LLM call entirely.
-_CANNED_RESULT = {
-    "executiveSummary": "Strong growth opportunity in target market.",
-    "tamValue": "$4.2B",
-    "samValue": "$1.8B",
-    "GrowthRate": "22%",
-    "strategicRecommendations": ["Focus on mid-market", "Expand APAC presence"],
-    "marketEntry": "Phase 1: US, Phase 2: EMEA",
-    "marketDrivers": ["Cloud adoption", "AI spend", "Regulatory tailwind"],
-    "marketSizeBySegment": {"Enterprise": "45%", "Mid-Market": "35%", "SMB": "20%"},
-    "growthProjections": {"2023": "1.0", "2026": "1.8", "2027": "2.2"},
+# Map component names to their captured fixture slugs.
+_COMPONENT_FIXTURE_SLUG = {
+    "market size & opportunity": "market_research_market_size_groq",
+    "industry trends report": "market_research_industry_trends_groq",
+    "competitor landscape": "market_research_competitor_landscape_groq",
+    "regulatory & compliance highlights": "market_research_regulatory_compliance_groq",
+    "market entry & growth strategy": "market_research_market_entry_groq",
 }
+
+
+def _captured_result(component_name: str = "market size & opportunity") -> dict:
+    slug = _COMPONENT_FIXTURE_SLUG.get(component_name, "market_research_market_size_groq")
+    return load_captured(slug)
 
 
 def _make_neo4j_record():
@@ -86,7 +86,7 @@ def test_post_market_research_all_components(client, mock_neo4j, mock_mongo, com
     # patching the source module is the canonical target.
     # _fetch_pinecone_supporting_context is now called inside the service (post-commit 16/25);
     # patch the binding in the service module where the call now lives.
-    with patch("app.services.market_research.COMPONENT_FUNCTIONS", {component_name: lambda _: dict(_CANNED_RESULT)}), \
+    with patch("app.services.market_research.COMPONENT_FUNCTIONS", {component_name: lambda _: _captured_result(component_name)}), \
          patch("app.services.market_research._fetch_pinecone_supporting_context", return_value=[]):
         response = client.post("/market-research", json=_base_payload(component_name))
 

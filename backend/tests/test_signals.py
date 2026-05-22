@@ -13,6 +13,7 @@ import json
 from unittest.mock import MagicMock, patch, call
 import pytest
 
+from tests.fixtures import load_captured
 from tests.helpers import scrub_dynamic
 from tests.identities import (
     TEST_USER_ID, TEST_ORG_ID, TEST_SIGNAL_ID_1, TEST_SIGNAL_ID_2
@@ -115,10 +116,8 @@ def test_post_generate_signals_batch_calls_llm(client):
     # signal_track find_one returns no existing headlines
     mc.__getitem__.return_value.__getitem__.return_value.find_one.return_value = None
 
-    signal_result = {"headline": "Test signal", "summary": "Test summary"}
-
     with patch("app.core.clients.client", mc), \
-         patch("app.services.signals.search_signals", return_value=dict(signal_result)) as mock_search, \
+         patch("app.services.signals.search_signals", return_value=dict(load_captured("search_signals_scout_groq"))) as mock_search, \
          patch("app.services.signals._fetch_pinecone_supporting_context", return_value=[]):
         response = client.post("/generate-signals-batch", json=_base_market_request())
 
@@ -135,10 +134,8 @@ def test_post_generate_signals_batch_returns_signals(client):
     """POST /generate-signals-batch → response has data list with signals."""
     mc, coll = _make_mc_for_signals([])
 
-    signal_result = {"headline": "Test signal", "summary": "Test summary"}
-
     with patch("app.core.clients.client", mc), \
-         patch("app.services.signals.search_signals", return_value=dict(signal_result)), \
+         patch("app.services.signals.search_signals", return_value=dict(load_captured("search_signals_scout_groq"))), \
          patch("app.services.signals._fetch_pinecone_supporting_context", return_value=[]):
         response = client.post("/generate-signals-batch", json=_base_market_request())
 

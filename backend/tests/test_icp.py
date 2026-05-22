@@ -15,6 +15,7 @@ Endpoints:
 import json
 from unittest.mock import MagicMock, patch
 
+from tests.fixtures import load_captured
 from tests.helpers import scrub_dynamic, DEFAULT_SCRUB_KEYS
 from tests.identities import TEST_USER_ID, TEST_ORG_ID, TEST_ICP_ID_1
 
@@ -449,7 +450,7 @@ def test_post_icp_research_icp_summary(client, mock_neo4j, mock_llm_chain, mock_
     _setup_icp_research_neo4j(mock_neo4j)
     _set_invoke_output(
         mock_llm_chain,
-        json.dumps({"summary": "ICP summary result", "market_opportunity": "Large TAM"}),
+        json.dumps(load_captured("icp_research_icp_summary_groq")),
     )
 
     mc = _mc_factory({
@@ -473,6 +474,8 @@ def test_post_icp_research_icp_summary(client, mock_neo4j, mock_llm_chain, mock_
 def test_post_icp_research_buyer_map(client, mock_neo4j, mock_llm_chain, mock_pinecone, snapshot):
     """icp-research: buyer map & roles, pain points, triggers component."""
     _setup_icp_research_neo4j(mock_neo4j)
+    # TODO(Phase E): swap to load_captured("icp_research_icp_buyer_map_groq") once API keys available.
+    # icp_research_2 requires {"currentData": {...}}; the stub lacks that key and causes ValueError.
     _set_invoke_output(
         mock_llm_chain,
         json.dumps({"currentData": {
@@ -505,6 +508,8 @@ def test_post_icp_research_buyer_map(client, mock_neo4j, mock_llm_chain, mock_pi
 def test_post_icp_research_competitive_overlap(client, mock_neo4j, mock_llm_chain, mock_pinecone, snapshot):
     """icp-research: competitive overlap & buying signals component."""
     _setup_icp_research_neo4j(mock_neo4j)
+    # TODO(Phase E): swap to load_captured("icp_research_icp_competitive_groq") once API keys available.
+    # icp_research_3 requires {"currentData": {...}}; the stub lacks that key and causes ValueError.
     _set_invoke_output(
         mock_llm_chain,
         json.dumps({"currentData": {
@@ -537,6 +542,8 @@ def test_post_icp_research_competitive_overlap(client, mock_neo4j, mock_llm_chai
 def test_post_icp_research_regulatory(client, mock_neo4j, mock_llm_chain, mock_pinecone, snapshot):
     """icp-research: regulatory, compliance & recommended icp component."""
     _setup_icp_research_neo4j(mock_neo4j)
+    # TODO(Phase E): swap to load_captured("icp_research_icp_regulatory_groq") once API keys available.
+    # icp_research_4 requires {"currentData": {...}}; the stub lacks that key and causes ValueError.
     _set_invoke_output(
         mock_llm_chain,
         json.dumps({"currentData": {

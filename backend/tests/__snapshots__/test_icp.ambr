@@ -221,10 +221,29 @@
 # name: test_post_icp_research_icp_summary
   dict({
     'data': dict({
+      '_stub': True,
+      '_stub_note': 'Replace by running tests/capture_fixtures.py with real API keys.',
       'component_name': 'icp summary & market opportunity',
-      'market_opportunity': 'Large TAM',
       'org_id': 'test_org_abc',
-      'summary': 'ICP summary result',
+      'suggestedICPs': list([
+        dict({
+          'firmographics': dict({
+            'company_size': '200-1000',
+            'industry': 'Stub',
+          }),
+          'id': 'icp_stub_1',
+          'key_decision_makers': list([
+            'VP Stub',
+          ]),
+          'pain_points_and_triggers': dict({
+            'critical': 'Stub pain',
+            'others': list([
+            ]),
+          }),
+          'title': 'Stub ICP 1',
+        }),
+      ]),
+      'summary': 'ICP stub for icp_summary (groq). REGENERATE.',
       'timestamp': '<scrubbed>',
       'user_id': 'test_user_123',
     }),
