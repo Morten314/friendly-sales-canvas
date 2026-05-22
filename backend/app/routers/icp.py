@@ -27,6 +27,9 @@ async def icp_research(request: MarketRequest):
 @router.post("/icp-research_claude")
 async def icp_research_claude(request: MarketRequest):
     """Same as /icp-research but research is generated with Claude (Tavily + Anthropic)."""
+    from app.services._claude_budget import CLAUDE_API_KEY
+    if not CLAUDE_API_KEY:
+        raise HTTPException(status_code=500, detail="ANTHROPIC_API_KEY is not configured")
     try:
         return await icp_service.run_icp_research(request, llm_backend="claude")
     except ICPIdRegistryError as e:

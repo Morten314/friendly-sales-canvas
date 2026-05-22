@@ -1035,7 +1035,11 @@ async def _run_icp_research_impl(request: Any, llm_backend: str) -> Dict[str, An
 
 
 async def run_icp_research(request: Any, llm_backend: str = "groq") -> Dict[str, Any]:
-    """Router-facing wrapper for POST /icp-research and POST /icp-research_claude.
+    """Unified worker for POST /icp-research and POST /icp-research_claude.
+
+    Originally collapsed in Phase B Task 11 via the shared `_run_icp_research_impl`
+    helper; Task 17 (B2.2) closes the loop by moving the CLAUDE_API_KEY guard out
+    of the service into the router (consistent with Task 14/16 boundary).
 
     Parameters
     ----------
@@ -1044,10 +1048,6 @@ async def run_icp_research(request: Any, llm_backend: str = "groq") -> Dict[str,
     llm_backend:
         ``"groq"`` (default) or ``"claude"``.
     """
-    if llm_backend == "claude":
-        from app.services._claude_budget import CLAUDE_API_KEY
-        if not CLAUDE_API_KEY:
-            raise HTTPException(status_code=500, detail="ANTHROPIC_API_KEY is not configured")
     return await _run_icp_research_impl(request, llm_backend=llm_backend)
 
 
