@@ -19,7 +19,7 @@ from app.core import llm_config
 from app.core.config import tavily_api_key, claude_sonnet_model
 from app.models.market_research import MarketRequest
 from app.models.signals import SignalActionRequest, SignalAskRequest
-from app.services.market_research import (
+from app.services._llm_helpers import (
     CLAUDE_RESEARCH_MAX_TOKENS,
     _tavily_context_and_urls,
     _claude_messages_text,

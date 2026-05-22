@@ -28,7 +28,7 @@ from pymongo.errors import DuplicateKeyError
 
 from app.core import clients, llm_config
 from app.core.exceptions import ICPIdRegistryError
-from app.services.market_research import (
+from app.services._llm_helpers import (
     CLAUDE_RESEARCH_MAX_TOKENS,
     _tavily_context_and_urls,
     _claude_messages_text,
