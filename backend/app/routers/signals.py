@@ -1,7 +1,6 @@
 """Signals endpoints: research, batch generation, signal feed, signal Q&A."""
 from fastapi import APIRouter, HTTPException, Query
 
-from app.core.exceptions import BudgetExhaustedError
 from app.models.market_research import MarketRequest
 from app.models.signals import (
     FetchSignalsResponse,
@@ -35,10 +34,7 @@ async def generate_signals_batch_claude(request: MarketRequest):
     from app.services._claude_budget import CLAUDE_API_KEY
     if not CLAUDE_API_KEY:
         raise HTTPException(status_code=500, detail="ANTHROPIC_API_KEY is not configured")
-    try:
-        return await signals_service.generate_signals_batch_claude(request)
-    except BudgetExhaustedError as e:
-        raise HTTPException(status_code=429, detail=e.args[0])
+    return await signals_service.generate_signals_batch_claude(request)
 
 
 @router.get("/fetch-signals", response_model=FetchSignalsResponse)
@@ -66,7 +62,4 @@ async def signal_ask_claude(request: SignalAskRequest):
     """
     Claude-powered signal ask endpoint with local token/run limiter.
     """
-    try:
-        return await signals_service.signal_ask_claude(request)
-    except BudgetExhaustedError as e:
-        raise HTTPException(status_code=429, detail=e.args[0])
+    return await signals_service.signal_ask_claude(request)
