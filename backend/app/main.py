@@ -3,9 +3,11 @@
 This module owns:
   - The FastAPI() instance
   - CORS middleware
-  - Logging configuration
   - include_router() calls for all domain routers (added incrementally
     as routers are extracted in Tasks 4-15)
+
+Logging is configured in app/core/logging.py (re-exported below for
+backward compat within Phase B).
 
 Domain routers register themselves here. Routes themselves live in
 app/routers/<domain>.py.
