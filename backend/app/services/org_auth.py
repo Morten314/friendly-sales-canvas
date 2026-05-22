@@ -1,6 +1,6 @@
 """Org / auth / registration service. HTTP-free business logic."""
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List
 
 from fastapi import HTTPException
@@ -98,7 +98,7 @@ def create_org(request: dict) -> Dict:
                     "$set": {
                         "org_list": org_list,
                         "org_names": org_names,
-                        "updated_at": datetime.utcnow()
+                        "updated_at": datetime.now(timezone.utc)
                     }
                 }
             )
@@ -107,8 +107,8 @@ def create_org(request: dict) -> Dict:
             org_data = {
                 "_id": "orgs",
                 "org_list": [new_org_id],
-                "created_at": datetime.utcnow(),
-                "updated_at": datetime.utcnow()
+                "created_at": datetime.now(timezone.utc),
+                "updated_at": datetime.now(timezone.utc)
             }
             if org_name:
                 org_data["org_names"] = {new_org_id: org_name}
@@ -151,7 +151,7 @@ def connect_user_to_org(user_id: str, org_id: str) -> Dict:
                 {
                     "$set": {
                         "user_mappings": user_mappings,
-                        "updated_at": datetime.utcnow()
+                        "updated_at": datetime.now(timezone.utc)
                     }
                 }
             )
@@ -160,8 +160,8 @@ def connect_user_to_org(user_id: str, org_id: str) -> Dict:
             collection.insert_one({
                 "_id": "users",
                 "user_mappings": {user_id: org_id},
-                "created_at": datetime.utcnow(),
-                "updated_at": datetime.utcnow()
+                "created_at": datetime.now(timezone.utc),
+                "updated_at": datetime.now(timezone.utc)
             })
 
         return {
@@ -220,7 +220,7 @@ def create_registration(registration: RegistrationRequest) -> RegistrationRespon
         registration_doc = {
             "name": registration.name,
             "email": registration.email,
-            "timestamp": datetime.utcnow()
+            "timestamp": datetime.now(timezone.utc)
         }
 
         # Insert the document

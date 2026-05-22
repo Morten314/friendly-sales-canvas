@@ -1,7 +1,7 @@
 """Lead market scoring endpoints: score / status / per-lead descriptions."""
 import logging
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
@@ -38,7 +38,7 @@ async def get_or_refresh_lead_market_scores(
 
         if active_run and market_scoring_service._is_stale_queued_run(active_run):
             stale_run_id = str(active_run.get("run_id"))
-            now_iso = datetime.utcnow().isoformat()
+            now_iso = datetime.now(timezone.utc).isoformat()
             run_coll.update_one(
                 {"run_id": stale_run_id},
                 {
@@ -59,7 +59,7 @@ async def get_or_refresh_lead_market_scores(
 
         if request.refresh and not active_run:
             run_id = str(uuid.uuid4())
-            queued_at = datetime.utcnow().isoformat()
+            queued_at = datetime.now(timezone.utc).isoformat()
             run_doc = {
                 "run_id": run_id,
                 "user_id": request.user_id,

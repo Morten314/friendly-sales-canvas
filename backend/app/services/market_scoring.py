@@ -404,7 +404,7 @@ def _persist_market_score_for_lead(
     scoring_status: str = "completed",
     score_coll=None,
 ) -> None:
-    now_iso = datetime.utcnow().isoformat()
+    now_iso = datetime.now(timezone.utc).isoformat()
     lead_id = str(lead.get("lead_id"))
     file_id = lead.get("file_id")
     company_name = _extract_company_name(lead)
@@ -468,7 +468,7 @@ def _run_market_scoring_for_org(user_id: str, org_id: str, run_id: str) -> None:
     run_coll = None
     try:
         mongo_client, score_coll, run_coll = _get_market_score_collections()
-        now_iso = datetime.utcnow().isoformat()
+        now_iso = datetime.now(timezone.utc).isoformat()
         run_coll.update_one(
             {"run_id": run_id},
             {"$set": {"status": "processing", "started_at": now_iso, "updated_at": now_iso}},
@@ -483,7 +483,7 @@ def _run_market_scoring_for_org(user_id: str, org_id: str, run_id: str) -> None:
                     "$set": {
                         "status": "failed",
                         "error": "No leads found for org_id",
-                        "completed_at": datetime.utcnow().isoformat(),
+                        "completed_at": datetime.now(timezone.utc).isoformat(),
                     }
                 },
             )
@@ -497,7 +497,7 @@ def _run_market_scoring_for_org(user_id: str, org_id: str, run_id: str) -> None:
                     "$set": {
                         "status": "failed",
                         "error": "Company profile not found for org_id",
-                        "completed_at": datetime.utcnow().isoformat(),
+                        "completed_at": datetime.now(timezone.utc).isoformat(),
                     }
                 },
             )
@@ -511,7 +511,7 @@ def _run_market_scoring_for_org(user_id: str, org_id: str, run_id: str) -> None:
                     "$set": {
                         "status": "failed",
                         "error": "Missing market research components. Generate all 5 components first.",
-                        "completed_at": datetime.utcnow().isoformat(),
+                        "completed_at": datetime.now(timezone.utc).isoformat(),
                     }
                 },
             )
@@ -526,7 +526,7 @@ def _run_market_scoring_for_org(user_id: str, org_id: str, run_id: str) -> None:
                     "total_leads": total_leads,
                     "processed_count": 0,
                     "failed_count": 0,
-                    "updated_at": datetime.utcnow().isoformat(),
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
                 }
             },
         )
@@ -540,7 +540,7 @@ def _run_market_scoring_for_org(user_id: str, org_id: str, run_id: str) -> None:
                         "$set": {
                             "processed_count": processed_count,
                             "failed_count": failed_count,
-                            "updated_at": datetime.utcnow().isoformat(),
+                            "updated_at": datetime.now(timezone.utc).isoformat(),
                         }
                     },
                 )
@@ -585,7 +585,7 @@ def _run_market_scoring_for_org(user_id: str, org_id: str, run_id: str) -> None:
                     "$set": {
                         "processed_count": processed_count,
                         "failed_count": failed_count,
-                        "updated_at": datetime.utcnow().isoformat(),
+                        "updated_at": datetime.now(timezone.utc).isoformat(),
                     }
                 },
             )
@@ -597,8 +597,8 @@ def _run_market_scoring_for_org(user_id: str, org_id: str, run_id: str) -> None:
                     "status": "completed",
                     "processed_count": processed_count,
                     "failed_count": failed_count,
-                    "updated_at": datetime.utcnow().isoformat(),
-                    "completed_at": datetime.utcnow().isoformat(),
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                    "completed_at": datetime.now(timezone.utc).isoformat(),
                 }
             },
         )
@@ -611,7 +611,7 @@ def _run_market_scoring_for_org(user_id: str, org_id: str, run_id: str) -> None:
                     "$set": {
                         "status": "failed",
                         "error": str(e),
-                        "completed_at": datetime.utcnow().isoformat(),
+                        "completed_at": datetime.now(timezone.utc).isoformat(),
                     }
                 },
             )

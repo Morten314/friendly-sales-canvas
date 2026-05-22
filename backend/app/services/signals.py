@@ -3,7 +3,7 @@ import json
 import re
 import asyncio
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Literal, Optional
 
 import requests
@@ -647,7 +647,7 @@ async def run_signals_research(request: MarketRequest) -> dict:
         "signal_id": signal_id,  # Ensure signal_id is also present
         "user_id": request.user_id,
         "agent": agent_name,
-        "timestamp": datetime.utcnow()
+        "timestamp": datetime.now(timezone.utc)
     })
     if request.org_id:
         signals_result["org_id"] = request.org_id
@@ -666,7 +666,7 @@ async def run_signals_research(request: MarketRequest) -> dict:
                 {"_id": track_key},
                 {
                     "$addToSet": {"headlines": signals_result.get("headline")},
-                    "$set": {"last_updated": datetime.utcnow()}
+                    "$set": {"last_updated": datetime.now(timezone.utc)}
                 },
                 upsert=True
             )
@@ -785,7 +785,7 @@ async def _generate_signals_batch_impl(request: MarketRequest, llm_backend: str)
         profiler_pre_data["pinecone_supporting_context"] = profiler_pinecone_context
 
     generated_signals = []
-    batch_id = f"batch_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
+    batch_id = f"batch_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}"
 
     # Generate 2 signals for scout
     for i in range(2):
@@ -798,7 +798,7 @@ async def _generate_signals_batch_impl(request: MarketRequest, llm_backend: str)
                 "signal_id": signal_id,  # Ensure signal_id is also present
                 "user_id": request.user_id,
                 "agent": "scout",
-                "timestamp": datetime.utcnow(),
+                "timestamp": datetime.now(timezone.utc),
                 "batch_id": batch_id
             })
             if request.org_id:
@@ -818,7 +818,7 @@ async def _generate_signals_batch_impl(request: MarketRequest, llm_backend: str)
                         {"_id": track_key},
                         {
                             "$addToSet": {"headlines": signals_result.get("headline")},
-                            "$set": {"last_updated": datetime.utcnow()}
+                            "$set": {"last_updated": datetime.now(timezone.utc)}
                         },
                         upsert=True
                     )
@@ -850,7 +850,7 @@ async def _generate_signals_batch_impl(request: MarketRequest, llm_backend: str)
                 "signal_id": signal_id,  # Ensure signal_id is also present
                 "user_id": request.user_id,
                 "agent": "profiler",
-                "timestamp": datetime.utcnow(),
+                "timestamp": datetime.now(timezone.utc),
                 "batch_id": batch_id
             })
             if request.org_id:
@@ -870,7 +870,7 @@ async def _generate_signals_batch_impl(request: MarketRequest, llm_backend: str)
                         {"_id": track_key},
                         {
                             "$addToSet": {"headlines": signals_result.get("headline")},
-                            "$set": {"last_updated": datetime.utcnow()}
+                            "$set": {"last_updated": datetime.now(timezone.utc)}
                         },
                         upsert=True
                     )
@@ -970,7 +970,7 @@ async def record_signal_action(request: SignalActionRequest) -> dict:
                     "$set": {
                         "org_id": request.org_id,
                         "status": "accepted",
-                        "actioned_at": datetime.utcnow()
+                        "actioned_at": datetime.now(timezone.utc)
                     }
                 }
             )

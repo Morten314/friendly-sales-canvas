@@ -1023,7 +1023,7 @@ async def _run_icp_research_impl(request: Any, llm_backend: str) -> Dict[str, An
     research_result.update({
         "user_id": request.user_id,
         "component_name": component_name,
-        "timestamp": datetime.utcnow()
+        "timestamp": datetime.now(timezone.utc)
     })
     if request.org_id:
         research_result["org_id"] = request.org_id

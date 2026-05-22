@@ -3,7 +3,7 @@
 Extracted from app/routers/leads.py during phase B modularization.
 """
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List
 
 from fastapi import HTTPException
@@ -117,7 +117,7 @@ def create_lead(request: LeadCreateRequest) -> Dict[str, Any]:
         lead_data["user_id"] = request.user_id
         lead_data["org_id"] = request.org_id
         lead_data["lead_id"] = lead_id
-        lead_data["created_at"] = datetime.utcnow().isoformat()
+        lead_data["created_at"] = datetime.now(timezone.utc).isoformat()
 
         # Set default stage if not provided
         if "stage" not in lead_data and "status" not in lead_data and "Status" not in lead_data:
@@ -167,7 +167,7 @@ def update_lead(lead_id: str, request: LeadUpdateRequest) -> Dict[str, Any]:
 
             # Prepare update data - store everything as-is
             update_data = request.data.copy()
-            update_data["updated_at"] = datetime.utcnow().isoformat()
+            update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
 
             # Update Lead node with all data directly (no extraction, no mapping)
             session.execute_write(
@@ -274,7 +274,7 @@ def batch_upload_leads(
             lead_stream_coll.create_index([("user_id", 1), ("org_id", 1)])
             # Generate backend file_id
             file_id = str(uuid.uuid4())
-            uploaded_at = datetime.utcnow().isoformat()
+            uploaded_at = datetime.now(timezone.utc).isoformat()
             lead_stream_coll.insert_one({
                 "file_id": file_id,
                 "user_id": user_id,
@@ -336,7 +336,7 @@ def batch_upload_leads(
                     lead_data["user_id"] = user_id
                     lead_data["org_id"] = org_id
                     lead_data["lead_id"] = lead_id
-                    lead_data["created_at"] = datetime.utcnow().isoformat()
+                    lead_data["created_at"] = datetime.now(timezone.utc).isoformat()
                     lead_data["file_id"] = file_id
 
                     # Set default stage if not provided
@@ -372,7 +372,7 @@ def batch_upload_leads(
                     "total_rows": total_rows,
                     "created_count": created_count,
                     "error_count": error_count,
-                    "last_processed_at": datetime.utcnow().isoformat()
+                    "last_processed_at": datetime.now(timezone.utc).isoformat()
                 }}
             )
             mongo_client.close()
@@ -498,8 +498,8 @@ def delete_leads_by_file(file_id: str, user_id: str, org_id: str) -> Dict[str, A
             {"$set": {
                 "processing_status": "deleted",
                 "deleted_count": total,
-                "deleted_at": datetime.utcnow().isoformat(),
-                "last_processed_at": datetime.utcnow().isoformat()
+                "deleted_at": datetime.now(timezone.utc).isoformat(),
+                "last_processed_at": datetime.now(timezone.utc).isoformat()
             }}
         )
 

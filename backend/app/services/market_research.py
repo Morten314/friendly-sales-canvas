@@ -8,7 +8,7 @@ import asyncio
 import json
 import os
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List
 
 from fastapi import HTTPException
@@ -1012,7 +1012,7 @@ async def run_market_research(request: MarketRequest, llm_backend: str = "groq")
     if request.org_id:
         research_result["org_id"] = request.org_id
     research_result["component_name"] = component_name
-    research_result["timestamp"] = datetime.utcnow()
+    research_result["timestamp"] = datetime.now(timezone.utc)
 
     await asyncio.to_thread(collection.insert_one, research_result)
     research_result.pop("_id", None)

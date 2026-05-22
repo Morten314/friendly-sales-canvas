@@ -16,7 +16,7 @@ extracted from the documents router in commit 13/25 (phase B).
 import json
 import os
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 
 import pandas as pd
@@ -174,7 +174,7 @@ async def process_file_to_embeddings(file_key: str, user_id: str, file_name: str
                     {"file_key": file_key},
                     {"$set": {
                         "status": "completed",
-                        "completed_at": datetime.utcnow(),
+                        "completed_at": datetime.now(timezone.utc),
                         "embedding_supported": False
                     }},
                     upsert=True
@@ -299,7 +299,7 @@ async def process_file_to_embeddings(file_key: str, user_id: str, file_name: str
             {"file_key": file_key},
             {"$set": {
                 "status": "completed",
-                "completed_at": datetime.utcnow(),
+                "completed_at": datetime.now(timezone.utc),
                 "chunks_count": len(chunks),
                 "embedding_supported": True
             }},
@@ -321,7 +321,7 @@ async def process_file_to_embeddings(file_key: str, user_id: str, file_name: str
                 {"$set": {
                     "status": "failed",
                     "error": str(e),
-                    "failed_at": datetime.utcnow()
+                    "failed_at": datetime.now(timezone.utc)
                 }},
                 upsert=True
             )
@@ -397,7 +397,7 @@ async def upload_document_file(
                     "file_name": name,
                     "url": url,
                     "status": "completed",
-                    "uploaded_at": datetime.utcnow(),
+                    "uploaded_at": datetime.now(timezone.utc),
                     "embedding_supported": False,
                     "data_source_type": "url"
                 }
@@ -485,7 +485,7 @@ async def upload_document_file(
                 "org_id": org_id,
                 "file_name": file_filename,
                 "status": "processing" if will_be_embedded else "completed",
-                "uploaded_at": datetime.utcnow(),
+                "uploaded_at": datetime.now(timezone.utc),
                 "s3_url": f"s3://{s3_bucket}/{file_key}",
                 "embedding_supported": will_be_embedded
             }
@@ -513,7 +513,7 @@ async def upload_document_file(
                     {"file_key": file_key},
                     {"$set": {
                         "status": "completed",
-                        "completed_at": datetime.utcnow(),
+                        "completed_at": datetime.now(timezone.utc),
                         "embedding_supported": False
                     }},
                     upsert=True

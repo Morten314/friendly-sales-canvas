@@ -8,7 +8,7 @@ import os
 import threading
 import uuid
 from collections import deque
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict
 
 from app.core.config import (
@@ -43,7 +43,7 @@ def _prune_claude_signal_window(now_ts: float) -> None:
 def _reserve_claude_signal_budget(input_tokens_estimate: int, max_output_tokens: int) -> Dict[str, Any]:
     global _claude_signal_total_runs
 
-    now_ts = datetime.utcnow().timestamp()
+    now_ts = datetime.now(timezone.utc).timestamp()
     reserved_tokens = max(0, input_tokens_estimate) + max(0, max_output_tokens)
     run_id = str(uuid.uuid4())
 
@@ -82,7 +82,7 @@ def _reserve_claude_signal_budget(input_tokens_estimate: int, max_output_tokens:
 
 
 def _finalize_claude_signal_budget(run_id: str, actual_total_tokens: int) -> Dict[str, int]:
-    now_ts = datetime.utcnow().timestamp()
+    now_ts = datetime.now(timezone.utc).timestamp()
     with _claude_signal_usage_lock:
         _prune_claude_signal_window(now_ts)
         for item in _claude_signal_usage_window:

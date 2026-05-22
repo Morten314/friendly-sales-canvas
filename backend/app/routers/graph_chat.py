@@ -59,7 +59,7 @@ async def add_engagement_voice(
 
     text = graph_chat_service.convert_audio_to_text(audio_path)
 
-    now_utc = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+    now_utc = datetime.datetime.now(datetime.timezone.utc)
     import pytz
     ist = pytz.timezone("Asia/Kolkata")
     now_ist = now_utc.astimezone(ist)
@@ -91,7 +91,7 @@ async def add_engagement_text(
     update_type: str = Form(...),  # note, offline meeting, email, online meeting
     text: str = Form(...)
 ):
-    now_utc = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+    now_utc = datetime.datetime.now(datetime.timezone.utc)
     import pytz
     ist = pytz.timezone("Asia/Kolkata")
     now_ist = now_utc.astimezone(ist)

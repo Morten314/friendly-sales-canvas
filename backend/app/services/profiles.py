@@ -1,6 +1,6 @@
 """Profiles service — profile CRUD, bulk cleanup, and generic edit dispatch."""
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import HTTPException
@@ -246,7 +246,7 @@ def edit_profile_field(request: EditRequest) -> dict:
             modified_doc = request.modified_json.copy()
             modified_doc["user_id"] = request.user_id
             # Add timestamp to ensure edited components are fetched as most recent
-            modified_doc["timestamp"] = datetime.utcnow()
+            modified_doc["timestamp"] = datetime.now(timezone.utc)
 
             # Insert modified JSON into MongoDB
             insert_result = collection.insert_one(modified_doc)
