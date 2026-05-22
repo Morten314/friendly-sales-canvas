@@ -1,5 +1,4 @@
 """Leads endpoints: CRUD, batch upload, file-grouped queries."""
-import shutil
 from typing import Any, Dict, List
 
 from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile

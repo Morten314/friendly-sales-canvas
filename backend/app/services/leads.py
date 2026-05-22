@@ -3,9 +3,8 @@
 Extracted from app/routers/leads.py during phase B modularization.
 """
 import json
-import shutil
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from fastapi import HTTPException
 
