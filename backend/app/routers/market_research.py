@@ -14,7 +14,7 @@ from app.services._retrieval import (
     _fetch_pinecone_supporting_context,
 )
 
-router = APIRouter()
+router = APIRouter(tags=["market-research"])
 
 
 @router.post("/market-research")

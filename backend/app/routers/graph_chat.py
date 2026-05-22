@@ -8,7 +8,7 @@ from app.core import llm_config
 from app.models.graph_chat import ProspectData
 from app.services import graph_chat as graph_chat_service
 
-router = APIRouter()
+router = APIRouter(tags=["graph-chat"])
 
 
 @router.post("/create-company/")

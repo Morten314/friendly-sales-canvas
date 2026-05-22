@@ -10,7 +10,7 @@ from app.core import clients
 from app.core.clients import upsert_node
 from app.models.profiles import EditRequest
 
-router = APIRouter()
+router = APIRouter(tags=["profiles"])
 
 
 @router.post("/profile/{profile_type}")

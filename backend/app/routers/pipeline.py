@@ -9,7 +9,7 @@ from app.core import llm_config
 from app.core.config import STAGE_ORDER, STAGE_MAPPING
 from app.models.pipeline import SalesPipelineResponse, TimeframeResponse, StageStats  # noqa: F401 — kept for response-shape parity with api.py
 
-router = APIRouter()
+router = APIRouter(tags=["pipeline"])
 
 
 @router.get("/Sales_Pipeline")

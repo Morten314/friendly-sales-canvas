@@ -14,10 +14,10 @@ from app.models.customer_profile import CustomerProfileRequest, SuggestedICPToCu
 #   Both helpers are imported lazily inside handlers to keep import order simple
 #   (no circular risk now that they live in app.services).
 
-router = APIRouter()
+router = APIRouter(prefix="/customer_profile", tags=["customer-profile"])
 
 
-@router.post("/customer_profile")
+@router.post("")
 async def create_or_update_customer_profile(request: CustomerProfileRequest):
     """
     Create or update customer profiles (ICPs) in MongoDB.
@@ -147,7 +147,7 @@ async def create_or_update_customer_profile(request: CustomerProfileRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/customer_profile")
+@router.get("")
 async def get_customer_profile(org_id: str = Query(...)):
     """
     Get customer profiles (ICPs) from MongoDB.
@@ -244,7 +244,7 @@ async def get_customer_profile(org_id: str = Query(...)):
             mongo_client.close()
 
 
-@router.post("/customer_profile/from_suggested_icp")
+@router.post("/from_suggested_icp")
 async def save_suggested_icp_as_customer_profile(request: SuggestedICPToCustomerProfileRequest):
     """
     Convert a suggested/recommended ICP (from GET /icp) into a Customer Profile ICP and save it.
@@ -397,7 +397,7 @@ async def save_suggested_icp_as_customer_profile(request: SuggestedICPToCustomer
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.delete("/customer_profile/icp/{icp_id}")
+@router.delete("/icp/{icp_id}")
 async def delete_customer_profile_icp(icp_id: str, org_id: str = Query(...)):
     """
     Delete a single saved customer profile ICP by icp_id for a given org_id.

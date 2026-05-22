@@ -18,7 +18,7 @@ from app.services import market_scoring as market_scoring_service
 from app.services.leads import fetch_leads_for_org
 
 
-router = APIRouter()
+router = APIRouter(tags=["market-scoring"])
 logger = logging.getLogger(__name__)
 
 

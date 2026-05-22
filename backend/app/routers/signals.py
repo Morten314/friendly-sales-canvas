@@ -30,7 +30,7 @@ from app.services._claude_budget import (
     _finalize_claude_signal_budget,
 )
 
-router = APIRouter()
+router = APIRouter(tags=["signals"])
 logger = logging.getLogger(__name__)
 
 

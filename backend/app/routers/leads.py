@@ -11,10 +11,10 @@ from app.core.clients import upsert_node
 from app.core.logging import logger
 from app.models.leads import LeadCreateRequest, LeadUpdateRequest
 
-router = APIRouter()
+router = APIRouter(prefix="/leads", tags=["leads"])
 
 
-@router.get("/leads", response_model=List[Dict[str, Any]])
+@router.get("", response_model=List[Dict[str, Any]])
 def get_all_leads(org_id: str = Query(...)):
     """
     Get all leads filtered by org_id (multitenant).
@@ -58,7 +58,7 @@ def get_all_leads(org_id: str = Query(...)):
         logger.error(f"Error fetching leads: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to fetch leads: {str(e)}")
 
-@router.post("/leads", response_model=Dict[str, Any])
+@router.post("", response_model=Dict[str, Any])
 async def add_lead(request: LeadCreateRequest):
     """
     Add a single lead manually with flexible key-value pairs.
@@ -106,7 +106,7 @@ async def add_lead(request: LeadCreateRequest):
         logger.error(f"Error creating lead: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to create lead: {str(e)}")
 
-@router.put("/leads/{lead_id}", response_model=Dict[str, Any])
+@router.put("/{lead_id}", response_model=Dict[str, Any])
 async def update_lead(lead_id: str, request: LeadUpdateRequest):
     """
     Modify a single lead with flexible key-value pairs.
@@ -153,7 +153,7 @@ async def update_lead(lead_id: str, request: LeadUpdateRequest):
         logger.error(f"Error updating lead: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to update lead: {str(e)}")
 
-@router.delete("/leads/{lead_id}", response_model=Dict[str, Any])
+@router.delete("/{lead_id}", response_model=Dict[str, Any])
 async def delete_lead(lead_id: str, user_id: str = Query(...), org_id: str = Query(...)):
     """
     Delete a single lead.
@@ -194,7 +194,7 @@ async def delete_lead(lead_id: str, user_id: str = Query(...), org_id: str = Que
         logger.error(f"Error deleting lead: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to delete lead: {str(e)}")
 
-@router.post("/leads/batch-upload", response_model=Dict[str, Any])
+@router.post("/batch-upload", response_model=Dict[str, Any])
 async def batch_upload_leads(
     file: UploadFile = File(...),
     user_id: str = Form(...),
@@ -364,7 +364,7 @@ async def batch_upload_leads(
         logger.error(f"Error in batch upload: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to process CSV file: {str(e)}")
 
-@router.get("/leads/by-file", response_model=List[Dict[str, Any]])
+@router.get("/by-file", response_model=List[Dict[str, Any]])
 def get_leads_by_file(org_id: str = Query(...), file_id: str = Query(...)):
     """
     Fetch leads filtered by file_id within an org.
@@ -397,7 +397,7 @@ def get_leads_by_file(org_id: str = Query(...), file_id: str = Query(...)):
         logger.error(f"Error fetching leads by file_id: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to fetch leads by file_id: {str(e)}")
 
-@router.get("/leads/stream/status", response_model=Dict[str, Any])
+@router.get("/stream/status", response_model=Dict[str, Any])
 def get_lead_stream_status(org_id: str = Query(...)):
     """
     List lead-stream uploads (file_id registry/status) for an org.
@@ -430,7 +430,7 @@ def get_lead_stream_status(org_id: str = Query(...)):
         if mongo_client:
             mongo_client.close()
 
-@router.delete("/leads/by-file/{file_id}", response_model=Dict[str, Any])
+@router.delete("/by-file/{file_id}", response_model=Dict[str, Any])
 def delete_leads_by_file(file_id: str, user_id: str = Query(...), org_id: str = Query(...)):
     """
     Delete all leads belonging to a specific file_id (scoped by user_id and org_id).
