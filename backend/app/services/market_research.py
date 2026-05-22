@@ -54,7 +54,7 @@ def Research_Market_1(pre_data, llm_backend: str = "default") -> dict:
         try:
             parsed = json.loads(pre_data)
             company_profile_json = json.dumps(parsed, indent=2)
-        except:
+        except Exception:
             company_profile_json = pre_data
     else:
         company_profile_json = str(pre_data)
@@ -173,7 +173,7 @@ def Research_Market_2(pre_data, llm_backend: str = "default") -> dict:
         try:
             parsed = json.loads(pre_data)
             company_profile_json = json.dumps(parsed, indent=2)
-        except:
+        except Exception:
             company_profile_json = pre_data
     else:
         company_profile_json = str(pre_data)
@@ -309,7 +309,7 @@ def Research_Market_3(pre_data, llm_backend: str = "default") -> dict:
         try:
             parsed = json.loads(pre_data)
             company_profile_json = json.dumps(parsed, indent=2)
-        except:
+        except Exception:
             company_profile_json = pre_data
     else:
         company_profile_json = str(pre_data)
@@ -536,7 +536,7 @@ def Research_Market_4(pre_data, llm_backend: str = "default") -> dict:
         try:
             parsed = json.loads(pre_data)
             company_profile_json = json.dumps(parsed, indent=2)
-        except:
+        except Exception:
             company_profile_json = pre_data
     else:
         company_profile_json = str(pre_data)
@@ -750,7 +750,7 @@ def Research_Market_5(pre_data, llm_backend: str = "default") -> dict:
         try:
             parsed = json.loads(pre_data)
             company_profile_json = json.dumps(parsed, indent=2)
-        except:
+        except Exception:
             company_profile_json = pre_data
     else:
         company_profile_json = str(pre_data)

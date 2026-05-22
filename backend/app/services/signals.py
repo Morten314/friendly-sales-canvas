@@ -569,7 +569,7 @@ async def run_signals_research(request: MarketRequest) -> dict:
             pre_data_dict = json.loads(pre_data) if isinstance(pre_data, str) else {}
             pre_data_dict["existing_headlines"] = existing_headlines
             pre_data = pre_data_dict
-        except:
+        except Exception:
             pre_data = {"company_profile": pre_data, "existing_headlines": existing_headlines}
 
     signal_context_queries = _build_signal_context_queries(agent_name, pre_data)
@@ -595,7 +595,7 @@ async def run_signals_research(request: MarketRequest) -> dict:
                 if not isinstance(pre_data, dict):
                     try:
                         pre_data = json.loads(pre_data) if isinstance(pre_data, str) else {}
-                    except:
+                    except Exception:
                         pre_data = {}
                 pre_data["leads_data"] = leads_data
                 if "company_profile" not in pre_data:
@@ -709,7 +709,7 @@ async def _generate_signals_batch_impl(request: MarketRequest, llm_backend: str)
             pre_data_dict = json.loads(pre_data) if isinstance(pre_data, str) else {}
             pre_data_dict["existing_headlines"] = existing_headlines
             pre_data = pre_data_dict
-        except:
+        except Exception:
             pre_data = {"company_profile": pre_data, "existing_headlines": existing_headlines}
 
     scout_signal_context_queries = _build_signal_context_queries("scout", pre_data)
@@ -736,7 +736,7 @@ async def _generate_signals_batch_impl(request: MarketRequest, llm_backend: str)
                 if not isinstance(pre_data, dict):
                     try:
                         pre_data = json.loads(pre_data) if isinstance(pre_data, str) else {}
-                    except:
+                    except Exception:
                         pre_data = {}
                 pre_data["leads_data"] = leads_data
                 if "company_profile" not in pre_data:

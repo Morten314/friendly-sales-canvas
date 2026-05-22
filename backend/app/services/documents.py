@@ -325,7 +325,7 @@ async def process_file_to_embeddings(file_key: str, user_id: str, file_name: str
                 }},
                 upsert=True
             )
-        except:
+        except Exception:
             pass
         logger.error(f"Error processing file {file_key}: {str(e)}")
 
