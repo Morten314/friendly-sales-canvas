@@ -20,10 +20,11 @@ Phase D leaf-class inventory (discovery 2026-05-22):
   Retained (reparented under BrewraError):
     BudgetExhaustedError → 429, ICPIdRegistryError → 500
 
-Standalone 500 raises at signals.py:1007/1137/1261 are converted to
-RuntimeError (not BrewraError) so they fall to FastAPI's default 500
-handler — they are ops-only signals (config check, race condition,
-upstream API failure) and don't need typed identity.
+Standalone 500 raises at signals.py (signal-delete race, missing
+ANTHROPIC_API_KEY, Claude API call failure) use the generic
+ServiceError(BrewraError) class so the response body carries the
+detail message (FastAPI's default 500 handler would replace it with
+"Internal Server Error").
 """
 
 
@@ -152,3 +153,10 @@ class BudgetExhaustedError(BrewraError):
 
 class ICPIdRegistryError(BrewraError):
     """ICP id reservation could not be acquired. Maps to HTTP 500."""
+
+
+# ─── 500: generic service-side failure ───
+
+class ServiceError(BrewraError):
+    """Operational failure (config missing, upstream API down, race condition).
+    Maps to HTTP 500 with the exception message in the detail field."""

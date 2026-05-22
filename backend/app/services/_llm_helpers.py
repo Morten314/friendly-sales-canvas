@@ -13,6 +13,7 @@ from typing import List
 import requests
 
 from app.core.config import claude_sonnet_model, tavily_api_key
+from app.core.exceptions import ServiceError
 
 
 # --- Claude-backed research (Tavily + Anthropic), same prompts as agent_chain path ---
@@ -50,7 +51,7 @@ def _tavily_context_and_urls(search_query: str, k: int = 10) -> tuple:
 def _claude_messages_text(user_prompt: str, max_tokens: int = CLAUDE_RESEARCH_MAX_TOKENS) -> str:
     api_key = os.getenv("ANTHROPIC_API_KEY") or ""
     if not api_key:
-        raise RuntimeError("ANTHROPIC_API_KEY is not configured")
+        raise ServiceError("ANTHROPIC_API_KEY is not configured")
     r = requests.post(
         "https://api.anthropic.com/v1/messages",
         headers={
@@ -67,7 +68,7 @@ def _claude_messages_text(user_prompt: str, max_tokens: int = CLAUDE_RESEARCH_MA
         timeout=300,
     )
     if r.status_code >= 400:
-        raise RuntimeError(f"Claude API failed ({r.status_code}): {r.text[:800]}")
+        raise ServiceError(f"Claude API failed ({r.status_code}): {r.text[:800]}")
     payload = r.json()
     out: List[str] = []
     for block in payload.get("content", []) or []:

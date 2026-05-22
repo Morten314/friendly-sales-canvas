@@ -12,6 +12,7 @@ from app.core import clients
 from app.core import llm_config
 from app.core.config import tavily_api_key, claude_sonnet_model
 from app.core.exceptions import (
+    ServiceError,
     SignalActionValidationError,
     SignalNotFoundError,
     UnsupportedComponentError,
@@ -994,7 +995,7 @@ async def record_signal_action(request: SignalActionRequest) -> dict:
                 "action": "reject"
             }
         else:
-            raise RuntimeError("Failed to delete signal")
+            raise ServiceError("Failed to delete signal")
     else:
         raise SignalActionValidationError(
             f"Invalid action: {request.action}. Must be 'accept' or 'reject'"
@@ -1112,7 +1113,7 @@ Please use the WebSearch tool to gather current information and provide a detail
 async def signal_ask_claude(request: SignalAskRequest) -> dict:
     """Claude-powered signal ask endpoint with local token/run limiter."""
     if not CLAUDE_API_KEY:
-        raise RuntimeError("ANTHROPIC_API_KEY is not configured")
+        raise ServiceError("ANTHROPIC_API_KEY is not configured")
 
     reservation: Optional[Dict[str, Any]] = None
     input_tokens_estimate = 0
@@ -1236,7 +1237,7 @@ INSTRUCTIONS:
 
         if response.status_code >= 400:
             response_text = response.text[:1000]
-            raise RuntimeError(
+            raise ServiceError(
                 f"Claude API call failed ({response.status_code}): {response_text}"
             )
 
