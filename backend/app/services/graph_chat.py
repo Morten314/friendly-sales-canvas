@@ -14,6 +14,7 @@ import json
 import re
 import requests
 import speech_recognition as sr
+from typing import Optional
 
 from langchain_core.messages import SystemMessage, HumanMessage
 
@@ -149,7 +150,7 @@ def get_ranked_prospects():
 
     return response
 
-def extract_number(content) -> str:
+def extract_number(content) -> Optional[str]:
     match = re.search(r"'([^']+)'", str(content))
     return match.group(1) if match else None
 
