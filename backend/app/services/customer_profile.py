@@ -122,8 +122,6 @@ def upsert_customer_profile(request: CustomerProfileRequest) -> dict:
 
         collection.update_one(filter_query, update_doc, upsert=True)
 
-        mongo_client.close()
-
         return {
             "success": True,
             "message": "Customer profiles saved successfully",
@@ -146,7 +144,6 @@ def get_customer_profile(org_id: str) -> dict:
     """
     from app.services.market_scoring import _get_profiler_mongo_client
     from app.services.icp import _ensure_icp_id_registry_indexes, _reserve_unique_icp_id
-    mongo_client = None
     try:
         # MongoDB connection
         mongo_client = _get_profiler_mongo_client()
@@ -229,9 +226,6 @@ def get_customer_profile(org_id: str) -> dict:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        if mongo_client:
-            mongo_client.close()
 
 
 def create_from_suggested_icp(request: SuggestedICPToCustomerProfileRequest) -> dict:
@@ -263,7 +257,6 @@ def create_from_suggested_icp(request: SuggestedICPToCustomerProfileRequest) -> 
                 target = item
                 break
         if not target:
-            mongo_client.close()
             raise HTTPException(status_code=404, detail=f"Suggested ICP not found for icp_id: {request.icp_id}")
 
         # --- Map suggested ICP -> CustomerProfileICP schema ---
@@ -338,7 +331,6 @@ def create_from_suggested_icp(request: SuggestedICPToCustomerProfileRequest) -> 
         # Reject if this suggested ICP was already saved for this org
         for existing in existing_icps:
             if isinstance(existing, dict) and str(existing.get("source_suggested_icp_id")) == str(request.icp_id):
-                mongo_client.close()
                 raise HTTPException(status_code=409, detail="This suggested ICP is already saved in customer profile.")
 
         merged_icps = [x for x in existing_icps if isinstance(x, dict)] + [new_icp]
@@ -372,7 +364,6 @@ def create_from_suggested_icp(request: SuggestedICPToCustomerProfileRequest) -> 
             }
         }
         company_profile_collection.update_one(filter_query, update_doc, upsert=True)
-        mongo_client.close()
 
         return {
             "success": True,
@@ -392,7 +383,6 @@ def delete_icp_from_customer_profile(icp_id: str, org_id: str) -> dict:
     """
     from app.services.market_scoring import _get_profiler_mongo_client
     from app.services.icp import _ensure_icp_id_registry_indexes, _release_icp_id
-    mongo_client = None
     try:
         mongo_client = _get_profiler_mongo_client()
         db = mongo_client["Profiler"]
@@ -434,6 +424,3 @@ def delete_icp_from_customer_profile(icp_id: str, org_id: str) -> dict:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        if mongo_client:
-            mongo_client.close()

@@ -375,7 +375,6 @@ def batch_upload_leads(
                     "last_processed_at": datetime.now(timezone.utc).isoformat()
                 }}
             )
-            mongo_client.close()
             return {
                 "status": "success",
                 "message": f"Batch upload completed. {created_count} leads created, {error_count} errors.",
@@ -425,7 +424,6 @@ def get_stream_status(org_id: str) -> Dict[str, Any]:
     List lead-stream uploads (file_id registry/status) for an org.
     """
     from app.services.market_scoring import _get_profiler_mongo_client
-    mongo_client = None
     try:
         mongo_client = _get_profiler_mongo_client()
         profiler_db = mongo_client["Profiler"]
@@ -448,9 +446,6 @@ def get_stream_status(org_id: str) -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"Error fetching lead-stream status: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to fetch lead-stream status: {str(e)}")
-    finally:
-        if mongo_client:
-            mongo_client.close()
 
 
 def delete_leads_by_file(file_id: str, user_id: str, org_id: str) -> Dict[str, Any]:
@@ -459,7 +454,6 @@ def delete_leads_by_file(file_id: str, user_id: str, org_id: str) -> Dict[str, A
     Also updates lead-stream tracking status in MongoDB.
     """
     from app.services.market_scoring import _get_profiler_mongo_client
-    mongo_client = None
     try:
         # First count matching leads
         count_query = """
@@ -516,6 +510,3 @@ def delete_leads_by_file(file_id: str, user_id: str, org_id: str) -> Dict[str, A
     except Exception as e:
         logger.error(f"Error deleting leads by file_id: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to delete leads by file_id: {str(e)}")
-    finally:
-        if mongo_client:
-            mongo_client.close()

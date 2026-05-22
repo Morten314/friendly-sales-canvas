@@ -38,15 +38,16 @@ def _get_profiler_mongo_client() -> MongoClient:
 
 
 def _get_market_score_collections():
-    mongo_client = _get_profiler_mongo_client()
-    profiler_db = mongo_client["Profiler"]
+    # Returns only the collections — never the client. Callers MUST NOT close
+    # the underlying connection; it is the shared singleton from app.core.clients.
+    profiler_db = _get_profiler_mongo_client()["Profiler"]
     score_coll = profiler_db["Lead_Market_Scores"]
     run_coll = profiler_db["Lead_Market_Score_Runs"]
     score_coll.create_index([("org_id", 1), ("lead_id", 1)], unique=True)
     score_coll.create_index([("org_id", 1), ("updated_at", -1)])
     run_coll.create_index([("org_id", 1), ("status", 1)])
     run_coll.create_index([("org_id", 1), ("created_at", -1)])
-    return mongo_client, score_coll, run_coll
+    return score_coll, run_coll
 
 
 def _safe_json_to_obj(value: Any) -> Any:
@@ -202,48 +203,38 @@ def _extract_description_preview(component_descriptions: Any) -> Optional[str]:
 
 
 def _get_latest_market_score_rows(org_id: str) -> List[LeadMarketScoreRow]:
-    mongo_client = None
-    try:
-        mongo_client, score_coll, _ = _get_market_score_collections()
-        docs = list(score_coll.find({"org_id": org_id}).sort("updated_at", -1))
-        rows: List[LeadMarketScoreRow] = []
-        for doc in docs:
-            doc.pop("_id", None)
-            has_company_name = _normalize_non_empty_string(doc.get("company_name")) is not None
-            has_lead_name = _normalize_non_empty_string(doc.get("lead_name")) is not None
-            if not has_company_name or not has_lead_name:
-                lead_identity = _get_lead_identity_from_neo4j(org_id=org_id, lead_id=str(doc.get("lead_id")))
-                updates: Dict[str, Optional[str]] = {}
-                if not has_company_name and lead_identity.get("company_name"):
-                    doc["company_name"] = lead_identity.get("company_name")
-                    updates["company_name"] = lead_identity.get("company_name")
-                if not has_lead_name and lead_identity.get("lead_name"):
-                    doc["lead_name"] = lead_identity.get("lead_name")
-                    updates["lead_name"] = lead_identity.get("lead_name")
-                if updates:
-                    score_coll.update_one(
-                        {"org_id": org_id, "lead_id": str(doc.get("lead_id"))},
-                        {"$set": updates},
-                    )
-            rows.append(_lead_to_score_row(doc))
-        return rows
-    finally:
-        if mongo_client:
-            mongo_client.close()
+    score_coll, _ = _get_market_score_collections()
+    docs = list(score_coll.find({"org_id": org_id}).sort("updated_at", -1))
+    rows: List[LeadMarketScoreRow] = []
+    for doc in docs:
+        doc.pop("_id", None)
+        has_company_name = _normalize_non_empty_string(doc.get("company_name")) is not None
+        has_lead_name = _normalize_non_empty_string(doc.get("lead_name")) is not None
+        if not has_company_name or not has_lead_name:
+            lead_identity = _get_lead_identity_from_neo4j(org_id=org_id, lead_id=str(doc.get("lead_id")))
+            updates: Dict[str, Optional[str]] = {}
+            if not has_company_name and lead_identity.get("company_name"):
+                doc["company_name"] = lead_identity.get("company_name")
+                updates["company_name"] = lead_identity.get("company_name")
+            if not has_lead_name and lead_identity.get("lead_name"):
+                doc["lead_name"] = lead_identity.get("lead_name")
+                updates["lead_name"] = lead_identity.get("lead_name")
+            if updates:
+                score_coll.update_one(
+                    {"org_id": org_id, "lead_id": str(doc.get("lead_id"))},
+                    {"$set": updates},
+                )
+        rows.append(_lead_to_score_row(doc))
+    return rows
 
 
 def _get_latest_scoring_run(org_id: str) -> Optional[Dict[str, Any]]:
-    mongo_client = None
-    try:
-        mongo_client, _, run_coll = _get_market_score_collections()
-        run_doc = run_coll.find_one({"org_id": org_id}, sort=[("created_at", -1)])
-        if not run_doc:
-            return None
-        run_doc.pop("_id", None)
-        return run_doc
-    finally:
-        if mongo_client:
-            mongo_client.close()
+    _, run_coll = _get_market_score_collections()
+    run_doc = run_coll.find_one({"org_id": org_id}, sort=[("created_at", -1)])
+    if not run_doc:
+        return None
+    run_doc.pop("_id", None)
+    return run_doc
 
 
 def _parse_iso_datetime(value: Any) -> Optional[datetime]:
@@ -413,36 +404,31 @@ def _persist_market_score_for_lead(
     component_descriptions = scoring_payload.get("component_descriptions", {})
     market_total_score = float(scoring_payload.get("market_total_score", 0))
 
-    mongo_client = None
-    try:
-        local_score_coll = score_coll
-        if local_score_coll is None:
-            mongo_client, local_score_coll, _ = _get_market_score_collections()
-        local_score_coll.update_one(
-            {"org_id": org_id, "lead_id": lead_id},
-            {
-                "$set": {
-                    "user_id": user_id,
-                    "org_id": org_id,
-                    "lead_id": lead_id,
-                    "file_id": file_id,
-                    "company_name": company_name,
-                    "lead_name": lead_name,
-                    "component_scores": component_scores,
-                    "component_descriptions": component_descriptions,
-                    "market_total_score": market_total_score,
-                    "scoring_status": scoring_status,
-                    "run_id": run_id,
-                    "updated_at": now_iso,
-                    "scored_at": now_iso,
-                },
-                "$setOnInsert": {"created_at": now_iso},
+    local_score_coll = score_coll
+    if local_score_coll is None:
+        local_score_coll, _ = _get_market_score_collections()
+    local_score_coll.update_one(
+        {"org_id": org_id, "lead_id": lead_id},
+        {
+            "$set": {
+                "user_id": user_id,
+                "org_id": org_id,
+                "lead_id": lead_id,
+                "file_id": file_id,
+                "company_name": company_name,
+                "lead_name": lead_name,
+                "component_scores": component_scores,
+                "component_descriptions": component_descriptions,
+                "market_total_score": market_total_score,
+                "scoring_status": scoring_status,
+                "run_id": run_id,
+                "updated_at": now_iso,
+                "scored_at": now_iso,
             },
-            upsert=True,
-        )
-    finally:
-        if mongo_client:
-            mongo_client.close()
+            "$setOnInsert": {"created_at": now_iso},
+        },
+        upsert=True,
+    )
 
     neo4j_update = {
         "market_component_scores": component_scores,
@@ -464,10 +450,9 @@ def _persist_market_score_for_lead(
 
 
 def _run_market_scoring_for_org(user_id: str, org_id: str, run_id: str) -> None:
-    mongo_client = None
     run_coll = None
     try:
-        mongo_client, score_coll, run_coll = _get_market_score_collections()
+        score_coll, run_coll = _get_market_score_collections()
         now_iso = datetime.now(timezone.utc).isoformat()
         run_coll.update_one(
             {"run_id": run_id},
@@ -615,6 +600,3 @@ def _run_market_scoring_for_org(user_id: str, org_id: str, run_id: str) -> None:
                     }
                 },
             )
-    finally:
-        if mongo_client:
-            mongo_client.close()
