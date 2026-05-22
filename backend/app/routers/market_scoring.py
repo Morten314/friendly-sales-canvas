@@ -1,7 +1,5 @@
 """Lead market scoring endpoints: score / status / per-lead descriptions."""
 import logging
-import uuid
-from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
@@ -27,78 +25,7 @@ async def get_or_refresh_lead_market_scores(
     request: LeadMarketScoresRequest,
     background_tasks: BackgroundTasks,
 ):
-    run_doc: Optional[Dict[str, Any]] = None
-    _, run_coll = market_scoring_service._get_market_score_collections()
-    active_run = run_coll.find_one(
-        {"org_id": request.org_id, "status": {"$in": ["queued", "processing"]}},
-        sort=[("created_at", -1)],
-    )
-
-    if active_run and market_scoring_service._is_stale_queued_run(active_run):
-        stale_run_id = str(active_run.get("run_id"))
-        now_iso = datetime.now(timezone.utc).isoformat()
-        run_coll.update_one(
-            {"run_id": stale_run_id},
-            {
-                "$set": {
-                    "status": "failed",
-                    "error": "Run auto-failed because it remained queued without starting.",
-                    "updated_at": now_iso,
-                    "completed_at": now_iso,
-                }
-            },
-        )
-        logger.warning(
-            "Marked stale queued market scoring run as failed. org_id=%s run_id=%s",
-            request.org_id,
-            stale_run_id,
-        )
-        active_run = None
-
-    if request.refresh and not active_run:
-        run_id = str(uuid.uuid4())
-        queued_at = datetime.now(timezone.utc).isoformat()
-        run_doc = {
-            "run_id": run_id,
-            "user_id": request.user_id,
-            "org_id": request.org_id,
-            "status": "queued",
-            "created_at": queued_at,
-            "started_at": None,
-            "completed_at": None,
-            "updated_at": queued_at,
-            "total_leads": 0,
-            "processed_count": 0,
-            "failed_count": 0,
-        }
-        run_coll.insert_one(run_doc)
-        background_tasks.add_task(
-            market_scoring_service._run_market_scoring_for_org,
-            request.user_id,
-            request.org_id,
-            run_id,
-        )
-    elif active_run:
-        active_run.pop("_id", None)
-        run_doc = active_run
-    else:
-        run_doc = market_scoring_service._get_latest_scoring_run(request.org_id)
-
-    rows = market_scoring_service._get_latest_market_score_rows(request.org_id)
-    if not rows and not request.refresh:
-        raise HTTPException(status_code=404, detail="No lead market scores found for org_id")
-
-    latest_run = run_doc or market_scoring_service._get_latest_scoring_run(request.org_id)
-    processing_status = str((latest_run or {}).get("status", "idle"))
-    last_scored_at = rows[0].updated_at if rows else None
-    return LeadMarketScoresResponse(
-        org_id=request.org_id,
-        total_leads=len(rows),
-        processing_status=processing_status,
-        active_run_id=(latest_run or {}).get("run_id"),
-        last_scored_at=last_scored_at,
-        rows=rows,
-    )
+    return market_scoring_service.trigger_or_get_market_scores(request, background_tasks)
 
 
 @router.get("/leads/market-scores/status", response_model=LeadMarketScoringStatusResponse)

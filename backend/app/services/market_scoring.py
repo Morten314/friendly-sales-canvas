@@ -13,12 +13,14 @@ import logging
 from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional
 
+from fastapi import BackgroundTasks, HTTPException
 from langchain_core.messages import HumanMessage
 from app.core import clients
 from app.core import llm_config
 from app.core.clients import upsert_node
 from app.models.market_scoring import (
     LeadMarketScoreRow,
+    LeadMarketScoresRequest,
     MARKET_SCORE_COMPONENT_KEYS,
 )
 from app.services.leads import get_leads_for_org
@@ -254,6 +256,92 @@ def _is_stale_queued_run(run_doc: Dict[str, Any], stale_after_seconds: int = 300
 
     age_seconds = (datetime.now(timezone.utc) - reference_time).total_seconds()
     return age_seconds >= stale_after_seconds
+
+
+def trigger_or_get_market_scores(
+    request: LeadMarketScoresRequest,
+    background_tasks: BackgroundTasks,
+) -> Dict[str, Any]:
+    """Trigger a new market-scoring run or return current/latest scores for an org.
+
+    Returns a dict matching the LeadMarketScoresResponse schema:
+      org_id, total_leads, processing_status, active_run_id, last_scored_at, rows.
+    Raises HTTPException(404) if no rows exist and no refresh was requested.
+    """
+    import uuid  # function-local: uuid is used only in this function
+
+    _, run_coll = _get_market_score_collections()
+    active_run = run_coll.find_one(
+        {"org_id": request.org_id, "status": {"$in": ["queued", "processing"]}},
+        sort=[("created_at", -1)],
+    )
+
+    if active_run and _is_stale_queued_run(active_run):
+        stale_run_id = str(active_run.get("run_id"))
+        now_iso = datetime.now(timezone.utc).isoformat()
+        run_coll.update_one(
+            {"run_id": stale_run_id},
+            {
+                "$set": {
+                    "status": "failed",
+                    "error": "Run auto-failed because it remained queued without starting.",
+                    "updated_at": now_iso,
+                    "completed_at": now_iso,
+                }
+            },
+        )
+        logger.warning(
+            "Marked stale queued market scoring run as failed. org_id=%s run_id=%s",
+            request.org_id,
+            stale_run_id,
+        )
+        active_run = None
+
+    run_doc: Optional[Dict[str, Any]] = None
+    if request.refresh and not active_run:
+        run_id = str(uuid.uuid4())
+        queued_at = datetime.now(timezone.utc).isoformat()
+        run_doc = {
+            "run_id": run_id,
+            "user_id": request.user_id,
+            "org_id": request.org_id,
+            "status": "queued",
+            "created_at": queued_at,
+            "started_at": None,
+            "completed_at": None,
+            "updated_at": queued_at,
+            "total_leads": 0,
+            "processed_count": 0,
+            "failed_count": 0,
+        }
+        run_coll.insert_one(run_doc)
+        background_tasks.add_task(
+            _run_market_scoring_for_org,
+            request.user_id,
+            request.org_id,
+            run_id,
+        )
+    elif active_run:
+        active_run.pop("_id", None)
+        run_doc = active_run
+    else:
+        run_doc = _get_latest_scoring_run(request.org_id)
+
+    rows = _get_latest_market_score_rows(request.org_id)
+    if not rows and not request.refresh:
+        raise HTTPException(status_code=404, detail="No lead market scores found for org_id")
+
+    latest_run = run_doc or _get_latest_scoring_run(request.org_id)
+    processing_status = str((latest_run or {}).get("status", "idle"))
+    last_scored_at = rows[0].updated_at if rows else None
+    return {
+        "org_id": request.org_id,
+        "total_leads": len(rows),
+        "processing_status": processing_status,
+        "active_run_id": (latest_run or {}).get("run_id"),
+        "last_scored_at": last_scored_at,
+        "rows": rows,
+    }
 
 
 def get_company_profile_for_org(org_id: str) -> Dict[str, Any]:
