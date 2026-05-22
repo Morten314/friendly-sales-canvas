@@ -47,6 +47,8 @@ After Phase E, the test count grows from 93 to ~210+, all green, with `pytest te
 
 **Underscore-prefixed helper modules** (`_claude_budget.py`, `_llm_helpers.py`, `_retrieval.py`): tested indirectly through the services that use them. Direct tests are a future candidate; not blocking.
 
+**`graph_chat.py` and `pipeline.py`:** not in the Phase D migration set (no typed-exception raises), so they're not in scope for the TD-002 unit-test pass. Integration tests cover them. `graph_chat.py` does contain the Cypher-injection risk sites (`voice_graph`/`text_graph`) flagged in CLAUDE.md "Gotchas" — those belong to the Phase F+ security-hardening phase, not Phase E.
+
 **Router-direct unit tests:** integration tests already exercise router code via `TestClient`. Adding a router unit layer offers no new signal.
 
 **Testcontainers / real DB images:** mock-based unit tests suffice at MVP velocity. Future Phase F+ candidate when a real bug demonstrates mock divergence.
@@ -81,8 +83,8 @@ backend/tests/
 ├── conftest.py                            # existing (integration-test fixtures)
 ├── helpers.py                             # existing
 ├── identities.py                          # existing
-├── test_smoke.py, test_auth_org.py, ...   # existing 9 integration test files (unchanged structure)
-├── __snapshots__/                         # existing syrupy snapshots
+├── test_smoke.py, test_auth_org.py, ...   # existing integration test files (89 def-test functions, 93 pytest-collected)
+├── __snapshots__/                         # existing syrupy snapshots (only test_auth_org.ambr, test_icp.ambr, test_profiles.ambr)
 ├── unit/                                  # NEW (TD-002)
 │   ├── __init__.py
 │   ├── conftest.py
@@ -95,8 +97,13 @@ backend/tests/
 │   ├── test_org_auth.py
 │   ├── test_profiles.py
 │   └── test_signals.py
-├── fixtures/
-│   ├── __init__.py                        # NEW: load_captured(), load_seed()
+├── fixtures/                              # existing — flat layout, kept
+│   ├── __init__.py                        # MODIFIED: add load_captured(), load_seed()
+│   ├── icp.py                             # existing hand-crafted builder
+│   ├── leads.py                           # existing hand-crafted builder
+│   ├── market_research.py                 # existing hand-crafted builder
+│   ├── profiles.py                        # existing hand-crafted builder
+│   ├── signals.py                         # existing hand-crafted builder
 │   ├── captured/                          # NEW (TD-001 output, committed)
 │   │   ├── market_research_market_size_groq.json
 │   │   ├── market_research_market_size_claude.json
@@ -108,11 +115,10 @@ backend/tests/
 │   │   ├── search_signals_profiler_claude.json
 │   │   ├── signal_ask_groq.json
 │   │   └── signal_ask_claude.json
-│   ├── seed/                              # NEW (capture-script inputs, committed)
-│   │   ├── company_profile.json
-│   │   ├── icp_card.json
-│   │   └── leads_sample.json
-│   └── inline/                            # existing hand-crafted builders (kept)
+│   └── seed/                              # NEW (capture-script inputs, committed)
+│       ├── company_profile.json
+│       ├── icp_card.json
+│       └── leads_sample.json
 └── capture_fixtures.py                    # NEW (TD-001 script)
 ```
 
@@ -120,18 +126,28 @@ backend/tests/
 
 **Mock convention:** unit tests patch at the same source-level layer the integration tests do — `app.core.clients.driver`, `app.core.clients.client`, `app.core.llm_config.agent_chain`, and the per-module imports of LLM helpers (`app.services.market_research.Research_Market_1`, etc.). No `TestClient`; tests call service functions directly.
 
-**`tests/unit/conftest.py` provides three shared fixtures:**
+**Cross-service mocking:** several services import private helpers from other services — e.g. `customer_profile.py` imports `_reserve_unique_icp_id` from `app.services.icp` at 4 sites. Unit tests mock at the *caller's* namespace, not the source module: `mocker.patch("app.services.customer_profile._reserve_unique_icp_id")`. This is standard Python mocking practice (patch where the name is looked up, not where it's defined) and matches the convention the existing integration tests use.
+
+**Unit conftest constraint:** `tests/unit/conftest.py` MUST NOT `import app.main` or trigger any router-import chain. The full FastAPI app load is the slow path that integration tests need but unit tests must avoid. Import only `app.services.<X>` and `app.core.*` modules directly.
+
+**`tests/unit/conftest.py` provides two shared fixtures:**
 
 ```python
+import pytest
+from unittest.mock import MagicMock
+
+
 @pytest.fixture
-def mock_driver(mocker):
-    """Lightweight Neo4j driver mock with a session() context manager."""
+def mock_session(mocker):
+    """Returns the *session* (not the driver) so tests can configure
+    session.run.return_value.single.return_value as needed. The driver
+    itself is patched onto app.core.clients.driver as a side effect."""
     session = MagicMock()
     driver = MagicMock()
     driver.session.return_value.__enter__ = MagicMock(return_value=session)
     driver.session.return_value.__exit__ = MagicMock(return_value=False)
     mocker.patch("app.core.clients.driver", driver)
-    return session  # tests configure session.run.return_value as needed
+    return session
 
 
 @pytest.fixture
@@ -139,19 +155,14 @@ def mock_mongo_client(mocker):
     """Lightweight MongoDB client mock returning per-collection MagicMocks."""
     client = MagicMock()
     mocker.patch("app.core.clients.client", client)
-    return client  # tests configure client[<db>][<coll>] as needed
-
-
-@pytest.fixture
-def captured(request):
-    """Loader for tests/fixtures/captured/<name>.json. Use as @pytest.mark.parametrize."""
-    from tests.fixtures import load_captured
-    return load_captured
+    return client
 ```
+
+For fixture loading, tests import `load_captured`/`load_seed` directly: `from tests.fixtures import load_captured`. No `captured` pytest-fixture indirection — the function is already module-level.
 
 **Naming convention:** `test_<function_name>_<scenario>`. Each test file's module docstring lists which public functions are covered and which paths each test exercises.
 
-**Async tests:** services include `async def` functions. Unit tests use `asyncio.run(my_service_function(...))` to invoke them. (Avoids adding a `pytest-asyncio` plugin dependency.)
+**Async tests:** services include `async def` functions. Unit tests use `asyncio.run(my_service_function(...))` to invoke them. This is safe because unit tests have no running event loop and don't share state across calls. The pattern works on Python 3.10+ (`asyncio.run` creates and tears down a fresh loop per call). If async testing grows cumbersome — more than ~30% of tests need it, or a future fixture starts a loop — add `pytest-asyncio` in a follow-up commit.
 
 ### 3.3 TD-001 — Capture script
 
@@ -169,6 +180,15 @@ python tests/capture_fixtures.py [--llm-backend {groq,claude,both}] \
                                  [--output-dir tests/fixtures/captured/] \
                                  [--seed-dir tests/fixtures/seed/]
 ```
+
+**Backend flag values:** `groq` = the Together.ai-hosted Llama path (the default `agent_chain` route in `llm_config`); `claude` = the Anthropic Claude Sonnet path via `_claude_messages_text`. The "groq" name follows the codebase convention even though no Groq model is actually used.
+
+**Valid `--components` values** (capture script validates against this set, errors on unknown):
+- For market_research: `market_size`, `industry_trends`, `competitor_landscape`, `regulatory_compliance`, `market_entry` (one per `Research_Market_1..5`)
+- For icp_research: `icp_segments`, `icp_decision_makers`, `icp_buying_signals`, `icp_competition` (TBD against `ICP_FUNCTIONS` keys at implementation; discovery resolves the final set)
+- For signals: `signals_scout`, `signals_profiler`
+- For signal_ask: `signal_ask`
+- Special: `all` (default if `--components` omitted), or any comma-list.
 
 **Captures produced:**
 
@@ -227,7 +247,9 @@ mock_chain = mocker.patch("app.services.signals.llm_config.agent_chain")
 mock_chain.invoke.return_value = load_captured("signal_ask_groq")
 ```
 
-Syrupy snapshots will diff against the captured output the first time tests run after the rewire. Snapshots get re-baselined with `pytest --snapshot-update`, committed alongside the rewire.
+**Snapshot scope:** of the rewire targets, only `test_icp.py` uses syrupy snapshots (verified — `tests/__snapshots__/` contains `test_auth_org.ambr`, `test_icp.ambr`, `test_profiles.ambr`). `test_market_research.py` and `test_signals.py` use plain assertions, so the rewire there is purely a mock-return-value swap. For `test_icp.py`, snapshots get re-baselined with `pytest --snapshot-update` and committed in the same commit.
+
+**Syrupy dependency note:** syrupy is used by three integration test files but is **not** declared in `backend/requirements.txt` (works today via implicit install). Adding it to the manifest is a Phase F+ housekeeping item; Phase E doesn't take it on.
 
 ---
 
@@ -238,7 +260,7 @@ The rollout mirrors Phase D's per-service cadence — one commit per service for
 | # | Commit | What lands |
 |---|---|---|
 | 1 | `feat(tests): add fixtures infrastructure and seed payloads` | `tests/fixtures/__init__.py`, `tests/fixtures/seed/*.json`, `tests/unit/conftest.py`, `tests/unit/__init__.py`. No new tests yet; existing 93 still pass. |
-| 2 | `feat(tests): add capture_fixtures.py and produce captured fixtures` | `tests/capture_fixtures.py` + all ~20 files in `tests/fixtures/captured/`. Developer runs the script locally with real keys, commits the JSON outputs. Existing 93 still pass. |
+| 2 | `feat(tests): add capture_fixtures.py and produce captured fixtures` | `tests/capture_fixtures.py` + all ~24 files in `tests/fixtures/captured/` (10 market_research + ~8 icp_research + 4 search_signals + 2 signal_ask). Developer runs the script locally with real keys, commits the JSON outputs. Existing 93 still pass. |
 | 3 | `test(be): add unit tests for org_auth (smallest)` | `tests/unit/test_org_auth.py`. ~10-12 tests. |
 | 4 | `test(be): add unit tests for profiles` | `tests/unit/test_profiles.py`. ~8-10 tests. |
 | 5 | `test(be): add unit tests for customer_profile` | `tests/unit/test_customer_profile.py`. ~12-15 tests, includes the ICPAlreadyExistsError 409 test. |
@@ -251,7 +273,7 @@ The rollout mirrors Phase D's per-service cadence — one commit per service for
 | 12 | `test(be): rewire integration tests to use captured fixtures` | Replace hand-crafted dicts with `load_captured(...)` in `test_market_research.py`, `test_icp.py`, `test_signals.py`. Re-baseline syrupy snapshots. |
 | 13 | `chore(docs): close TD-001 and TD-002 in TECH_DEBT.md` | Add "Resolved 2026-05-22 by Phase E (`refactor-backend-modularization-phase-e`)" line to both entries. |
 
-**Migration order rationale:** smallest services first (`org_auth`, `profiles`) to validate the unit-test pattern; LLM-using services after captured fixtures land (commit 2 must precede 7, 8, 11); the rewire (commit 12) needs both captured fixtures and the unit test layer in place because some integration tests will be replaced by unit tests where appropriate.
+**Migration order rationale:** smallest services first (`org_auth`, `profiles`) to validate the unit-test pattern; LLM-using services after captured fixtures land (commit 2 must precede commits 7, 8, 11, **and 12** — the integration rewire also consumes `load_captured(...)`); the rewire (commit 12) needs both captured fixtures and the unit test layer in place because some integration tests will be replaced by unit tests where appropriate.
 
 **Estimated total:** 13 commits.
 
@@ -277,31 +299,31 @@ from app.services.leads import (
 from tests.identities import TEST_USER_ID, TEST_ORG_ID, TEST_LEAD_ID_1
 
 
-def test_create_lead_happy_path(mock_driver):
+def test_create_lead_happy_path(mock_session):
     request = LeadCreateRequest(
         user_id=TEST_USER_ID, org_id=TEST_ORG_ID, data={"name": "Acme Co"}
     )
     result = create_lead(request)
     assert result["status"] == "success"
     assert "lead_id" in result
-    assert mock_driver.execute_write.called
+    assert mock_session.execute_write.called
 
 
-def test_update_lead_raises_lead_not_found(mock_driver):
-    mock_driver.run.return_value.single.return_value = None  # lead does not exist
+def test_update_lead_raises_lead_not_found(mock_session):
+    mock_session.run.return_value.single.return_value = None  # lead does not exist
     request = LeadUpdateRequest(user_id=TEST_USER_ID, org_id=TEST_ORG_ID, data={"stage": "X"})
     with pytest.raises(LeadNotFoundError, match="Lead not found or access denied"):
         update_lead(TEST_LEAD_ID_1, request)
 
 
-def test_get_leads_for_org_propagates_neo4j_error(mock_driver):
+def test_get_leads_for_org_propagates_neo4j_error(mock_session):
     """Post-Task-14: get_leads_for_org no longer has raise_on_error; Neo4j errors propagate."""
-    mock_driver.run.side_effect = RuntimeError("connection refused")
+    mock_session.run.side_effect = RuntimeError("connection refused")
     with pytest.raises(RuntimeError, match="connection refused"):
         get_leads_for_org(TEST_ORG_ID, limit=10)
 
 
-def test_batch_upload_leads_raises_on_empty_csv(mock_driver, mock_mongo_client):
+def test_batch_upload_leads_raises_on_empty_csv(mock_session, mock_mongo_client):
     empty_csv = b"col1,col2\n"  # header only
     with pytest.raises(LeadCSVValidationError, match="CSV file is empty"):
         batch_upload_leads(empty_csv, "empty.csv", TEST_USER_ID, TEST_ORG_ID)
@@ -322,13 +344,13 @@ from tests.fixtures import load_captured, load_seed
 from tests.identities import TEST_USER_ID, TEST_ORG_ID
 
 
-def test_run_market_research_groq_happy_path(mocker, mock_driver, mock_mongo_client):
+def test_run_market_research_groq_happy_path(mocker, mock_session, mock_mongo_client):
     captured = load_captured("market_research_market_size_groq")
     mocker.patch("app.services.market_research.Research_Market_1", return_value=captured)
     # Mock Neo4j returns a company profile record
     record = mocker.MagicMock()
     record.values.return_value = [load_seed("company_profile")]
-    mock_driver.run.return_value.single.return_value = record
+    mock_session.run.return_value.single.return_value = record
 
     request = MarketRequest(
         user_id=TEST_USER_ID, org_id=TEST_ORG_ID,
@@ -350,8 +372,8 @@ def test_run_market_research_raises_on_unsupported_component():
         asyncio.run(run_market_research(request))
 
 
-def test_run_market_research_raises_when_no_company_profile(mock_driver, mock_mongo_client):
-    mock_driver.run.return_value.single.return_value = None  # no profile in Neo4j
+def test_run_market_research_raises_when_no_company_profile(mock_session, mock_mongo_client):
+    mock_session.run.return_value.single.return_value = None  # no profile in Neo4j
     request = MarketRequest(
         user_id=TEST_USER_ID, org_id=TEST_ORG_ID,
         component_name="market size & opportunity", data=None, refresh=True
@@ -406,7 +428,7 @@ def test_run_market_scoring_for_org_marks_failed_on_brewra_error(mocker, mock_mo
 - `pytest tests/unit/` runs and passes with all ~110-130 new tests green.
 - `pytest tests/unit/` completes in under 2 seconds wall-clock.
 - `pytest tests/` (full suite) passes — 93 existing + ~110-130 new = ~210+ tests, no regressions.
-- `tests/fixtures/captured/` exists with at least 20 JSON files.
+- `tests/fixtures/captured/` exists with at least 24 JSON files (10 market_research + ~8 icp_research + 4 search_signals + 2 signal_ask).
 - `tests/fixtures/seed/` exists with `company_profile.json`, `icp_card.json`, `leads_sample.json`.
 - `tests/capture_fixtures.py` exists and has a module-level docstring documenting the re-capture triggers.
 - Every public function in `app/services/{customer_profile,documents,icp,leads,market_research,market_scoring,org_auth,profiles,signals}.py` has at least one unit test referencing it by name.
@@ -440,7 +462,7 @@ The integration tests already mock the LLM at the service layer (`agent_chain` p
 
 **Why one capture script run produces all fixtures?**
 
-LLM API costs and Tavily API calls are non-trivial. A single script run with `--llm-backend both` exercises every helper once and writes ~20 JSON files. Re-running on a per-endpoint basis is supported via `--components`, but the default mode captures everything.
+LLM API costs and Tavily API calls are non-trivial. A single script run with `--llm-backend both` exercises every helper once and writes ~24 JSON files. Re-running on a per-endpoint basis is supported via `--components`, but the default mode captures everything.
 
 **Why no testcontainers / real DBs?**
 
