@@ -47,3 +47,28 @@ class EditRequest(BaseModel):
     original_json: Dict[str, Any]
     modified_json: Dict[str, Any]
     edit_type: str  # "comment" or "modification"
+
+
+# ---------------------------------------------------------------------------
+# Response models
+# ---------------------------------------------------------------------------
+
+class ProfileMessageResponse(BaseModel):
+    """Returned by upsert_profile (POST /profile/{profile_type})."""
+    message: str
+
+
+class CleanupProfilesResponse(BaseModel):
+    """Returned by cleanup_company_profiles."""
+    message: str
+    deleted: int
+    remaining: int
+
+
+class EditProfileResponse(BaseModel):
+    """Returned by edit_profile_field (POST /edit).
+    Status can be 'success', 'feature coming soon', or error message.
+    """
+    status: Optional[str] = None
+    inserted_id: Optional[str] = None
+    error: Optional[str] = None

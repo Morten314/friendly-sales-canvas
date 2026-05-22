@@ -33,3 +33,44 @@ class SuggestedICPToCustomerProfileRequest(BaseModel):
     user_id: str
     org_id: str
     icp_id: str
+
+
+# ---------------------------------------------------------------------------
+# Response models
+# ---------------------------------------------------------------------------
+
+class CustomerProfileICPListData(BaseModel):
+    """Inner data: list of ICPs."""
+    icps: List[Any]
+
+
+class CustomerProfileResponse(BaseModel):
+    """Returned by get_customer_profile and upsert_customer_profile."""
+    success: bool
+    message: Optional[str] = None
+    data: CustomerProfileICPListData
+
+
+class CustomerProfileDeleteData(BaseModel):
+    """Inner data returned on ICP deletion."""
+    deleted_icp_id: str
+    remaining_count: int
+
+
+class CustomerProfileDeleteResponse(BaseModel):
+    """Returned by delete_icp_from_customer_profile."""
+    success: bool
+    message: str
+    data: CustomerProfileDeleteData
+
+
+class SuggestedICPData(BaseModel):
+    """Inner data returned by create_from_suggested_icp."""
+    icp: Dict[str, Any]
+
+
+class SuggestedICPResponse(BaseModel):
+    """Returned by create_from_suggested_icp."""
+    success: bool
+    message: str
+    data: SuggestedICPData

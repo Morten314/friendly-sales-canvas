@@ -4,12 +4,19 @@ import shutil
 from fastapi import APIRouter, BackgroundTasks, Body, File, Form, HTTPException, Query, UploadFile
 
 from app.core.logging import logger
+from app.models.documents import (
+    DataSourceDeleteResponse,
+    DataSourceUpdateResponse,
+    DocumentStatusResponse,
+    ListUserDocumentsResponse,
+    MessageResponse,
+)
 from app.services import documents as documents_service
 
 router = APIRouter(tags=["documents"])
 
 
-@router.post("/upload_file/")
+@router.post("/upload_file/", response_model=MessageResponse)
 async def upload_document(file: UploadFile = File(...)):
     file_path = f"uploaded_{file.filename}"
     with open(file_path, "wb") as f:
@@ -17,7 +24,7 @@ async def upload_document(file: UploadFile = File(...)):
     return documents_service.upload_file_text(file_path, file.filename)
 
 
-@router.post('/upload')
+@router.post('/upload', response_model=MessageResponse)
 async def upload_prospect_list(file: UploadFile = File(...)):
     file_path = f"/tmp/{file.filename}"
     with open(file_path, 'wb') as buffer:
@@ -25,6 +32,8 @@ async def upload_prospect_list(file: UploadFile = File(...)):
     return documents_service.upload_prospect_list_file(file_path)
 
 
+# Response shape varies by code path (plain dict vs JSONResponse); annotation deferred
+# — see Phase C test track.
 @router.post("/upload-document")
 async def upload_document_route(
     background_tasks: BackgroundTasks,
@@ -57,21 +66,21 @@ async def upload_document_route(
     )
 
 
-@router.get("/document-status/{file_key:path}")
+@router.get("/document-status/{file_key:path}", response_model=DocumentStatusResponse)
 async def get_document_status(file_key: str):
     return await documents_service.get_document_status(file_key)
 
 
-@router.get("/user-documents")
+@router.get("/user-documents", response_model=ListUserDocumentsResponse)
 async def get_user_documents(org_id: str = Query(...)):
     return await documents_service.list_user_documents(org_id)
 
 
-@router.delete("/data-source/{file_id}")
+@router.delete("/data-source/{file_id}", response_model=DataSourceDeleteResponse)
 async def delete_data_source(file_id: str):
     return await documents_service.delete_data_source(file_id)
 
 
-@router.put("/data-source/{file_id}")
+@router.put("/data-source/{file_id}", response_model=DataSourceUpdateResponse)
 async def update_data_source(file_id: str, request: dict = Body(...)):
     return await documents_service.update_data_source(file_id, request)
