@@ -110,24 +110,21 @@ def test_get_signals_empty_when_no_docs(client):
 # ---------------------------------------------------------------------------
 
 def test_post_generate_signals_batch_calls_llm(client):
-    """POST /generate-signals-batch calls search_signals_scout and search_signals_profiler."""
+    """POST /generate-signals-batch calls search_signals 4 times (2 scout + 2 profiler)."""
     mc, coll = _make_mc_for_signals([])
     # signal_track find_one returns no existing headlines
     mc.__getitem__.return_value.__getitem__.return_value.find_one.return_value = None
 
-    scout_result = {"headline": "Scout signal", "summary": "Scout summary"}
-    profiler_result = {"headline": "Profiler signal", "summary": "Profiler summary"}
+    signal_result = {"headline": "Test signal", "summary": "Test summary"}
 
     with patch("app.core.clients.client", mc), \
-         patch("app.services.signals.search_signals_scout", return_value=dict(scout_result)) as mock_scout, \
-         patch("app.services.signals.search_signals_profiler", return_value=dict(profiler_result)) as mock_profiler, \
+         patch("app.services.signals.search_signals", return_value=dict(signal_result)) as mock_search, \
          patch("app.services.signals._fetch_pinecone_supporting_context", return_value=[]):
         response = client.post("/generate-signals-batch", json=_base_market_request())
 
     assert response.status_code == 200
-    # Scout called twice, profiler called twice
-    assert mock_scout.call_count == 2
-    assert mock_profiler.call_count == 2
+    # Called 4 times total: 2 scout + 2 profiler
+    assert mock_search.call_count == 4
 
 
 # ---------------------------------------------------------------------------
@@ -138,12 +135,10 @@ def test_post_generate_signals_batch_returns_signals(client):
     """POST /generate-signals-batch → response has data list with signals."""
     mc, coll = _make_mc_for_signals([])
 
-    scout_result = {"headline": "Scout signal A", "summary": "Summary A"}
-    profiler_result = {"headline": "Profiler signal B", "summary": "Summary B"}
+    signal_result = {"headline": "Test signal", "summary": "Test summary"}
 
     with patch("app.core.clients.client", mc), \
-         patch("app.services.signals.search_signals_scout", return_value=dict(scout_result)), \
-         patch("app.services.signals.search_signals_profiler", return_value=dict(profiler_result)), \
+         patch("app.services.signals.search_signals", return_value=dict(signal_result)), \
          patch("app.services.signals._fetch_pinecone_supporting_context", return_value=[]):
         response = client.post("/generate-signals-batch", json=_base_market_request())
 

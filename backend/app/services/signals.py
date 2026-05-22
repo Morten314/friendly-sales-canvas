@@ -1,15 +1,11 @@
-"""Signals service: Scout/Profiler signal search + batch generation.
-
-Phase B will dedupe search_signals_scout and search_signals_profiler
-(~80% overlapping). For now they remain near-duplicates.
-"""
+"""Signals service: Scout/Profiler signal search + batch generation."""
 import json
 import re
 import asyncio
 import uuid
 import logging
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 import requests
 from fastapi import HTTPException
@@ -74,90 +70,17 @@ def _signals_agent_output(prompt: str, company_profile_seed: str, llm_backend: s
     return response, tavily_urls
 
 
-# Signals Research Functions
-def search_signals_scout(pre_data, llm_backend: str = "default") -> dict:
-    """Search for market, competitor, and industry trend signals for Scout agent using WebSearch"""
+# ---------------------------------------------------------------------------
+# Prompt templates (persona-specific; shared structure)
+# ---------------------------------------------------------------------------
 
-    # Extract existing headlines and leads if present
-    existing_headlines = []
-    leads_data = []
-    company_profile_data = pre_data
-
-    if isinstance(pre_data, dict):
-        existing_headlines = pre_data.get("existing_headlines", [])
-        leads_data = pre_data.get("leads_data", [])
-        # Remove metadata fields from dict for company profile
-        company_profile_data = {k: v for k, v in pre_data.items() if k not in ["existing_headlines", "leads_data", "icp_data"]}
-        company_profile_json = json.dumps(company_profile_data, indent=2)
-    elif isinstance(pre_data, str):
-        # If it's already a string, try to parse and reformat for better readability
-        try:
-            parsed = json.loads(pre_data)
-            existing_headlines = parsed.get("existing_headlines", [])
-            leads_data = parsed.get("leads_data", [])
-            company_profile_data = {k: v for k, v in parsed.items() if k not in ["existing_headlines", "leads_data", "icp_data"]}
-            company_profile_json = json.dumps(company_profile_data, indent=2)
-        except:
-            company_profile_json = pre_data
-    else:
-        company_profile_json = str(pre_data)
-
-    # Format leads data for prompt - pass all data without field name assumptions
-    leads_text = ""
-    if leads_data and len(leads_data) > 0:
-        print(f"[DEBUG Scout] Processing {len(leads_data)} leads for signal generation")
-        # Convert all leads to JSON string - no field name assumptions, pass everything
-        try:
-            # Limit to 50 leads to avoid prompt size issues, but include all fields
-            leads_for_context = leads_data[:50]
-            leads_json = json.dumps(leads_for_context, indent=2, default=str)
-
-            leads_text = f"""
-STEP 1.2 - LEADS DATA (CRITICAL - Use this to prioritize signal relevance):
-Your organization has {len(leads_data)} active leads in your pipeline. Below is the complete lead data with all available fields. You MUST analyze this data and use it when generating signals.
-
-Complete Leads Data (showing up to 50 most recent leads):
-{leads_json}
-
-CRITICAL INSTRUCTIONS:
-- Analyze ALL fields in the leads data above - do not assume any specific field names
-- Extract any company names, industries, regions, technologies, or other relevant information from whatever fields exist
-- Prioritize signals that relate to companies, industries, regions, or any other attributes found in your leads pipeline
-- If a signal mentions a company or organization, check if it matches any entity in your leads data
-- Focus on signals that would be relevant to your actual sales pipeline based on the lead data structure
-- Use the lead data to understand your target market, customer segments, and sales priorities
-- This will make the signals more actionable for your sales team
-"""
-        except Exception as e:
-            print(f"[ERROR] Failed to format leads data: {e}")
-            # Fallback: just mention leads exist
-            leads_text = f"""
-STEP 1.2 - LEADS DATA:
-Your organization has {len(leads_data)} active leads in your pipeline. Use this information to prioritize signals relevant to your actual sales pipeline.
-"""
-
-    # Format existing headlines for prompt
-    existing_headlines_text = ""
-    if existing_headlines:
-        headlines_list = "\n".join([f"- {h}" for h in existing_headlines[:30]])  # Limit to 30 for prompt size
-        existing_headlines_text = f"""
-STEP 1.5 - EXISTING SIGNALS (CRITICAL - AVOID DUPLICATES):
-You MUST avoid generating signals similar to these existing signal headlines. Review them carefully and ensure your new signal is completely different and unique:
-
-Existing Signal Headlines:
-{headlines_list}
-
-IMPORTANT: Your new signal headline must be about a DIFFERENT news story, market development, or industry trend. Do NOT generate a signal about the same event, company news, or market development as any of the above headlines, even if worded differently. Search for NEW and UNIQUE signals that haven't been covered yet.
-"""
-
-    # Construct prompt with full company profile and WebSearch instructions
-    template = """Task: Research and identify a high-quality, actionable market signal for a sales scout agent. This signal should help the sales team understand market opportunities, competitor movements, or industry trends that could impact their sales strategy.
+_SCOUT_PROMPT_TEMPLATE = """Task: Research and identify a high-quality, actionable market signal for a sales scout agent. This signal should help the sales team understand market opportunities, competitor movements, or industry trends that could impact their sales strategy.
 
 STEP 1 - COMPANY PROFILE DATA:
 Review the complete company profile data below. Extract all relevant information about the company's industry, target markets, regions, company size, strategic goals, and any other relevant attributes.
 
 Company Profile Data:
-{company_profile_json}
+{context_json}
 {leads_section}
 {existing_headlines_section}
 
@@ -264,191 +187,7 @@ Final Answer: <your JSON answer here>
 Do not include any additional reasoning, thoughts, or steps after that.
 """
 
-    prompt = template.format(
-        company_profile_json=company_profile_json,
-        leads_section=leads_text,
-        existing_headlines_section=existing_headlines_text
-    )
-
-    response, tavily_urls = _signals_agent_output(prompt, company_profile_json, llm_backend)
-
-    # Extract JSON from response
-    if "Final Answer:" in response:
-        response = response.split("Final Answer:")[-1].strip()
-
-    # Clean and escape the JSON string
-    cleaned_str = response.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-    # Remove any leading/trailing text before first { or after last }
-    if "{" in cleaned_str:
-        cleaned_str = cleaned_str[cleaned_str.index("{"):]
-    if "}" in cleaned_str:
-        cleaned_str = cleaned_str[:cleaned_str.rindex("}") + 1]
-
-    # Escape newline and other control characters within string values
-    cleaned_str = re.sub(r'\"description\": \"(.*?)\"', lambda m: '"description": "' + m.group(1).replace('\n', '\\n').replace('\r', '\\r').replace('"', '\\"') + '"', cleaned_str, flags=re.DOTALL)
-    cleaned_str = re.sub(r'\"snippet\": \"(.*?)\"', lambda m: '"snippet": "' + m.group(1).replace('\n', '\\n').replace('\r', '\\r').replace('"', '\\"') + '"', cleaned_str, flags=re.DOTALL)
-    cleaned_str = re.sub(r'\"headline\": \"(.*?)\"', lambda m: '"headline": "' + m.group(1).replace('\n', '\\n').replace('\r', '\\r').replace('"', '\\"') + '"', cleaned_str, flags=re.DOTALL)
-
-    # Parse to JSON (Python dict)
-    parsed_json = json.loads(cleaned_str)
-
-    # Validate and fix URLs using Tavily URLs if available
-    def validate_url(url, tavily_urls_list):
-        """Validate URL and replace with Tavily URL if invalid"""
-        if not url or not isinstance(url, str):
-            return tavily_urls_list[0] if tavily_urls_list else ""
-
-        # Check if URL is valid format
-        if not url.startswith(('http://', 'https://')):
-            return tavily_urls_list[0] if tavily_urls_list else ""
-
-        # If Tavily URLs available, try to match or use first one
-        if tavily_urls_list:
-            # Check if URL domain matches any Tavily URL
-            url_domain = url.split('/')[2] if len(url.split('/')) > 2 else ""
-            for tavily_url in tavily_urls_list:
-                tavily_domain = tavily_url.split('/')[2] if len(tavily_url.split('/')) > 2 else ""
-                if url_domain and url_domain == tavily_domain:
-                    return tavily_url
-            # If no match, use first Tavily URL
-            return tavily_urls_list[0]
-
-        return url
-
-    # Validate sourceUrl
-    source_url = validate_url(parsed_json.get("sourceUrl", ""), tavily_urls)
-
-    # Validate source array URLs
-    validated_sources = []
-    source_array = parsed_json.get("source", [])
-    for i, src in enumerate(source_array[:2]):  # Max 2 sources
-        if isinstance(src, dict) and "url" in src:
-            validated_url = validate_url(src["url"], tavily_urls[i:] if i < len(tavily_urls) else tavily_urls)
-            validated_sources.append({
-                "citation": src.get("citation", ""),
-                "url": validated_url
-            })
-
-    # If no sources validated, use Tavily URLs directly
-    if not validated_sources and tavily_urls:
-        for i, tavily_url in enumerate(tavily_urls[:2]):
-            validated_sources.append({
-                "citation": f"Source {i+1}",
-                "url": tavily_url
-            })
-
-    # Add metadata (ID will be generated in API layer to ensure uniqueness per org_id)
-    from datetime import datetime
-    hours_ago = 1  # Default, can be made dynamic based on signal recency
-    timestamp = f"{hours_ago}h ago"
-
-    result = {
-        "agent": "scout",
-        "timestamp": timestamp,
-        "headline": parsed_json.get("headline", ""),
-        "snippet": parsed_json.get("snippet", ""),
-        "description": parsed_json.get("description", ""),
-        "sourceUrl": source_url if source_url else (validated_sources[0]["url"] if validated_sources else ""),
-        "sourceLabel": parsed_json.get("sourceLabel", ""),
-        "source": validated_sources if validated_sources else parsed_json.get("source", []),
-        "nextBestMoves": parsed_json.get("nextBestMoves", []),
-        "NBAs": parsed_json.get("NBAs", []),
-        "contextualSuggestions": parsed_json.get("contextualSuggestions", [])
-    }
-
-    return result
-
-def search_signals_profiler(pre_data, llm_backend: str = "default") -> dict:
-    """Search for ICP and customer-related signals for Profiler agent using WebSearch"""
-
-    # Extract existing headlines and leads if present
-    existing_headlines = []
-    leads_data = []
-    company_profile = {}
-    icp_data = {}
-
-    if isinstance(pre_data, dict):
-        existing_headlines = pre_data.get("existing_headlines", [])
-        leads_data = pre_data.get("leads_data", [])
-        if "company_profile" in pre_data:
-            company_profile = pre_data["company_profile"]
-            icp_data = pre_data.get("icp_data", {})
-        else:
-            # Remove metadata fields from dict
-            company_profile = {k: v for k, v in pre_data.items() if k not in ["existing_headlines", "leads_data", "icp_data"]}
-            icp_data = {}
-    else:
-        try:
-            parsed = json.loads(pre_data) if isinstance(pre_data, str) else {}
-            existing_headlines = parsed.get("existing_headlines", [])
-            leads_data = parsed.get("leads_data", [])
-            if "company_profile" in parsed:
-                company_profile = parsed["company_profile"]
-                icp_data = parsed.get("icp_data", {})
-            else:
-                company_profile = {k: v for k, v in parsed.items() if k not in ["existing_headlines", "leads_data", "icp_data"]}
-                icp_data = parsed.get("icp_data", {})
-        except:
-            company_profile = {}
-            icp_data = {}
-
-    # Format leads data for prompt - pass all data without field name assumptions
-    leads_text = ""
-    if leads_data and len(leads_data) > 0:
-        print(f"[DEBUG Profiler] Processing {len(leads_data)} leads for signal generation")
-        # Convert all leads to JSON string - no field name assumptions, pass everything
-        try:
-            # Limit to 50 leads to avoid prompt size issues, but include all fields
-            leads_for_context = leads_data[:50]
-            leads_json = json.dumps(leads_for_context, indent=2, default=str)
-
-            leads_text = f"""
-STEP 1.2 - LEADS DATA (CRITICAL - Use this to prioritize ICP signal relevance):
-Your organization has {len(leads_data)} active leads in your pipeline. Below is the complete lead data with all available fields. You MUST analyze this data and use it when generating ICP signals.
-
-Complete Leads Data (showing up to 50 most recent leads):
-{leads_json}
-
-CRITICAL INSTRUCTIONS:
-- Analyze ALL fields in the leads data above - do not assume any specific field names
-- Extract any company names, industries, regions, company sizes, technologies, buyer personas, or other relevant ICP information from whatever fields exist
-- Prioritize ICP signals that relate to companies, industries, regions, company sizes, or any other attributes found in your leads pipeline
-- If a signal mentions a company or organization, check if it matches any entity in your leads data
-- Focus on ICP signals that would be relevant to your actual sales/profiling pipeline based on the lead data structure
-- Use the lead data to understand your target ICP segments, customer profiles, and sales priorities
-- This will make the ICP signals more actionable for your sales/profiling team
-"""
-        except Exception as e:
-            print(f"[ERROR] Failed to format leads data: {e}")
-            # Fallback: just mention leads exist
-            leads_text = f"""
-STEP 1.2 - LEADS DATA:
-Your organization has {len(leads_data)} active leads in your pipeline. Use this information to prioritize ICP signals relevant to your actual sales pipeline.
-"""
-
-    # Convert to JSON string for prompt
-    context_data = {
-        "company_profile": company_profile,
-        "icp_data": icp_data
-    }
-    context_json = json.dumps(context_data, indent=2)
-
-    # Format existing headlines for prompt
-    existing_headlines_text = ""
-    if existing_headlines:
-        headlines_list = "\n".join([f"- {h}" for h in existing_headlines[:30]])  # Limit to 30 for prompt size
-        existing_headlines_text = f"""
-STEP 1.5 - EXISTING SIGNALS (CRITICAL - AVOID DUPLICATES):
-You MUST avoid generating signals similar to these existing signal headlines. Review them carefully and ensure your new signal is completely different and unique:
-
-Existing Signal Headlines:
-{headlines_list}
-
-IMPORTANT: Your new signal headline must be about a DIFFERENT news story, market development, or industry trend. Do NOT generate a signal about the same event, company news, or market development as any of the above headlines, even if worded differently. Search for NEW and UNIQUE signals that haven't been covered yet.
-"""
-
-    # Construct prompt with full company profile/ICP data and WebSearch instructions
-    template = """Task: Research and identify a high-quality, actionable ICP/customer signal for a profiler agent. This signal should help the sales team understand customer buying behavior, ICP trends, or customer acquisition opportunities.
+_PROFILER_PROMPT_TEMPLATE = """Task: Research and identify a high-quality, actionable ICP/customer signal for a profiler agent. This signal should help the sales team understand customer buying behavior, ICP trends, or customer acquisition opportunities.
 
 STEP 1 - COMPANY PROFILE AND ICP DATA:
 Review the complete company profile and ICP data below. Extract all relevant information about the company's industry, target markets, regions, ICP segments, company sizes, buyer personas, and any other relevant attributes.
@@ -568,86 +307,196 @@ Final Answer: <your JSON answer here>
 Do not include any additional reasoning, thoughts, or steps after that.
 """
 
-    prompt = template.format(
+
+# ---------------------------------------------------------------------------
+# Unified signal search (replaces search_signals_scout + search_signals_profiler)
+# ---------------------------------------------------------------------------
+
+def search_signals(
+    pre_data,
+    persona: Literal["scout", "profiler"] = "scout",
+    llm_backend: str = "default",
+) -> dict:
+    """Unified scout/profiler signal search.
+
+    Replaces search_signals_scout and search_signals_profiler.
+    Persona switches:
+      - data extraction strategy (scout: flat dict; profiler: nested company_profile/icp_data)
+      - leads text label (scout: "signal"; profiler: "ICP signal")
+      - prompt template (_SCOUT_PROMPT_TEMPLATE vs _PROFILER_PROMPT_TEMPLATE)
+      - result "agent" field
+    """
+    if persona not in ("scout", "profiler"):
+        raise ValueError(f"unknown persona: {persona!r}")
+
+    # ------------------------------------------------------------------
+    # 1. Extract existing_headlines, leads_data, and context_json
+    # ------------------------------------------------------------------
+    existing_headlines: list = []
+    leads_data: list = []
+
+    if persona == "scout":
+        # Scout: flat dict — company profile is everything except metadata keys
+        if isinstance(pre_data, dict):
+            existing_headlines = pre_data.get("existing_headlines", [])
+            leads_data = pre_data.get("leads_data", [])
+            company_profile_data = {k: v for k, v in pre_data.items() if k not in ["existing_headlines", "leads_data", "icp_data"]}
+            context_json = json.dumps(company_profile_data, indent=2)
+        elif isinstance(pre_data, str):
+            try:
+                parsed = json.loads(pre_data)
+                existing_headlines = parsed.get("existing_headlines", [])
+                leads_data = parsed.get("leads_data", [])
+                company_profile_data = {k: v for k, v in parsed.items() if k not in ["existing_headlines", "leads_data", "icp_data"]}
+                context_json = json.dumps(company_profile_data, indent=2)
+            except Exception:
+                context_json = pre_data
+        else:
+            context_json = str(pre_data)
+    else:
+        # Profiler: may have nested company_profile / icp_data keys
+        company_profile: dict = {}
+        icp_data: dict = {}
+        if isinstance(pre_data, dict):
+            existing_headlines = pre_data.get("existing_headlines", [])
+            leads_data = pre_data.get("leads_data", [])
+            if "company_profile" in pre_data:
+                company_profile = pre_data["company_profile"]
+                icp_data = pre_data.get("icp_data", {})
+            else:
+                company_profile = {k: v for k, v in pre_data.items() if k not in ["existing_headlines", "leads_data", "icp_data"]}
+        else:
+            try:
+                parsed = json.loads(pre_data) if isinstance(pre_data, str) else {}
+                existing_headlines = parsed.get("existing_headlines", [])
+                leads_data = parsed.get("leads_data", [])
+                if "company_profile" in parsed:
+                    company_profile = parsed["company_profile"]
+                    icp_data = parsed.get("icp_data", {})
+                else:
+                    company_profile = {k: v for k, v in parsed.items() if k not in ["existing_headlines", "leads_data", "icp_data"]}
+                    icp_data = parsed.get("icp_data", {})
+            except Exception:
+                company_profile = {}
+                icp_data = {}
+        context_json = json.dumps({"company_profile": company_profile, "icp_data": icp_data}, indent=2)
+
+    # ------------------------------------------------------------------
+    # 2. Format leads text (label differs by persona)
+    # ------------------------------------------------------------------
+    signal_label = "ICP signal" if persona == "profiler" else "signal"
+    leads_text = ""
+    if leads_data:
+        print(f"[DEBUG {persona.capitalize()}] Processing {len(leads_data)} leads for signal generation")
+        try:
+            leads_json = json.dumps(leads_data[:50], indent=2, default=str)
+            leads_text = f"""
+STEP 1.2 - LEADS DATA (CRITICAL - Use this to prioritize {signal_label} relevance):
+Your organization has {len(leads_data)} active leads in your pipeline. Below is the complete lead data with all available fields. You MUST analyze this data and use it when generating {signal_label}s.
+
+Complete Leads Data (showing up to 50 most recent leads):
+{leads_json}
+
+CRITICAL INSTRUCTIONS:
+- Analyze ALL fields in the leads data above - do not assume any specific field names
+- Extract any company names, industries, regions, technologies, or other relevant information from whatever fields exist
+- Prioritize {signal_label}s that relate to companies, industries, regions, or any other attributes found in your leads pipeline
+- If a {signal_label} mentions a company or organization, check if it matches any entity in your leads data
+- Focus on {signal_label}s that would be relevant to your actual sales pipeline based on the lead data structure
+- Use the lead data to understand your target market, customer segments, and sales priorities
+- This will make the {signal_label}s more actionable for your sales team
+"""
+        except Exception as e:
+            print(f"[ERROR] Failed to format leads data: {e}")
+            leads_text = f"""
+STEP 1.2 - LEADS DATA:
+Your organization has {len(leads_data)} active leads in your pipeline. Use this information to prioritize {signal_label}s relevant to your actual sales pipeline.
+"""
+
+    # ------------------------------------------------------------------
+    # 3. Format existing headlines text (identical across personas)
+    # ------------------------------------------------------------------
+    existing_headlines_text = ""
+    if existing_headlines:
+        headlines_list = "\n".join([f"- {h}" for h in existing_headlines[:30]])
+        existing_headlines_text = f"""
+STEP 1.5 - EXISTING SIGNALS (CRITICAL - AVOID DUPLICATES):
+You MUST avoid generating signals similar to these existing signal headlines. Review them carefully and ensure your new signal is completely different and unique:
+
+Existing Signal Headlines:
+{headlines_list}
+
+IMPORTANT: Your new signal headline must be about a DIFFERENT news story, market development, or industry trend. Do NOT generate a signal about the same event, company news, or market development as any of the above headlines, even if worded differently. Search for NEW and UNIQUE signals that haven't been covered yet.
+"""
+
+    # ------------------------------------------------------------------
+    # 4. Build and run the prompt
+    # ------------------------------------------------------------------
+    prompt_template = _SCOUT_PROMPT_TEMPLATE if persona == "scout" else _PROFILER_PROMPT_TEMPLATE
+    prompt = prompt_template.format(
         context_json=context_json,
         leads_section=leads_text,
-        existing_headlines_section=existing_headlines_text
+        existing_headlines_section=existing_headlines_text,
     )
 
     response, tavily_urls = _signals_agent_output(prompt, context_json, llm_backend)
 
-    # Extract JSON from response
+    # ------------------------------------------------------------------
+    # 5. Parse response (identical across personas)
+    # ------------------------------------------------------------------
     if "Final Answer:" in response:
         response = response.split("Final Answer:")[-1].strip()
 
-    # Clean and escape the JSON string
     cleaned_str = response.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-    # Remove any leading/trailing text before first { or after last }
     if "{" in cleaned_str:
         cleaned_str = cleaned_str[cleaned_str.index("{"):]
     if "}" in cleaned_str:
         cleaned_str = cleaned_str[:cleaned_str.rindex("}") + 1]
 
-    # Escape newline and other control characters within string values
     cleaned_str = re.sub(r'\"description\": \"(.*?)\"', lambda m: '"description": "' + m.group(1).replace('\n', '\\n').replace('\r', '\\r').replace('"', '\\"') + '"', cleaned_str, flags=re.DOTALL)
     cleaned_str = re.sub(r'\"snippet\": \"(.*?)\"', lambda m: '"snippet": "' + m.group(1).replace('\n', '\\n').replace('\r', '\\r').replace('"', '\\"') + '"', cleaned_str, flags=re.DOTALL)
     cleaned_str = re.sub(r'\"headline\": \"(.*?)\"', lambda m: '"headline": "' + m.group(1).replace('\n', '\\n').replace('\r', '\\r').replace('"', '\\"') + '"', cleaned_str, flags=re.DOTALL)
 
-    # Parse to JSON (Python dict)
     parsed_json = json.loads(cleaned_str)
 
-    # Validate and fix URLs using Tavily URLs if available
+    # ------------------------------------------------------------------
+    # 6. Validate URLs (identical across personas)
+    # ------------------------------------------------------------------
     def validate_url(url, tavily_urls_list):
-        """Validate URL and replace with Tavily URL if invalid"""
+        """Validate URL and replace with Tavily URL if invalid."""
         if not url or not isinstance(url, str):
             return tavily_urls_list[0] if tavily_urls_list else ""
-
-        # Check if URL is valid format
         if not url.startswith(('http://', 'https://')):
             return tavily_urls_list[0] if tavily_urls_list else ""
-
-        # If Tavily URLs available, try to match or use first one
         if tavily_urls_list:
-            # Check if URL domain matches any Tavily URL
             url_domain = url.split('/')[2] if len(url.split('/')) > 2 else ""
             for tavily_url in tavily_urls_list:
                 tavily_domain = tavily_url.split('/')[2] if len(tavily_url.split('/')) > 2 else ""
                 if url_domain and url_domain == tavily_domain:
                     return tavily_url
-            # If no match, use first Tavily URL
             return tavily_urls_list[0]
-
         return url
 
-    # Validate sourceUrl
     source_url = validate_url(parsed_json.get("sourceUrl", ""), tavily_urls)
 
-    # Validate source array URLs
     validated_sources = []
-    source_array = parsed_json.get("source", [])
-    for i, src in enumerate(source_array[:2]):  # Max 2 sources
+    for i, src in enumerate(parsed_json.get("source", [])[:2]):
         if isinstance(src, dict) and "url" in src:
             validated_url = validate_url(src["url"], tavily_urls[i:] if i < len(tavily_urls) else tavily_urls)
-            validated_sources.append({
-                "citation": src.get("citation", ""),
-                "url": validated_url
-            })
+            validated_sources.append({"citation": src.get("citation", ""), "url": validated_url})
 
-    # If no sources validated, use Tavily URLs directly
     if not validated_sources and tavily_urls:
         for i, tavily_url in enumerate(tavily_urls[:2]):
-            validated_sources.append({
-                "citation": f"Source {i+1}",
-                "url": tavily_url
-            })
+            validated_sources.append({"citation": f"Source {i+1}", "url": tavily_url})
 
-    # Add metadata (ID will be generated in API layer to ensure uniqueness per org_id)
-    from datetime import datetime
-    hours_ago = 1  # Default, can be made dynamic based on signal recency
+    # ------------------------------------------------------------------
+    # 7. Assemble result
+    # ------------------------------------------------------------------
+    hours_ago = 1
     timestamp = f"{hours_ago}h ago"
 
-    result = {
-        "agent": "profiler",
+    return {
+        "agent": persona,
         "timestamp": timestamp,
         "headline": parsed_json.get("headline", ""),
         "snippet": parsed_json.get("snippet", ""),
@@ -657,16 +506,8 @@ Do not include any additional reasoning, thoughts, or steps after that.
         "source": validated_sources if validated_sources else parsed_json.get("source", []),
         "nextBestMoves": parsed_json.get("nextBestMoves", []),
         "NBAs": parsed_json.get("NBAs", []),
-        "contextualSuggestions": parsed_json.get("contextualSuggestions", [])
+        "contextualSuggestions": parsed_json.get("contextualSuggestions", []),
     }
-
-    return result
-
-# Signals function mapping
-SIGNALS_FUNCTIONS = {
-    "scout": search_signals_scout,
-    "profiler": search_signals_profiler
-}
 
 
 # ---------------------------------------------------------------------------
@@ -677,9 +518,7 @@ async def run_signals_research(request: MarketRequest) -> dict:
     """Research web signals for specific agents (scout/profiler)."""
     agent_name = request.component_name.strip().lower()
 
-    # Lookup the function for the given agent
-    signals_function = SIGNALS_FUNCTIONS.get(agent_name)
-    if not signals_function:
+    if agent_name not in ("scout", "profiler"):
         raise HTTPException(
             status_code=400,
             detail=f"Unsupported agent: {request.component_name}. Supported agents: scout, profiler"
@@ -790,7 +629,7 @@ async def run_signals_research(request: MarketRequest) -> dict:
     max_retries = 2
     for attempt in range(1, max_retries + 1):
         try:
-            signals_result = await asyncio.to_thread(signals_function, pre_data)
+            signals_result = await asyncio.to_thread(search_signals, pre_data, agent_name)
             break
         except Exception as e:
             if attempt == max_retries:
@@ -953,7 +792,7 @@ async def _generate_signals_batch_impl(request: MarketRequest, llm_backend: str)
     for i in range(2):
         try:
             print(f"Generating scout signal {i+1}...")
-            signals_result = await asyncio.to_thread(search_signals_scout, pre_data, llm_backend)
+            signals_result = await asyncio.to_thread(search_signals, pre_data, "scout", llm_backend)
             signal_id = str(uuid.uuid4())
             signals_result.update({
                 "id": signal_id,
@@ -1005,7 +844,7 @@ async def _generate_signals_batch_impl(request: MarketRequest, llm_backend: str)
     for i in range(2):
         try:
             print(f"Generating profiler signal {i+1}...")
-            signals_result = await asyncio.to_thread(search_signals_profiler, profiler_pre_data, llm_backend)
+            signals_result = await asyncio.to_thread(search_signals, profiler_pre_data, "profiler", llm_backend)
             signal_id = str(uuid.uuid4())
             signals_result.update({
                 "id": signal_id,
