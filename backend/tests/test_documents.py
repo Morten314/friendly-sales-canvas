@@ -10,6 +10,7 @@ After Phase B Task 5, MongoDB is accessed via the singleton client imported
 from app.core.clients. Patch "app.core.clients.client" for Mongo mocking.
 """
 import io
+from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
 import pytest
 
@@ -17,6 +18,18 @@ from tests.helpers import scrub_dynamic
 from tests.identities import (
     TEST_USER_ID, TEST_ORG_ID, TEST_FILE_KEY, TEST_FILE_ID
 )
+
+
+@contextmanager
+def _override_mongo(mongo_instance):
+    """Phase F: documents router reads Mongo via Depends(get_mongo)."""
+    from app.main import app
+    from app.core.dependencies import get_mongo
+    app.dependency_overrides[get_mongo] = lambda: mongo_instance
+    try:
+        yield
+    finally:
+        app.dependency_overrides.pop(get_mongo, None)
 
 
 # ---------------------------------------------------------------------------
@@ -108,7 +121,7 @@ def test_get_document_list_returns_uploaded_docs(client):
     }
     mc, _ = _make_doc_mc(find_results=[doc])
 
-    with patch("app.core.clients.client", mc):
+    with _override_mongo(mc):
         response = client.get(f"/user-documents?org_id={TEST_ORG_ID}")
 
     assert response.status_code == 200
@@ -134,7 +147,7 @@ def test_get_document_status_returns_status(client):
     }
     mc, _ = _make_doc_mc(find_one_result=status_doc)
 
-    with patch("app.core.clients.client", mc):
+    with _override_mongo(mc):
         response = client.get(f"/document-status/{TEST_FILE_KEY}")
 
     assert response.status_code == 200
@@ -178,7 +191,7 @@ def test_get_document_status_unknown_file_key(client):
     mc = MagicMock()
     mc.__getitem__.return_value = db
 
-    with patch("app.core.clients.client", mc):
+    with _override_mongo(mc):
         response = client.get("/document-status/test_org_abc/nonexistent.pdf")
 
     assert response.status_code == 404

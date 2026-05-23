@@ -73,20 +73,20 @@ def test_load_document_pdf_branch(mocker):
 # ---------------------------------------------------------------------------
 
 def test_grapher_returns_graph_documents(mocker):
-    """grapher(file_path) loads docs then passes them through
-    llm_config.llm_transformer.convert_to_graph_documents."""
+    """grapher(graph, llm_transformer, file_path) loads docs then passes them through
+    llm_transformer.convert_to_graph_documents."""
     mocker.patch(
         "app.services.documents.load_document",
         return_value=[MagicMock(page_content="some content")],
     )
     transformer = MagicMock()
     transformer.convert_to_graph_documents.return_value = ["graph_doc_1"]
-    mocker.patch("app.core.llm_config.llm_transformer", transformer)
-    mocker.patch("app.core.clients.graph")
+    graph = MagicMock()
 
-    grapher("/tmp/foo.pdf")
+    grapher(graph, transformer, "/tmp/foo.pdf")
 
     transformer.convert_to_graph_documents.assert_called_once()
+    graph.add_graph_documents.assert_called_once_with(["graph_doc_1"])
 
 
 def test_process_prospect_list_returns_dataframe_rows(mocker):
@@ -106,15 +106,17 @@ def test_process_prospect_list_returns_dataframe_rows(mocker):
 
 
 def test_upload_file_text_uploads_to_s3(mocker, tmp_path):
-    """upload_file_text(file_path, filename) — calls grapher() internally.
+    """upload_file_text(graph, llm_transformer, file_path, filename) — calls grapher() internally.
     Stub grapher so no LLM or Neo4j I/O occurs; verify the function completes."""
     test_file = tmp_path / "test.txt"
     test_file.write_text("file content")
     mock_grapher = mocker.patch("app.services.documents.grapher", return_value=None)
+    graph = MagicMock()
+    transformer = MagicMock()
 
-    result = upload_file_text(str(test_file), "test.txt")
+    result = upload_file_text(graph, transformer, str(test_file), "test.txt")
 
-    mock_grapher.assert_called_once_with(str(test_file))
+    mock_grapher.assert_called_once_with(graph, transformer, str(test_file))
     assert result is not None
 
 
@@ -146,7 +148,7 @@ def test_get_document_status_raises_when_missing(mocker, mock_mongo_client):
     mock_mongo_client.__getitem__.return_value.__getitem__.return_value = coll
 
     with pytest.raises(DocumentNotFoundError):
-        asyncio.run(get_document_status(TEST_FILE_KEY))
+        asyncio.run(get_document_status(mock_mongo_client, TEST_FILE_KEY))
 
 
 def test_get_document_status_happy_path(mocker, mock_mongo_client):
@@ -160,7 +162,7 @@ def test_get_document_status_happy_path(mocker, mock_mongo_client):
     }
     mock_mongo_client.__getitem__.return_value.__getitem__.return_value = coll
 
-    result = asyncio.run(get_document_status(TEST_FILE_KEY))
+    result = asyncio.run(get_document_status(mock_mongo_client, TEST_FILE_KEY))
 
     # Outer envelope uses "success"; the embedded doc has "status": "completed"
     assert result["status"] == "success"
@@ -177,7 +179,7 @@ def test_list_user_documents_takes_org_id(mocker, mock_mongo_client):
     ]
     mock_mongo_client.__getitem__.return_value.__getitem__.return_value = coll
 
-    result = asyncio.run(list_user_documents(TEST_ORG_ID))
+    result = asyncio.run(list_user_documents(mock_mongo_client, TEST_ORG_ID))
 
     assert result["count"] == 2
     assert len(result["files"]) == 2
@@ -199,7 +201,7 @@ def test_delete_data_source_raises_when_missing(mocker, mock_mongo_client):
     mock_mongo_client.__getitem__.return_value.__getitem__.return_value = coll
 
     with pytest.raises(DocumentNotFoundError):
-        asyncio.run(delete_data_source(TEST_FILE_ID))
+        asyncio.run(delete_data_source(mock_mongo_client, MagicMock(), MagicMock(), TEST_FILE_ID))
 
 
 def test_update_data_source_raises_on_empty_request(mocker, mock_mongo_client):
@@ -207,7 +209,7 @@ def test_update_data_source_raises_on_empty_request(mocker, mock_mongo_client):
     update payload as a dict. Empty dict (tags=None, description=None)
     → DocumentValidationError before any Mongo access."""
     with pytest.raises(DocumentValidationError):
-        asyncio.run(update_data_source(TEST_FILE_ID, {}))
+        asyncio.run(update_data_source(MagicMock(), TEST_FILE_ID, {}))
 
 
 # ---------------------------------------------------------------------------
@@ -218,18 +220,21 @@ def test_process_file_to_embeddings_catches_brewra_error(
     mocker,
     mock_mongo_client,
 ):
-    """The S3 download in process_file_to_embeddings is inline at L189:
-        clients.s3_client.download_file(s3_bucket, file_key, local_file_path)
-    Patch the s3_client attribute and make download_file raise BrewraError.
-    The except BrewraError block must catch it and persist a 'failed' status."""
+    """The S3 download in process_file_to_embeddings is inline. Pass an s3
+    mock whose download_file raises BrewraError. The except BrewraError block
+    must catch it and persist a 'failed' status."""
     coll = MagicMock()
     mock_mongo_client.__getitem__.return_value.__getitem__.return_value = coll
-    s3 = mocker.patch("app.services.documents.clients.s3_client")
+    s3 = MagicMock()
     s3.download_file.side_effect = BrewraError("S3 hiccup")
+    pinecone = MagicMock()
 
     # Should not raise — caught by the except BrewraError block
     asyncio.run(
         process_file_to_embeddings(
+            mock_mongo_client,
+            s3,
+            pinecone,
             file_key=TEST_FILE_KEY,
             user_id=TEST_USER_ID,
             file_name="report.pdf",
@@ -252,12 +257,13 @@ def test_process_file_to_embeddings_catches_brewra_error(
 # ---------------------------------------------------------------------------
 
 def test_upload_document_file_returns_file_id(mocker, mock_mongo_client):
-    """upload_document_file has a 10-positional signature:
-       (background_tasks, file_content, file_filename, file_content_type,
-        user_id, org_id, url, name, tags, description)
+    """upload_document_file (post-Phase-F signature):
+       (mongo, s3, pinecone, background_tasks, file_content, file_filename,
+        file_content_type, user_id, org_id, url, name, tags, description)
     Verify it uploads to S3 via put_object, inserts a Mongo tracking doc,
     and schedules background processing."""
-    s3 = mocker.patch("app.services.documents.clients.s3_client")
+    s3 = MagicMock()
+    pinecone = MagicMock()
     coll = MagicMock()
     coll.insert_one.return_value.inserted_id = "abc"
     mock_mongo_client.__getitem__.return_value.__getitem__.return_value = coll
@@ -266,6 +272,9 @@ def test_upload_document_file_returns_file_id(mocker, mock_mongo_client):
 
     result = asyncio.run(
         upload_document_file(
+            mock_mongo_client,
+            s3,
+            pinecone,
             bg_tasks,                # background_tasks
             b"%PDF-1.4\n...",        # file_content
             "report.pdf",            # file_filename

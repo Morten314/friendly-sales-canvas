@@ -1,8 +1,15 @@
 """Document upload, status, and data-source management endpoints."""
 import shutil
 
-from fastapi import APIRouter, BackgroundTasks, Body, File, Form, HTTPException, Query, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Body, Depends, File, Form, HTTPException, Query, UploadFile
 
+from app.core.dependencies import (
+    get_llm_transformer,
+    get_mongo,
+    get_neo4j_graph,
+    get_pinecone,
+    get_s3,
+)
 from app.core.logging import logger
 from app.models.documents import (
     DataSourceDeleteResponse,
@@ -17,11 +24,15 @@ router = APIRouter(tags=["documents"])
 
 
 @router.post("/upload_file/", response_model=MessageResponse)
-async def upload_document(file: UploadFile = File(...)):
+async def upload_document(
+    file: UploadFile = File(...),
+    graph=Depends(get_neo4j_graph),
+    llm_transformer=Depends(get_llm_transformer),
+):
     file_path = f"uploaded_{file.filename}"
     with open(file_path, "wb") as f:
         f.write(file.file.read())
-    return documents_service.upload_file_text(file_path, file.filename)
+    return documents_service.upload_file_text(graph, llm_transformer, file_path, file.filename)
 
 
 @router.post('/upload', response_model=MessageResponse)
@@ -43,7 +54,10 @@ async def upload_document_route(
     url: str = Form(None),
     name: str = Form(None),
     tags: str = Form(None),
-    description: str = Form(None)
+    description: str = Form(None),
+    mongo=Depends(get_mongo),
+    s3=Depends(get_s3),
+    pinecone=Depends(get_pinecone),
 ):
     file_content = None
     file_filename = None
@@ -53,6 +67,9 @@ async def upload_document_route(
         file_filename = file.filename
         file_content_type = file.content_type
     return await documents_service.upload_document_file(
+        mongo,
+        s3,
+        pinecone,
         background_tasks=background_tasks,
         file_content=file_content,
         file_filename=file_filename,
@@ -67,20 +84,29 @@ async def upload_document_route(
 
 
 @router.get("/document-status/{file_key:path}", response_model=DocumentStatusResponse)
-async def get_document_status(file_key: str):
-    return await documents_service.get_document_status(file_key)
+async def get_document_status(file_key: str, mongo=Depends(get_mongo)):
+    return await documents_service.get_document_status(mongo, file_key)
 
 
 @router.get("/user-documents", response_model=ListUserDocumentsResponse)
-async def get_user_documents(org_id: str = Query(...)):
-    return await documents_service.list_user_documents(org_id)
+async def get_user_documents(org_id: str = Query(...), mongo=Depends(get_mongo)):
+    return await documents_service.list_user_documents(mongo, org_id)
 
 
 @router.delete("/data-source/{file_id}", response_model=DataSourceDeleteResponse)
-async def delete_data_source(file_id: str):
-    return await documents_service.delete_data_source(file_id)
+async def delete_data_source(
+    file_id: str,
+    mongo=Depends(get_mongo),
+    s3=Depends(get_s3),
+    pinecone=Depends(get_pinecone),
+):
+    return await documents_service.delete_data_source(mongo, s3, pinecone, file_id)
 
 
 @router.put("/data-source/{file_id}", response_model=DataSourceUpdateResponse)
-async def update_data_source(file_id: str, request: dict = Body(...)):
-    return await documents_service.update_data_source(file_id, request)
+async def update_data_source(
+    file_id: str,
+    request: dict = Body(...),
+    mongo=Depends(get_mongo),
+):
+    return await documents_service.update_data_source(mongo, file_id, request)

@@ -33,8 +33,6 @@ from langchain_openai import OpenAIEmbeddings
 from langchain_pinecone import PineconeVectorStore
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-from app.core import clients
-from app.core import llm_config
 from app.core.clients import query  # function — local binding ok
 from app.core.config import pinecone_api_key, s3_bucket, together_api_key
 from app.core.exceptions import BrewraError, DocumentNotFoundError, DocumentValidationError
@@ -54,10 +52,10 @@ def load_document(file_path):
     return loader.load()
 
 # Function to process documents and update Neo4j graph
-def grapher(file_path):
+def grapher(graph, llm_transformer, file_path):
     text = load_document(file_path)
-    graph_documents = llm_config.llm_transformer.convert_to_graph_documents(text)
-    clients.graph.add_graph_documents(graph_documents)
+    graph_documents = llm_transformer.convert_to_graph_documents(text)
+    graph.add_graph_documents(graph_documents)
 
 def process_prospect_list(file_path):
     """Process the prospect list and add data to Neo4j."""
@@ -147,9 +145,9 @@ def process_prospect_list(file_path):
 # Route-logic functions (extracted from router in commit 13/25)
 # ---------------------------------------------------------------------------
 
-def upload_file_text(file_path: str, filename: str) -> dict:
+def upload_file_text(graph, llm_transformer, file_path: str, filename: str) -> dict:
     """Process a file (already written to disk) into the Neo4j graph."""
-    grapher(file_path)
+    grapher(graph, llm_transformer, file_path)
     return {"message": f"File {filename} processed and graph updated."}
 
 
@@ -158,7 +156,7 @@ def upload_prospect_list_file(file_path: str) -> dict:
     return process_prospect_list(file_path)
 
 
-async def process_file_to_embeddings(file_key: str, user_id: str, file_name: str, org_id: str, file_id: str):
+async def process_file_to_embeddings(mongo, s3, pinecone, file_key: str, user_id: str, file_name: str, org_id: str, file_id: str):
     """Background task to convert file to embeddings and store in Pinecone with org_id namespace.
     Processes PDF, TXT, CSV, and XLSX files. Other file types are skipped gracefully."""
     try:
@@ -168,7 +166,7 @@ async def process_file_to_embeddings(file_key: str, user_id: str, file_name: str
             logger.info(f"Skipping Pinecone embedding for unsupported file type: {file_name}")
             # Update status to completed (not embedded)
             try:
-                db = clients.client["File_Processing"]
+                db = mongo["File_Processing"]
                 collection = db["file_status"]
 
                 collection.update_one(
@@ -186,7 +184,7 @@ async def process_file_to_embeddings(file_key: str, user_id: str, file_name: str
 
         # Download file from S3
         local_file_path = f"/tmp/{file_name}"
-        clients.s3_client.download_file(s3_bucket, file_key, local_file_path)
+        s3.download_file(s3_bucket, file_key, local_file_path)
 
         # Load document based on file type
         if file_name.lower().endswith('.pdf'):
@@ -274,7 +272,7 @@ async def process_file_to_embeddings(file_key: str, user_id: str, file_name: str
         # Create or get Pinecone index
         index_name = "brewra-documents"
         try:
-            clients.pc.create_index(
+            pinecone.create_index(
                 name=index_name,
                 dimension=1024,  # multilingual-e5-large-instruct embedding dimension (1024)
                 metric="cosine"
@@ -293,7 +291,7 @@ async def process_file_to_embeddings(file_key: str, user_id: str, file_name: str
         )
 
         # Update status in MongoDB (optional - for tracking)
-        db = clients.client["File_Processing"]
+        db = mongo["File_Processing"]
         collection = db["file_status"]
 
         collection.update_one(
@@ -318,7 +316,7 @@ async def process_file_to_embeddings(file_key: str, user_id: str, file_name: str
             file_id, file_key, e,
         )
         try:
-            db = clients.client["File_Processing"]
+            db = mongo["File_Processing"]
             collection = db["file_status"]
             collection.update_one(
                 {"file_key": file_key},
@@ -335,7 +333,7 @@ async def process_file_to_embeddings(file_key: str, user_id: str, file_name: str
         # Unexpected failure — log at error then mark status failed so
         # the BackgroundTasks runner doesn't swallow it silently.
         try:
-            db = clients.client["File_Processing"]
+            db = mongo["File_Processing"]
             collection = db["file_status"]
 
             collection.update_one(
@@ -353,6 +351,9 @@ async def process_file_to_embeddings(file_key: str, user_id: str, file_name: str
 
 
 async def upload_document_file(
+    mongo,
+    s3,
+    pinecone,
     background_tasks: BackgroundTasks,
     file_content: Optional[bytes],
     file_filename: Optional[str],
@@ -409,7 +410,7 @@ async def upload_document_file(
 
             # Save URL data source to MongoDB
             try:
-                db = clients.client["File_Processing"]
+                db = mongo["File_Processing"]
                 collection = db["file_status"]
 
                 doc = {
@@ -466,7 +467,7 @@ async def upload_document_file(
 
         # Upload to S3
         try:
-            clients.s3_client.put_object(
+            s3.put_object(
                 Bucket=s3_bucket,
                 Key=file_key,
                 Body=file_content,
@@ -497,7 +498,7 @@ async def upload_document_file(
 
         # Store initial status in MongoDB
         try:
-            db = clients.client["File_Processing"]
+            db = mongo["File_Processing"]
             collection = db["file_status"]
 
             doc = {
@@ -524,11 +525,11 @@ async def upload_document_file(
 
         # Start background task for PDF, TXT, CSV, and XLSX files (vectorization)
         if will_be_embedded:
-            background_tasks.add_task(process_file_to_embeddings, file_key, user_id, file_filename, org_id, file_id)
+            background_tasks.add_task(process_file_to_embeddings, mongo, s3, pinecone, file_key, user_id, file_filename, org_id, file_id)
         else:
             # For non-embeddable files, mark as completed immediately
             try:
-                db = clients.client["File_Processing"]
+                db = mongo["File_Processing"]
                 collection = db["file_status"]
 
                 collection.update_one(
@@ -570,12 +571,12 @@ async def upload_document_file(
         )
 
 
-async def get_document_status(file_key: str) -> dict:
+async def get_document_status(mongo, file_key: str) -> dict:
     """
     Get the processing status of a document.
     Returns status: processing, completed, or failed
     """
-    db = clients.client["File_Processing"]
+    db = mongo["File_Processing"]
     collection = db["file_status"]
 
     status_doc = collection.find_one({"file_key": file_key})
@@ -590,13 +591,13 @@ async def get_document_status(file_key: str) -> dict:
     }
 
 
-async def list_user_documents(org_id: str) -> dict:
+async def list_user_documents(mongo, org_id: str) -> dict:
     """
     Get all data sources (files and URLs) for an organization.
     Returns list of files and URLs with file_name, file_id, and other metadata.
     Filtered by org_id for multi-org support.
     """
-    db = clients.client["File_Processing"]
+    db = mongo["File_Processing"]
     collection = db["file_status"]
 
     # Find all data sources (files and URLs) for this org
@@ -632,7 +633,7 @@ async def list_user_documents(org_id: str) -> dict:
     }
 
 
-async def delete_data_source(file_id: str) -> dict:
+async def delete_data_source(mongo, s3, pinecone, file_id: str) -> dict:
     """
     Delete a data source file from AWS S3, Pinecone, and MongoDB.
     Deletes based on file_id.
@@ -648,7 +649,7 @@ async def delete_data_source(file_id: str) -> dict:
         if original_file_id != file_id:
             logger.warning(f"Stripped trailing slash from file_id: '{original_file_id}' -> '{file_id}'")
 
-        db = clients.client["File_Processing"]
+        db = mongo["File_Processing"]
         collection = db["file_status"]
 
         # Log what we're searching for
@@ -711,7 +712,7 @@ async def delete_data_source(file_id: str) -> dict:
         # 1. Delete from AWS S3 (only for file data sources, not URLs)
         if not is_url_data_source and file_key:
             try:
-                clients.s3_client.delete_object(Bucket=s3_bucket, Key=file_key)
+                s3.delete_object(Bucket=s3_bucket, Key=file_key)
                 logger.info(f"Deleted file from S3: {file_key}")
             except Exception as e:
                 error_msg = str(e)
@@ -730,7 +731,7 @@ async def delete_data_source(file_id: str) -> dict:
         if not is_url_data_source and org_id and file_key:
             try:
                 index_name = "brewra-documents"
-                index = clients.pc.Index(index_name)
+                index = pinecone.Index(index_name)
 
                 # Check if namespace exists first and log what we're searching for
                 logger.info(f"Attempting Pinecone deletion: namespace='{org_id}', file_id='{actual_file_id}', file_key='{file_key}'")
@@ -878,7 +879,7 @@ async def delete_data_source(file_id: str) -> dict:
         raise
 
 
-async def update_data_source(file_id: str, request: dict) -> dict:
+async def update_data_source(mongo, file_id: str, request: dict) -> dict:
     """
     Update tags and description for a data source file.
     """
@@ -890,7 +891,7 @@ async def update_data_source(file_id: str, request: dict) -> dict:
     if tags is None and description is None:
         raise DocumentValidationError("At least one of 'tags' or 'description' must be provided")
 
-    db = clients.client["File_Processing"]
+    db = mongo["File_Processing"]
     collection = db["file_status"]
 
     file_doc = collection.find_one({"file_id": file_id})
