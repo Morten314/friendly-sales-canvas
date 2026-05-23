@@ -36,7 +36,9 @@ Test count holds at 236 (the Phase G end-state baseline observed post-merge). No
    - `tests/test_documents.py` → `tests/test_data_sources.py`.
    - `tests/test_documents_v2.py` → `tests/test_data_sources_v2.py`.
    - `tests/unit/test_documents.py` → `tests/unit/test_data_sources.py`.
-   - `app/main.py` router-include line + any `tags=["documents"]` attribute.
+   - `app/main.py` router-include lines (`app/main.py:141,145`) + any `tags=["documents"]` attribute.
+
+   **OpenAPI grouping note.** `tags=["documents"]` and `tags=["v2", "documents"]` become `tags=["data_sources"]` and `tags=["v2", "data_sources"]`. This shifts the Swagger `/docs` grouping from "documents" to "data_sources" — an intentional cosmetic surface change consistent with the package rename. Tags are not listed in the §2.3 HTTP-surface-stability exclusion, so this isn't a constraint violation.
 
 3. **TD-006 close-out.** Two callsites in `market_scoring` orchestrator change from `leads, _ = get_leads_for_org(...); total_leads = len(leads)` to `leads, total_leads = get_leads_for_org(...)`. Folded into the `market_scoring/` orchestrator-extraction commit (no separate commit).
 
@@ -84,10 +86,10 @@ services/<domain>/
 
 **Dependency direction.** `orchestrator` is the root that composes everything. All four leaves (`prompts`, `llm`, `parsing`, `persistence`) are independent of each other; `llm.py` does not import from `prompts.py` because the existing `_*_agent_output` signatures take `prompt: str` as a parameter — the orchestrator imports both `llm` and `prompts` and threads the prompt string in as an argument. No leaf-to-leaf imports permitted. If a parser needs prompt-specific knowledge, colocate (keep them in one module); cross-imports between siblings are a smell.
 
-**`__init__.py` content.** Re-exports only — no logic. Example:
+**`__init__.py` content.** Re-exports only — no logic. Two illustrative examples:
 
 ```python
-# services/signals/__init__.py
+# services/signals/__init__.py — public-only re-exports
 from app.services.signals.orchestrator import (
     search_signals,
     run_signals_research,
@@ -109,6 +111,33 @@ __all__ = [
 ]
 ```
 
+```python
+# services/market_scoring/__init__.py — illustrates §3.7 _-prefix exceptions
+from app.services.market_scoring.orchestrator import (
+    trigger_or_get_market_scores,
+    get_market_scores_status,
+    get_lead_market_score_descriptions,
+)
+from app.services.market_scoring.persistence import (
+    get_company_profile_for_org,
+    _ensure_market_scoring_indexes,      # §3.7: called by app/main.py lifespan
+    _get_latest_market_score_rows,       # §3.7: imported by unit tests
+)
+from app.services.market_scoring.scoring import (
+    _run_market_scoring_for_org,         # §3.7: imported by unit tests
+)
+
+__all__ = [
+    "trigger_or_get_market_scores",
+    "get_market_scores_status",
+    "get_lead_market_score_descriptions",
+    "get_company_profile_for_org",
+    "_ensure_market_scoring_indexes",
+    "_get_latest_market_score_rows",
+    "_run_market_scoring_for_org",
+]
+```
+
 ### 3.2 `signals/` — full layout
 
 Source: `services/signals.py` (1297 LOC).
@@ -122,9 +151,11 @@ Source: `services/signals.py` (1297 LOC).
 | `orchestrator.py` | `search_signals`, `run_signals_research`, `_generate_signals_batch_impl`, `generate_signals_batch`, `generate_signals_batch_claude`, `fetch_signals`, `signal_ask`, `signal_ask_claude` | ~350 |
 | `__init__.py` | Re-exports (see public symbols below) | ~25 |
 
-**Public symbols (re-exported from `__init__.py`):** `search_signals`, `run_signals_research`, `generate_signals_batch`, `signal_ask`, `fetch_signals`, `record_signal_action`. Plus any `_claude` variants confirmed live during pre-flight.
+**Public symbols (re-exported from `__init__.py`):** `search_signals`, `run_signals_research`, `generate_signals_batch`, `generate_signals_batch_claude`, `signal_ask`, `signal_ask_claude`, `record_signal_action`, `fetch_signals`.
 
-**Implementor note — Claude variants.** Phase B's commits (`f4fb287`, `0610e12`, `a361337`) collapsed several Groq/Claude pairs into single workers parameterized by `llm_backend`. Pre-flight: confirm whether `generate_signals_batch_claude` and `signal_ask_claude` are still reachable from any router. If dead code, delete in the same commit as their extraction. If live wrappers around the unified path, keep in `orchestrator.py` unchanged.
+**Implementor note — Claude variants.** Pre-flight against the current codebase confirmed: `generate_signals_batch_claude` and `signal_ask_claude` are live backend-dispatcher wrappers (covered by `tests/unit/test_signals.py` lines 117 / 273 etc., which assert dispatch with `llm_backend='claude'`). Keep in `orchestrator.py` unchanged.
+
+**LOC estimation note for signals/.** The submodule estimates above total ~930 LOC against a 1297 LOC source — leaving ~370 LOC (28%) for imports, module-level constants, docstrings, blank lines, and any inline helpers not yet mapped to a submodule. Distribute that residual by best judgment during decomposition; the `~400 LOC per submodule` ceiling was dropped from §6 in round-1 revisions and no longer applies as a constraint.
 
 ### 3.3 `icp/` — full layout
 
@@ -135,11 +166,11 @@ Source: `services/icp.py` (1145 LOC).
 | `prompts.py` | Prompt templates from `ICP_generator` + `icp_research_1..4` | ~280 |
 | `llm.py` | `_icp_research_agent_output` | ~20 |
 | `parsing.py` | JSON-extraction helpers extracted from `icp_research_N` bodies (helper names assigned during implementation) | ~80 |
-| `persistence.py` | `list_icps`, `delete_recommended_icp`, `_ensure_icp_indexes`, `_reserve_unique_icp_id`, `_release_icp_id` | ~280 |
+| `persistence.py` | `list_icps`, `delete_recommended_icp`, `_ensure_icp_indexes`, `_reserve_unique_icp_id`, `_release_icp_id` (last three re-exported per §3.7) | ~280 |
 | `orchestrator.py` | `ICP_generator`, `icp_research_1..4`, `_run_icp_research_impl`, `run_icp_research` | ~280 |
 | `__init__.py` | Re-exports (see public symbols below) | ~25 |
 
-**Public symbols (re-exported from `__init__.py`):** `ICP_generator`, `icp_research_1`, `icp_research_2`, `icp_research_3`, `icp_research_4`, `run_icp_research`, `list_icps`, `delete_recommended_icp`. Plus `_ensure_icp_indexes` (see §3.7).
+**Public symbols (re-exported from `__init__.py`):** `ICP_generator`, `icp_research_1`, `icp_research_2`, `icp_research_3`, `icp_research_4`, `run_icp_research`, `list_icps`, `delete_recommended_icp`. Plus `_ensure_icp_indexes`, `_reserve_unique_icp_id`, `_release_icp_id` (see §3.7 — the last two are lazy-imported by `customer_profile.py`).
 
 ### 3.4 `market_research/` — full layout
 
@@ -183,7 +214,7 @@ Source: `services/market_scoring.py` (854 LOC).
 | `orchestrator.py` | `trigger_or_get_market_scores`, `get_market_scores_status`, `get_lead_market_score_descriptions` (with TD-006 two-char fix applied) | ~200 |
 | `__init__.py` | Re-exports (see public symbols below) | ~25 |
 
-**Public symbols (re-exported from `__init__.py`):** `trigger_or_get_market_scores`, `get_market_scores_status`, `get_lead_market_score_descriptions`, `get_company_profile_for_org`. Plus `_ensure_market_scoring_indexes` and `_run_market_scoring_for_org` (see §3.7).
+**Public symbols (re-exported from `__init__.py`):** `trigger_or_get_market_scores`, `get_market_scores_status`, `get_lead_market_score_descriptions`, `get_company_profile_for_org`. Plus `_ensure_market_scoring_indexes`, `_get_latest_market_score_rows`, and `_run_market_scoring_for_org` (see §3.7).
 
 No `prompts.py`/`llm.py`/`parsing.py` — no LLM in this service.
 
@@ -195,9 +226,12 @@ The general rule (§2.1 item 4) is that `_`-prefixed helpers stay internal to th
 |---|---|---|---|
 | `_ensure_market_scoring_indexes` | `services/market_scoring/__init__.py` | `app/main.py` (lifespan) | Mongo-index creation at startup |
 | `_ensure_icp_indexes` | `services/icp/__init__.py` | `app/main.py` (lifespan) | Mongo-index creation at startup |
-| `_run_market_scoring_for_org` | `services/market_scoring/__init__.py` | `app/routers/market_scoring.py` | `BackgroundTasks.add_task` callable reference |
+| `_reserve_unique_icp_id` | `services/icp/__init__.py` | `app/services/customer_profile.py:20,139,217` (lazy, in function bodies) | Atomic ID-reservation shared with customer-profile service |
+| `_release_icp_id` | `services/icp/__init__.py` | `app/services/customer_profile.py:354` (lazy, in function body) | Atomic ID-release shared with customer-profile service |
+| `_run_market_scoring_for_org` | `services/market_scoring/__init__.py` | `tests/unit/test_market_scoring.py:19` | Direct unit-test import (the router uses `from app.services import market_scoring as market_scoring_service` and references via attribute access, which works through the package's `__init__.py` even without explicit re-export — but the test imports the symbol directly, so re-export is required) |
+| `_get_latest_market_score_rows` | `services/market_scoring/__init__.py` | `tests/unit/test_market_scoring.py:372` | Direct unit test of pagination contract |
 
-**Pre-flight check before scaffolding any service.** Run `grep -rn "from app.services.<domain> import _" backend/` for each service. Any new `_`-prefixed import surfaced gets added to this table before the corresponding service is decomposed.
+**Pre-flight check before scaffolding any service.** Run `grep -rn "from app.services.<domain> import _" backend/ tests/` for each service (replace `<domain>` with each of `signals`, `icp`, `market_research`, `documents`, `market_scoring`). Any new `_`-prefixed import surfaced gets added to this table before the corresponding service is decomposed.
 
 ---
 
@@ -218,7 +252,7 @@ Easiest → hardest, so the per-domain pattern is validated on simpler services 
 While Python's import machinery allows both `services/<domain>.py` and `services/<domain>/__init__.py` on disk (the package shadows the module), leaving the original file alongside the new package is confusing and easy to miss in review. Step 1 therefore moves all code into the package and deletes the original in a single commit.
 
 ```
-1. scaffold <domain>/ package: git mv services/<domain>.py services/<domain>/orchestrator.py;
+1. Move service file into package: git mv services/<domain>.py services/<domain>/orchestrator.py;
    create services/<domain>/__init__.py with full public-API re-exports against orchestrator.py.
    Tests must pass. (Use git mv to preserve git log --follow and git blame continuity.)
 2. extract persistence.py from orchestrator.py — lowest coupling, no caller signature changes
@@ -227,11 +261,11 @@ While Python's import machinery allows both `services/<domain>.py` and `services
 5. closeout (per-service variations):
    - data_sources/: rename router files + test files + main.py inclusion in same commit
    - market_scoring/: fold in TD-006 two-char fix in same commit
-   - signals/: final cleanup pass and dead Claude-variant deletion if confirmed
+   - signals/: final cleanup pass
    - market_research/, icp/: no closeout commit needed
 ```
 
-Commit count per service: `market_scoring/` 4 commits (steps 1, 2, scoring-split, 5); `data_sources/` 4 commits (steps 1, 2, pipeline+loaders split, 5); `market_research/` 5 commits (steps 1-5 minus an empty step 5); `icp/` 5 commits; `signals/` 5-6 commits. **Total: approximately 23-25 commits.**
+Commit count per service: `market_scoring/` 4 commits (1, 2, normalization/scoring split, 5); `data_sources/` 4 commits (1, 2, loaders/pipeline split, 5); `market_research/` 4 commits (1, 2, 3, 4); `icp/` 4 commits (1, 2, 3, 4); `signals/` 5–6 commits (1, 2, 3, 4, 5, optional cleanup). **Total: approximately 21–22 commits.**
 
 Each commit message follows the convention used in Phase G: `refactor(be): extract <domain>/persistence.py [phase H, commit N/M]`. The `[phase H, commit N/M]` tail makes review-trace easy.
 
@@ -257,15 +291,30 @@ All four leaves (`prompts`, `llm`, `parsing`, `persistence`) are independent of 
 
 Adding a symbol to a submodule but forgetting to re-export it in `__init__.py` produces an `ImportError` at the caller. Mitigation: every commit's diff explicitly lists which symbols re-exported; full test suite runs per commit and imports the public API the same way callers do — broken re-exports fail tests immediately. The §3.7 exception list is the authoritative reference for `_`-prefixed symbols that must be re-exported despite the underscore convention.
 
+**Known gap in automated coverage.** Two external consumers are not exercised by `pytest -q`:
+- `backend/tests/capture_fixtures.py` (manual capture script) imports `Research_Market_1..5`, `icp_research_1..4`, and `search_signals` from their service packages (lines 86, 108, 130).
+- `backend/scripts/test_claude_batch_and_market_research.py:32` imports `get_company_profile_for_org` from `market_scoring`.
+
+All four symbols are public and covered by the §3 enumerations, so the re-exports will be in place. But if a future refactor accidentally removes one of these from the `__init__.py`, the break surfaces only when someone runs the script manually. Mitigation: after the phase completes, run `python tests/capture_fixtures.py --dry-run` (or a one-line import smoke) as a post-phase verification.
+
 ### 5.4 `data_sources/` rename ripple
 
-Multiple files renamed in one commit (router + v2 router + 3 test files + main.py reference). Anything missing the rename breaks imports. Mitigation: before the rename commit, run:
+Multiple files renamed in one commit (router + v2 router + 3 test files + main.py reference). Anything missing the rename breaks imports. The most easily-missed sites are the two `app/main.py` router-include lines that use the `from app.routers import documents` form (lines 141, 145) — a regex tuned to dotted paths like `app.routers.documents` will not match these.
+
+Mitigation: before the rename commit, run a broad grep and classify hits manually:
 
 ```bash
-grep -rEn "(from |import )(app\.services\.documents|app\.routers\.documents|app\.routers\.v2\.documents)|\"documents\"|test_documents|mocker\.patch\(['\"]app\.services\.documents" backend/ tests/
+grep -rn "documents" backend/app/main.py backend/app/routers/ backend/app/services/customer_profile.py backend/tests/
 ```
 
-Confirm the diff covers everything intentional. Verify the Mongo collection name (it's `user_documents`, not `documents` — the rename does not touch any database identifiers). Run full suite after; broken imports fail loud.
+Expected hit categories:
+- `app/main.py:141,145` — router import lines (must rename).
+- `app/routers/documents.py`, `app/routers/v2/documents.py` — router files (renamed).
+- `app/routers/documents.py:25`, `app/routers/v2/documents.py:8` — `tags=["documents"]` / `tags=["v2", "documents"]` (rename per §2.1 item 2).
+- `tests/test_documents.py`, `tests/test_documents_v2.py`, `tests/unit/test_documents.py` — test files (renamed).
+- Any `mocker.patch("app.services.documents.X")` strings inside test bodies.
+
+Verify the Mongo collection name (it's `user_documents`, not `documents` — the rename does not touch any database identifiers). Run full suite after; broken imports fail loud.
 
 ### 5.5 `market_scoring/` background-task callable reference
 
