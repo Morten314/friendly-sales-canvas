@@ -17,7 +17,7 @@ import json
 import re
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from langchain_core.prompts import PromptTemplate
 from pymongo.errors import DuplicateKeyError
@@ -669,7 +669,15 @@ ICP_FUNCTIONS_CLAUDE = {
 # Router-facing service functions
 # ---------------------------------------------------------------------------
 
-def list_icps(driver, mongo, agent_chain, user_id: str, refresh: bool = False) -> Dict[str, Any]:
+def list_icps(
+    driver,
+    mongo,
+    agent_chain,
+    user_id: str,
+    refresh: bool = False,
+    limit: int = 500,
+    offset: int = 0,
+) -> tuple[List[Dict[str, Any]], int]:
     """Fetch or generate ICPs for a given user_id.
 
     Implements the GET /icp handler logic:
@@ -838,7 +846,10 @@ def list_icps(driver, mongo, agent_chain, user_id: str, refresh: bool = False) -
                 {"$set": {"user_id": user_id, "icps": normalized_cached}},
                 upsert=True
             )
-            return normalized_cached
+            all_items = normalized_cached.get("suggestedICPs", [])
+            total = len(all_items)
+            items = all_items[offset : offset + limit]
+            return items, total
 
         logger.info(f"[ICP] Generating new ICPs for user_id: {user_id}")
 
@@ -890,7 +901,10 @@ def list_icps(driver, mongo, agent_chain, user_id: str, refresh: bool = False) -
                 raise
 
             logger.info(f"[ICP] Successfully returned ICPs for user_id: {user_id}")
-            return icp_result
+            all_items = icp_result.get("suggestedICPs", [])
+            total = len(all_items)
+            items = all_items[offset : offset + limit]
+            return items, total
 
     except Exception as e:
         logger.error(f"[ICP] ERROR: {str(e)}")

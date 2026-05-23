@@ -111,9 +111,11 @@ def test_list_icps_returns_cached_when_no_refresh(mocker, mock_mongo_client):
         "app.services.icp._reserve_unique_icp_id", return_value=TEST_ICP_ID_1,
     )
 
-    result = list_icps(MagicMock(), mock_mongo_client, MagicMock(), TEST_USER_ID, refresh=False)
+    items, total = list_icps(MagicMock(), mock_mongo_client, MagicMock(), TEST_USER_ID, refresh=False)
 
-    assert "suggestedICPs" in result
+    assert isinstance(items, list)
+    assert total == 1
+    assert items[0]["id"] == TEST_ICP_ID_1
 
 
 def test_list_icps_raises_when_no_company_profile_for_refresh(

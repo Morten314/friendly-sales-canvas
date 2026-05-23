@@ -264,6 +264,9 @@ def test_get_icp_returns_cached_suggested_icps(client, snapshot):
     assert response.status_code == 200
     data = response.json()
     assert "suggestedICPs" in data
+    assert response.headers.get("Deprecation") == "true"
+    assert 'rel="successor-version"' in response.headers.get("Link", "")
+    assert "/api/v2/icp" in response.headers["Link"]
     body_scrubbed = scrub_dynamic(data)
     assert body_scrubbed == snapshot
 

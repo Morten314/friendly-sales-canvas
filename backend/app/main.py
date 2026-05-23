@@ -162,6 +162,10 @@ from app.routers import icp
 
 app.include_router(icp.router)
 
+from app.routers.v2 import icp as icp_v2
+
+app.include_router(icp_v2.router, prefix="/v2")
+
 from app.routers import signals
 
 app.include_router(signals.router)

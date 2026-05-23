@@ -1,5 +1,5 @@
 """ICP endpoints: synthesis, multi-component research, and saved-ICP delete."""
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 
 from app.core.dependencies import (
     get_agent_chain,
@@ -16,13 +16,21 @@ router = APIRouter(tags=["icp"])
 
 @router.get("/icp", response_model=ICPListResponse)
 async def get_or_create_icp_config(
+    response: Response,
     user_id: str = Query(...),
     refresh: bool = Query(False),
     driver=Depends(get_neo4j_driver),
     mongo=Depends(get_mongo),
     agent_chain=Depends(get_agent_chain),
 ):
-    return icp_service.list_icps(driver, mongo, agent_chain, user_id=user_id, refresh=refresh)
+    """**Deprecated:** use `GET /api/v2/icp` for the paginated envelope.
+
+    Returns the user's ICP list (typically 5-10 items; hard cap of 500).
+    """
+    response.headers["Deprecation"] = "true"
+    response.headers["Link"] = '</api/v2/icp>; rel="successor-version"'
+    items, _ = icp_service.list_icps(driver, mongo, agent_chain, user_id=user_id, refresh=refresh)
+    return {"suggestedICPs": items}
 
 
 @router.post("/icp-research", response_model=ICPResearchResponse)
