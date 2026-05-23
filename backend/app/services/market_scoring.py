@@ -50,14 +50,9 @@ def _ensure_market_scoring_indexes(mongo) -> None:
     run_coll.create_index([("org_id", 1), ("created_at", -1)])
 
 
-def _get_market_score_collections(mongo=None):
+def _get_market_score_collections(mongo):
     # Returns only the collections — never the client. Callers MUST NOT close
     # the underlying connection; it is the shared singleton from app.core.clients.
-    # Phase F (commit 15a/17): `mongo` is the new explicit param. Fallback to
-    # clients.client supports unconverted callers during the 15a↔15b window;
-    # commit 15b removes the default and the fallback.
-    if mongo is None:
-        mongo = clients.client
     profiler_db = mongo["Profiler"]
     return profiler_db["Lead_Market_Scores"], profiler_db["Lead_Market_Score_Runs"]
 
@@ -166,13 +161,13 @@ def _extract_lead_name(lead: Dict[str, Any]) -> Optional[str]:
     return None
 
 
-def _get_lead_identity_from_neo4j(driver=None, org_id: Optional[str] = None, lead_id: Optional[str] = None) -> Dict[str, Optional[str]]:
+def _get_lead_identity_from_neo4j(driver, org_id: str, lead_id: str) -> Dict[str, Optional[str]]:
     query_string = """
     MATCH (l:Lead {org_id: $org_id, lead_id: $lead_id})
     RETURN l
     LIMIT 1
     """
-    with clients.driver.session() as session:
+    with driver.session() as session:
         record = session.run(query_string, org_id=org_id, lead_id=lead_id).single()
         if not record:
             return {"company_name": None, "lead_name": None}
@@ -214,7 +209,7 @@ def _extract_description_preview(component_descriptions: Any) -> Optional[str]:
     return None
 
 
-def _get_latest_market_score_rows(driver=None, mongo=None, org_id: Optional[str] = None) -> List[LeadMarketScoreRow]:
+def _get_latest_market_score_rows(driver, mongo, org_id: str) -> List[LeadMarketScoreRow]:
     score_coll, _ = _get_market_score_collections(mongo)
     docs = list(score_coll.find({"org_id": org_id}).sort("updated_at", -1))
     rows: List[LeadMarketScoreRow] = []
@@ -240,7 +235,7 @@ def _get_latest_market_score_rows(driver=None, mongo=None, org_id: Optional[str]
     return rows
 
 
-def _get_latest_scoring_run(mongo=None, org_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
+def _get_latest_scoring_run(mongo, org_id: str) -> Optional[Dict[str, Any]]:
     _, run_coll = _get_market_score_collections(mongo)
     run_doc = run_coll.find_one({"org_id": org_id}, sort=[("created_at", -1)])
     if not run_doc:
@@ -279,6 +274,9 @@ def _is_stale_queued_run(run_doc: Dict[str, Any], stale_after_seconds: int = 300
 
 
 def trigger_or_get_market_scores(
+    driver,
+    mongo,
+    llm2,
     request: LeadMarketScoresRequest,
     background_tasks: BackgroundTasks,
 ) -> Dict[str, Any]:
@@ -290,7 +288,7 @@ def trigger_or_get_market_scores(
     """
     import uuid  # function-local: uuid is used only in this function
 
-    _, run_coll = _get_market_score_collections()
+    _, run_coll = _get_market_score_collections(mongo)
     active_run = run_coll.find_one(
         {"org_id": request.org_id, "status": {"$in": ["queued", "processing"]}},
         sort=[("created_at", -1)],
@@ -337,6 +335,9 @@ def trigger_or_get_market_scores(
         run_coll.insert_one(run_doc)
         background_tasks.add_task(
             _run_market_scoring_for_org,
+            driver,
+            mongo,
+            llm2,
             request.user_id,
             request.org_id,
             run_id,
@@ -345,13 +346,13 @@ def trigger_or_get_market_scores(
         active_run.pop("_id", None)
         run_doc = active_run
     else:
-        run_doc = _get_latest_scoring_run(request.org_id)
+        run_doc = _get_latest_scoring_run(mongo, request.org_id)
 
-    rows = _get_latest_market_score_rows(request.org_id)
+    rows = _get_latest_market_score_rows(driver, mongo, request.org_id)
     if not rows and not request.refresh:
         raise MarketScoreNotFoundError("No lead market scores found for org_id")
 
-    latest_run = run_doc or _get_latest_scoring_run(request.org_id)
+    latest_run = run_doc or _get_latest_scoring_run(mongo, request.org_id)
     processing_status = str((latest_run or {}).get("status", "idle"))
     last_scored_at = rows[0].updated_at if rows else None
     return {
@@ -365,6 +366,8 @@ def trigger_or_get_market_scores(
 
 
 def get_market_scores_status(
+    driver,
+    mongo,
     user_id: str,
     org_id: str,
     run_id: Optional[str],
@@ -375,7 +378,7 @@ def get_market_scores_status(
     Returns a dict matching the LeadMarketScoringStatusResponse schema.
     Raises MarketScoringRunNotFoundError if no run is found for the given filter.
     """
-    score_coll, run_coll = _get_market_score_collections()
+    score_coll, run_coll = _get_market_score_collections(mongo)
     run_filter: Dict[str, Any] = {"org_id": org_id, "user_id": user_id}
     if run_id:
         run_filter["run_id"] = run_id
@@ -394,7 +397,7 @@ def get_market_scores_status(
         # Neo4j hiccups. total_leads=0 yields a progress_percent of 0 — UI
         # shows "no progress" rather than a hard 500.
         try:
-            total_leads = len(get_leads_for_org(org_id=org_id, limit=5000, order_by_recent=True))
+            total_leads = len(get_leads_for_org(driver, org_id=org_id, limit=5000, order_by_recent=True))
         except Exception as e:
             logger.warning(
                 "Could not fetch leads for scoring status (org_id=%s): %s; defaulting total_leads=0",
@@ -451,6 +454,7 @@ def get_market_scores_status(
 
 
 def get_lead_market_score_descriptions(
+    mongo,
     lead_id: str,
     user_id: str,
     org_id: str,
@@ -460,7 +464,7 @@ def get_lead_market_score_descriptions(
     Returns a dict matching the LeadMarketScoreDescriptionsResponse schema.
     Raises MarketScoreNotFoundError if the lead has no scoring document.
     """
-    score_coll, _ = _get_market_score_collections()
+    score_coll, _ = _get_market_score_collections(mongo)
     doc = score_coll.find_one({"org_id": org_id, "lead_id": lead_id, "user_id": user_id})
     if not doc:
         raise MarketScoreNotFoundError("Lead scoring descriptions not found")
@@ -482,10 +486,8 @@ def get_lead_market_score_descriptions(
     }
 
 
-def get_company_profile_for_org(driver=None, org_id: Optional[str] = None) -> Dict[str, Any]:
+def get_company_profile_for_org(driver, org_id: str) -> Dict[str, Any]:
     """Fetch a single company profile for an org."""
-    if driver is None:
-        driver = clients.driver
     with driver.session() as session:
         result = session.run(
             "MATCH (c:CompanyProfile {org_id: $org_id}) RETURN c LIMIT 1",
@@ -503,10 +505,8 @@ def get_company_profile_for_org(driver=None, org_id: Optional[str] = None) -> Di
         return company_profile
 
 
-def get_market_reports_for_org(mongo=None, user_id: Optional[str] = None, org_id: Optional[str] = None) -> Dict[str, Dict[str, Any]]:
+def get_market_reports_for_org(mongo, user_id: str, org_id: str) -> Dict[str, Dict[str, Any]]:
     """Fetch latest market research reports for all five components."""
-    if mongo is None:
-        mongo = clients.client
     db = mongo["Scout_Agent"]
     collection = db["Market_Intelligence"]
     reports: Dict[str, Dict[str, Any]] = {}
@@ -534,10 +534,10 @@ def _clean_and_parse_json(raw_text: str) -> Dict[str, Any]:
 
 
 def score_single_lead_against_market(
-    llm2=None,
-    lead: Optional[Dict[str, Any]] = None,
-    company_profile: Optional[Dict[str, Any]] = None,
-    market_reports: Optional[Dict[str, Dict[str, Any]]] = None,
+    llm2,
+    lead: Dict[str, Any],
+    company_profile: Dict[str, Any],
+    market_reports: Dict[str, Dict[str, Any]],
 ) -> Dict[str, Any]:
     """
     Score one lead against all five market components with explanations.
@@ -577,9 +577,6 @@ Return JSON schema:
   }}
 }}
 """
-    if llm2 is None:
-        from app.core import llm_config as _llm_config_fallback
-        llm2 = _llm_config_fallback.llm2
     response = llm2.invoke([HumanMessage(content=prompt)])
     content = getattr(response, "content", response)
     parsed = _clean_and_parse_json(content)
@@ -611,13 +608,13 @@ Return JSON schema:
 
 
 def _persist_market_score_for_lead(
-    driver=None,
-    mongo=None,
-    user_id: Optional[str] = None,
-    org_id: Optional[str] = None,
-    lead: Optional[Dict[str, Any]] = None,
-    scoring_payload: Optional[Dict[str, Any]] = None,
-    run_id: Optional[str] = None,
+    driver,
+    mongo,
+    user_id: str,
+    org_id: str,
+    lead: Dict[str, Any],
+    scoring_payload: Dict[str, Any],
+    run_id: str,
     scoring_status: str = "completed",
     score_coll=None,
 ) -> None:
@@ -665,8 +662,6 @@ def _persist_market_score_for_lead(
         "market_scoring_status": scoring_status,
         "market_score_run_id": run_id,
     }
-    if driver is None:
-        driver = clients.driver
     with driver.session() as session:
         session.execute_write(
             upsert_node,
@@ -677,17 +672,17 @@ def _persist_market_score_for_lead(
         )
 
 
-def _run_market_scoring_for_org(user_id: str, org_id: str, run_id: str) -> None:
+def _run_market_scoring_for_org(driver, mongo, llm2, user_id: str, org_id: str, run_id: str) -> None:
     run_coll = None
     try:
-        score_coll, run_coll = _get_market_score_collections()
+        score_coll, run_coll = _get_market_score_collections(mongo)
         now_iso = datetime.now(timezone.utc).isoformat()
         run_coll.update_one(
             {"run_id": run_id},
             {"$set": {"status": "processing", "started_at": now_iso, "updated_at": now_iso}},
         )
 
-        leads = get_leads_for_org(org_id=org_id, limit=5000, order_by_recent=True)
+        leads = get_leads_for_org(driver, org_id=org_id, limit=5000, order_by_recent=True)
         total_leads = len(leads)
         if not leads:
             run_coll.update_one(
@@ -702,7 +697,7 @@ def _run_market_scoring_for_org(user_id: str, org_id: str, run_id: str) -> None:
             )
             return
 
-        company_profile = get_company_profile_for_org(org_id)
+        company_profile = get_company_profile_for_org(driver, org_id)
         if not company_profile:
             run_coll.update_one(
                 {"run_id": run_id},
@@ -716,7 +711,7 @@ def _run_market_scoring_for_org(user_id: str, org_id: str, run_id: str) -> None:
             )
             return
 
-        market_reports = get_market_reports_for_org(user_id, org_id)
+        market_reports = get_market_reports_for_org(mongo, user_id, org_id)
         if len(market_reports) < len(MARKET_SCORE_COMPONENT_KEYS):
             run_coll.update_one(
                 {"run_id": run_id},
@@ -760,11 +755,14 @@ def _run_market_scoring_for_org(user_id: str, org_id: str, run_id: str) -> None:
                 continue
             try:
                 scoring_payload = score_single_lead_against_market(
+                    llm2,
                     lead=lead,
                     company_profile=company_profile,
                     market_reports=market_reports,
                 )
                 _persist_market_score_for_lead(
+                    driver,
+                    mongo,
                     user_id=user_id,
                     org_id=org_id,
                     lead=lead,
@@ -784,6 +782,8 @@ def _run_market_scoring_for_org(user_id: str, org_id: str, run_id: str) -> None:
                     "market_total_score": 0.0,
                 }
                 _persist_market_score_for_lead(
+                    driver,
+                    mongo,
                     user_id=user_id,
                     org_id=org_id,
                     lead=lead,

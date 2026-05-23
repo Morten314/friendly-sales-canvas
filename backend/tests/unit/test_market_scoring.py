@@ -52,7 +52,7 @@ def test_get_market_scores_status_returns_status(mocker, mock_mongo_client):
         return_value=[{"lead_id": "L1"}, {"lead_id": "L2"}],
     )
 
-    result = get_market_scores_status(TEST_USER_ID, TEST_ORG_ID, None, 10)
+    result = get_market_scores_status(MagicMock(), mock_mongo_client, TEST_USER_ID, TEST_ORG_ID, None, 10)
 
     assert result.get("processing_status") == "completed" or result.get("status") == "completed"
     assert result.get("total_leads", 0) >= 0
@@ -81,7 +81,7 @@ def test_get_market_scores_status_degrades_when_leads_fetch_fails(
     )
 
     # Should not raise — the call site wraps get_leads_for_org in try/except
-    result = get_market_scores_status(TEST_USER_ID, TEST_ORG_ID, None, 10)
+    result = get_market_scores_status(MagicMock(), mock_mongo_client, TEST_USER_ID, TEST_ORG_ID, None, 10)
 
     assert result.get("total_leads", 0) == 0  # degraded, not fatal
 
@@ -98,7 +98,7 @@ def test_get_market_scores_status_raises_when_no_run_found(
     )
 
     with pytest.raises(MarketScoringRunNotFoundError):
-        get_market_scores_status(TEST_USER_ID, TEST_ORG_ID, None, 10)
+        get_market_scores_status(MagicMock(), mock_mongo_client, TEST_USER_ID, TEST_ORG_ID, None, 10)
 
 
 # ---------------------------------------------------------------------------
@@ -134,7 +134,7 @@ def test_trigger_or_get_market_scores_returns_existing_when_present(
     request = LeadMarketScoresRequest(
         user_id=TEST_USER_ID, org_id=TEST_ORG_ID, refresh=False,
     )
-    result = trigger_or_get_market_scores(request, bg_tasks)
+    result = trigger_or_get_market_scores(MagicMock(), mock_mongo_client, MagicMock(), request, bg_tasks)
 
     assert isinstance(result, dict)
     assert "org_id" in result and "processing_status" in result
@@ -156,7 +156,7 @@ def test_get_lead_market_score_descriptions_raises_when_missing(
     )
 
     with pytest.raises(MarketScoreNotFoundError):
-        get_lead_market_score_descriptions(TEST_LEAD_ID_1, TEST_USER_ID, TEST_ORG_ID)
+        get_lead_market_score_descriptions(mock_mongo_client, TEST_LEAD_ID_1, TEST_USER_ID, TEST_ORG_ID)
 
 
 def test_get_lead_market_score_descriptions_happy_path(
@@ -180,7 +180,7 @@ def test_get_lead_market_score_descriptions_happy_path(
         return_value=(score_coll, run_coll),
     )
 
-    result = get_lead_market_score_descriptions(TEST_LEAD_ID_1, TEST_USER_ID, TEST_ORG_ID)
+    result = get_lead_market_score_descriptions(mock_mongo_client, TEST_LEAD_ID_1, TEST_USER_ID, TEST_ORG_ID)
 
     assert "descriptions" in result
     assert result.get("lead_id") == TEST_LEAD_ID_1
@@ -196,7 +196,7 @@ def test_get_company_profile_for_org_returns_neo4j_profile(mock_session):
     record.values.return_value = [{"name": "Acme", "industry": "Logistics"}]
     mock_session.run.return_value.single.return_value = record
 
-    result = get_company_profile_for_org(org_id=TEST_ORG_ID)
+    result = get_company_profile_for_org(mock_session._driver, org_id=TEST_ORG_ID)
 
     assert result["name"] == "Acme"
 
@@ -204,7 +204,7 @@ def test_get_company_profile_for_org_returns_neo4j_profile(mock_session):
 def test_get_company_profile_for_org_returns_empty_when_missing(mock_session):
     mock_session.run.return_value.single.return_value = None
 
-    result = get_company_profile_for_org(org_id=TEST_ORG_ID)
+    result = get_company_profile_for_org(mock_session._driver, org_id=TEST_ORG_ID)
 
     assert result == {}
 
@@ -228,7 +228,7 @@ def test_get_market_reports_for_org_returns_dict(mock_mongo_client):
     db_mock.__getitem__.return_value = coll
     mock_mongo_client.__getitem__.return_value = db_mock
 
-    result = get_market_reports_for_org(user_id=TEST_USER_ID, org_id=TEST_ORG_ID)
+    result = get_market_reports_for_org(mock_mongo_client, user_id=TEST_USER_ID, org_id=TEST_ORG_ID)
 
     assert isinstance(result, dict)
     assert "market size & opportunity" in result
@@ -295,6 +295,7 @@ def test_run_market_scoring_for_org_marks_failed_on_brewra_error(
 
     # Should not raise
     _run_market_scoring_for_org(
+        MagicMock(), mock_mongo_client, MagicMock(),
         user_id=TEST_USER_ID, org_id=TEST_ORG_ID, run_id="r1",
     )
 
@@ -349,6 +350,7 @@ def test_run_market_scoring_for_org_marks_completed_on_success(
     )
 
     _run_market_scoring_for_org(
+        MagicMock(), mock_mongo_client, MagicMock(),
         user_id=TEST_USER_ID, org_id=TEST_ORG_ID, run_id="r1",
     )
 

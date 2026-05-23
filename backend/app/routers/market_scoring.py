@@ -2,8 +2,9 @@
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, BackgroundTasks, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, Query
 
+from app.core.dependencies import get_llm2, get_mongo, get_neo4j_driver
 from app.models.market_scoring import (
     LeadMarketScoresRequest,
     LeadMarketScoresResponse,
@@ -21,8 +22,13 @@ logger = logging.getLogger(__name__)
 async def get_or_refresh_lead_market_scores(
     request: LeadMarketScoresRequest,
     background_tasks: BackgroundTasks,
+    driver=Depends(get_neo4j_driver),
+    mongo=Depends(get_mongo),
+    llm2=Depends(get_llm2),
 ):
-    return market_scoring_service.trigger_or_get_market_scores(request, background_tasks)
+    return market_scoring_service.trigger_or_get_market_scores(
+        driver, mongo, llm2, request, background_tasks,
+    )
 
 
 @router.get("/leads/market-scores/status", response_model=LeadMarketScoringStatusResponse)
@@ -31,9 +37,11 @@ async def get_lead_market_scores_status(
     org_id: str = Query(...),
     run_id: Optional[str] = Query(None),
     recent_items_limit: int = Query(10, ge=1, le=100),
+    driver=Depends(get_neo4j_driver),
+    mongo=Depends(get_mongo),
 ):
     return market_scoring_service.get_market_scores_status(
-        user_id=user_id, org_id=org_id, run_id=run_id, recent_items_limit=recent_items_limit,
+        driver, mongo, user_id=user_id, org_id=org_id, run_id=run_id, recent_items_limit=recent_items_limit,
     )
 
 
@@ -42,7 +50,8 @@ async def get_lead_market_score_descriptions(
     lead_id: str,
     user_id: str = Query(...),
     org_id: str = Query(...),
+    mongo=Depends(get_mongo),
 ):
     return market_scoring_service.get_lead_market_score_descriptions(
-        lead_id=lead_id, user_id=user_id, org_id=org_id,
+        mongo, lead_id=lead_id, user_id=user_id, org_id=org_id,
     )

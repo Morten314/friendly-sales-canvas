@@ -8,11 +8,24 @@ Both use _get_market_score_collections() → clients.client["Profiler"].
 After Phase B Task 5, all Mongo access goes through the singleton client
 from app.core.clients. Patch "app.core.clients.client" for mocking.
 """
+from contextlib import contextmanager
 from unittest.mock import MagicMock, patch, call
 import pytest
 
 from tests.helpers import scrub_dynamic
 from tests.identities import TEST_USER_ID, TEST_ORG_ID, TEST_LEAD_ID_1
+
+
+@contextmanager
+def _override_mongo(mongo_instance):
+    """Phase F: market_scoring router reads Mongo via Depends(get_mongo)."""
+    from app.main import app
+    from app.core.dependencies import get_mongo
+    app.dependency_overrides[get_mongo] = lambda: mongo_instance
+    try:
+        yield
+    finally:
+        app.dependency_overrides.pop(get_mongo, None)
 
 
 # ---------------------------------------------------------------------------
@@ -104,7 +117,7 @@ def test_trigger_market_scoring_returns_accepted(client, mock_neo4j):
         "refresh": True,
     }
 
-    with patch("app.core.clients.client", mc):
+    with _override_mongo(mc):
         response = client.post("/leads/market-scores", json=payload)
 
     assert response.status_code == 200
@@ -134,7 +147,7 @@ def test_get_market_score_returns_score(client, mock_neo4j):
         "refresh": False,
     }
 
-    with patch("app.core.clients.client", mc), \
+    with _override_mongo(mc), \
          patch("app.services.market_scoring._get_lead_identity_from_neo4j", return_value={}):
         response = client.post("/leads/market-scores", json=payload)
 
@@ -156,7 +169,7 @@ def test_get_market_score_status_404_when_no_run(client):
     mc, _, run_coll = _make_score_mc()
     run_coll.find_one.return_value = None
 
-    with patch("app.core.clients.client", mc):
+    with _override_mongo(mc):
         response = client.get(
             f"/leads/market-scores/status?user_id={TEST_USER_ID}&org_id={TEST_ORG_ID}"
         )
