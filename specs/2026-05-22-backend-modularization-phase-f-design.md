@@ -30,7 +30,7 @@ The characterization test suite is again the safety net. Test count is unchanged
 4. **Convert all 12 service-layer files** (11 domain services — `pipeline`, `org_auth`, `profiles`, `customer_profile`, `documents`, `leads`, `graph_chat`, `market_research`, `icp`, `signals`, `market_scoring` — plus the `_retrieval` shared helper) to take clients/LLMs as explicit function arguments. **Total ~94 service-side usage sites: ~75 qualified `clients.*` accesses + ~11 qualified `llm_config.*` accesses + 8 direct-import sites for `query` / `upsert_node`** (which the qualified-access greps miss and must be tracked separately). **Explicitly excluded:** `_claude_budget.py` and `_llm_helpers.py` — verified by grep, neither references `clients.*` or `llm_config.*`. They convert via no-op (no signature changes needed).
 5. **Convert the one router with direct client/LLM access (`graph_chat.py`)** — **5 sites total** (3 `from app.core.clients import query` direct imports at lines 45, 71, 103 + 2 `llm_config.chain*.run(...)` calls at lines 34, 39) — to use `Depends()` providers. Where appropriate, the direct router-side data access is pushed into the corresponding service (matching the Phase B layer rule).
 6. **Wire every router endpoint** that today reaches module globals (either directly or transitively through service calls) to use `Depends()` providers and pass the injected clients to its services.
-7. **Background-task pattern:** routers acquire clients via `Depends()` and pass them positionally to the task function (`_run_market_scoring_for_org`, `process_file_to_embeddings`). Tasks become pure functions taking clients as args. The Phase D `except BrewraError: log+continue` outer wrappers remain.
+7. **Background-task pattern:** routers acquire clients via `Depends()` and pass them to the service functions they call. For `market_scoring`, the router calls a *synchronous* service function (`trigger_or_get_market_scores`) which then forwards the clients to `bg.add_task(_run_market_scoring_for_org, …)` — a two-layer flow (router → sync service → `bg.add_task`). For `documents`, the router calls `bg.add_task(process_file_to_embeddings, …)` more directly. Tasks become pure functions taking clients as args. The Phase D `except BrewraError: log+continue` outer wrappers remain. See §3.6 for the worked example.
 8. **Rewrite test fixtures** in `tests/conftest.py` and `tests/unit/conftest.py`:
    - Integration fixtures switch from `mocker.patch("app.core.clients.X", ...)` to `app.dependency_overrides[get_X] = lambda: mock`. Cleanup via `yield … ; app.dependency_overrides.pop(get_X, None)`.
    - Unit fixtures stay as mock-builders; tests pass mocks directly as positional args to service functions.
@@ -98,11 +98,11 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ClientBundle:
-    driver: Optional[Any]      # neo4j.GraphDatabase driver
-    graph: Optional[Neo4jGraph]
-    client: Optional[MongoClient]
-    s3_client: Optional[Any]
-    pc: Optional[Pinecone]
+    driver: Optional[Any]      # neo4j.GraphDatabase driver — None when BREWRA_SKIP_DB_INIT or connect fails
+    graph: Optional[Neo4jGraph] # None when BREWRA_SKIP_DB_INIT or init fails
+    client: Optional[MongoClient]  # None when BREWRA_SKIP_DB_INIT or connect fails
+    s3_client: Any              # boto3 client — always constructed (lazy)
+    pc: Pinecone                # always constructed (lazy)
 
 
 def build_clients(skip_db_init: Optional[bool] = None) -> ClientBundle:
@@ -271,13 +271,26 @@ def get_pinecone(request: Request):
 
 
 # ── LLM providers ───────────────────────────────────────────────────────
-def get_llm(request: Request):                  return request.app.state.llm.llm
-def get_llm2(request: Request):                 return request.app.state.llm.llm2
-def get_llm_transformer(request: Request):      return request.app.state.llm.llm_transformer
-def get_memory(request: Request):               return request.app.state.llm.memory
-def get_agent_chain(request: Request):          return request.app.state.llm.agent_chain
-def get_chain(request: Request):                return request.app.state.llm.chain
-def get_chain2(request: Request):               return request.app.state.llm.chain2
+def get_llm(request: Request):
+    return request.app.state.llm.llm
+
+def get_llm2(request: Request):
+    return request.app.state.llm.llm2
+
+def get_llm_transformer(request: Request):
+    return request.app.state.llm.llm_transformer
+
+def get_memory(request: Request):
+    return request.app.state.llm.memory
+
+def get_agent_chain(request: Request):
+    return request.app.state.llm.agent_chain
+
+def get_chain(request: Request):
+    return request.app.state.llm.chain
+
+def get_chain2(request: Request):
+    return request.app.state.llm.chain2
 ```
 
 Providers use the `Request`-bound form (`request.app.state.…`) rather than reading a module global. This works in both request and background-task contexts.
@@ -333,62 +346,123 @@ def get_all_leads(
 
 ### 3.6 Background-task pattern
 
+The `market_scoring` domain has the most complex shape: the router does **not** call `bg.add_task(_run_market_scoring_for_org, …)` directly. It calls a *synchronous* service function (`trigger_or_get_market_scores`) which does its own Mongo/Neo4j work AND then schedules the background task. After Phase F the clients flow router → synchronous service → `bg.add_task` (two layers), not router → `bg.add_task` (one layer).
+
 **Before:**
 
 ```python
-# app/routers/market_scoring.py
+# app/routers/market_scoring.py (today)
 @router.post("/leads/market-scores")
-def trigger_market_scores(org_id: str, bg: BackgroundTasks):
-    bg.add_task(services.market_scoring._run_market_scoring_for_org, org_id)
+def get_or_refresh_lead_market_scores(
+    request: LeadMarketScoresRequest,
+    background_tasks: BackgroundTasks,
+):
+    return market_scoring_service.trigger_or_get_market_scores(request, background_tasks)
+```
+
+```python
+# app/services/market_scoring.py (today) — inside trigger_or_get_market_scores
+def trigger_or_get_market_scores(request, background_tasks):
+    _, run_coll = _get_market_score_collections()      # uses clients.client
+    rows = _get_latest_market_score_rows(request.org_id)
+    # …decides whether to schedule a run…
+    background_tasks.add_task(
+        _run_market_scoring_for_org, request.user_id, request.org_id, run_id,
+    )
 ```
 
 **After:**
 
 ```python
+# app/routers/market_scoring.py — router injects everything the call chain needs
 @router.post("/leads/market-scores")
-def trigger_market_scores(
-    org_id: str,
-    bg: BackgroundTasks,
+def get_or_refresh_lead_market_scores(
+    request: LeadMarketScoresRequest,
+    background_tasks: BackgroundTasks,
     driver=Depends(get_neo4j_driver),
     mongo=Depends(get_mongo),
     llm2=Depends(get_llm2),
 ):
-    bg.add_task(
-        services.market_scoring._run_market_scoring_for_org,
-        driver, mongo, llm2, org_id,
+    return market_scoring_service.trigger_or_get_market_scores(
+        request, background_tasks, driver, mongo, llm2,
     )
 ```
 
-Background-task functions become pure functions taking clients as args. The Phase D `except BrewraError: log+continue` outer wrapper stays.
+```python
+# app/services/market_scoring.py — synchronous service forwards clients to bg.add_task
+def trigger_or_get_market_scores(request, background_tasks, driver, mongo, llm2):
+    _, run_coll = _get_market_score_collections(mongo)
+    rows = _get_latest_market_score_rows(driver, mongo, request.org_id)   # needs both
+    # …decides whether to schedule a run…
+    background_tasks.add_task(
+        _run_market_scoring_for_org,
+        driver, mongo, llm2, request.user_id, request.org_id, run_id,
+    )
+```
 
-**Worked example: `_run_market_scoring_for_org`.** This is the most complex conversion because the background task has 5 internal client-access sites today (`market_scoring.py:155, 467, 486, 555, 638`) plus the `_get_market_score_collections` helper (`market_scoring.py:37-42`) that reads `clients.client` and is called from multiple sites within the same module.
+Background-task functions become pure functions taking clients as args. The Phase D `except BrewraError: log+continue` outer wrapper stays. The other two router endpoints in `app/routers/market_scoring.py` (`get_market_scores_status`, `get_lead_market_score_descriptions`) are synchronous-only — they do not schedule background tasks — but they still need `driver` and `mongo` injected because their service functions transitively reach `clients.driver` and `clients.client`.
+
+**Worked example: `_run_market_scoring_for_org` and its sibling synchronous functions.** The `market_scoring.py` module has 7 client-accessing functions and one helper:
+
+| Function | Kind | Direct clients accessed | New first positional args (post-Phase-F) | Internal helpers called |
+|---|---|---|---|---|
+| `_get_market_score_collections` | helper | `clients.client` (line 41) | `mongo` | — |
+| `_get_lead_identity_from_neo4j` | helper | `clients.driver` (line 155) | `driver` | — |
+| `_get_latest_market_score_rows` | helper | — | `driver, mongo` | `_get_market_score_collections`, `_get_lead_identity_from_neo4j` |
+| `_get_latest_scoring_run` | helper | — | `mongo` | `_get_market_score_collections` |
+| `trigger_or_get_market_scores` | sync (router-called) | — | `driver, mongo, llm2` (forwards `llm2` to bg.add_task) | `_get_market_score_collections`, `_get_latest_market_score_rows`, schedules `_run_market_scoring_for_org` |
+| `get_market_scores_status` | sync (router-called) | — | `driver, mongo` | `_get_market_score_collections`, `get_leads_for_org` (cross-module) |
+| `get_lead_market_score_descriptions` | sync (router-called) | — | `mongo` | `_get_market_score_collections` |
+| `get_company_profile_for_org` | sync (called from bg task) | `clients.driver` (line 467) | `driver` | — |
+| `get_market_reports_for_org` | sync (called from bg task) | `clients.client` (line 486) | `mongo` | — |
+| `score_single_lead_against_market` | sync (called from bg task) | `llm_config.llm2` (line 555) | `llm2` | — |
+| `_persist_market_score_for_lead` | sync (called from bg task) | `clients.driver` (line 638) | `driver, mongo` (existing `score_coll=None` stays as last kwarg) | `_get_market_score_collections` (fallback when caller doesn't pass `score_coll`) |
+| `_run_market_scoring_for_org` | background task | — | `driver, mongo, llm2` | all of the above |
+
+Because all callers of these functions live inside `market_scoring.py` itself plus the `market_scoring` router (also converted in commit 15), every function uses the **§3.4 simple form** — mandatory `driver`/`mongo`/`llm2` arguments, no `=None` fallback. The §3.7 cross-commit fallback is **not** needed for market_scoring internals.
+
+`_persist_market_score_for_lead` already has a pre-existing `score_coll=None` parameter — that is an *optimization* (let the caller pass an already-fetched collection) and is unrelated to the §3.7 fallback pattern. It stays as is; the newly-added `driver` and `mongo` arguments are mandatory.
 
 ```python
-# app/services/market_scoring.py — internal helper after Phase F
+# app/services/market_scoring.py — helpers after Phase F
 def _get_market_score_collections(mongo):
     # Was: profiler_db = clients.client["Profiler"]
     profiler_db = mongo["Profiler"]
     return profiler_db["Lead_Market_Scores"], profiler_db["Lead_Market_Score_Runs"]
 
 
-# app/services/market_scoring.py — background task after Phase F
-def _run_market_scoring_for_org(driver, mongo, llm2, user_id: str, org_id: str, run_id: str) -> None:
-    # Every internal access to clients.* / llm_config.* becomes a parameter
-    # reference. The function's outer try/except BrewraError wrapper (Phase D)
-    # stays exactly as it is.
-    scores_col, runs_col = _get_market_score_collections(mongo)   # threaded through
-
+def _get_lead_identity_from_neo4j(driver, org_id: str, lead_id: str):
     with driver.session() as session:                              # was: clients.driver.session()
         ...
 
-    leads_db = mongo["Scout_Agent"]["leads"]                       # was: clients.client["Scout_Agent"]
-    leads = leads_db.find(...)
 
-    response = llm2.invoke([HumanMessage(content=prompt)])         # was: llm_config.llm2.invoke(...)
-    ...
+def _get_latest_market_score_rows(driver, mongo, org_id: str):
+    score_coll, _ = _get_market_score_collections(mongo)
+    for doc in score_coll.find(...):
+        lead_identity = _get_lead_identity_from_neo4j(driver, org_id, str(doc.get("lead_id")))
+        ...
+
+
+# app/services/market_scoring.py — background task after Phase F
+def _run_market_scoring_for_org(driver, mongo, llm2, user_id: str, org_id: str, run_id: str) -> None:
+    # Every internal access to clients.* / llm_config.* becomes a parameter
+    # reference, and clients are threaded through to every internal helper.
+    # The function's outer try/except BrewraError wrapper (Phase D) stays.
+    score_coll, run_coll = _get_market_score_collections(mongo)
+    leads = get_leads_for_org(driver, org_id, limit=5000, order_by_recent=True)
+    company_profile = get_company_profile_for_org(driver, org_id)        # threads driver through
+    market_reports = get_market_reports_for_org(mongo, user_id, org_id)  # threads mongo through
+
+    for lead in leads:
+        scoring_payload = score_single_lead_against_market(llm2, lead, company_profile, market_reports)
+        _persist_market_score_for_lead(
+            driver, mongo, user_id, org_id, lead, scoring_payload, run_id, score_coll=score_coll,
+        )
 ```
 
-Every caller of `_get_market_score_collections` inside `market_scoring.py` (~5 sites) now passes `mongo` explicitly. The same shape applies to `process_file_to_embeddings` in `services/documents.py` — it takes `(driver, mongo, s3, pinecone, …)` and threads them through its internal calls.
+`_get_market_score_collections` has **7 internal call sites** (lines 198, 224, 273, 358, 443, 605, 651) plus **1 external caller** in lifespan (the relocated `_ensure_market_scoring_indexes`, see §2.1 item 10). Every site gains an explicit `mongo` argument in commit 15.
+
+The same general shape (clients passed in, threaded through internal helpers) applies to `process_file_to_embeddings` in `services/documents.py` — it takes `(mongo, s3, pinecone, …)` and threads them through its internal calls. (No `driver`: `process_file_to_embeddings` itself does not touch Neo4j; the sibling function in the same file that does call `clients.graph.add_graph_documents` is a separate conversion site within commit 9.)
 
 ### 3.7 Backward-compatible fallback during coexistence (commits 4–15)
 
@@ -398,12 +472,12 @@ The fix: during the coexistence period (commits 4–15), **every converted servi
 
 ```python
 # app/services/_retrieval.py — after commit 8 (with fallback)
+# `from app.core import clients` is at module top — alive through commit 15.
 def _fetch_pinecone_supporting_context(pc=None, queries=None, org_id=None, top_k=5):
     if pc is None:
         # Fallback for unconverted callers (commits 9–14 still call old signature).
-        # Module global is alive throughout commits 1–15; commit 16 removes both
-        # the default and this fallback.
-        from app.core import clients
+        # Commit 16 removes both the default and this fallback together with
+        # deleting the module globals.
         pc = clients.pc
     ...
 ```
@@ -412,7 +486,6 @@ def _fetch_pinecone_supporting_context(pc=None, queries=None, org_id=None, top_k
 # app/services/leads.py — after commit 10 (with fallback)
 def get_leads_for_org(driver=None, org_id=None, limit=None, order_by_recent=False):
     if driver is None:
-        from app.core import clients
         driver = clients.driver
     ...
 ```
@@ -432,9 +505,9 @@ Functions that have **no cross-commit callers** (leaf services like `pipeline`, 
 | Callee | In commit | Callers | In commits |
 |---|---|---|---|
 | `_retrieval._fetch_pinecone_supporting_context` | 8 | `services/icp.py` (3 sites), `services/signals.py` (3 sites), `services/market_research.py` (1 site) | 12, 13, 14 |
-| `leads.get_leads_for_org` | 10 | `services/signals.py` (2 sites), `services/market_scoring.py` (1 site) | 14, 15 |
+| `leads.get_leads_for_org` | 10 | `services/signals.py` (2 sites), `services/market_scoring.py` (**2 sites**: line 377 in `get_market_scores_status`, line 658 in `_run_market_scoring_for_org`) | 14, 15 |
 | `graph_chat.score_prospect` | 11 | `services/documents.py:64` (lazy import) | 9 (already converted) |
-| `icp._reserve_unique_icp_id`, `_ensure_icp_id_registry_indexes`, `_release_icp_id` | 13 | `services/customer_profile.py` (7 sites at lines 21, 25, 77, 86, 104, 143, 147, 183, 193, 224, 229, 292, 365, 368, 392) | 7 (already converted) |
+| `icp._reserve_unique_icp_id`, `_ensure_icp_id_registry_indexes`, `_release_icp_id` | 13 | `services/customer_profile.py` (**11 call sites**: `_ensure_icp_id_registry_indexes` at 25, 147, 229, 368; `_reserve_unique_icp_id` at 77, 86, 104, 183, 193, 292; `_release_icp_id` at 392 — plus 4 deferred-import lines at 21, 143, 224, 365 which are not call sites) | 7 (already converted) |
 
 For the reverse-direction cases (callee converted *after* caller — `score_prospect`, the `icp` helpers), the converting commit must also update the already-converted caller to pass the explicit arg. The §4.2 commit table notes this in the row for each affected commit.
 
@@ -442,7 +515,7 @@ For the reverse-direction cases (callee converted *after* caller — `score_pros
 
 ## 4. Migration sequencing
 
-Single feature branch off `master`: `refactor-backend-modularization-phase-f`. ~16 commits, each independently green; bisectable.
+Single feature branch off `master`: `refactor-backend-modularization-phase-f`. **16 or 17 commits** (3 prep + 12 service conversions + 1 cleanup; commit 15 is planned to split into 15a/15b unless 15a's diff comes in below ~200 LOC, in which case re-merge). Each commit independently green; bisectable.
 
 ### 4.1 Prep (3 commits)
 
@@ -464,12 +537,12 @@ Per-commit blast radius reflects the count from `grep -rn "clients\.…|llm_conf
 | 7 | `customer_profile` | 7 | Calls `icp._reserve_unique_icp_id` / `_ensure_icp_id_registry_indexes` / `_release_icp_id` (callee converted in commit 13). Until then, customer_profile passes nothing extra and the icp helpers fall back to globals (§3.7). **Commit 13 then patches these 7 call sites** in customer_profile.py to pass `mongo` explicitly. |
 | 8 | `_retrieval` | 1 | Pinecone-only shared helper. **Uses §3.7 fallback form** (`pc=None` default) because consumers in commits 12, 13, 14 still call old signature. |
 | 9 | `documents` | 18 | LLM (`llm_transformer`) + Mongo + S3. Largest non-LLM-heavy file. Calls `graph_chat.score_prospect` (callee converted in commit 11); falls back until then. **Commit 11 patches `documents.py:64`** to pass `driver`. |
-| 10 | `leads` | 10 | Includes background-task wiring through `_run_market_scoring_for_org` call from the router. **`get_leads_for_org` uses §3.7 fallback form** because callers in commits 14, 15 still call old signature. |
+| 10 | `leads` | 10 | 10 usage sites: `clients.driver` (Neo4j sessions), `clients.client` (Mongo on some paths), plus the `upsert_node` direct import (re-pointed in commit 16). No background tasks — the leads router is plain CRUD; `BackgroundTasks` does not appear in `leads.py` or `routers/leads.py`. **`get_leads_for_org` uses §3.7 fallback form** because callers in commits 14 (signals) and 15 (market_scoring) still call the old signature until then. |
 | 11 | `graph_chat` | 2 (svc) + 5 (router) | Router has 5 direct sites: 3 `from app.core.clients import query` (lines 45, 71, 103) + 2 `llm_config.chain*.run(...)` (lines 34, 39). Router-side data access pushed into `services/graph_chat.py` first, then converted. **Commit also updates `documents.py:64`** to pass `driver` to `score_prospect`. |
 | 12 | `market_research` | 3 | LLM. **Updates its 1 call site** to `_fetch_pinecone_supporting_context` to pass `pc`. |
 | 13 | `icp` | 7 | LLM. **Updates 3 call sites** to `_fetch_pinecone_supporting_context` (pass `pc`) **and patches `customer_profile.py`'s 7 call sites** to pass `mongo` to icp's helpers. The icp helpers' fallback can be removed in this same commit. |
 | 14 | `signals` | 17 | LLM, largest LLM file. **Updates 3 call sites** to `_fetch_pinecone_supporting_context` (pass `pc`) **and 2 call sites** to `get_leads_for_org` (pass `driver`). |
-| 15 | `market_scoring` | 7 + internal helpers | Stateful, background-task heavy. Commit must also refactor `_get_market_score_collections(mongo)` (now takes `mongo`; threaded through ~5 internal callers within this file). **Moves `_ensure_market_scoring_indexes` from `app/main.py` to `market_scoring.py`** with `mongo` parameter. **Updates 1 call site** to `get_leads_for_org` (pass `driver`). Worked example in §3.6. Last per Phase A precedent. If diff exceeds ~500 LOC, split into 15a (internal helpers + `_get_market_score_collections` + index relocation) and 15b (`_run_market_scoring_for_org` + router wiring). |
+| 15 | `market_scoring` | 7 dotted-access + 3 sync router-callable + 1 bg task + helpers | Stateful, largest commit. Full scope: 7 dotted-access sites (`clients.*` / `llm_config.*`) + 7 internal `_get_market_score_collections` callers (lines 198, 224, 273, 358, 443, 605, 651) + 1 external `_get_market_score_collections` caller in lifespan + 2 cross-module `get_leads_for_org` callers (lines 377, 658) + 3 synchronous router-callable functions (`trigger_or_get_market_scores`, `get_market_scores_status`, `get_lead_market_score_descriptions`) that each need `driver`/`mongo` threaded through, including the **transitive** `clients.driver` dependency via `_get_lead_identity_from_neo4j` (line 155). All internal market_scoring functions use the §3.4 simple form (no §3.7 fallback) because every caller is also in commit 15. **Moves `_ensure_market_scoring_indexes` from `app/main.py` to `market_scoring.py`** with `mongo` parameter. **`_persist_market_score_for_lead`'s pre-existing `score_coll=None` optimization parameter stays** (it is unrelated to §3.7 fallback); the newly-added `driver`/`mongo` arguments are mandatory. Worked example in §3.6. **Plan to split into 15a/15b upfront** given the scope: 15a = helpers (`_get_market_score_collections`, `_get_lead_identity_from_neo4j`, `_get_latest_market_score_rows`, `_get_latest_scoring_run`, `get_company_profile_for_org`, `get_market_reports_for_org`, `score_single_lead_against_market`, `_persist_market_score_for_lead`) + `_ensure_market_scoring_indexes` relocation; 15b = `trigger_or_get_market_scores` + `get_market_scores_status` + `get_lead_market_score_descriptions` + `_run_market_scoring_for_org` + router wiring. Re-merge into single commit only if 15a's diff is <~200 LOC. |
 
 Each conversion commit:
 - Rewrites service function signatures to take clients/LLMs as explicit args.
@@ -479,16 +552,16 @@ Each conversion commit:
 - Removes the now-stale `mocker.patch` lines from the relevant conftest fixture if no other test still needs them; otherwise leave them (they coexist with overrides).
 - Tests must be green before commit.
 
-### 4.3 Cleanup (1 commit)
+### 4.3 Cleanup (1 commit — numbered 16 or 17 depending on the 15a/15b split)
 
-16. **Remove module-level state and fallback defaults in one step.** Factories are no longer called at module import. Module globals (`clients.driver`, `llm_config.llm`, etc.) deleted. Lifespan is now the only construction site. The non-client functions (`query`, `results_to_string`, `escape_property_name`, `upsert_node`) move to `app/services/_neo4j_helpers.py` (with `query` gaining its `driver` parameter — see §2.1 item 9). **Every `=None` default and `if X is None: from app.core import clients; X = clients.X` fallback added in commits 4–15 is removed in this same commit** — the two changes must land together so no intermediate state has globals deleted but fallbacks still pointing at them. Any straggler `mocker.patch("app.core.clients.…")` calls in tests are deleted. Final grep proves nothing in `app/` reaches into module globals AND no `=None` defaults remain on service-function client parameters (see §7.1 hard criteria).
+16 (or 17). **Remove module-level state and fallback defaults in one step.** Factories are no longer called at module import. Module globals (`clients.driver`, `llm_config.llm`, etc.) deleted. Lifespan is now the only construction site. The non-client functions (`query`, `results_to_string`, `escape_property_name`, `upsert_node`) move to `app/services/_neo4j_helpers.py` (with `query` gaining its `driver` parameter — see §2.1 item 9). **Every `=None` default and `if X is None: from app.core import clients; X = clients.X` fallback added in commits 4–15 is removed in this same commit** — the two changes must land together so no intermediate state has globals deleted but fallbacks still pointing at them. Any straggler `mocker.patch("app.core.clients.…")` calls in tests are deleted. Final grep proves nothing in `app/` reaches into module globals AND no `=None` defaults remain on service-function client parameters (see §7.1 hard criteria).
 
 ### 4.4 Per-commit validation
 
 ```bash
 cd backend && pytest tests/        # green
 git diff --stat                    # sanity-check the diff size
-git commit -m "refactor(be): inject <domain> [phase F, commit N/16]"
+git commit -m "refactor(be): inject <domain> [phase F, commit N/<total>]"   # <total> = 16 or 17
 ```
 
 ### 4.5 Rollback
@@ -641,7 +714,7 @@ cd backend && pytest tests/        # green; same test count as Phase E baseline
 
 ### 7.3 Phase complete when
 
-- All ~16 commits land on `master`.
+- All 16 or 17 commits land on `master`.
 - TD-003 closed in `docs/TECH_DEBT.md`.
 - This spec's Phase G inventory section (§8 below) captures remaining items the next phase will consider.
 - `pytest backend/tests/` green; test count matches Phase E baseline.
@@ -683,4 +756,4 @@ Phase D's §8 listed twelve Phase E+ candidates. Phase E consumed #2 (test impro
 - **Spec (this document):** `/specs/2026-05-22-backend-modularization-phase-f-design.md`.
 - **Plan (next, after spec approval):** `/plans/modularization-plan-6.md`.
 - **Branch:** `refactor-backend-modularization-phase-f`.
-- **Commit-message format:** `refactor(be): <description> [phase F, commit N/16]` (matches Phase A–E precedent).
+- **Commit-message format:** `refactor(be): <description> [phase F, commit N/<total>]` where `<total>` is 16 if commit 15 stays single, or 17 if it splits into 15a/15b (matches Phase A–E precedent, with the per-phase commit-count suffix updated to reflect the actual final count).
