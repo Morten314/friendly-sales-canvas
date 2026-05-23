@@ -2,9 +2,9 @@
 import datetime
 import shutil
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 
-from app.core import llm_config
+from app.core.dependencies import get_chain, get_chain2, get_neo4j_driver
 from app.models.graph_chat import (
     CreateProspectResponse,
     GraphChatResponse,
@@ -17,12 +17,12 @@ router = APIRouter(tags=["graph-chat"])
 
 
 @router.post("/create-company/", response_model=CreateProspectResponse)
-async def create_prospect(data: ProspectData):
+async def create_prospect(data: ProspectData, driver=Depends(get_neo4j_driver)):
     if not data.Name or not data.Company or not data.answers:
         raise HTTPException(status_code=400, detail="Missing name, company, or answers")
 
     try:
-        node = graph_chat_service.create_prospect_node(data.Name, data.Company, data.answers)
+        node = graph_chat_service.create_prospect_node(driver, data.Name, data.Company, data.answers)
         return {"message": "Prospect node created", "node": node}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -30,27 +30,27 @@ async def create_prospect(data: ProspectData):
 # /ask/ returns a set literal `{response}` (pre-existing quirk); response shape
 # is unstable — annotation deferred until the handler is normalized.
 @router.get("/ask/")
-async def ask_chain(question: str):
-    response = llm_config.chain.run(question)
+async def ask_chain(question: str, chain=Depends(get_chain)):
+    response = chain.run(question)
     return {response}
 
 @router.get("/chat/", response_model=GraphChatResponse)
-async def ask_chain2(question: str):
-    response = llm_config.chain2.run(question)
+async def ask_chain2(question: str, chain2=Depends(get_chain2)):
+    response = chain2.run(question)
     return {"response": response}
 
 # /query/ is a raw Cypher debug endpoint; result shape varies per query.
 @router.get("/query/")
-async def run_query(cypher_query: str):
-    from app.core.clients import query
-    result = query(cypher_query)
+async def run_query(cypher_query: str, driver=Depends(get_neo4j_driver)):
+    result = graph_chat_service.run_cypher_query(driver, cypher_query)
     return {"result": result}
 
 @router.post("/voice_graph/", response_model=GraphMessageResponse)
 async def add_engagement_voice(
     prospect_name: str = Form(...),
     update_type: str = Form(...),  # Can be note, offline meeting, email, online meeting
-    voice_file: UploadFile = File(...)
+    voice_file: UploadFile = File(...),
+    driver=Depends(get_neo4j_driver),
 ):
     audio_path = f"temp_{voice_file.filename}"
 
@@ -67,21 +67,7 @@ async def add_engagement_voice(
     newId = int(now_ist.timestamp())
     current_time_str = now_ist.strftime("%Y-%m-%d %H:%M:%S")
 
-    # Ensure the prospect node exists
-    from app.core.clients import query
-    query(f"MERGE (p:Prospect {{Name: '{prospect_name}'}})")
-
-    # Create a generic Engagement node and link it to the prospect
-    query(f"""
-    CREATE (e:Engagement {{
-        text: '{text}',
-        id: {newId},
-        created_at: '{current_time_str}',
-        type: '{update_type}'
-    }})
-    WITH e
-    MATCH (p:Prospect {{Name: '{prospect_name}'}})
-    CREATE (p)-[:HAS_ENGAGEMENT]->(e)""")
+    graph_chat_service.add_engagement(driver, prospect_name, text, update_type, newId, current_time_str)
 
     return {"message": f"Engagement of type '{update_type}' added for {prospect_name}"}
 
@@ -89,7 +75,8 @@ async def add_engagement_voice(
 async def add_engagement_text(
     prospect_name: str = Form(...),
     update_type: str = Form(...),  # note, offline meeting, email, online meeting
-    text: str = Form(...)
+    text: str = Form(...),
+    driver=Depends(get_neo4j_driver),
 ):
     now_utc = datetime.datetime.now(datetime.timezone.utc)
     import pytz
@@ -99,21 +86,6 @@ async def add_engagement_text(
     newId = int(now_ist.timestamp())
     current_time_str = now_ist.strftime("%Y-%m-%d %H:%M:%S")
 
-    # Ensure the prospect node exists
-    from app.core.clients import query
-    query(f"MERGE (p:Prospect {{Name: '{prospect_name}'}})")
-
-    # Create Engagement node and link to Prospect
-    query(f"""
-    CREATE (e:Engagement {{
-        text: '{text}',
-        id: {newId},
-        created_at: '{current_time_str}',
-        type: '{update_type}'
-    }})
-    WITH e
-    MATCH (p:Prospect {{Name: '{prospect_name}'}})
-    CREATE (p)-[:HAS_ENGAGEMENT]->(e)
-    """)
+    graph_chat_service.add_engagement(driver, prospect_name, text, update_type, newId, current_time_str)
 
     return {"message": f"Engagement of type '{update_type}' added for {prospect_name}"}

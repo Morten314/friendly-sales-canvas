@@ -4,8 +4,10 @@ import shutil
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, File, Form, HTTPException, Query, UploadFile
 
 from app.core.dependencies import (
+    get_llm,
     get_llm_transformer,
     get_mongo,
+    get_neo4j_driver,
     get_neo4j_graph,
     get_pinecone,
     get_s3,
@@ -36,11 +38,15 @@ async def upload_document(
 
 
 @router.post('/upload', response_model=MessageResponse)
-async def upload_prospect_list(file: UploadFile = File(...)):
+async def upload_prospect_list(
+    file: UploadFile = File(...),
+    driver=Depends(get_neo4j_driver),
+    llm=Depends(get_llm),
+):
     file_path = f"/tmp/{file.filename}"
     with open(file_path, 'wb') as buffer:
         shutil.copyfileobj(file.file, buffer)
-    return documents_service.upload_prospect_list_file(file_path)
+    return documents_service.upload_prospect_list_file(driver, llm, file_path)
 
 
 # Response shape varies by code path (plain dict vs JSONResponse); annotation deferred

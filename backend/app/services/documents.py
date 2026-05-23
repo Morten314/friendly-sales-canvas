@@ -57,7 +57,7 @@ def grapher(graph, llm_transformer, file_path):
     graph_documents = llm_transformer.convert_to_graph_documents(text)
     graph.add_graph_documents(graph_documents)
 
-def process_prospect_list(file_path):
+def process_prospect_list(driver, llm, file_path):
     """Process the prospect list and add data to Neo4j."""
     from app.services.graph_chat import score_prospect  # lazy: avoid load-time dep
 
@@ -93,7 +93,7 @@ def process_prospect_list(file_path):
         check_query = f"""
             MATCH (p:Prospect {{name: '{data['Prospect Name']}', company: '{data['Prospect Company']}'}}) RETURN p
         """
-        existing_prospect = query(check_query)
+        existing_prospect = query(driver, check_query)
 
         if existing_prospect:
             continue  # Skip if already exists
@@ -115,7 +115,7 @@ def process_prospect_list(file_path):
             `Could this project contribute to career growth for the buyer?`: '{data[question_columns[9]]}'
         }})
         """
-        score = score_prospect(temp_cypher)
+        score = score_prospect(llm, temp_cypher)
 
         # Final query with score
         cypher_query = f"""
@@ -135,7 +135,7 @@ def process_prospect_list(file_path):
             `Prospect_Score`: '{score}'
         }})
         """
-        query(cypher_query)
+        query(driver, cypher_query)
         added_count += 1
 
     return {"message": f"{added_count} new prospects added."}
@@ -151,9 +151,9 @@ def upload_file_text(graph, llm_transformer, file_path: str, filename: str) -> d
     return {"message": f"File {filename} processed and graph updated."}
 
 
-def upload_prospect_list_file(file_path: str) -> dict:
+def upload_prospect_list_file(driver, llm, file_path: str) -> dict:
     """Process an uploaded prospect list file."""
-    return process_prospect_list(file_path)
+    return process_prospect_list(driver, llm, file_path)
 
 
 async def process_file_to_embeddings(mongo, s3, pinecone, file_key: str, user_id: str, file_name: str, org_id: str, file_id: str):

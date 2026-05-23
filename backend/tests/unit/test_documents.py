@@ -99,7 +99,9 @@ def test_process_prospect_list_returns_dataframe_rows(mocker):
     # query() calls Neo4j driver.session() — stub the local binding in documents
     mocker.patch("app.services.documents.query", return_value=None)
 
-    result = process_prospect_list("/tmp/prospects.csv")
+    driver = MagicMock()
+    llm = MagicMock()
+    result = process_prospect_list(driver, llm, "/tmp/prospects.csv")
 
     mock_read_csv.assert_called_once_with("/tmp/prospects.csv")
     assert isinstance(result, (list, dict, pd.DataFrame))
@@ -129,8 +131,10 @@ def test_upload_prospect_list_file_uploads_to_s3(mocker, tmp_path):
         "app.services.documents.process_prospect_list",
         return_value={"message": "1 new prospects added."},
     )
+    driver = MagicMock()
+    llm = MagicMock()
 
-    result = upload_prospect_list_file(str(test_file))
+    result = upload_prospect_list_file(driver, llm, str(test_file))
 
     assert result is not None
 

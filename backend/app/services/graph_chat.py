@@ -7,6 +7,8 @@ Functions:
     LinkedIn-related helpers via RapidAPI
   - calculate_prospect_score / get_ranked_prospects / extract_number /
     score_prospect: prospect-scoring chain
+  - run_cypher_query / add_engagement: extracted from router endpoints
+    (Phase F commit 11/17, per spec §2.1 item 5)
 
 Extracted from services.py during phase A.
 """
@@ -18,8 +20,6 @@ from typing import Optional
 
 from langchain_core.messages import SystemMessage, HumanMessage
 
-from app.core import clients
-from app.core import llm_config
 from app.core.config import PREDEFINED_QUESTIONS, rapidapi_key
 from app.core.clients import query  # function — local binding ok
 
@@ -40,7 +40,7 @@ def convert_audio_to_text(file):
     return text
 
 # Function to create a company node in Neo4j
-def create_prospect_node(Name: str, Company: str, answers: list):
+def create_prospect_node(driver, Name: str, Company: str, answers: list):
     if len(answers) != len(PREDEFINED_QUESTIONS):
         raise ValueError("Mismatch between predefined questions and provided answers")
 
@@ -57,7 +57,7 @@ def create_prospect_node(Name: str, Company: str, answers: list):
     RETURN p
     """
 
-    query(cypher_query)  # Execute the Cypher query
+    query(driver, cypher_query)  # Execute the Cypher query
 
 def get_linkedin_followers(username):
     url = f"https://linkedin-data-api.p.rapidapi.com/connection-count?username={username}"
@@ -131,14 +131,14 @@ def calculate_prospect_score(recent_activity, followers):
 
     return activity_score + follower_score
 
-def get_ranked_prospects():
+def get_ranked_prospects(driver):
     query_string = """
     MATCH (p:Prospect)
     RETURN p.name AS name, p.mobile AS mobile, p.prospect_score AS score
     ORDER BY p.prospect_score DESC
     """
 
-    with clients.driver.session() as session:
+    with driver.session() as session:
         results = session.run(query_string).data()
 
     if not results:
@@ -154,7 +154,7 @@ def extract_number(content) -> Optional[str]:
     match = re.search(r"'([^']+)'", str(content))
     return match.group(1) if match else None
 
-def score_prospect(cypher_query):
+def score_prospect(llm, cypher_query):
     # AI instruction with memory context
     prompt_instruction = f"""
     You are an AI agent that goes through a cypher query with a prospect and how he answers 10 questions to a sales agent.
@@ -180,6 +180,37 @@ def score_prospect(cypher_query):
         HumanMessage(content=f"Cypher Query:\n{cypher_query}\n\nOnly give me the number , nothing else at all , not even punctuation marks:")
     ]
 
-    response = llm_config.llm(messages)
+    response = llm(messages)
     response = extract_number(response)
     return response
+
+
+# ---------------------------------------------------------------------------
+# Router-extracted helpers (Phase F commit 11/17, per spec §2.1 item 5).
+# These were inline Cypher in routers/graph_chat.py before; pushed into the
+# service layer to keep the router HTTP-only and to flow `driver` through
+# `Depends()` instead of the router's direct `from app.core.clients import query`.
+# Cypher-injection risk in voice_graph/text_graph is carried over; spec §2.2
+# defers parameterization to Phase G.
+# ---------------------------------------------------------------------------
+
+def run_cypher_query(driver, query_string: str):
+    """Execute an arbitrary Cypher query string. Backs the raw `/query/` debug endpoint."""
+    return query(driver, query_string)
+
+
+def add_engagement(driver, prospect_name: str, text: str, update_type: str, engagement_id: int, current_time_str: str):
+    """Create a Prospect node (if missing) and link an Engagement node to it.
+    Used by both `/voice_graph/` and `/text_graph/`. Cypher injection via
+    `prospect_name`/`text`/`update_type` is a Phase G concern (spec §2.2)."""
+    query(driver, f"MERGE (p:Prospect {{Name: '{prospect_name}'}})")
+    query(driver, f"""
+    CREATE (e:Engagement {{
+        text: '{text}',
+        id: {engagement_id},
+        created_at: '{current_time_str}',
+        type: '{update_type}'
+    }})
+    WITH e
+    MATCH (p:Prospect {{Name: '{prospect_name}'}})
+    CREATE (p)-[:HAS_ENGAGEMENT]->(e)""")

@@ -86,9 +86,16 @@ def build_clients(skip_db_init: Optional[bool] = None) -> ClientBundle:
 
 
 # Function to execute a Cypher query
-def query(query_string):
+#
+# Phase F (commit 11/17): `driver` is now an explicit positional argument.
+# `params` is a new optional third argument — backwards-compatible because
+# `session.run(query_string, params or {})` is semantically identical to
+# `session.run(query_string)` when no params are supplied. Phase G will
+# parameterize the Cypher-injection-prone callers (spec §2.2 / §8 Phase G #1).
+# Commit 17 relocates this function to `app/services/_neo4j_helpers.py`.
+def query(driver, query_string, params=None):
     with driver.session() as session:
-        results = session.run(query_string).data()
+        results = session.run(query_string, params or {}).data()
         return results_to_string(results)
 
 # Function to convert query results into a readable string
