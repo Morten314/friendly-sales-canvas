@@ -319,7 +319,7 @@ def test_run_market_scoring_for_org_marks_completed_on_success(
     )
     mocker.patch(
         "app.services.market_scoring.get_leads_for_org",
-        return_value=[{"lead_id": "L1"}],
+        return_value=([{"lead_id": "L1"}], 1),
     )
     mocker.patch(
         "app.services.market_scoring.get_company_profile_for_org",

@@ -3,7 +3,7 @@ operations.
 """
 import json
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from app.services._neo4j_helpers import upsert_node
 from app.core.exceptions import LeadCSVValidationError, LeadNotFoundError
@@ -27,25 +27,34 @@ def _ensure_leads_indexes(mongo) -> None:
 def get_leads_for_org(
     driver,
     org_id: str,
-    limit: Optional[int] = None,
-    order_by_recent: bool = False,
-) -> List[Dict[str, Any]]:
-    """Fetch leads from Neo4j for a given org. Raises on storage or query
-    failures; callers wanting silent failure wrap with
+    limit: int = 500,
+    offset: int = 0,
+) -> tuple[List[Dict[str, Any]], int]:
+    """Fetch leads from Neo4j for a given org, paginated. Returns (items, total).
+
+    Results ordered by `created_at DESC` (newest first) — mandatory for stable pagination.
+    Raises on storage or query failures; callers wanting silent failure wrap with
     ``except BrewraError`` (or ``except Exception``).
     """
-    clauses = ["MATCH (l:Lead)", "WHERE l.org_id = $org_id"]
-    params: Dict[str, Any] = {"org_id": org_id}
-    clauses.append("RETURN l")
-    if order_by_recent:
-        clauses.append("ORDER BY l.created_at DESC")
-    if limit is not None:
-        clauses.append("LIMIT $limit")
-        params["limit"] = limit
-    query_string = "\n".join(clauses)
-    with driver.session() as session:
-        results = session.run(query_string, **params)
-        return _process_neo4j_lead_records(results)
+    with driver.session() as s:
+        items_result = s.run(
+            """
+            MATCH (l:Lead {org_id: $org_id})
+            RETURN l
+            ORDER BY l.created_at DESC
+            SKIP $offset LIMIT $limit
+            """,
+            org_id=org_id, limit=limit, offset=offset,
+        )
+        items = _process_neo4j_lead_records(items_result)
+
+        total_result = s.run(
+            "MATCH (l:Lead {org_id: $org_id}) RETURN count(l) AS total",
+            org_id=org_id,
+        )
+        total = total_result.single()["total"]
+
+    return items, total
 
 
 # ---------------------------------------------------------------------------
@@ -345,20 +354,37 @@ def batch_upload_leads(
             os.remove(tmp_path)
 
 
-def list_leads_by_file(driver, org_id: str, file_id: str) -> List[Dict[str, Any]]:
+def list_leads_by_file(
+    driver,
+    org_id: str,
+    file_id: str,
+    limit: int = 500,
+    offset: int = 0,
+) -> tuple[List[Dict[str, Any]], int]:
+    """Fetch leads filtered by file_id within an org, paginated. Returns (items, total).
+
+    Results ordered by `created_at DESC` (newest first) — mandatory for stable pagination.
     """
-    Fetch leads filtered by file_id within an org.
-    Returns full lead records with all properties similar to get_leads_for_org.
-    """
-    query_string = """
-    MATCH (l:Lead)
-    WHERE l.org_id = $org_id AND l.file_id = $file_id
-    RETURN l
-    """
-    with driver.session() as session:
-        results = session.run(query_string, org_id=org_id, file_id=file_id)
-        leads = _process_neo4j_lead_records(results)
-    return leads
+    with driver.session() as s:
+        items_result = s.run(
+            """
+            MATCH (l:Lead)
+            WHERE l.org_id = $org_id AND l.file_id = $file_id
+            RETURN l
+            ORDER BY l.created_at DESC
+            SKIP $offset LIMIT $limit
+            """,
+            org_id=org_id, file_id=file_id, limit=limit, offset=offset,
+        )
+        items = _process_neo4j_lead_records(items_result)
+
+        total_result = s.run(
+            "MATCH (l:Lead) WHERE l.org_id = $org_id AND l.file_id = $file_id RETURN count(l) AS total",
+            org_id=org_id, file_id=file_id,
+        )
+        total = total_result.single()["total"]
+
+    return items, total
 
 
 def get_stream_status(mongo, org_id: str) -> Dict[str, Any]:

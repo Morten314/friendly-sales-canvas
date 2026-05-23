@@ -101,6 +101,9 @@ def test_get_leads_returns_list(client, mock_neo4j):
     assert isinstance(body, list)
     assert len(body) == 2
     assert body[0]["lead_id"] == TEST_LEAD_ID_1
+    assert response.headers.get("Deprecation") == "true"
+    assert 'rel="successor-version"' in response.headers.get("Link", "")
+    assert "/api/v2/leads" in response.headers["Link"]
 
 
 # ---------------------------------------------------------------------------
@@ -266,6 +269,9 @@ def test_get_leads_by_file_returns_filtered_list(client, mock_neo4j):
     assert isinstance(body, list)
     assert len(body) == 1
     assert body[0]["lead_id"] == TEST_LEAD_ID_1
+    assert response.headers.get("Deprecation") == "true"
+    assert 'rel="successor-version"' in response.headers.get("Link", "")
+    assert "/api/v2/leads/by-file" in response.headers["Link"]
 
 
 # ---------------------------------------------------------------------------

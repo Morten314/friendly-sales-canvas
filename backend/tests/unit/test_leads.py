@@ -32,23 +32,29 @@ def test_get_leads_for_org_returns_list(mock_session):
     node = MagicMock()
     node.items.return_value = [("lead_id", "L1"), ("name", "Acme")]
     record.__getitem__.return_value = node
-    mock_session.run.return_value = iter([record])
+    count_mock = MagicMock()
+    count_mock.single.return_value = {"total": 1}
+    mock_session.run.side_effect = [iter([record]), count_mock]
 
-    result = get_leads_for_org(mock_session._driver, org_id=TEST_ORG_ID)
+    result, total = get_leads_for_org(mock_session._driver, org_id=TEST_ORG_ID)
 
     assert len(result) == 1
     assert result[0]["lead_id"] == "L1"
+    assert total == 1
 
 
 def test_get_leads_for_org_applies_limit_and_order(mock_session):
-    mock_session.run.return_value = iter([])
+    count_mock = MagicMock()
+    count_mock.single.return_value = {"total": 0}
+    mock_session.run.side_effect = [iter([]), count_mock]
 
-    get_leads_for_org(mock_session._driver, org_id=TEST_ORG_ID, limit=5, order_by_recent=True)
+    get_leads_for_org(mock_session._driver, org_id=TEST_ORG_ID, limit=5, offset=2)
 
-    query = mock_session.run.call_args.args[0]
+    query = mock_session.run.call_args_list[0].args[0]
     assert "LIMIT $limit" in query
     assert "ORDER BY l.created_at DESC" in query
-    assert mock_session.run.call_args.kwargs["limit"] == 5
+    assert mock_session.run.call_args_list[0].kwargs["limit"] == 5
+    assert mock_session.run.call_args_list[0].kwargs["offset"] == 2
 
 
 def test_get_leads_for_org_propagates_neo4j_error(mock_session):
@@ -183,12 +189,15 @@ def test_list_leads_by_file_returns_records(mock_session):
     node = MagicMock()
     node.items.return_value = [("lead_id", "L1"), ("file_id", TEST_FILE_ID)]
     record.__getitem__.return_value = node
-    mock_session.run.return_value = iter([record])
+    count_mock = MagicMock()
+    count_mock.single.return_value = {"total": 1}
+    mock_session.run.side_effect = [iter([record]), count_mock]
 
-    result = list_leads_by_file(mock_session._driver, TEST_ORG_ID, TEST_FILE_ID)
+    result, total = list_leads_by_file(mock_session._driver, TEST_ORG_ID, TEST_FILE_ID)
 
     assert len(result) == 1
     assert result[0]["file_id"] == TEST_FILE_ID
+    assert total == 1
 
 
 def test_get_stream_status_returns_files_list(mock_mongo_client):
@@ -231,3 +240,31 @@ def test_delete_leads_by_file_happy_path(mock_session, mock_mongo_client):
 
     assert result["status"] == "success"
     assert result["deleted_count"] == 3
+
+
+# ---------------------------------------------------------------------------
+# get_leads_for_org — new paginated signature (Task 7)
+# ---------------------------------------------------------------------------
+
+def test_get_leads_for_org_returns_items_and_total():
+    session = MagicMock()
+    driver = MagicMock()
+    driver.session.return_value.__enter__.return_value = session
+    session.run.side_effect = [
+        [{"l": {"name": "Lead A"}}, {"l": {"name": "Lead B"}}],
+        MagicMock(single=lambda: {"total": 7}),
+    ]
+    items, total = get_leads_for_org(driver, "org_1", limit=10, offset=0)
+    assert len(items) == 2
+    assert total == 7
+
+
+def test_get_leads_for_org_default_limit_is_500():
+    session = MagicMock()
+    driver = MagicMock()
+    driver.session.return_value.__enter__.return_value = session
+    session.run.side_effect = [[], MagicMock(single=lambda: {"total": 0})]
+    get_leads_for_org(driver, "org_1")
+    first_call_kwargs = session.run.call_args_list[0].kwargs
+    assert first_call_kwargs["limit"] == 500
+    assert first_call_kwargs["offset"] == 0

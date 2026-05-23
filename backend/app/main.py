@@ -150,6 +150,10 @@ from app.routers import leads
 
 app.include_router(leads.router)
 
+from app.routers.v2 import leads as leads_v2
+
+app.include_router(leads_v2.router, prefix="/v2")
+
 from app.routers import graph_chat
 
 app.include_router(graph_chat.router)

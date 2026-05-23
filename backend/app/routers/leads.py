@@ -1,7 +1,7 @@
 """Leads endpoints: CRUD, batch upload, file-grouped queries."""
 from typing import Any, Dict, List
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile
 
 from app.core.dependencies import get_mongo, get_neo4j_driver
 from app.models.leads import (
@@ -18,9 +18,22 @@ router = APIRouter(prefix="/leads", tags=["leads"])
 
 
 @router.get("", response_model=List[Dict[str, Any]])
-def get_all_leads(org_id: str = Query(...), driver=Depends(get_neo4j_driver)):
-    """Get all leads filtered by org_id (multitenant)."""
-    return leads_service.get_leads_for_org(driver, org_id=org_id)
+def get_all_leads(
+    response: Response,
+    org_id: str = Query(...),
+    driver=Depends(get_neo4j_driver),
+):
+    """**Deprecated:** use `GET /api/v2/leads` for the paginated envelope.
+
+    Returns up to 500 leads (silent cap). The cap is new — prior to Phase G
+    this endpoint returned all leads unbounded. Results are now returned in
+    creation order (newest first) — previously the order was unspecified, as
+    Cypher returns rows in arbitrary order without `ORDER BY`.
+    """
+    response.headers["Deprecation"] = "true"
+    response.headers["Link"] = '</api/v2/leads>; rel="successor-version"'
+    items, _ = leads_service.get_leads_for_org(driver, org_id=org_id)
+    return items
 
 
 @router.post("", response_model=LeadMutationResponse)
@@ -69,12 +82,20 @@ async def batch_upload_leads(
 
 @router.get("/by-file", response_model=List[Dict[str, Any]])
 def get_leads_by_file(
+    response: Response,
     org_id: str = Query(...),
     file_id: str = Query(...),
     driver=Depends(get_neo4j_driver),
 ):
-    """Fetch leads filtered by file_id within an org."""
-    return leads_service.list_leads_by_file(driver, org_id, file_id)
+    """**Deprecated:** use `GET /api/v2/leads/by-file` for the paginated envelope.
+
+    Returns up to 500 leads (silent cap; previously unbounded). Results are now
+    ordered by `created_at DESC` — previously had no ORDER BY at all.
+    """
+    response.headers["Deprecation"] = "true"
+    response.headers["Link"] = '</api/v2/leads/by-file>; rel="successor-version"'
+    items, _ = leads_service.list_leads_by_file(driver, org_id, file_id)
+    return items
 
 
 @router.get("/stream/status", response_model=StreamStatusResponse)

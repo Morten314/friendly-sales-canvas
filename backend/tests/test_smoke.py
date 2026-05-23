@@ -15,9 +15,12 @@ def test_client_starts_and_serves_docs(client):
 def test_neo4j_mock_is_applied(client, mock_neo4j):
     """Hit any endpoint that touches Neo4j, confirm the mock receives the call.
 
-    Uses GET /leads — known to call driver.session().run().
+    Uses GET /leads — known to call driver.session().run() twice (items + count).
     """
-    mock_neo4j["session"].run.return_value = []
+    from unittest.mock import MagicMock
+    count_mock = MagicMock()
+    count_mock.single.return_value = {"total": 0}
+    mock_neo4j["session"].run.side_effect = [[], count_mock]
     response = client.get("/leads", params={"user_id": "test", "org_id": "test"})
     # Don't assert response shape — just that the endpoint was reached and Neo4j mock was called.
     assert mock_neo4j["session"].run.called or response.status_code in (200, 422)
