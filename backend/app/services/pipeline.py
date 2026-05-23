@@ -2,13 +2,11 @@
 from datetime import datetime, timedelta, timezone
 from typing import Dict
 
-from app.core import clients
-from app.core import llm_config
 from app.core.config import STAGE_ORDER, STAGE_MAPPING
 from app.models.pipeline import SalesPipelineResponse, TimeframeResponse, StageStats
 
 
-def compute_sales_pipeline(user_id: str, timeframe: int) -> SalesPipelineResponse:
+def compute_sales_pipeline(driver, user_id: str, timeframe: int) -> SalesPipelineResponse:
     """Aggregate lead stage counts from Neo4j for the given user/timeframe.
 
     Moved from app/routers/pipeline.py in Phase B Task 6.
@@ -22,7 +20,7 @@ def compute_sales_pipeline(user_id: str, timeframe: int) -> SalesPipelineRespons
     RETURN l.stage AS stage, count(*) AS count
     """
 
-    with clients.driver.session() as session:
+    with driver.session() as session:
         results = session.run(query_string, {
             "start_date": start_date.isoformat(),
             "end_date": end_date.isoformat()
@@ -66,7 +64,7 @@ def compute_sales_pipeline(user_id: str, timeframe: int) -> SalesPipelineRespons
         )
 
 
-def probe_llm() -> Dict[str, str]:
+def probe_llm(llm2) -> Dict[str, str]:
     """LLM-availability smoke probe. Returns a small dict.
 
     Moved from app/routers/pipeline.py in Phase B Task 6.
@@ -76,7 +74,7 @@ def probe_llm() -> Dict[str, str]:
 
         test_prompt = "Generate a simple JSON: {\"test\": \"hello\"}"
         messages = [HumanMessage(content=test_prompt)]
-        response = llm_config.llm2.invoke(messages)
+        response = llm2.invoke(messages)
         return {"status": "success", "response": str(response.content)}
     except Exception as e:
         return {"status": "error", "error": str(e)}
