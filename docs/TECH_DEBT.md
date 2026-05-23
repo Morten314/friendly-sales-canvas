@@ -2,96 +2,7 @@
 
 Running list of debt items the team has consciously accepted. Each entry: what was done, what should be done, why we deferred, and the trigger that should pull it forward.
 
----
-
-## TD-001 — Test fixtures are hand-crafted, not captured from real responses
-
-**Date logged:** 2026-05-08
-**Origin:** Characterization-test brainstorm (`specs/2026-05-08-characterization-tests-design.md`)
-
-**Current state:**
-Backend characterization tests use **hand-crafted fixture dicts** for all endpoints — including LLM-driven ones (`POST /api/market-research`, `POST /api/icp-research`, `POST /api/generate-signals-batch`, `POST /api/signal_Ask`). The fixtures represent a minimal structural sketch of the response shape, authored by hand.
-
-**What it should be:**
-A **hybrid**: hand-crafted fixtures for simple CRUD endpoints, captured-once fixtures for the LLM-driven endpoints. A `backend/tests/capture_fixtures.py` script would hit the live (or local) backend with a dedicated test `org_id`, record real LLM responses to JSON, and freeze them as the canonical fixtures. Re-run intentionally when prompts change.
-
-**Why we deferred:**
-- Velocity. The first wave of refactoring is days away; capture-script setup adds a half-day before any tests can be written.
-- B-grade fixtures still catch the most common refactor regressions (response shape, status codes, mocked side-effects).
-- We can upgrade incrementally — each LLM endpoint can be re-fixtured later without reworking the test structure.
-
-**What we lose by staying on B:**
-- Hand-crafted LLM fixtures don't reflect the actual prompt-output shape the system produces today. If a refactor preserves contract but accidentally changes prompt logic, hand-fixtures may still pass; captured fixtures would catch the drift.
-- Hand-crafted fixtures for nested LLM JSON are tedious and easy to under-spec (the test asserts a smaller structure than reality).
-
-**Pull-forward triggers:**
-- First refactor that touches `backend/services.py` LLM-call functions (`Research_Market_*`, `icp_research_*`, `search_signals_scout`/`_profiler`).
-- First time a test passes locally but production diverges — i.e., a real "the fixtures lied" incident.
-- When LLM provider/model changes (Groq, Together) — captured fixtures would re-baseline the system at the new model's output shape.
-
-**Owner:** TBD (likely whoever first hits a "fixtures lied" incident).
-
-**Resolved 2026-05-22 by Phase E (`refactor-backend-modularization-phase-e`).** `backend/tests/capture_fixtures.py` produces ~24 deterministic JSON captures in `backend/tests/fixtures/captured/`. Three integration test files (`test_market_research.py`, `test_icp.py`, `test_signals.py`) now consume these via `load_captured(...)`. Re-capture triggers are documented in the script header.
-
----
-
-## TD-002 — No direct unit tests for service functions
-
-**Date logged:** 2026-05-22
-**Origin:** Phase C code review N7 (`docs/code-review-backend-modularization-phase-c.md`); Phase D design §2.2 (`specs/2026-05-22-backend-modularization-phase-d-design.md`).
-
-**Current state:**
-All backend tests exercise services *through* the FastAPI `TestClient` and assert on HTTP status codes / JSON bodies. There are no tests that call service functions directly and assert on their return values or raised exceptions.
-
-**What it should be:**
-Service functions get a layer of direct unit tests — `pytest.raises(LeadNotFoundError)` style — complementing the existing integration tests. Especially valuable for the three Phase C service extractions (`trigger_or_get_market_scores`, `get_market_scores_status`, `get_lead_market_score_descriptions`) and any future service that's reused outside HTTP.
-
-**Why we deferred:**
-- Phase D establishes the precondition (services raise typed exceptions instead of `HTTPException`), but adding the tests in the same phase would balloon scope.
-- Existing 93 tests already cover HTTP-level behavior; adding service-level tests is a quality improvement, not a regression fix.
-
-**What we lose by staying as-is:**
-- A bug introduced *inside* a service function (logic, query construction) is only caught if the integration test happens to exercise that path with the right data.
-- Refactors inside a service are riskier than they should be — no fast feedback loop independent of FastAPI.
-- The typed-exception convention is harder to enforce without tests pinning it.
-
-**Pull-forward triggers:**
-- First bug found in a service that the integration tests missed because mock setup hid it.
-- First non-HTTP caller (background task, CLI command, LangChain chain) that calls a service and exposes a behavior the integration tests don't.
-- When `_get_market_score_collections` or similar helper needs to be tested independently to validate a query change.
-
-**Owner:** TBD.
-
-**Resolved 2026-05-22 by Phase E (`refactor-backend-modularization-phase-e`).** `backend/tests/unit/` adds ~110-130 direct unit tests across 9 service files. Each typed-exception leaf in `app/core/exceptions.py` is asserted via `pytest.raises(...)`. `pytest tests/unit/` runs in under 2s.
-
----
-
-## TD-003 — Startup hooks use deprecated `@app.on_event` API
-
-**Resolved 2026-05-23 by Phase F (`refactor-backend-modularization-phase-f`).** A `lifespan` context manager in `app/main.py` replaces both the `@app.on_event("startup")` hook and the module-import-time `clients.graph.refresh_schema()` call. See `plans/modularization-plan-6.md` Task 16 (commit 17/17).
-
-**Date logged:** 2026-05-22
-**Origin:** Phase C code review C2 (`docs/code-review-backend-modularization-phase-c.md`); Phase D design §8 item 6.
-
-**Current state:**
-`app/main.py` uses `@app.on_event("startup")` for `_ensure_market_scoring_indexes` (added in Phase C). The pre-existing `clients.graph.refresh_schema()` runs at module-import time (even more dated). FastAPI 0.93+ recommends a `lifespan` context manager and emits a deprecation warning for `on_event`. The test suite shows this warning (count rose from 9 to 11 after Phase C).
-
-**What it should be:**
-A single `@asynccontextmanager`-decorated `lifespan` function passed to `FastAPI(lifespan=...)` that wraps both the Neo4j schema refresh and the Mongo index creation, guarded by `BREWRA_SKIP_DB_INIT` / `clients.client is None`.
-
-**Why we deferred:**
-- Phase C scope was cleanup closure; Phase D scope is the exception convention. A `lifespan` migration is its own small phase to keep diffs reviewable.
-- Migrating only the new hook while leaving the pre-existing one untouched would make `main.py` more inconsistent, not less.
-
-**What we lose by staying as-is:**
-- 2 deprecation warnings per test run (will become errors when FastAPI removes `on_event`).
-- Pattern inconsistency for future contributors — module-level startup vs `on_event` vs `lifespan` is three forms in one file.
-
-**Pull-forward triggers:**
-- FastAPI release notes announce removal of `on_event` (any major version bump in `requirements.txt`).
-- Next time someone needs to add a startup or shutdown hook — do the migration alongside it.
-
-**Owner:** TBD.
+Numbering is preserved across resolutions — TD-001/002/003 (resolved by Phases E and F) were removed on 2026-05-23; their IDs are not reused so commit/spec references stay traceable.
 
 ---
 
@@ -111,12 +22,128 @@ Run `cd backend && python tests/capture_fixtures.py` on a machine with all three
 - Running the script requires live API credentials with budget; doing it inside the test-writing phase would gate test-writing on key procurement.
 
 **What we lose by staying as-is:**
-- Tests don't assert against actual response shape. A service parsing change that produces a different real output can pass tests silently ("the fixtures lied"). This is the exact risk TD-001 was meant to retire.
+- Tests don't assert against actual response shape. A service parsing change that produces a different real output can pass tests silently ("the fixtures lied"). This is the exact risk the now-retired TD-001 was meant to retire.
 - The `test_icp.ambr` snapshot encodes stub shape, not real shape — it will need re-baselining after the first real capture.
 
 **Pull-forward triggers:**
 - First time someone with API keys runs the suite locally and observes a mismatch between stub assertions and real service behavior.
-- Before any production release that depends on the captured-fixture acceptance criterion in `docs/TECH_DEBT.md` TD-001.
+- Before any production release that depends on the captured-fixture acceptance criterion.
 - When the capture pipeline (`tests/capture_fixtures.py`) is modified — re-run to validate the change end-to-end.
 
 **Owner:** CTO (has API key access).
+
+---
+
+## TD-005 — v1 list endpoints expose `count` as page size, not DB total
+
+**Date logged:** 2026-05-23
+**Origin:** Phase G code review on Task 3 (`feat(be): add /v2/user-documents paginated endpoint + deprecate v1 [phase G, commit 3/8]`).
+
+**Current state:**
+v1 paginated routes that still return a wrapped envelope (`{status, count, files}` for `/user-documents`, `{status, count, signals}` for `/fetch-signals`) compute `count` as `len(items)` after the service silently caps at 500. Pre–Phase G, the service was unbounded and `count` reflected the true DB count. Post–Phase G, for orgs with >500 documents/signals, `count` is silently truncated to 500 while the underlying service knows the real total (it's the discarded `_` in `items, _ = await service.list_*(...)`).
+
+```python
+# v1 /user-documents
+items, _ = await documents_service.list_user_documents(mongo, org_id)
+return {"status": "success", "count": len(items), "files": items}  # count maxes at 500
+```
+
+The deprecation docstring tells clients to migrate to v2, but does not say `count` semantics changed.
+
+**What it should be:**
+Either:
+1. Pass `total` through: `items, total = ...; return {…, "count": total, …}` — keeps the wire field honest at the cost of `count != len(files)` when capped.
+2. Add explicit docstring note: `count` is page size, not DB total — migrate to v2 for the true count.
+
+Option 1 is one character of code; option 2 is two lines of prose. v1 is being deleted in Phase H regardless.
+
+**Why we deferred:**
+- The plan (`plans/modularization-plan-7.md`) specifies the `len(items)` form verbatim. Changing it during execution would have been a spec deviation.
+- The plan's reasoning (preserving `count == len(files)` invariant) is defensible: v1 callers iterating `files` see exactly `count` items with no surprise — the deprecation header tells them to migrate to v2 for the true total.
+- Affected endpoints: `/user-documents` and `/fetch-signals` only. The other v1 routes either return bare lists (`/registration`, `/leads`, `/leads/by-file`) or wrappers without `count` (`/icp` returns `{suggestedICPs: items}`).
+
+**What we lose by staying as-is:**
+- v1 clients with org-size >500 see a `count` that lies about reality. The deprecation header is the only signal pointing them at the fix.
+- If Phase H v1-deletion slips, the gap widens — orgs grow past 500 over time and silent truncation becomes silent data loss to consumers that don't read the full page.
+
+**Pull-forward triggers:**
+- First v1 client reports a missing-document/missing-signal incident traceable to the 500-cap.
+- Phase H planning — fold the docstring/return change into the v1-removal commit if both endpoints aren't fully migrated by then.
+- Any FE bug ticket mentioning "we have N documents in S3 but the dashboard says 500."
+
+**Owner:** TBD (likely whoever wires the FE to v2 first).
+
+---
+
+## TD-006 — `market_scoring.py` callers recompute `len(leads)` instead of using the returned `total`
+
+**Date logged:** 2026-05-23
+**Origin:** Phase G code review on Task 7 (`feat(be): add /v2/leads + /v2/leads/by-file paginated endpoints + drop order_by_recent [phase G, commit 7/8]`).
+
+**Current state:**
+Both callers of `get_leads_for_org` in `backend/app/services/market_scoring.py` (lines ~404 and ~690) discard `total` and recompute it from the page:
+
+```python
+leads, _ = get_leads_for_org(driver, org_id=org_id, limit=5000, offset=0)
+total_leads = len(leads)
+```
+
+`get_leads_for_org` already runs a second Cypher query (`MATCH (l:Lead {org_id: $org_id}) RETURN count(l) AS total`) and returns the true count in the tuple. Recomputing via `len(leads)` is identical at ≤5000 leads, but for orgs with >5000 leads it under-reports the total — and even at smaller sizes it forces deserializing every record server-side just to length-check it.
+
+**What it should be:**
+```python
+leads, total_leads = get_leads_for_org(driver, org_id=org_id, limit=5000, offset=0)
+```
+
+Two-character change at each callsite. Eliminates the wasted deserialization at small sizes and the under-reporting at large sizes.
+
+**Why we deferred:**
+- The plan (`plans/modularization-plan-7.md` Task 7 Step 5) specifies the `_; total_leads = len(leads)` form verbatim. Following it preserved review-trace consistency with the plan's text.
+- The semantic difference only matters at orgs >5000 leads, which doesn't exist in MVP-stage data (0 live users).
+- The `len(leads)` form is correct for the immediate use — progress-display denominator in a background scoring task that processes those exact leads. The "real total" wouldn't change the loop's behavior.
+
+**What we lose by staying as-is:**
+- Slight efficiency loss: count is computed twice (once via Cypher inside the service, once via `len()` in the caller).
+- If org-size grows past 5000, `total_leads` becomes misleading — it caps at 5000 while the org has more.
+- Future readers who see the discarded `_` may copy-paste the pattern elsewhere without realizing the total was free.
+
+**Pull-forward triggers:**
+- First org reaching >5000 leads (will require lifting the `limit=5000` cap regardless — fix the tuple-unpack at the same time).
+- Any market-scoring progress-bar UX work that needs a denominator larger than the current page.
+- Routine cleanup pass on `market_scoring.py`.
+
+**Owner:** TBD.
+
+---
+
+## TD-007 — Cosmetic cruft from Phase G plan-verbatim test code
+
+**Date logged:** 2026-05-23
+**Origin:** Phase G code reviews on Tasks 2, 4, 6, 8 (multiple commits).
+
+**Current state:**
+Several Phase G tests and routers contain unused symbols that were transcribed verbatim from `plans/modularization-plan-7.md`'s code blocks. None affect behavior; all are 1-line fixes.
+
+- `backend/tests/test_icp_v2.py:7` — `fake_result = {"suggestedICPs": [...]}` assigned and never referenced (data is inlined into the `patch(...)` call on the next line).
+- `backend/tests/unit/test_market_scoring.py` — `test_get_latest_market_score_rows_returns_items_and_total` declares `monkeypatch` as a parameter but the test body uses `patch(...)` as a context manager; the fixture is never used.
+- `backend/app/routers/v2/org_auth.py:1` — `from typing import List` imported but unused (the generic annotation lives on `PaginatedResponse[RegistrationResponse]`).
+- `backend/tests/unit/test_customer_profile.py` — nine `mocker.patch("app.services.icp._ensure_icp_indexes")` calls remain in tests whose code paths no longer reach `_ensure_icp_indexes` (the calls were deleted from `customer_profile.py` in Phase G Task 2). The patches still bind a real symbol so they don't error, but they're dead setup — guarding against a call that never happens.
+
+**What it should be:**
+Delete the dead lines. ~13 lines across 4 files.
+
+**Why we deferred:**
+- All four items were flagged during Task code-quality review as **Minor** (non-blocking per the subagent-driven-development skill).
+- The dead var, unused import, and unused `monkeypatch` parameter were copied verbatim from the plan's code blocks; the implementer correctly followed the plan rather than deviating mid-task.
+- The dead `mocker.patch` calls in `test_customer_profile.py` predate the cleanup intent — they were updated in place (renamed) by `sed` per the plan's Step 9, rather than re-evaluated for relevance.
+
+**What we lose by staying as-is:**
+- Future readers will hit a "why is this here?" moment on each occurrence. The patches in `test_customer_profile.py` are the worst offender — they imply `_ensure_icp_indexes` is still reachable from `customer_profile.py` code paths when it isn't.
+- Marginal pytest collection cost (negligible).
+
+**Pull-forward triggers:**
+- Next routine cleanup pass on `backend/tests/`.
+- First future agent that gets confused by one of the dead patches and asks "is `_ensure_icp_indexes` still called from `customer_profile`?"
+- Bundled with Phase H's v1-route deletion (which will remove related tests anyway).
+
+**Owner:** TBD.
