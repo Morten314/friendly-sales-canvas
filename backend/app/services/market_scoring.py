@@ -1,12 +1,10 @@
 """Lead market scoring service.
 
 Owns:
-  - Profiler Mongo collections (shared primary cluster via app.core.clients.client)
+  - Profiler Mongo collections (shared primary cluster)
   - Lead identity extraction (cross-source name normalization)
   - Single-lead scoring against market reports
   - Bulk scoring background task with stale-run detection
-
-Largest service module in phase A.
 """
 import json
 import logging

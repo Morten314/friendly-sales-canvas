@@ -7,10 +7,7 @@ Functions:
     LinkedIn-related helpers via RapidAPI
   - calculate_prospect_score / get_ranked_prospects / extract_number /
     score_prospect: prospect-scoring chain
-  - run_cypher_query / add_engagement: extracted from router endpoints
-    (Phase F commit 11/17, per spec §2.1 item 5)
-
-Extracted from services.py during phase A.
+  - run_cypher_query / add_engagement: thin wrappers consumed by graph_chat router
 """
 import json
 import re
@@ -186,12 +183,7 @@ def score_prospect(llm, cypher_query):
 
 
 # ---------------------------------------------------------------------------
-# Router-extracted helpers (Phase F commit 11/17, per spec §2.1 item 5).
-# These were inline Cypher in routers/graph_chat.py before; pushed into the
-# service layer to keep the router HTTP-only and to flow `driver` through
-# `Depends()` instead of the router's direct `from app.core.clients import query`.
-# Cypher-injection risk in voice_graph/text_graph is carried over; spec §2.2
-# defers parameterization to Phase G.
+# Router-extracted helpers
 # ---------------------------------------------------------------------------
 
 def run_cypher_query(driver, query_string: str):
@@ -201,8 +193,9 @@ def run_cypher_query(driver, query_string: str):
 
 def add_engagement(driver, prospect_name: str, text: str, update_type: str, engagement_id: int, current_time_str: str):
     """Create a Prospect node (if missing) and link an Engagement node to it.
-    Used by both `/voice_graph/` and `/text_graph/`. Cypher injection via
-    `prospect_name`/`text`/`update_type` is a Phase G concern (spec §2.2)."""
+    Used by both `/voice_graph/` and `/text_graph/`.
+    TODO: parameterize the Cypher to close the injection risk on
+    `prospect_name`/`text`/`update_type` (tracked under spec §2.2 security backlog)."""
     query(driver, f"MERGE (p:Prospect {{Name: '{prospect_name}'}})")
     query(driver, f"""
     CREATE (e:Engagement {{

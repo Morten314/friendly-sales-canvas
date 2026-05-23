@@ -6,8 +6,7 @@ Endpoints covered:
   POST /signal_action             — accept / reject a signal
   POST /signal_Ask                — ask AI about signals
 
-After Phase B Task 5, all endpoints use the singleton client imported from
-app.core.clients. Patch "app.core.clients.client" for Mongo mocking.
+Mongo is supplied via the `_override_mongo` helper (`app.dependency_overrides[get_mongo]`).
 """
 import json
 from contextlib import contextmanager
@@ -23,7 +22,7 @@ from tests.identities import (
 
 @contextmanager
 def _override_mongo(mongo_instance):
-    """Phase F: signals router reads Mongo via Depends(get_mongo)."""
+    """Substitute the Mongo client via `app.dependency_overrides[get_mongo]`."""
     from app.main import app
     from app.core.dependencies import get_mongo
     app.dependency_overrides[get_mongo] = lambda: mongo_instance
@@ -83,7 +82,7 @@ def _base_market_request() -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Task 15-1: GET /fetch-signals returns list
+# GET /fetch-signals returns list
 # ---------------------------------------------------------------------------
 
 def test_get_signals_returns_list(client):
@@ -103,7 +102,7 @@ def test_get_signals_returns_list(client):
 
 
 # ---------------------------------------------------------------------------
-# Task 15-2: GET /fetch-signals empty when no docs
+# GET /fetch-signals empty when no docs
 # ---------------------------------------------------------------------------
 
 def test_get_signals_empty_when_no_docs(client):
@@ -120,7 +119,7 @@ def test_get_signals_empty_when_no_docs(client):
 
 
 # ---------------------------------------------------------------------------
-# Task 15-3: POST /generate-signals-batch calls search functions
+# POST /generate-signals-batch calls search functions
 # ---------------------------------------------------------------------------
 
 def test_post_generate_signals_batch_calls_llm(client):
@@ -140,7 +139,7 @@ def test_post_generate_signals_batch_calls_llm(client):
 
 
 # ---------------------------------------------------------------------------
-# Task 15-4: POST /generate-signals-batch returns signals list
+# POST /generate-signals-batch returns signals list
 # ---------------------------------------------------------------------------
 
 def test_post_generate_signals_batch_returns_signals(client):
@@ -161,7 +160,7 @@ def test_post_generate_signals_batch_returns_signals(client):
 
 
 # ---------------------------------------------------------------------------
-# Task 15-5: POST /signal_action accept → updates Mongo
+# POST /signal_action accept → updates Mongo
 # ---------------------------------------------------------------------------
 
 def test_post_signal_action_accept(client):
@@ -186,7 +185,7 @@ def test_post_signal_action_accept(client):
 
 
 # ---------------------------------------------------------------------------
-# Task 15-6: POST /signal_action dismiss (reject) → deletes from Mongo
+# POST /signal_action dismiss (reject) → deletes from Mongo
 # ---------------------------------------------------------------------------
 
 def test_post_signal_action_dismiss(client):
@@ -211,7 +210,7 @@ def test_post_signal_action_dismiss(client):
 
 
 # ---------------------------------------------------------------------------
-# Task 15-7: POST /signal_Ask returns answer
+# POST /signal_Ask returns answer
 # ---------------------------------------------------------------------------
 
 def test_post_signal_ask_returns_answer(client, mock_neo4j, mock_llm_chain):
@@ -241,7 +240,7 @@ def test_post_signal_ask_returns_answer(client, mock_neo4j, mock_llm_chain):
         "history": [],
     }
 
-    # Phase F: signal_ask gets agent_chain via Depends(get_agent_chain).
+    # signal_ask gets agent_chain via Depends(get_agent_chain).
     # Override the dependency to inject our chain_mock.
     chain_mock = MagicMock()
     chain_mock.invoke.return_value = {"output": "This is the AI answer."}
@@ -264,7 +263,7 @@ def test_post_signal_ask_returns_answer(client, mock_neo4j, mock_llm_chain):
 
 
 # ---------------------------------------------------------------------------
-# Task 15-8: POST /signal_action with missing signal → 404
+# POST /signal_action with missing signal → 404
 # ---------------------------------------------------------------------------
 
 def test_post_signal_action_invalid_signal_id(client):

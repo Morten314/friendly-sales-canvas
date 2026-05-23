@@ -514,7 +514,7 @@ IMPORTANT: Your new signal headline must be about a DIFFERENT news story, market
 
 
 # ---------------------------------------------------------------------------
-# Router-facing service functions (Phase B extraction)
+# Router-facing service functions
 # ---------------------------------------------------------------------------
 
 async def run_signals_research(driver, mongo, pc, agent_chain, request: MarketRequest) -> dict:
@@ -902,11 +902,10 @@ async def generate_signals_batch(driver, mongo, pc, agent_chain, request: Market
 
 async def generate_signals_batch_claude(driver, mongo, pc, agent_chain, request: MarketRequest) -> dict:
     """Same as generate_signals_batch but signal text is produced with Claude.
-
-    Task 18 (B2.3): CLAUDE_API_KEY guard moved to the router for boundary
-    consistency with Task 14/16/17. The signal_ask / signal_ask_claude pair
-    stays parallel — Groq uses agent_chain; Claude does direct HTTP with
-    per-window budget tracking — divergence too large to collapse cleanly.
+    The `CLAUDE_API_KEY` availability check lives in the router. The
+    Groq/Claude pair stays parallel — Groq uses `agent_chain`; Claude does
+    direct HTTP with per-window budget tracking — divergence too large to
+    collapse cleanly.
     """
     return await _generate_signals_batch_impl(driver, mongo, pc, agent_chain, request, "claude")
 

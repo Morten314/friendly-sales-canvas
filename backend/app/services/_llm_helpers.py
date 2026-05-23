@@ -1,10 +1,4 @@
-"""Cross-domain LLM helpers.
-
-Promoted from app/services/market_research.py in Phase B Task 15 because
-icp and signals were importing these via the underscore-private path —
-a convention violation. New convention: any service helper used by 2+
-services lives here.
-"""
+"""Cross-domain LLM helpers — any service helper used by 2+ services lives here."""
 import os
 import json
 import re

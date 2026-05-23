@@ -1,19 +1,15 @@
 """Characterization tests for auth/org endpoints.
 
-IMPORTANT — module identity:
-  After Phase B Task 5 (centralize MongoClient), the org/connect_org/registration
-  handlers live in `app.routers.org_auth` and import `client` from
-  `app.core.clients`. All Mongo mocking is done via
-  `patch("app.core.clients.client", mongo_instance)`.
-  The /registration handlers also use the module-level `app.core.clients.client`.
-
 Endpoints covered:
-  GET  /org              — user→org lookup (uses clients.client)
-  POST /org              — create org (uses clients.client)
-  POST /connect_org      — link user to org (uses clients.client)
-  POST /registration     — create registration (uses clients.client)
-  GET  /registration     — list registrations (uses clients.client)
+  GET  /org              — user→org lookup
+  POST /org              — create org
+  POST /connect_org      — link user to org
+  POST /registration     — create registration
+  GET  /registration     — list registrations
   POST /api/auth/token   — does not exist; lock the 404/405 behaviour
+
+Mongo is injected via `Depends(get_mongo)`; tests substitute through
+`app.dependency_overrides` (see `_override_mongo` helper below).
 """
 from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
@@ -24,8 +20,7 @@ from tests.identities import TEST_USER_ID, TEST_ORG_ID
 
 @contextmanager
 def _override_mongo(mongo_instance):
-    """Phase F: org_auth router now reads Mongo via Depends(get_mongo).
-    Replaces the legacy `with patch("app.core.clients.client", mongo_instance)`."""
+    """Substitute the Mongo client via `app.dependency_overrides[get_mongo]`."""
     from app.main import app
     from app.core.dependencies import get_mongo
     app.dependency_overrides[get_mongo] = lambda: mongo_instance

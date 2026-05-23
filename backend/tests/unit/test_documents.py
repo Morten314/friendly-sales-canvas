@@ -2,7 +2,7 @@
 """Unit tests for app/services/documents.py.
 
 Covers all 11 public functions, the 3 + 3 typed-exception sites, and the
-BrewraError catch path in process_file_to_embeddings (Phase D Task 15 gap).
+BrewraError catch path in process_file_to_embeddings.
 
 IMPORTANT — actual signatures (verified L49-L881 of documents.py):
   - load_document(file_path)
@@ -217,7 +217,7 @@ def test_update_data_source_raises_on_empty_request(mocker, mock_mongo_client):
 
 
 # ---------------------------------------------------------------------------
-# process_file_to_embeddings — BrewraError catch path (Phase D Task 15 gap)
+# process_file_to_embeddings — BrewraError catch path
 # ---------------------------------------------------------------------------
 
 def test_process_file_to_embeddings_catches_brewra_error(

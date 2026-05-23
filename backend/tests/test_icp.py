@@ -1,8 +1,5 @@
 """Characterization tests for ICP endpoints.
 
-After Phase B Task 5, all Mongo access goes via the singleton client from
-app.core.clients. All per-test Mongo mocks use patch("app.core.clients.client", mc).
-
 Endpoints:
   POST /customer_profile        — create/merge ICPs
   GET  /customer_profile        — list ICPs
@@ -11,6 +8,8 @@ Endpoints:
   POST /customer_profile/from_suggested_icp
   DELETE /icp/recommended/{icp_id}
   POST /icp-research            — 4 component names
+
+Mongo is supplied via the `_override_mongo` helper (`app.dependency_overrides[get_mongo]`).
 """
 import json
 from contextlib import contextmanager
@@ -25,10 +24,7 @@ _SCRUB_WITH_ID = DEFAULT_SCRUB_KEYS | {"id"}
 
 @contextmanager
 def _override_mongo(mongo_instance):
-    """Phase F: customer_profile router reads Mongo via Depends(get_mongo).
-    Replaces the legacy `with patch("app.core.clients.client", mongo_instance)`
-    for tests that depend on the *specific* mock data shape (not just route
-    code path). icp router is not yet converted; use legacy patch for /icp tests."""
+    """Substitute the Mongo client via `app.dependency_overrides[get_mongo]`."""
     from app.main import app
     from app.core.dependencies import get_mongo
     app.dependency_overrides[get_mongo] = lambda: mongo_instance

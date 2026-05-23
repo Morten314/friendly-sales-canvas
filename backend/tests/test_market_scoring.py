@@ -4,9 +4,8 @@ Endpoints:
   POST /leads/market-scores          — trigger scoring (background) or return cached
   GET  /leads/market-scores/status   — status of a scoring run
 
-Both use _get_market_score_collections() → clients.client["Profiler"].
-After Phase B Task 5, all Mongo access goes through the singleton client
-from app.core.clients. Patch "app.core.clients.client" for mocking.
+Both reach into `clients.client["Profiler"]` via `_get_market_score_collections()`;
+tests substitute via the `_override_mongo` helper.
 """
 from contextlib import contextmanager
 from unittest.mock import MagicMock, patch, call
@@ -18,7 +17,7 @@ from tests.identities import TEST_USER_ID, TEST_ORG_ID, TEST_LEAD_ID_1
 
 @contextmanager
 def _override_mongo(mongo_instance):
-    """Phase F: market_scoring router reads Mongo via Depends(get_mongo)."""
+    """Substitute the Mongo client via `app.dependency_overrides[get_mongo]`."""
     from app.main import app
     from app.core.dependencies import get_mongo
     app.dependency_overrides[get_mongo] = lambda: mongo_instance
@@ -101,7 +100,7 @@ def _make_score_mc(score_docs=None, run_docs=None, run_find_one=None):
 
 
 # ---------------------------------------------------------------------------
-# Task 17-1: POST /leads/market-scores with refresh=True → 200, queued run
+# POST /leads/market-scores with refresh=True → 200, queued run
 # ---------------------------------------------------------------------------
 
 def test_trigger_market_scoring_returns_accepted(client, mock_neo4j):
@@ -128,7 +127,7 @@ def test_trigger_market_scoring_returns_accepted(client, mock_neo4j):
 
 
 # ---------------------------------------------------------------------------
-# Task 17-2: GET /leads/market-scores (cached) returns score
+# GET /leads/market-scores (cached) returns score
 # ---------------------------------------------------------------------------
 
 def test_get_market_score_returns_score(client, mock_neo4j):
@@ -161,7 +160,7 @@ def test_get_market_score_returns_score(client, mock_neo4j):
 
 
 # ---------------------------------------------------------------------------
-# Task 17-3: GET /leads/market-scores/status — no run → 404
+# GET /leads/market-scores/status — no run → 404
 # ---------------------------------------------------------------------------
 
 def test_get_market_score_status_404_when_no_run(client):

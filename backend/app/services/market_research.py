@@ -1,8 +1,6 @@
-"""Market research service: 5-component report generation.
-
-Extracted from services.py during phase A (commit 12/16).
-LLM helpers promoted to app/services/_llm_helpers.py in Phase B Task 15.
-run_market_research worker collapsed from router Groq/Claude pair in Phase B Task 16.
+"""Market research service: 5-component report generation. Cross-domain LLM
+helpers live in `app.services._llm_helpers`. `run_market_research` is the
+unified Groq/Claude worker.
 """
 import asyncio
 import json

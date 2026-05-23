@@ -1,16 +1,10 @@
 """FastAPI application factory.
 
-This module owns:
-  - The FastAPI() instance
-  - CORS middleware
-  - include_router() calls for all domain routers (added incrementally
-    as routers are extracted in Tasks 4-15)
-
-Logging is configured in app/core/logging.py (re-exported below for
-backward compat within Phase B).
-
-Domain routers register themselves here. Routes themselves live in
-app/routers/<domain>.py.
+Owns the `FastAPI()` instance, CORS middleware, the `lifespan` context
+manager (which builds the client/LLM bundles on `app.state`), domain
+exception handlers, and `include_router(...)` calls for each domain.
+Routes themselves live in `app/routers/<domain>.py`; logging in
+`app/core/logging.py`.
 """
 from contextlib import asynccontextmanager
 
@@ -30,16 +24,14 @@ from app.core.exceptions import (
     ValidationError,
 )
 from app.core.llm_config import build_llm_config
-from app.core.logging import logger  # noqa: F401 — re-exported for backward compat within Phase B
+from app.core.logging import logger  # noqa: F401
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Construct all external clients/LLMs once and stash on app.state.
-
-    Phase F: this lifespan replaces the legacy `@app.on_event("startup")` hook
-    and the module-import-time `clients.graph.refresh_schema()` call. Idempotent
-    — Mongo `create_index` is a no-op when an equivalent index exists.
+    """Construct external clients/LLMs once and stash them on `app.state`.
+    Refresh the Neo4j schema and ensure Mongo indexes for market scoring.
+    Idempotent — `create_index` is a no-op when an equivalent index exists.
     """
     app.state.clients = build_clients()
     app.state.llm = build_llm_config(app.state.clients)
@@ -60,8 +52,9 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-# NOTE: allow_origins=["*"] with allow_credentials=True is preserved from
-# original behavior. Phase B tightens this.
+# TODO: tighten — `allow_origins=["*"]` with `allow_credentials=True` is
+# the legacy default; the security backlog (spec §2.2) calls for restricting
+# this to known frontend origins.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -71,11 +64,10 @@ app.add_middleware(
 )
 
 
-# Phase D: domain-exception handlers. Map each BrewraError base to its HTTP
-# response. Python's exception MRO makes subclass routing automatic —
-# registering against NotFoundError catches every NotFoundError subclass.
-# Client-error families (4xx) log at debug; operational families
-# (429, 500) log at warning so ops sees them.
+# Domain-exception handlers: each BrewraError base maps to an HTTP response.
+# Python's exception MRO makes subclass routing automatic — registering
+# against `NotFoundError` catches every `NotFoundError` subclass. Client-error
+# families (4xx) log at debug; operational families (429, 500) log at warning.
 
 
 @app.exception_handler(NotFoundError)
@@ -126,8 +118,6 @@ def _handle_service_error(request, exc):
     return JSONResponse(status_code=500, content={"detail": str(exc)})
 
 
-# Router registrations are added incrementally in Tasks 4-15.
-# Each Task N adds one line: app.include_router(<domain>.router)
 from app.routers import pipeline
 
 app.include_router(pipeline.router)
@@ -171,6 +161,3 @@ app.include_router(signals.router)
 from app.routers import market_scoring
 
 app.include_router(market_scoring.router)
-
-# Phase F: `lifespan` (above) owns Neo4j schema refresh and Mongo index creation.
-# TD-003 retired.

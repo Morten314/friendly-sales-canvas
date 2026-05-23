@@ -23,7 +23,7 @@ async def create_or_update_profile(
 
 
 # Response shape varies by profile_type (CompanyProfile, UserProfile, ScoutProfile);
-# annotation deferred — see Phase C test track.
+# annotation deferred.
 @router.get("/profile/{profile_type}")
 async def get_single_profile(
     profile_type: str,

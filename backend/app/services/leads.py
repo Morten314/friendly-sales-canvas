@@ -1,6 +1,5 @@
-"""Leads service: all business logic for lead CRUD, batch upload, and file operations.
-
-Extracted from app/routers/leads.py during phase B modularization.
+"""Leads service: business logic for lead CRUD, batch upload, and file
+operations.
 """
 import json
 from datetime import datetime, timezone
@@ -22,11 +21,9 @@ def get_leads_for_org(
     limit: Optional[int] = None,
     order_by_recent: bool = False,
 ) -> List[Dict[str, Any]]:
-    """Fetch leads from Neo4j for a given org.
-
-    Raises on storage or query failures. Callers that want silent failure
-    (e.g. background tasks) wrap with ``try/except BrewraError`` or
-    ``except Exception``; see Task 15.
+    """Fetch leads from Neo4j for a given org. Raises on storage or query
+    failures; callers wanting silent failure wrap with
+    ``except BrewraError`` (or ``except Exception``).
     """
     clauses = ["MATCH (l:Lead)", "WHERE l.org_id = $org_id"]
     params: Dict[str, Any] = {"org_id": org_id}

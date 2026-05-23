@@ -7,10 +7,7 @@ from app.models.pipeline import SalesPipelineResponse, TimeframeResponse, StageS
 
 
 def compute_sales_pipeline(driver, user_id: str, timeframe: int) -> SalesPipelineResponse:
-    """Aggregate lead stage counts from Neo4j for the given user/timeframe.
-
-    Moved from app/routers/pipeline.py in Phase B Task 6.
-    """
+    """Aggregate lead stage counts from Neo4j for the given user/timeframe."""
     end_date = datetime.now(timezone.utc)
     start_date = end_date - timedelta(days=timeframe)
 
@@ -65,10 +62,7 @@ def compute_sales_pipeline(driver, user_id: str, timeframe: int) -> SalesPipelin
 
 
 def probe_llm(llm2) -> Dict[str, str]:
-    """LLM-availability smoke probe. Returns a small dict.
-
-    Moved from app/routers/pipeline.py in Phase B Task 6.
-    """
+    """LLM-availability smoke probe. Returns a small dict."""
     try:
         from langchain_core.messages import HumanMessage
 

@@ -1,17 +1,14 @@
 """Pytest fixtures for service-function unit tests.
 
-These tests bypass FastAPI / TestClient entirely. They call service functions
-directly and mock at the same source-level layer the integration tests do:
-`app.core.clients.driver`, `app.core.clients.client`, and per-module LLM
-helper imports.
+Unit tests bypass FastAPI / TestClient entirely. They call service functions
+directly with positional client/LLM mocks (no dependency injection).
 
 Note on `app.main` import:
-The parent `tests/conftest.py` imports `app.main` eagerly (so integration
-tests' router fixtures are wired before any mocker.patch lands). pytest
-discovers parent conftest files first, so unit tests inherit that import.
-This file itself does NOT import `app.main` and unit tests should not
-request router-dependent fixtures — but the import happens at collection
-time regardless of which subdirectory the test lives in.
+The parent `tests/conftest.py` imports `app.main` eagerly so integration
+tests' router fixtures are wired before any `mocker.patch` lands. pytest
+discovers parent conftest files first, so unit tests inherit that import —
+they should not request router-dependent fixtures, but the import happens
+at collection time regardless of which subdirectory the test lives in.
 """
 import os
 import sys
@@ -36,12 +33,8 @@ os.environ.setdefault("BREWRA_SKIP_DB_INIT", "1")
 @pytest.fixture
 def mock_session():
     """Returns a Neo4j session mock; `session._driver` exposes the wrapping
-    driver mock so converted services (which take `driver` as a positional
-    arg post-Phase F) can be called via `service_fn(mock_session._driver, ...)`.
-
-    Phase F (commit 17/17): no source-patch — services no longer read
-    `app.core.clients.driver` directly. The session mock is configured to
-    return on `driver.session().__enter__()`.
+    driver mock so services can be called via `service_fn(mock_session._driver, ...)`.
+    The session mock is configured to return on `driver.session().__enter__()`.
     """
     session = MagicMock()
     driver = MagicMock()
@@ -53,10 +46,7 @@ def mock_session():
 
 @pytest.fixture
 def mock_mongo_client():
-    """Lightweight MongoDB client mock. Pass positionally to converted
-    services: `service_fn(mock_mongo_client, ...)`.
-
-    Phase F (commit 17/17): no source-patch — services no longer read
-    `app.core.clients.client` directly.
+    """Lightweight MongoDB client mock. Pass positionally to services:
+    `service_fn(mock_mongo_client, ...)`.
     """
     return MagicMock()

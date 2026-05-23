@@ -1,8 +1,8 @@
 """Shared pytest fixtures for backend characterization tests.
 
-Phase F (commit 17/17): all external deps (Neo4j, Mongo, Pinecone, S3, LLM
-chains) are injected via FastAPI `Depends()` providers. The fixtures below
-register `app.dependency_overrides` entries — no more source-patches.
+External deps (Neo4j, Mongo, Pinecone, S3, LLM chains) are injected via
+FastAPI `Depends()` providers; fixtures register `app.dependency_overrides`
+entries so each test can substitute a mock.
 """
 import sys
 import os

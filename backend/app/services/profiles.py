@@ -72,8 +72,8 @@ def upsert_profile(driver, profile_type: str, payload: dict) -> dict:
         elif profile_type == "user":
             match_field = "name"
             match_value = payload.get("name") or payload.get("user_id")
-            # Phase D security pass: this query interpolates `profile_type` into Cypher.
-            # Move was verbatim during Phase B; parameterization comes later.
+            # TODO: this query interpolates `profile_type` (the label) into
+            # Cypher; parameterize once the security backlog (spec §2.2) lands.
             session.run(
                 f"MATCH (p:{neo4j_label} {{user_id: $user_id}}) DELETE p",
                 user_id=user_id
@@ -81,8 +81,8 @@ def upsert_profile(driver, profile_type: str, payload: dict) -> dict:
         elif profile_type == "agent_name":
             match_field = "agentName"
             match_value = payload.get("agentName") or "Scout"
-            # Phase D security pass: this query interpolates `profile_type` into Cypher.
-            # Move was verbatim during Phase B; parameterization comes later.
+            # TODO: this query interpolates `profile_type` (the label) into
+            # Cypher; parameterize once the security backlog (spec §2.2) lands.
             session.run(
                 f"MATCH (p:{neo4j_label} {{user_id: $user_id}}) DELETE p",
                 user_id=user_id
@@ -91,8 +91,8 @@ def upsert_profile(driver, profile_type: str, payload: dict) -> dict:
             # For any other profile_type, use user_id as match field
             match_field = "user_id"
             match_value = user_id
-            # Phase D security pass: this query interpolates `profile_type` into Cypher.
-            # Move was verbatim during Phase B; parameterization comes later.
+            # TODO: this query interpolates `profile_type` (the label) into
+            # Cypher; parameterize once the security backlog (spec §2.2) lands.
             session.run(
                 f"MATCH (p:{neo4j_label} {{user_id: $user_id}}) DELETE p",
                 user_id=user_id
@@ -118,8 +118,8 @@ def get_profile(driver, mongo, profile_type: str, user_id: Optional[str], org_id
             if not org_id:
                 raise ProfileValidationError("org_id is required for company profiles")
             neo4j_label = "CompanyProfile"
-            # Phase D security pass: this query interpolates `profile_type` into Cypher.
-            # Move was verbatim during Phase B; parameterization comes later.
+            # TODO: this query interpolates `profile_type` (the label) into
+            # Cypher; parameterize once the security backlog (spec §2.2) lands.
             query_string = f"MATCH (p:{neo4j_label} {{org_id: $org_id}}) RETURN p LIMIT 1"
             result = session.run(query_string, org_id=org_id)
         else:
@@ -127,8 +127,8 @@ def get_profile(driver, mongo, profile_type: str, user_id: Optional[str], org_id
             if not user_id:
                 raise ProfileValidationError("user_id is required for non-company profiles")
             # Query by profile_type and user_id (multitenancy)
-            # Phase D security pass: this query interpolates `profile_type` into Cypher.
-            # Move was verbatim during Phase B; parameterization comes later.
+            # TODO: this query interpolates `profile_type` (the label) into
+            # Cypher; parameterize once the security backlog (spec §2.2) lands.
             query_string = f"MATCH (p:{profile_type} {{user_id: $user_id}}) RETURN p LIMIT 1"
             result = session.run(query_string, user_id=user_id)
 

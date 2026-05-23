@@ -5,15 +5,12 @@ Includes:
   - icp_research_1..4: 4-component ICP-research breakdown
   - _icp_research_agent_output: prompt-dispatch helper (default vs claude)
   - _ensure_icp_id_registry_indexes / _reserve_unique_icp_id / _release_icp_id:
-    Mongo-backed ICP-id reservation (moved here from api.py in commit 13/16)
+    Mongo-backed ICP-id reservation
   - ICP_FUNCTIONS, ICP_FUNCTIONS_CLAUDE dispatch dicts
   - list_icps: router-facing wrapper for GET /icp
   - _run_icp_research_impl: shared worker for POST /icp-research[_claude]
   - run_icp_research: router-facing wrapper for POST /icp-research and /icp-research_claude
   - delete_recommended_icp: router-facing wrapper for DELETE /icp/recommended/{icp_id}
-
-Extracted from services.py + api.py during phase A (commit 13/16).
-Router-facing wrappers added during phase B (commit 11/25).
 """
 import asyncio
 import json
@@ -669,7 +666,7 @@ ICP_FUNCTIONS_CLAUDE = {
 
 
 # ---------------------------------------------------------------------------
-# Router-facing service functions (added phase B, commit 11/25)
+# Router-facing service functions
 # ---------------------------------------------------------------------------
 
 def list_icps(driver, mongo, agent_chain, user_id: str, refresh: bool = False) -> Dict[str, Any]:
@@ -1035,10 +1032,8 @@ async def _run_icp_research_impl(driver, mongo, pc, agent_chain, request: Any, l
 
 async def run_icp_research(driver, mongo, pc, agent_chain, request: Any, llm_backend: str = "groq") -> Dict[str, Any]:
     """Unified worker for POST /icp-research and POST /icp-research_claude.
-
-    Originally collapsed in Phase B Task 11 via the shared `_run_icp_research_impl`
-    helper; Task 17 (B2.2) closes the loop by moving the CLAUDE_API_KEY guard out
-    of the service into the router (consistent with Task 14/16 boundary).
+    Dispatches to `_run_icp_research_impl` with the chosen backend. The
+    `CLAUDE_API_KEY` availability check lives in the router.
 
     Parameters
     ----------
@@ -1096,7 +1091,7 @@ def delete_recommended_icp(mongo, icp_id: str, user_id: str) -> Dict[str, Any]:
     }
 
 
-# --- ICP-id registry helpers (moved from api.py in commit 13/16) ---
+# --- ICP-id registry helpers ---
 def _ensure_icp_id_registry_indexes(db) -> None:
     registry = db["ICP_ID_REGISTRY"]
     registry.create_index("id", unique=True)

@@ -49,8 +49,7 @@ async def upload_prospect_list(
     return documents_service.upload_prospect_list_file(driver, llm, file_path)
 
 
-# Response shape varies by code path (plain dict vs JSONResponse); annotation deferred
-# — see Phase C test track.
+# Response shape varies by code path (plain dict vs JSONResponse); annotation deferred.
 @router.post("/upload-document")
 async def upload_document_route(
     background_tasks: BackgroundTasks,

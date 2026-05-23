@@ -1,7 +1,5 @@
-"""Neo4j query helpers — moved here from app.core.clients in Phase F commit 17.
-
-These are query utilities, not clients. `query()` takes `driver` explicitly
-because the old module-level closure no longer exists post-Phase-F.
+"""Neo4j query utilities. `query()` takes `driver` explicitly because
+callers pass the injected driver in (no module-level closure).
 """
 import json
 from typing import Any, Optional

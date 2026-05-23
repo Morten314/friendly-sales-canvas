@@ -2,8 +2,8 @@
 """Unit tests for app/services/market_scoring.py.
 
 Covers all router-facing service functions, the BrewraError catch path in
-_run_market_scoring_for_org (Phase D Task 15 gap), and the C2 degrade-on-error
-behavior of get_market_scores_status.
+`_run_market_scoring_for_org`, and the degrade-on-error behavior of
+`get_market_scores_status`.
 """
 from unittest.mock import MagicMock
 
@@ -274,7 +274,7 @@ def test_score_single_lead_against_market_returns_score(mocker):
 
 
 # ---------------------------------------------------------------------------
-# _run_market_scoring_for_org — BrewraError catch (Phase D Task 15 gap)
+# _run_market_scoring_for_org — BrewraError catch
 # ---------------------------------------------------------------------------
 
 def test_run_market_scoring_for_org_marks_failed_on_brewra_error(

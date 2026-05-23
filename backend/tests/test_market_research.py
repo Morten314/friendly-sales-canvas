@@ -72,7 +72,7 @@ def _base_payload(component_name: str, refresh: bool = True) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Task 14-1: POST /market-research — 5 component names each return 200
+# POST /market-research — 5 component names each return 200
 # ---------------------------------------------------------------------------
 
 @pytest.mark.parametrize("component_name", VALID_COMPONENTS)
@@ -81,11 +81,10 @@ def test_post_market_research_all_components(client, mock_neo4j, mock_mongo, com
     # Neo4j returns a CompanyProfile record
     mock_neo4j["session"].run.return_value.single.return_value = _make_neo4j_record()
 
-    # COMPONENT_FUNCTIONS lives in app.services.market_research (post-commit 12/16).
-    # The router accesses it via `market_research_service.COMPONENT_FUNCTIONS`, so
-    # patching the source module is the canonical target.
-    # _fetch_pinecone_supporting_context is now called inside the service (post-commit 16/25);
-    # patch the binding in the service module where the call now lives.
+    # COMPONENT_FUNCTIONS lives in app.services.market_research; the router
+    # accesses it via `market_research_service.COMPONENT_FUNCTIONS`, so patch
+    # the source module. `_fetch_pinecone_supporting_context` is called inside
+    # the service — patch the binding there too.
     with patch("app.services.market_research.COMPONENT_FUNCTIONS", {component_name: lambda agent_chain, _: _captured_result(component_name)}), \
          patch("app.services.market_research._fetch_pinecone_supporting_context", return_value=[]):
         response = client.post("/market-research", json=_base_payload(component_name))
@@ -97,7 +96,7 @@ def test_post_market_research_all_components(client, mock_neo4j, mock_mongo, com
 
 
 # ---------------------------------------------------------------------------
-# Task 14-2: cached path — refresh=False and Mongo has cached doc → LLM not called
+# cached path — refresh=False and Mongo has cached doc → LLM not called
 # ---------------------------------------------------------------------------
 
 def test_post_market_research_cached_path(client, mock_neo4j, mock_mongo):
@@ -134,7 +133,7 @@ def test_post_market_research_cached_path(client, mock_neo4j, mock_mongo):
 
 
 # ---------------------------------------------------------------------------
-# Task 14-3: invalid component → 400
+# invalid component → 400
 # ---------------------------------------------------------------------------
 
 def test_post_market_research_invalid_component(client):

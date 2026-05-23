@@ -1,30 +1,18 @@
 """Domain exception hierarchy.
 
 Service-layer functions raise these. A FastAPI exception handler in
-app/main.py maps each base class to its HTTP response. Routers MAY still
-raise HTTPException directly for transport-only concerns; the rule is
-crisp: services raise BrewraError subclasses, routers may raise either.
+`app/main.py` maps each base class to its HTTP response. Routers MAY still
+raise `HTTPException` directly for transport-only concerns; the rule is
+crisp: services raise `BrewraError` subclasses, routers may raise either.
 
-Phase D leaf-class inventory (discovery 2026-05-22):
-  404 NotFoundError leaves (14):
-    LeadNotFoundError, CompanyProfileNotFoundError, CustomerProfileNotFoundError,
-    SuggestedICPNotFoundError, CustomerProfileICPNotFoundError, DocumentNotFoundError,
-    ICPConfigNotFoundError, RecommendedICPNotFoundError, MarketScoreNotFoundError,
-    MarketScoringRunNotFoundError, SignalNotFoundError, UsersDocumentNotFoundError,
-    OrgNotFoundError, ProfileNotFoundError
-  400 ValidationError leaves (5):
-    ProfileValidationError, LeadCSVValidationError, DocumentValidationError,
-    UnsupportedComponentError, SignalActionValidationError
-  409 ConflictError leaves (1):
-    ICPAlreadyExistsError
-  Retained (reparented under BrewraError):
-    BudgetExhaustedError → 429, ICPIdRegistryError → 500
+Base classes route to status codes:
+  - `NotFoundError` → 404, `ValidationError` → 400, `ConflictError` → 409
+  - `AuthenticationError` → 401, `AuthorizationError` → 403
+  - `BudgetExhaustedError` → 429
+  - `ICPIdRegistryError`, `ServiceError` → 500
 
-Standalone 500 raises at signals.py (signal-delete race, missing
-ANTHROPIC_API_KEY, Claude API call failure) use the generic
-ServiceError(BrewraError) class so the response body carries the
-detail message (FastAPI's default 500 handler would replace it with
-"Internal Server Error").
+The generic `ServiceError` exists so 500 responses can carry a useful detail
+message instead of FastAPI's default "Internal Server Error".
 """
 
 

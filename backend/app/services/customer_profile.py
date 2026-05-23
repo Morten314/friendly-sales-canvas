@@ -1,4 +1,4 @@
-"""Customer profile service — CRUD logic extracted from router (phase B)."""
+"""Customer profile service — CRUD logic for company customer profiles."""
 import json
 from datetime import datetime, timezone
 

@@ -1,17 +1,13 @@
 """Document loading, prospect-list processing, and route-logic service.
 
-Extracted from services.py during phase A modularization. The helper functions
-(`load_document`, `grapher`, `process_prospect_list`) are the reusable,
-non-route pieces of the documents domain.
-
-`score_prospect` (LLM-bound scoring helper) lives in app.services.graph_chat
-(extracted in commit 10/16). It is imported lazily inside
-`process_prospect_list` to avoid a load-time dependency on graph_chat.
-
-Route-logic functions (`upload_file_text`, `upload_prospect_list_file`,
+Reusable helpers (`load_document`, `grapher`, `process_prospect_list`) plus
+route-logic functions (`upload_file_text`, `upload_prospect_list_file`,
 `process_file_to_embeddings`, `upload_document_file`, `get_document_status`,
-`list_user_documents`, `delete_data_source`, `update_data_source`) were
-extracted from the documents router in commit 13/25 (phase B).
+`list_user_documents`, `delete_data_source`, `update_data_source`).
+
+`score_prospect` (LLM-bound scoring helper) lives in `app.services.graph_chat`
+and is imported lazily inside `process_prospect_list` to break a load-time
+cycle.
 """
 import json
 import os
@@ -142,7 +138,7 @@ def process_prospect_list(driver, llm, file_path):
 
 
 # ---------------------------------------------------------------------------
-# Route-logic functions (extracted from router in commit 13/25)
+# Route-logic functions
 # ---------------------------------------------------------------------------
 
 def upload_file_text(graph, llm_transformer, file_path: str, filename: str) -> dict:

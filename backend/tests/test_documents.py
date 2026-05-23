@@ -5,9 +5,8 @@ Endpoints:
   GET  /document-status/{file_key:path}  — get processing status
   GET  /user-documents      — list all docs/URLs for an org
 
-S3 is patched by the `mock_s3` fixture (app.core.clients.s3_client).
-After Phase B Task 5, MongoDB is accessed via the singleton client imported
-from app.core.clients. Patch "app.core.clients.client" for Mongo mocking.
+S3 is supplied by the `mock_s3` fixture; Mongo via the `_override_mongo`
+helper (both flow through `app.dependency_overrides`).
 """
 import io
 from contextlib import contextmanager
@@ -22,7 +21,7 @@ from tests.identities import (
 
 @contextmanager
 def _override_mongo(mongo_instance):
-    """Phase F: documents router reads Mongo via Depends(get_mongo)."""
+    """Substitute the Mongo client via `app.dependency_overrides[get_mongo]`."""
     from app.main import app
     from app.core.dependencies import get_mongo
     app.dependency_overrides[get_mongo] = lambda: mongo_instance
@@ -59,7 +58,7 @@ def _pdf_upload():
 
 
 # ---------------------------------------------------------------------------
-# Task 18-1: POST /upload-document stores in S3
+# POST /upload-document stores in S3
 # ---------------------------------------------------------------------------
 
 def test_post_document_upload_stores_in_s3(client, mock_s3):
@@ -82,7 +81,7 @@ def test_post_document_upload_stores_in_s3(client, mock_s3):
 
 
 # ---------------------------------------------------------------------------
-# Task 18-2: POST /upload-document returns file_id
+# POST /upload-document returns file_id
 # ---------------------------------------------------------------------------
 
 def test_post_document_upload_returns_file_id(client, mock_s3):
@@ -105,7 +104,7 @@ def test_post_document_upload_returns_file_id(client, mock_s3):
 
 
 # ---------------------------------------------------------------------------
-# Task 18-3: GET /user-documents returns uploaded docs
+# GET /user-documents returns uploaded docs
 # ---------------------------------------------------------------------------
 
 def test_get_document_list_returns_uploaded_docs(client):
@@ -133,7 +132,7 @@ def test_get_document_list_returns_uploaded_docs(client):
 
 
 # ---------------------------------------------------------------------------
-# Task 18-4: GET /document-status/{file_key} returns status
+# GET /document-status/{file_key} returns status
 # ---------------------------------------------------------------------------
 
 def test_get_document_status_returns_status(client):
@@ -158,7 +157,7 @@ def test_get_document_status_returns_status(client):
 
 
 # ---------------------------------------------------------------------------
-# Task 18-5: POST /upload-document with no file and no url → 400
+# POST /upload-document with no file and no url → 400
 # ---------------------------------------------------------------------------
 
 def test_post_document_upload_no_file_or_url(client, mock_s3):
@@ -178,8 +177,6 @@ def test_post_document_upload_no_file_or_url(client, mock_s3):
 def test_get_document_status_unknown_file_key(client):
     """GET /document-status/<key> for an unknown key → 404.
 
-    After Phase B Task 5, the endpoint uses the singleton client from
-    app.core.clients. Patch it to return an empty file_status collection.
     Locks the 404-on-missing behavior — a refactor that returns 200 with
     `status: not_found` would break FE polling logic that distinguishes
     "still processing" (200) from "never existed" (404).

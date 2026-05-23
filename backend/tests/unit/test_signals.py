@@ -1,8 +1,8 @@
 # backend/tests/unit/test_signals.py
 """Unit tests for app/services/signals.py.
 
-Covers all 8 public functions and the 4 typed-exception leaves plus the
-3 ServiceError sites introduced in the Phase D C1 fix.
+Covers all 8 public functions, the 4 typed-exception leaves, and the
+3 `ServiceError` raise sites in `signal_ask` / `signal_ask_claude`.
 """
 import asyncio
 import json

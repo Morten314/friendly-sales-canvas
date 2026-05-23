@@ -8,10 +8,8 @@ Endpoints:
   POST /leads/batch-upload      — CSV batch upload
   GET  /leads/by-file           — leads filtered by file_id
 
-GET /leads and GET /leads/by-file use the module-level driver
-(app.core.clients.driver). POST/PUT/DELETE /leads use the same driver.
-POST /leads/batch-upload accesses Mongo via app.core.clients.client — patch
-that symbol to inject the mock.
+Neo4j is supplied via the `mock_neo4j` fixture; Mongo (for batch-upload)
+via the `_override_mongo` helper.
 """
 import io
 from contextlib import contextmanager
@@ -26,7 +24,7 @@ from tests.identities import (
 
 @contextmanager
 def _override_mongo(mongo_instance):
-    """Phase F: leads router reads Mongo via Depends(get_mongo)."""
+    """Substitute the Mongo client via `app.dependency_overrides[get_mongo]`."""
     from app.main import app
     from app.core.dependencies import get_mongo
     app.dependency_overrides[get_mongo] = lambda: mongo_instance
@@ -88,7 +86,7 @@ def _make_profiler_mc():
 
 
 # ---------------------------------------------------------------------------
-# Task 16-1: GET /leads returns list
+# GET /leads returns list
 # ---------------------------------------------------------------------------
 
 def test_get_leads_returns_list(client, mock_neo4j):
@@ -106,7 +104,7 @@ def test_get_leads_returns_list(client, mock_neo4j):
 
 
 # ---------------------------------------------------------------------------
-# Task 16-2: GET /leads empty when none
+# GET /leads empty when none
 # ---------------------------------------------------------------------------
 
 def test_get_leads_empty_when_none(client, mock_neo4j):
@@ -120,7 +118,7 @@ def test_get_leads_empty_when_none(client, mock_neo4j):
 
 
 # ---------------------------------------------------------------------------
-# Task 16-3: POST /leads creates in Neo4j
+# POST /leads creates in Neo4j
 # ---------------------------------------------------------------------------
 
 def test_post_lead_creates_in_neo4j(client, mock_neo4j):
@@ -141,7 +139,7 @@ def test_post_lead_creates_in_neo4j(client, mock_neo4j):
 
 
 # ---------------------------------------------------------------------------
-# Task 16-4: POST /leads missing required fields → 422
+# POST /leads missing required fields → 422
 # ---------------------------------------------------------------------------
 
 def test_post_lead_missing_required_fields(client):
@@ -153,7 +151,7 @@ def test_post_lead_missing_required_fields(client):
 
 
 # ---------------------------------------------------------------------------
-# Task 16-5: DELETE /leads/{lead_id} removes from Neo4j
+# DELETE /leads/{lead_id} removes from Neo4j
 # ---------------------------------------------------------------------------
 
 def test_delete_lead_removes_from_neo4j(client, mock_neo4j):
@@ -175,7 +173,7 @@ def test_delete_lead_removes_from_neo4j(client, mock_neo4j):
 
 
 # ---------------------------------------------------------------------------
-# Task 16-6: DELETE /leads/{lead_id} 404 when not found
+# DELETE /leads/{lead_id} 404 when not found
 # ---------------------------------------------------------------------------
 
 def test_delete_lead_404_when_not_found(client, mock_neo4j):
@@ -190,7 +188,7 @@ def test_delete_lead_404_when_not_found(client, mock_neo4j):
 
 
 # ---------------------------------------------------------------------------
-# Task 16-7: PUT /leads/{lead_id} updates Neo4j
+# PUT /leads/{lead_id} updates Neo4j
 # ---------------------------------------------------------------------------
 
 def test_put_lead_updates_neo4j(client, mock_neo4j):
@@ -214,7 +212,7 @@ def test_put_lead_updates_neo4j(client, mock_neo4j):
 
 
 # ---------------------------------------------------------------------------
-# Task 16-8: POST /leads/batch-upload parses CSV file
+# POST /leads/batch-upload parses CSV file
 # ---------------------------------------------------------------------------
 
 def test_post_upload_csv_parses_file(client, mock_neo4j):
@@ -238,7 +236,7 @@ def test_post_upload_csv_parses_file(client, mock_neo4j):
 
 
 # ---------------------------------------------------------------------------
-# Task 16-9: POST /leads/batch-upload invalid format → 400
+# POST /leads/batch-upload invalid format → 400
 # ---------------------------------------------------------------------------
 
 def test_post_upload_csv_invalid_format(client):
@@ -253,7 +251,7 @@ def test_post_upload_csv_invalid_format(client):
 
 
 # ---------------------------------------------------------------------------
-# Task 16-10: GET /leads/by-file returns filtered list
+# GET /leads/by-file returns filtered list
 # ---------------------------------------------------------------------------
 
 def test_get_leads_by_file_returns_filtered_list(client, mock_neo4j):
@@ -271,7 +269,7 @@ def test_get_leads_by_file_returns_filtered_list(client, mock_neo4j):
 
 
 # ---------------------------------------------------------------------------
-# Task 16-11: GET /leads/by-file empty when no match
+# GET /leads/by-file empty when no match
 # ---------------------------------------------------------------------------
 
 def test_get_leads_by_file_empty_when_no_match(client, mock_neo4j):
@@ -285,7 +283,7 @@ def test_get_leads_by_file_empty_when_no_match(client, mock_neo4j):
 
 
 # ---------------------------------------------------------------------------
-# Task 16-12: GET /leads requires org_id → 422
+# GET /leads requires org_id → 422
 # ---------------------------------------------------------------------------
 
 def test_get_leads_requires_org_id(client):

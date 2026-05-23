@@ -1,10 +1,8 @@
-"""External service clients: Neo4j driver, Mongo client(s), S3 client, Pinecone client.
-
-Phase F (commit 17/17): module-level singletons removed. Construction is now
-owned by `app.main.lifespan` via `build_clients()`. Routers/services receive
-the bundle via FastAPI `Depends()` providers in `app.core.dependencies`.
-The 4 Neo4j query helpers (`query`, `results_to_string`, `escape_property_name`,
-`upsert_node`) moved to `app.services._neo4j_helpers`.
+"""External service clients (Neo4j driver, Mongo, S3, Pinecone).
+`build_clients()` constructs a `ClientBundle` invoked once per process by
+`app.main.lifespan`; services and routers receive bundle fields via FastAPI
+dependency injection. Cypher query helpers live in
+`app.services._neo4j_helpers`.
 """
 import logging
 import os
