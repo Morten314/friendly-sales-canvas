@@ -3,7 +3,6 @@ import json
 from datetime import datetime, timezone
 from typing import Optional
 
-from app.core import clients
 from app.core.clients import upsert_node
 from app.core.exceptions import (
     CompanyProfileNotFoundError,
@@ -13,7 +12,7 @@ from app.core.exceptions import (
 from app.models.profiles import EditRequest
 
 
-def upsert_profile(profile_type: str, payload: dict) -> dict:
+def upsert_profile(driver, profile_type: str, payload: dict) -> dict:
     """Create or update a profile node in Neo4j."""
     # Check if profile_type is provided in payload (optional, can use path param)
     if "profile_type" in payload:
@@ -54,7 +53,7 @@ def upsert_profile(profile_type: str, payload: dict) -> dict:
             # Convert everything else to string
             data[key] = str(value)
 
-    with clients.driver.session() as session:
+    with driver.session() as session:
         # Map profile_type to Neo4j label (handle case differences)
         neo4j_label = profile_type
         if profile_type == "company":
@@ -111,9 +110,9 @@ def upsert_profile(profile_type: str, payload: dict) -> dict:
     return {"message": f"{profile_type} profile processed successfully"}
 
 
-def get_profile(profile_type: str, user_id: Optional[str], org_id: Optional[str]) -> dict:
+def get_profile(driver, mongo, profile_type: str, user_id: Optional[str], org_id: Optional[str]) -> dict:
     """Fetch a profile node from Neo4j (and MongoDB for company profiles)."""
-    with clients.driver.session() as session:
+    with driver.session() as session:
         # For company profiles, filter by org_id (required for multi-org support)
         if profile_type == "company":
             if not org_id:
@@ -158,7 +157,7 @@ def get_profile(profile_type: str, user_id: Optional[str], org_id: Optional[str]
         # For company profiles, also fetch customer profiles from MongoDB
         if profile_type == "company":
             try:
-                db = clients.client["Profiler"]
+                db = mongo["Profiler"]
                 collection = db["Company_Profile"]
 
                 # Find the company profile document with customer profiles (filter by org_id)
@@ -182,9 +181,9 @@ def get_profile(profile_type: str, user_id: Optional[str], org_id: Optional[str]
         return profile_data
 
 
-def cleanup_company_profiles(org_id: Optional[str] = None) -> dict:
+def cleanup_company_profiles(driver, org_id: Optional[str] = None) -> dict:
     """Ensure only one CompanyProfile exists in Neo4j. Keeps the first (oldest by node ID)."""
-    with clients.driver.session() as session:
+    with driver.session() as session:
         # Get all company profiles
         result = session.run("MATCH (c:CompanyProfile) RETURN c, id(c) as node_id ORDER BY id(c)")
         records = list(result)
@@ -212,9 +211,9 @@ def cleanup_company_profiles(org_id: Optional[str] = None) -> dict:
         }
 
 
-def edit_profile_field(request: EditRequest) -> dict:
+def edit_profile_field(mongo, request: EditRequest) -> dict:
     """Generic edit dispatcher: routes by edit_type to appropriate handler."""
-    db = clients.client["Scout_Agent"]
+    db = mongo["Scout_Agent"]
     collection = db["Market_Intelligence"]
 
     if request.edit_type == "modification":

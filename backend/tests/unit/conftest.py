@@ -38,12 +38,19 @@ def mock_session(mocker):
     """Returns the Neo4j *session* (not the driver) so tests can configure
     `session.run.return_value.single.return_value = ...` directly. The driver
     itself is patched onto `app.core.clients.driver` as a side effect.
+
+    Phase F (DI): `session._driver` exposes the underlying driver mock so
+    converted services (whose signature now takes `driver` as a positional
+    arg) can be called with `service_fn(mock_session._driver, ...)`. The
+    `clients.driver` source-patch is irrelevant for converted services but
+    kept here for the unconverted ones that still read `clients.driver`.
     """
     session = MagicMock()
     driver = MagicMock()
     driver.session.return_value.__enter__ = MagicMock(return_value=session)
     driver.session.return_value.__exit__ = MagicMock(return_value=False)
     mocker.patch("app.core.clients.driver", driver)
+    session._driver = driver
     return session
 
 

@@ -189,11 +189,16 @@ def test_get_profile_company_returns_profile_with_icps(client, mock_neo4j, snaps
     mock_mongo_client = MagicMock()
     mock_mongo_client.__getitem__.return_value.__getitem__.return_value.find_one.return_value = mongo_doc
 
-    with patch("app.core.clients.client", mock_mongo_client):
+    from app.main import app
+    from app.core.dependencies import get_mongo
+    app.dependency_overrides[get_mongo] = lambda: mock_mongo_client
+    try:
         response = client.get(
             "/profile/company",
             params={"org_id": TEST_ORG_ID},
         )
+    finally:
+        app.dependency_overrides.pop(get_mongo, None)
 
     assert response.status_code == 200
     data = response.json()

@@ -71,74 +71,132 @@ for _mod in _HEAVY_MODULES:
 from app.main import app as _app  # noqa: F401, E402
 
 
+def _install_override(app, provider, mock):
+    """Install an override AND return a cleanup callable. Used inside
+    fixture bodies so the integration `client` fixture can register
+    overrides for converted routes (which read from `app.state.clients.*`
+    via `Depends()`) — alongside the legacy source-patches that still
+    cover unconverted routes."""
+    app.dependency_overrides[provider] = lambda: mock
+    return lambda: app.dependency_overrides.pop(provider, None)
+
+
 @pytest.fixture
 def mock_neo4j(mocker):
-    """Mock Neo4j driver — single source-patch at app.core.clients.driver."""
+    """Mock Neo4j driver — source-patch + dependency_override.
+
+    Phase F: also registers `app.dependency_overrides[get_neo4j_driver]`
+    so converted routes (which read `request.app.state.clients.driver`
+    via `Depends(get_neo4j_driver)`) get the same mock as legacy routes
+    that still read `clients.driver` directly.
+    """
+    from app.main import app
+    from app.core.dependencies import get_neo4j_driver
+
     mock_driver = MagicMock()
     mock_session = MagicMock()
     mock_driver.session.return_value.__enter__.return_value = mock_session
     mock_driver.session.return_value.__exit__.return_value = False
     mocker.patch("app.core.clients.driver", mock_driver)
-    return {"driver": mock_driver, "session": mock_session}
+    cleanup = _install_override(app, get_neo4j_driver, mock_driver)
+    yield {"driver": mock_driver, "session": mock_session}
+    cleanup()
 
 
 @pytest.fixture
 def mock_mongo(mocker):
-    """Mock MongoDB client. Source-patches `app.core.clients.client` so
-    all router and service code that imports `client` from `app.core.clients`
-    uses the mock.
+    """Mock MongoDB client — source-patch + dependency_override.
 
     Phase B Task 5: per-router MongoClient patches removed. All 26 inline
     MongoClient constructions have been replaced with imports from
     app.core.clients. A single patch of `app.core.clients.client` is
     sufficient — the Profiler databases live on the same cluster.
+
+    Phase F: also overrides `get_mongo` for converted routes.
     """
+    from app.main import app
+    from app.core.dependencies import get_mongo
+
     mongo = MagicMock()
     mocker.patch("app.core.clients.client", mongo)
-    return mongo
+    cleanup = _install_override(app, get_mongo, mongo)
+    yield mongo
+    cleanup()
 
 
 @pytest.fixture
 def mock_llm_chain(mocker):
+    from app.main import app
+    from app.core.dependencies import get_agent_chain
+
     mock_chain = MagicMock()
     mocker.patch("app.core.llm_config.agent_chain", mock_chain)
-    return mock_chain
+    cleanup = _install_override(app, get_agent_chain, mock_chain)
+    yield mock_chain
+    cleanup()
 
 
 @pytest.fixture
 def mock_llm_config(mocker):
-    """Source-patch all llm_config globals + the shared `graph` Neo4jGraph.
+    """Source-patch all llm_config globals + dependency_override for
+    converted routes.
 
-    Note: after Task 2, llm_config no longer holds its own `graph` attribute —
-    it accesses `clients.graph` directly. So `graph` is only patched on
-    `app.core.clients`. The other names (chain, chain2, llm, llm2,
-    llm_transformer) remain module-level attrs of app.core.llm_config.
+    Note: after Phase B Task 2, llm_config no longer holds its own `graph`
+    attribute — it accesses `clients.graph` directly. So `graph` is only
+    patched on `app.core.clients`.
     """
+    from app.main import app
+    from app.core.dependencies import (
+        get_chain, get_chain2, get_llm, get_llm2, get_llm_transformer,
+        get_neo4j_graph,
+    )
+
+    provider_by_name = {
+        "chain": get_chain,
+        "chain2": get_chain2,
+        "llm": get_llm,
+        "llm2": get_llm2,
+        "llm_transformer": get_llm_transformer,
+    }
     mocks = {}
-    for name in ("chain", "chain2", "llm", "llm2", "llm_transformer"):
+    cleanups = []
+    for name, provider in provider_by_name.items():
         mocks[name] = MagicMock(name=f"llm_config.{name}")
         mocker.patch(f"app.core.llm_config.{name}", mocks[name])
+        cleanups.append(_install_override(app, provider, mocks[name]))
     # graph lives only on app.core.clients now (llm_config uses clients.graph).
     mocks["graph"] = MagicMock(name="clients.graph")
     mocker.patch("app.core.clients.graph", mocks["graph"])
-    return mocks
+    cleanups.append(_install_override(app, get_neo4j_graph, mocks["graph"]))
+    yield mocks
+    for c in cleanups:
+        c()
 
 
 @pytest.fixture
 def mock_s3(mocker):
+    from app.main import app
+    from app.core.dependencies import get_s3 as _get_s3
+
     s3 = MagicMock()
     mocker.patch("app.core.clients.s3_client", s3)
-    return s3
+    cleanup = _install_override(app, _get_s3, s3)
+    yield s3
+    cleanup()
 
 
 @pytest.fixture
 def mock_pinecone(mocker):
-    """Source-patch the clients.pc singleton. The inline Pinecone constructor
-    in api.py is gone (replaced with clients.pc.Index in Task 2)."""
+    """Source-patch the clients.pc singleton + dependency_override."""
+    from app.main import app
+    from app.core.dependencies import get_pinecone
+
     pc = MagicMock()
     pc.Index.return_value.query.return_value = {"matches": []}
     mocker.patch("app.core.clients.pc", pc)
-    return pc
+    cleanup = _install_override(app, get_pinecone, pc)
+    yield pc
+    cleanup()
 
 
 @pytest.fixture
