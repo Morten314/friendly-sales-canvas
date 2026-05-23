@@ -175,18 +175,20 @@ def test_get_document_status_happy_path(mocker, mock_mongo_client):
 
 def test_list_user_documents_takes_org_id(mocker, mock_mongo_client):
     """list_user_documents takes org_id (not user_id, despite the function name).
-    The implementation uses collection.find().sort() — mock the chain."""
+    Returns (items, total) tuple; implementation uses find().sort().skip().limit()."""
     coll = MagicMock()
-    coll.find.return_value.sort.return_value = [
+    docs = [
         {"file_id": "f1", "org_id": TEST_ORG_ID, "file_name": "a.pdf"},
         {"file_id": "f2", "org_id": TEST_ORG_ID, "file_name": "b.pdf"},
     ]
+    coll.find.return_value.sort.return_value.skip.return_value.limit.return_value = docs
+    coll.count_documents.return_value = 2
     mock_mongo_client.__getitem__.return_value.__getitem__.return_value = coll
 
-    result = asyncio.run(list_user_documents(mock_mongo_client, TEST_ORG_ID))
+    items, total = asyncio.run(list_user_documents(mock_mongo_client, TEST_ORG_ID))
 
-    assert result["count"] == 2
-    assert len(result["files"]) == 2
+    assert total == 2
+    assert len(items) == 2
 
 
 # ---------------------------------------------------------------------------

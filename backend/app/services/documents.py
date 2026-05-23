@@ -13,7 +13,7 @@ import json
 import os
 import uuid
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
 from fastapi import BackgroundTasks
@@ -587,17 +587,22 @@ async def get_document_status(mongo, file_key: str) -> dict:
     }
 
 
-async def list_user_documents(mongo, org_id: str) -> dict:
+async def list_user_documents(
+    mongo,
+    org_id: str,
+    limit: int = 500,
+    offset: int = 0,
+) -> Tuple[List[Dict[str, Any]], int]:
     """
     Get all data sources (files and URLs) for an organization.
-    Returns list of files and URLs with file_name, file_id, and other metadata.
+    Returns (file_list, total) where total is the unfiltered count.
     Filtered by org_id for multi-org support.
     """
     db = mongo["File_Processing"]
     collection = db["file_status"]
+    flt = {"org_id": org_id}
 
-    # Find all data sources (files and URLs) for this org
-    files = collection.find({"org_id": org_id}).sort("uploaded_at", -1)
+    files = collection.find(flt).sort("uploaded_at", -1).skip(offset).limit(limit)
 
     file_list = []
     for file_doc in files:
@@ -607,7 +612,7 @@ async def list_user_documents(mongo, org_id: str) -> dict:
             "file_name": file_doc.get("file_name"),
             "status": file_doc.get("status", "unknown"),
             "uploaded_at": file_doc.get("uploaded_at"),
-            "data_source_type": file_doc.get("data_source_type", "file")  # "file" or "url"
+            "data_source_type": file_doc.get("data_source_type", "file"),  # "file" or "url"
         }
 
         # Include URL if it's a URL data source
@@ -622,11 +627,8 @@ async def list_user_documents(mongo, org_id: str) -> dict:
 
         file_list.append(file_item)
 
-    return {
-        "status": "success",
-        "count": len(file_list),
-        "files": file_list
-    }
+    total = collection.count_documents(flt)
+    return file_list, total
 
 
 async def delete_data_source(mongo, s3, pinecone, file_id: str) -> dict:

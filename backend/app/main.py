@@ -142,6 +142,10 @@ from app.routers import documents
 
 app.include_router(documents.router)
 
+from app.routers.v2 import documents as documents_v2
+
+app.include_router(documents_v2.router, prefix="/v2")
+
 from app.routers import leads
 
 app.include_router(leads.router)

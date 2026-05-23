@@ -36,12 +36,17 @@ def _override_mongo(mongo_instance):
 # ---------------------------------------------------------------------------
 
 def _make_doc_mc(find_one_result=None, find_results=None):
-    """MongoClient mock for File_Processing.file_status collection."""
+    """MongoClient mock for File_Processing.file_status collection.
+
+    Chains find().sort().skip().limit() so the new paginated service signature
+    works. count_documents() returns len(find_results) by default.
+    """
     coll = MagicMock()
     coll.find_one.return_value = find_one_result
-    cursor = MagicMock()
-    cursor.__iter__ = MagicMock(return_value=iter(find_results or []))
-    coll.find.return_value.sort.return_value = cursor
+    results = list(find_results or [])
+    # Wire the full cursor chain: find().sort().skip().limit() → results list
+    coll.find.return_value.sort.return_value.skip.return_value.limit.return_value = results
+    coll.count_documents.return_value = len(results)
     coll.insert_one.return_value = MagicMock(inserted_id="ins_id")
     coll.update_one.return_value = MagicMock(modified_count=1)
 
@@ -129,6 +134,9 @@ def test_get_document_list_returns_uploaded_docs(client):
     assert body["count"] == 1
     assert isinstance(body["files"], list)
     assert body["files"][0]["file_id"] == TEST_FILE_ID
+    assert response.headers.get("Deprecation") == "true"
+    assert 'rel="successor-version"' in response.headers.get("Link", "")
+    assert "/api/v2/user-documents" in response.headers["Link"]
 
 
 # ---------------------------------------------------------------------------

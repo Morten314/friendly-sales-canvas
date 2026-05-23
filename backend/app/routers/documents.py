@@ -1,7 +1,7 @@
 """Document upload, status, and data-source management endpoints."""
 import shutil
 
-from fastapi import APIRouter, BackgroundTasks, Body, Depends, File, Form, HTTPException, Query, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Body, Depends, File, Form, HTTPException, Query, Response, UploadFile
 
 from app.core.dependencies import (
     get_llm,
@@ -94,8 +94,19 @@ async def get_document_status(file_key: str, mongo=Depends(get_mongo)):
 
 
 @router.get("/user-documents", response_model=ListUserDocumentsResponse)
-async def get_user_documents(org_id: str = Query(...), mongo=Depends(get_mongo)):
-    return await documents_service.list_user_documents(mongo, org_id)
+async def get_user_documents(
+    response: Response,
+    org_id: str = Query(...),
+    mongo=Depends(get_mongo),
+):
+    """**Deprecated:** use `GET /api/v2/user-documents` for the paginated envelope.
+
+    Returns up to 500 documents (silent cap; previously unbounded).
+    """
+    response.headers["Deprecation"] = "true"
+    response.headers["Link"] = '</api/v2/user-documents>; rel="successor-version"'
+    items, _ = await documents_service.list_user_documents(mongo, org_id)
+    return {"status": "success", "count": len(items), "files": items}
 
 
 @router.delete("/data-source/{file_id}", response_model=DataSourceDeleteResponse)
