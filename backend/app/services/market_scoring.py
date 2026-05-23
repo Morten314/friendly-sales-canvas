@@ -15,8 +15,7 @@ from typing import List, Dict, Any, Optional
 
 from fastapi import BackgroundTasks
 from langchain_core.messages import HumanMessage
-from app.core import clients
-from app.core import llm_config
+from app.core import clients   # kept alive through commit 15 — required by §3.7 fallbacks below
 from app.core.clients import upsert_node
 from app.core.exceptions import (
     BrewraError,
@@ -34,11 +33,32 @@ from app.services.leads import get_leads_for_org
 logger = logging.getLogger(__name__)
 
 
-def _get_market_score_collections():
+def _ensure_market_scoring_indexes(mongo) -> None:
+    """Create Mongo indexes for Lead_Market_Scores and Lead_Market_Score_Runs.
+
+    Phase F (commit 15a/17): relocated from app/main.py. Called from both
+    `app.main.lifespan` and the legacy `@app.on_event("startup")` hook (the
+    latter delegates to this function; commit 17 deletes the legacy hook).
+    Idempotent — Mongo `create_index` is a no-op when an equivalent index exists.
+    """
+    if mongo is None:
+        return
+    score_coll, run_coll = _get_market_score_collections(mongo)
+    score_coll.create_index([("org_id", 1), ("lead_id", 1)], unique=True)
+    score_coll.create_index([("org_id", 1), ("updated_at", -1)])
+    run_coll.create_index([("org_id", 1), ("status", 1)])
+    run_coll.create_index([("org_id", 1), ("created_at", -1)])
+
+
+def _get_market_score_collections(mongo=None):
     # Returns only the collections — never the client. Callers MUST NOT close
     # the underlying connection; it is the shared singleton from app.core.clients.
-    # Index creation has moved to a startup event in app/main.py.
-    profiler_db = clients.client["Profiler"]
+    # Phase F (commit 15a/17): `mongo` is the new explicit param. Fallback to
+    # clients.client supports unconverted callers during the 15a↔15b window;
+    # commit 15b removes the default and the fallback.
+    if mongo is None:
+        mongo = clients.client
+    profiler_db = mongo["Profiler"]
     return profiler_db["Lead_Market_Scores"], profiler_db["Lead_Market_Score_Runs"]
 
 
@@ -146,7 +166,7 @@ def _extract_lead_name(lead: Dict[str, Any]) -> Optional[str]:
     return None
 
 
-def _get_lead_identity_from_neo4j(org_id: str, lead_id: str) -> Dict[str, Optional[str]]:
+def _get_lead_identity_from_neo4j(driver=None, org_id: Optional[str] = None, lead_id: Optional[str] = None) -> Dict[str, Optional[str]]:
     query_string = """
     MATCH (l:Lead {org_id: $org_id, lead_id: $lead_id})
     RETURN l
@@ -194,8 +214,8 @@ def _extract_description_preview(component_descriptions: Any) -> Optional[str]:
     return None
 
 
-def _get_latest_market_score_rows(org_id: str) -> List[LeadMarketScoreRow]:
-    score_coll, _ = _get_market_score_collections()
+def _get_latest_market_score_rows(driver=None, mongo=None, org_id: Optional[str] = None) -> List[LeadMarketScoreRow]:
+    score_coll, _ = _get_market_score_collections(mongo)
     docs = list(score_coll.find({"org_id": org_id}).sort("updated_at", -1))
     rows: List[LeadMarketScoreRow] = []
     for doc in docs:
@@ -220,8 +240,8 @@ def _get_latest_market_score_rows(org_id: str) -> List[LeadMarketScoreRow]:
     return rows
 
 
-def _get_latest_scoring_run(org_id: str) -> Optional[Dict[str, Any]]:
-    _, run_coll = _get_market_score_collections()
+def _get_latest_scoring_run(mongo=None, org_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    _, run_coll = _get_market_score_collections(mongo)
     run_doc = run_coll.find_one({"org_id": org_id}, sort=[("created_at", -1)])
     if not run_doc:
         return None
@@ -462,9 +482,11 @@ def get_lead_market_score_descriptions(
     }
 
 
-def get_company_profile_for_org(org_id: str) -> Dict[str, Any]:
+def get_company_profile_for_org(driver=None, org_id: Optional[str] = None) -> Dict[str, Any]:
     """Fetch a single company profile for an org."""
-    with clients.driver.session() as session:
+    if driver is None:
+        driver = clients.driver
+    with driver.session() as session:
         result = session.run(
             "MATCH (c:CompanyProfile {org_id: $org_id}) RETURN c LIMIT 1",
             org_id=org_id,
@@ -481,9 +503,11 @@ def get_company_profile_for_org(org_id: str) -> Dict[str, Any]:
         return company_profile
 
 
-def get_market_reports_for_org(user_id: str, org_id: str) -> Dict[str, Dict[str, Any]]:
+def get_market_reports_for_org(mongo=None, user_id: Optional[str] = None, org_id: Optional[str] = None) -> Dict[str, Dict[str, Any]]:
     """Fetch latest market research reports for all five components."""
-    db = clients.client["Scout_Agent"]
+    if mongo is None:
+        mongo = clients.client
+    db = mongo["Scout_Agent"]
     collection = db["Market_Intelligence"]
     reports: Dict[str, Dict[str, Any]] = {}
     for component_name in MARKET_SCORE_COMPONENT_KEYS:
@@ -510,9 +534,10 @@ def _clean_and_parse_json(raw_text: str) -> Dict[str, Any]:
 
 
 def score_single_lead_against_market(
-    lead: Dict[str, Any],
-    company_profile: Dict[str, Any],
-    market_reports: Dict[str, Dict[str, Any]],
+    llm2=None,
+    lead: Optional[Dict[str, Any]] = None,
+    company_profile: Optional[Dict[str, Any]] = None,
+    market_reports: Optional[Dict[str, Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     """
     Score one lead against all five market components with explanations.
@@ -552,7 +577,10 @@ Return JSON schema:
   }}
 }}
 """
-    response = llm_config.llm2.invoke([HumanMessage(content=prompt)])
+    if llm2 is None:
+        from app.core import llm_config as _llm_config_fallback
+        llm2 = _llm_config_fallback.llm2
+    response = llm2.invoke([HumanMessage(content=prompt)])
     content = getattr(response, "content", response)
     parsed = _clean_and_parse_json(content)
     scores = parsed.get("component_scores", {}) if isinstance(parsed, dict) else {}
@@ -583,11 +611,13 @@ Return JSON schema:
 
 
 def _persist_market_score_for_lead(
-    user_id: str,
-    org_id: str,
-    lead: Dict[str, Any],
-    scoring_payload: Dict[str, Any],
-    run_id: str,
+    driver=None,
+    mongo=None,
+    user_id: Optional[str] = None,
+    org_id: Optional[str] = None,
+    lead: Optional[Dict[str, Any]] = None,
+    scoring_payload: Optional[Dict[str, Any]] = None,
+    run_id: Optional[str] = None,
     scoring_status: str = "completed",
     score_coll=None,
 ) -> None:
@@ -602,7 +632,7 @@ def _persist_market_score_for_lead(
 
     local_score_coll = score_coll
     if local_score_coll is None:
-        local_score_coll, _ = _get_market_score_collections()
+        local_score_coll, _ = _get_market_score_collections(mongo)
     local_score_coll.update_one(
         {"org_id": org_id, "lead_id": lead_id},
         {
@@ -635,7 +665,9 @@ def _persist_market_score_for_lead(
         "market_scoring_status": scoring_status,
         "market_score_run_id": run_id,
     }
-    with clients.driver.session() as session:
+    if driver is None:
+        driver = clients.driver
+    with driver.session() as session:
         session.execute_write(
             upsert_node,
             "Lead",

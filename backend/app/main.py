@@ -55,15 +55,8 @@ async def lifespan(app: FastAPI):
             logger.error("Neo4j refresh_schema (lifespan) failed: %s", e)
 
     if app.state.clients.client is not None:
-        # Re-run Mongo index creation via lifespan. Inline today; Task 15a
-        # replaces this with `_ensure_market_scoring_indexes(app.state.clients.client)`
-        # once the helper relocates into `app/services/market_scoring.py`.
-        from app.services.market_scoring import _get_market_score_collections
-        score_coll, run_coll = _get_market_score_collections()
-        score_coll.create_index([("org_id", 1), ("lead_id", 1)], unique=True)
-        score_coll.create_index([("org_id", 1), ("updated_at", -1)])
-        run_coll.create_index([("org_id", 1), ("status", 1)])
-        run_coll.create_index([("org_id", 1), ("created_at", -1)])
+        from app.services.market_scoring import _ensure_market_scoring_indexes
+        _ensure_market_scoring_indexes(app.state.clients.client)
 
     yield
     # No teardown — clients are process-lifetime singletons.
@@ -192,14 +185,13 @@ if clients.graph is not None:
 # Phase C: one-time index creation on startup. Guarded by BREWRA_SKIP_DB_INIT
 # (test/sandbox env var, also honored by app.core.clients) and a defensive
 # clients.client is None check.
+# Phase F (commit 15a/17): function body relocated to
+# `app.services.market_scoring._ensure_market_scoring_indexes`. This hook
+# delegates to it. Commit 17 deletes the hook entirely (lifespan above
+# handles the work).
 @app.on_event("startup")
-def _ensure_market_scoring_indexes() -> None:
+def _ensure_market_scoring_indexes_startup() -> None:
     if os.getenv("BREWRA_SKIP_DB_INIT") or clients.client is None:
         return
-    from app.services.market_scoring import _get_market_score_collections
-
-    score_coll, run_coll = _get_market_score_collections()
-    score_coll.create_index([("org_id", 1), ("lead_id", 1)], unique=True)
-    score_coll.create_index([("org_id", 1), ("updated_at", -1)])
-    run_coll.create_index([("org_id", 1), ("status", 1)])
-    run_coll.create_index([("org_id", 1), ("created_at", -1)])
+    from app.services.market_scoring import _ensure_market_scoring_indexes
+    _ensure_market_scoring_indexes(clients.client)

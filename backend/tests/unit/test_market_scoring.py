@@ -196,7 +196,7 @@ def test_get_company_profile_for_org_returns_neo4j_profile(mock_session):
     record.values.return_value = [{"name": "Acme", "industry": "Logistics"}]
     mock_session.run.return_value.single.return_value = record
 
-    result = get_company_profile_for_org(TEST_ORG_ID)
+    result = get_company_profile_for_org(org_id=TEST_ORG_ID)
 
     assert result["name"] == "Acme"
 
@@ -204,7 +204,7 @@ def test_get_company_profile_for_org_returns_neo4j_profile(mock_session):
 def test_get_company_profile_for_org_returns_empty_when_missing(mock_session):
     mock_session.run.return_value.single.return_value = None
 
-    result = get_company_profile_for_org(TEST_ORG_ID)
+    result = get_company_profile_for_org(org_id=TEST_ORG_ID)
 
     assert result == {}
 
@@ -228,7 +228,7 @@ def test_get_market_reports_for_org_returns_dict(mock_mongo_client):
     db_mock.__getitem__.return_value = coll
     mock_mongo_client.__getitem__.return_value = db_mock
 
-    result = get_market_reports_for_org(TEST_USER_ID, TEST_ORG_ID)
+    result = get_market_reports_for_org(user_id=TEST_USER_ID, org_id=TEST_ORG_ID)
 
     assert isinstance(result, dict)
     assert "market size & opportunity" in result
@@ -263,15 +263,11 @@ def test_score_single_lead_against_market_returns_score(mocker):
     llm2_mock = MagicMock()
     llm2_mock.invoke.return_value = fake_response
 
-    llm_config_mock = MagicMock()
-    llm_config_mock.llm2 = llm2_mock
-    mocker.patch("app.services.market_scoring.llm_config", llm_config_mock)
-
     lead = {"lead_id": TEST_LEAD_ID_1, "company_name": "Acme"}
     company_profile = {"industry": "Logistics"}
     market_reports = {"market size & opportunity": {"tam": "$1B"}}
 
-    result = score_single_lead_against_market(lead, company_profile, market_reports)
+    result = score_single_lead_against_market(llm2_mock, lead=lead, company_profile=company_profile, market_reports=market_reports)
 
     assert "market_total_score" in result
     assert "component_scores" in result
