@@ -15,8 +15,7 @@ from typing import List, Dict, Any, Optional
 
 from fastapi import BackgroundTasks
 from langchain_core.messages import HumanMessage
-from app.core import clients   # kept alive through commit 15 — required by §3.7 fallbacks below
-from app.core.clients import upsert_node
+from app.services._neo4j_helpers import upsert_node
 from app.core.exceptions import (
     BrewraError,
     MarketScoreNotFoundError,

@@ -21,7 +21,7 @@ from typing import Optional
 from langchain_core.messages import SystemMessage, HumanMessage
 
 from app.core.config import PREDEFINED_QUESTIONS, rapidapi_key
-from app.core.clients import query  # function — local binding ok
+from app.services._neo4j_helpers import query  # function — local binding ok
 
 
 def convert_audio_to_text(file):

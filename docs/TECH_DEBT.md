@@ -68,6 +68,8 @@ Service functions get a layer of direct unit tests — `pytest.raises(LeadNotFou
 
 ## TD-003 — Startup hooks use deprecated `@app.on_event` API
 
+**Resolved 2026-05-23 by Phase F (`refactor-backend-modularization-phase-f`).** A `lifespan` context manager in `app/main.py` replaces both the `@app.on_event("startup")` hook and the module-import-time `clients.graph.refresh_schema()` call. See `plans/modularization-plan-6.md` Task 16 (commit 17/17).
+
 **Date logged:** 2026-05-22
 **Origin:** Phase C code review C2 (`docs/code-review-backend-modularization-phase-c.md`); Phase D design §8 item 6.
 

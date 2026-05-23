@@ -66,7 +66,7 @@ def test_post_document_upload_stores_in_s3(client, mock_s3):
     """POST /upload-document → s3_client.put_object called."""
     mc, _ = _make_doc_mc()
 
-    with patch("app.core.clients.client", mc):
+    with _override_mongo(mc):
         response = client.post(
             "/upload-document",
             data={"user_id": TEST_USER_ID, "org_id": TEST_ORG_ID},
@@ -89,7 +89,7 @@ def test_post_document_upload_returns_file_id(client, mock_s3):
     """POST /upload-document response includes file_id and file_key."""
     mc, _ = _make_doc_mc()
 
-    with patch("app.core.clients.client", mc):
+    with _override_mongo(mc):
         response = client.post(
             "/upload-document",
             data={"user_id": TEST_USER_ID, "org_id": TEST_ORG_ID},

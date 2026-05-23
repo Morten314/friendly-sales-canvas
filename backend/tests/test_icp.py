@@ -133,7 +133,7 @@ def test_post_customer_profile_creates_icp(client, mock_neo4j, snapshot):
         "icp_id_registry": _make_coll(find_one=None),
     })
 
-    with patch("app.core.clients.client", mc):
+    with _override_mongo(mc):
         response = client.post("/customer_profile", json=_ICP_PAYLOAD)
 
     assert response.status_code in (200, 201)
@@ -145,7 +145,7 @@ def test_post_customer_profile_requires_icps(client):
     """Missing icps field → 422."""
     payload = {"profile_type": "customer", "org_id": TEST_ORG_ID}
     mc = _mc_factory({})
-    with patch("app.core.clients.client", mc):
+    with _override_mongo(mc):
         response = client.post("/customer_profile", json=payload)
     assert response.status_code == 422
 
@@ -179,7 +179,7 @@ def test_get_customer_profile_empty_when_no_mongo_doc(client, mock_neo4j, snapsh
     })
     mock_neo4j["session"].run.return_value.single.return_value = MagicMock()
 
-    with patch("app.core.clients.client", mc):
+    with _override_mongo(mc):
         response = client.get("/customer_profile", params={"org_id": TEST_ORG_ID})
 
     assert response.status_code == 200
@@ -223,7 +223,7 @@ def test_delete_customer_profile_icp_404_when_not_found(client):
         "icp_id_registry": _make_coll(find_one=None),
     })
 
-    with patch("app.core.clients.client", mc):
+    with _override_mongo(mc):
         response = client.delete(
             "/customer_profile/icp/nonexistent_id",
             params={"org_id": TEST_ORG_ID},
@@ -285,7 +285,7 @@ def test_get_icp_refresh_true_calls_neo4j_and_llm(client, mock_neo4j):
 
     mock_generator = MagicMock(return_value={"suggestedICPs": []})
 
-    with patch("app.core.clients.client", mc), \
+    with _override_mongo(mc), \
          patch("app.services.icp.ICP_generator", mock_generator):
         response = client.get("/icp", params={"user_id": TEST_USER_ID, "refresh": "true"})
 
@@ -302,7 +302,7 @@ def test_get_icp_404_when_no_company_profile(client, mock_neo4j):
     })
     mock_neo4j["session"].run.return_value.single.return_value = None
 
-    with patch("app.core.clients.client", mc):
+    with _override_mongo(mc):
         response = client.get("/icp", params={"user_id": TEST_USER_ID, "refresh": "true"})
 
     assert response.status_code == 404
@@ -370,7 +370,7 @@ def test_post_customer_profile_from_suggested_icp_404_when_not_found(client):
         "icp_id": "nonexistent_id",
     }
 
-    with patch("app.core.clients.client", mc):
+    with _override_mongo(mc):
         response = client.post("/customer_profile/from_suggested_icp", json=payload)
 
     assert response.status_code == 404
@@ -417,7 +417,7 @@ def test_delete_recommended_icp_404_when_not_found(client):
         "icp_id_registry": _make_coll(find_one=None),
     })
 
-    with patch("app.core.clients.client", mc):
+    with _override_mongo(mc):
         response = client.delete(
             "/icp/recommended/nonexistent",
             params={"user_id": TEST_USER_ID},
@@ -474,7 +474,7 @@ def test_post_icp_research_icp_summary(client, mock_neo4j, mock_llm_chain, mock_
         "icp_id_registry": _make_coll(find_one=None),
     })
 
-    with patch("app.core.clients.client", mc):
+    with _override_mongo(mc):
         response = client.post(
             "/icp-research",
             json=_icp_research_payload("icp summary & market opportunity"),
@@ -500,7 +500,7 @@ def test_post_icp_research_buyer_map(client, mock_neo4j, mock_llm_chain, mock_pi
         "icp_id_registry": _make_coll(find_one=None),
     })
 
-    with patch("app.core.clients.client", mc):
+    with _override_mongo(mc):
         response = client.post(
             "/icp-research",
             json=_icp_research_payload("buyer map & roles, pain points, triggers"),
@@ -524,7 +524,7 @@ def test_post_icp_research_competitive_overlap(client, mock_neo4j, mock_llm_chai
         "icp_id_registry": _make_coll(find_one=None),
     })
 
-    with patch("app.core.clients.client", mc):
+    with _override_mongo(mc):
         response = client.post(
             "/icp-research",
             json=_icp_research_payload("competitive overlap & buying signals"),
@@ -548,7 +548,7 @@ def test_post_icp_research_regulatory(client, mock_neo4j, mock_llm_chain, mock_p
         "icp_id_registry": _make_coll(find_one=None),
     })
 
-    with patch("app.core.clients.client", mc):
+    with _override_mongo(mc):
         response = client.post(
             "/icp-research",
             json=_icp_research_payload("regulatory, compliance & recommended icp"),
@@ -562,7 +562,7 @@ def test_post_icp_research_regulatory(client, mock_neo4j, mock_llm_chain, mock_p
 def test_post_icp_research_invalid_component_returns_400(client):
     """Unsupported component_name returns 400."""
     mc = _mc_factory({})
-    with patch("app.core.clients.client", mc):
+    with _override_mongo(mc):
         response = client.post(
             "/icp-research",
             json=_icp_research_payload("invalid_component"),

@@ -33,7 +33,7 @@ from langchain_openai import OpenAIEmbeddings
 from langchain_pinecone import PineconeVectorStore
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-from app.core.clients import query  # function — local binding ok
+from app.services._neo4j_helpers import query  # function — local binding ok
 from app.core.config import pinecone_api_key, s3_bucket, together_api_key
 from app.core.exceptions import BrewraError, DocumentNotFoundError, DocumentValidationError
 from app.core.logging import logger

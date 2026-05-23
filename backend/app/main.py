@@ -12,14 +12,12 @@ backward compat within Phase B).
 Domain routers register themselves here. Routes themselves live in
 app/routers/<domain>.py.
 """
-import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.core import clients
 from app.core.clients import build_clients
 from app.core.exceptions import (
     AuthenticationError,
@@ -39,11 +37,9 @@ from app.core.logging import logger  # noqa: F401 — re-exported for backward c
 async def lifespan(app: FastAPI):
     """Construct all external clients/LLMs once and stash on app.state.
 
-    Phase F (commit 2/17): introduced alongside the legacy module-import-time
-    construction in `app.core.clients` / `app.core.llm_config` and the
-    `@app.on_event("startup")` hook below. All three coexist through commit 15;
-    commit 17 deletes the legacy paths. Idempotent — Mongo `create_index` is a
-    no-op when an equivalent index exists.
+    Phase F: this lifespan replaces the legacy `@app.on_event("startup")` hook
+    and the module-import-time `clients.graph.refresh_schema()` call. Idempotent
+    — Mongo `create_index` is a no-op when an equivalent index exists.
     """
     app.state.clients = build_clients()
     app.state.llm = build_llm_config(app.state.clients)
@@ -176,22 +172,5 @@ from app.routers import market_scoring
 
 app.include_router(market_scoring.router)
 
-# Preserve original boot-time Neo4j schema refresh (was in pre-Task-2 main.py).
-# Guarded so BREWRA_SKIP_DB_INIT=1 (and any future None-graph mode) is safe.
-if clients.graph is not None:
-    clients.graph.refresh_schema()
-
-
-# Phase C: one-time index creation on startup. Guarded by BREWRA_SKIP_DB_INIT
-# (test/sandbox env var, also honored by app.core.clients) and a defensive
-# clients.client is None check.
-# Phase F (commit 15a/17): function body relocated to
-# `app.services.market_scoring._ensure_market_scoring_indexes`. This hook
-# delegates to it. Commit 17 deletes the hook entirely (lifespan above
-# handles the work).
-@app.on_event("startup")
-def _ensure_market_scoring_indexes_startup() -> None:
-    if os.getenv("BREWRA_SKIP_DB_INIT") or clients.client is None:
-        return
-    from app.services.market_scoring import _ensure_market_scoring_indexes
-    _ensure_market_scoring_indexes(clients.client)
+# Phase F: `lifespan` (above) owns Neo4j schema refresh and Mongo index creation.
+# TD-003 retired.

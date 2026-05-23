@@ -6,8 +6,7 @@ import json
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from app.core import clients   # kept alive through commit 15 — required by §3.7 fallback in get_leads_for_org
-from app.core.clients import upsert_node
+from app.services._neo4j_helpers import upsert_node
 from app.core.exceptions import LeadCSVValidationError, LeadNotFoundError
 from app.core.logging import logger
 from app.models.leads import LeadCreateRequest, LeadUpdateRequest
@@ -18,29 +17,17 @@ from app.models.leads import LeadCreateRequest, LeadUpdateRequest
 # ---------------------------------------------------------------------------
 
 def get_leads_for_org(
-    driver=None,
-    org_id: Optional[str] = None,
+    driver,
+    org_id: str,
     limit: Optional[int] = None,
     order_by_recent: bool = False,
 ) -> List[Dict[str, Any]]:
     """Fetch leads from Neo4j for a given org.
 
-    Args:
-        driver: Neo4j driver. Phase F: explicit DI; until commit 17, falls
-            back to ``clients.driver`` for cross-commit callers in signals
-            (commit 14) and market_scoring (commit 15) that pass
-            ``org_id=...`` by keyword. Commit 17 removes the default and the
-            fallback below.
-        org_id: tenant scope.
-        limit: max rows to return; None for no LIMIT clause.
-        order_by_recent: if True, adds ``ORDER BY l.created_at DESC``.
-
     Raises on storage or query failures. Callers that want silent failure
     (e.g. background tasks) wrap with ``try/except BrewraError`` or
     ``except Exception``; see Task 15.
     """
-    if driver is None:
-        driver = clients.driver
     clauses = ["MATCH (l:Lead)", "WHERE l.org_id = $org_id"]
     params: Dict[str, Any] = {"org_id": org_id}
     clauses.append("RETURN l")

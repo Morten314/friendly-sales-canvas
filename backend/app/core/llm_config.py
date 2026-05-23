@@ -20,7 +20,6 @@ from langchain_classic.agents import initialize_agent, Tool
 from langchain_classic.agents.agent_types import AgentType
 from langchain_community.tools.tavily_search.tool import TavilySearchResults
 from app.core.config import groq_api_key, together_api_key, tavily_api_key
-from app.core import clients
 from app.core.clients import ClientBundle
 
 # Prompt Template for Cypher Query Generation
@@ -350,16 +349,3 @@ def build_llm_config(clients_bundle: ClientBundle) -> LLMBundle:
 # Vision model — not part of LLMBundle (no current service uses it). Kept at
 # module scope so any future reference to `llm_config.vision` continues to work.
 vision = ChatGroq(model="llama-3.2-90b-vision-preview", api_key=groq_api_key)
-
-
-# Module-level globals — routed through the factory. Kept alive through commit
-# 15 for backward compatibility with services that haven't been converted to
-# dependency injection yet. Commit 17 deletes these.
-_bundle = build_llm_config(clients._bundle)
-llm = _bundle.llm
-llm2 = _bundle.llm2
-llm_transformer = _bundle.llm_transformer
-memory = _bundle.memory
-chain = _bundle.chain
-chain2 = _bundle.chain2
-agent_chain = _bundle.agent_chain

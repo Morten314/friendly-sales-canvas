@@ -14,6 +14,7 @@ POST /leads/batch-upload accesses Mongo via app.core.clients.client — patch
 that symbol to inject the mock.
 """
 import io
+from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
 import pytest
 
@@ -21,6 +22,18 @@ from tests.helpers import scrub_dynamic
 from tests.identities import (
     TEST_USER_ID, TEST_ORG_ID, TEST_LEAD_ID_1, TEST_LEAD_ID_2, TEST_FILE_ID
 )
+
+
+@contextmanager
+def _override_mongo(mongo_instance):
+    """Phase F: leads router reads Mongo via Depends(get_mongo)."""
+    from app.main import app
+    from app.core.dependencies import get_mongo
+    app.dependency_overrides[get_mongo] = lambda: mongo_instance
+    try:
+        yield
+    finally:
+        app.dependency_overrides.pop(get_mongo, None)
 
 
 # ---------------------------------------------------------------------------
@@ -209,7 +222,7 @@ def test_post_upload_csv_parses_file(client, mock_neo4j):
     csv_content = "company_name,lead_name\nACME,Alice\nBeta Corp,Bob\n"
     mc = _make_profiler_mc()
 
-    with patch("app.core.clients.client", mc):
+    with _override_mongo(mc):
         response = client.post(
             "/leads/batch-upload",
             data={"user_id": TEST_USER_ID, "org_id": TEST_ORG_ID},

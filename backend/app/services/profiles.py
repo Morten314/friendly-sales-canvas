@@ -3,7 +3,7 @@ import json
 from datetime import datetime, timezone
 from typing import Optional
 
-from app.core.clients import upsert_node
+from app.services._neo4j_helpers import upsert_node
 from app.core.exceptions import (
     CompanyProfileNotFoundError,
     ProfileNotFoundError,

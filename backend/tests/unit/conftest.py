@@ -34,33 +34,29 @@ os.environ.setdefault("BREWRA_SKIP_DB_INIT", "1")
 
 
 @pytest.fixture
-def mock_session(mocker):
-    """Returns the Neo4j *session* (not the driver) so tests can configure
-    `session.run.return_value.single.return_value = ...` directly. The driver
-    itself is patched onto `app.core.clients.driver` as a side effect.
+def mock_session():
+    """Returns a Neo4j session mock; `session._driver` exposes the wrapping
+    driver mock so converted services (which take `driver` as a positional
+    arg post-Phase F) can be called via `service_fn(mock_session._driver, ...)`.
 
-    Phase F (DI): `session._driver` exposes the underlying driver mock so
-    converted services (whose signature now takes `driver` as a positional
-    arg) can be called with `service_fn(mock_session._driver, ...)`. The
-    `clients.driver` source-patch is irrelevant for converted services but
-    kept here for the unconverted ones that still read `clients.driver`.
+    Phase F (commit 17/17): no source-patch — services no longer read
+    `app.core.clients.driver` directly. The session mock is configured to
+    return on `driver.session().__enter__()`.
     """
     session = MagicMock()
     driver = MagicMock()
     driver.session.return_value.__enter__ = MagicMock(return_value=session)
     driver.session.return_value.__exit__ = MagicMock(return_value=False)
-    mocker.patch("app.core.clients.driver", driver)
     session._driver = driver
     return session
 
 
 @pytest.fixture
-def mock_mongo_client(mocker):
-    """Lightweight MongoDB client mock. Source-patches `app.core.clients.client`.
+def mock_mongo_client():
+    """Lightweight MongoDB client mock. Pass positionally to converted
+    services: `service_fn(mock_mongo_client, ...)`.
 
-    Tests configure per-collection MagicMocks via:
-        mock_mongo_client["Profiler"]["ICP_config"].find_one.return_value = ...
+    Phase F (commit 17/17): no source-patch — services no longer read
+    `app.core.clients.client` directly.
     """
-    client = MagicMock()
-    mocker.patch("app.core.clients.client", client)
-    return client
+    return MagicMock()
