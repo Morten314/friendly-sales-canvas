@@ -4,53 +4,86 @@ Renamed from `app/core/database.py` in Phase B (Task 2) — the file holds
 multiple external clients (not just "the database"). After Task 5 (B1),
 all 26 inline MongoClient constructions in routers/services are replaced by
 importing `client` from this module.
+
+Phase F (commit 1/17) introduces `ClientBundle` + `build_clients()`. The
+module-level globals below are routed through the factory to keep a single
+construction path. Services not yet converted to dependency injection still
+read `clients.driver`, `clients.client`, etc. via these globals; they're
+deleted in commit 17 after all services are converted.
 """
 import logging
 import os
+from dataclasses import dataclass
+from typing import Any, Optional
 
+import boto3
 from neo4j import GraphDatabase
 from langchain_community.graphs.neo4j_graph import Neo4jGraph
 from pymongo import MongoClient
-from app.core.config import neo4j_uri, neo4j_username, neo4j_password, mongo_uri
+from pinecone import Pinecone
+
+from app.core.config import (
+    neo4j_uri, neo4j_username, neo4j_password, mongo_uri,
+    aws_access_key, aws_secret_key, aws_region, pinecone_api_key,
+)
 
 # Local logger — uses logging.getLogger(__name__) rather than `app.core.logging.logger`
 # to avoid an import-order coupling between this module and the project logger setup.
 logger = logging.getLogger(__name__)
 
-# Setting BREWRA_SKIP_DB_INIT=1 skips eager Neo4j/Mongo connection attempts at
-# import time. Pytest's conftest sets it so test sessions don't block on SRV
-# DNS / Bolt handshake when the sandbox can't reach the prod clusters; mocks
-# replace `client` / `graph` before any test touches them. Production leaves
-# this unset.
-_SKIP_DB_INIT = bool(os.getenv("BREWRA_SKIP_DB_INIT"))
 
-# Connect to Neo4j Database
-driver = None
-if not _SKIP_DB_INIT:
-    try:
-        driver = GraphDatabase.driver(neo4j_uri, auth=(neo4j_username, neo4j_password))
-        driver.verify_connectivity()
-        logger.info("Connected to Neo4j successfully!")
-    except Exception as e:
-        logger.error("Neo4j Connection failed: %s", e)
+@dataclass
+class ClientBundle:
+    driver: Optional[Any]          # neo4j.GraphDatabase driver — None when BREWRA_SKIP_DB_INIT or connect fails
+    graph: Optional[Any]           # Neo4jGraph — None when BREWRA_SKIP_DB_INIT or init fails
+    client: Optional[Any]          # MongoClient — None when BREWRA_SKIP_DB_INIT or connect fails
+    s3_client: Any                 # boto3 client — always constructed (lazy)
+    pc: Any                        # Pinecone — always constructed (lazy)
 
-# Initialize Neo4j Graph
-graph = None
-if not _SKIP_DB_INIT:
-    try:
-        graph = Neo4jGraph(url=neo4j_uri, username=neo4j_username, password=neo4j_password)
-    except Exception as e:
-        logger.error("Neo4jGraph init failed: %s", e)
 
-# MongoDB connection — primary cluster (brewra-db.d3hvuf8.mongodb.net).
-# pymongo 4.x eagerly resolves mongodb+srv URIs during construction, which
-# blocks on DNS in sandboxes with restricted outbound. Skip when gated.
-client = None
-if not _SKIP_DB_INIT:
-    try:
-        client = MongoClient(mongo_uri)
-    except Exception as e:
-        logger.error("MongoDB Connection failed: %s", e)
+def build_clients(skip_db_init: Optional[bool] = None) -> ClientBundle:
+    """Construct all external clients. Call once at app startup.
+
+    Preserves current code semantics exactly:
+    - Neo4j driver / graph / Mongo are gated by `skip_db_init` AND wrapped in
+      try/except — matches today's module-level `_SKIP_DB_INIT` + try/except.
+    - S3 and Pinecone are constructed UNCONDITIONALLY and NOT wrapped in
+      try/except — matches today. Construction is lazy for both (no network
+      call), so this is safe in test environments.
+    """
+    if skip_db_init is None:
+        skip_db_init = bool(os.getenv("BREWRA_SKIP_DB_INIT"))
+
+    driver, graph, client = None, None, None
+
+    if not skip_db_init:
+        try:
+            driver = GraphDatabase.driver(neo4j_uri, auth=(neo4j_username, neo4j_password))
+            driver.verify_connectivity()
+            logger.info("Connected to Neo4j successfully!")
+        except Exception as e:
+            logger.error("Neo4j Connection failed: %s", e)
+
+        try:
+            graph = Neo4jGraph(url=neo4j_uri, username=neo4j_username, password=neo4j_password)
+        except Exception as e:
+            logger.error("Neo4jGraph init failed: %s", e)
+
+        try:
+            client = MongoClient(mongo_uri)
+        except Exception as e:
+            logger.error("MongoDB Connection failed: %s", e)
+
+    s3_client = boto3.client(
+        "s3",
+        aws_access_key_id=aws_access_key,
+        aws_secret_access_key=aws_secret_key,
+        region_name=aws_region,
+    )
+    pc = Pinecone(api_key=pinecone_api_key)
+
+    return ClientBundle(driver=driver, graph=graph, client=client, s3_client=s3_client, pc=pc)
+
 
 # Function to execute a Cypher query
 def query(query_string):
@@ -86,7 +119,7 @@ def upsert_node(tx, label, match_field, match_value, data: dict):
     Escapes property names with spaces or special characters.
     """
     import json
-    
+
     # Prepare data with type conversion for Neo4j compatibility
     neo4j_data = {}
     for key, value in data.items():
@@ -102,11 +135,11 @@ def upsert_node(tx, label, match_field, match_value, data: dict):
         else:
             # Convert everything else to string
             neo4j_data[key] = str(value)
-    
+
     # Build dynamic SET clause to handle all properties
     set_clauses = []
     params = {"match_value": match_value}
-    
+
     for key, value in neo4j_data.items():
         # Escape property name for Neo4j (handles spaces and special chars)
         escaped_key = escape_property_name(key)
@@ -116,7 +149,7 @@ def upsert_node(tx, label, match_field, match_value, data: dict):
         param_name = f"param_{safe_key}"
         set_clauses.append(f"n.{escaped_key} = ${param_name}")
         params[param_name] = value
-    
+
     if set_clauses:
         set_clause = ", ".join(set_clauses)
         # Also escape match_field if needed
@@ -135,21 +168,14 @@ def upsert_node(tx, label, match_field, match_value, data: dict):
         tx.run(query, match_value=match_value)
 
 
-# S3 + Pinecone clients (moved from api.py during phase A modularization)
-import boto3
-from pinecone import Pinecone
-from app.core.config import (
-    aws_access_key,
-    aws_secret_key,
-    aws_region,
-    pinecone_api_key,
-)
-
-s3_client = boto3.client(
-    's3',
-    aws_access_key_id=aws_access_key,
-    aws_secret_access_key=aws_secret_key,
-    region_name=aws_region,
-)
-
-pc = Pinecone(api_key=pinecone_api_key)
+# Module-level globals — routed through the factory. Kept alive through commit
+# 15 for backward compatibility with services that haven't been converted to
+# dependency injection yet. Commit 17 deletes these along with the `query`,
+# `results_to_string`, `escape_property_name`, `upsert_node` helpers above
+# (which move to `app/services/_neo4j_helpers.py`).
+_bundle = build_clients()
+driver = _bundle.driver
+graph = _bundle.graph
+client = _bundle.client
+s3_client = _bundle.s3_client
+pc = _bundle.pc

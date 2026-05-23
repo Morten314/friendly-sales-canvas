@@ -1,3 +1,15 @@
+"""LLM-side artifacts: chat models, transformers, memory, chains, and the
+ReAct agent.
+
+Phase F (commit 1/17) introduces `LLMBundle` + `build_llm_config()`. The
+module-level globals at the bottom are routed through the factory to keep a
+single construction path. Services not yet converted to dependency injection
+still read `llm_config.llm`, `llm_config.chain`, etc. via these globals; they're
+deleted in commit 17 after all services are converted.
+"""
+from dataclasses import dataclass
+from typing import Any, Optional
+
 from langchain_groq import ChatGroq
 from langchain_community.chat_models import ChatOpenAI
 from langchain_experimental.graph_transformers import LLMGraphTransformer
@@ -9,21 +21,7 @@ from langchain_classic.agents.agent_types import AgentType
 from langchain_community.tools.tavily_search.tool import TavilySearchResults
 from app.core.config import groq_api_key, together_api_key, tavily_api_key
 from app.core import clients
-
-# Initialize LLM models
-llm = ChatGroq(model="llama-3.3-70b-versatile", api_key=groq_api_key)
-vision = ChatGroq(model="llama-3.2-90b-vision-preview", api_key=groq_api_key)
-llm2 = ChatOpenAI(
-    openai_api_base="https://api.together.xyz/v1",
-    openai_api_key=together_api_key,
-    model="Qwen/Qwen3-235B-A22B-Instruct-2507-tput"
-)
-
-# Initialize Graph Transformer
-llm_transformer = LLMGraphTransformer(llm=llm)
-
-# Initialize Memory
-memory = ConversationBufferMemory(return_messages=True)
+from app.core.clients import ClientBundle
 
 # Prompt Template for Cypher Query Generation
 Cypher_gen_prompt = """
@@ -156,16 +154,6 @@ qa_prompt = PromptTemplate(
     input_variables=["context", "question"]
 )
 
-# Initialize LangChain QA Chain
-# Guarded so a missing graph (BREWRA_SKIP_DB_INIT in tests, or unreachable
-# Neo4j at boot) doesn't crash module import. Conftest patches llm_config.chain.
-if clients.graph is not None:
-    chain = GraphCypherQAChain.from_llm(
-        llm=llm2, graph=clients.graph, cypher_prompt=Cypher_Prompt, qa_prompt=qa_prompt ,verbose=True, memory=memory, allow_dangerous_requests=True
-    )
-else:
-    chain = None
-
 Cypher_gen_prompt2 = """
 You are a Neo4j Cypher expert. Your task is to return a single clean, executable Cypher query — with no markdown, no commentary, no prefixes or suffixes, and no text outside the Cypher code.
 
@@ -286,34 +274,92 @@ qa_prompt2 = PromptTemplate(
     input_variables=["context", "question"]
 )
 
-# Initialize LangChain QA Chain
-if clients.graph is not None:
-    chain2 = GraphCypherQAChain.from_llm(
-        llm=llm2, graph=clients.graph, cypher_prompt=Cypher_Prompt2, qa_prompt=qa_prompt2 ,verbose=True, memory=memory, allow_dangerous_requests=True
+@dataclass
+class LLMBundle:
+    llm: Any                                      # ChatGroq
+    llm2: Any                                     # ChatOpenAI (Together)
+    llm_transformer: Any                          # LLMGraphTransformer
+    memory: Any                                   # ConversationBufferMemory
+    chain: Optional[Any]                          # GraphCypherQAChain — None when clients.graph is None
+    chain2: Optional[Any]                         # GraphCypherQAChain — None when clients.graph is None
+    agent_chain: Any                              # LangChain AgentExecutor
+
+
+def build_llm_config(clients_bundle: ClientBundle) -> LLMBundle:
+    """Construct all LLM-side artifacts. Requires a ClientBundle because
+    `chain`/`chain2` need `clients.graph` to be either real or None — exactly
+    matching today's conditional construction.
+
+    Initialization arguments match the legacy module-level construction line
+    for line (Groq llama-3.3, Together Qwen3-235B with the `-tput` model
+    suffix, GraphCypherQAChain with `verbose=True`, agent with
+    `verbose=False`, `handle_parsing_errors=True`, `max_iterations=20`,
+    `max_execution_time=120`, Tavily `k=10`).
+    """
+    llm = ChatGroq(model="llama-3.3-70b-versatile", api_key=groq_api_key)
+    llm2 = ChatOpenAI(
+        openai_api_base="https://api.together.xyz/v1",
+        openai_api_key=together_api_key,
+        model="Qwen/Qwen3-235B-A22B-Instruct-2507-tput",
     )
-else:
+    llm_transformer = LLMGraphTransformer(llm=llm)
+    memory = ConversationBufferMemory(return_messages=True)
+
+    chain = None
     chain2 = None
+    if clients_bundle.graph is not None:
+        chain = GraphCypherQAChain.from_llm(
+            llm=llm2, graph=clients_bundle.graph,
+            cypher_prompt=Cypher_Prompt, qa_prompt=qa_prompt,
+            verbose=True, memory=memory, allow_dangerous_requests=True,
+        )
+        chain2 = GraphCypherQAChain.from_llm(
+            llm=llm2, graph=clients_bundle.graph,
+            cypher_prompt=Cypher_Prompt2, qa_prompt=qa_prompt2,
+            verbose=True, memory=memory, allow_dangerous_requests=True,
+        )
 
-# Search tool configuration
-search_tool = TavilySearchResults(
-    k=10,  # Increased from 5 to 10 for more comprehensive results
-    tavily_api_key=tavily_api_key
-)
-tools = [
-    Tool(
-        name="WebSearch",
-        func=search_tool.run,
-        description="Use this to gather up-to-date market data, TAM, competition, rankings, submarkets, industry trends, growth rates, market segments, regulatory information, and strategic insights. Perform multiple searches to cross-reference data from different sources for accuracy. Focus on recent data (2026-2027) when available."
+    search_tool = TavilySearchResults(
+        k=10,
+        tavily_api_key=tavily_api_key,
     )
-]
+    tools = [
+        Tool(
+            name="WebSearch",
+            func=search_tool.run,
+            description="Use this to gather up-to-date market data, TAM, competition, rankings, submarkets, industry trends, growth rates, market segments, regulatory information, and strategic insights. Perform multiple searches to cross-reference data from different sources for accuracy. Focus on recent data (2026-2027) when available.",
+        ),
+    ]
+    agent_chain = initialize_agent(
+        tools=tools,
+        llm=llm2,
+        agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
+        verbose=False,
+        handle_parsing_errors=True,
+        max_iterations=20,
+        max_execution_time=120,
+    )
 
-# Agent (combines LLM + search)
-agent_chain = initialize_agent(
-    tools=tools,
-    llm=llm2,
-    agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
-    verbose=False,
-    handle_parsing_errors=True,
-    max_iterations=20,  # Increased from 10 to 20 to allow more search queries
-    max_execution_time=120  # Increased from 60 to 120 seconds for deeper research
-)
+    return LLMBundle(
+        llm=llm, llm2=llm2,
+        llm_transformer=llm_transformer, memory=memory,
+        chain=chain, chain2=chain2, agent_chain=agent_chain,
+    )
+
+
+# Vision model — not part of LLMBundle (no current service uses it). Kept at
+# module scope so any future reference to `llm_config.vision` continues to work.
+vision = ChatGroq(model="llama-3.2-90b-vision-preview", api_key=groq_api_key)
+
+
+# Module-level globals — routed through the factory. Kept alive through commit
+# 15 for backward compatibility with services that haven't been converted to
+# dependency injection yet. Commit 17 deletes these.
+_bundle = build_llm_config(clients._bundle)
+llm = _bundle.llm
+llm2 = _bundle.llm2
+llm_transformer = _bundle.llm_transformer
+memory = _bundle.memory
+chain = _bundle.chain
+chain2 = _bundle.chain2
+agent_chain = _bundle.agent_chain
