@@ -65,7 +65,7 @@ def test_upsert_customer_profile_happy_path(mocker, mock_session, mock_mongo_cli
             "fit_confidence": "high",
         }],
     )
-    result = upsert_customer_profile(request)
+    result = upsert_customer_profile(mock_session._driver, mock_mongo_client, request)
 
     assert result.get("success") is True
     coll.update_one.assert_called_once()
@@ -88,10 +88,10 @@ def test_get_customer_profile_raises_when_not_found(mock_session, mock_mongo_cli
     mock_session.run.return_value.single.return_value = None
 
     with pytest.raises(CompanyProfileNotFoundError, match="No company profile found"):
-        get_customer_profile(TEST_ORG_ID)
+        get_customer_profile(mock_session._driver, mock_mongo_client, TEST_ORG_ID)
 
 
-def test_get_customer_profile_returns_existing_doc(mock_mongo_client, mocker):
+def test_get_customer_profile_returns_existing_doc(mock_session, mock_mongo_client, mocker):
     mocker.patch("app.services.icp._ensure_icp_id_registry_indexes")
     mocker.patch(
         "app.services.icp._reserve_unique_icp_id",
@@ -106,7 +106,7 @@ def test_get_customer_profile_returns_existing_doc(mock_mongo_client, mocker):
     }
     mock_mongo_client["Profiler"].__getitem__.return_value = coll
 
-    result = get_customer_profile(TEST_ORG_ID)
+    result = get_customer_profile(mock_session._driver, mock_mongo_client, TEST_ORG_ID)
 
     # Service returns {"success": True, "data": {"icps": [...]}}
     assert result.get("success") is True
@@ -156,7 +156,7 @@ def test_create_from_suggested_icp_happy_path(
     request = SuggestedICPToCustomerProfileRequest(
         user_id=TEST_USER_ID, org_id=TEST_ORG_ID, icp_id=TEST_ICP_ID_1,
     )
-    result = create_from_suggested_icp(request)
+    result = create_from_suggested_icp(mock_session._driver, mock_mongo_client, request)
 
     assert result.get("success") is True
     assert "icp" in result["data"]
@@ -185,7 +185,7 @@ def test_create_from_suggested_icp_raises_when_icp_id_missing(
         user_id=TEST_USER_ID, org_id=TEST_ORG_ID, icp_id=TEST_ICP_ID_1,
     )
     with pytest.raises(SuggestedICPNotFoundError, match="Suggested ICP not found"):
-        create_from_suggested_icp(request)
+        create_from_suggested_icp(mock_session._driver, mock_mongo_client, request)
 
 
 def test_create_from_suggested_icp_raises_icp_already_exists(
@@ -222,7 +222,7 @@ def test_create_from_suggested_icp_raises_icp_already_exists(
         user_id=TEST_USER_ID, org_id=TEST_ORG_ID, icp_id=TEST_ICP_ID_1,
     )
     with pytest.raises(ICPAlreadyExistsError, match="already"):
-        create_from_suggested_icp(request)
+        create_from_suggested_icp(mock_session._driver, mock_mongo_client, request)
 
 
 # ---------------------------------------------------------------------------
@@ -238,7 +238,7 @@ def test_delete_icp_raises_when_customer_profile_missing(
     mock_mongo_client["Profiler"].__getitem__.return_value = coll
 
     with pytest.raises(CustomerProfileNotFoundError):
-        delete_icp_from_customer_profile(TEST_ICP_ID_1, TEST_ORG_ID)
+        delete_icp_from_customer_profile(mock_mongo_client, TEST_ICP_ID_1, TEST_ORG_ID)
 
 
 def test_delete_icp_raises_when_icp_not_in_profile(
@@ -254,7 +254,7 @@ def test_delete_icp_raises_when_icp_not_in_profile(
     mocker.patch("app.services.icp._release_icp_id")
 
     with pytest.raises(CustomerProfileICPNotFoundError):
-        delete_icp_from_customer_profile(TEST_ICP_ID_1, TEST_ORG_ID)
+        delete_icp_from_customer_profile(mock_mongo_client, TEST_ICP_ID_1, TEST_ORG_ID)
 
 
 def test_delete_icp_happy_path_releases_id(mock_mongo_client, mocker):
@@ -272,7 +272,7 @@ def test_delete_icp_happy_path_releases_id(mock_mongo_client, mocker):
     mock_mongo_client["Profiler"].__getitem__.return_value = coll
     release_mock = mocker.patch("app.services.icp._release_icp_id")
 
-    result = delete_icp_from_customer_profile(TEST_ICP_ID_1, TEST_ORG_ID)
+    result = delete_icp_from_customer_profile(mock_mongo_client, TEST_ICP_ID_1, TEST_ORG_ID)
 
     assert result.get("success") is True
     release_mock.assert_called_once()

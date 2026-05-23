@@ -2,7 +2,6 @@
 import json
 from datetime import datetime, timezone
 
-from app.core import clients
 from app.core.exceptions import (
     CompanyProfileNotFoundError,
     CustomerProfileICPNotFoundError,
@@ -13,21 +12,19 @@ from app.core.exceptions import (
 from app.models.customer_profile import CustomerProfileRequest, SuggestedICPToCustomerProfileRequest
 
 
-def upsert_customer_profile(request: CustomerProfileRequest) -> dict:
+def upsert_customer_profile(driver, mongo, request: CustomerProfileRequest) -> dict:
     """
     Create or update customer profiles (ICPs) in MongoDB.
     Customer profiles are stored within the company profile document.
     """
     from app.services.icp import _ensure_icp_id_registry_indexes, _reserve_unique_icp_id
-    # MongoDB connection
-    mongo_client = clients.client
-    db = mongo_client["Profiler"]
+    db = mongo["Profiler"]
     _ensure_icp_id_registry_indexes(db)
     collection = db["Company_Profile"]
 
     # Get company profile from Neo4j to include in MongoDB document (filter by org_id)
     company_profile_data = {}
-    with clients.driver.session() as session:
+    with driver.session() as session:
         result = session.run(
             "MATCH (c:CompanyProfile {org_id: $org_id}) RETURN c LIMIT 1",
             org_id=request.org_id
@@ -134,16 +131,14 @@ def upsert_customer_profile(request: CustomerProfileRequest) -> dict:
     }
 
 
-def get_customer_profile(org_id: str) -> dict:
+def get_customer_profile(driver, mongo, org_id: str) -> dict:
     """
     Get customer profiles (ICPs) from MongoDB.
     Returns both company profile and associated customer profiles from the same document.
     Filtered by org_id for multi-org support.
     """
     from app.services.icp import _ensure_icp_id_registry_indexes, _reserve_unique_icp_id
-    # MongoDB connection
-    mongo_client = clients.client
-    db = mongo_client["Profiler"]
+    db = mongo["Profiler"]
     _ensure_icp_id_registry_indexes(db)
     collection = db["Company_Profile"]
 
@@ -153,7 +148,7 @@ def get_customer_profile(org_id: str) -> dict:
 
     if not document:
         # If no MongoDB document exists, try to get from Neo4j and return empty customer profiles
-        with clients.driver.session() as session:
+        with driver.session() as session:
             result = session.run(
                 "MATCH (c:CompanyProfile {org_id: $org_id}) RETURN c LIMIT 1",
                 org_id=org_id
@@ -216,16 +211,13 @@ def get_customer_profile(org_id: str) -> dict:
     }
 
 
-def create_from_suggested_icp(request: SuggestedICPToCustomerProfileRequest) -> dict:
+def create_from_suggested_icp(driver, mongo, request: SuggestedICPToCustomerProfileRequest) -> dict:
     """
     Convert a suggested/recommended ICP (from GET /icp) into a Customer Profile ICP and save it.
     Enforces uniqueness by source suggested ICP id within the org's saved customer profiles.
     """
     from app.services.icp import _ensure_icp_id_registry_indexes, _reserve_unique_icp_id
-    # --- Load suggested ICPs for this user_id ---
-    mongo_client = clients.client
-
-    profiler_db = mongo_client["Profiler"]
+    profiler_db = mongo["Profiler"]
     _ensure_icp_id_registry_indexes(profiler_db)
     icp_config_collection = profiler_db["ICP_config"]
     icp_config = icp_config_collection.find_one({"user_id": request.user_id}) or {}
@@ -324,7 +316,7 @@ def create_from_suggested_icp(request: SuggestedICPToCustomerProfileRequest) -> 
     # Get company profile from Neo4j to include (reuse existing if present)
     company_profile_data = existing_doc.get("company_profile") or {}
     if not company_profile_data:
-        with clients.driver.session() as session:
+        with driver.session() as session:
             result = session.run(
                 "MATCH (c:CompanyProfile {org_id: $org_id}) RETURN c LIMIT 1",
                 org_id=request.org_id
@@ -358,13 +350,12 @@ def create_from_suggested_icp(request: SuggestedICPToCustomerProfileRequest) -> 
     }
 
 
-def delete_icp_from_customer_profile(icp_id: str, org_id: str) -> dict:
+def delete_icp_from_customer_profile(mongo, icp_id: str, org_id: str) -> dict:
     """
     Delete a single saved customer profile ICP by icp_id for a given org_id.
     """
     from app.services.icp import _ensure_icp_id_registry_indexes, _release_icp_id
-    mongo_client = clients.client
-    db = mongo_client["Profiler"]
+    db = mongo["Profiler"]
     _ensure_icp_id_registry_indexes(db)
     collection = db["Company_Profile"]
 

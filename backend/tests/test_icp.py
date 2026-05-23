@@ -13,6 +13,7 @@ Endpoints:
   POST /icp-research            — 4 component names
 """
 import json
+from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
 
 from tests.fixtures import load_captured
@@ -20,6 +21,21 @@ from tests.helpers import scrub_dynamic, DEFAULT_SCRUB_KEYS
 from tests.identities import TEST_USER_ID, TEST_ORG_ID, TEST_ICP_ID_1
 
 _SCRUB_WITH_ID = DEFAULT_SCRUB_KEYS | {"id"}
+
+
+@contextmanager
+def _override_mongo(mongo_instance):
+    """Phase F: customer_profile router reads Mongo via Depends(get_mongo).
+    Replaces the legacy `with patch("app.core.clients.client", mongo_instance)`
+    for tests that depend on the *specific* mock data shape (not just route
+    code path). icp router is not yet converted; use legacy patch for /icp tests."""
+    from app.main import app
+    from app.core.dependencies import get_mongo
+    app.dependency_overrides[get_mongo] = lambda: mongo_instance
+    try:
+        yield
+    finally:
+        app.dependency_overrides.pop(get_mongo, None)
 
 
 # ---------------------------------------------------------------------------
@@ -145,7 +161,7 @@ def test_get_customer_profile_returns_icp_list(client, mock_neo4j, snapshot):
         "icp_id_registry": _make_coll(find_one=None),
     })
 
-    with patch("app.core.clients.client", mc):
+    with _override_mongo(mc):
         response = client.get("/customer_profile", params={"org_id": TEST_ORG_ID})
 
     assert response.status_code == 200
@@ -189,7 +205,7 @@ def test_delete_customer_profile_icp_removes_from_mongo(client):
         "icp_id_registry": _make_coll(find_one=None),
     })
 
-    with patch("app.core.clients.client", mc):
+    with _override_mongo(mc):
         response = client.delete(
             f"/customer_profile/icp/{TEST_ICP_ID_1}",
             params={"org_id": TEST_ORG_ID},
@@ -327,7 +343,7 @@ def test_post_customer_profile_from_suggested_icp_promotes(client, mock_neo4j, s
         "icp_id": "sug_001",
     }
 
-    with patch("app.core.clients.client", mc):
+    with _override_mongo(mc):
         response = client.post("/customer_profile/from_suggested_icp", json=payload)
 
     assert response.status_code in (200, 201)
