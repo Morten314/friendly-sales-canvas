@@ -57,21 +57,30 @@ def _build_signal_context_queries(agent_name: str, context_payload: Any) -> List
 
 
 def _fetch_pinecone_supporting_context(
-    queries: List[str],
-    org_id: Optional[str],
-    top_k: int = 3
+    pc=None,
+    queries: Optional[List[str]] = None,
+    org_id: Optional[str] = None,
+    top_k: int = 3,
 ) -> List[Dict[str, Any]]:
     """
     Best-effort Pinecone retrieval.
     Never raises; returns [] on any issue.
+
+    Phase F (commit 8/17): `pc` is the new explicit Pinecone client parameter.
+    Defaults to `None` only because `queries` and `org_id` cannot be mandatory
+    after a defaulted arg; the fallback below reads `clients.pc` for
+    unconverted callers in market_research (commit 12), icp (commit 13), and
+    signals (commit 14). Commit 17 deletes both the default and the fallback.
     """
+    if pc is None:
+        pc = clients.pc
     if not queries or not pinecone_api_key:
         return []
     if not org_id:
         return []
 
     try:
-        index = clients.pc.Index("brewra-documents")
+        index = pc.Index("brewra-documents")
         embeddings = OpenAIEmbeddings(
             openai_api_key=together_api_key,
             openai_api_base="https://api.together.xyz/v1",
