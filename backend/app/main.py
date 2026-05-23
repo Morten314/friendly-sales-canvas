@@ -13,12 +13,14 @@ Domain routers register themselves here. Routes themselves live in
 app/routers/<domain>.py.
 """
 import os
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.core import clients
+from app.core.clients import build_clients
 from app.core.exceptions import (
     AuthenticationError,
     AuthorizationError,
@@ -29,9 +31,45 @@ from app.core.exceptions import (
     ServiceError,
     ValidationError,
 )
+from app.core.llm_config import build_llm_config
 from app.core.logging import logger  # noqa: F401 — re-exported for backward compat within Phase B
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Construct all external clients/LLMs once and stash on app.state.
+
+    Phase F (commit 2/17): introduced alongside the legacy module-import-time
+    construction in `app.core.clients` / `app.core.llm_config` and the
+    `@app.on_event("startup")` hook below. All three coexist through commit 15;
+    commit 17 deletes the legacy paths. Idempotent — Mongo `create_index` is a
+    no-op when an equivalent index exists.
+    """
+    app.state.clients = build_clients()
+    app.state.llm = build_llm_config(app.state.clients)
+
+    if app.state.clients.graph is not None:
+        try:
+            app.state.clients.graph.refresh_schema()
+        except Exception as e:
+            logger.error("Neo4j refresh_schema (lifespan) failed: %s", e)
+
+    if app.state.clients.client is not None:
+        # Re-run Mongo index creation via lifespan. Inline today; Task 15a
+        # replaces this with `_ensure_market_scoring_indexes(app.state.clients.client)`
+        # once the helper relocates into `app/services/market_scoring.py`.
+        from app.services.market_scoring import _get_market_score_collections
+        score_coll, run_coll = _get_market_score_collections()
+        score_coll.create_index([("org_id", 1), ("lead_id", 1)], unique=True)
+        score_coll.create_index([("org_id", 1), ("updated_at", -1)])
+        run_coll.create_index([("org_id", 1), ("status", 1)])
+        run_coll.create_index([("org_id", 1), ("created_at", -1)])
+
+    yield
+    # No teardown — clients are process-lifetime singletons.
+
+
+app = FastAPI(lifespan=lifespan)
 
 # NOTE: allow_origins=["*"] with allow_credentials=True is preserved from
 # original behavior. Phase B tightens this.
