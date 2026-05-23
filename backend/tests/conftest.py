@@ -149,3 +149,130 @@ def client(mock_neo4j, mock_mongo, mock_llm_chain, mock_llm_config,
     from main import app
     with TestClient(app) as c:
         yield c
+
+
+# ---------------------------------------------------------------------------
+# Phase F: dependency_overrides-based fixtures
+#
+# These coexist with the source-patch fixtures above. Tests for services
+# already converted to dependency injection (commits 4-15) use `_via_override`
+# variants; tests for un-converted services keep using the source-patch
+# fixtures. Commit 17 deletes the source-patch fixtures entirely.
+#
+# Each fixture pops its override in a `finally` block so a test failure
+# doesn't leave a stale override in place — the session-scope autouse leak
+# detector below catches any that escape anyway.
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def mock_neo4j_via_override():
+    """Neo4j driver mock injected via app.dependency_overrides[get_neo4j_driver]."""
+    from app.main import app
+    from app.core.dependencies import get_neo4j_driver
+
+    mock_session = MagicMock()
+    mock_driver = MagicMock()
+    mock_driver.session.return_value.__enter__.return_value = mock_session
+    mock_driver.session.return_value.__exit__.return_value = False
+
+    app.dependency_overrides[get_neo4j_driver] = lambda: mock_driver
+    try:
+        yield {"driver": mock_driver, "session": mock_session}
+    finally:
+        app.dependency_overrides.pop(get_neo4j_driver, None)
+
+
+@pytest.fixture
+def mock_mongo_via_override():
+    from app.main import app
+    from app.core.dependencies import get_mongo
+
+    mock = MagicMock()
+    app.dependency_overrides[get_mongo] = lambda: mock
+    try:
+        yield mock
+    finally:
+        app.dependency_overrides.pop(get_mongo, None)
+
+
+@pytest.fixture
+def mock_s3_via_override():
+    from app.main import app
+    from app.core.dependencies import get_s3
+
+    mock = MagicMock()
+    app.dependency_overrides[get_s3] = lambda: mock
+    try:
+        yield mock
+    finally:
+        app.dependency_overrides.pop(get_s3, None)
+
+
+@pytest.fixture
+def mock_pinecone_via_override():
+    from app.main import app
+    from app.core.dependencies import get_pinecone
+
+    mock = MagicMock()
+    mock.Index.return_value.query.return_value = {"matches": []}
+    app.dependency_overrides[get_pinecone] = lambda: mock
+    try:
+        yield mock
+    finally:
+        app.dependency_overrides.pop(get_pinecone, None)
+
+
+@pytest.fixture
+def mock_neo4j_graph_via_override():
+    from app.main import app
+    from app.core.dependencies import get_neo4j_graph
+
+    mock = MagicMock()
+    app.dependency_overrides[get_neo4j_graph] = lambda: mock
+    try:
+        yield mock
+    finally:
+        app.dependency_overrides.pop(get_neo4j_graph, None)
+
+
+@pytest.fixture
+def mock_llm_via_override():
+    """Composite override for all 7 LLM providers. Mirrors mock_llm_config in
+    structure but flows through app.dependency_overrides instead of source-patches."""
+    from app.main import app
+    from app.core.dependencies import (
+        get_llm, get_llm2, get_llm_transformer,
+        get_memory, get_agent_chain, get_chain, get_chain2,
+    )
+
+    mocks = {name: MagicMock(name=f"llm.{name}") for name in (
+        "llm", "llm2", "llm_transformer", "memory", "agent_chain", "chain", "chain2",
+    )}
+    app.dependency_overrides[get_llm] = lambda: mocks["llm"]
+    app.dependency_overrides[get_llm2] = lambda: mocks["llm2"]
+    app.dependency_overrides[get_llm_transformer] = lambda: mocks["llm_transformer"]
+    app.dependency_overrides[get_memory] = lambda: mocks["memory"]
+    app.dependency_overrides[get_agent_chain] = lambda: mocks["agent_chain"]
+    app.dependency_overrides[get_chain] = lambda: mocks["chain"]
+    app.dependency_overrides[get_chain2] = lambda: mocks["chain2"]
+    try:
+        yield mocks
+    finally:
+        for provider in (get_llm, get_llm2, get_llm_transformer, get_memory,
+                         get_agent_chain, get_chain, get_chain2):
+            app.dependency_overrides.pop(provider, None)
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _verify_no_dependency_override_leak():
+    """Session-end safety check: a test fixture forgot to pop its override.
+
+    A leak pollutes later tests — they'd inherit the override and pass/fail
+    for the wrong reasons. This catches that without exercising any
+    production code path.
+    """
+    from app.main import app
+    yield
+    assert app.dependency_overrides == {}, (
+        f"Test session leaked overrides: {list(app.dependency_overrides.keys())}"
+    )
