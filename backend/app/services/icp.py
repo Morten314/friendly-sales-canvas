@@ -4,7 +4,7 @@ Includes:
   - ICP_generator: main ICP synthesis from company profile
   - icp_research_1..4: 4-component ICP-research breakdown
   - _icp_research_agent_output: prompt-dispatch helper (default vs claude)
-  - _ensure_icp_id_registry_indexes / _reserve_unique_icp_id / _release_icp_id:
+  - _ensure_icp_indexes / _reserve_unique_icp_id / _release_icp_id:
     Mongo-backed ICP-id reservation
   - ICP_FUNCTIONS, ICP_FUNCTIONS_CLAUDE dispatch dicts
   - list_icps: router-facing wrapper for GET /icp
@@ -813,7 +813,6 @@ def list_icps(driver, mongo, agent_chain, user_id: str, refresh: bool = False) -
 
     try:
         db = mongo["Profiler"]
-        _ensure_icp_id_registry_indexes(db)
         collection = db["ICP_config"]
 
         # Filter by user_id only for multitenancy
@@ -1048,7 +1047,6 @@ async def run_icp_research(driver, mongo, pc, agent_chain, request: Any, llm_bac
 def delete_recommended_icp(mongo, icp_id: str, user_id: str) -> Dict[str, Any]:
     """Delete a single recommended ICP from ICP_config by icp_id for a given user_id."""
     db = mongo["Profiler"]
-    _ensure_icp_id_registry_indexes(db)
     collection = db["ICP_config"]
 
     document = collection.find_one({"user_id": user_id})
@@ -1092,8 +1090,9 @@ def delete_recommended_icp(mongo, icp_id: str, user_id: str) -> Dict[str, Any]:
 
 
 # --- ICP-id registry helpers ---
-def _ensure_icp_id_registry_indexes(db) -> None:
-    registry = db["ICP_ID_REGISTRY"]
+def _ensure_icp_indexes(mongo) -> None:
+    """Create Mongo indexes for ICP_ID_REGISTRY. Idempotent."""
+    registry = mongo["Profiler"]["ICP_ID_REGISTRY"]
     registry.create_index("id", unique=True)
     registry.create_index("id_type")
 

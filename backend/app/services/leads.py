@@ -11,6 +11,15 @@ from app.core.logging import logger
 from app.models.leads import LeadCreateRequest, LeadUpdateRequest
 
 
+def _ensure_leads_indexes(mongo) -> None:
+    """Create Mongo indexes for Lead_Stream_Files.
+    Idempotent — `create_index` is a no-op when an equivalent index exists.
+    """
+    coll = mongo["Profiler"]["Lead_Stream_Files"]
+    coll.create_index("file_id", unique=True)
+    coll.create_index([("user_id", 1), ("org_id", 1)])
+
+
 # ---------------------------------------------------------------------------
 # Unified lead-fetch helper
 # ---------------------------------------------------------------------------
@@ -216,8 +225,6 @@ def batch_upload_leads(
         # Prepare lead stream tracking (Mongo)
         profiler_db = mongo["Profiler"]
         lead_stream_coll = profiler_db["Lead_Stream_Files"]
-        lead_stream_coll.create_index("file_id", unique=True)
-        lead_stream_coll.create_index([("user_id", 1), ("org_id", 1)])
         # Generate backend file_id
         file_id = str(uuid.uuid4())
         uploaded_at = datetime.now(timezone.utc).isoformat()

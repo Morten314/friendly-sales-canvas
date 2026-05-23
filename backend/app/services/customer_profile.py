@@ -17,9 +17,8 @@ def upsert_customer_profile(driver, mongo, request: CustomerProfileRequest) -> d
     Create or update customer profiles (ICPs) in MongoDB.
     Customer profiles are stored within the company profile document.
     """
-    from app.services.icp import _ensure_icp_id_registry_indexes, _reserve_unique_icp_id
+    from app.services.icp import _reserve_unique_icp_id
     db = mongo["Profiler"]
-    _ensure_icp_id_registry_indexes(db)
     collection = db["Company_Profile"]
 
     # Get company profile from Neo4j to include in MongoDB document (filter by org_id)
@@ -137,9 +136,8 @@ def get_customer_profile(driver, mongo, org_id: str) -> dict:
     Returns both company profile and associated customer profiles from the same document.
     Filtered by org_id for multi-org support.
     """
-    from app.services.icp import _ensure_icp_id_registry_indexes, _reserve_unique_icp_id
+    from app.services.icp import _reserve_unique_icp_id
     db = mongo["Profiler"]
-    _ensure_icp_id_registry_indexes(db)
     collection = db["Company_Profile"]
 
     # Find the company profile document (filter by org_id)
@@ -216,9 +214,8 @@ def create_from_suggested_icp(driver, mongo, request: SuggestedICPToCustomerProf
     Convert a suggested/recommended ICP (from GET /icp) into a Customer Profile ICP and save it.
     Enforces uniqueness by source suggested ICP id within the org's saved customer profiles.
     """
-    from app.services.icp import _ensure_icp_id_registry_indexes, _reserve_unique_icp_id
+    from app.services.icp import _reserve_unique_icp_id
     profiler_db = mongo["Profiler"]
-    _ensure_icp_id_registry_indexes(profiler_db)
     icp_config_collection = profiler_db["ICP_config"]
     icp_config = icp_config_collection.find_one({"user_id": request.user_id}) or {}
     icps_payload = icp_config.get("icps") or {}
@@ -354,9 +351,8 @@ def delete_icp_from_customer_profile(mongo, icp_id: str, org_id: str) -> dict:
     """
     Delete a single saved customer profile ICP by icp_id for a given org_id.
     """
-    from app.services.icp import _ensure_icp_id_registry_indexes, _release_icp_id
+    from app.services.icp import _release_icp_id
     db = mongo["Profiler"]
-    _ensure_icp_id_registry_indexes(db)
     collection = db["Company_Profile"]
 
     filter_query = {"profile_type": "company", "org_id": org_id}

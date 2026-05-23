@@ -26,6 +26,8 @@ from app.core.exceptions import (
 from app.core.llm_config import build_llm_config
 from app.core.logging import logger  # noqa: F401
 from app.services.market_scoring import _ensure_market_scoring_indexes
+from app.services.leads import _ensure_leads_indexes
+from app.services.icp import _ensure_icp_indexes
 
 
 @asynccontextmanager
@@ -45,6 +47,8 @@ async def lifespan(app: FastAPI):
 
     if app.state.clients.client is not None:
         _ensure_market_scoring_indexes(app.state.clients.client)
+        _ensure_leads_indexes(app.state.clients.client)
+        _ensure_icp_indexes(app.state.clients.client)
 
     yield
     # No teardown — clients are process-lifetime singletons.
