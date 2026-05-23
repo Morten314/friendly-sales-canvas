@@ -90,7 +90,7 @@ def test_run_market_research_groq_per_component(
         user_id=TEST_USER_ID, org_id=TEST_ORG_ID,
         component_name=component_name, data={}, refresh=True,
     )
-    result = asyncio.run(run_market_research(request, llm_backend="groq"))
+    result = asyncio.run(run_market_research(mock_session._driver, mock_mongo_client, MagicMock(), MagicMock(), request, llm_backend="groq"))
 
     assert result["status"] == "success"
     assert result["data"]["component_name"] == component_name
@@ -120,7 +120,7 @@ def test_run_market_research_returns_cached_when_not_refreshing(
         user_id=TEST_USER_ID, org_id=TEST_ORG_ID,
         component_name="market size & opportunity", data={}, refresh=False,
     )
-    result = asyncio.run(run_market_research(request, llm_backend="groq"))
+    result = asyncio.run(run_market_research(mock_session._driver, mock_mongo_client, MagicMock(), MagicMock(), request, llm_backend="groq"))
 
     assert result["status"] == "success"
     fake_fn.assert_not_called()
@@ -155,7 +155,7 @@ def test_run_market_research_claude_uses_captured(
         user_id=TEST_USER_ID, org_id=TEST_ORG_ID,
         component_name="market size & opportunity", data={}, refresh=True,
     )
-    result = asyncio.run(run_market_research(request, llm_backend="claude"))
+    result = asyncio.run(run_market_research(mock_session._driver, mock_mongo_client, MagicMock(), MagicMock(), request, llm_backend="claude"))
 
     assert result["status"] == "success"
     assert result["data"]["user_id"] == TEST_USER_ID
@@ -174,7 +174,7 @@ def test_run_market_research_raises_on_unsupported_component(
         component_name="not a real component", data={}, refresh=True,
     )
     with pytest.raises(UnsupportedComponentError, match="Unsupported component_name"):
-        asyncio.run(run_market_research(request))
+        asyncio.run(run_market_research(mock_session._driver, mock_mongo_client, MagicMock(), MagicMock(), request))
 
 
 def test_run_market_research_raises_when_company_profile_missing(
@@ -187,7 +187,7 @@ def test_run_market_research_raises_when_company_profile_missing(
         component_name="market size & opportunity", data={}, refresh=True,
     )
     with pytest.raises(CompanyProfileNotFoundError, match="No company profile"):
-        asyncio.run(run_market_research(request))
+        asyncio.run(run_market_research(mock_session._driver, mock_mongo_client, MagicMock(), MagicMock(), request))
 
 
 def test_run_market_research_propagates_budget_exhausted_error(
@@ -215,4 +215,4 @@ def test_run_market_research_propagates_budget_exhausted_error(
         component_name="market size & opportunity", data={}, refresh=True,
     )
     with pytest.raises(BudgetExhaustedError, match="budget exhausted"):
-        asyncio.run(run_market_research(request, llm_backend="claude"))
+        asyncio.run(run_market_research(mock_session._driver, mock_mongo_client, MagicMock(), MagicMock(), request, llm_backend="claude"))

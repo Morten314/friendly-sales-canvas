@@ -11,7 +11,6 @@ import re
 from datetime import datetime, timezone
 from typing import List
 
-from app.core import clients, llm_config
 from app.core.exceptions import (
     BudgetExhaustedError,
     CompanyProfileNotFoundError,
@@ -32,9 +31,9 @@ from app.services._llm_helpers import (  # noqa: F401
 )
 
 
-def _market_research_agent_output(prompt: str, company_profile_json: str, llm_backend: str) -> str:
+def _market_research_agent_output(agent_chain, prompt: str, company_profile_json: str, llm_backend: str) -> str:
     if llm_backend != "claude":
-        raw_response = llm_config.agent_chain.invoke({"input": prompt})
+        raw_response = agent_chain.invoke({"input": prompt})
         return raw_response["output"]
     seed = " ".join(str(company_profile_json).split())[:1200]
     web_ctx, _ = _tavily_context_and_urls(f"market research industry trends data 2026 {seed}")
@@ -47,7 +46,7 @@ WEB SEARCH RESULTS (primary external evidence — synthesize with company profil
 
 
 # Research Market Functions
-def Research_Market_1(pre_data, llm_backend: str = "default") -> dict:
+def Research_Market_1(agent_chain, pre_data, llm_backend: str = "default") -> dict:
     # Convert company profile to JSON string (handle both dict and string inputs)
     if isinstance(pre_data, dict):
         company_profile_json = json.dumps(pre_data, indent=2)
@@ -153,7 +152,7 @@ Do not include any additional reasoning, thoughts, or steps after that.
     prompt = template.format(company_profile_json=company_profile_json)
 
     # Step 3: Get LLM response
-    response = _market_research_agent_output(prompt, company_profile_json, llm_backend)
+    response = _market_research_agent_output(agent_chain, prompt, company_profile_json, llm_backend)
 
     # Clean and escape the JSON string
     cleaned_str = response.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
@@ -166,7 +165,7 @@ Do not include any additional reasoning, thoughts, or steps after that.
     # ✅ Return the Python dict
     return parsed_json
 
-def Research_Market_2(pre_data, llm_backend: str = "default") -> dict:
+def Research_Market_2(agent_chain, pre_data, llm_backend: str = "default") -> dict:
     # Convert company profile to JSON string (handle both dict and string inputs)
     if isinstance(pre_data, dict):
         company_profile_json = json.dumps(pre_data, indent=2)
@@ -289,7 +288,7 @@ Do not include any additional reasoning, thoughts, or steps after that.
     prompt = template.format(company_profile_json=company_profile_json)
 
     # Step 3: Get LLM response
-    response = _market_research_agent_output(prompt, company_profile_json, llm_backend)
+    response = _market_research_agent_output(agent_chain, prompt, company_profile_json, llm_backend)
 
     # Clean and escape the JSON string
     cleaned_str = response.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
@@ -302,7 +301,7 @@ Do not include any additional reasoning, thoughts, or steps after that.
     # ✅ Return the Python dict
     return parsed_json
 
-def Research_Market_3(pre_data, llm_backend: str = "default") -> dict:
+def Research_Market_3(agent_chain, pre_data, llm_backend: str = "default") -> dict:
     # Convert company profile to JSON string (handle both dict and string inputs)
     if isinstance(pre_data, dict):
         company_profile_json = json.dumps(pre_data, indent=2)
@@ -516,7 +515,7 @@ Do not include any additional reasoning, thoughts, or steps after that.
     prompt = template.format(company_profile_json=company_profile_json)
 
     # Step 3: Get LLM response
-    response = _market_research_agent_output(prompt, company_profile_json, llm_backend)
+    response = _market_research_agent_output(agent_chain, prompt, company_profile_json, llm_backend)
 
     # Clean and escape the JSON string
     cleaned_str = response.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
@@ -529,7 +528,7 @@ Do not include any additional reasoning, thoughts, or steps after that.
     # ✅ Return the Python dict
     return parsed_json
 
-def Research_Market_4(pre_data, llm_backend: str = "default") -> dict:
+def Research_Market_4(agent_chain, pre_data, llm_backend: str = "default") -> dict:
     # Convert company profile to JSON string (handle both dict and string inputs)
     if isinstance(pre_data, dict):
         company_profile_json = json.dumps(pre_data, indent=2)
@@ -730,7 +729,7 @@ Do not include any additional reasoning, thoughts, or steps after that.
     prompt = template.format(company_profile_json=company_profile_json)
 
     # Step 3: Get LLM response
-    response = _market_research_agent_output(prompt, company_profile_json, llm_backend)
+    response = _market_research_agent_output(agent_chain, prompt, company_profile_json, llm_backend)
 
     # Clean and escape the JSON string
     cleaned_str = response.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
@@ -743,7 +742,7 @@ Do not include any additional reasoning, thoughts, or steps after that.
     # ✅ Return the Python dict
     return parsed_json
 
-def Research_Market_5(pre_data, llm_backend: str = "default") -> dict:
+def Research_Market_5(agent_chain, pre_data, llm_backend: str = "default") -> dict:
     # Convert company profile to JSON string (handle both dict and string inputs)
     if isinstance(pre_data, dict):
         company_profile_json = json.dumps(pre_data, indent=2)
@@ -892,7 +891,7 @@ Do not include any additional reasoning, thoughts, or steps after that.
     prompt = template.format(company_profile_json=company_profile_json)
 
     # Step 3: Get LLM response
-    response = _market_research_agent_output(prompt, company_profile_json, llm_backend)
+    response = _market_research_agent_output(agent_chain, prompt, company_profile_json, llm_backend)
 
     # Clean and escape the JSON string
     cleaned_str = response.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
@@ -916,15 +915,15 @@ COMPONENT_FUNCTIONS = {
 }
 
 COMPONENT_FUNCTIONS_CLAUDE = {
-    "market size & opportunity": lambda d: Research_Market_1(d, "claude"),
-    "industry trends report": lambda d: Research_Market_2(d, "claude"),
-    "competitor landscape": lambda d: Research_Market_3(d, "claude"),
-    "regulatory & compliance highlights": lambda d: Research_Market_4(d, "claude"),
-    "market entry & growth strategy": lambda d: Research_Market_5(d, "claude"),
+    "market size & opportunity": lambda agent_chain, d: Research_Market_1(agent_chain, d, "claude"),
+    "industry trends report": lambda agent_chain, d: Research_Market_2(agent_chain, d, "claude"),
+    "competitor landscape": lambda agent_chain, d: Research_Market_3(agent_chain, d, "claude"),
+    "regulatory & compliance highlights": lambda agent_chain, d: Research_Market_4(agent_chain, d, "claude"),
+    "market entry & growth strategy": lambda agent_chain, d: Research_Market_5(agent_chain, d, "claude"),
 }
 
 
-async def run_market_research(request: MarketRequest, llm_backend: str = "groq") -> dict:
+async def run_market_research(driver, mongo, pc, agent_chain, request: MarketRequest, llm_backend: str = "groq") -> dict:
     """Unified worker for both Groq and Claude market-research variants.
 
     The caller (router) is responsible for:
@@ -940,7 +939,7 @@ async def run_market_research(request: MarketRequest, llm_backend: str = "groq")
             f"Unsupported component_name: {request.component_name}"
         )
 
-    db = clients.client["Scout_Agent"]
+    db = mongo["Scout_Agent"]
     collection = db["Market_Intelligence"]
 
     query = {
@@ -957,7 +956,7 @@ async def run_market_research(request: MarketRequest, llm_backend: str = "groq")
             return {"status": "success", "data": latest_report}
 
     def fetch_company_profile():
-        with clients.driver.session() as session:
+        with driver.session() as session:
             if request.org_id:
                 result = session.run(
                     "MATCH (c:CompanyProfile {org_id: $org_id}) RETURN c LIMIT 1",
@@ -982,6 +981,7 @@ async def run_market_research(request: MarketRequest, llm_backend: str = "groq")
     market_context_queries = _build_market_context_queries(component_name, company_profile)
     pinecone_context = await asyncio.to_thread(
         _fetch_pinecone_supporting_context,
+        pc,
         market_context_queries,
         request.org_id,
         3,
@@ -993,7 +993,7 @@ async def run_market_research(request: MarketRequest, llm_backend: str = "groq")
     research_result = None
     for attempt in range(1, max_retries + 1):
         try:
-            research_result = await asyncio.to_thread(research_function, company_profile)
+            research_result = await asyncio.to_thread(research_function, agent_chain, company_profile)
             break
         except BudgetExhaustedError:
             # Re-raise immediately — caller (router) catches and maps to HTTP 429

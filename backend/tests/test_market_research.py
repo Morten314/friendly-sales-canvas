@@ -86,7 +86,7 @@ def test_post_market_research_all_components(client, mock_neo4j, mock_mongo, com
     # patching the source module is the canonical target.
     # _fetch_pinecone_supporting_context is now called inside the service (post-commit 16/25);
     # patch the binding in the service module where the call now lives.
-    with patch("app.services.market_research.COMPONENT_FUNCTIONS", {component_name: lambda _: _captured_result(component_name)}), \
+    with patch("app.services.market_research.COMPONENT_FUNCTIONS", {component_name: lambda agent_chain, _: _captured_result(component_name)}), \
          patch("app.services.market_research._fetch_pinecone_supporting_context", return_value=[]):
         response = client.post("/market-research", json=_base_payload(component_name))
 
