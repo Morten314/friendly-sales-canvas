@@ -124,7 +124,8 @@ def test_trigger_or_get_market_scores_returns_existing_when_present(
         "company_name": "Acme",
         "lead_name": "Jane Doe",
     }
-    score_coll.find.return_value.sort.return_value = [score_doc]
+    score_coll.find.return_value.sort.return_value.skip.return_value.limit.return_value = iter([score_doc])
+    score_coll.count_documents.return_value = 1
     mocker.patch(
         "app.services.market_scoring._get_market_score_collections",
         return_value=(score_coll, run_coll),
@@ -360,3 +361,53 @@ def test_run_market_scoring_for_org_marks_completed_on_success(
         if c.args[1].get("$set", {}).get("status") == "completed"
     ]
     assert len(completed_updates) >= 1
+
+
+# ---------------------------------------------------------------------------
+# _get_latest_market_score_rows — pagination params + tuple return
+# ---------------------------------------------------------------------------
+
+from unittest.mock import patch  # noqa: E402 (import after guards above)
+
+from app.services.market_scoring import _get_latest_market_score_rows  # noqa: E402
+
+
+def test_get_latest_market_score_rows_returns_items_and_total(monkeypatch):
+    """_get_latest_market_score_rows returns (items, total) with paginated query."""
+    fake_docs = [
+        {"lead_id": "L1", "org_id": "org_1", "updated_at": "2026-01-01",
+         "company_name": "C1", "lead_name": "Lead1"},
+        {"lead_id": "L2", "org_id": "org_1", "updated_at": "2026-01-02",
+         "company_name": "C2", "lead_name": "Lead2"},
+    ]
+    fake_cursor = MagicMock()
+    fake_cursor.sort.return_value.skip.return_value.limit.return_value = iter(fake_docs)
+    score_coll = MagicMock()
+    score_coll.find.return_value = fake_cursor
+    score_coll.count_documents.return_value = 42
+
+    with patch(
+        "app.services.market_scoring._get_market_score_collections",
+        return_value=(score_coll, MagicMock()),
+    ):
+        rows, total = _get_latest_market_score_rows(
+            driver=MagicMock(), mongo=MagicMock(), org_id="org_1",
+        )
+    assert len(rows) == 2
+    assert total == 42
+
+
+def test_get_latest_market_score_rows_default_limit_is_500():
+    fake_cursor = MagicMock()
+    fake_cursor.sort.return_value.skip.return_value.limit.return_value = iter([])
+    score_coll = MagicMock()
+    score_coll.find.return_value = fake_cursor
+    score_coll.count_documents.return_value = 0
+
+    with patch(
+        "app.services.market_scoring._get_market_score_collections",
+        return_value=(score_coll, MagicMock()),
+    ):
+        _get_latest_market_score_rows(driver=MagicMock(), mongo=MagicMock(), org_id="org_1")
+    fake_cursor.sort.return_value.skip.assert_called_with(0)
+    fake_cursor.sort.return_value.skip.return_value.limit.assert_called_with(500)

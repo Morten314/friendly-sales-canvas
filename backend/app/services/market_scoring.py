@@ -202,9 +202,19 @@ def _extract_description_preview(component_descriptions: Any) -> Optional[str]:
     return None
 
 
-def _get_latest_market_score_rows(driver, mongo, org_id: str) -> List[LeadMarketScoreRow]:
+def _get_latest_market_score_rows(
+    driver,
+    mongo,
+    org_id: str,
+    limit: int = 500,
+    offset: int = 0,
+) -> tuple[List[LeadMarketScoreRow], int]:
     score_coll, _ = _get_market_score_collections(mongo)
-    docs = list(score_coll.find({"org_id": org_id}).sort("updated_at", -1))
+    flt = {"org_id": org_id}
+    total = score_coll.count_documents(flt)
+    docs = list(
+        score_coll.find(flt).sort("updated_at", -1).skip(offset).limit(limit)
+    )
     rows: List[LeadMarketScoreRow] = []
     for doc in docs:
         doc.pop("_id", None)
@@ -225,7 +235,7 @@ def _get_latest_market_score_rows(driver, mongo, org_id: str) -> List[LeadMarket
                     {"$set": updates},
                 )
         rows.append(_lead_to_score_row(doc))
-    return rows
+    return rows, total
 
 
 def _get_latest_scoring_run(mongo, org_id: str) -> Optional[Dict[str, Any]]:
@@ -341,7 +351,7 @@ def trigger_or_get_market_scores(
     else:
         run_doc = _get_latest_scoring_run(mongo, request.org_id)
 
-    rows = _get_latest_market_score_rows(driver, mongo, request.org_id)
+    rows, _ = _get_latest_market_score_rows(driver, mongo, request.org_id)
     if not rows and not request.refresh:
         raise MarketScoreNotFoundError("No lead market scores found for org_id")
 

@@ -71,7 +71,7 @@ def _make_score_mc(score_docs=None, run_docs=None, run_find_one=None):
     Profiler["Lead_Market_Score_Runs"] → run_coll
     """
     score_coll = MagicMock()
-    score_coll.find.return_value.sort.return_value = iter(score_docs or [])
+    score_coll.find.return_value.sort.return_value.skip.return_value.limit.return_value = iter(score_docs or [])
     score_coll.find_one.return_value = None
     score_coll.update_one.return_value = MagicMock(modified_count=1)
     score_coll.insert_one.return_value = MagicMock(inserted_id="score_id")
