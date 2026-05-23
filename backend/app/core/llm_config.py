@@ -1,11 +1,7 @@
-"""LLM-side artifacts: chat models, transformers, memory, chains, and the
-ReAct agent.
-
-Phase F (commit 1/17) introduces `LLMBundle` + `build_llm_config()`. The
-module-level globals at the bottom are routed through the factory to keep a
-single construction path. Services not yet converted to dependency injection
-still read `llm_config.llm`, `llm_config.chain`, etc. via these globals; they're
-deleted in commit 17 after all services are converted.
+"""LLM-side artifacts (chat models, transformers, memory, chains, ReAct
+agent). `build_llm_config()` constructs an `LLMBundle` holding all
+components; invoked once per process by `app.main.lifespan`. Services receive
+bundle fields via FastAPI dependency injection — no module-level state.
 """
 from dataclasses import dataclass
 from typing import Any, Optional
@@ -344,8 +340,3 @@ def build_llm_config(clients_bundle: ClientBundle) -> LLMBundle:
         llm_transformer=llm_transformer, memory=memory,
         chain=chain, chain2=chain2, agent_chain=agent_chain,
     )
-
-
-# Vision model — not part of LLMBundle (no current service uses it). Kept at
-# module scope so any future reference to `llm_config.vision` continues to work.
-vision = ChatGroq(model="llama-3.2-90b-vision-preview", api_key=groq_api_key)
