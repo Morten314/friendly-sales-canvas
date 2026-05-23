@@ -46,10 +46,9 @@ def test_search_signals_scout_groq_uses_captured(mocker):
     # and accesses raw_response["output"] — return a JSON-parseable string.
     chain_mock = MagicMock()
     chain_mock.invoke.return_value = {"output": json.dumps(captured)}
-    mocker.patch("app.core.llm_config.agent_chain", chain_mock)
 
     pre_data = json.dumps(load_seed("company_profile"))
-    result = search_signals(pre_data, persona="scout", llm_backend="default")
+    result = search_signals(chain_mock, pre_data, persona="scout", llm_backend="default")
 
     assert result is not None
     chain_mock.invoke.assert_called_once()
@@ -71,7 +70,7 @@ def test_search_signals_profiler_claude_uses_captured(mocker):
     )
 
     pre_data = json.dumps(load_seed("company_profile"))
-    result = search_signals(pre_data, persona="profiler", llm_backend="claude")
+    result = search_signals(MagicMock(), pre_data, persona="profiler", llm_backend="claude")
 
     assert result is not None
 
@@ -88,7 +87,7 @@ def test_run_signals_research_raises_on_unknown_persona(
         component_name="bogus persona", data={}, refresh=True,
     )
     with pytest.raises(UnsupportedComponentError):
-        asyncio.run(run_signals_research(request))
+        asyncio.run(run_signals_research(mock_session._driver, mock_mongo_client, MagicMock(), MagicMock(), request))
 
 
 # ---------------------------------------------------------------------------
@@ -110,7 +109,7 @@ def test_generate_signals_batch_happy_path(
         user_id=TEST_USER_ID, org_id=TEST_ORG_ID,
         component_name="signals", data={}, refresh=True,
     )
-    result = asyncio.run(generate_signals_batch(request))
+    result = asyncio.run(generate_signals_batch(mock_session._driver, mock_mongo_client, MagicMock(), MagicMock(), request))
 
     assert result["status"] == "success"
 
@@ -129,7 +128,7 @@ def test_generate_signals_batch_claude_happy_path(
         user_id=TEST_USER_ID, org_id=TEST_ORG_ID,
         component_name="signals", data={}, refresh=True,
     )
-    result = asyncio.run(generate_signals_batch_claude(request))
+    result = asyncio.run(generate_signals_batch_claude(mock_session._driver, mock_mongo_client, MagicMock(), MagicMock(), request))
 
     assert result["status"] == "success"
 
@@ -143,7 +142,7 @@ def test_fetch_signals_returns_empty_when_no_docs(mocker, mock_mongo_client):
     coll.find.return_value.sort.return_value.limit.return_value = []
     mock_mongo_client.__getitem__.return_value.__getitem__.return_value = coll
 
-    result = asyncio.run(fetch_signals(TEST_USER_ID))
+    result = asyncio.run(fetch_signals(mock_mongo_client, TEST_USER_ID))
 
     assert isinstance(result, dict)
     assert result["signals"] == []
@@ -156,7 +155,7 @@ def test_fetch_signals_returns_docs(mocker, mock_mongo_client):
     ]
     mock_mongo_client.__getitem__.return_value.__getitem__.return_value = coll
 
-    result = asyncio.run(fetch_signals(TEST_USER_ID, limit=10))
+    result = asyncio.run(fetch_signals(mock_mongo_client, TEST_USER_ID, limit=10))
 
     assert len(result["signals"]) == 1
 
@@ -181,7 +180,7 @@ def test_record_signal_action_raises_on_invalid_action(
         org_id=TEST_ORG_ID, signal_id=TEST_SIGNAL_ID_1, action="bogus",
     )
     with pytest.raises(SignalActionValidationError):
-        asyncio.run(record_signal_action(request))
+        asyncio.run(record_signal_action(mock_mongo_client, request))
 
 
 def test_record_signal_action_raises_when_signal_missing(
@@ -195,7 +194,7 @@ def test_record_signal_action_raises_when_signal_missing(
         org_id=TEST_ORG_ID, signal_id=TEST_SIGNAL_ID_1, action="accept",
     )
     with pytest.raises(SignalNotFoundError):
-        asyncio.run(record_signal_action(request))
+        asyncio.run(record_signal_action(mock_mongo_client, request))
 
 
 def test_record_signal_action_accept_happy_path(mocker, mock_mongo_client):
@@ -209,7 +208,7 @@ def test_record_signal_action_accept_happy_path(mocker, mock_mongo_client):
     request = SignalActionRequest(
         org_id=TEST_ORG_ID, signal_id=TEST_SIGNAL_ID_1, action="accept",
     )
-    result = asyncio.run(record_signal_action(request))
+    result = asyncio.run(record_signal_action(mock_mongo_client, request))
 
     assert result["status"] == "success"
     assert result["action"] == "accept"
@@ -232,7 +231,7 @@ def test_record_signal_action_reject_raises_service_error_on_delete_race(
         org_id=TEST_ORG_ID, signal_id=TEST_SIGNAL_ID_1, action="reject",
     )
     with pytest.raises(ServiceError, match="Failed to delete signal"):
-        asyncio.run(record_signal_action(request))
+        asyncio.run(record_signal_action(mock_mongo_client, request))
 
 
 # ---------------------------------------------------------------------------
@@ -248,7 +247,6 @@ def test_signal_ask_groq_uses_captured(mocker, mock_session, mock_mongo_client):
     chain_mock = MagicMock()
     # signal_ask uses raw_response.get("output", "") from the chain result
     chain_mock.invoke.return_value = {"output": str(captured)}
-    mocker.patch("app.core.llm_config.agent_chain", chain_mock)
     mocker.patch(
         "app.services.signals._fetch_pinecone_supporting_context",
         return_value=[],
@@ -263,7 +261,7 @@ def test_signal_ask_groq_uses_captured(mocker, mock_session, mock_mongo_client):
         user_id=TEST_USER_ID, org_id=TEST_ORG_ID,
         question="What's the latest signal?",
     )
-    result = asyncio.run(signal_ask(request))
+    result = asyncio.run(signal_ask(mock_session._driver, mock_mongo_client, chain_mock, request))
 
     assert result is not None
     assert "answer" in result
@@ -279,7 +277,7 @@ def test_signal_ask_claude_raises_service_error_when_api_key_missing(
         user_id=TEST_USER_ID, org_id=TEST_ORG_ID, question="Q",
     )
     with pytest.raises(ServiceError, match="ANTHROPIC_API_KEY"):
-        asyncio.run(signal_ask_claude(request))
+        asyncio.run(signal_ask_claude(MagicMock(), mock_mongo_client, request))
 
 
 def test_signal_ask_claude_raises_service_error_when_claude_call_fails(
@@ -312,7 +310,7 @@ def test_signal_ask_claude_raises_service_error_when_claude_call_fails(
         user_id=TEST_USER_ID, org_id=TEST_ORG_ID, question="Q",
     )
     with pytest.raises(ServiceError):
-        asyncio.run(signal_ask_claude(request))
+        asyncio.run(signal_ask_claude(mock_session._driver, mock_mongo_client, request))
 
 
 def test_signal_ask_claude_happy_path_uses_captured(
@@ -355,7 +353,7 @@ def test_signal_ask_claude_happy_path_uses_captured(
     request = SignalAskRequest(
         user_id=TEST_USER_ID, org_id=TEST_ORG_ID, question="Q",
     )
-    result = asyncio.run(signal_ask_claude(request))
+    result = asyncio.run(signal_ask_claude(mock_session._driver, mock_mongo_client, request))
 
     assert result is not None
     assert result.get("status") == "success"

@@ -10,6 +10,7 @@ After Phase B Task 5, all endpoints use the singleton client imported from
 app.core.clients. Patch "app.core.clients.client" for Mongo mocking.
 """
 import json
+from contextlib import contextmanager
 from unittest.mock import MagicMock, patch, call
 import pytest
 
@@ -18,6 +19,18 @@ from tests.helpers import scrub_dynamic
 from tests.identities import (
     TEST_USER_ID, TEST_ORG_ID, TEST_SIGNAL_ID_1, TEST_SIGNAL_ID_2
 )
+
+
+@contextmanager
+def _override_mongo(mongo_instance):
+    """Phase F: signals router reads Mongo via Depends(get_mongo)."""
+    from app.main import app
+    from app.core.dependencies import get_mongo
+    app.dependency_overrides[get_mongo] = lambda: mongo_instance
+    try:
+        yield
+    finally:
+        app.dependency_overrides.pop(get_mongo, None)
 
 
 # ---------------------------------------------------------------------------
@@ -78,7 +91,7 @@ def test_get_signals_returns_list(client):
     sig = _make_signal()
     mc, coll = _make_mc_for_signals([sig])
 
-    with patch("app.core.clients.client", mc):
+    with _override_mongo(mc):
         response = client.get(f"/fetch-signals?user_id={TEST_USER_ID}")
 
     assert response.status_code == 200
@@ -97,7 +110,7 @@ def test_get_signals_empty_when_no_docs(client):
     """GET /fetch-signals with empty Mongo → empty list."""
     mc, _ = _make_mc_for_signals([])
 
-    with patch("app.core.clients.client", mc):
+    with _override_mongo(mc):
         response = client.get(f"/fetch-signals?user_id={TEST_USER_ID}")
 
     assert response.status_code == 200
@@ -116,7 +129,7 @@ def test_post_generate_signals_batch_calls_llm(client):
     # signal_track find_one returns no existing headlines
     mc.__getitem__.return_value.__getitem__.return_value.find_one.return_value = None
 
-    with patch("app.core.clients.client", mc), \
+    with _override_mongo(mc), \
          patch("app.services.signals.search_signals", return_value=dict(load_captured("search_signals_scout_groq"))) as mock_search, \
          patch("app.services.signals._fetch_pinecone_supporting_context", return_value=[]):
         response = client.post("/generate-signals-batch", json=_base_market_request())
@@ -134,7 +147,7 @@ def test_post_generate_signals_batch_returns_signals(client):
     """POST /generate-signals-batch → response has data list with signals."""
     mc, coll = _make_mc_for_signals([])
 
-    with patch("app.core.clients.client", mc), \
+    with _override_mongo(mc), \
          patch("app.services.signals.search_signals", return_value=dict(load_captured("search_signals_scout_groq"))), \
          patch("app.services.signals._fetch_pinecone_supporting_context", return_value=[]):
         response = client.post("/generate-signals-batch", json=_base_market_request())
@@ -162,7 +175,7 @@ def test_post_signal_action_accept(client):
         "action": "accept",
     }
 
-    with patch("app.core.clients.client", mc):
+    with _override_mongo(mc):
         response = client.post("/signal_action", json=payload)
 
     assert response.status_code == 200
@@ -187,7 +200,7 @@ def test_post_signal_action_dismiss(client):
         "action": "reject",
     }
 
-    with patch("app.core.clients.client", mc):
+    with _override_mongo(mc):
         response = client.post("/signal_action", json=payload)
 
     assert response.status_code == 200
@@ -228,14 +241,19 @@ def test_post_signal_ask_returns_answer(client, mock_neo4j, mock_llm_chain):
         "history": [],
     }
 
-    # The endpoint accesses `llm_config.agent_chain` via the qualified-import
-    # convention, so patch the source attribute on `app.core.llm_config`.
+    # Phase F: signal_ask gets agent_chain via Depends(get_agent_chain).
+    # Override the dependency to inject our chain_mock.
     chain_mock = MagicMock()
     chain_mock.invoke.return_value = {"output": "This is the AI answer."}
+    from app.main import app
+    from app.core.dependencies import get_agent_chain
+    app.dependency_overrides[get_agent_chain] = lambda: chain_mock
 
-    with patch("app.core.clients.client", mc), \
-         patch("app.core.llm_config.agent_chain", chain_mock):
-        response = client.post("/signal_Ask", json=payload)
+    try:
+        with _override_mongo(mc):
+            response = client.post("/signal_Ask", json=payload)
+    finally:
+        app.dependency_overrides.pop(get_agent_chain, None)
 
     assert response.status_code == 200
     body = response.json()
@@ -259,7 +277,7 @@ def test_post_signal_action_invalid_signal_id(client):
         "action": "accept",
     }
 
-    with patch("app.core.clients.client", mc):
+    with _override_mongo(mc):
         response = client.post("/signal_action", json=payload)
 
     assert response.status_code == 404

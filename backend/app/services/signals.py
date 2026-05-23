@@ -8,8 +8,6 @@ from typing import Any, Dict, List, Literal, Optional
 
 import requests
 
-from app.core import clients
-from app.core import llm_config
 from app.core.config import tavily_api_key, claude_sonnet_model
 from app.core.exceptions import (
     ServiceError,
@@ -40,11 +38,11 @@ from app.services._claude_budget import (
 from app.core.logging import logger
 
 
-def _signals_agent_output(prompt: str, company_profile_seed: str, llm_backend: str) -> tuple:
+def _signals_agent_output(agent_chain, prompt: str, company_profile_seed: str, llm_backend: str) -> tuple:
     """Returns (model_output_text, tavily_urls) for signal JSON parsing."""
     tavily_urls: List[str] = []
     if llm_backend != "claude":
-        raw_response = llm_config.agent_chain.invoke({"input": prompt})
+        raw_response = agent_chain.invoke({"input": prompt})
         response = raw_response["output"]
         try:
             if hasattr(raw_response, "intermediate_steps"):
@@ -317,6 +315,7 @@ Do not include any additional reasoning, thoughts, or steps after that.
 # ---------------------------------------------------------------------------
 
 def search_signals(
+    agent_chain,
     pre_data,
     persona: Literal["scout", "profiler"] = "scout",
     llm_backend: str = "default",
@@ -443,7 +442,7 @@ IMPORTANT: Your new signal headline must be about a DIFFERENT news story, market
         existing_headlines_section=existing_headlines_text,
     )
 
-    response, tavily_urls = _signals_agent_output(prompt, context_json, llm_backend)
+    response, tavily_urls = _signals_agent_output(agent_chain, prompt, context_json, llm_backend)
 
     # ------------------------------------------------------------------
     # 5. Parse response (identical across personas)
@@ -518,7 +517,7 @@ IMPORTANT: Your new signal headline must be about a DIFFERENT news story, market
 # Router-facing service functions (Phase B extraction)
 # ---------------------------------------------------------------------------
 
-async def run_signals_research(request: MarketRequest) -> dict:
+async def run_signals_research(driver, mongo, pc, agent_chain, request: MarketRequest) -> dict:
     """Research web signals for specific agents (scout/profiler)."""
     agent_name = request.component_name.strip().lower()
 
@@ -527,7 +526,7 @@ async def run_signals_research(request: MarketRequest) -> dict:
             f"Unsupported agent: {request.component_name}. Supported agents: scout, profiler"
         )
 
-    db = clients.client["Signals"]
+    db = mongo["Signals"]
     collection = db["signals"]
 
     # Filter by user_id only for multitenancy
@@ -551,7 +550,7 @@ async def run_signals_research(request: MarketRequest) -> dict:
     # Fetch existing headlines from signal_track collection
     existing_headlines = []
     if request.org_id or request.user_id:
-        track_db = clients.client["Signals"]
+        track_db = mongo["Signals"]
         track_collection = track_db["signal_track"]
         track_key = request.org_id if request.org_id else f"user_{request.user_id}"
 
@@ -578,6 +577,7 @@ async def run_signals_research(request: MarketRequest) -> dict:
     signal_context_queries = _build_signal_context_queries(agent_name, pre_data)
     pinecone_context = await asyncio.to_thread(
         _fetch_pinecone_supporting_context,
+        pc,
         signal_context_queries,
         request.org_id,
         3
@@ -591,7 +591,7 @@ async def run_signals_research(request: MarketRequest) -> dict:
     if request.org_id:
         try:
             from app.services.leads import get_leads_for_org
-            leads_data = get_leads_for_org(org_id=request.org_id, limit=100, order_by_recent=True)
+            leads_data = get_leads_for_org(driver, org_id=request.org_id, limit=100, order_by_recent=True)
             if isinstance(pre_data, dict):
                 pre_data["leads_data"] = leads_data
             else:
@@ -610,7 +610,7 @@ async def run_signals_research(request: MarketRequest) -> dict:
     if agent_name == "profiler":
         # Try to get ICP data from Profiler database
         try:
-            profiler_db = clients.client["Profiler"]
+            profiler_db = mongo["Profiler"]
             icp_collection = profiler_db["ICP_config"]
             icp_data = icp_collection.find_one({"user_id": request.user_id})
             if icp_data:
@@ -632,7 +632,7 @@ async def run_signals_research(request: MarketRequest) -> dict:
     max_retries = 2
     for attempt in range(1, max_retries + 1):
         try:
-            signals_result = await asyncio.to_thread(search_signals, pre_data, agent_name)
+            signals_result = await asyncio.to_thread(search_signals, agent_chain, pre_data, agent_name)
             break
         except Exception:
             if attempt == max_retries:
@@ -658,7 +658,7 @@ async def run_signals_research(request: MarketRequest) -> dict:
 
     # Store headline in signal_track collection
     if signals_result.get("headline") and (request.org_id or request.user_id):
-        track_db = clients.client["Signals"]
+        track_db = mongo["Signals"]
         track_collection = track_db["signal_track"]
         track_key = request.org_id if request.org_id else f"user_{request.user_id}"
 
@@ -678,9 +678,9 @@ async def run_signals_research(request: MarketRequest) -> dict:
     return {"status": "success", "data": signals_result}
 
 
-async def _generate_signals_batch_impl(request: MarketRequest, llm_backend: str) -> dict:
+async def _generate_signals_batch_impl(driver, mongo, pc, agent_chain, request: MarketRequest, llm_backend: str) -> dict:
     """Shared implementation for batch signal generation (Groq and Claude)."""
-    db = clients.client["Signals"]
+    db = mongo["Signals"]
     collection = db["signals"]
 
     # Prepare data for the signals functions
@@ -689,7 +689,7 @@ async def _generate_signals_batch_impl(request: MarketRequest, llm_backend: str)
     # Fetch existing headlines from signal_track collection
     existing_headlines = []
     if request.org_id or request.user_id:
-        track_db = clients.client["Signals"]
+        track_db = mongo["Signals"]
         track_collection = track_db["signal_track"]
         track_key = request.org_id if request.org_id else f"user_{request.user_id}"
 
@@ -715,6 +715,7 @@ async def _generate_signals_batch_impl(request: MarketRequest, llm_backend: str)
     scout_signal_context_queries = _build_signal_context_queries("scout", pre_data)
     scout_pinecone_context = await asyncio.to_thread(
         _fetch_pinecone_supporting_context,
+        pc,
         scout_signal_context_queries,
         request.org_id,
         3
@@ -728,7 +729,7 @@ async def _generate_signals_batch_impl(request: MarketRequest, llm_backend: str)
     if request.org_id:
         try:
             from app.services.leads import get_leads_for_org
-            leads_data = get_leads_for_org(org_id=request.org_id, limit=100, order_by_recent=True)
+            leads_data = get_leads_for_org(driver, org_id=request.org_id, limit=100, order_by_recent=True)
             logger.info(f"[Batch Signals] Fetched {len(leads_data)} leads for org_id: {request.org_id}")
             if isinstance(pre_data, dict):
                 pre_data["leads_data"] = leads_data
@@ -749,7 +750,7 @@ async def _generate_signals_batch_impl(request: MarketRequest, llm_backend: str)
     # For profiler agent, also include ICP data if available - filter by user_id
     profiler_pre_data = pre_data.copy() if isinstance(pre_data, dict) else pre_data
     try:
-        profiler_db = clients.client["Profiler"]
+        profiler_db = mongo["Profiler"]
         icp_collection = profiler_db["ICP_config"]
         icp_data = icp_collection.find_one({"user_id": request.user_id})
         if icp_data:
@@ -777,6 +778,7 @@ async def _generate_signals_batch_impl(request: MarketRequest, llm_backend: str)
     profiler_signal_context_queries = _build_signal_context_queries("profiler", profiler_pre_data)
     profiler_pinecone_context = await asyncio.to_thread(
         _fetch_pinecone_supporting_context,
+        pc,
         profiler_signal_context_queries,
         request.org_id,
         3
@@ -792,7 +794,7 @@ async def _generate_signals_batch_impl(request: MarketRequest, llm_backend: str)
     for i in range(2):
         try:
             logger.info(f"Generating scout signal {i+1}...")
-            signals_result = await asyncio.to_thread(search_signals, pre_data, "scout", llm_backend)
+            signals_result = await asyncio.to_thread(search_signals, agent_chain, pre_data, "scout", llm_backend)
             signal_id = str(uuid.uuid4())
             signals_result.update({
                 "id": signal_id,
@@ -810,7 +812,7 @@ async def _generate_signals_batch_impl(request: MarketRequest, llm_backend: str)
 
             # Store headline in signal_track collection
             if signals_result.get("headline") and (request.org_id or request.user_id):
-                track_db = clients.client["Signals"]
+                track_db = mongo["Signals"]
                 track_collection = track_db["signal_track"]
                 track_key = request.org_id if request.org_id else f"user_{request.user_id}"
 
@@ -841,7 +843,7 @@ async def _generate_signals_batch_impl(request: MarketRequest, llm_backend: str)
     for i in range(2):
         try:
             logger.info(f"Generating profiler signal {i+1}...")
-            signals_result = await asyncio.to_thread(search_signals, profiler_pre_data, "profiler", llm_backend)
+            signals_result = await asyncio.to_thread(search_signals, agent_chain, profiler_pre_data, "profiler", llm_backend)
             signal_id = str(uuid.uuid4())
             signals_result.update({
                 "id": signal_id,
@@ -859,7 +861,7 @@ async def _generate_signals_batch_impl(request: MarketRequest, llm_backend: str)
 
             # Store headline in signal_track collection
             if signals_result.get("headline") and (request.org_id or request.user_id):
-                track_db = clients.client["Signals"]
+                track_db = mongo["Signals"]
                 track_collection = track_db["signal_track"]
                 track_key = request.org_id if request.org_id else f"user_{request.user_id}"
 
@@ -893,12 +895,12 @@ async def _generate_signals_batch_impl(request: MarketRequest, llm_backend: str)
     }
 
 
-async def generate_signals_batch(request: MarketRequest) -> dict:
+async def generate_signals_batch(driver, mongo, pc, agent_chain, request: MarketRequest) -> dict:
     """Generate 2 signals for scout and 2 signals for profiler (Groq)."""
-    return await _generate_signals_batch_impl(request, "default")
+    return await _generate_signals_batch_impl(driver, mongo, pc, agent_chain, request, "default")
 
 
-async def generate_signals_batch_claude(request: MarketRequest) -> dict:
+async def generate_signals_batch_claude(driver, mongo, pc, agent_chain, request: MarketRequest) -> dict:
     """Same as generate_signals_batch but signal text is produced with Claude.
 
     Task 18 (B2.3): CLAUDE_API_KEY guard moved to the router for boundary
@@ -906,12 +908,12 @@ async def generate_signals_batch_claude(request: MarketRequest) -> dict:
     stays parallel — Groq uses agent_chain; Claude does direct HTTP with
     per-window budget tracking — divergence too large to collapse cleanly.
     """
-    return await _generate_signals_batch_impl(request, "claude")
+    return await _generate_signals_batch_impl(driver, mongo, pc, agent_chain, request, "claude")
 
 
-async def fetch_signals(user_id: str, limit: int = 10) -> dict:
+async def fetch_signals(mongo, user_id: str, limit: int = 10) -> dict:
     """Fetch signals and return them in a simple list format - filtered by user_id only."""
-    db = clients.client["Signals"]
+    db = mongo["Signals"]
     collection = db["signals"]
 
     # Fetch signals for the user only (multitenancy), ordered by timestamp (newest first)
@@ -937,9 +939,9 @@ async def fetch_signals(user_id: str, limit: int = 10) -> dict:
     }
 
 
-async def record_signal_action(request: SignalActionRequest) -> dict:
+async def record_signal_action(mongo, request: SignalActionRequest) -> dict:
     """Accept or reject a signal."""
-    db = clients.client["Signals"]
+    db = mongo["Signals"]
     collection = db["signals"]
 
     # Find the signal by signal_id (check both "id" and "signal_id" fields)
@@ -1002,13 +1004,13 @@ async def record_signal_action(request: SignalActionRequest) -> dict:
         )
 
 
-async def signal_ask(request: SignalAskRequest) -> dict:
+async def signal_ask(driver, mongo, agent_chain, request: SignalAskRequest) -> dict:
     """Answer a question about signals using company profile, customer profile, history, and WebSearch."""
     try:
         # Fetch company profile from Neo4j
         company_profile = None
         try:
-            with clients.driver.session() as session:
+            with driver.session() as session:
                 result = session.run(
                     "MATCH (p:CompanyProfile {org_id: $org_id}) RETURN p LIMIT 1",
                     org_id=request.org_id
@@ -1022,7 +1024,7 @@ async def signal_ask(request: SignalAskRequest) -> dict:
         # Fetch customer profile from MongoDB
         customer_profile = None
         try:
-            db = clients.client["Profiler"]
+            db = mongo["Profiler"]
             collection = db["Company_Profile"]
 
             filter_query = {"profile_type": "company", "org_id": request.org_id}
@@ -1091,7 +1093,7 @@ Please use the WebSearch tool to gather current information and provide a detail
 
         # Use agent_chain to answer with WebSearch
         raw_response = await asyncio.to_thread(
-            llm_config.agent_chain.invoke,
+            agent_chain.invoke,
             {'input': prompt}
         )
 
@@ -1110,7 +1112,7 @@ Please use the WebSearch tool to gather current information and provide a detail
         raise
 
 
-async def signal_ask_claude(request: SignalAskRequest) -> dict:
+async def signal_ask_claude(driver, mongo, request: SignalAskRequest) -> dict:
     """Claude-powered signal ask endpoint with local token/run limiter."""
     if not CLAUDE_API_KEY:
         raise ServiceError("ANTHROPIC_API_KEY is not configured")
@@ -1124,7 +1126,7 @@ async def signal_ask_claude(request: SignalAskRequest) -> dict:
         # Fetch company profile from Neo4j
         company_profile = None
         try:
-            with clients.driver.session() as session:
+            with driver.session() as session:
                 result = session.run(
                     "MATCH (p:CompanyProfile {org_id: $org_id}) RETURN p LIMIT 1",
                     org_id=request.org_id
@@ -1138,7 +1140,7 @@ async def signal_ask_claude(request: SignalAskRequest) -> dict:
         # Fetch customer profile from MongoDB
         customer_profile = None
         try:
-            db = clients.client["Profiler"]
+            db = mongo["Profiler"]
             collection = db["Company_Profile"]
 
             filter_query = {"profile_type": "company", "org_id": request.org_id}
