@@ -174,6 +174,10 @@ from app.routers.v2 import signals as signals_v2
 
 app.include_router(signals_v2.router, prefix="/v2")
 
+from app.routers.v2 import org_auth as org_auth_v2
+
+app.include_router(org_auth_v2.router, prefix="/v2")
+
 from app.routers import market_scoring
 
 app.include_router(market_scoring.router)

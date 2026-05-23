@@ -161,7 +161,8 @@ def test_connect_user_to_org_updates_existing_document(mock_mongo_client):
 
 def test_list_registrations_returns_sorted_results(mock_mongo_client):
     coll = MagicMock()
-    coll.find.return_value.sort.return_value = [
+    coll.count_documents.return_value = 2
+    coll.find.return_value.sort.return_value.skip.return_value.limit.return_value = [
         {
             "_id": "reg2",
             "name": "Jane",
@@ -177,9 +178,10 @@ def test_list_registrations_returns_sorted_results(mock_mongo_client):
     ]
     mock_mongo_client["Registration_DB"].__getitem__.return_value = coll
 
-    result = list_registrations(mock_mongo_client)
+    result, total = list_registrations(mock_mongo_client)
 
     assert len(result) == 2
+    assert total == 2
     assert result[0].name == "Jane"
     assert result[1].name == "John"
 

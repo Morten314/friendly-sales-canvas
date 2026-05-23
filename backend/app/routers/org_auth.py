@@ -1,7 +1,7 @@
 """Org and registration router. HTTP wiring only."""
 from typing import List
 
-from fastapi import APIRouter, Body, Depends, Query
+from fastapi import APIRouter, Body, Depends, Query, Response
 
 from app.core.dependencies import get_mongo
 from app.models.org_auth import OrgResponse, RegistrationRequest, RegistrationResponse
@@ -38,5 +38,17 @@ async def create_registration(
 
 
 @router.get("/registration", response_model=List[RegistrationResponse])
-async def get_registrations(mongo=Depends(get_mongo)):
-    return org_auth_service.list_registrations(mongo)
+async def get_registrations(
+    response: Response,
+    mongo=Depends(get_mongo),
+):
+    """**Deprecated:** use `GET /api/v2/registration` for the paginated envelope.
+
+    Returns up to 500 registrations (silent cap; previously unbounded).
+    Admin-only cross-tenant view — no org_id filter — see spec §2.1 #2.
+    Reads from the separate `Registration_DB` database (not `Profiler`).
+    """
+    response.headers["Deprecation"] = "true"
+    response.headers["Link"] = '</api/v2/registration>; rel="successor-version"'
+    items, _ = org_auth_service.list_registrations(mongo)
+    return items

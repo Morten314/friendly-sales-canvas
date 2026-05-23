@@ -216,11 +216,9 @@ def test_get_registration_lists_entries(client, snapshot):
         },
     ]
 
-    mock_sort = MagicMock()
-    mock_sort.__iter__ = MagicMock(return_value=iter(fake_regs))
-
     col_mock = MagicMock()
-    col_mock.find.return_value.sort.return_value = mock_sort
+    col_mock.count_documents.return_value = 2
+    col_mock.find.return_value.sort.return_value.skip.return_value.limit.return_value = fake_regs
 
     mongo_mock = MagicMock()
     mongo_mock.__getitem__.return_value.__getitem__.return_value = col_mock
@@ -230,17 +228,18 @@ def test_get_registration_lists_entries(client, snapshot):
 
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("application/json")
+    assert response.headers.get("Deprecation") == "true"
+    assert 'rel="successor-version"' in response.headers.get("Link", "")
+    assert "/api/v2/registration" in response.headers["Link"]
     body_scrubbed = scrub_dynamic(response.json())
     assert body_scrubbed == snapshot
 
 
 def test_get_registration_empty_returns_list(client):
     """Empty collection → empty list, not 404."""
-    mock_sort = MagicMock()
-    mock_sort.__iter__ = MagicMock(return_value=iter([]))
-
     col_mock = MagicMock()
-    col_mock.find.return_value.sort.return_value = mock_sort
+    col_mock.count_documents.return_value = 0
+    col_mock.find.return_value.sort.return_value.skip.return_value.limit.return_value = []
 
     mongo_mock = MagicMock()
     mongo_mock.__getitem__.return_value.__getitem__.return_value = col_mock

@@ -153,29 +153,33 @@ def connect_user_to_org(mongo, user_id: str, org_id: str) -> Dict:
     }
 
 
-def list_registrations(mongo) -> List[RegistrationResponse]:
+def list_registrations(
+    mongo,
+    limit: int = 500,
+    offset: int = 0,
+) -> tuple[List[RegistrationResponse], int]:
+    """Cross-tenant admin view of registrations, paginated.
+
+    No org_id filter — see spec §2.1 #2. Uses separate database
+    'Registration_DB' and collection 'registrations'.
     """
-    Fetches all registration entries ordered by recency (most recent first).
-    Uses separate database 'Registration_DB' and collection 'registrations'.
-    """
-    # Connect to separate registration database
     db = mongo["Registration_DB"]
     collection = db["registrations"]
+    flt: dict = {}
 
-    # Fetch all registrations ordered by timestamp (descending - most recent first)
-    registrations = collection.find().sort("timestamp", -1)
+    total = collection.count_documents(flt)
+    cursor = collection.find(flt).sort("timestamp", -1).skip(offset).limit(limit)
 
-    # Convert to response format
-    result = []
-    for reg in registrations:
+    result: List[RegistrationResponse] = []
+    for reg in cursor:
         result.append(RegistrationResponse(
             id=str(reg["_id"]),
             name=reg["name"],
             email=reg["email"],
-            timestamp=reg["timestamp"].isoformat() if isinstance(reg["timestamp"], datetime) else reg["timestamp"]
+            timestamp=reg["timestamp"].isoformat() if isinstance(reg["timestamp"], datetime) else reg["timestamp"],
         ))
 
-    return result
+    return result, total
 
 
 def create_registration(mongo, registration: RegistrationRequest) -> RegistrationResponse:
