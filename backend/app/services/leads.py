@@ -6,7 +6,7 @@ import json
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from app.core import clients
+from app.core import clients   # kept alive through commit 15 — required by §3.7 fallback in get_leads_for_org
 from app.core.clients import upsert_node
 from app.core.exceptions import LeadCSVValidationError, LeadNotFoundError
 from app.core.logging import logger
@@ -18,13 +18,19 @@ from app.models.leads import LeadCreateRequest, LeadUpdateRequest
 # ---------------------------------------------------------------------------
 
 def get_leads_for_org(
-    org_id: str,
+    driver=None,
+    org_id: Optional[str] = None,
     limit: Optional[int] = None,
     order_by_recent: bool = False,
 ) -> List[Dict[str, Any]]:
     """Fetch leads from Neo4j for a given org.
 
     Args:
+        driver: Neo4j driver. Phase F: explicit DI; until commit 17, falls
+            back to ``clients.driver`` for cross-commit callers in signals
+            (commit 14) and market_scoring (commit 15) that pass
+            ``org_id=...`` by keyword. Commit 17 removes the default and the
+            fallback below.
         org_id: tenant scope.
         limit: max rows to return; None for no LIMIT clause.
         order_by_recent: if True, adds ``ORDER BY l.created_at DESC``.
@@ -33,6 +39,8 @@ def get_leads_for_org(
     (e.g. background tasks) wrap with ``try/except BrewraError`` or
     ``except Exception``; see Task 15.
     """
+    if driver is None:
+        driver = clients.driver
     clauses = ["MATCH (l:Lead)", "WHERE l.org_id = $org_id"]
     params: Dict[str, Any] = {"org_id": org_id}
     clauses.append("RETURN l")
@@ -42,7 +50,7 @@ def get_leads_for_org(
         clauses.append("LIMIT $limit")
         params["limit"] = limit
     query_string = "\n".join(clauses)
-    with clients.driver.session() as session:
+    with driver.session() as session:
         results = session.run(query_string, **params)
         return _process_neo4j_lead_records(results)
 
@@ -75,7 +83,7 @@ def _process_neo4j_lead_records(results) -> List[Dict[str, Any]]:
 # ---------------------------------------------------------------------------
 
 
-def create_lead(request: LeadCreateRequest) -> Dict[str, Any]:
+def create_lead(driver, request: LeadCreateRequest) -> Dict[str, Any]:
     """
     Add a single lead manually with flexible key-value pairs.
     NO REQUIRED FIELDS - all fields are optional.
@@ -99,7 +107,7 @@ def create_lead(request: LeadCreateRequest) -> Dict[str, Any]:
         lead_data["stage"] = "Initial Outreach"
 
     # Create Lead node with all data as-is (no extraction, no mapping)
-    with clients.driver.session() as session:
+    with driver.session() as session:
         session.execute_write(
             upsert_node,
             "Lead",
@@ -115,14 +123,14 @@ def create_lead(request: LeadCreateRequest) -> Dict[str, Any]:
     }
 
 
-def update_lead(lead_id: str, request: LeadUpdateRequest) -> Dict[str, Any]:
+def update_lead(driver, lead_id: str, request: LeadUpdateRequest) -> Dict[str, Any]:
     """
     Modify a single lead with flexible key-value pairs.
     Updates lead properties while maintaining multitenancy (user_id and org_id).
     Stores all data directly on Lead node - no mapping or extraction.
     Works exactly like company profile endpoint - completely flexible.
     """
-    with clients.driver.session() as session:
+    with driver.session() as session:
         # Verify lead exists and belongs to user/org
         verify_query = """
             MATCH (l:Lead {lead_id: $lead_id})
@@ -153,12 +161,12 @@ def update_lead(lead_id: str, request: LeadUpdateRequest) -> Dict[str, Any]:
     }
 
 
-def delete_lead(lead_id: str, user_id: str, org_id: str) -> Dict[str, Any]:
+def delete_lead(driver, lead_id: str, user_id: str, org_id: str) -> Dict[str, Any]:
     """
     Delete a single lead.
     Verifies multitenancy (user_id and org_id) before deletion.
     """
-    with clients.driver.session() as session:
+    with driver.session() as session:
         # Verify lead exists and belongs to user/org
         verify_query = """
             MATCH (l:Lead {lead_id: $lead_id})
@@ -188,6 +196,8 @@ def delete_lead(lead_id: str, user_id: str, org_id: str) -> Dict[str, Any]:
 
 
 def batch_upload_leads(
+    driver,
+    mongo,
     file_content: bytes,
     filename: str,
     user_id: str,
@@ -220,8 +230,7 @@ def batch_upload_leads(
 
     try:
         # Prepare lead stream tracking (Mongo)
-        mongo_client = clients.client
-        profiler_db = mongo_client["Profiler"]
+        profiler_db = mongo["Profiler"]
         lead_stream_coll = profiler_db["Lead_Stream_Files"]
         lead_stream_coll.create_index("file_id", unique=True)
         lead_stream_coll.create_index([("user_id", 1), ("org_id", 1)])
@@ -299,7 +308,7 @@ def batch_upload_leads(
                 lead_data = {k: str(v) if not isinstance(v, (dict, list)) else v for k, v in lead_data.items()}
 
                 # Create Lead node with all data as-is (no extraction, no mapping)
-                with clients.driver.session() as session:
+                with driver.session() as session:
                     session.execute_write(
                         upsert_node,
                         "Lead",
@@ -345,7 +354,7 @@ def batch_upload_leads(
             os.remove(tmp_path)
 
 
-def list_leads_by_file(org_id: str, file_id: str) -> List[Dict[str, Any]]:
+def list_leads_by_file(driver, org_id: str, file_id: str) -> List[Dict[str, Any]]:
     """
     Fetch leads filtered by file_id within an org.
     Returns full lead records with all properties similar to get_leads_for_org.
@@ -355,18 +364,17 @@ def list_leads_by_file(org_id: str, file_id: str) -> List[Dict[str, Any]]:
     WHERE l.org_id = $org_id AND l.file_id = $file_id
     RETURN l
     """
-    with clients.driver.session() as session:
+    with driver.session() as session:
         results = session.run(query_string, org_id=org_id, file_id=file_id)
         leads = _process_neo4j_lead_records(results)
     return leads
 
 
-def get_stream_status(org_id: str) -> Dict[str, Any]:
+def get_stream_status(mongo, org_id: str) -> Dict[str, Any]:
     """
     List lead-stream uploads (file_id registry/status) for an org.
     """
-    mongo_client = clients.client
-    profiler_db = mongo_client["Profiler"]
+    profiler_db = mongo["Profiler"]
     coll = profiler_db["Lead_Stream_Files"]
     cursor = coll.find({"org_id": org_id}).sort("uploaded_at", -1)
     files = []
@@ -385,7 +393,7 @@ def get_stream_status(org_id: str) -> Dict[str, Any]:
     return {"files": files}
 
 
-def delete_leads_by_file(file_id: str, user_id: str, org_id: str) -> Dict[str, Any]:
+def delete_leads_by_file(driver, mongo, file_id: str, user_id: str, org_id: str) -> Dict[str, Any]:
     """
     Delete all leads belonging to a specific file_id (scoped by user_id and org_id).
     Also updates lead-stream tracking status in MongoDB.
@@ -396,7 +404,7 @@ def delete_leads_by_file(file_id: str, user_id: str, org_id: str) -> Dict[str, A
         WHERE l.user_id = $user_id AND l.org_id = $org_id AND l.file_id = $file_id
         RETURN count(l) AS total
     """
-    with clients.driver.session() as session:
+    with driver.session() as session:
         count_result = session.run(count_query, user_id=user_id, org_id=org_id, file_id=file_id)
         count_record = count_result.single()
         total = int(count_record["total"]) if count_record and count_record["total"] is not None else 0
@@ -418,8 +426,7 @@ def delete_leads_by_file(file_id: str, user_id: str, org_id: str) -> Dict[str, A
         session.run(delete_query, user_id=user_id, org_id=org_id, file_id=file_id)
 
     # Update lead stream tracking document if present
-    mongo_client = clients.client
-    profiler_db = mongo_client["Profiler"]
+    profiler_db = mongo["Profiler"]
     coll = profiler_db["Lead_Stream_Files"]
     coll.update_one(
         {"file_id": file_id, "user_id": user_id, "org_id": org_id},

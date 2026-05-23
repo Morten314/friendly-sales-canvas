@@ -34,7 +34,7 @@ def test_get_leads_for_org_returns_list(mock_session):
     record.__getitem__.return_value = node
     mock_session.run.return_value = iter([record])
 
-    result = get_leads_for_org(TEST_ORG_ID)
+    result = get_leads_for_org(mock_session._driver, org_id=TEST_ORG_ID)
 
     assert len(result) == 1
     assert result[0]["lead_id"] == "L1"
@@ -43,7 +43,7 @@ def test_get_leads_for_org_returns_list(mock_session):
 def test_get_leads_for_org_applies_limit_and_order(mock_session):
     mock_session.run.return_value = iter([])
 
-    get_leads_for_org(TEST_ORG_ID, limit=5, order_by_recent=True)
+    get_leads_for_org(mock_session._driver, org_id=TEST_ORG_ID, limit=5, order_by_recent=True)
 
     query = mock_session.run.call_args.args[0]
     assert "LIMIT $limit" in query
@@ -58,7 +58,7 @@ def test_get_leads_for_org_propagates_neo4j_error(mock_session):
     mock_session.run.side_effect = RuntimeError("Neo4j connection refused")
 
     with pytest.raises(RuntimeError, match="connection refused"):
-        get_leads_for_org(TEST_ORG_ID, limit=10)
+        get_leads_for_org(mock_session._driver, org_id=TEST_ORG_ID, limit=10)
 
 
 # ---------------------------------------------------------------------------
@@ -70,7 +70,7 @@ def test_create_lead_happy_path(mock_session):
         user_id=TEST_USER_ID, org_id=TEST_ORG_ID,
         data={"company_name": "Acme Co", "stage": "Initial Outreach"},
     )
-    result = create_lead(request)
+    result = create_lead(mock_session._driver, request)
 
     assert result["status"] == "success"
     assert "lead_id" in result
@@ -82,7 +82,7 @@ def test_create_lead_sets_default_stage_when_missing(mock_session):
         user_id=TEST_USER_ID, org_id=TEST_ORG_ID,
         data={"company_name": "Acme Co"},
     )
-    create_lead(request)
+    create_lead(mock_session._driver, request)
     # The execute_write call gets the data dict as its 4th positional arg
     call_data = mock_session.execute_write.call_args.args[4]
     assert call_data["stage"] == "Initial Outreach"
@@ -99,7 +99,7 @@ def test_update_lead_raises_when_lead_missing(mock_session):
         user_id=TEST_USER_ID, org_id=TEST_ORG_ID, data={"stage": "Qualified"},
     )
     with pytest.raises(LeadNotFoundError, match="Lead not found"):
-        update_lead(TEST_LEAD_ID_1, request)
+        update_lead(mock_session._driver, TEST_LEAD_ID_1, request)
 
 
 def test_update_lead_happy_path(mock_session):
@@ -108,7 +108,7 @@ def test_update_lead_happy_path(mock_session):
     request = LeadUpdateRequest(
         user_id=TEST_USER_ID, org_id=TEST_ORG_ID, data={"stage": "Qualified"},
     )
-    result = update_lead(TEST_LEAD_ID_1, request)
+    result = update_lead(mock_session._driver, TEST_LEAD_ID_1, request)
 
     assert result["status"] == "success"
     mock_session.execute_write.assert_called_once()
@@ -122,13 +122,13 @@ def test_delete_lead_raises_when_lead_missing(mock_session):
     mock_session.run.return_value.single.return_value = None
 
     with pytest.raises(LeadNotFoundError):
-        delete_lead(TEST_LEAD_ID_1, TEST_USER_ID, TEST_ORG_ID)
+        delete_lead(mock_session._driver, TEST_LEAD_ID_1, TEST_USER_ID, TEST_ORG_ID)
 
 
 def test_delete_lead_happy_path(mock_session):
     mock_session.run.return_value.single.return_value = MagicMock()
 
-    result = delete_lead(TEST_LEAD_ID_1, TEST_USER_ID, TEST_ORG_ID)
+    result = delete_lead(mock_session._driver, TEST_LEAD_ID_1, TEST_USER_ID, TEST_ORG_ID)
 
     assert result["status"] == "success"
 
@@ -145,7 +145,7 @@ def test_batch_upload_leads_raises_on_empty_csv(
     empty_csv = b"col1,col2\n"  # header only
 
     with pytest.raises(LeadCSVValidationError, match="CSV file is empty"):
-        batch_upload_leads(empty_csv, "empty.csv", TEST_USER_ID, TEST_ORG_ID)
+        batch_upload_leads(mock_session._driver, mock_mongo_client, empty_csv, "empty.csv", TEST_USER_ID, TEST_ORG_ID)
 
 
 def test_batch_upload_leads_raises_on_corrupt_binary(
@@ -159,7 +159,7 @@ def test_batch_upload_leads_raises_on_corrupt_binary(
     bad_bytes = b"\x00" * 50
 
     with pytest.raises(LeadCSVValidationError):
-        batch_upload_leads(bad_bytes, "bad.csv", TEST_USER_ID, TEST_ORG_ID)
+        batch_upload_leads(mock_session._driver, mock_mongo_client, bad_bytes, "bad.csv", TEST_USER_ID, TEST_ORG_ID)
 
 
 def test_batch_upload_leads_happy_path(mock_session, mock_mongo_client):
@@ -167,7 +167,7 @@ def test_batch_upload_leads_happy_path(mock_session, mock_mongo_client):
     mock_mongo_client["Profiler"].__getitem__.return_value = coll
     csv_bytes = b"company_name,stage\nAcme,Initial\nBeta Corp,Qualified\n"
 
-    result = batch_upload_leads(csv_bytes, "leads.csv", TEST_USER_ID, TEST_ORG_ID)
+    result = batch_upload_leads(mock_session._driver, mock_mongo_client, csv_bytes, "leads.csv", TEST_USER_ID, TEST_ORG_ID)
 
     assert result["status"] == "success"
     assert result["created_count"] == 2
@@ -185,7 +185,7 @@ def test_list_leads_by_file_returns_records(mock_session):
     record.__getitem__.return_value = node
     mock_session.run.return_value = iter([record])
 
-    result = list_leads_by_file(TEST_ORG_ID, TEST_FILE_ID)
+    result = list_leads_by_file(mock_session._driver, TEST_ORG_ID, TEST_FILE_ID)
 
     assert len(result) == 1
     assert result[0]["file_id"] == TEST_FILE_ID
@@ -203,7 +203,7 @@ def test_get_stream_status_returns_files_list(mock_mongo_client):
     ]
     mock_mongo_client["Profiler"].__getitem__.return_value = coll
 
-    result = get_stream_status(TEST_ORG_ID)
+    result = get_stream_status(mock_mongo_client, TEST_ORG_ID)
 
     assert len(result["files"]) == 1
     assert result["files"][0]["file_id"] == TEST_FILE_ID
@@ -217,7 +217,7 @@ def test_delete_leads_by_file_raises_when_no_leads_match(
     mock_session.run.return_value.single.return_value = count_record
 
     with pytest.raises(LeadNotFoundError, match="No leads found"):
-        delete_leads_by_file(TEST_FILE_ID, TEST_USER_ID, TEST_ORG_ID)
+        delete_leads_by_file(mock_session._driver, mock_mongo_client, TEST_FILE_ID, TEST_USER_ID, TEST_ORG_ID)
 
 
 def test_delete_leads_by_file_happy_path(mock_session, mock_mongo_client):
@@ -227,7 +227,7 @@ def test_delete_leads_by_file_happy_path(mock_session, mock_mongo_client):
     coll = MagicMock()
     mock_mongo_client["Profiler"].__getitem__.return_value = coll
 
-    result = delete_leads_by_file(TEST_FILE_ID, TEST_USER_ID, TEST_ORG_ID)
+    result = delete_leads_by_file(mock_session._driver, mock_mongo_client, TEST_FILE_ID, TEST_USER_ID, TEST_ORG_ID)
 
     assert result["status"] == "success"
     assert result["deleted_count"] == 3
