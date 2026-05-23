@@ -57,7 +57,8 @@ def _make_mc_for_signals(signals: list, find_one_result=None):
     # find(...).sort(...).limit(...) chain
     cursor = MagicMock()
     cursor.__iter__ = MagicMock(return_value=iter([dict(s) for s in signals]))
-    coll.find.return_value.sort.return_value.limit.return_value = cursor
+    coll.find.return_value.sort.return_value.skip.return_value.limit.return_value = cursor
+    coll.count_documents.return_value = len(signals)
     coll.find_one.return_value = find_one_result
     coll.update_one.return_value = MagicMock(modified_count=1)
     coll.delete_one.return_value = MagicMock(deleted_count=1)
@@ -99,6 +100,9 @@ def test_get_signals_returns_list(client):
     assert body["count"] == 1
     assert isinstance(body["signals"], list)
     assert body["signals"][0]["signal_id"] == TEST_SIGNAL_ID_1
+    assert response.headers.get("Deprecation") == "true"
+    assert 'rel="successor-version"' in response.headers.get("Link", "")
+    assert "/api/v2/fetch-signals" in response.headers["Link"]
 
 
 # ---------------------------------------------------------------------------

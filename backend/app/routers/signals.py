@@ -1,5 +1,5 @@
 """Signals endpoints: research, batch generation, signal feed, signal Q&A."""
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 
 from app.core.dependencies import (
     get_agent_chain,
@@ -63,12 +63,20 @@ async def generate_signals_batch_claude(
 
 @router.get("/fetch-signals", response_model=FetchSignalsResponse)
 async def fetch_signals(
+    response: Response,
     user_id: str = Query(...),
     limit: int = Query(10),
     mongo=Depends(get_mongo),
 ):
-    """Fetch signals and return them in a simple list format - filtered by user_id only"""
-    return await signals_service.fetch_signals(mongo, user_id, limit)
+    """**Deprecated:** use `GET /api/v2/fetch-signals` for the paginated envelope.
+
+    Preserves the existing unvalidated `limit` query parameter — tightening is
+    deferred to Phase H alongside v1 route deletion.
+    """
+    response.headers["Deprecation"] = "true"
+    response.headers["Link"] = '</api/v2/fetch-signals>; rel="successor-version"'
+    items, _ = await signals_service.fetch_signals(mongo, user_id, limit=limit)
+    return {"status": "success", "count": len(items), "signals": items}
 
 
 @router.post("/signal_action", response_model=SignalActionResponse)

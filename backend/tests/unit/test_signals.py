@@ -139,25 +139,28 @@ def test_generate_signals_batch_claude_happy_path(
 
 def test_fetch_signals_returns_empty_when_no_docs(mocker, mock_mongo_client):
     coll = MagicMock()
-    coll.find.return_value.sort.return_value.limit.return_value = []
+    coll.find.return_value.sort.return_value.skip.return_value.limit.return_value = []
+    coll.count_documents.return_value = 0
     mock_mongo_client.__getitem__.return_value.__getitem__.return_value = coll
 
-    result = asyncio.run(fetch_signals(mock_mongo_client, TEST_USER_ID))
+    items, total = asyncio.run(fetch_signals(mock_mongo_client, TEST_USER_ID))
 
-    assert isinstance(result, dict)
-    assert result["signals"] == []
+    assert items == []
+    assert total == 0
 
 
 def test_fetch_signals_returns_docs(mocker, mock_mongo_client):
     coll = MagicMock()
-    coll.find.return_value.sort.return_value.limit.return_value = [
+    coll.find.return_value.sort.return_value.skip.return_value.limit.return_value = [
         {"signal_id": TEST_SIGNAL_ID_1, "user_id": TEST_USER_ID, "headline": "X"},
     ]
+    coll.count_documents.return_value = 1
     mock_mongo_client.__getitem__.return_value.__getitem__.return_value = coll
 
-    result = asyncio.run(fetch_signals(mock_mongo_client, TEST_USER_ID, limit=10))
+    items, total = asyncio.run(fetch_signals(mock_mongo_client, TEST_USER_ID, limit=10))
 
-    assert len(result["signals"]) == 1
+    assert len(items) == 1
+    assert total == 1
 
 
 # ---------------------------------------------------------------------------

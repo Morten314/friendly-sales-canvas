@@ -910,32 +910,30 @@ async def generate_signals_batch_claude(driver, mongo, pc, agent_chain, request:
     return await _generate_signals_batch_impl(driver, mongo, pc, agent_chain, request, "claude")
 
 
-async def fetch_signals(mongo, user_id: str, limit: int = 10) -> dict:
-    """Fetch signals and return them in a simple list format - filtered by user_id only."""
+async def fetch_signals(
+    mongo,
+    user_id: str,
+    limit: int = 10,
+    offset: int = 0,
+) -> tuple[List[Dict[str, Any]], int]:
+    """Fetch signals for a user. Returns (items, total). User-scoped, not org-scoped."""
     db = mongo["Signals"]
     collection = db["signals"]
+    flt = {"user_id": user_id}
 
-    # Fetch signals for the user only (multitenancy), ordered by timestamp (newest first)
-    signals_cursor = collection.find(
-        {"user_id": user_id}
-    ).sort("timestamp", -1).limit(limit)
+    signals_cursor = collection.find(flt).sort("timestamp", -1).skip(offset).limit(limit)
 
     signals_list = []
     for signal in signals_cursor:
-        # Remove MongoDB _id and format for simple list
         signal.pop("_id", None)
-        # Ensure signal_id is present (use "id" if signal_id doesn't exist)
         if "signal_id" not in signal and "id" in signal:
             signal["signal_id"] = signal["id"]
         elif "id" not in signal and "signal_id" in signal:
             signal["id"] = signal["signal_id"]
         signals_list.append(signal)
 
-    return {
-        "status": "success",
-        "count": len(signals_list),
-        "signals": signals_list
-    }
+    total = collection.count_documents(flt)
+    return signals_list, total
 
 
 async def record_signal_action(mongo, request: SignalActionRequest) -> dict:
