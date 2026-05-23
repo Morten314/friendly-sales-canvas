@@ -262,7 +262,7 @@ def test_get_icp_returns_cached_suggested_icps(client, snapshot):
         "icp_id_registry": _make_coll(find_one=None),
     })
 
-    with patch("app.core.clients.client", mc):
+    with _override_mongo(mc):
         response = client.get("/icp", params={"user_id": TEST_USER_ID})
 
     assert response.status_code == 200
@@ -396,7 +396,7 @@ def test_delete_recommended_icp_removes_from_mongo(client):
         "icp_id_registry": _make_coll(find_one=None),
     })
 
-    with patch("app.core.clients.client", mc):
+    with _override_mongo(mc):
         response = client.delete(
             "/icp/recommended/sug_001",
             params={"user_id": TEST_USER_ID},
@@ -583,7 +583,7 @@ def test_post_icp_research_returns_cached_when_available(client, mock_neo4j, moc
         "icp_id_registry": _make_coll(find_one=None),
     })
 
-    with patch("app.core.clients.client", mc):
+    with _override_mongo(mc):
         response = client.post(
             "/icp-research",
             json=_icp_research_payload("icp summary & market opportunity", refresh=False),

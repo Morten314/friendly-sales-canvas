@@ -25,7 +25,6 @@ from typing import Any, Dict
 from langchain_core.prompts import PromptTemplate
 from pymongo.errors import DuplicateKeyError
 
-from app.core import clients, llm_config
 from app.core.exceptions import (
     CompanyProfileNotFoundError,
     ICPConfigNotFoundError,
@@ -41,10 +40,10 @@ from app.services._llm_helpers import (
 )
 
 
-def _icp_research_agent_output(prompt: str, pre_data: str, llm_backend: str) -> str:
+def _icp_research_agent_output(agent_chain, prompt: str, pre_data: str, llm_backend: str) -> str:
     """Dispatcher for ICP research LLM call. Mirrors _market_research_agent_output."""
     if llm_backend != "claude":
-        raw_response = llm_config.agent_chain.invoke({"input": prompt})
+        raw_response = agent_chain.invoke({"input": prompt})
         return raw_response["output"]
     seed = " ".join(str(pre_data).split())[:1200]
     web_ctx, _ = _tavily_context_and_urls(
@@ -58,7 +57,7 @@ WEB SEARCH RESULTS (primary external evidence — synthesize with company profil
     return _claude_messages_text(augmented, max_tokens=CLAUDE_RESEARCH_MAX_TOKENS)
 
 
-def ICP_generator(pre_data: str) -> dict:
+def ICP_generator(agent_chain, pre_data: str) -> dict:
     # Construct prompt by embedding the entire JSON string
     template = """Task: Based on the provided company_profile below, analyze the data and research the market to suggest the most relevant Ideal Customer Profiles (ICPs). Consider industry fit, strategic alignment, and known patterns of technology adoption.
 
@@ -177,7 +176,7 @@ Do not include any additional reasoning, thoughts, or steps after that.
     ).format(pre_data=pre_data)
 
     def _invoke_generator(pmt: str) -> dict:
-        raw_response = llm_config.agent_chain.invoke({'input': pmt})
+        raw_response = agent_chain.invoke({'input': pmt})
         response = raw_response["output"]
         try:
             logger.debug("[ICP_generator] Raw LLM output (first 500 chars): %s", str(response)[:500])
@@ -217,7 +216,7 @@ Do not include any additional reasoning, thoughts, or steps after that.
     # ✅ Return the Python dict
     return parsed_json
 
-def icp_research_1(pre_data: str, llm_backend: str = "default") -> dict:
+def icp_research_1(agent_chain, pre_data: str, llm_backend: str = "default") -> dict:
     # Construct prompt by embedding the entire JSON string
     template = """Task: Research and compile an updated overview of icp  in the exact format given at end, based on the data below based on this ( follow this strictly and do research based on what all provided here - {pre_data}.
 
@@ -308,7 +307,7 @@ Do not include any additional reasoning, thoughts, or steps after that.
     ).format(pre_data=pre_data)
 
     # Step 3: Get LLM response
-    response = _icp_research_agent_output(prompt, pre_data, llm_backend)
+    response = _icp_research_agent_output(agent_chain, prompt, pre_data, llm_backend)
 
     # Clean and escape the JSON string
     cleaned_str = response.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
@@ -321,7 +320,7 @@ Do not include any additional reasoning, thoughts, or steps after that.
     # ✅ Return the Python dict
     return parsed_json
 
-def icp_research_2(pre_data: str, llm_backend: str = "default") -> dict:
+def icp_research_2(agent_chain, pre_data: str, llm_backend: str = "default") -> dict:
     # Construct prompt by embedding the entire JSON string
     # The pre_data contains both company_profile and icp_card (flexible data structure)
     template = """Task: Research and compile a detailed "Buyer Map & Roles, Pain Points, Triggers" analysis based on the provided company profile and ICP data.
@@ -383,7 +382,7 @@ Do not include any additional reasoning, thoughts, or steps after that.
     max_retries = 3
     for attempt in range(1, max_retries + 1):
         try:
-            response = _icp_research_agent_output(prompt, pre_data, llm_backend)
+            response = _icp_research_agent_output(agent_chain, prompt, pre_data, llm_backend)
 
             # Extract JSON from response
             if "Final Answer:" in response:
@@ -419,7 +418,7 @@ Do not include any additional reasoning, thoughts, or steps after that.
                 raise ValueError(f"Error in icp_research_2 after {max_retries} attempts: {str(e)}")
             continue
 
-def icp_research_3(pre_data: str, llm_backend: str = "default") -> dict:
+def icp_research_3(agent_chain, pre_data: str, llm_backend: str = "default") -> dict:
     # Construct prompt by embedding the entire JSON string
     # The pre_data contains both company_profile and icp_card (flexible data structure)
     template = """Task: Research and compile a detailed "Competitive Overlap & Buying Signals" analysis based on the provided company profile and ICP data.
@@ -501,7 +500,7 @@ Do not include any additional reasoning, thoughts, or steps after that.
     max_retries = 3
     for attempt in range(1, max_retries + 1):
         try:
-            response = _icp_research_agent_output(prompt, pre_data, llm_backend)
+            response = _icp_research_agent_output(agent_chain, prompt, pre_data, llm_backend)
 
             # Extract JSON from response
             if "Final Answer:" in response:
@@ -540,7 +539,7 @@ Do not include any additional reasoning, thoughts, or steps after that.
                 raise ValueError(f"Error in icp_research_3 after {max_retries} attempts: {str(e)}")
             continue
 
-def icp_research_4(pre_data: str, llm_backend: str = "default") -> dict:
+def icp_research_4(agent_chain, pre_data: str, llm_backend: str = "default") -> dict:
     # Construct prompt by embedding the entire JSON string
     # The pre_data contains both company_profile and icp_card (flexible data structure)
     template = """Task: Research and compile a detailed "Regulatory, Compliance & Recommended ICP" analysis based on the provided company profile and ICP data.
@@ -615,7 +614,7 @@ Do not include any additional reasoning, thoughts, or steps after that.
     max_retries = 3
     for attempt in range(1, max_retries + 1):
         try:
-            response = _icp_research_agent_output(prompt, pre_data, llm_backend)
+            response = _icp_research_agent_output(agent_chain, prompt, pre_data, llm_backend)
 
             # Extract JSON from response
             if "Final Answer:" in response:
@@ -662,10 +661,10 @@ ICP_FUNCTIONS = {
 }
 
 ICP_FUNCTIONS_CLAUDE = {
-    "icp summary & market opportunity": lambda d: icp_research_1(d, "claude"),
-    "buyer map & roles, pain points, triggers": lambda d: icp_research_2(d, "claude"),
-    "competitive overlap & buying signals": lambda d: icp_research_3(d, "claude"),
-    "regulatory, compliance & recommended icp": lambda d: icp_research_4(d, "claude"),
+    "icp summary & market opportunity": lambda agent_chain, d: icp_research_1(agent_chain, d, "claude"),
+    "buyer map & roles, pain points, triggers": lambda agent_chain, d: icp_research_2(agent_chain, d, "claude"),
+    "competitive overlap & buying signals": lambda agent_chain, d: icp_research_3(agent_chain, d, "claude"),
+    "regulatory, compliance & recommended icp": lambda agent_chain, d: icp_research_4(agent_chain, d, "claude"),
 }
 
 
@@ -673,7 +672,7 @@ ICP_FUNCTIONS_CLAUDE = {
 # Router-facing service functions (added phase B, commit 11/25)
 # ---------------------------------------------------------------------------
 
-def list_icps(user_id: str, refresh: bool = False) -> Dict[str, Any]:
+def list_icps(driver, mongo, agent_chain, user_id: str, refresh: bool = False) -> Dict[str, Any]:
     """Fetch or generate ICPs for a given user_id.
 
     Implements the GET /icp handler logic:
@@ -816,8 +815,7 @@ def list_icps(user_id: str, refresh: bool = False) -> Dict[str, Any]:
         return {"suggestedICPs": normalized_icps}
 
     try:
-        # MongoDB connection — use singleton from app.core.clients
-        db = clients.client["Profiler"]
+        db = mongo["Profiler"]
         _ensure_icp_id_registry_indexes(db)
         collection = db["ICP_config"]
 
@@ -849,7 +847,7 @@ def list_icps(user_id: str, refresh: bool = False) -> Dict[str, Any]:
         logger.info(f"[ICP] Generating new ICPs for user_id: {user_id}")
 
         # Generate new ICPs from Neo4j company profile - get shared company profile
-        with clients.driver.session() as session:
+        with driver.session() as session:
             result = session.run(
                 "MATCH (c:CompanyProfile) RETURN c LIMIT 1"
             )
@@ -872,7 +870,7 @@ def list_icps(user_id: str, refresh: bool = False) -> Dict[str, Any]:
             # Generate ICPs
             logger.info(f"[ICP] Calling ICP_generator() for user_id: {user_id}")
             try:
-                icp_result = ICP_generator(company_profile)
+                icp_result = ICP_generator(agent_chain, company_profile)
                 if isinstance(icp_result, dict) and "suggestedICPs" in icp_result:
                     logger.info(f"[ICP] Generated {len(icp_result.get('suggestedICPs', []))} ICPs for user_id: {user_id}")
                 else:
@@ -903,7 +901,7 @@ def list_icps(user_id: str, refresh: bool = False) -> Dict[str, Any]:
         raise
 
 
-async def _run_icp_research_impl(request: Any, llm_backend: str) -> Dict[str, Any]:
+async def _run_icp_research_impl(driver, mongo, pc, agent_chain, request: Any, llm_backend: str) -> Dict[str, Any]:
     """Shared async worker for POST /icp-research and POST /icp-research_claude.
 
     Parameters
@@ -931,7 +929,7 @@ async def _run_icp_research_impl(request: Any, llm_backend: str) -> Dict[str, An
             f"Unsupported component_name: {request.component_name}"
         )
 
-    db = clients.client["Profiler"]
+    db = mongo["Profiler"]
     collection = db["ICPs"]
 
     # Filter by user_id only for multitenancy
@@ -951,7 +949,7 @@ async def _run_icp_research_impl(request: Any, llm_backend: str) -> Dict[str, An
 
     # --- Neo4j query inside a thread - get company profile by org_id ---
     def fetch_company_profile():
-        with clients.driver.session() as session:
+        with driver.session() as session:
             # Get the company profile filtered by org_id (if provided)
             if request.org_id:
                 result = session.run(
@@ -992,6 +990,7 @@ async def _run_icp_research_impl(request: Any, llm_backend: str) -> Dict[str, An
     market_context_queries = _build_market_context_queries(component_name, context_data)
     pinecone_context = await asyncio.to_thread(
         _fetch_pinecone_supporting_context,
+        pc,
         market_context_queries,
         request.org_id,
         3
@@ -1007,7 +1006,7 @@ async def _run_icp_research_impl(request: Any, llm_backend: str) -> Dict[str, An
     research_result: Any = None
     for attempt in range(1, max_retries + 1):
         try:
-            research_result = await asyncio.to_thread(research_function, context_json)
+            research_result = await asyncio.to_thread(research_function, agent_chain, context_json)
             break
         except Exception:
             if attempt == max_retries:
@@ -1034,7 +1033,7 @@ async def _run_icp_research_impl(request: Any, llm_backend: str) -> Dict[str, An
     return {"status": "success", "data": research_result}
 
 
-async def run_icp_research(request: Any, llm_backend: str = "groq") -> Dict[str, Any]:
+async def run_icp_research(driver, mongo, pc, agent_chain, request: Any, llm_backend: str = "groq") -> Dict[str, Any]:
     """Unified worker for POST /icp-research and POST /icp-research_claude.
 
     Originally collapsed in Phase B Task 11 via the shared `_run_icp_research_impl`
@@ -1048,12 +1047,12 @@ async def run_icp_research(request: Any, llm_backend: str = "groq") -> Dict[str,
     llm_backend:
         ``"groq"`` (default) or ``"claude"``.
     """
-    return await _run_icp_research_impl(request, llm_backend=llm_backend)
+    return await _run_icp_research_impl(driver, mongo, pc, agent_chain, request, llm_backend=llm_backend)
 
 
-def delete_recommended_icp(icp_id: str, user_id: str) -> Dict[str, Any]:
+def delete_recommended_icp(mongo, icp_id: str, user_id: str) -> Dict[str, Any]:
     """Delete a single recommended ICP from ICP_config by icp_id for a given user_id."""
-    db = clients.client["Profiler"]
+    db = mongo["Profiler"]
     _ensure_icp_id_registry_indexes(db)
     collection = db["ICP_config"]
 

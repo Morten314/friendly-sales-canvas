@@ -111,7 +111,7 @@ def test_list_icps_returns_cached_when_no_refresh(mocker, mock_mongo_client):
         "app.services.icp._reserve_unique_icp_id", return_value=TEST_ICP_ID_1,
     )
 
-    result = list_icps(TEST_USER_ID, refresh=False)
+    result = list_icps(MagicMock(), mock_mongo_client, MagicMock(), TEST_USER_ID, refresh=False)
 
     assert "suggestedICPs" in result
 
@@ -126,7 +126,7 @@ def test_list_icps_raises_when_no_company_profile_for_refresh(
     mock_session.run.return_value.single.return_value = None  # no company profile
 
     with pytest.raises(CompanyProfileNotFoundError):
-        list_icps(TEST_USER_ID, refresh=True)
+        list_icps(mock_session._driver, mock_mongo_client, MagicMock(), TEST_USER_ID, refresh=True)
 
 
 # ---------------------------------------------------------------------------
@@ -141,7 +141,7 @@ def test_run_icp_research_raises_unsupported_component(
         component_name="totally bogus", data={}, refresh=True,
     )
     with pytest.raises(UnsupportedComponentError):
-        asyncio.run(run_icp_research(request, llm_backend="groq"))
+        asyncio.run(run_icp_research(mock_session._driver, mock_mongo_client, MagicMock(), MagicMock(), request, llm_backend="groq"))
 
 
 def test_run_icp_research_groq_happy_path(
@@ -170,7 +170,7 @@ def test_run_icp_research_groq_happy_path(
         user_id=TEST_USER_ID, org_id=TEST_ORG_ID,
         component_name="icp summary & market opportunity", data={}, refresh=True,
     )
-    result = asyncio.run(run_icp_research(request, llm_backend="groq"))
+    result = asyncio.run(run_icp_research(mock_session._driver, mock_mongo_client, MagicMock(), MagicMock(), request, llm_backend="groq"))
 
     assert result["status"] == "success"
     assert result["data"]["user_id"] == TEST_USER_ID
@@ -200,7 +200,7 @@ def test_run_icp_research_claude_happy_path(
         component_name="buyer map & roles, pain points, triggers",
         data={}, refresh=True,
     )
-    result = asyncio.run(run_icp_research(request, llm_backend="claude"))
+    result = asyncio.run(run_icp_research(mock_session._driver, mock_mongo_client, MagicMock(), MagicMock(), request, llm_backend="claude"))
 
     assert result["status"] == "success"
 
@@ -219,7 +219,7 @@ def test_run_icp_research_raises_when_company_profile_missing(
         data={}, refresh=True,
     )
     with pytest.raises(CompanyProfileNotFoundError):
-        asyncio.run(run_icp_research(request, llm_backend="groq"))
+        asyncio.run(run_icp_research(mock_session._driver, mock_mongo_client, MagicMock(), MagicMock(), request, llm_backend="groq"))
 
 
 # ---------------------------------------------------------------------------
@@ -235,7 +235,7 @@ def test_delete_recommended_icp_raises_when_config_missing(
     mocker.patch("app.services.icp._ensure_icp_id_registry_indexes")
 
     with pytest.raises(ICPConfigNotFoundError):
-        delete_recommended_icp(TEST_ICP_ID_1, TEST_USER_ID)
+        delete_recommended_icp(mock_mongo_client, TEST_ICP_ID_1, TEST_USER_ID)
 
 
 def test_delete_recommended_icp_raises_when_icp_not_in_payload(
@@ -250,7 +250,7 @@ def test_delete_recommended_icp_raises_when_icp_not_in_payload(
     mocker.patch("app.services.icp._ensure_icp_id_registry_indexes")
 
     with pytest.raises(RecommendedICPNotFoundError):
-        delete_recommended_icp(TEST_ICP_ID_1, TEST_USER_ID)
+        delete_recommended_icp(mock_mongo_client, TEST_ICP_ID_1, TEST_USER_ID)
 
 
 def test_delete_recommended_icp_happy_path(mocker, mock_mongo_client):
@@ -268,7 +268,7 @@ def test_delete_recommended_icp_happy_path(mocker, mock_mongo_client):
     mocker.patch("app.services.icp._ensure_icp_id_registry_indexes")
     release_mock = mocker.patch("app.services.icp._release_icp_id")
 
-    result = delete_recommended_icp(TEST_ICP_ID_1, TEST_USER_ID)
+    result = delete_recommended_icp(mock_mongo_client, TEST_ICP_ID_1, TEST_USER_ID)
 
     assert result["success"] is True
     assert result["data"]["remaining_count"] == 1
