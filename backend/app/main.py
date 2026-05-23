@@ -25,6 +25,7 @@ from app.core.exceptions import (
 )
 from app.core.llm_config import build_llm_config
 from app.core.logging import logger  # noqa: F401
+from app.services.market_scoring import _ensure_market_scoring_indexes
 
 
 @asynccontextmanager
@@ -43,7 +44,6 @@ async def lifespan(app: FastAPI):
             logger.error("Neo4j refresh_schema (lifespan) failed: %s", e)
 
     if app.state.clients.client is not None:
-        from app.services.market_scoring import _ensure_market_scoring_indexes
         _ensure_market_scoring_indexes(app.state.clients.client)
 
     yield
