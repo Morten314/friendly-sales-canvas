@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from typing import Any, Optional
 
 from langchain_groq import ChatGroq
-from langchain_community.chat_models import ChatOpenAI
+from langchain_openai import ChatOpenAI
 from langchain_experimental.graph_transformers import LLMGraphTransformer
 from langchain_core.prompts import PromptTemplate
 from langchain_neo4j import GraphCypherQAChain
