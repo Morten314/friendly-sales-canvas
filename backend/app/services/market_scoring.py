@@ -34,11 +34,7 @@ logger = logging.getLogger(__name__)
 
 def _ensure_market_scoring_indexes(mongo) -> None:
     """Create Mongo indexes for Lead_Market_Scores and Lead_Market_Score_Runs.
-
-    Phase F (commit 15a/17): relocated from app/main.py. Called from both
-    `app.main.lifespan` and the legacy `@app.on_event("startup")` hook (the
-    latter delegates to this function; commit 17 deletes the legacy hook).
-    Idempotent — Mongo `create_index` is a no-op when an equivalent index exists.
+    Idempotent — `create_index` is a no-op when an equivalent index exists.
     """
     if mongo is None:
         return
