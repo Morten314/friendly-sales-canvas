@@ -44,7 +44,7 @@ def test_list_orgs_happy_path(mock_mongo_client):
         users_coll if k == "users" else orgs_coll
     )
 
-    result = list_orgs(TEST_USER_ID)
+    result = list_orgs(mock_mongo_client, TEST_USER_ID)
 
     assert result["status"] == "success"
     assert result["org_id"] == TEST_ORG_ID
@@ -57,7 +57,7 @@ def test_list_orgs_raises_users_document_not_found(mock_mongo_client):
     mock_mongo_client["Org_Management"].__getitem__.return_value = users_coll
 
     with pytest.raises(UsersDocumentNotFoundError, match="Users document not found"):
-        list_orgs(TEST_USER_ID)
+        list_orgs(mock_mongo_client, TEST_USER_ID)
 
 
 def test_list_orgs_raises_org_not_found_for_unknown_user(mock_mongo_client):
@@ -69,7 +69,7 @@ def test_list_orgs_raises_org_not_found_for_unknown_user(mock_mongo_client):
     )
 
     with pytest.raises(OrgNotFoundError, match="No org_id found for user_id"):
-        list_orgs(TEST_USER_ID)
+        list_orgs(mock_mongo_client, TEST_USER_ID)
 
 
 # ---------------------------------------------------------------------------
@@ -81,7 +81,7 @@ def test_create_org_creates_new_document_when_none_exists(mock_mongo_client):
     coll.find_one.return_value = None
     mock_mongo_client["Org_Management"].__getitem__.return_value = coll
 
-    result = create_org({"org_name": "New Co"})
+    result = create_org(mock_mongo_client, {"org_name": "New Co"})
 
     assert result["status"] == "success"
     assert "org_id" in result
@@ -100,7 +100,7 @@ def test_create_org_appends_to_existing_document(mock_mongo_client):
     }
     mock_mongo_client["Org_Management"].__getitem__.return_value = coll
 
-    result = create_org({"org_name": "New Co"})
+    result = create_org(mock_mongo_client, {"org_name": "New Co"})
 
     assert result["status"] == "success"
     coll.update_one.assert_called_once()
@@ -114,7 +114,7 @@ def test_create_org_handles_missing_org_name(mock_mongo_client):
     coll.find_one.return_value = None
     mock_mongo_client["Org_Management"].__getitem__.return_value = coll
 
-    result = create_org({})
+    result = create_org(mock_mongo_client, {})
 
     assert result["status"] == "success"
     assert "org_id" in result
@@ -130,7 +130,7 @@ def test_connect_user_to_org_creates_new_document(mock_mongo_client):
     coll.find_one.return_value = None
     mock_mongo_client["Org_Management"].__getitem__.return_value = coll
 
-    result = connect_user_to_org(TEST_USER_ID, TEST_ORG_ID)
+    result = connect_user_to_org(mock_mongo_client, TEST_USER_ID, TEST_ORG_ID)
 
     assert result["status"] == "success"
     assert result["user_id"] == TEST_USER_ID
@@ -146,7 +146,7 @@ def test_connect_user_to_org_updates_existing_document(mock_mongo_client):
     }
     mock_mongo_client["Org_Management"].__getitem__.return_value = coll
 
-    result = connect_user_to_org(TEST_USER_ID, TEST_ORG_ID)
+    result = connect_user_to_org(mock_mongo_client, TEST_USER_ID, TEST_ORG_ID)
 
     assert result["status"] == "success"
     coll.update_one.assert_called_once()
@@ -177,7 +177,7 @@ def test_list_registrations_returns_sorted_results(mock_mongo_client):
     ]
     mock_mongo_client["Registration_DB"].__getitem__.return_value = coll
 
-    result = list_registrations()
+    result = list_registrations(mock_mongo_client)
 
     assert len(result) == 2
     assert result[0].name == "Jane"
@@ -190,7 +190,7 @@ def test_create_registration_inserts_and_returns_response(mock_mongo_client):
     mock_mongo_client["Registration_DB"].__getitem__.return_value = coll
 
     req = RegistrationRequest(name="Alice", email="alice@example.com")
-    result = create_registration(req)
+    result = create_registration(mock_mongo_client, req)
 
     assert result.id == "new_reg_id"
     assert result.name == "Alice"

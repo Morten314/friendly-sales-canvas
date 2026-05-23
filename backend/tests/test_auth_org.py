@@ -15,10 +15,24 @@ Endpoints covered:
   GET  /registration     — list registrations (uses clients.client)
   POST /api/auth/token   — does not exist; lock the 404/405 behaviour
 """
+from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
 import pytest
 from tests.helpers import scrub_dynamic
 from tests.identities import TEST_USER_ID, TEST_ORG_ID
+
+
+@contextmanager
+def _override_mongo(mongo_instance):
+    """Phase F: org_auth router now reads Mongo via Depends(get_mongo).
+    Replaces the legacy `with patch("app.core.clients.client", mongo_instance)`."""
+    from app.main import app
+    from app.core.dependencies import get_mongo
+    app.dependency_overrides[get_mongo] = lambda: mongo_instance
+    try:
+        yield
+    finally:
+        app.dependency_overrides.pop(get_mongo, None)
 
 
 # ---------------------------------------------------------------------------
@@ -61,7 +75,7 @@ def test_get_org_returns_org_for_user(client, snapshot):
     }
     mongo_instance, _ = _mongo_client_mock_returning(users_doc, orgs_doc)
 
-    with patch("app.core.clients.client", mongo_instance):
+    with _override_mongo(mongo_instance):
         response = client.get("/org", params={"user_id": TEST_USER_ID})
 
     assert response.status_code == 200
@@ -74,7 +88,7 @@ def test_get_org_returns_404_for_missing_users_doc(client):
     """users document absent → 404."""
     mongo_instance, _ = _mongo_client_mock_returning(None)
 
-    with patch("app.core.clients.client", mongo_instance):
+    with _override_mongo(mongo_instance):
         response = client.get("/org", params={"user_id": TEST_USER_ID})
 
     assert response.status_code == 404
@@ -85,7 +99,7 @@ def test_get_org_returns_404_for_unknown_user(client):
     users_doc = {"_id": "users", "user_mappings": {}}
     mongo_instance, _ = _mongo_client_mock_returning(users_doc)
 
-    with patch("app.core.clients.client", mongo_instance):
+    with _override_mongo(mongo_instance):
         response = client.get("/org", params={"user_id": TEST_USER_ID})
 
     assert response.status_code == 404
@@ -99,7 +113,7 @@ def test_post_org_creates_new_org(client, snapshot):
     """Creates an org when no orgs document pre-exists."""
     mongo_instance, orgs_col = _mongo_client_mock_returning(None)
 
-    with patch("app.core.clients.client", mongo_instance):
+    with _override_mongo(mongo_instance):
         response = client.post("/org", json={"org_name": "Test Org"})
 
     assert response.status_code == 200
@@ -119,7 +133,7 @@ def test_post_connect_org_links_user_to_org_new_doc(client, snapshot):
     """No existing users document → insert_one called."""
     mongo_instance, users_col = _mongo_client_mock_returning(None)
 
-    with patch("app.core.clients.client", mongo_instance):
+    with _override_mongo(mongo_instance):
         response = client.post(
             "/connect_org",
             json={"user_id": TEST_USER_ID, "org_id": TEST_ORG_ID},
@@ -139,7 +153,7 @@ def test_post_connect_org_links_user_to_org_existing_doc(client):
     }
     mongo_instance, users_col = _mongo_client_mock_returning(existing_doc)
 
-    with patch("app.core.clients.client", mongo_instance):
+    with _override_mongo(mongo_instance):
         response = client.post(
             "/connect_org",
             json={"user_id": TEST_USER_ID, "org_id": TEST_ORG_ID},
@@ -160,13 +174,14 @@ def test_post_registration_creates_entry(client, snapshot):
 
     inserted_id = ObjectId("000000000000000000000001")
 
-    # clients.client["Registration_DB"]["registrations"].insert_one(...)
+    # mongo["Registration_DB"]["registrations"].insert_one(...)
     col_mock = MagicMock()
     col_mock.insert_one.return_value.inserted_id = inserted_id
 
-    with patch("app.core.clients.client") as mock_client:
-        mock_client.__getitem__.return_value.__getitem__.return_value = col_mock
+    mongo_mock = MagicMock()
+    mongo_mock.__getitem__.return_value.__getitem__.return_value = col_mock
 
+    with _override_mongo(mongo_mock):
         payload = {"name": "Test User", "email": "test@brewra.test"}
         response = client.post("/registration", json=payload)
 
@@ -212,9 +227,10 @@ def test_get_registration_lists_entries(client, snapshot):
     col_mock = MagicMock()
     col_mock.find.return_value.sort.return_value = mock_sort
 
-    with patch("app.core.clients.client") as mock_client:
-        mock_client.__getitem__.return_value.__getitem__.return_value = col_mock
+    mongo_mock = MagicMock()
+    mongo_mock.__getitem__.return_value.__getitem__.return_value = col_mock
 
+    with _override_mongo(mongo_mock):
         response = client.get("/registration")
 
     assert response.status_code == 200
@@ -231,9 +247,10 @@ def test_get_registration_empty_returns_list(client):
     col_mock = MagicMock()
     col_mock.find.return_value.sort.return_value = mock_sort
 
-    with patch("app.core.clients.client") as mock_client:
-        mock_client.__getitem__.return_value.__getitem__.return_value = col_mock
+    mongo_mock = MagicMock()
+    mongo_mock.__getitem__.return_value.__getitem__.return_value = col_mock
 
+    with _override_mongo(mongo_mock):
         response = client.get("/registration")
 
     assert response.status_code == 200

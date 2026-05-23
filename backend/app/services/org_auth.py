@@ -3,17 +3,16 @@ import uuid
 from datetime import datetime, timezone
 from typing import Dict, List
 
-from app.core import clients
 from app.core.exceptions import OrgNotFoundError, UsersDocumentNotFoundError
 from app.models.org_auth import RegistrationRequest, RegistrationResponse
 
 
-def list_orgs(user_id: str) -> Dict:
+def list_orgs(mongo, user_id: str) -> Dict:
     """
     Get org_id and org_name for a given user_id.
     Fetches from MongoDB users collection (single document) and orgs collection for org_name.
     """
-    db = clients.client["Org_Management"]
+    db = mongo["Org_Management"]
     users_collection = db["users"]
     orgs_collection = db["orgs"]
 
@@ -48,7 +47,7 @@ def list_orgs(user_id: str) -> Dict:
     return response
 
 
-def create_org(request: dict) -> Dict:
+def create_org(mongo, request: dict) -> Dict:
     """
     Generate a new org_id and save it to MongoDB orgs collection (single document).
     Optionally accepts org_name to link with the org_id.
@@ -62,7 +61,7 @@ def create_org(request: dict) -> Dict:
     # Generate new org_id
     new_org_id = str(uuid.uuid4())
 
-    db = clients.client["Org_Management"]
+    db = mongo["Org_Management"]
     collection = db["orgs"]
 
     # Get or create the single orgs document
@@ -112,12 +111,12 @@ def create_org(request: dict) -> Dict:
     return response
 
 
-def connect_user_to_org(user_id: str, org_id: str) -> Dict:
+def connect_user_to_org(mongo, user_id: str, org_id: str) -> Dict:
     """
     Connect a user_id to an org_id.
     Saves the mapping in MongoDB users collection (single document).
     """
-    db = clients.client["Org_Management"]
+    db = mongo["Org_Management"]
     collection = db["users"]
 
     # Get or create the single users document
@@ -154,13 +153,13 @@ def connect_user_to_org(user_id: str, org_id: str) -> Dict:
     }
 
 
-def list_registrations() -> List[RegistrationResponse]:
+def list_registrations(mongo) -> List[RegistrationResponse]:
     """
     Fetches all registration entries ordered by recency (most recent first).
     Uses separate database 'Registration_DB' and collection 'registrations'.
     """
     # Connect to separate registration database
-    db = clients.client["Registration_DB"]
+    db = mongo["Registration_DB"]
     collection = db["registrations"]
 
     # Fetch all registrations ordered by timestamp (descending - most recent first)
@@ -179,13 +178,13 @@ def list_registrations() -> List[RegistrationResponse]:
     return result
 
 
-def create_registration(registration: RegistrationRequest) -> RegistrationResponse:
+def create_registration(mongo, registration: RegistrationRequest) -> RegistrationResponse:
     """
     Creates a new registration entry in MongoDB.
     Uses separate database 'Registration_DB' and collection 'registrations'.
     """
     # Connect to separate registration database
-    db = clients.client["Registration_DB"]
+    db = mongo["Registration_DB"]
     collection = db["registrations"]
 
     # Create registration document with timestamp
