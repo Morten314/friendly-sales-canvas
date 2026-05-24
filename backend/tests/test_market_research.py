@@ -85,8 +85,8 @@ def test_post_market_research_all_components(client, mock_neo4j, mock_mongo, com
     # accesses it via `market_research_service.COMPONENT_FUNCTIONS`, so patch
     # the source module. `_fetch_pinecone_supporting_context` is called inside
     # the service — patch the binding there too.
-    with patch("app.services.market_research.COMPONENT_FUNCTIONS", {component_name: lambda agent_chain, _: _captured_result(component_name)}), \
-         patch("app.services.market_research._fetch_pinecone_supporting_context", return_value=[]):
+    with patch("app.services.market_research.orchestrator.COMPONENT_FUNCTIONS", {component_name: lambda agent_chain, _: _captured_result(component_name)}), \
+         patch("app.services.market_research.orchestrator._fetch_pinecone_supporting_context", return_value=[]):
         response = client.post("/market-research", json=_base_payload(component_name))
 
     assert response.status_code == 200
@@ -122,7 +122,7 @@ def test_post_market_research_cached_path(client, mock_neo4j, mock_mongo):
 
     # The research function should never be called
     research_fn = MagicMock()
-    with patch("app.services.market_research.COMPONENT_FUNCTIONS", {component_name: research_fn}):
+    with patch("app.services.market_research.orchestrator.COMPONENT_FUNCTIONS", {component_name: research_fn}):
         response = client.post("/market-research", json=_base_payload(component_name, refresh=False))
 
     assert response.status_code == 200
