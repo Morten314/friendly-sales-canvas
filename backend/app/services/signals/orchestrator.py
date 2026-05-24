@@ -1,6 +1,5 @@
 """Signals service: Scout/Profiler signal search + batch generation."""
 import json
-import re
 import asyncio
 import uuid
 from datetime import datetime, timezone
@@ -15,11 +14,6 @@ from app.core.exceptions import (
 )
 from app.models.market_research import MarketRequest
 from app.models.signals import SignalAskRequest
-from app.services._llm_helpers import (
-    CLAUDE_RESEARCH_MAX_TOKENS,
-    _tavily_context_and_urls,
-    _claude_messages_text,
-)
 from app.services._retrieval import (
     _build_signal_context_queries,
     _fetch_pinecone_supporting_context,
@@ -40,42 +34,13 @@ from app.services.signals.prompts import (
     _SCOUT_PROMPT_TEMPLATE,
     _PROFILER_PROMPT_TEMPLATE,
 )
+from app.services.signals.llm import _signals_agent_output
+from app.services.signals.parsing import (
+    _parse_search_signals_response,
+    _normalize_search_signals_result,
+)
 
 from app.core.logging import logger
-
-
-def _signals_agent_output(agent_chain, prompt: str, company_profile_seed: str, llm_backend: str) -> tuple:
-    """Returns (model_output_text, tavily_urls) for signal JSON parsing."""
-    tavily_urls: List[str] = []
-    if llm_backend != "claude":
-        raw_response = agent_chain.invoke({"input": prompt})
-        response = raw_response["output"]
-        try:
-            if hasattr(raw_response, "intermediate_steps"):
-                for step in raw_response.intermediate_steps:
-                    if len(step) > 1 and isinstance(step[1], list):
-                        for result in step[1]:
-                            if isinstance(result, dict) and "url" in result:
-                                tavily_urls.append(result["url"])
-            if not tavily_urls:
-                url_pattern = r'https?://[^\s<>"{}|\\^`\[\]]+'
-                found_urls = re.findall(url_pattern, response)
-                tavily_urls = list(set(found_urls))[:5]
-        except Exception:
-            pass
-        return response, tavily_urls
-
-    seed = " ".join(str(company_profile_seed).split())[:1200]
-    web_ctx, tavily_urls = _tavily_context_and_urls(
-        f"B2B market competitor industry news ICP customer trends 2026 {seed}"
-    )
-    augmented = f"{prompt}\n\nWEB SEARCH RESULTS:\n{web_ctx}\n"
-    response = _claude_messages_text(augmented, max_tokens=CLAUDE_RESEARCH_MAX_TOKENS)
-    if not tavily_urls:
-        url_pattern = r'https?://[^\s<>"{}|\\^`\[\]]+'
-        found_urls = re.findall(url_pattern, response)
-        tavily_urls = list(set(found_urls))[:5]
-    return response, tavily_urls
 
 
 # ---------------------------------------------------------------------------
@@ -213,72 +178,11 @@ IMPORTANT: Your new signal headline must be about a DIFFERENT news story, market
     response, tavily_urls = _signals_agent_output(agent_chain, prompt, context_json, llm_backend)
 
     # ------------------------------------------------------------------
-    # 5. Parse response (identical across personas)
+    # 5. Parse response + validate URLs + assemble result
+    #    (extracted to signals.parsing during Phase H commit 19/20)
     # ------------------------------------------------------------------
-    if "Final Answer:" in response:
-        response = response.split("Final Answer:")[-1].strip()
-
-    cleaned_str = response.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-    if "{" in cleaned_str:
-        cleaned_str = cleaned_str[cleaned_str.index("{"):]
-    if "}" in cleaned_str:
-        cleaned_str = cleaned_str[:cleaned_str.rindex("}") + 1]
-
-    cleaned_str = re.sub(r'\"description\": \"(.*?)\"', lambda m: '"description": "' + m.group(1).replace('\n', '\\n').replace('\r', '\\r').replace('"', '\\"') + '"', cleaned_str, flags=re.DOTALL)
-    cleaned_str = re.sub(r'\"snippet\": \"(.*?)\"', lambda m: '"snippet": "' + m.group(1).replace('\n', '\\n').replace('\r', '\\r').replace('"', '\\"') + '"', cleaned_str, flags=re.DOTALL)
-    cleaned_str = re.sub(r'\"headline\": \"(.*?)\"', lambda m: '"headline": "' + m.group(1).replace('\n', '\\n').replace('\r', '\\r').replace('"', '\\"') + '"', cleaned_str, flags=re.DOTALL)
-
-    parsed_json = json.loads(cleaned_str)
-
-    # ------------------------------------------------------------------
-    # 6. Validate URLs (identical across personas)
-    # ------------------------------------------------------------------
-    def validate_url(url, tavily_urls_list):
-        """Validate URL and replace with Tavily URL if invalid."""
-        if not url or not isinstance(url, str):
-            return tavily_urls_list[0] if tavily_urls_list else ""
-        if not url.startswith(('http://', 'https://')):
-            return tavily_urls_list[0] if tavily_urls_list else ""
-        if tavily_urls_list:
-            url_domain = url.split('/')[2] if len(url.split('/')) > 2 else ""
-            for tavily_url in tavily_urls_list:
-                tavily_domain = tavily_url.split('/')[2] if len(tavily_url.split('/')) > 2 else ""
-                if url_domain and url_domain == tavily_domain:
-                    return tavily_url
-            return tavily_urls_list[0]
-        return url
-
-    source_url = validate_url(parsed_json.get("sourceUrl", ""), tavily_urls)
-
-    validated_sources = []
-    for i, src in enumerate(parsed_json.get("source", [])[:2]):
-        if isinstance(src, dict) and "url" in src:
-            validated_url = validate_url(src["url"], tavily_urls[i:] if i < len(tavily_urls) else tavily_urls)
-            validated_sources.append({"citation": src.get("citation", ""), "url": validated_url})
-
-    if not validated_sources and tavily_urls:
-        for i, tavily_url in enumerate(tavily_urls[:2]):
-            validated_sources.append({"citation": f"Source {i+1}", "url": tavily_url})
-
-    # ------------------------------------------------------------------
-    # 7. Assemble result
-    # ------------------------------------------------------------------
-    hours_ago = 1
-    timestamp = f"{hours_ago}h ago"
-
-    return {
-        "agent": persona,
-        "timestamp": timestamp,
-        "headline": parsed_json.get("headline", ""),
-        "snippet": parsed_json.get("snippet", ""),
-        "description": parsed_json.get("description", ""),
-        "sourceUrl": source_url if source_url else (validated_sources[0]["url"] if validated_sources else ""),
-        "sourceLabel": parsed_json.get("sourceLabel", ""),
-        "source": validated_sources if validated_sources else parsed_json.get("source", []),
-        "nextBestMoves": parsed_json.get("nextBestMoves", []),
-        "NBAs": parsed_json.get("NBAs", []),
-        "contextualSuggestions": parsed_json.get("contextualSuggestions", []),
-    }
+    parsed_json = _parse_search_signals_response(response)
+    return _normalize_search_signals_result(parsed_json, tavily_urls, persona)
 
 
 # ---------------------------------------------------------------------------

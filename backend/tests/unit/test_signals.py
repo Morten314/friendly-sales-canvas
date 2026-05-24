@@ -61,11 +61,11 @@ def test_search_signals_profiler_claude_uses_captured(mocker):
     _llm_helpers source module would NOT affect those local bindings."""
     captured = load_captured("search_signals_profiler_claude")
     mocker.patch(
-        "app.services.signals.orchestrator._claude_messages_text",
+        "app.services.signals.llm._claude_messages_text",
         return_value=json.dumps(captured),
     )
     mocker.patch(
-        "app.services.signals.orchestrator._tavily_context_and_urls",
+        "app.services.signals.llm._tavily_context_and_urls",
         return_value=("web context", []),
     )
 
