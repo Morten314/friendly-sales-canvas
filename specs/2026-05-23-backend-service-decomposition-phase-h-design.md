@@ -232,7 +232,20 @@ The general rule (§2.1 item 4) is that `_`-prefixed helpers stay internal to th
 | `_run_market_scoring_for_org` | `services/market_scoring/__init__.py` | `tests/unit/test_market_scoring.py:19` | Direct unit-test import (the router uses `from app.services import market_scoring as market_scoring_service` and references via attribute access, which works through the package's `__init__.py` even without explicit re-export — but the test imports the symbol directly, so re-export is required) |
 | `_get_latest_market_score_rows` | `services/market_scoring/__init__.py` | `tests/unit/test_market_scoring.py:372` | Direct unit test of pagination contract |
 
-**Pre-flight check before scaffolding any service.** Run `grep -rn "from app.services.<domain> import _" backend/ tests/` for each service (replace `<domain>` with each of `signals`, `icp`, `market_research`, `documents`, `market_scoring`). Any new `_`-prefixed import surfaced gets added to this table before the corresponding service is decomposed.
+**The full `__init__.py` re-export surface is wider than this table.** This table enumerates only the `_`-prefix *exceptions* — symbols that violate the "underscore = private" convention because external code reaches into them. Every **public** (unprefixed) function defined in the package that any external code imports must also be re-exported from `__init__.py`. The illustrative `__init__.py` examples in §3.2–§3.6 show a minimal subset for readability; the actual `__init__.py` must list every public symbol from the spec's "Owns" set that any router, lifespan hook, service, script, or test imports. Sequence A and Sequence B confirmed this empirically — `get_market_reports_for_org` and `score_single_lead_against_market` (market_scoring), and `load_document`, `grapher`, `process_prospect_list` (data_sources), were imported by tests but absent from the corresponding illustrative example. They had to be added at scaffold time to avoid `ImportError`.
+
+**Pre-flight check before scaffolding any service.** Run two greps for each service (replace `<domain>` with each of `signals`, `icp`, `market_research`, `documents`, `market_scoring`):
+
+```bash
+# _-prefix imports (this table's domain):
+grep -rn "from app.services.<domain> import _" backend/ tests/
+grep -rn "mocker\.patch.*app\.services\.<domain>\._" backend/ tests/
+
+# Unprefixed public imports (must also be in __init__.py, not necessarily in this table):
+grep -rEn "from app\.services\.<domain> import " backend/ tests/ | grep -v 'import _'
+```
+
+The union of both grep outputs is the **minimum** `__init__.py` re-export set. Any new `_`-prefix import surfaced gets added to this table before the corresponding service is decomposed; unprefixed imports go straight into `__init__.py` without table entry.
 
 **Re-exports are about *findability*, not *interception*.** Listing a symbol in `__init__.py` makes `from app.services.<svc> import X` and `getattr(app.services.<svc>, "X")` succeed — which is what `mocker.patch(...)` needs to *locate* a patch target without an `AttributeError`. It does **not** redirect calls that internal package code makes to `X`. Python's function name resolution uses `function.__globals__` (the function's defining module's namespace) at call time, so a function defined in `orchestrator.py` that calls `X()` resolves the name through `orchestrator.py.__dict__` — never through `__init__.py`. A `mocker.patch("app.services.<svc>.X")` replaces the binding in the package's `__init__.py` only, and therefore does not intercept internal calls in `orchestrator.py` / `persistence.py` / etc.
 
@@ -250,12 +263,30 @@ Concrete rule: at the same commit that moves a function's *definition* (or moves
 
 **Symbols that are imported into the package from elsewhere** (e.g., `get_leads_for_org` is `from app.services.leads import get_leads_for_org` inside `market_scoring`'s orchestrator) follow the same rule: tests patch it at the orchestrator's path (`app.services.market_scoring.orchestrator.get_leads_for_org`) because that is the namespace where orchestrator.py looks it up. If the same import moves to a different submodule during an extraction commit, the patch path shifts with it.
 
+**How callsite code must look: module-import + namespace prefix for patched symbols.** The step-2 retarget (`...orchestrator.X` → `...persistence.X`) only intercepts the orchestrator's call to `X` if the orchestrator's name lookup at call time goes through `persistence.__dict__`. With `from app.services.<svc>.persistence import X` at the top of `orchestrator.py`, Python binds `X` into `orchestrator.__dict__`; calls inside orchestrator resolve through orchestrator's namespace, not persistence's. A `mocker.patch("app.services.<svc>.persistence.X")` then fails to intercept those orchestrator-side calls (same `function.__globals__` mechanism as the §3.7 re-exports note). The required pattern for any moved symbol that tests patch is **module-import + namespace-prefix calls**:
+
+```python
+# orchestrator.py — TOP
+from app.services.<svc> import persistence
+
+# orchestrator.py — every callsite of a moved-and-patched symbol
+result = persistence.X(...)
+```
+
+With this pattern, name resolution at call time is `orchestrator.persistence.__dict__[X]` = `persistence.__dict__[X]`, and a single `mocker.patch("app.services.<svc>.persistence.X")` intercepts every caller — orchestrator-side and persistence-internal. Pure helpers that no test patches (typical: prompt templates, normalization helpers, parsing utilities) may use the cleaner `from .<submodule> import X` from-import; the §3.8 pre-flight inventory below is the cutline. Sequence A Task 2 confirmed empirically that from-import + step-2 retarget breaks tests (6 failures with the same mock-semantics symptoms as the round-3 halt); switching the 6 persistence functions to module-import + namespace-prefix calls turned all 236 tests green at .persistence.X patches.
+
+**Circular-import resolution for back-edges.** When a new submodule needs helpers that still live in `orchestrator.py` (typical mid-decomposition state: persistence needs normalization helpers that haven't moved yet), import them **lazily inside the function bodies** that use them — never at module top. The lazy import resolves after orchestrator is fully loaded, so the cycle breaks at call time. Once the helpers move to their own submodule (e.g., normalization.py in Task 3), the lazy import can be promoted to a top-level `from .<submodule> import X` because the back-edge is gone.
+
+**Lazy-import-through-`__init__` exception.** When an outside module uses a *lazy* `from app.services.<svc> import X` (i.e., the import lives inside a function body), the name resolves through `app.services.<svc>.__init__.py`'s namespace at call time. Tests for the caller patch at the **package path** (`app.services.<svc>.X`), not the submodule path — even after X moves to a submodule, the `__init__.py` re-export forwards transparently, so the lazy import always sees whatever `__init__.py` exports.
+
+**Operational impact:** the step-1 bulk sed must EXCLUDE test files that exclusively use this pattern. Concrete case: `app/services/customer_profile.py` has four lazy imports of `_reserve_unique_icp_id` and `_release_icp_id` from `app.services.icp`. `tests/unit/test_customer_profile.py` patches these via `mocker.patch("app.services.icp.<name>")` (9+ sites). For Sequence D's Task 12 scaffold, the bulk sed must omit `test_customer_profile.py` — rewriting those patches to `app.services.icp.orchestrator.X` (or later `app.services.icp.persistence.X`) would patch a binding that the lazy `from app.services.icp import` never reads, breaking every test. The test file's docstring documents this convention.
+
 **Worked example — Sequence A.**
 
 | Commit | What moves | Test patch-path edits |
 |---|---|---|
 | Scaffold (`market_scoring.py` → `market_scoring/orchestrator.py`) | All 13 patched symbols stay in orchestrator | All `app.services.market_scoring.X` → `app.services.market_scoring.orchestrator.X`. Bulk find-and-replace in `tests/test_market_scoring.py` and `tests/unit/test_market_scoring.py`. |
-| Extract `persistence.py` | `_get_market_score_collections`, `_get_latest_market_score_rows`, `_get_latest_scoring_run`, `_get_lead_identity_from_neo4j`, `get_company_profile_for_org`, `_ensure_market_scoring_indexes` | For the six moved symbols, `app.services.market_scoring.orchestrator.X` → `app.services.market_scoring.persistence.X`. Other patches (e.g., `get_leads_for_org`, `_persist_market_score_for_lead`) stay at `.orchestrator.X`. |
+| Extract `persistence.py` | `_get_market_score_collections`, `_get_latest_market_score_rows`, `_get_latest_scoring_run`, `_get_lead_identity_from_neo4j`, `get_company_profile_for_org`, `_ensure_market_scoring_indexes` | For the six moved symbols, `app.services.market_scoring.orchestrator.X` → `app.services.market_scoring.persistence.X`. **Requires** orchestrator to use module-import + namespace-prefix (`from . import persistence; persistence.X(...)`) per the subsection above — from-import + this retarget does not intercept orchestrator-side callers. Other patches (e.g., `get_leads_for_org`, `_persist_market_score_for_lead`) stay at `.orchestrator.X`. |
 | Extract `normalization.py` + `scoring.py` | 9 normalization helpers + `_lead_to_score_row`, `_is_stale_queued_run`, `_run_market_scoring_for_org` | For symbols that any test patches, retarget to `.normalization.X` or `.scoring.X`. (Most normalization helpers are not patched in tests; check at execution time and skip the edit when the grep is empty.) |
 | TD-006 fix | No moves | No patch edits. |
 

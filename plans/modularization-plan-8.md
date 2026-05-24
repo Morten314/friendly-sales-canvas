@@ -29,6 +29,10 @@
 **Spec deviations from `specs/2026-05-23-backend-service-decomposition-phase-h-design.md`:**
 - `data_sources/` collapses from 4 commits (spec §4.2) to 3, with the spec-defined Step 5 closeout folded into Step 1 as an atomic full-rename. Reason: the generic Step 1 (`git mv` only) leaves router importers referencing the deleted `app.services.documents` path, violating per-commit greenness. The spec §4.2 commit-count line was amended in the same review round to match (20 total instead of 21-22).
 - **Test patch-path migration is bundled into every move commit** per spec §3.8 (added in the round-3 spec revision after the original plan tried scaffold-only on 2026-05-24 and broke 9 unit tests). Each scaffold task includes a bulk find-and-replace of `app.services.<svc>.X` → `app.services.<svc>.orchestrator.X` in the service's test files; each extraction task includes a selective retarget to the new submodule path for symbols that moved. The pytest gate at the end of each task asserts 236 passing because the move and the path edits land together — within a commit, ordering is "move → re-export → patch-rewrite → pytest", and each commit is atomic so there is no intermediate red state. The `__init__.py` re-export list stays at the public surface + spec §3.7 exceptions (no need to inflate it with patch-target symbols, since the patches no longer target the package path after the rewrite).
+- **Round-4 revisions** (2026-05-24, after Phase H execution): three plan/spec gaps were folded back upstream after the merged branch hit 236 passing.
+  - **Module-import + namespace-prefix for any moved-and-patched symbol** (spec §3.8 subsection added). The original Step 3 wording — "At the top of `orchestrator.py`, add: `from app.services.<svc>.<submodule> import (...)`" — is broken for symbols that tests patch by string: from-import binds the name into orchestrator's `__dict__`, so step-2 retargets to `.<submodule>.X` fail to intercept orchestrator-side calls. Sequence A Task 2 broke 6 tests with this pattern and was fixed by switching to `from app.services.<svc> import <submodule>` + `<submodule>.X(...)` namespace-prefix calls. Tasks 2 and 13 now spell out the module-import pattern; Tasks 6, 9, 17 use from-import because none of their moved symbols are patched (verified per the §3.8 pre-flight inventory). Plan Step 3 wording was rewritten to reference the decision rule per task.
+  - **Task 12 Step 3a excludes `test_customer_profile.py` from the bulk sed.** `app/services/customer_profile.py` uses lazy imports through `app.services.icp.__init__.py`; tests patch via the package path (`app.services.icp.X`). Rewriting them to `.orchestrator.X` would patch a binding the lazy import never reads. Spec §3.8 grew a "lazy-import-through-`__init__` exception" subsection documenting this case generally.
+  - **`__init__.py` re-export surface is wider than spec §3.7's illustrative example.** Sequence A's Task 1 had to add `get_market_reports_for_org` and `score_single_lead_against_market` to market_scoring's `__init__.py`; Sequence B's Task 5 had to add `load_document`, `grapher`, `process_prospect_list` to data_sources's. Spec §3.7's pre-flight grep was extended to also catch unprefixed external imports, and §3.7 now explicitly states the table is the `_`-prefix exceptions list (not the full public surface).
 
 **Parallelizability:** Sequences B-E (`data_sources/`, `market_research/`, `icp/`, `signals/`) are mutually independent — they touch different service files, different routers, different test files, and don't share mutable state. After Sequence A (`market_scoring/`) validates the pattern, B-E may be dispatched to parallel subagents using the `subagent-driven-development` skill. Within each sequence, tasks must remain serial (scaffold → extraction → extraction). Sequence A must complete first because its outcome decides whether to continue at all (per the plan-level kill criterion).
 
@@ -294,22 +298,35 @@ _get_latest_market_score_rows (unit test), get_company_profile_for_org.
 
 followed by the imports each extracted function needs (re-derive these by reading the function bodies), then the functions themselves in their original order.
 
-- [ ] **Step 3: Update `orchestrator.py` to import from `persistence.py`**
+- [ ] **Step 3: Update `orchestrator.py` to call into `persistence.py`**
 
-At the top of `orchestrator.py`, add:
+All six moved symbols are in the §3.8 patch-target inventory (the unit tests patch `_get_market_score_collections`, `_get_lead_identity_from_neo4j`, and `get_company_profile_for_org` directly; the other three are pulled in transitively by orchestrator-function tests). Per spec §3.8 "How callsite code must look", any moved-and-patched symbol requires **module-import + namespace-prefix calls** in orchestrator — otherwise the Step 4a retarget to `.persistence.X` cannot intercept orchestrator-side callers.
+
+At the top of `orchestrator.py`, add (do NOT use `from .persistence import ...`):
 
 ```python
-from app.services.market_scoring.persistence import (
-    _get_market_score_collections,
-    _get_latest_market_score_rows,
-    _get_latest_scoring_run,
-    _get_lead_identity_from_neo4j,
-    get_company_profile_for_org,
-    _ensure_market_scoring_indexes,
-)
+from app.services.market_scoring import persistence
+```
+
+Rewrite every callsite of a moved symbol inside `orchestrator.py` to use the namespace prefix. Expect ~9 sites:
+
+```python
+# Before:
+score_coll, run_coll = _get_market_score_collections(mongo)
+rows, _ = _get_latest_market_score_rows(driver, mongo, request.org_id)
+company_profile = get_company_profile_for_org(driver, org_id)
+
+# After:
+score_coll, run_coll = persistence._get_market_score_collections(mongo)
+rows, _ = persistence._get_latest_market_score_rows(driver, mongo, request.org_id)
+company_profile = persistence.get_company_profile_for_org(driver, org_id)
 ```
 
 Delete the original function definitions (they now live in `persistence.py`).
+
+**Why not the from-import pattern.** `from app.services.market_scoring.persistence import X` binds `X` into `orchestrator.__dict__`. A test that patches `app.services.market_scoring.persistence.X` only replaces persistence's binding; orchestrator-side callers still hit the real function. This was the failure mode at Sequence A Task 2's first attempt (6 unit tests with `TypeError: '<' not supported between instances of 'int' and 'MagicMock'` and similar mock-non-intercept symptoms). See spec §3.8.
+
+**Circular-import resolution.** `persistence.py` needs four normalization helpers (`_extract_company_name`, `_extract_lead_name`, `_lead_to_score_row`, `_normalize_non_empty_string`) that still live in `orchestrator.py` until Task 3 moves them. Import them **lazily inside the persistence function bodies** that use them — never at persistence.py's top level. Module-import for orchestrator + lazy import for persistence's reverse-edge breaks the cycle. Once Task 3 moves the helpers to `normalization.py`, persistence's lazy imports can be promoted to top-level from-imports against `normalization` (no cycle then).
 
 - [ ] **Step 4: Update `__init__.py` to source persistence-resident symbols from `persistence.py`**
 
@@ -831,6 +848,8 @@ for user-uploaded data sources.
 
 - [ ] **Step 3: Update `orchestrator.py` to import from persistence**
 
+None of the four moved functions appear in the §3.8 patch-target inventory for `data_sources`, so per spec §3.8 "How callsite code must look" the simpler from-import pattern is safe here (no module-import + namespace-prefix needed). Re-verify with the §3.8 pre-flight grep before adopting the from-import; if any of the four turn out to be patched, switch to the module-import pattern from Task 2 Step 3 for this task.
+
 ```python
 from app.services.data_sources.persistence import (
     list_user_documents,
@@ -1198,6 +1217,8 @@ Name new helpers with `_` prefix (internal to package). They're not re-exported.
 
 - [ ] **Step 3: Update `orchestrator.py`**
 
+The new helpers in `persistence.py` are extracted from inline code — they did not exist as named functions before, so no test patches them. Per spec §3.8 "How callsite code must look", the simpler from-import pattern is safe. (If you find any pre-existing test patches them, switch to the module-import pattern from Task 2 Step 3.)
+
 Replace the inline Mongo I/O blocks with calls to the new helpers:
 
 ```python
@@ -1490,21 +1511,27 @@ __all__ = [
 
 - [ ] **Step 3a: Bulk-rewrite test patch paths (spec §3.8 step 1)**
 
-From plan-writing-time inventory, `icp` has 6 patch targets across two test directories plus `customer_profile`'s test file: `ICP_FUNCTIONS`, `ICP_generator`, `_ensure_icp_indexes`, `_release_icp_id`, `_reserve_unique_icp_id`, `icp_research_2`. **`tests/unit/test_customer_profile.py` also patches `app.services.icp._ensure_icp_indexes` at 9+ sites** and must be included in the rewrite — this is the load-bearing coverage flagged in Task 13 Step 5.
+From plan-writing-time inventory, `icp` has 6 patch targets across two test directories: `ICP_FUNCTIONS`, `ICP_generator`, `_ensure_icp_indexes`, `_release_icp_id`, `_reserve_unique_icp_id`, `icp_research_2`. **`tests/unit/test_customer_profile.py` is intentionally EXCLUDED from this bulk sed** — that file patches `app.services.icp._ensure_icp_indexes` and `app.services.icp._reserve_unique_icp_id` at 9+ sites, and per spec §3.8 "Lazy-import-through-`__init__` exception" those patches must stay at the package path. `app/services/customer_profile.py` uses lazy imports (`from app.services.icp import _reserve_unique_icp_id` inside function bodies) that resolve through `app.services.icp.__init__.py` at call time; rewriting the patches to `app.services.icp.orchestrator.X` (or later `app.services.icp.persistence.X`) would patch a binding the lazy import never reads, breaking every customer_profile test.
 
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence
 sed -i 's/"app\.services\.icp\./"app.services.icp.orchestrator./g' \
   backend/tests/test_icp.py \
-  backend/tests/unit/test_icp.py \
-  backend/tests/unit/test_customer_profile.py
+  backend/tests/unit/test_icp.py
 ```
 
-Verify:
+Verify the rewrite landed where intended:
 
 ```bash
-grep -nE '"app\.services\.icp\.' backend/tests/test_icp.py backend/tests/unit/test_icp.py backend/tests/unit/test_customer_profile.py
+grep -nE '"app\.services\.icp\.' backend/tests/test_icp.py backend/tests/unit/test_icp.py
 # expected: every match now has .orchestrator. infix
+```
+
+Verify `test_customer_profile.py` was NOT touched:
+
+```bash
+grep -nE '"app\.services\.icp\.' backend/tests/unit/test_customer_profile.py
+# expected: every match stays at app.services.icp.<symbol> with NO .orchestrator. infix
 ```
 
 - [ ] **Step 4: Run pytest**
@@ -1519,7 +1546,7 @@ BREWRA_SKIP_DB_INIT=1 python -m pytest -q 2>&1 | tail -3
 
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence
-git add backend/app/services/icp/ backend/tests/test_icp.py backend/tests/unit/test_icp.py backend/tests/unit/test_customer_profile.py
+git add backend/app/services/icp/ backend/tests/test_icp.py backend/tests/unit/test_icp.py
 git commit -m "refactor(be): scaffold icp/ package [phase H, commit 12/M]
 
 git mv services/icp.py → services/icp/orchestrator.py
@@ -1529,9 +1556,11 @@ for customer_profile.py lazy imports).
 
 Rewrite test patch paths per spec §3.8 step 1: every 'app.services.icp.X'
 patch target retargeted to 'app.services.icp.orchestrator.X' across
-test_icp.py, unit/test_icp.py, AND unit/test_customer_profile.py (the
-last one patches _ensure_icp_indexes at 9+ sites — load-bearing coverage
-for the icp/customer_profile lazy-import contract).
+test_icp.py and unit/test_icp.py only. unit/test_customer_profile.py is
+intentionally NOT touched (per spec §3.8 'Lazy-import-through-__init__
+exception'): customer_profile uses lazy imports that resolve through
+__init__.py, so its patches must stay at the package path
+(app.services.icp.X) regardless of where the function lives now.
 
 236 tests passing."
 ```
@@ -1565,19 +1594,33 @@ grep -n "^def list_icps\|^def delete_recommended_icp\|^def _ensure_icp_indexes\|
 # ... five functions ...
 ```
 
-- [ ] **Step 3: Update `orchestrator.py`**
+- [ ] **Step 3: Update `orchestrator.py` to call into `persistence.py`**
+
+Three of the five moved symbols (`_ensure_icp_indexes`, `_reserve_unique_icp_id`, `_release_icp_id`) are in the §3.8 patch-target inventory. Per spec §3.8 "How callsite code must look", any moved-and-patched symbol requires **module-import + namespace-prefix calls** in orchestrator. Use the module-import pattern for all five (consistent style; the two unpatched symbols `list_icps`, `delete_recommended_icp` cost nothing extra to access via the prefix).
+
+At the top of `orchestrator.py`, add (do NOT use `from .persistence import ...`):
 
 ```python
-from app.services.icp.persistence import (
-    list_icps,
-    delete_recommended_icp,
-    _ensure_icp_indexes,
-    _reserve_unique_icp_id,
-    _release_icp_id,
-)
+from app.services.icp import persistence
 ```
 
-Delete the originals.
+Rewrite every callsite of a moved symbol inside `orchestrator.py` to use the namespace prefix:
+
+```python
+# Before:
+persistence._ensure_icp_indexes(mongo)
+list_icps(mongo, org_id)
+
+# After:
+persistence._ensure_icp_indexes(mongo)
+persistence.list_icps(mongo, org_id)
+```
+
+Delete the original function definitions.
+
+**Why not the from-import pattern.** Same reasoning as Task 2 Step 3 — see Task 2 for the full explanation. `customer_profile.py`'s lazy imports go through `app.services.icp.__init__.py` (covered by Step 4 below), so they are unaffected by orchestrator's choice of from-import vs. module-import; the constraint is purely about orchestrator-internal callers and unit-test patches in `tests/unit/test_icp.py`.
+
+**Circular-import resolution.** If `persistence.py` ends up needing helpers still in `orchestrator.py`, use lazy imports inside the persistence function bodies (same pattern as Task 2).
 
 - [ ] **Step 4: Update `__init__.py`**
 
@@ -1585,24 +1628,30 @@ Move all five symbols from the orchestrator-import block to a new persistence-im
 
 - [ ] **Step 4a: Retarget test patches for moved symbols (spec §3.8 step 2)**
 
-Of the 5 moved persistence functions, three are patched extensively: `_ensure_icp_indexes`, `_reserve_unique_icp_id`, `_release_icp_id`. The other two (`list_icps`, `delete_recommended_icp`) are public functions tests typically call directly rather than patch. Retarget across all three test files:
+Of the 5 moved persistence functions, three are patched extensively: `_ensure_icp_indexes`, `_reserve_unique_icp_id`, `_release_icp_id`. The other two (`list_icps`, `delete_recommended_icp`) are public functions tests typically call directly rather than patch. Retarget across the two `test_icp.py` files only — **do NOT touch `tests/unit/test_customer_profile.py`** (its patches stay at the package path per spec §3.8 "Lazy-import-through-`__init__` exception"; see Task 12 Step 3a for the explanation):
 
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence
 for sym in _ensure_icp_indexes _reserve_unique_icp_id _release_icp_id; do
   sed -i "s/\"app\\.services\\.icp\\.orchestrator\\.$sym\"/\"app.services.icp.persistence.$sym\"/g" \
     backend/tests/test_icp.py \
-    backend/tests/unit/test_icp.py \
-    backend/tests/unit/test_customer_profile.py
+    backend/tests/unit/test_icp.py
 done
 ```
 
-Verify:
+Verify the retarget landed in the icp test files:
 
 ```bash
-grep -nE '"app\.services\.icp\.(orchestrator|persistence)\.' backend/tests/test_icp.py backend/tests/unit/test_icp.py backend/tests/unit/test_customer_profile.py
+grep -nE '"app\.services\.icp\.(orchestrator|persistence)\.' backend/tests/test_icp.py backend/tests/unit/test_icp.py
 # expected: the three retargeted symbols appear with .persistence.; other patched
 # symbols (ICP_FUNCTIONS, ICP_generator, icp_research_2) stay at .orchestrator.
+```
+
+Verify `test_customer_profile.py` was NOT touched — its patches must remain at the package path:
+
+```bash
+grep -nE '"app\.services\.icp\.' backend/tests/unit/test_customer_profile.py
+# expected: every match stays at app.services.icp.X (no .orchestrator., .persistence., etc.)
 ```
 
 - [ ] **Step 5: Run pytest**
@@ -1622,7 +1671,7 @@ BREWRA_SKIP_DB_INIT=1 python -m pytest tests/unit/test_customer_profile.py -v 2>
 - [ ] **Step 6: Commit**
 
 ```bash
-git add backend/app/services/icp/ backend/tests/test_icp.py backend/tests/unit/test_icp.py backend/tests/unit/test_customer_profile.py
+git add backend/app/services/icp/ backend/tests/test_icp.py backend/tests/unit/test_icp.py
 git commit -m "refactor(be): extract icp/persistence.py [phase H, commit 13/M]
 
 Move 5 ICP CRUD + ID-registry helpers out of orchestrator.py. Three are §3.7
@@ -1630,11 +1679,17 @@ exceptions re-exported despite _ prefix: _ensure_icp_indexes (lifespan),
 _reserve_unique_icp_id and _release_icp_id (lazy-imported by
 customer_profile.py at 4 sites).
 
+Orchestrator uses module-import + namespace-prefix calls
+(persistence.X(...)) per spec §3.8 — required for the three patched
+symbols whose interception must work for orchestrator-side callers.
+
 Retarget test patches per spec §3.8 step 2: the three _-prefix symbols
-move from .orchestrator. to .persistence. across test_icp.py,
-unit/test_icp.py, and unit/test_customer_profile.py. Other patched
-symbols (ICP_FUNCTIONS, ICP_generator, icp_research_2) stay at
-.orchestrator.X since those symbols didn't move.
+move from .orchestrator. to .persistence. across test_icp.py and
+unit/test_icp.py. unit/test_customer_profile.py is intentionally NOT
+touched (its patches stay at app.services.icp.X per the lazy-import-
+through-__init__ exception in spec §3.8). Other patched icp symbols
+(ICP_FUNCTIONS, ICP_generator, icp_research_2) stay at .orchestrator.X
+since those symbols didn't move.
 
 236 tests passing including test_customer_profile.py (the load-bearing
 coverage for the lazy-import case)."
@@ -1914,6 +1969,8 @@ async def record_signal_action(mongo, request):
 ```
 
 - [ ] **Step 3: Update `orchestrator.py` to import from `persistence.py`**
+
+Neither `record_signal_action` nor the new internal helpers extracted here are in the §3.8 patch-target inventory for `signals`, so per spec §3.8 "How callsite code must look" the simpler from-import pattern is safe. (Re-verify with the §3.8 pre-flight grep; if any moved symbol turns out to be patched, switch to the module-import pattern from Task 2 Step 3.)
 
 ```python
 from app.services.signals.persistence import (
