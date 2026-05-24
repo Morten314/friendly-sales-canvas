@@ -783,7 +783,7 @@ Most common failure: missed an import rename. The error message will name the fi
 
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence
-git add -A backend/app/services/data_sources/ backend/app/services/ backend/app/routers/ backend/app/main.py backend/tests/
+git add backend/app/services/data_sources/ backend/app/services/ backend/app/routers/ backend/app/main.py backend/tests/
 git commit -m "refactor(be): rename documents → data_sources + scaffold package [phase H, commit 5/M]
 
 Atomic rename of services/documents.py → services/data_sources/orchestrator.py
@@ -1486,15 +1486,7 @@ __all__ = [
 ]
 ```
 
-- [ ] **Step 4: Run pytest**
-
-```bash
-cd /projects/Brewra/brewra-gtm-intelligence/backend
-BREWRA_SKIP_DB_INIT=1 python -m pytest -q 2>&1 | tail -3
-# expected: 236 passed
-```
-
-**This is the highest-stakes scaffold commit** — if either `_reserve_unique_icp_id` or `_release_icp_id` is missing from `__init__.py`, `customer_profile` tests will fail with `ImportError` at runtime when their tests run. The Critical-finding fix in spec round-2 specifically guards against this.
+**This is the highest-stakes scaffold commit** — if either `_reserve_unique_icp_id` or `_release_icp_id` is missing from the `__init__.py` re-export list above, `customer_profile` tests will fail with `ImportError` at runtime when their tests run. The Critical-finding fix in spec round-2 specifically guards against this.
 
 - [ ] **Step 3a: Bulk-rewrite test patch paths (spec §3.8 step 1)**
 
@@ -1513,6 +1505,14 @@ Verify:
 ```bash
 grep -nE '"app\.services\.icp\.' backend/tests/test_icp.py backend/tests/unit/test_icp.py backend/tests/unit/test_customer_profile.py
 # expected: every match now has .orchestrator. infix
+```
+
+- [ ] **Step 4: Run pytest**
+
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence/backend
+BREWRA_SKIP_DB_INIT=1 python -m pytest -q 2>&1 | tail -3
+# expected: 236 passed
 ```
 
 - [ ] **Step 5: Commit**
