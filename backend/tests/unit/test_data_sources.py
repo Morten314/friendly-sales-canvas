@@ -39,15 +39,17 @@ from app.core.exceptions import (
 from app.services.data_sources import (
     delete_data_source,
     get_document_status,
-    grapher,
     list_user_documents,
-    load_document,
     process_file_to_embeddings,
-    process_prospect_list,
     update_data_source,
     upload_document_file,
     upload_file_text,
     upload_prospect_list_file,
+)
+from app.services.data_sources.loaders import (
+    grapher,
+    load_document,
+    process_prospect_list,
 )
 from tests.identities import TEST_FILE_ID, TEST_FILE_KEY, TEST_ORG_ID, TEST_USER_ID
 

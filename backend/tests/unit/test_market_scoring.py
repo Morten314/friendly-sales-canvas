@@ -19,10 +19,12 @@ from app.services.market_scoring import (
     _run_market_scoring_for_org,
     get_company_profile_for_org,
     get_lead_market_score_descriptions,
-    get_market_reports_for_org,
     get_market_scores_status,
-    score_single_lead_against_market,
     trigger_or_get_market_scores,
+)
+from app.services.market_scoring.orchestrator import (
+    get_market_reports_for_org,
+    score_single_lead_against_market,
 )
 from tests.identities import TEST_LEAD_ID_1, TEST_ORG_ID, TEST_USER_ID
 

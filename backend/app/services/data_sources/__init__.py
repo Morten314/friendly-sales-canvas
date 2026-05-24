@@ -10,20 +10,14 @@ orchestrator.py was deleted in commit 7/20 — there is no multi-step
 compositional logic to compose across submodules; each public function
 does its own thing in its defining submodule.
 
-Re-exports the 8 public-surface symbols listed in spec §3.5, plus 3
-internal helpers (load_document, grapher, process_prospect_list) that
-tests/unit/test_data_sources.py imports directly. They're a §3.7-style
-exception — not imported anywhere in app/ outside this package, but
-re-exported here so the unit-test direct-import statements work
-through __init__.py.
+Re-exports the 8 public-surface symbols listed in spec §3.5. Internal
+helpers (load_document, grapher, process_prospect_list) live in
+loaders.py and tests import them from that submodule directly.
 """
 
 from app.services.data_sources.loaders import (
     upload_file_text,
     upload_prospect_list_file,
-    load_document,
-    grapher,
-    process_prospect_list,
 )
 from app.services.data_sources.pipeline import (
     process_file_to_embeddings,
@@ -45,7 +39,4 @@ __all__ = [
     "get_document_status",
     "delete_data_source",
     "update_data_source",
-    "load_document",
-    "grapher",
-    "process_prospect_list",
 ]
