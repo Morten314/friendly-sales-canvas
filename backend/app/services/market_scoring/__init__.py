@@ -9,11 +9,13 @@ from app.services.market_scoring.orchestrator import (
     trigger_or_get_market_scores,
     get_market_scores_status,
     get_lead_market_score_descriptions,
-    get_company_profile_for_org,
     get_market_reports_for_org,
     score_single_lead_against_market,
-    _ensure_market_scoring_indexes,
     _run_market_scoring_for_org,
+)
+from app.services.market_scoring.persistence import (
+    get_company_profile_for_org,
+    _ensure_market_scoring_indexes,
     _get_latest_market_score_rows,
 )
 

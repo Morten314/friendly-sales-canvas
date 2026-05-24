@@ -147,7 +147,7 @@ def test_get_market_score_returns_score(client, mock_neo4j):
     }
 
     with _override_mongo(mc), \
-         patch("app.services.market_scoring.orchestrator._get_lead_identity_from_neo4j", return_value={}):
+         patch("app.services.market_scoring.persistence._get_lead_identity_from_neo4j", return_value={}):
         response = client.post("/leads/market-scores", json=payload)
 
     assert response.status_code == 200
