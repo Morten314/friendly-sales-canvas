@@ -31,6 +31,8 @@
 
 **Parallelizability:** Sequences B-E (`data_sources/`, `market_research/`, `icp/`, `signals/`) are mutually independent — they touch different service files, different routers, different test files, and don't share mutable state. After Sequence A (`market_scoring/`) validates the pattern, B-E may be dispatched to parallel subagents using the `subagent-driven-development` skill. Within each sequence, tasks must remain serial (scaffold → extraction → extraction). Sequence A must complete first because its outcome decides whether to continue at all (per the plan-level kill criterion).
 
+**Branch strategy for parallel sequences:** Each parallel subagent must operate on its own branch off Sequence A's HEAD (e.g., `refactor-backend-service-decomposition-phase-h-data_sources`, `…-market_research`, `…-icp`, `…-signals`); the operator merges results into the main phase branch after all sequences complete. The `subagent-driven-development` skill normally handles this via worktrees. If running parallel sequences manually, do not share a single branch — concurrent commits will conflict on `__init__.py` re-export blocks and overlapping helper files.
+
 **Order of attack** (spec §4.1, easiest → hardest):
 
 1. `market_scoring/` (4 commits) — no LLM, cleanest seams. Proves the pattern. Closes TD-006.
@@ -65,6 +67,8 @@ BREWRA_SKIP_DB_INIT=1 python -m pytest -q 2>&1 | tail -3
 
 Record exact count here at execution time: __________ (must be 236; if different, surface to operator).
 
+**If the actual count is greater than 236** (e.g., new tests landed after plan-writing): update every subsequent "expected: 236 passed" reference in this plan to the new baseline before starting Sequence A. The 236 number reflects the Phase G post-merge state at plan-writing time; only the relative invariant ("count must not drop") is load-bearing, not the absolute number.
+
 - [ ] **Phase F DI sanity check (spec §5.6)**
 
 ```bash
@@ -83,9 +87,11 @@ If any module-level assignments appear, halt — a service still reaches into mo
 cd /projects/Brewra/brewra-gtm-intelligence
 for d in signals icp market_research documents market_scoring; do
   echo "=== $d ==="
-  grep -rn "from app.services.$d import _" backend/ tests/ 2>/dev/null
+  grep -rn "from app.services.$d import _\|mocker\.patch.*app\.services\.$d\._" backend/ tests/ 2>/dev/null
 done
 ```
+
+(The `mocker.patch` alternation catches string-based mock-target references — these resolve through `__init__.py` at runtime and therefore also require the symbol to be re-exported. The §3.7 table assumes complete coverage; this grep validates the assumption for future-phase reuse.)
 
 Expected matches per spec §3.7 table:
 - `signals`: none
@@ -138,7 +144,13 @@ git mv backend/app/services/market_scoring.py backend/app/services/market_scorin
 
 (`git mv` creates the directory automatically when the target path includes a new parent.)
 
-**If pytest fails later in this task with mysterious `ImportError`:** `rm -rf backend/app/services/__pycache__` and retry — stale `.pyc` files from the pre-move module can shadow the new package.
+- [ ] **Step 2a: Preemptively clear `__pycache__` for the affected directory**
+
+```bash
+rm -rf backend/app/services/__pycache__
+```
+
+Module-to-package conversion makes stale `.pyc` shadowing predictable, not exceptional. Clearing the cache eliminates a class of false-negative pytest failures. (If pytest later in this task still hits a mysterious `ImportError`, broaden to `find backend -name __pycache__ -type d -exec rm -rf {} +`.)
 
 - [ ] **Step 3: Create `__init__.py` with full re-exports**
 
@@ -518,7 +530,13 @@ git mv backend/tests/test_documents_v2.py backend/tests/test_data_sources_v2.py
 git mv backend/tests/unit/test_documents.py backend/tests/unit/test_data_sources.py
 ```
 
-**If pytest fails later in this task with mysterious `ImportError`:** `rm -rf backend/app/services/__pycache__ backend/app/routers/__pycache__ backend/tests/__pycache__` and retry — stale `.pyc` files from the pre-rename names can shadow the new modules.
+- [ ] **Step 2a: Preemptively clear `__pycache__` across all renamed directories**
+
+```bash
+rm -rf backend/app/services/__pycache__ backend/app/routers/__pycache__ backend/app/routers/v2/__pycache__ backend/tests/__pycache__ backend/tests/unit/__pycache__
+```
+
+Six renames in one commit produce six potential stale-`.pyc` shadowing sites. Clearing the cache up front eliminates a class of false-negative failures later in the task. (If pytest still hits a mysterious `ImportError`, broaden to `find backend -name __pycache__ -type d -exec rm -rf {} +`.)
 
 - [ ] **Step 3: Create `services/data_sources/__init__.py`**
 
@@ -767,17 +785,15 @@ Mongo status tracking, and async embedding via BackgroundTasks.
 # ... two functions ...
 ```
 
-- [ ] **Step 4: Decide whether `orchestrator.py` survives**
+- [ ] **Step 4: Delete `orchestrator.py`**
 
-After this step, `orchestrator.py` may contain only imports and re-exports. Two options:
+After Steps 2-3, `orchestrator.py` contains only imports and re-exports — `data_sources/` has no multi-step compositional logic (every public function does its own thing in loaders, pipeline, or persistence). Per YAGNI, delete it:
 
-(a) Delete `orchestrator.py` entirely; `__init__.py` imports directly from `loaders`, `pipeline`, `persistence`.
+```bash
+git rm backend/app/services/data_sources/orchestrator.py
+```
 
-(b) Keep `orchestrator.py` as the empty "compositional surface" placeholder — useful if any future workflow composition needs to land somewhere.
-
-Recommend (a): if it's empty, delete it. The package has three working submodules; the orchestrator role isn't needed for this service.
-
-If choosing (a), `git rm backend/app/services/data_sources/orchestrator.py`.
+`__init__.py` (next step) imports directly from `loaders`, `pipeline`, and `persistence` — no orchestrator hop needed.
 
 - [ ] **Step 5: Update `__init__.py`**
 
@@ -871,7 +887,13 @@ cd /projects/Brewra/brewra-gtm-intelligence
 git mv backend/app/services/market_research.py backend/app/services/market_research/orchestrator.py
 ```
 
-**If pytest fails later in this task with mysterious `ImportError`:** `rm -rf backend/app/services/__pycache__` and retry — stale `.pyc` files from the pre-move module can shadow the new package.
+- [ ] **Step 2a: Preemptively clear `__pycache__`**
+
+```bash
+rm -rf backend/app/services/__pycache__
+```
+
+Eliminates stale-`.pyc` shadowing of the new package. (Same rationale as Task 1.)
 
 - [ ] **Step 3: Create `__init__.py`**
 
@@ -1147,7 +1169,13 @@ cd /projects/Brewra/brewra-gtm-intelligence
 git mv backend/app/services/icp.py backend/app/services/icp/orchestrator.py
 ```
 
-**If pytest fails later in this task with mysterious `ImportError`:** `rm -rf backend/app/services/__pycache__` and retry — stale `.pyc` files from the pre-move module can shadow the new package.
+- [ ] **Step 2a: Preemptively clear `__pycache__`**
+
+```bash
+rm -rf backend/app/services/__pycache__
+```
+
+Eliminates stale-`.pyc` shadowing of the new package. (Same rationale as Task 1.)
 
 - [ ] **Step 3: Create `__init__.py`**
 
@@ -1391,7 +1419,9 @@ cd /projects/Brewra/brewra-gtm-intelligence/backend
 grep -n "^def search_signals\|^async def run_signals_research\|^async def generate_signals_batch\|^async def fetch_signals\|^async def record_signal_action\|^async def signal_ask" app/services/signals.py
 ```
 
-Expected: `search_signals`, `run_signals_research`, `_generate_signals_batch_impl`, `generate_signals_batch`, `generate_signals_batch_claude`, `fetch_signals`, `record_signal_action`, `signal_ask`, `signal_ask_claude`.
+Expected: `search_signals`, `run_signals_research`, `generate_signals_batch`, `generate_signals_batch_claude`, `fetch_signals`, `record_signal_action`, `signal_ask`, `signal_ask_claude`.
+
+(`_generate_signals_batch_impl` is internal and intentionally not in the grep pattern — it doesn't get re-exported and doesn't need scaffold-time verification.)
 
 Per spec §3.2 implementor note: Claude variants confirmed live — keep in package.
 
@@ -1402,7 +1432,13 @@ cd /projects/Brewra/brewra-gtm-intelligence
 git mv backend/app/services/signals.py backend/app/services/signals/orchestrator.py
 ```
 
-**If pytest fails later in this task with mysterious `ImportError`:** `rm -rf backend/app/services/__pycache__` and retry — stale `.pyc` files from the pre-move module can shadow the new package.
+- [ ] **Step 2a: Preemptively clear `__pycache__`**
+
+```bash
+rm -rf backend/app/services/__pycache__
+```
+
+Eliminates stale-`.pyc` shadowing of the new package. (Same rationale as Task 1.)
 
 - [ ] **Step 3: Create `__init__.py`**
 
