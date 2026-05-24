@@ -8,7 +8,7 @@
 
 **Tech Stack:** Python 3.12, FastAPI, pytest, pytest-mock, syrupy. No new dependencies.
 
-**Spec:** `specs/2026-05-24-backend-modularization-phase-i-design.md` (round 0 + round 1 + round 2 synthesis applied; status "ready for implementation").
+**Spec:** `specs/2026-05-24-backend-modularization-phase-i-design.md` (round 0 + round 1 + round 2 synthesis + plan-writing gap closure applied; status "ready for implementation").
 
 **Branch:** `refactor-backend-modularization-phase-i` off `master` (Phase H merged at commit `55a5c3a`).
 
@@ -22,8 +22,7 @@
 
 **Abort criterion:** if any commit drops the test count below the expected post-commit baseline (242-246 after commit 1; same after each subsequent commit), halt and surface to operator. Structural moves shouldn't change test count.
 
-**Spec deviations from `specs/2026-05-24-backend-modularization-phase-i-design.md`:**
-- **Added `claude_prompt_suffix_template` parameter** to `_research_agent_output`. Spec §2.1 item 1 lists only 6 parameters; this plan adds a 7th. Reason: the 3 services use 3 different Claude-side prompt augmentation framings (signals: simple newline-separated; icp: triple-quoted with "synthesize with company profile and ICP card"; market_research: triple-quoted with "synthesize with company profile"). Unifying on one framing would change LLM input for 2 services — a behavior change neither the spec nor the round-2 review committed to. Adding the parameter (with the signals framing as default) preserves all three services' exact current behavior. The parameter is a string with a literal `{web_ctx}` placeholder. Documented again at Task 1 Step 4 below.
+**No spec deviations.** Plan implements spec §2.1-§3.2 as-written, including the 7-parameter `_research_agent_output` signature with `claude_prompt_suffix_template` and the per-service `_ICP_CLAUDE_SUFFIX` / `_MARKET_RESEARCH_CLAUDE_SUFFIX` constants in their wrappers.
 
 ---
 
@@ -537,16 +536,16 @@ git add backend/app/services/_llm_helpers.py backend/tests/unit/test_llm_helpers
 git commit -m "refactor(be): add _research_agent_output + _extract_research_json to _llm_helpers [phase I, 1/11]
 
 Shared dispatch + JSON-parsing helpers for the 3 research services
-(signals, icp, market_research). No per-service wrappers wired yet —
-commits 2 and 3 consume them.
+(signals, icp, market_research) per spec §2.1. No per-service wrappers
+wired yet — commits 2 and 3 consume them.
+
+_research_agent_output: 7 parameters including claude_prompt_suffix_template
+(default matches signals' framing; icp + market_research wrappers pass
+their own custom templates in commit 2 to preserve byte-identical
+LLM input).
 
 New test module backend/tests/unit/test_llm_helpers.py covers both
 helpers parameterized across the per-service configurations.
-
-Adds claude_prompt_suffix_template parameter (plan deviation from spec
-§2.1; spec didn't account for the 3 services' differing Claude-prompt
-augmentation framings — defaulting to signals' framing preserves all
-three services' exact current behavior when commits 2-3 wire wrappers).
 
 Test count: 236 → 246 (10 new tests)."
 ```
