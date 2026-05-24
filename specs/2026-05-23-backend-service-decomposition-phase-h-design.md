@@ -265,7 +265,9 @@ While Python's import machinery allows both `services/<domain>.py` and `services
    - market_research/, icp/: no closeout commit needed
 ```
 
-Commit count per service: `market_scoring/` 4 commits (1, 2, normalization/scoring split, 5); `data_sources/` 4 commits (1, 2, loaders/pipeline split, 5); `market_research/` 4 commits (1, 2, 3, 4); `icp/` 4 commits (1, 2, 3, 4); `signals/` 5–6 commits (1, 2, 3, 4, 5, optional cleanup). **Total: approximately 21–22 commits.**
+Commit count per service: `market_scoring/` 4 commits (1, 2, normalization/scoring split, 5); `data_sources/` 3 commits (atomic rename + scaffold, 2, loaders/pipeline split); `market_research/` 4 commits (1, 2, 3, 4); `icp/` 4 commits (1, 2, 3, 4); `signals/` 5 commits (1, 2, 3, 4, optional cleanup). **Total: approximately 19–20 commits.**
+
+**Note on `data_sources/` deviation from the generic 4-step template.** The generic Step 1 (`git mv` only) would leave `data_sources/` importers broken (routers still reference `app.services.documents`), violating the per-commit-greenness constraint (§2.3). `data_sources/` therefore folds the Step 5 closeout (router/test/main.py renames) into Step 1 as an atomic full-rename commit, collapsing 4 steps into 3.
 
 Each commit message follows the convention used in Phase G: `refactor(be): extract <domain>/persistence.py [phase H, commit N/M]`. The `[phase H, commit N/M]` tail makes review-trace easy.
 

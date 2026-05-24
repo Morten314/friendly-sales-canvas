@@ -16,11 +16,20 @@
 
 **Target:** 236 tests still passing at branch HEAD. No new tests; no removed tests. Test count is the safety net — any drop below 236 is a regression unless the commit message explicitly justifies it.
 
-**Commit numbering convention:** `<type>(be): <description> [phase H, commit N/M]`. `M` is decided at execution time once the implementor confirms whether `signals/` cleanup is 1 or 2 commits (5 vs 6 total signals commits). Plan estimates **20 commits** total; final M lands in commit-1's message.
+**Commit numbering convention:** `<type>(be): <description> [phase H, commit N/M]`. `M` is decided at execution time once the implementor confirms whether `signals/` cleanup (Task 20) is needed. Plan estimates **19-20 commits** total (Task 20 is conditional cleanup; omit if Tasks 16-19 leave `signals/` in a clean final state). Final M lands in commit-1's message.
 
 **Merge cadence:** Per Brewra "Business State" (0 live users, deployment ceremony not a constraint), per-commit merges from the feature branch to `master` are acceptable. Each commit is independently green and bisectable. Recommendation: complete one full per-service sequence (e.g., all of `market_scoring/`'s 4 commits) before merging, so a service is never half-decomposed on `master`.
 
 **Abort criterion:** if any task's pytest run shows any failure (count drops below 236, or any test errors), halt and report the failure mode before proceeding. The structural-move nature of this work means *any* test break indicates a missing re-export, a wrong import, or a function moved to the wrong submodule — these are diagnosable in minutes, not hours.
+
+**On test failure during a task:** do not commit. Either fix forward (re-edit the files and re-run pytest) or `git checkout -- .` to discard the attempt and re-read the step. Never commit a red state to the branch.
+
+**Plan-level kill criterion:** if the decomposition pattern fails on a service after reasonable diagnosis effort (e.g., the package structure can't be made green for a service after two or three attempts), halt the branch and escalate to the operator. Already-completed sequences are individually green and may be cherry-picked to `master` at the operator's discretion — the branch does not need to be all-or-nothing. The order-of-attack (easiest → hardest) is designed so partial completion still ships value.
+
+**Spec deviations from `specs/2026-05-23-backend-service-decomposition-phase-h-design.md`:**
+- `data_sources/` collapses from 4 commits (spec §4.2) to 3, with the spec-defined Step 5 closeout folded into Step 1 as an atomic full-rename. Reason: the generic Step 1 (`git mv` only) leaves router importers referencing the deleted `app.services.documents` path, violating per-commit greenness. The spec §4.2 commit-count line was amended in the same review round to match (20 total instead of 21-22).
+
+**Parallelizability:** Sequences B-E (`data_sources/`, `market_research/`, `icp/`, `signals/`) are mutually independent — they touch different service files, different routers, different test files, and don't share mutable state. After Sequence A (`market_scoring/`) validates the pattern, B-E may be dispatched to parallel subagents using the `subagent-driven-development` skill. Within each sequence, tasks must remain serial (scaffold → extraction → extraction). Sequence A must complete first because its outcome decides whether to continue at all (per the plan-level kill criterion).
 
 **Order of attack** (spec §4.1, easiest → hardest):
 
@@ -61,10 +70,12 @@ Record exact count here at execution time: __________ (must be 236; if different
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence
 grep -rEn "^(client|mongo|driver|pc|agent_chain)\s*=" backend/app/services/
-# expected: zero matches (or only false positives like inline assignments inside functions)
+# expected: zero matches. The ^ anchor restricts matches to module-level
+# assignments only — any hit is a real Phase F DI violation, not a false
+# positive. Surface to operator before halting.
 ```
 
-If any top-level assignments appear, halt — a service still reaches into module globals and decomposition assumptions are violated.
+If any module-level assignments appear, halt — a service still reaches into module globals and decomposition assumptions are violated.
 
 - [ ] **`_`-prefix external-import inventory (spec §3.7 pre-flight)**
 
@@ -126,6 +137,8 @@ git mv backend/app/services/market_scoring.py backend/app/services/market_scorin
 ```
 
 (`git mv` creates the directory automatically when the target path includes a new parent.)
+
+**If pytest fails later in this task with mysterious `ImportError`:** `rm -rf backend/app/services/__pycache__` and retry — stale `.pyc` files from the pre-move module can shadow the new package.
 
 - [ ] **Step 3: Create `__init__.py` with full re-exports**
 
@@ -322,19 +335,23 @@ _run_market_scoring_for_org is the background task invoked from
 trigger_or_get_market_scores via BackgroundTasks.add_task. Re-exported
 from __init__.py per §3.7 (imported by tests/unit/test_market_scoring.py).
 """
-# Imports — including from normalization and persistence
-from app.services.market_scoring.normalization import (
-    _lead_to_score_row,  # if it depends on normalization helpers
-)
-from app.services.market_scoring.persistence import (
-    _get_market_score_collections,
-    # ... any other persistence helpers _run_market_scoring_for_org needs
-)
+# Imports re-derived from function bodies. Common needs:
+# - from app.services.market_scoring.normalization import (
+#       <pure-data helpers used by _lead_to_score_row or the scoring loop>
+#   )
+# - from app.services.market_scoring.persistence import (
+#       _get_market_score_collections,
+#       _get_latest_scoring_run,
+#       <other Mongo/Neo4j helpers used by the background task>
+#   )
 
-# ... three functions ...
+# Three functions defined here, per spec §3.6:
+#   _lead_to_score_row(...)        — lead → score-row shape transform
+#   _is_stale_queued_run(...)      — stale-run detection
+#   _run_market_scoring_for_org(...) — background task body
 ```
 
-(Verify `_lead_to_score_row`'s actual dependencies — it may belong in either module depending on what it does. Spec §3.6 places it in `scoring.py`.)
+`_lead_to_score_row` is **defined** in this file (per spec §3.6) — do not attempt to import it from `normalization`. Only import from `normalization` and `persistence` the helpers that `_lead_to_score_row`, `_is_stale_queued_run`, or `_run_market_scoring_for_org` actually call when you read their bodies.
 
 - [ ] **Step 4: Update `orchestrator.py` imports**
 
@@ -500,6 +517,8 @@ git mv backend/tests/test_documents.py backend/tests/test_data_sources.py
 git mv backend/tests/test_documents_v2.py backend/tests/test_data_sources_v2.py
 git mv backend/tests/unit/test_documents.py backend/tests/unit/test_data_sources.py
 ```
+
+**If pytest fails later in this task with mysterious `ImportError`:** `rm -rf backend/app/services/__pycache__ backend/app/routers/__pycache__ backend/tests/__pycache__` and retry — stale `.pyc` files from the pre-rename names can shadow the new modules.
 
 - [ ] **Step 3: Create `services/data_sources/__init__.py`**
 
@@ -852,6 +871,8 @@ cd /projects/Brewra/brewra-gtm-intelligence
 git mv backend/app/services/market_research.py backend/app/services/market_research/orchestrator.py
 ```
 
+**If pytest fails later in this task with mysterious `ImportError`:** `rm -rf backend/app/services/__pycache__` and retry — stale `.pyc` files from the pre-move module can shadow the new package.
+
 - [ ] **Step 3: Create `__init__.py`**
 
 ```python
@@ -880,12 +901,17 @@ __all__ = [
 ]
 ```
 
-- [ ] **Step 4: Run pytest, then commit**
+- [ ] **Step 4: Run pytest**
 
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence/backend
-BREWRA_SKIP_DB_INIT=1 python -m pytest -q 2>&1 | tail -3   # expected: 236 passed
+BREWRA_SKIP_DB_INIT=1 python -m pytest -q 2>&1 | tail -3
+# expected: 236 passed
+```
 
+- [ ] **Step 5: Commit**
+
+```bash
 cd /projects/Brewra/brewra-gtm-intelligence
 git add backend/app/services/market_research/
 git commit -m "refactor(be): scaffold market_research/ package [phase H, commit 8/M]
@@ -1121,6 +1147,8 @@ cd /projects/Brewra/brewra-gtm-intelligence
 git mv backend/app/services/icp.py backend/app/services/icp/orchestrator.py
 ```
 
+**If pytest fails later in this task with mysterious `ImportError`:** `rm -rf backend/app/services/__pycache__` and retry — stale `.pyc` files from the pre-move module can shadow the new package.
+
 - [ ] **Step 3: Create `__init__.py`**
 
 ```python
@@ -1162,7 +1190,7 @@ __all__ = [
 ]
 ```
 
-- [ ] **Step 4: Run pytest, then commit**
+- [ ] **Step 4: Run pytest**
 
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence/backend
@@ -1171,6 +1199,8 @@ BREWRA_SKIP_DB_INIT=1 python -m pytest -q 2>&1 | tail -3
 ```
 
 **This is the highest-stakes scaffold commit** — if either `_reserve_unique_icp_id` or `_release_icp_id` is missing from `__init__.py`, `customer_profile` tests will fail with `ImportError` at runtime when their tests run. The Critical-finding fix in spec round-2 specifically guards against this.
+
+- [ ] **Step 5: Commit**
 
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence
@@ -1261,7 +1291,9 @@ coverage for the lazy-import case)."
 
 ### Task 14: Extract `icp/prompts.py`
 
-Same pattern as Task 10.
+Same pattern as Task 10 (market_research/prompts.py).
+
+**`_`-exception note:** Task 13 already landed the three `_`-prefix exception re-exports (`_ensure_icp_indexes`, `_reserve_unique_icp_id`, `_release_icp_id`) into `persistence.py` and `__init__.py`. Task 14 doesn't touch them — prompts are public-template data with no exception surface to manage.
 
 - [ ] **Step 1: Identify prompt templates inside `ICP_generator` + `icp_research_1..4`**
 
@@ -1270,28 +1302,76 @@ cd /projects/Brewra/brewra-gtm-intelligence/backend
 grep -n "template = " app/services/icp/orchestrator.py
 ```
 
-- [ ] **Step 2: Create `prompts.py`** with `ICP_GENERATOR_TEMPLATE`, `ICP_RESEARCH_1_TEMPLATE`, `..._2`, `..._3`, `..._4` constants.
+- [ ] **Step 2: Create `prompts.py`** with `ICP_GENERATOR_TEMPLATE`, `ICP_RESEARCH_1_TEMPLATE`, `..._2`, `..._3`, `..._4` constants. Preserve any `{placeholder}` substitution markers — the orchestrator calls `.format(...)` after import.
 
-- [ ] **Step 3: Update orchestrator.py imports** to source templates from `prompts.py`.
+- [ ] **Step 3: Update orchestrator.py imports** to source templates from `prompts.py`. Delete the original inline template assignments.
 
-- [ ] **Step 4: pytest + commit**
+- [ ] **Step 4: Run pytest**
 
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence/backend
+BREWRA_SKIP_DB_INIT=1 python -m pytest -q 2>&1 | tail -3
+# expected: 236 passed
 ```
-expected: 236 passed
-commit message: "refactor(be): extract icp/prompts.py [phase H, commit 14/M]"
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add backend/app/services/icp/
+git commit -m "refactor(be): extract icp/prompts.py [phase H, commit 14/M]
+
+Lift ICP_generator + icp_research_1..4 prompt templates out of orchestrator
+function bodies into module-level constants in prompts.py. Templates stay
+as inline Python strings; externalization is Option D scope. 236 tests passing."
 ```
 
 ### Task 15: Extract `icp/llm.py` + `parsing.py`
 
-Same pattern as Task 11.
+Same pattern as Task 11 (market_research/llm.py + parsing.py).
 
-- `llm.py`: `_icp_research_agent_output`
-- `parsing.py`: JSON-extraction helpers from `icp_research_N` bodies
+**`_`-exception note:** Same as Task 14 — the three `_`-prefix exception re-exports landed in Task 13 and are not touched here.
 
+- [ ] **Step 1: Identify content**
+  - `llm.py`: `_icp_research_agent_output`
+  - `parsing.py`: JSON-extraction helpers from `icp_research_N` bodies (likely a `_extract_icp_json(raw_response: str) -> dict` extracted from a repeated pattern across the four workers)
+
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence/backend
+grep -n "^def _icp_research_agent_output" app/services/icp/orchestrator.py
 ```
-expected: 236 passed
-commit message: "refactor(be): extract icp/llm.py + parsing.py [phase H, commit 15/M]
-icp/ decomposition complete (4 commits)."
+
+- [ ] **Step 2: Create `llm.py`** with `_icp_research_agent_output` (unchanged body, re-derive imports from function references).
+
+- [ ] **Step 3: Create `parsing.py`** with the new `_extract_icp_json` (or similarly-named) helper consolidating JSON parsing from `icp_research_1..4` bodies.
+
+- [ ] **Step 4: Update orchestrator.py**
+
+```python
+from app.services.icp.llm import _icp_research_agent_output
+from app.services.icp.parsing import _extract_icp_json
+```
+
+Delete the original `_icp_research_agent_output` definition; replace inline JSON parsing in each `icp_research_N` with `_extract_icp_json(response)` calls.
+
+- [ ] **Step 5: Run pytest**
+
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence/backend
+BREWRA_SKIP_DB_INIT=1 python -m pytest -q 2>&1 | tail -3
+# expected: 236 passed
+```
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add backend/app/services/icp/
+git commit -m "refactor(be): extract icp/llm.py + parsing.py [phase H, commit 15/M]
+
+llm.py: _icp_research_agent_output wrapper (unchanged).
+parsing.py: _extract_icp_json — new helper consolidating the JSON
+extraction pattern from icp_research_1..4 bodies.
+
+236 tests passing. icp/ decomposition complete (4 commits)."
 ```
 
 ---
@@ -1321,6 +1401,8 @@ Per spec §3.2 implementor note: Claude variants confirmed live — keep in pack
 cd /projects/Brewra/brewra-gtm-intelligence
 git mv backend/app/services/signals.py backend/app/services/signals/orchestrator.py
 ```
+
+**If pytest fails later in this task with mysterious `ImportError`:** `rm -rf backend/app/services/__pycache__` and retry — stale `.pyc` files from the pre-move module can shadow the new package.
 
 - [ ] **Step 3: Create `__init__.py`**
 
@@ -1356,19 +1438,36 @@ __all__ = [
 ]
 ```
 
-- [ ] **Step 4: pytest + commit**
+- [ ] **Step 4: Run pytest**
 
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence/backend
+BREWRA_SKIP_DB_INIT=1 python -m pytest -q 2>&1 | tail -3
+# expected: 236 passed
 ```
-expected: 236 passed
-commit message: "refactor(be): scaffold signals/ package [phase H, commit 16/M]
-git mv services/signals.py → services/signals/orchestrator.py; __init__.py
-re-exports public API including confirmed-live Claude variants
-(generate_signals_batch_claude, signal_ask_claude). 236 tests passing."
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add backend/app/services/signals/
+git commit -m "refactor(be): scaffold signals/ package [phase H, commit 16/M]
+
+git mv services/signals.py → services/signals/orchestrator.py
+__init__.py re-exports public API including confirmed-live Claude variants
+(generate_signals_batch_claude, signal_ask_claude — backend-dispatcher
+wrappers covered by tests/unit/test_signals.py).
+
+236 tests passing."
 ```
 
 ### Task 17: Extract `signals/persistence.py`
 
-Per spec §3.2: `record_signal_action` (public) + Mongo read helpers extracted from `fetch_signals` body.
+**Files:**
+- Create: `backend/app/services/signals/persistence.py`
+- Modify: `backend/app/services/signals/orchestrator.py`
+- Modify: `backend/app/services/signals/__init__.py`
+
+Per spec §3.2: `record_signal_action` (public) + Mongo read helpers extracted from `fetch_signals` body. Note: `signals/` has no §3.7 `_`-prefix exception re-exports — `record_signal_action` is the only public symbol that lands in `persistence.py`.
 
 - [ ] **Step 1: Locate `record_signal_action` and the Mongo blocks inside `fetch_signals`**
 
@@ -1377,57 +1476,234 @@ cd /projects/Brewra/brewra-gtm-intelligence/backend
 grep -n "^async def record_signal_action\|^async def fetch_signals" app/services/signals/orchestrator.py
 ```
 
-Read the body of `fetch_signals` and identify the Mongo I/O sections to extract as helpers (e.g., `_load_signals_from_mongo(mongo, user_id, ...)`).
+Read the body of `fetch_signals` and identify the Mongo I/O sections to extract as named helpers. Typical pattern: a `.find().sort().skip().limit()` chain reading from the signals collection, possibly with secondary lookups (e.g., enrichment from a profiles collection). Each cohesive Mongo block becomes one `_`-prefixed helper like `_load_signals_for_user(mongo, user_id, limit, offset)`.
 
-- [ ] **Step 2: Create `persistence.py`** with `record_signal_action` (public) and the new internal helpers.
+- [ ] **Step 2: Create `persistence.py`**
 
-- [ ] **Step 3: Update `orchestrator.py`** to import the public + internal symbols.
+```python
+"""Persistence layer for signals/ — Mongo writes/reads for signal records.
 
-- [ ] **Step 4: Update `__init__.py`** — move `record_signal_action` from the orchestrator-import block to a new persistence-import block.
+Public symbol re-exported from __init__.py: record_signal_action.
+Internal helpers (prefix _): new helpers extracted from fetch_signals body
+during Phase H — see commit message for exact names.
+"""
+# Re-derive imports from function bodies (typing, pymongo, app.models.signals, etc.)
 
-- [ ] **Step 5: pytest + commit**
+async def record_signal_action(mongo, request):
+    """Public — record a user action against a signal. Mongo write to
+    the signal_actions collection."""
+    # ... original body moved unchanged from orchestrator.py ...
 
+# ... new internal _ helpers extracted from fetch_signals body ...
 ```
-expected: 236 passed
-commit message: "refactor(be): extract signals/persistence.py [phase H, commit 17/M]
-record_signal_action (public, re-exported from persistence) + new internal
-Mongo-read helpers extracted from fetch_signals body. 236 tests passing."
+
+- [ ] **Step 3: Update `orchestrator.py` to import from `persistence.py`**
+
+```python
+from app.services.signals.persistence import (
+    record_signal_action,
+    # ... internal helpers consumed by fetch_signals ...
+)
+```
+
+Delete the original `record_signal_action` definition. Inside `fetch_signals`, replace the inline Mongo I/O blocks with calls to the new internal helpers.
+
+- [ ] **Step 4: Update `__init__.py`** — move `record_signal_action` from the orchestrator-import block to a new persistence-import block:
+
+```python
+from app.services.signals.orchestrator import (
+    search_signals,
+    run_signals_research,
+    generate_signals_batch,
+    generate_signals_batch_claude,
+    signal_ask,
+    signal_ask_claude,
+    fetch_signals,
+)
+from app.services.signals.persistence import (
+    record_signal_action,
+)
+```
+
+(`__all__` list unchanged.)
+
+- [ ] **Step 5: Run pytest**
+
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence/backend
+BREWRA_SKIP_DB_INIT=1 python -m pytest -q 2>&1 | tail -3
+# expected: 236 passed
+```
+
+Common failure: an extracted helper references a function still in `orchestrator.py` → circular import or `NameError`. Fix: move the dependency to `persistence.py` too, or pass it as a parameter from orchestrator.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add backend/app/services/signals/
+git commit -m "refactor(be): extract signals/persistence.py [phase H, commit 17/M]
+
+record_signal_action (public) moved unchanged out of orchestrator.py.
+New internal _-prefix helpers extracted from fetch_signals body for
+the Mongo I/O blocks. __init__.py updated to source record_signal_action
+from persistence. 236 tests passing."
 ```
 
 ### Task 18: Extract `signals/prompts.py`
 
-Per spec §3.2: Inline `MAIN_PROMPT_TEMPLATE` + persona prompt blocks (currently lines ~75-313 in the original `signals.py`; line numbers may have shifted).
+**Files:**
+- Create: `backend/app/services/signals/prompts.py`
+- Modify: `backend/app/services/signals/orchestrator.py`
+
+Per spec §3.2: Inline `MAIN_PROMPT_TEMPLATE` + persona prompt blocks (currently lines ~75-313 in the original `signals.py`; line numbers may have shifted after Tasks 16-17).
 
 - [ ] **Step 1: Locate the prompt block**
 
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence/backend
-grep -n "MAIN_PROMPT_TEMPLATE\|persona\|PROMPT" app/services/signals/orchestrator.py | head -10
+grep -n "MAIN_PROMPT_TEMPLATE\|persona\|PROMPT\|template = " app/services/signals/orchestrator.py | head -20
 ```
 
-- [ ] **Step 2-5:** Same pattern as Tasks 10/14. Create `prompts.py`, move templates as module-level constants, update orchestrator imports.
+Identify each named prompt constant or inline `template = f"""..."""` block. Common shapes:
+- `MAIN_PROMPT_TEMPLATE = """..."""` — a module-level constant
+- Persona-specific blocks inside `search_signals(persona=...)` switches (scout vs profiler)
+- Per-worker templates inside `generate_signals_batch` / `signal_ask`
 
+- [ ] **Step 2: Create `prompts.py`**
+
+```python
+"""Prompt templates for signals/ — main search prompt + persona variants
++ per-operation prompts.
+
+Templates stay as inline Python strings per Phase H scope. Option D will
+externalize these to .md/.yaml in a follow-up phase.
+"""
+
+MAIN_PROMPT_TEMPLATE = """..."""  # text from current MAIN_PROMPT_TEMPLATE
+
+# Persona variants (Scout vs Profiler) — extract from search_signals body
+SCOUT_PERSONA_PROMPT = """..."""
+PROFILER_PERSONA_PROMPT = """..."""
+
+# Per-operation prompts as you find them in the source
+SIGNAL_ASK_PROMPT = """..."""
+# ... etc ...
 ```
-expected: 236 passed
-commit message: "refactor(be): extract signals/prompts.py [phase H, commit 18/M]
-MAIN_PROMPT_TEMPLATE and persona prompt blocks lifted out of orchestrator
-into prompts.py module-level constants. 236 tests passing."
+
+Preserve any `{placeholder}` substitution markers — the orchestrator calls `.format()` after import. If a template is built via f-string interpolation today (not `.format()`), convert it to a `.format()`-friendly template constant + an orchestrator-side `.format(...)` call.
+
+- [ ] **Step 3: Update `orchestrator.py`**
+
+At the top of `orchestrator.py`, add imports for every template constant created in Step 2. Delete the inline template definitions. Replace each f-string-built `prompt = f"""..."""` block with `prompt = TEMPLATE_NAME.format(...)`.
+
+- [ ] **Step 4: Run pytest**
+
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence/backend
+BREWRA_SKIP_DB_INIT=1 python -m pytest -q 2>&1 | tail -3
+# expected: 236 passed
+```
+
+If any test fails: the most likely cause is a missed `.format(...)` substitution (the template still contains an unrendered `{placeholder}`). Re-grep the orchestrator for `template`, `prompt =`, and `f"""` to find any inline prompt construction that wasn't lifted.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add backend/app/services/signals/
+git commit -m "refactor(be): extract signals/prompts.py [phase H, commit 18/M]
+
+MAIN_PROMPT_TEMPLATE, persona prompts (scout/profiler), and per-operation
+prompt blocks lifted out of orchestrator into prompts.py module-level
+constants. Templates remain inline Python strings. 236 tests passing."
 ```
 
 ### Task 19: Extract `signals/llm.py` + `parsing.py`
 
+**Files:**
+- Create: `backend/app/services/signals/llm.py`
+- Create: `backend/app/services/signals/parsing.py`
+- Modify: `backend/app/services/signals/orchestrator.py`
+
 Per spec §3.2:
 - `llm.py`: `_signals_agent_output`
-- `parsing.py`: response-normalization helpers extracted from `search_signals` / `_generate_signals_batch_impl` bodies
+- `parsing.py`: response-normalization helpers extracted from `search_signals` / `_generate_signals_batch_impl` bodies (the response parsing is interleaved with LLM-call logic in `signals.py` — extraction surfaces new named helpers)
 
-- [ ] **Step 1-5:** Same pattern as Tasks 11/15.
+- [ ] **Step 1: Identify `llm.py` content**
 
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence/backend
+grep -n "^def _signals_agent_output" app/services/signals/orchestrator.py
 ```
-expected: 236 passed
-commit message: "refactor(be): extract signals/llm.py + parsing.py [phase H, commit 19/M]
-llm.py: _signals_agent_output wrapper (unchanged).
+
+`_signals_agent_output(agent_chain, prompt, company_profile_seed, llm_backend)` should be the only function moving to `llm.py`.
+
+- [ ] **Step 2: Identify `parsing.py` content**
+
+Read the bodies of `search_signals` and `_generate_signals_batch_impl` (and `signal_ask` if needed). Identify response-shape transformations: JSON extraction, signal-list normalization, deduplication, field renaming. Each cohesive transformation becomes a named helper:
+- `_extract_signals_from_response(raw: str) -> list[dict]` — raw LLM output → structured signal list
+- `_normalize_signal_record(signal: dict) -> dict` — field renaming + defaults
+- Plus any others surfaced during extraction
+
+- [ ] **Step 3: Create `llm.py`**
+
+```python
+"""LLM invocation wrapper for signals/."""
+
+def _signals_agent_output(agent_chain, prompt, company_profile_seed, llm_backend):
+    # ... original body moved unchanged from orchestrator.py ...
+```
+
+- [ ] **Step 4: Create `parsing.py`**
+
+```python
+"""Response parsing for signals/ — LLM output → structured signal records.
+
+Internal _-prefix helpers (not re-exported). Extracted from search_signals
+and _generate_signals_batch_impl bodies during Phase H.
+"""
+# Re-derive imports (typing, json, re, app.models.signals as needed)
+
+def _extract_signals_from_response(raw_response: str) -> list[dict]:
+    """Parse the LLM response into a list of structured signal records.
+    Extracted from the response-handling block inside search_signals."""
+    # ... extracted code ...
+
+# ... additional helpers as discovered ...
+```
+
+- [ ] **Step 5: Update `orchestrator.py`**
+
+```python
+from app.services.signals.llm import _signals_agent_output
+from app.services.signals.parsing import (
+    _extract_signals_from_response,
+    # ... other parsing helpers ...
+)
+```
+
+Delete the original `_signals_agent_output` definition. Inside `search_signals` and `_generate_signals_batch_impl`, replace the inline parsing blocks with calls to the new helpers.
+
+- [ ] **Step 6: Run pytest**
+
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence/backend
+BREWRA_SKIP_DB_INIT=1 python -m pytest -q 2>&1 | tail -3
+# expected: 236 passed
+```
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add backend/app/services/signals/
+git commit -m "refactor(be): extract signals/llm.py + parsing.py [phase H, commit 19/M]
+
+llm.py: _signals_agent_output wrapper (unchanged body).
 parsing.py: response-normalization helpers extracted from search_signals
-and _generate_signals_batch_impl bodies. 236 tests passing."
+and _generate_signals_batch_impl bodies — _extract_signals_from_response
+plus additional helpers surfaced during extraction.
+
+236 tests passing. signals/ structural extraction complete; Task 20 is
+the optional cleanup pass."
 ```
 
 ### Task 20: Final cleanup pass for `signals/`
