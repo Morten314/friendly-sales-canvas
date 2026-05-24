@@ -124,6 +124,10 @@ This repo is structured for AI-native development: cross-cutting tasks (changes 
 - **Spec and plan persist** — canonical record of *why* and *how*. Don't delete after execution; agents reference them.
 - **Sync workflow** (during temp week only): `bash scripts/sync.sh` pulls Brewra-dev changes from old repos. `git merge develop` on master absorbs FE updates. After cutover (Plan 05 + Plan 06), this section is removed.
 
+## Testing
+
+Backend test conventions live in `backend/TESTING.md` — patch-where-used is the most-bitten rule.
+
 ## Gotchas (things you can't infer from the code)
 
 - **Smoke-test scripts hit production.** `backend/test_*.py` use `https://backend-11kr.onrender.com` and hardcoded IDs. Treat them as live integration probes, not unit tests.
