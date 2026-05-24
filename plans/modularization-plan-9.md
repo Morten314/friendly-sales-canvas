@@ -669,7 +669,16 @@ BREWRA_SKIP_DB_INIT=1 .venv/bin/python -m pytest -q 2>&1 | tail -3
 # expected: 246 passed, 19 snapshots passed
 ```
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 6: Verify LOC numbers and commit**
+
+Before committing, verify the LOC claims against actuals:
+
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence
+wc -l backend/app/services/signals/llm.py backend/app/services/icp/llm.py backend/app/services/market_research/llm.py
+```
+
+Substitute the actual post-edit numbers into the commit message below (replacing the plan's estimates "51 → 17", "30 → 16", "29 → 16") before running `git commit`.
 
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence
@@ -693,7 +702,7 @@ Test count: 246 passed."
 ### Task 3: Consolidate 3 JSON-parsing bodies to call `_extract_research_json`
 
 **Files:**
-- Modify: `backend/app/services/icp/parsing.py` (~110 → ~3 LOC for the function; whole file shrinks)
+- Modify: `backend/app/services/icp/parsing.py` (~79 → ~3 LOC for the function; whole file shrinks)
 - Modify: `backend/app/services/market_research/parsing.py` (~40 → ~12 LOC)
 - Modify: `backend/app/services/signals/parsing.py` (drop quote-escaping; `_parse_search_signals_response` body shrinks to ~10 LOC; `_validate_url` and `_normalize_search_signals_result` stay unchanged)
 
@@ -755,9 +764,19 @@ This is a targeted change, not a whole-file rewrite. `_validate_url` and `_norma
 2. The imports (drop `re`, add `_extract_research_json` import).
 3. The `_parse_search_signals_response` function body (becomes a thin adapter).
 
+**Pre-edit sanity check (mandatory):**
+
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence
+grep -nE "^def " backend/app/services/signals/parsing.py
+# expected: 3 functions in this order — _parse_search_signals_response, _validate_url, _normalize_search_signals_result
+```
+
+If the output differs (wrong order, wrong count, or unexpected names), halt — a prior step modified `parsing.py` unexpectedly. Otherwise proceed.
+
 Replace ONLY the following in `backend/app/services/signals/parsing.py`:
 
-**(a) Module docstring + imports.** Replace lines 1-10 (the docstring + import block) with:
+**(a) Module docstring + imports.** Replace everything from the start of the file through the end of the import block (the last `from ... import ...` line) with:
 
 ```python
 """Response parsing for signals/ — LLM output -> structured signal records.
@@ -782,7 +801,7 @@ from typing import Any, Dict, List
 from app.services._llm_helpers import _extract_research_json
 ```
 
-**(b) Replace the entire `_parse_search_signals_response` function** (currently spans lines ~11-47, ~37 LOC) with:
+**(b) Replace the entire `_parse_search_signals_response` function** with:
 
 ```python
 def _parse_search_signals_response(response: str) -> Dict[str, Any]:
@@ -800,7 +819,7 @@ def _parse_search_signals_response(response: str) -> Dict[str, Any]:
     )
 ```
 
-**(c) Do NOT touch `_validate_url` (lines ~50-64) or `_normalize_search_signals_result` (lines ~66-105).** They stay exactly as-is. After your edits, run:
+**(c) Do NOT touch `_validate_url` or `_normalize_search_signals_result`.** They stay exactly as-is. After your edits, run:
 
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence
@@ -820,14 +839,23 @@ BREWRA_SKIP_DB_INIT=1 .venv/bin/python -m pytest -q 2>&1 | tail -3
 
 If any test fails because of the quote-escaping removal, the test was implicitly depending on signals' divergent behavior. Investigate the failing test before commit — it may be a legitimate find requiring spec consultation.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 6: Verify LOC numbers and commit**
+
+Before committing, verify the LOC claims against actuals:
+
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence
+wc -l backend/app/services/icp/parsing.py backend/app/services/market_research/parsing.py backend/app/services/signals/parsing.py
+```
+
+Substitute the actual post-edit numbers into the commit message below (plan's estimates: icp `79 → ~12`, market_research `40 → ~12`, signals `104 → ~78`) before running `git commit`.
 
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence
 git add backend/app/services/icp/parsing.py backend/app/services/market_research/parsing.py backend/app/services/signals/parsing.py
 git commit -m "refactor(be): consolidate 3 JSON-parsing bodies to shared _extract_research_json [phase I, 3/11]
 
-icp/parsing.py: 110 → 12 LOC. _extract_icp_json is now a 1-line alias for
+icp/parsing.py: 79 → 12 LOC. _extract_icp_json is now a 1-line alias for
 the shared helper.
 
 market_research/parsing.py: 40 → 12 LOC. Adapter passes shared helper
@@ -844,6 +872,8 @@ Test count: 246 passed."
 ```
 
 ---
+
+_(Item B — lazy circular imports — deferred to Phase J per spec §2.2; no I-B sub-sequence in this plan.)_
 
 ## Sub-sequence I-C — signals/ decomposition (commits 4-8)
 
@@ -1036,6 +1066,27 @@ from app.services.signals.prompts import (
 
 **Important:** the import block above is illustrative — adjust based on what `search_signals` and `run_signals_research` actually use after you read the orchestrator. Only import what's actually used.
 
+**Verify paste fidelity (mandatory before Step 4):**
+
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence
+# Snapshot originals (orchestrator.py still has both functions at this point)
+sed -n '52,176p'  backend/app/services/signals/orchestrator.py > /tmp/search_signals_orig.py
+sed -n '177,305p' backend/app/services/signals/orchestrator.py > /tmp/run_signals_research_orig.py
+
+# Locate the pasted bodies in search.py
+grep -nE "^(async )?def " backend/app/services/signals/search.py
+# Note the start line of each function and the file's last line (wc -l search.py).
+# Each body spans from its def line to the line before the next def (or to EOF).
+# Replace <P1>,<Q1> and <P2>,<Q2> below with those ranges.
+
+diff /tmp/search_signals_orig.py       <(sed -n '<P1>,<Q1>p' backend/app/services/signals/search.py)
+diff /tmp/run_signals_research_orig.py <(sed -n '<P2>,<Q2>p' backend/app/services/signals/search.py)
+# both expected: zero output
+```
+
+If either diff produces any output, the paste was paraphrased — re-do Step 3 from the orchestrator source. Do not proceed to Step 4 until both diffs are clean.
+
 - [ ] **Step 4: Remove the 2 functions from `orchestrator.py`**
 
 Delete the `def search_signals(...)` block (lines ~52-176) and the `async def run_signals_research(...)` block (lines ~177-305) from `backend/app/services/signals/orchestrator.py`.
@@ -1199,6 +1250,40 @@ from app.services.signals.persistence import _save_signal_and_track_headline
 
 **Important:** copy the function bodies verbatim from orchestrator.py. The only change inside `_generate_signals_batch_impl` is rewriting any direct `search_signals` call to `search.search_signals` (the module-import already happened in Task 5; orchestrator.py's local reference is the one being relocated here).
 
+**Verify paste fidelity (mandatory before Step 4):**
+
+`_generate_signals_batch_impl` has intentional `search_signals` → `search.search_signals` retargeting; the two wrappers have no internal edits. Verify both classes:
+
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence
+
+# (i) Wrappers — byte-identical, snapshot + diff
+sed -n '480,484p' backend/app/services/signals/orchestrator.py > /tmp/generate_signals_batch_orig.py
+sed -n '485,494p' backend/app/services/signals/orchestrator.py > /tmp/generate_signals_batch_claude_orig.py
+
+grep -nE "^(async )?def " backend/app/services/signals/batch.py
+# Note ranges; replace <P1>,<Q1> and <P2>,<Q2> below with the wrapper bodies' line ranges
+
+diff /tmp/generate_signals_batch_orig.py        <(sed -n '<P1>,<Q1>p' backend/app/services/signals/batch.py)
+diff /tmp/generate_signals_batch_claude_orig.py <(sed -n '<P2>,<Q2>p' backend/app/services/signals/batch.py)
+# both expected: zero output
+
+# (ii) _generate_signals_batch_impl — has intentional retargeting. Count assertions + visual diff.
+ORIG_COUNT=$(grep -cE "[^.]search_signals\(" <(sed -n '306,479p' backend/app/services/signals/orchestrator.py))
+NEW_BARE=$(grep -cE "[^.]search_signals\(" backend/app/services/signals/batch.py)
+NEW_NS=$(grep -c "search\.search_signals(" backend/app/services/signals/batch.py)
+echo "orig bare-call count in _impl: $ORIG_COUNT | batch.py bare: $NEW_BARE (expect 0) | batch.py namespaced: $NEW_NS (expect $ORIG_COUNT)"
+[ "$NEW_BARE" = "0" ] && [ "$NEW_NS" = "$ORIG_COUNT" ] || { echo "FAIL counts — paste retargeting inconsistent"; exit 1; }
+
+# Visual diff of the _impl body — only $ORIG_COUNT delta line-pairs should appear,
+# each showing the search_signals → search.search_signals retargeting.
+sed -n '306,479p' backend/app/services/signals/orchestrator.py > /tmp/impl_orig.py
+diff -u /tmp/impl_orig.py <(sed -n '<P3>,<Q3>p' backend/app/services/signals/batch.py)
+# expected: exactly $ORIG_COUNT delta line-pairs (-/+), each showing the retargeting
+```
+
+If the count assertions fail, or the visual diff shows any non-retargeting delta, the paste was paraphrased — re-do Step 3 from the orchestrator source.
+
 - [ ] **Step 4: Remove the 3 functions from `orchestrator.py`**
 
 Delete the 3 function blocks. After this commit orchestrator.py should contain only `signal_ask`, `signal_ask_claude` (those move in Task 7).
@@ -1334,6 +1419,25 @@ from app.services.signals.prompts import (
 ```
 
 **Important:** imports above are illustrative; trim to only what the bodies actually use. The function bodies themselves are copied verbatim — no logic changes.
+
+**Verify paste fidelity (mandatory before Step 4):**
+
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence
+# Snapshot originals (orchestrator.py still has both functions at this point)
+sed -n '505,585p' backend/app/services/signals/orchestrator.py > /tmp/signal_ask_orig.py
+sed -n '586,744p' backend/app/services/signals/orchestrator.py > /tmp/signal_ask_claude_orig.py
+
+# Locate the pasted bodies in ask.py
+grep -nE "^(async )?def " backend/app/services/signals/ask.py
+# Note ranges; replace <P1>,<Q1> and <P2>,<Q2> below
+
+diff /tmp/signal_ask_orig.py        <(sed -n '<P1>,<Q1>p' backend/app/services/signals/ask.py)
+diff /tmp/signal_ask_claude_orig.py <(sed -n '<P2>,<Q2>p' backend/app/services/signals/ask.py)
+# both expected: zero output
+```
+
+If either diff produces any output, the paste was paraphrased — re-do Step 3 from the orchestrator source. Do not proceed to Step 4 until both diffs are clean.
 
 - [ ] **Step 4: Remove the 2 functions from `orchestrator.py`**
 
