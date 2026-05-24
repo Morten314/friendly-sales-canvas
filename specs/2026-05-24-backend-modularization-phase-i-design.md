@@ -1,7 +1,7 @@
 # Backend Modularization Phase I — Phase H Deferrals: Shared LLM Helpers, Signals Decomposition, Cleanup
 
 **Date:** 2026-05-24
-**Status:** Draft — awaiting spec review
+**Status:** Draft — round-1 review applied; awaiting round-2 spec review
 **Branch (planned):** `refactor-backend-modularization-phase-i` off `master` (after Phase H merges)
 **Predecessors:** Phase H (`/specs/2026-05-23-backend-service-decomposition-phase-h-design.md`) and prior phases A-G.
 
@@ -11,11 +11,11 @@
 
 Phase I closes three deferred items from Phase H:
 
-- **Item A** — Consolidates three near-duplicate `_*_agent_output` helpers (signals/icp/market_research LLM dispatch) and three near-duplicate JSON-parsing helpers into shared `_llm_helpers.py` functions. Spec §2.2 of Phase H explicitly excluded this; Phase H's review-2 synthesis re-flagged it as a Low finding worth a future pass. ~250 LOC of cross-service duplication killed.
-- **Item C** — Decomposes `signals/orchestrator.py` (744 LOC, 8 functions) into focused submodules `search.py`, `batch.py`, `ask.py`, plus `fetch_signals` moving into `persistence.py`. `signals/orchestrator.py` is deleted — same pattern as `data_sources/` reached at Phase H commit 7/20. Closes Phase H's "orchestrator at 2× spec-estimate LOC" finding.
+- **Item A** — Consolidates three near-duplicate `_*_agent_output` helpers (signals/icp/market_research LLM dispatch) and three near-duplicate JSON-parsing helpers into shared `_llm_helpers.py` functions. Spec §2.2 of Phase H explicitly excluded this; Phase H's review-2 synthesis re-flagged it as a Low finding worth a future pass. ~180 LOC of cross-service duplication killed.
+- **Item C** — Decomposes `signals/orchestrator.py` (744 LOC, 8 functions) into focused submodules `search.py`, `batch.py`, `ask.py`, plus `fetch_signals` promoted in `persistence.py`. `signals/orchestrator.py` is deleted — same pattern as `data_sources/` reached at Phase H commit 7/20. Closes Phase H's "orchestrator at 2× spec-estimate LOC" finding.
 - **Item D** — Renames `app.models.documents` → `app.models.data_sources` (catches up the model layer to Phase H's service rename), hoists `_URL_PATTERN` constant into `_llm_helpers.py`, closes TD-007 cosmetic cruft (4 one-line fixes).
 
-This is a structural move: zero changes to behavior, signatures, response shapes, or route paths. Existing 236 behavior tests stay green and unchanged in assertions; snapshot count holds at 19. Commit 1 adds a small parameterized test module for the two new shared helpers (~6-10 new tests; total settles around 242-246). Test patch-path strings update in step with each structural move per the Phase H discipline (see `feedback_phase_h_module_import_pattern.md`).
+This is structurally a no-op move: signatures, response shapes, and route paths are unchanged. **One intentional behavior change**: signals' historical quote-escaping in `_parse_search_signals_response` (escaping `"` inside `description`/`snippet`/`headline` matched values, in addition to `\n`/`\r`) is removed during the I-A consolidation. The other two research services (icp, market_research) have always operated without this defensive code path with no recorded incident; Phase I unifies all three on the simpler escape rule. If a future quote-related parsing failure surfaces, it becomes a scoped fix rather than a diverged-per-service legacy. Existing 236 behavior tests stay green; snapshot count holds at 19. Commit 1 adds a small parameterized test module for the two new shared helpers (~6-10 new tests; total settles around 242-246). Test patch-path strings update in step with each structural move per the Phase H discipline (see `feedback_phase_h_module_import_pattern.md`).
 
 **Explicitly out of scope:** Item B (lazy circular imports in icp/persistence + market_scoring/scoring). Tracked for Phase J. Phase I will not surface those cycles naturally — they live in different packages.
 
@@ -27,7 +27,7 @@ This is a structural move: zero changes to behavior, signatures, response shapes
 
 1. **Two shared helpers added to `_llm_helpers.py`:**
    - `_research_agent_output(agent_chain, prompt, seed_text, llm_backend, search_query_template, extract_intermediate_urls=False) -> tuple[str, list[str]]` — unifies the Groq-vs-Claude dispatch pattern used by all three research services. The `search_query_template` must contain a literal `{seed}` placeholder; the helper substitutes it via `str.format(seed=...)` with the first 1200 chars of whitespace-normalized `seed_text`.
-   - `_extract_research_json(response, escape_keys=("description",), trim_braces=False, strip_final_answer=False) -> dict` — promoted from `icp/parsing.py::_extract_icp_json` (already generic-shaped).
+   - `_extract_research_json(response, escape_keys=("description",), trim_braces=False, strip_final_answer=False) -> dict` — promoted from `icp/parsing.py::_extract_icp_json` (already generic-shaped). Per-key escape rule matches icp's current behavior: escape `\n`/`\r` inside matched values, not `"`. Signals' historical quote-escaping is removed as the unification decision (see §1).
 
 2. **Per-service wrappers preserved** (~6-15 LOC each) for the three services. The wrappers hardcode service-specific configuration (search query template, escape keys, URL extraction). They keep `mocker.patch("app.services.<svc>.llm._<svc>_agent_output")` strings working — the §3.7 Phase H "patch where it's used" discipline applies.
 
@@ -35,8 +35,8 @@ This is a structural move: zero changes to behavior, signatures, response shapes
    - `signals/search.py` — `search_signals` + `run_signals_research` (~255 LOC).
    - `signals/batch.py` — `generate_signals_batch` + `generate_signals_batch_claude` + `_generate_signals_batch_impl` (~190 LOC).
    - `signals/ask.py` — `signal_ask` + `signal_ask_claude` (~240 LOC).
-   - `signals/persistence.py` — `fetch_signals` added (~10 LOC delta).
-   - `signals/orchestrator.py` — deleted.
+   - `signals/persistence.py` — `_load_signals_for_user` renamed to public `fetch_signals` (no wrapper-to-a-wrapper).
+   - `signals/orchestrator.py` — deleted (the existing `fetch_signals` wrapper there is dropped during the I-C commit 4 rename).
    - `signals/__init__.py` — re-export paths updated; public surface unchanged (8 symbols).
 
 4. **Cross-submodule import** (`batch.py` → `search.py`) uses the module-import + namespace-prefix pattern: `from app.services.signals import search; search.search_signals(...)`. This makes `mocker.patch("app.services.signals.search.search_signals")` intercept batch's callers — same trick Phase H Task 2 used for market_scoring.
@@ -72,12 +72,12 @@ No route paths change. No request/response shapes change. No OpenAPI tags change
 
 ### 3.1 Shared helpers layer
 
-`backend/app/services/_llm_helpers.py` grows from 72 LOC to ~250 LOC. Becomes the single home for:
+`backend/app/services/_llm_helpers.py` grows from 71 LOC to ~170-180 LOC. Becomes the single home for:
 
 - **Primitives (existing):** `_tavily_context_and_urls`, `_claude_messages_text`, `CLAUDE_RESEARCH_MAX_TOKENS`.
 - **Patterns (new):** `_research_agent_output`, `_extract_research_json`, `_URL_PATTERN`.
 
-Module docstring updated to reflect both layers: "Cross-domain LLM helpers — primitives (Tavily, Claude messaging) and shared patterns (research dispatch, JSON parsing) used by 2+ services."
+Module docstring updated to reflect both layers and to document the per-service kwargs conventions for `_extract_research_json` (signals: `escape_keys=("description","snippet","headline"), trim_braces=True, strip_final_answer=True`; icp: per-worker variations of `escape_keys` ranging from `("description",)` to `("description","blurb","headline")`; market_research: defaults). This is the docstring home of record for those conventions — the icp alias (§3.2) doesn't carry its own.
 
 ### 3.2 Per-service wrapper shape (I-A)
 
@@ -119,9 +119,45 @@ def _market_research_agent_output(agent_chain, prompt, company_profile_json, llm
     return text
 ```
 
-`icp/parsing.py::_extract_icp_json` becomes a 1-line alias (`_extract_icp_json = _extract_research_json`) — preserves the existing in-package callsites (8 grep hits across icp/ orchestrator and parsing) without a cross-cutting sweep. `signals/parsing.py::_parse_search_signals_response` and `market_research/parsing.py::_extract_research_json` become thin adapters that call the shared helper with service-specific kwargs.
+**Parsing adapters** (mirror the agent_output wrapper shape):
 
-`signals/parsing.py::_validate_url` stays in signals/ — it's signals-specific (validates URLs against a tavily_urls allowlist).
+```python
+# icp/parsing.py — post-Phase-I, ~3 LOC
+from app.services._llm_helpers import _extract_research_json
+
+# 1-line alias preserves the existing in-package callsites (8 grep hits across
+# icp/ orchestrator and parsing) without a cross-cutting sweep. The alias
+# doesn't carry its own docstring — see _extract_research_json in _llm_helpers
+# for the per-service convention table.
+_extract_icp_json = _extract_research_json
+```
+
+```python
+# market_research/parsing.py — post-Phase-I, ~4 LOC
+# Module-import to avoid name shadow (the local function and the shared helper
+# both want the name _extract_research_json).
+from app.services import _llm_helpers
+
+def _extract_research_json(raw_response):
+    return _llm_helpers._extract_research_json(raw_response)  # defaults: escape_keys=("description",)
+```
+
+```python
+# signals/parsing.py — post-Phase-I, _parse_search_signals_response is ~7 LOC;
+# _validate_url stays put (signals-specific, validates URLs against a
+# tavily_urls allowlist).
+from app.services._llm_helpers import _extract_research_json
+
+def _parse_search_signals_response(response):
+    # Note: signals' historical quote-escaping is removed per §1 unification
+    # decision. The shared helper escapes \n/\r only; no escape_quotes kwarg.
+    return _extract_research_json(
+        response,
+        escape_keys=("description", "snippet", "headline"),
+        trim_braces=True,
+        strip_final_answer=True,
+    )
+```
 
 ### 3.3 signals/ structure (post-Phase-I)
 
@@ -131,7 +167,7 @@ backend/app/services/signals/
 ├── prompts.py           # (unchanged from Phase H, 328 LOC)
 ├── llm.py               # _signals_agent_output adapter (~15 LOC)
 ├── parsing.py           # _parse_search_signals_response adapter + _validate_url (~50 LOC)
-├── persistence.py       # all Mongo helpers + fetch_signals (~191 LOC)
+├── persistence.py       # all Mongo helpers + fetch_signals (renamed from _load_signals_for_user) (~181 LOC, no net change)
 ├── search.py            # search_signals + run_signals_research (~255 LOC)   NEW
 ├── batch.py             # generate_signals_batch + _claude + _impl (~190 LOC) NEW
 └── ask.py               # signal_ask + signal_ask_claude (~240 LOC)           NEW
@@ -194,19 +230,21 @@ Per `feedback_phase_h_module_import_pattern.md`: from-import (`from .search impo
 
 Single sequence, 11 commits, branch `refactor-backend-modularization-phase-i`.
 
+**Commit dependency graph.** Commits 1-3 are strictly sequential — 1 introduces the shared helpers, 2 and 3 consume them. Commits 4-8 are strictly sequential — progressive extraction from `signals/orchestrator.py`. Commits 9-11 are independent of each other and of commits 4-8, except commit 10 (URL regex hoist) depends on commit 2 (which orphans `_URL_PATTERN` in `signals/llm.py`). Recommended order is sequential 1→11 for review-clarity; a parallel run of 9 alongside 4-8 is technically safe but adds nothing.
+
 ### 4.1 Sub-sequence I-A (commits 1-3) — shared helpers
 
 | # | Commit | Effect |
 |---|---|---|
 | 1 | `refactor(be): add _research_agent_output + _extract_research_json to _llm_helpers [phase I, 1/11]` | Add shared helpers and `_URL_PATTERN` use inside them. Add `tests/unit/test_llm_helpers.py` covering the parameterized behavior. No service-side callers wired yet. |
-| 2 | `refactor(be): consolidate 3 _*_agent_output bodies to shared dispatch [phase I, 2/11]` | Rewrite 3 per-service wrappers to call `_research_agent_output`. ~150 LOC net deletion across `signals/llm.py`, `icp/llm.py`, `market_research/llm.py`. `signals/llm.py::_URL_PATTERN` becomes unused; cleaned in commit 10. |
-| 3 | `refactor(be): consolidate 3 JSON-parsing bodies to shared _extract_research_json [phase I, 3/11]` | Promote `icp/parsing.py::_extract_icp_json` (alias for backward compat). Rewrite `signals/parsing.py::_parse_search_signals_response` and `market_research/parsing.py::_extract_research_json` as thin adapters. ~100 LOC net deletion. |
+| 2 | `refactor(be): consolidate 3 _*_agent_output bodies to shared dispatch [phase I, 2/11]` | Rewrite 3 per-service wrappers to call `_research_agent_output`. ~70 LOC net deletion across `signals/llm.py`, `icp/llm.py`, `market_research/llm.py`. `signals/llm.py::_URL_PATTERN` becomes unused; cleaned in commit 10. |
+| 3 | `refactor(be): consolidate 3 JSON-parsing bodies to shared _extract_research_json [phase I, 3/11]` | Promote `icp/parsing.py::_extract_icp_json` (1-line alias). Rewrite `signals/parsing.py::_parse_search_signals_response` (drops historical quote-escaping per §1) and `market_research/parsing.py::_extract_research_json` (module-import to avoid name shadow) as thin adapters. ~100 LOC net deletion. |
 
 ### 4.2 Sub-sequence I-C (commits 4-8) — signals decomposition
 
 | # | Commit | Effect |
 |---|---|---|
-| 4 | `refactor(be): move fetch_signals into signals/persistence.py [phase I, 4/11]` | 10 LOC move. `__init__.py` re-export updated. Smallest commit — verifies the pattern. |
+| 4 | `refactor(be): rename _load_signals_for_user → fetch_signals (public) in persistence.py [phase I, 4/11]` | The orchestrator's `fetch_signals` was already a one-line wrapper around `persistence._load_signals_for_user`. Rename `_load_signals_for_user` to public `fetch_signals` in `persistence.py`; drop the orchestrator wrapper; update `__init__.py` re-export to point at `persistence.fetch_signals`. Smallest commit — verifies the pattern. |
 | 5 | `refactor(be): extract signals/search.py [phase I, 5/11]` | Move `search_signals` + `run_signals_research` out of orchestrator. orchestrator's other functions (still resident) switch to module-import (`from . import search; search.search_signals(...)`). `__init__.py` + test patch-path updates. |
 | 6 | `refactor(be): extract signals/batch.py [phase I, 6/11]` | Move `_generate_signals_batch_impl` + 2 wrappers out. `batch.py` uses module-import for search. `__init__.py` + test patch-path updates. |
 | 7 | `refactor(be): extract signals/ask.py [phase I, 7/11]` | Move `signal_ask` + `signal_ask_claude` out. No new cross-submodule deps. `__init__.py` + test patch-path updates. |
@@ -263,6 +301,8 @@ grep -rn 'app\.services\.signals\.orchestrator\.signal_ask' backend/tests/
 
 Each hit is a `mocker.patch(...)` string target that needs to retarget the new submodule home in the same commit as the move.
 
+**Catch-all (run after each commit 4-7, not only commit 8)**: `grep -rn "app\.services\.signals\.orchestrator" backend/` — any non-zero hit means a stale reference slipped through the per-symbol greps above. Catching this per-commit instead of only at commit 8 prevents stragglers from compounding across the I-C sub-sequence.
+
 ### 5.5 Post-commit verification
 
 After every commit (1-11):
@@ -300,3 +340,9 @@ After every commit (1-11):
 ## 8. Spec change log
 
 - **2026-05-24, round 0** — initial draft after `/brainstorming` session; scope A+C+D per user; B deferred to Phase J.
+- **2026-05-24, round 1** — applied round-1 spec-review synthesis (`docs/reviews/backend-modularization-phase-i-design-spec-synthesis-1.md`). Changes:
+  - **Critical (resolved with intentional behavior change):** signals' historical quote-escaping in `_parse_search_signals_response` removed during I-A consolidation rather than preserved via an `escape_quotes` parameter. Documented as the one intentional behavior change in §1 and noted at the relevant code blocks (§2.1 item 1, §3.2 signals adapter, §4.1 commit 3).
+  - **High:** LOC estimates corrected — §1 "~250 LOC" → "~180 LOC"; §3.1 "~250 LOC" → "~170-180 LOC"; §4.1 commit 2 "~150 LOC" → "~70 LOC". §3.2 gained 3 code blocks for the parsing adapters (icp alias, market_research module-import wrapper, signals adapter dropping quote-escaping).
+  - **Medium:** §5.4 extended with a catch-all `grep -rn "app\.services\.signals\.orchestrator" backend/` to run after each I-C commit (4-7), not only commit 8.
+  - **Low:** §4 gained a commit-dependency paragraph explaining strict-sequential (1-3 and 4-8) vs independent (9, 11) vs dependent (10 → 2). §3.1 module docstring expanded to document the per-service `escape_keys`/`trim_braces`/`strip_final_answer` conventions (the icp alias doesn't carry its own). §3.3 + §4.2 commit 4 changed from "move fetch_signals" to "rename `_load_signals_for_user` → public `fetch_signals` in persistence" (avoids wrapper-to-a-wrapper).
+  - **Severity disagreements (no spec change):** intermediate `__init__.py` docstring drift kept at the §6 R3 mitigation level (rewrite at commit 8 only). Phase H spec header hygiene noted but not a Phase I prerequisite.
