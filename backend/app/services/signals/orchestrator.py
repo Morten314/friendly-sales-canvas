@@ -26,13 +26,15 @@ from app.services._claude_budget import (
     _reserve_claude_signal_budget,
     _finalize_claude_signal_budget,
 )
-from app.services.signals.persistence import (
-    _load_signals_for_user,
-    record_signal_action,
-)
+from app.services.signals import persistence
 from app.services.signals.prompts import (
     _SCOUT_PROMPT_TEMPLATE,
     _PROFILER_PROMPT_TEMPLATE,
+    _LEADS_SECTION_TEMPLATE,
+    _LEADS_SECTION_FALLBACK_TEMPLATE,
+    _EXISTING_HEADLINES_SECTION_TEMPLATE,
+    _SIGNAL_ASK_PROMPT_TEMPLATE,
+    _SIGNAL_ASK_CLAUDE_PROMPT_TEMPLATE,
 )
 from app.services.signals.llm import _signals_agent_output
 from app.services.signals.parsing import (
@@ -126,28 +128,17 @@ def search_signals(
         logger.debug(f"[DEBUG {persona.capitalize()}] Processing {len(leads_data)} leads for signal generation")
         try:
             leads_json = json.dumps(leads_data[:50], indent=2, default=str)
-            leads_text = f"""
-STEP 1.2 - LEADS DATA (CRITICAL - Use this to prioritize {signal_label} relevance):
-Your organization has {len(leads_data)} active leads in your pipeline. Below is the complete lead data with all available fields. You MUST analyze this data and use it when generating {signal_label}s.
-
-Complete Leads Data (showing up to 50 most recent leads):
-{leads_json}
-
-CRITICAL INSTRUCTIONS:
-- Analyze ALL fields in the leads data above - do not assume any specific field names
-- Extract any company names, industries, regions, technologies, or other relevant information from whatever fields exist
-- Prioritize {signal_label}s that relate to companies, industries, regions, or any other attributes found in your leads pipeline
-- If a {signal_label} mentions a company or organization, check if it matches any entity in your leads data
-- Focus on {signal_label}s that would be relevant to your actual sales pipeline based on the lead data structure
-- Use the lead data to understand your target market, customer segments, and sales priorities
-- This will make the {signal_label}s more actionable for your sales team
-"""
+            leads_text = _LEADS_SECTION_TEMPLATE.format(
+                signal_label=signal_label,
+                leads_count=len(leads_data),
+                leads_json=leads_json,
+            )
         except Exception as e:
             logger.error(f"[ERROR] Failed to format leads data: {e}")
-            leads_text = f"""
-STEP 1.2 - LEADS DATA:
-Your organization has {len(leads_data)} active leads in your pipeline. Use this information to prioritize {signal_label}s relevant to your actual sales pipeline.
-"""
+            leads_text = _LEADS_SECTION_FALLBACK_TEMPLATE.format(
+                signal_label=signal_label,
+                leads_count=len(leads_data),
+            )
 
     # ------------------------------------------------------------------
     # 3. Format existing headlines text (identical across personas)
@@ -155,15 +146,9 @@ Your organization has {len(leads_data)} active leads in your pipeline. Use this 
     existing_headlines_text = ""
     if existing_headlines:
         headlines_list = "\n".join([f"- {h}" for h in existing_headlines[:30]])
-        existing_headlines_text = f"""
-STEP 1.5 - EXISTING SIGNALS (CRITICAL - AVOID DUPLICATES):
-You MUST avoid generating signals similar to these existing signal headlines. Review them carefully and ensure your new signal is completely different and unique:
-
-Existing Signal Headlines:
-{headlines_list}
-
-IMPORTANT: Your new signal headline must be about a DIFFERENT news story, market development, or industry trend. Do NOT generate a signal about the same event, company news, or market development as any of the above headlines, even if worded differently. Search for NEW and UNIQUE signals that haven't been covered yet.
-"""
+        existing_headlines_text = _EXISTING_HEADLINES_SECTION_TEMPLATE.format(
+            headlines_list=headlines_list,
+        )
 
     # ------------------------------------------------------------------
     # 4. Build and run the prompt
@@ -198,22 +183,13 @@ async def run_signals_research(driver, mongo, pc, agent_chain, request: MarketRe
             f"Unsupported agent: {request.component_name}. Supported agents: scout, profiler"
         )
 
-    db = mongo["Signals"]
-    collection = db["signals"]
-
-    # Filter by user_id only for multitenancy
-    query = {
-        "user_id": request.user_id,
-        "agent": agent_name
-    }
-
-    # If refresh is False, fetch the latest signal
+    # If refresh is False, fetch the latest signal for this (user_id, agent)
     if not request.refresh:
         latest_signal = await asyncio.to_thread(
-            collection.find_one, query, sort=[("timestamp", -1)]
+            persistence._get_latest_signal_for_user_agent,
+            mongo, request.user_id, agent_name,
         )
         if latest_signal:
-            latest_signal.pop("_id", None)
             return {"status": "success", "data": latest_signal}
 
     # Prepare data for the signals function
@@ -221,18 +197,12 @@ async def run_signals_research(driver, mongo, pc, agent_chain, request: MarketRe
 
     # Fetch existing headlines from signal_track collection
     existing_headlines = []
+    track_key: Optional[str] = None
     if request.org_id or request.user_id:
-        track_db = mongo["Signals"]
-        track_collection = track_db["signal_track"]
         track_key = request.org_id if request.org_id else f"user_{request.user_id}"
-
-        def fetch_existing_headlines():
-            track_doc = track_collection.find_one({"_id": track_key})
-            if track_doc and track_doc.get("headlines"):
-                return track_doc.get("headlines", [])
-            return []
-
-        existing_headlines = await asyncio.to_thread(fetch_existing_headlines)
+        existing_headlines = await asyncio.to_thread(
+            persistence._get_existing_headlines, mongo, track_key,
+        )
 
     # Add existing headlines to pre_data for prompt injection
     if isinstance(pre_data, dict):
@@ -280,11 +250,8 @@ async def run_signals_research(driver, mongo, pc, agent_chain, request: MarketRe
 
     # For profiler agent, also include ICP data if available - filter by user_id
     if agent_name == "profiler":
-        # Try to get ICP data from Profiler database
         try:
-            profiler_db = mongo["Profiler"]
-            icp_collection = profiler_db["ICP_config"]
-            icp_data = icp_collection.find_one({"user_id": request.user_id})
+            icp_data = persistence._get_user_icp_config(mongo, request.user_id)
             if icp_data:
                 if isinstance(pre_data, dict):
                     pre_data["icp_data"] = icp_data.get("icps", {})
@@ -325,26 +292,12 @@ async def run_signals_research(driver, mongo, pc, agent_chain, request: MarketRe
     if request.org_id:
         signals_result["org_id"] = request.org_id
 
-    # Save to Signals DB
-    await asyncio.to_thread(collection.insert_one, signals_result)
-
-    # Store headline in signal_track collection
-    if signals_result.get("headline") and (request.org_id or request.user_id):
-        track_db = mongo["Signals"]
-        track_collection = track_db["signal_track"]
-        track_key = request.org_id if request.org_id else f"user_{request.user_id}"
-
-        def update_signal_track():
-            track_collection.update_one(
-                {"_id": track_key},
-                {
-                    "$addToSet": {"headlines": signals_result.get("headline")},
-                    "$set": {"last_updated": datetime.now(timezone.utc)}
-                },
-                upsert=True
-            )
-
-        await asyncio.to_thread(update_signal_track)
+    # Save signal + (if headline present) upsert into signal_track. track_key
+    # was computed above when fetching existing_headlines; None if neither
+    # org_id nor user_id was present.
+    await asyncio.to_thread(
+        persistence._save_signal_and_track_headline, mongo, signals_result, track_key,
+    )
 
     signals_result.pop("_id", None)
     return {"status": "success", "data": signals_result}
@@ -352,26 +305,17 @@ async def run_signals_research(driver, mongo, pc, agent_chain, request: MarketRe
 
 async def _generate_signals_batch_impl(driver, mongo, pc, agent_chain, request: MarketRequest, llm_backend: str) -> dict:
     """Shared implementation for batch signal generation (Groq and Claude)."""
-    db = mongo["Signals"]
-    collection = db["signals"]
-
     # Prepare data for the signals functions
     pre_data = request.data
 
     # Fetch existing headlines from signal_track collection
     existing_headlines = []
+    track_key: Optional[str] = None
     if request.org_id or request.user_id:
-        track_db = mongo["Signals"]
-        track_collection = track_db["signal_track"]
         track_key = request.org_id if request.org_id else f"user_{request.user_id}"
-
-        def fetch_existing_headlines():
-            track_doc = track_collection.find_one({"_id": track_key})
-            if track_doc and track_doc.get("headlines"):
-                return track_doc.get("headlines", [])
-            return []
-
-        existing_headlines = await asyncio.to_thread(fetch_existing_headlines)
+        existing_headlines = await asyncio.to_thread(
+            persistence._get_existing_headlines, mongo, track_key,
+        )
 
     # Add existing headlines to pre_data
     if isinstance(pre_data, dict):
@@ -422,9 +366,7 @@ async def _generate_signals_batch_impl(driver, mongo, pc, agent_chain, request: 
     # For profiler agent, also include ICP data if available - filter by user_id
     profiler_pre_data = pre_data.copy() if isinstance(pre_data, dict) else pre_data
     try:
-        profiler_db = mongo["Profiler"]
-        icp_collection = profiler_db["ICP_config"]
-        icp_data = icp_collection.find_one({"user_id": request.user_id})
+        icp_data = persistence._get_user_icp_config(mongo, request.user_id)
         if icp_data:
             if isinstance(profiler_pre_data, dict):
                 profiler_pre_data["icp_data"] = icp_data.get("icps", {})
@@ -479,30 +421,14 @@ async def _generate_signals_batch_impl(driver, mongo, pc, agent_chain, request: 
             if request.org_id:
                 signals_result["org_id"] = request.org_id
 
-            # Save to Signals DB
-            await asyncio.to_thread(collection.insert_one, signals_result)
+            # Save signal + (if headline) upsert into signal_track.
+            await asyncio.to_thread(
+                persistence._save_signal_and_track_headline, mongo, signals_result, track_key,
+            )
 
-            # Store headline in signal_track collection
-            if signals_result.get("headline") and (request.org_id or request.user_id):
-                track_db = mongo["Signals"]
-                track_collection = track_db["signal_track"]
-                track_key = request.org_id if request.org_id else f"user_{request.user_id}"
-
-                def update_signal_track():
-                    track_collection.update_one(
-                        {"_id": track_key},
-                        {
-                            "$addToSet": {"headlines": signals_result.get("headline")},
-                            "$set": {"last_updated": datetime.now(timezone.utc)}
-                        },
-                        upsert=True
-                    )
-
-                await asyncio.to_thread(update_signal_track)
-
-                # Update existing_headlines list for next iteration
-                if isinstance(pre_data, dict):
-                    pre_data["existing_headlines"].append(signals_result.get("headline"))
+            # Mirror the headline into pre_data for the next iteration's prompt.
+            if signals_result.get("headline") and track_key and isinstance(pre_data, dict):
+                pre_data["existing_headlines"].append(signals_result.get("headline"))
             signals_result.pop("_id", None)
             generated_signals.append(signals_result)
             logger.info(f"Successfully generated scout signal {i+1}")
@@ -528,30 +454,14 @@ async def _generate_signals_batch_impl(driver, mongo, pc, agent_chain, request: 
             if request.org_id:
                 signals_result["org_id"] = request.org_id
 
-            # Save to Signals DB
-            await asyncio.to_thread(collection.insert_one, signals_result)
+            # Save signal + (if headline) upsert into signal_track.
+            await asyncio.to_thread(
+                persistence._save_signal_and_track_headline, mongo, signals_result, track_key,
+            )
 
-            # Store headline in signal_track collection
-            if signals_result.get("headline") and (request.org_id or request.user_id):
-                track_db = mongo["Signals"]
-                track_collection = track_db["signal_track"]
-                track_key = request.org_id if request.org_id else f"user_{request.user_id}"
-
-                def update_signal_track():
-                    track_collection.update_one(
-                        {"_id": track_key},
-                        {
-                            "$addToSet": {"headlines": signals_result.get("headline")},
-                            "$set": {"last_updated": datetime.now(timezone.utc)}
-                        },
-                        upsert=True
-                    )
-
-                await asyncio.to_thread(update_signal_track)
-
-                # Update existing_headlines list for next iteration
-                if isinstance(profiler_pre_data, dict):
-                    profiler_pre_data["existing_headlines"].append(signals_result.get("headline"))
+            # Mirror the headline into profiler_pre_data for the next iteration's prompt.
+            if signals_result.get("headline") and track_key and isinstance(profiler_pre_data, dict):
+                profiler_pre_data["existing_headlines"].append(signals_result.get("headline"))
             signals_result.pop("_id", None)
             generated_signals.append(signals_result)
             logger.info(f"Successfully generated profiler signal {i+1}")
@@ -589,7 +499,7 @@ async def fetch_signals(
     offset: int = 0,
 ) -> tuple[List[Dict[str, Any]], int]:
     """Fetch signals for a user. Returns (items, total). User-scoped, not org-scoped."""
-    return _load_signals_for_user(mongo, user_id, limit, offset)
+    return persistence._load_signals_for_user(mongo, user_id, limit, offset)
 
 
 async def signal_ask(driver, mongo, agent_chain, request: SignalAskRequest) -> dict:
@@ -612,21 +522,7 @@ async def signal_ask(driver, mongo, agent_chain, request: SignalAskRequest) -> d
         # Fetch customer profile from MongoDB
         customer_profile = None
         try:
-            db = mongo["Profiler"]
-            collection = db["Company_Profile"]
-
-            filter_query = {"profile_type": "company", "org_id": request.org_id}
-            document = collection.find_one(filter_query)
-
-            if document:
-                customer_profiles = document.get("customer_profiles", {})
-                icps = customer_profiles.get("icps", [])
-                # Remove MongoDB _id if present
-                for icp in icps:
-                    if "_id" in icp:
-                        del icp["_id"]
-                customer_profile = {"icps": icps}
-
+            customer_profile = persistence._get_signal_ask_customer_profile(mongo, request.org_id)
         except Exception as e:
             logger.warning(f"Could not fetch customer profile: {e}")
 
@@ -660,24 +556,11 @@ async def signal_ask(driver, mongo, agent_chain, request: SignalAskRequest) -> d
         context = "\n\n".join(context_parts)
 
         # Build prompt
-        prompt = f"""You are an intelligent assistant helping answer questions about market signals, company strategy, and customer insights.
-
-{context}
-{history_text}
-
-CURRENT QUESTION:
-{request.question}
-
-INSTRUCTIONS:
-1. Use the WebSearch tool to find the most up-to-date and accurate information to answer the question
-2. Consider the company profile and customer profile (ICPs) when providing context-specific answers
-3. Reference the conversation history to maintain context and continuity
-4. Provide a comprehensive, well-structured answer that directly addresses the question
-5. If the question relates to market signals, trends, or industry insights, use WebSearch to find recent data (2026-2027)
-6. Cite sources when using information from WebSearch
-7. Be specific and actionable in your response
-
-Please use the WebSearch tool to gather current information and provide a detailed answer."""
+        prompt = _SIGNAL_ASK_PROMPT_TEMPLATE.format(
+            context=context,
+            history_text=history_text,
+            question=request.question,
+        )
 
         # Use agent_chain to answer with WebSearch
         raw_response = await asyncio.to_thread(
@@ -728,20 +611,7 @@ async def signal_ask_claude(driver, mongo, request: SignalAskRequest) -> dict:
         # Fetch customer profile from MongoDB
         customer_profile = None
         try:
-            db = mongo["Profiler"]
-            collection = db["Company_Profile"]
-
-            filter_query = {"profile_type": "company", "org_id": request.org_id}
-            document = collection.find_one(filter_query)
-
-            if document:
-                customer_profiles = document.get("customer_profiles", {})
-                icps = customer_profiles.get("icps", [])
-                for icp in icps:
-                    if "_id" in icp:
-                        del icp["_id"]
-                customer_profile = {"icps": icps}
-
+            customer_profile = persistence._get_signal_ask_customer_profile(mongo, request.org_id)
         except Exception as e:
             logger.warning(f"Could not fetch customer profile (Claude): {e}")
 
@@ -781,26 +651,12 @@ async def signal_ask_claude(driver, mongo, request: SignalAskRequest) -> dict:
         except Exception as e:
             logger.warning(f"WebSearch failed in signal_ask_claude: {e}")
 
-        prompt = f"""You are an intelligent assistant helping answer questions about market signals, company strategy, and customer insights.
-
-{context}
-{history_text}
-
-WEB SEARCH RESULTS:
-{web_search_results}
-
-CURRENT QUESTION:
-{request.question}
-
-INSTRUCTIONS:
-1. Use the provided web search results as the freshest external context.
-2. Consider the company profile and customer profile (ICPs) when providing context-specific answers.
-3. Reference the conversation history to maintain context and continuity.
-4. Provide a comprehensive, well-structured answer that directly addresses the question.
-5. If the question relates to market signals, trends, or industry insights, prioritize recent data (2026-2027).
-6. Cite sources if they appear in web search results.
-7. Be specific and actionable in your response.
-"""
+        prompt = _SIGNAL_ASK_CLAUDE_PROMPT_TEMPLATE.format(
+            context=context,
+            history_text=history_text,
+            web_search_results=web_search_results,
+            question=request.question,
+        )
 
         input_tokens_estimate = _estimate_token_count(prompt)
         reservation = _reserve_claude_signal_budget(

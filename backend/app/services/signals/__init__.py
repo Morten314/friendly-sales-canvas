@@ -1,9 +1,24 @@
-"""signals service — package skeleton (Phase H commit 16/20).
+"""signals service — public API (Phase H Sequence E final form).
 
-All code lives in orchestrator.py for now; subsequent commits extract
-persistence.py, prompts.py, llm.py, and parsing.py.
-
-Hardest service of Phase H — done last with the pattern validated.
+Service for researching and persisting Scout/Profiler market signals
+(single-shot, batch, and Claude-backed variants) + signal Q&A endpoints.
+Submodules:
+  - orchestrator.py: search_signals (persona-shared core),
+    run_signals_research, generate_signals_batch (+ _claude variant,
+    + _generate_signals_batch_impl shared body), signal_ask
+    (+ _claude variant), fetch_signals
+  - persistence.py: record_signal_action (public) + Mongo helpers —
+    _load_signals_for_user, _get_latest_signal_for_user_agent,
+    _get_existing_headlines, _get_user_icp_config,
+    _save_signal_and_track_headline (consolidates 3 copy-pasted
+    save+track blocks), _get_signal_ask_customer_profile
+  - prompts.py: _SCOUT_PROMPT_TEMPLATE, _PROFILER_PROMPT_TEMPLATE,
+    _LEADS_SECTION_TEMPLATE (+ fallback), _EXISTING_HEADLINES_SECTION_TEMPLATE,
+    _SIGNAL_ASK_PROMPT_TEMPLATE (+ Claude variant)
+  - llm.py: _signals_agent_output (dispatches Groq agent chain or
+    Claude messages API)
+  - parsing.py: _parse_search_signals_response,
+    _normalize_search_signals_result, _validate_url
 """
 
 from app.services.signals.orchestrator import (

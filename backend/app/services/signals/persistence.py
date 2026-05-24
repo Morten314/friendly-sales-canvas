@@ -1,11 +1,12 @@
 """Persistence layer for signals/ -- Mongo writes/reads for signal records.
 
 Public symbol re-exported from __init__.py: record_signal_action.
-Internal helper (prefix _): _load_signals_for_user extracted from
-fetch_signals body during Phase H.
+Internal helpers (prefix _) extracted from orchestrator bodies during
+Phase H. All sync (use asyncio.to_thread at the call site for async
+contexts; mirrors the original inline code's wrapping).
 """
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from app.core.exceptions import (
     ServiceError,
@@ -40,6 +41,79 @@ def _load_signals_for_user(
 
     total = collection.count_documents(flt)
     return signals_list, total
+
+
+def _get_latest_signal_for_user_agent(
+    mongo, user_id: str, agent_name: str
+) -> Optional[Dict[str, Any]]:
+    """Fetch the most recent signal for a (user_id, agent_name) pair, or
+    None if no signal exists. _id is stripped from the returned dict."""
+    collection = mongo["Signals"]["signals"]
+    latest = collection.find_one(
+        {"user_id": user_id, "agent": agent_name},
+        sort=[("timestamp", -1)],
+    )
+    if latest is None:
+        return None
+    latest.pop("_id", None)
+    return latest
+
+
+def _get_existing_headlines(mongo, track_key: str) -> List[str]:
+    """Fetch existing signal headlines for a track_key (org_id when present
+    else 'user_<user_id>'). Returns empty list if no track doc exists or
+    has no headlines."""
+    track_collection = mongo["Signals"]["signal_track"]
+    track_doc = track_collection.find_one({"_id": track_key})
+    if track_doc and track_doc.get("headlines"):
+        return track_doc.get("headlines", [])
+    return []
+
+
+def _get_user_icp_config(mongo, user_id: str) -> Optional[Dict[str, Any]]:
+    """Fetch ICP config for a user from Profiler.ICP_config. Returns the
+    raw doc or None; _id is preserved (callers read .get('icps') only)."""
+    return mongo["Profiler"]["ICP_config"].find_one({"user_id": user_id})
+
+
+def _save_signal_and_track_headline(
+    mongo, signals_result: Dict[str, Any], track_key: Optional[str]
+) -> None:
+    """Atomic-pair Mongo write: insert the signal into Signals.signals,
+    then (if headline present and track_key is not None) upsert that
+    headline into Signals.signal_track[_id=track_key].headlines via
+    $addToSet. Consolidates 3 copy-pasted blocks from run_signals_research
+    and _generate_signals_batch_impl."""
+    db = mongo["Signals"]
+    db["signals"].insert_one(signals_result)
+
+    if signals_result.get("headline") and track_key:
+        db["signal_track"].update_one(
+            {"_id": track_key},
+            {
+                "$addToSet": {"headlines": signals_result.get("headline")},
+                "$set": {"last_updated": datetime.now(timezone.utc)},
+            },
+            upsert=True,
+        )
+
+
+def _get_signal_ask_customer_profile(
+    mongo, org_id: str
+) -> Optional[Dict[str, Any]]:
+    """Fetch the customer profile (ICPs) for an org from Profiler.
+    Company_Profile. Returns {'icps': [...]} or None. _id is stripped from
+    each ICP entry. Used by signal_ask and signal_ask_claude."""
+    document = mongo["Profiler"]["Company_Profile"].find_one(
+        {"profile_type": "company", "org_id": org_id}
+    )
+    if not document:
+        return None
+    customer_profiles = document.get("customer_profiles", {})
+    icps = customer_profiles.get("icps", [])
+    for icp in icps:
+        icp.pop("_id", None)
+    return {"icps": icps}
 
 
 async def record_signal_action(mongo, request: SignalActionRequest) -> dict:

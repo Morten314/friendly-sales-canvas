@@ -14,6 +14,10 @@ from app.services._llm_helpers import (
     _claude_messages_text,
 )
 
+# Matches URLs in LLM response bodies. Used as a fallback when the agent's
+# intermediate steps don't surface tavily URLs directly.
+_URL_PATTERN = r'https?://[^\s<>"{}|\\^`\[\]]+'
+
 
 def _signals_agent_output(agent_chain, prompt: str, company_profile_seed: str, llm_backend: str) -> tuple:
     """Returns (model_output_text, tavily_urls) for signal JSON parsing."""
@@ -29,8 +33,7 @@ def _signals_agent_output(agent_chain, prompt: str, company_profile_seed: str, l
                             if isinstance(result, dict) and "url" in result:
                                 tavily_urls.append(result["url"])
             if not tavily_urls:
-                url_pattern = r'https?://[^\s<>"{}|\\^`\[\]]+'
-                found_urls = re.findall(url_pattern, response)
+                found_urls = re.findall(_URL_PATTERN, response)
                 tavily_urls = list(set(found_urls))[:5]
         except Exception:
             pass
@@ -43,7 +46,6 @@ def _signals_agent_output(agent_chain, prompt: str, company_profile_seed: str, l
     augmented = f"{prompt}\n\nWEB SEARCH RESULTS:\n{web_ctx}\n"
     response = _claude_messages_text(augmented, max_tokens=CLAUDE_RESEARCH_MAX_TOKENS)
     if not tavily_urls:
-        url_pattern = r'https?://[^\s<>"{}|\\^`\[\]]+'
-        found_urls = re.findall(url_pattern, response)
+        found_urls = re.findall(_URL_PATTERN, response)
         tavily_urls = list(set(found_urls))[:5]
     return response, tavily_urls

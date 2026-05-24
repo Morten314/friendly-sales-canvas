@@ -1,4 +1,4 @@
-"""Document upload, status, and data-source management endpoints."""
+"""Data-source upload, status, and management endpoints."""
 import shutil
 
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, File, Form, HTTPException, Query, Response, UploadFile

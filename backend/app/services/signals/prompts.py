@@ -1,10 +1,20 @@
 """Prompt templates for signals/ -- persona-specific search prompts.
 
 Templates stay as inline Python strings per Phase H scope. They are
-.format()-friendly: search_signals supplies context_json, leads_section,
-and existing_headlines_section placeholders.
+.format()-friendly:
+- _SCOUT_PROMPT_TEMPLATE, _PROFILER_PROMPT_TEMPLATE: context_json,
+  leads_section, existing_headlines_section (used by search_signals).
+- _LEADS_SECTION_TEMPLATE, _LEADS_SECTION_FALLBACK_TEMPLATE:
+  signal_label, leads_count, leads_json (used by search_signals to
+  build the leads_section placeholder above).
+- _EXISTING_HEADLINES_SECTION_TEMPLATE: headlines_list (used by
+  search_signals to build the existing_headlines_section placeholder).
+- _SIGNAL_ASK_PROMPT_TEMPLATE: context, history_text, question (used
+  by signal_ask).
+- _SIGNAL_ASK_CLAUDE_PROMPT_TEMPLATE: context, history_text,
+  web_search_results, question (used by signal_ask_claude).
 
-Extracted from orchestrator.py during Phase H commit 18/20.
+Extracted from orchestrator.py during Phase H commits 18/20 and 20/20.
 """
 
 _SCOUT_PROMPT_TEMPLATE = """Task: Research and identify a high-quality, actionable market signal for a sales scout agent. This signal should help the sales team understand market opportunities, competitor movements, or industry trends that could impact their sales strategy.
@@ -238,4 +248,81 @@ Return your findings in the following exact JSON format (use exact keys as shown
 When you have reached the final answer, respond only with:
 Final Answer: <your JSON answer here>
 Do not include any additional reasoning, thoughts, or steps after that.
+"""
+
+
+_LEADS_SECTION_TEMPLATE = """
+STEP 1.2 - LEADS DATA (CRITICAL - Use this to prioritize {signal_label} relevance):
+Your organization has {leads_count} active leads in your pipeline. Below is the complete lead data with all available fields. You MUST analyze this data and use it when generating {signal_label}s.
+
+Complete Leads Data (showing up to 50 most recent leads):
+{leads_json}
+
+CRITICAL INSTRUCTIONS:
+- Analyze ALL fields in the leads data above - do not assume any specific field names
+- Extract any company names, industries, regions, technologies, or other relevant information from whatever fields exist
+- Prioritize {signal_label}s that relate to companies, industries, regions, or any other attributes found in your leads pipeline
+- If a {signal_label} mentions a company or organization, check if it matches any entity in your leads data
+- Focus on {signal_label}s that would be relevant to your actual sales pipeline based on the lead data structure
+- Use the lead data to understand your target market, customer segments, and sales priorities
+- This will make the {signal_label}s more actionable for your sales team
+"""
+
+
+_LEADS_SECTION_FALLBACK_TEMPLATE = """
+STEP 1.2 - LEADS DATA:
+Your organization has {leads_count} active leads in your pipeline. Use this information to prioritize {signal_label}s relevant to your actual sales pipeline.
+"""
+
+
+_EXISTING_HEADLINES_SECTION_TEMPLATE = """
+STEP 1.5 - EXISTING SIGNALS (CRITICAL - AVOID DUPLICATES):
+You MUST avoid generating signals similar to these existing signal headlines. Review them carefully and ensure your new signal is completely different and unique:
+
+Existing Signal Headlines:
+{headlines_list}
+
+IMPORTANT: Your new signal headline must be about a DIFFERENT news story, market development, or industry trend. Do NOT generate a signal about the same event, company news, or market development as any of the above headlines, even if worded differently. Search for NEW and UNIQUE signals that haven't been covered yet.
+"""
+
+
+_SIGNAL_ASK_PROMPT_TEMPLATE = """You are an intelligent assistant helping answer questions about market signals, company strategy, and customer insights.
+
+{context}
+{history_text}
+
+CURRENT QUESTION:
+{question}
+
+INSTRUCTIONS:
+1. Use the WebSearch tool to find the most up-to-date and accurate information to answer the question
+2. Consider the company profile and customer profile (ICPs) when providing context-specific answers
+3. Reference the conversation history to maintain context and continuity
+4. Provide a comprehensive, well-structured answer that directly addresses the question
+5. If the question relates to market signals, trends, or industry insights, use WebSearch to find recent data (2026-2027)
+6. Cite sources when using information from WebSearch
+7. Be specific and actionable in your response
+
+Please use the WebSearch tool to gather current information and provide a detailed answer."""
+
+
+_SIGNAL_ASK_CLAUDE_PROMPT_TEMPLATE = """You are an intelligent assistant helping answer questions about market signals, company strategy, and customer insights.
+
+{context}
+{history_text}
+
+WEB SEARCH RESULTS:
+{web_search_results}
+
+CURRENT QUESTION:
+{question}
+
+INSTRUCTIONS:
+1. Use the provided web search results as the freshest external context.
+2. Consider the company profile and customer profile (ICPs) when providing context-specific answers.
+3. Reference the conversation history to maintain context and continuity.
+4. Provide a comprehensive, well-structured answer that directly addresses the question.
+5. If the question relates to market signals, trends, or industry insights, prioritize recent data (2026-2027).
+6. Cite sources if they appear in web search results.
+7. Be specific and actionable in your response.
 """
