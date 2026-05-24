@@ -14,7 +14,6 @@ re-exported by __init__.py per spec §3.7.
 """
 import asyncio
 import json
-import re
 from datetime import datetime, timezone
 from typing import Any, Dict, List
 
@@ -25,11 +24,8 @@ from app.core.exceptions import (
     UnsupportedComponentError,
 )
 from app.core.logging import logger
-from app.services._llm_helpers import (
-    CLAUDE_RESEARCH_MAX_TOKENS,
-    _tavily_context_and_urls,
-    _claude_messages_text,
-)
+from app.services.icp.llm import _icp_research_agent_output
+from app.services.icp.parsing import _extract_icp_json
 from app.services.icp.prompts import (
     ICP_GENERATOR_TEMPLATE,
     ICP_RESEARCH_1_TEMPLATE,
@@ -37,23 +33,6 @@ from app.services.icp.prompts import (
     ICP_RESEARCH_3_TEMPLATE,
     ICP_RESEARCH_4_TEMPLATE,
 )
-
-
-def _icp_research_agent_output(agent_chain, prompt: str, pre_data: str, llm_backend: str) -> str:
-    """Dispatcher for ICP research LLM call. Mirrors _market_research_agent_output."""
-    if llm_backend != "claude":
-        raw_response = agent_chain.invoke({"input": prompt})
-        return raw_response["output"]
-    seed = " ".join(str(pre_data).split())[:1200]
-    web_ctx, _ = _tavily_context_and_urls(
-        f"ICP buyer persona pain points buying triggers competitors compliance 2026 {seed}"
-    )
-    augmented = f"""{prompt}
-
-WEB SEARCH RESULTS (primary external evidence — synthesize with company profile and ICP card):
-{web_ctx}
-"""
-    return _claude_messages_text(augmented, max_tokens=CLAUDE_RESEARCH_MAX_TOKENS)
 
 
 def ICP_generator(agent_chain, pre_data: str) -> dict:
@@ -72,14 +51,7 @@ def ICP_generator(agent_chain, pre_data: str) -> dict:
             logger.debug("[ICP_generator] Raw LLM output (first 500 chars): %s", str(response)[:500])
         except Exception:
             pass
-        cleaned_str = response.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-        cleaned_str = re.sub(
-            r'\"description\": \"(.*?)\"',
-            lambda m: '"description": "' + m.group(1).replace('\n', '\\n').replace('\r', '\\r') + '"',
-            cleaned_str,
-            flags=re.DOTALL
-        )
-        return json.loads(cleaned_str)
+        return _extract_icp_json(response)
 
     # First attempt
     parsed_json = _invoke_generator(prompt)
@@ -118,13 +90,8 @@ def icp_research_1(agent_chain, pre_data: str, llm_backend: str = "default") -> 
     # Step 3: Get LLM response
     response = _icp_research_agent_output(agent_chain, prompt, pre_data, llm_backend)
 
-    # Clean and escape the JSON string
-    cleaned_str = response.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-    # Escape newline and other control characters within string values
-    cleaned_str = re.sub(r'\"description\": \"(.*?)\"', lambda m: '"description": "' + m.group(1).replace('\n', '\\n').replace('\r', '\\r') + '"', cleaned_str, flags=re.DOTALL)
-
-    # Parse to JSON (Python dict)
-    parsed_json = json.loads(cleaned_str)
+    # Parse cleaned JSON (strips ``` fences, escapes \\n in 'description' values)
+    parsed_json = _extract_icp_json(response)
 
     # ✅ Return the Python dict
     return parsed_json
@@ -145,24 +112,13 @@ def icp_research_2(agent_chain, pre_data: str, llm_backend: str = "default") -> 
         try:
             response = _icp_research_agent_output(agent_chain, prompt, pre_data, llm_backend)
 
-            # Extract JSON from response
-            if "Final Answer:" in response:
-                response = response.split("Final Answer:")[-1].strip()
-
-            # Clean and escape the JSON string
-            cleaned_str = response.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-            # Remove any leading/trailing text before first { or after last }
-            if "{" in cleaned_str:
-                cleaned_str = cleaned_str[cleaned_str.index("{"):]
-            if "}" in cleaned_str:
-                cleaned_str = cleaned_str[:cleaned_str.rindex("}") + 1]
-
-            # Escape newline and other control characters within string values
-            cleaned_str = re.sub(r'\"description\": \"(.*?)\"', lambda m: '"description": "' + m.group(1).replace('\n', '\\n').replace('\r', '\\r') + '"', cleaned_str, flags=re.DOTALL)
-            cleaned_str = re.sub(r'\"blurb\": \"(.*?)\"', lambda m: '"blurb": "' + m.group(1).replace('\n', '\\n').replace('\r', '\\r') + '"', cleaned_str, flags=re.DOTALL)
-
-            # Parse to JSON (Python dict)
-            parsed_json = json.loads(cleaned_str)
+            # Parse cleaned JSON (Final Answer split + brace trim + description/blurb escaping)
+            parsed_json = _extract_icp_json(
+                response,
+                escape_keys=("description", "blurb"),
+                trim_braces=True,
+                strip_final_answer=True,
+            )
 
             # Validate structure
             if "currentData" not in parsed_json:
@@ -195,25 +151,13 @@ def icp_research_3(agent_chain, pre_data: str, llm_backend: str = "default") -> 
         try:
             response = _icp_research_agent_output(agent_chain, prompt, pre_data, llm_backend)
 
-            # Extract JSON from response
-            if "Final Answer:" in response:
-                response = response.split("Final Answer:")[-1].strip()
-
-            # Clean and escape the JSON string
-            cleaned_str = response.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-            # Remove any leading/trailing text before first { or after last }
-            if "{" in cleaned_str:
-                cleaned_str = cleaned_str[cleaned_str.index("{"):]
-            if "}" in cleaned_str:
-                cleaned_str = cleaned_str[:cleaned_str.rindex("}") + 1]
-
-            # Escape newline and other control characters within string values
-            cleaned_str = re.sub(r'\"description\": \"(.*?)\"', lambda m: '"description": "' + m.group(1).replace('\n', '\\n').replace('\r', '\\r') + '"', cleaned_str, flags=re.DOTALL)
-            cleaned_str = re.sub(r'\"blurb\": \"(.*?)\"', lambda m: '"blurb": "' + m.group(1).replace('\n', '\\n').replace('\r', '\\r') + '"', cleaned_str, flags=re.DOTALL)
-            cleaned_str = re.sub(r'\"headline\": \"(.*?)\"', lambda m: '"headline": "' + m.group(1).replace('\n', '\\n').replace('\r', '\\r') + '"', cleaned_str, flags=re.DOTALL)
-
-            # Parse to JSON (Python dict)
-            parsed_json = json.loads(cleaned_str)
+            # Parse cleaned JSON (Final Answer split + brace trim + description/blurb/headline escaping)
+            parsed_json = _extract_icp_json(
+                response,
+                escape_keys=("description", "blurb", "headline"),
+                trim_braces=True,
+                strip_final_answer=True,
+            )
 
             # Validate structure
             if "currentData" not in parsed_json:
@@ -248,24 +192,13 @@ def icp_research_4(agent_chain, pre_data: str, llm_backend: str = "default") -> 
         try:
             response = _icp_research_agent_output(agent_chain, prompt, pre_data, llm_backend)
 
-            # Extract JSON from response
-            if "Final Answer:" in response:
-                response = response.split("Final Answer:")[-1].strip()
-
-            # Clean and escape the JSON string
-            cleaned_str = response.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-            # Remove any leading/trailing text before first { or after last }
-            if "{" in cleaned_str:
-                cleaned_str = cleaned_str[cleaned_str.index("{"):]
-            if "}" in cleaned_str:
-                cleaned_str = cleaned_str[:cleaned_str.rindex("}") + 1]
-
-            # Escape newline and other control characters within string values
-            cleaned_str = re.sub(r'\"description\": \"(.*?)\"', lambda m: '"description": "' + m.group(1).replace('\n', '\\n').replace('\r', '\\r') + '"', cleaned_str, flags=re.DOTALL)
-            cleaned_str = re.sub(r'\"blurb\": \"(.*?)\"', lambda m: '"blurb": "' + m.group(1).replace('\n', '\\n').replace('\r', '\\r') + '"', cleaned_str, flags=re.DOTALL)
-
-            # Parse to JSON (Python dict)
-            parsed_json = json.loads(cleaned_str)
+            # Parse cleaned JSON (Final Answer split + brace trim + description/blurb escaping)
+            parsed_json = _extract_icp_json(
+                response,
+                escape_keys=("description", "blurb"),
+                trim_braces=True,
+                strip_final_answer=True,
+            )
 
             # Validate structure
             if "currentData" not in parsed_json:
