@@ -13,8 +13,10 @@ from app.services.signals.orchestrator import (
     generate_signals_batch_claude,
     signal_ask,
     signal_ask_claude,
-    record_signal_action,
     fetch_signals,
+)
+from app.services.signals.persistence import (
+    record_signal_action,
 )
 
 __all__ = [
