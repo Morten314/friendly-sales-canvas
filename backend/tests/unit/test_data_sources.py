@@ -59,7 +59,7 @@ from tests.identities import TEST_FILE_ID, TEST_FILE_KEY, TEST_ORG_ID, TEST_USER
 def test_load_document_pdf_branch(mocker):
     """load_document branches on file extension; this test covers .pdf only.
     The .txt branch is exercised indirectly by process_file_to_embeddings."""
-    pdf_loader_cls = mocker.patch("app.services.data_sources.orchestrator.PyPDFLoader")
+    pdf_loader_cls = mocker.patch("app.services.data_sources.loaders.PyPDFLoader")
     pdf_loader_cls.return_value.load.return_value = [MagicMock(page_content="Doc text")]
 
     result = load_document("/tmp/foo.pdf")
@@ -76,7 +76,7 @@ def test_grapher_returns_graph_documents(mocker):
     """grapher(graph, llm_transformer, file_path) loads docs then passes them through
     llm_transformer.convert_to_graph_documents."""
     mocker.patch(
-        "app.services.data_sources.orchestrator.load_document",
+        "app.services.data_sources.loaders.load_document",
         return_value=[MagicMock(page_content="some content")],
     )
     transformer = MagicMock()
@@ -93,11 +93,11 @@ def test_process_prospect_list_returns_dataframe_rows(mocker):
     """process_prospect_list(file_path) parses CSV/Excel into dict rows."""
     import pandas as pd
     df = pd.DataFrame([{"company": "Acme", "stage": "Initial"}])
-    mock_read_csv = mocker.patch("app.services.data_sources.orchestrator.pd.read_csv", return_value=df)
+    mock_read_csv = mocker.patch("app.services.data_sources.loaders.pd.read_csv", return_value=df)
     # score_prospect is imported lazily inside process_prospect_list; stub it out
     mocker.patch("app.services.graph_chat.score_prospect", return_value={})
     # query() calls Neo4j driver.session() — stub the local binding in documents
-    mocker.patch("app.services.data_sources.orchestrator.query", return_value=None)
+    mocker.patch("app.services.data_sources.loaders.query", return_value=None)
 
     driver = MagicMock()
     llm = MagicMock()
@@ -112,7 +112,7 @@ def test_upload_file_text_uploads_to_s3(mocker, tmp_path):
     Stub grapher so no LLM or Neo4j I/O occurs; verify the function completes."""
     test_file = tmp_path / "test.txt"
     test_file.write_text("file content")
-    mock_grapher = mocker.patch("app.services.data_sources.orchestrator.grapher", return_value=None)
+    mock_grapher = mocker.patch("app.services.data_sources.loaders.grapher", return_value=None)
     graph = MagicMock()
     transformer = MagicMock()
 
@@ -128,7 +128,7 @@ def test_upload_prospect_list_file_uploads_to_s3(mocker, tmp_path):
     test_file.write_text("col1,col2\nA,B\n")
     # Stub the internals so no real CSV/Neo4j processing runs
     mocker.patch(
-        "app.services.data_sources.orchestrator.process_prospect_list",
+        "app.services.data_sources.loaders.process_prospect_list",
         return_value={"message": "1 new prospects added."},
     )
     driver = MagicMock()
