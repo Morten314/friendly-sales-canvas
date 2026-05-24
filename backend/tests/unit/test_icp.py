@@ -106,9 +106,9 @@ def test_list_icps_returns_cached_when_no_refresh(mocker, mock_mongo_client):
         "icps": {"suggestedICPs": [{"id": TEST_ICP_ID_1, "title": "Cached"}]},
     }
     mock_mongo_client["Profiler"].__getitem__.return_value = coll
-    mocker.patch("app.services.icp._ensure_icp_indexes")
+    mocker.patch("app.services.icp.orchestrator._ensure_icp_indexes")
     mocker.patch(
-        "app.services.icp._reserve_unique_icp_id", return_value=TEST_ICP_ID_1,
+        "app.services.icp.orchestrator._reserve_unique_icp_id", return_value=TEST_ICP_ID_1,
     )
 
     items, total = list_icps(MagicMock(), mock_mongo_client, MagicMock(), TEST_USER_ID, refresh=False)
@@ -124,7 +124,7 @@ def test_list_icps_raises_when_no_company_profile_for_refresh(
     coll = MagicMock()
     coll.find_one.return_value = None
     mock_mongo_client["Profiler"].__getitem__.return_value = coll
-    mocker.patch("app.services.icp._ensure_icp_indexes")
+    mocker.patch("app.services.icp.orchestrator._ensure_icp_indexes")
     mock_session.run.return_value.single.return_value = None  # no company profile
 
     with pytest.raises(CompanyProfileNotFoundError):
@@ -154,7 +154,7 @@ def test_run_icp_research_groq_happy_path(
     captured = load_captured("icp_research_icp_summary_groq")
     fake_fn = MagicMock(return_value=captured)
     mocker.patch.dict(
-        "app.services.icp.ICP_FUNCTIONS",
+        "app.services.icp.orchestrator.ICP_FUNCTIONS",
         {"icp summary & market opportunity": fake_fn},
     )
     mock_session.run.return_value.single.return_value = _make_company_record()
@@ -185,7 +185,7 @@ def test_run_icp_research_claude_happy_path(
     the underlying icp_research_N at call time, so patching the module
     attr works here (unlike the direct-ref Groq dict above)."""
     captured = load_captured("icp_research_icp_buyer_map_claude")
-    mocker.patch("app.services.icp.icp_research_2", return_value=captured)
+    mocker.patch("app.services.icp.orchestrator.icp_research_2", return_value=captured)
     mock_session.run.return_value.single.return_value = _make_company_record()
     coll = MagicMock()
     coll.find_one.return_value = None
@@ -234,7 +234,7 @@ def test_delete_recommended_icp_raises_when_config_missing(
     coll = MagicMock()
     coll.find_one.return_value = None
     mock_mongo_client["Profiler"].__getitem__.return_value = coll
-    mocker.patch("app.services.icp._ensure_icp_indexes")
+    mocker.patch("app.services.icp.orchestrator._ensure_icp_indexes")
 
     with pytest.raises(ICPConfigNotFoundError):
         delete_recommended_icp(mock_mongo_client, TEST_ICP_ID_1, TEST_USER_ID)
@@ -249,7 +249,7 @@ def test_delete_recommended_icp_raises_when_icp_not_in_payload(
         "icps": {"suggestedICPs": [{"id": TEST_ICP_ID_2}]},
     }
     mock_mongo_client["Profiler"].__getitem__.return_value = coll
-    mocker.patch("app.services.icp._ensure_icp_indexes")
+    mocker.patch("app.services.icp.orchestrator._ensure_icp_indexes")
 
     with pytest.raises(RecommendedICPNotFoundError):
         delete_recommended_icp(mock_mongo_client, TEST_ICP_ID_1, TEST_USER_ID)
@@ -267,8 +267,8 @@ def test_delete_recommended_icp_happy_path(mocker, mock_mongo_client):
         },
     }
     mock_mongo_client["Profiler"].__getitem__.return_value = coll
-    mocker.patch("app.services.icp._ensure_icp_indexes")
-    release_mock = mocker.patch("app.services.icp._release_icp_id")
+    mocker.patch("app.services.icp.orchestrator._ensure_icp_indexes")
+    release_mock = mocker.patch("app.services.icp.orchestrator._release_icp_id")
 
     result = delete_recommended_icp(mock_mongo_client, TEST_ICP_ID_1, TEST_USER_ID)
 
