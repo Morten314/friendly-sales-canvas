@@ -20,9 +20,9 @@ from app.models.documents import (
     ListUserDocumentsResponse,
     MessageResponse,
 )
-from app.services import documents as documents_service
+from app.services import data_sources as data_sources_service
 
-router = APIRouter(tags=["documents"])
+router = APIRouter(tags=["data_sources"])
 
 
 @router.post("/upload_file/", response_model=MessageResponse)
@@ -34,7 +34,7 @@ async def upload_document(
     file_path = f"uploaded_{file.filename}"
     with open(file_path, "wb") as f:
         f.write(file.file.read())
-    return documents_service.upload_file_text(graph, llm_transformer, file_path, file.filename)
+    return data_sources_service.upload_file_text(graph, llm_transformer, file_path, file.filename)
 
 
 @router.post('/upload', response_model=MessageResponse)
@@ -46,7 +46,7 @@ async def upload_prospect_list(
     file_path = f"/tmp/{file.filename}"
     with open(file_path, 'wb') as buffer:
         shutil.copyfileobj(file.file, buffer)
-    return documents_service.upload_prospect_list_file(driver, llm, file_path)
+    return data_sources_service.upload_prospect_list_file(driver, llm, file_path)
 
 
 # Response shape varies by code path (plain dict vs JSONResponse); annotation deferred.
@@ -71,7 +71,7 @@ async def upload_document_route(
         file_content = await file.read()
         file_filename = file.filename
         file_content_type = file.content_type
-    return await documents_service.upload_document_file(
+    return await data_sources_service.upload_document_file(
         mongo,
         s3,
         pinecone,
@@ -90,7 +90,7 @@ async def upload_document_route(
 
 @router.get("/document-status/{file_key:path}", response_model=DocumentStatusResponse)
 async def get_document_status(file_key: str, mongo=Depends(get_mongo)):
-    return await documents_service.get_document_status(mongo, file_key)
+    return await data_sources_service.get_document_status(mongo, file_key)
 
 
 @router.get("/user-documents", response_model=ListUserDocumentsResponse)
@@ -105,7 +105,7 @@ async def get_user_documents(
     """
     response.headers["Deprecation"] = "true"
     response.headers["Link"] = '</api/v2/user-documents>; rel="successor-version"'
-    items, _ = await documents_service.list_user_documents(mongo, org_id)
+    items, _ = await data_sources_service.list_user_documents(mongo, org_id)
     return {"status": "success", "count": len(items), "files": items}
 
 
@@ -116,7 +116,7 @@ async def delete_data_source(
     s3=Depends(get_s3),
     pinecone=Depends(get_pinecone),
 ):
-    return await documents_service.delete_data_source(mongo, s3, pinecone, file_id)
+    return await data_sources_service.delete_data_source(mongo, s3, pinecone, file_id)
 
 
 @router.put("/data-source/{file_id}", response_model=DataSourceUpdateResponse)
@@ -125,4 +125,4 @@ async def update_data_source(
     request: dict = Body(...),
     mongo=Depends(get_mongo),
 ):
-    return await documents_service.update_data_source(mongo, file_id, request)
+    return await data_sources_service.update_data_source(mongo, file_id, request)

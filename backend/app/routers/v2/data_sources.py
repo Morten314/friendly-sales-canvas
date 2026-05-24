@@ -3,9 +3,9 @@ from fastapi import APIRouter, Depends, Query
 from app.core.dependencies import get_mongo
 from app.models import PaginatedResponse
 from app.models.documents import UserDocumentEntry
-from app.services.documents import list_user_documents
+from app.services.data_sources import list_user_documents
 
-router = APIRouter(prefix="/user-documents", tags=["v2", "documents"])
+router = APIRouter(prefix="/user-documents", tags=["v2", "data_sources"])
 
 
 @router.get("", response_model=PaginatedResponse[UserDocumentEntry])
