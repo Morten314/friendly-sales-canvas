@@ -1,7 +1,7 @@
 # Backend Modularization Phase I — Phase H Deferrals: Shared LLM Helpers, Signals Decomposition, Cleanup
 
 **Date:** 2026-05-24
-**Status:** Draft — round-2 review applied; ready for implementation
+**Status:** Draft — round-2 review applied + plan-writing gap closed; ready for implementation
 **Branch (planned):** `refactor-backend-modularization-phase-i` off `master` (Phase H merged at commit `55a5c3a`)
 **Predecessors:** Phase H (`/specs/2026-05-23-backend-service-decomposition-phase-h-design.md`) and prior phases A-G.
 
@@ -26,7 +26,7 @@ This is structurally a no-op move: signatures, response shapes, and route paths 
 ### 2.1 In scope
 
 1. **Two shared helpers added to `_llm_helpers.py`:**
-   - `_research_agent_output(agent_chain, prompt, seed_text, llm_backend, search_query_template, extract_intermediate_urls=False) -> tuple[str, list[str]]` — unifies the Groq-vs-Claude dispatch pattern used by all three research services. The `search_query_template` must contain a literal `{seed}` placeholder; the helper substitutes it via `str.format(seed=...)` with the first 1200 chars of whitespace-normalized `seed_text`.
+   - `_research_agent_output(agent_chain, prompt, seed_text, llm_backend, search_query_template, claude_prompt_suffix_template="\n\nWEB SEARCH RESULTS:\n{web_ctx}\n", extract_intermediate_urls=False) -> tuple[str, list[str]]` — unifies the Groq-vs-Claude dispatch pattern used by all three research services. The `search_query_template` must contain a literal `{seed}` placeholder; the helper substitutes it via `str.format(seed=...)` with the first 1200 chars of whitespace-normalized `seed_text`. The `claude_prompt_suffix_template` must contain a literal `{web_ctx}` placeholder; the helper appends it to `prompt` after substituting the Tavily context. Default matches signals' framing; icp and market_research pass custom triple-quoted templates to preserve their per-service framing byte-identically. This 7th parameter was added during plan-writing after the initial spec missed the 3 services' divergent Claude-prompt framings — without it, two services would silently change their LLM input.
    - `_extract_research_json(response, escape_keys=("description",), trim_braces=False, strip_final_answer=False) -> dict` — promoted from `icp/parsing.py::_extract_icp_json` (already generic-shaped). Per-key escape rule matches icp's current behavior: escape `\n`/`\r` inside matched values, not `"`. Signals' historical quote-escaping is removed as the unification decision (see §1).
 
 2. **Per-service wrappers preserved** (~6-15 LOC each) for the three services. The wrappers hardcode service-specific configuration (search query template, escape keys, URL extraction). They keep `mocker.patch("app.services.<svc>.llm._<svc>_agent_output")` strings working — the §3.7 Phase H "patch where it's used" discipline applies.
@@ -96,28 +96,46 @@ def _signals_agent_output(agent_chain, prompt, company_profile_seed, llm_backend
 ```
 
 ```python
-# icp/llm.py — post-Phase-I, ~12 LOC total
+# icp/llm.py — post-Phase-I, ~16 LOC total
 from app.services._llm_helpers import _research_agent_output
+
+_ICP_CLAUDE_SUFFIX = """
+
+WEB SEARCH RESULTS (primary external evidence — synthesize with company profile and ICP card):
+{web_ctx}
+"""
+
 
 def _icp_research_agent_output(agent_chain, prompt, pre_data, llm_backend):
     text, _ = _research_agent_output(
         agent_chain, prompt, pre_data, llm_backend,
         search_query_template="ICP buyer persona pain points buying triggers competitors compliance 2026 {seed}",
+        claude_prompt_suffix_template=_ICP_CLAUDE_SUFFIX,
     )
     return text
 ```
 
 ```python
-# market_research/llm.py — post-Phase-I, ~12 LOC total
+# market_research/llm.py — post-Phase-I, ~16 LOC total
 from app.services._llm_helpers import _research_agent_output
+
+_MARKET_RESEARCH_CLAUDE_SUFFIX = """
+
+WEB SEARCH RESULTS (primary external evidence — synthesize with company profile):
+{web_ctx}
+"""
+
 
 def _market_research_agent_output(agent_chain, prompt, company_profile_json, llm_backend):
     text, _ = _research_agent_output(
         agent_chain, prompt, company_profile_json, llm_backend,
         search_query_template="market research industry trends data 2026 {seed}",
+        claude_prompt_suffix_template=_MARKET_RESEARCH_CLAUDE_SUFFIX,
     )
     return text
 ```
+
+Signals' wrapper does not pass `claude_prompt_suffix_template` because the default already matches signals' framing (`"\n\nWEB SEARCH RESULTS:\n{web_ctx}\n"`).
 
 **Parsing adapters** (mirror the agent_output wrapper shape):
 
@@ -373,3 +391,7 @@ After every commit (1-11):
   - **Deferred (no spec change):** quote-escaping empirical justification — logged as post-Phase-I audit task (30-day production log grep). Trigger: any signals-parsing incident OR routine audit.
   - **Severity disagreements (no spec change):** test-count "236" already verified by post-merge `pytest -q` (master commit `55a5c3a`); spec status line self-referentially correct and updated naturally.
   - Status line updated: "Draft — round-2 review applied; ready for implementation". Branch reference notes Phase H merged at `55a5c3a`.
+- **2026-05-24, plan-writing gap closure** — during plan-writing for `plans/modularization-plan-9.md`, discovered that the 3 research services use 3 different Claude-prompt augmentation framings (signals: simple newline-separated; icp: triple-quoted with "synthesize with company profile and ICP card"; market_research: triple-quoted with "synthesize with company profile"). The round-0/1/2 spec signature for `_research_agent_output` had 6 parameters — none accommodating per-service Claude-prompt framing. Without this, two of the three services would have changed their LLM input as a side effect of the I-A consolidation — an unintended behavior change neither the spec nor the round-2 review committed to. Changes:
+  - **§2.1 item 1:** added 7th parameter `claude_prompt_suffix_template` with default `"\n\nWEB SEARCH RESULTS:\n{web_ctx}\n"` (matches signals' framing); icp and market_research wrappers pass custom triple-quoted templates.
+  - **§3.2 wrapper code blocks:** updated icp and market_research blocks to define `_ICP_CLAUDE_SUFFIX` / `_MARKET_RESEARCH_CLAUDE_SUFFIX` constants and pass them. Added one-line note that signals' wrapper relies on the default. Per-service `llm.py` LOC estimate widened from "~12" to "~16" for icp and market_research (the suffix constants add ~4 LOC each).
+  - No round-3 review triggered: this is a signature parameter addition that preserves all current behavior byte-identically. The change closes a spec gap, doesn't open new design surface.
