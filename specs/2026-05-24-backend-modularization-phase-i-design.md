@@ -1,8 +1,8 @@
 # Backend Modularization Phase I — Phase H Deferrals: Shared LLM Helpers, Signals Decomposition, Cleanup
 
 **Date:** 2026-05-24
-**Status:** Draft — round-1 review applied; awaiting round-2 spec review
-**Branch (planned):** `refactor-backend-modularization-phase-i` off `master` (after Phase H merges)
+**Status:** Draft — round-2 review applied; ready for implementation
+**Branch (planned):** `refactor-backend-modularization-phase-i` off `master` (Phase H merged at commit `55a5c3a`)
 **Predecessors:** Phase H (`/specs/2026-05-23-backend-service-decomposition-phase-h-design.md`) and prior phases A-G.
 
 ---
@@ -136,6 +136,8 @@ _extract_icp_json = _extract_research_json
 # market_research/parsing.py — post-Phase-I, ~4 LOC
 # Module-import to avoid name shadow (the local function and the shared helper
 # both want the name _extract_research_json).
+# Behavior is byte-identical to current implementation: same fence-stripping,
+# same escape_keys=("description",) default, no trim_braces, no strip_final_answer.
 from app.services import _llm_helpers
 
 def _extract_research_json(raw_response):
@@ -166,12 +168,14 @@ backend/app/services/signals/
 ├── __init__.py          # re-exports 8 public symbols
 ├── prompts.py           # (unchanged from Phase H, 328 LOC)
 ├── llm.py               # _signals_agent_output adapter (~15 LOC)
-├── parsing.py           # _parse_search_signals_response adapter + _validate_url (~50 LOC)
-├── persistence.py       # all Mongo helpers + fetch_signals (renamed from _load_signals_for_user) (~181 LOC, no net change)
+├── parsing.py           # _parse_search_signals_response adapter + _validate_url + _normalize_search_signals_result (~80-90 LOC)
+├── persistence.py       # all Mongo helpers + fetch_signals (renamed from _load_signals_for_user) (~181-185 LOC, rename + docstring refresh)
 ├── search.py            # search_signals + run_signals_research (~255 LOC)   NEW
 ├── batch.py             # generate_signals_batch + _claude + _impl (~190 LOC) NEW
 └── ask.py               # signal_ask + signal_ask_claude (~240 LOC)           NEW
 ```
+
+`_normalize_search_signals_result` (38 LOC, currently in parsing.py, called by `search_signals` after `_parse_search_signals_response`) stays in parsing.py — keeps parsing-related logic co-located. `search.py` imports it from `.parsing` alongside `_parse_search_signals_response` and `_validate_url`.
 
 `orchestrator.py` is deleted — there's no multi-step cross-submodule composition that needs an orchestrator tier. Same conclusion data_sources/ reached at Phase H commit 7/20.
 
@@ -193,6 +197,13 @@ from app.services.signals import search
 # inside _generate_signals_batch_impl
 signals_result = await asyncio.to_thread(search.search_signals, agent_chain, pre_data, "scout", llm_backend)
 ```
+
+**External (cross-package) imports not shown in the intra-signals graph above:**
+- `search.py` → `app.services._retrieval` (signal-context helpers like `_build_signal_context_queries`, `_fetch_pinecone_supporting_context`)
+- `batch.py` → `app.services._retrieval` (via the same helpers used by search.py path)
+- `ask.py` → `app.services._claude_budget` (budget helpers, `CLAUDE_API_KEY`), `requests` (Claude HTTP calls)
+
+These cross-package edges are the source of the ~16 imported-symbol patch targets referenced in §5.4 that move with their importing function.
 
 ### 3.5 Public surface (signals/__init__.py)
 
@@ -216,7 +227,7 @@ Docstring rewritten post-commit-8 to describe final form (no intermediate-state 
 
 ### 3.6 Module rename (D-1)
 
-`backend/app/models/documents.py` → `backend/app/models/data_sources.py`. `git mv` preserves blame. The module's 5 Pydantic classes (`DataSourceDeleteResponse`, `DataSourceUpdateResponse`, `DocumentStatusResponse`, `ListUserDocumentsResponse`, `MessageResponse`, plus `UserDocumentEntry` referenced by v2 router) stay named as-is. Two import sites updated atomically in the same commit.
+`backend/app/models/documents.py` → `backend/app/models/data_sources.py`. `git mv` preserves blame. The module's 8 Pydantic classes (`MessageResponse`, `UploadDocumentResponse`, `DocumentStatusData`, `DocumentStatusResponse`, `UserDocumentEntry`, `ListUserDocumentsResponse`, `DataSourceDeleteResponse`, `DataSourceUpdateResponse`) stay named as-is. `UploadDocumentResponse` and `DocumentStatusData` are internal to the module (`DocumentStatusData` is the field type for `DocumentStatusResponse.data`; `UploadDocumentResponse` has no external imports). Two external import sites updated atomically in the same commit: `routers/data_sources.py:16` and `routers/v2/data_sources.py:5`.
 
 ### 3.7 Patch discipline (carries over from Phase H §3.7-3.8)
 
@@ -245,9 +256,9 @@ Single sequence, 11 commits, branch `refactor-backend-modularization-phase-i`.
 | # | Commit | Effect |
 |---|---|---|
 | 4 | `refactor(be): rename _load_signals_for_user → fetch_signals (public) in persistence.py [phase I, 4/11]` | The orchestrator's `fetch_signals` was already a one-line wrapper around `persistence._load_signals_for_user`. Rename `_load_signals_for_user` to public `fetch_signals` in `persistence.py`; drop the orchestrator wrapper; update `__init__.py` re-export to point at `persistence.fetch_signals`. Smallest commit — verifies the pattern. |
-| 5 | `refactor(be): extract signals/search.py [phase I, 5/11]` | Move `search_signals` + `run_signals_research` out of orchestrator. orchestrator's other functions (still resident) switch to module-import (`from . import search; search.search_signals(...)`). `__init__.py` + test patch-path updates. |
+| 5 | `refactor(be): extract signals/search.py [phase I, 5/11]` | Move `search_signals` + `run_signals_research` out of orchestrator. `search.py` imports `_parse_search_signals_response`, `_validate_url`, `_normalize_search_signals_result` from `.parsing` and `_fetch_pinecone_supporting_context` (and related) from `app.services._retrieval`. orchestrator's other functions (still resident) switch to module-import (`from . import search; search.search_signals(...)`). `__init__.py` + test patch-path updates (including `_fetch_pinecone_supporting_context` retargeting from `orchestrator` to `search`). |
 | 6 | `refactor(be): extract signals/batch.py [phase I, 6/11]` | Move `_generate_signals_batch_impl` + 2 wrappers out. `batch.py` uses module-import for search. `__init__.py` + test patch-path updates. |
-| 7 | `refactor(be): extract signals/ask.py [phase I, 7/11]` | Move `signal_ask` + `signal_ask_claude` out. No new cross-submodule deps. `__init__.py` + test patch-path updates. |
+| 7 | `refactor(be): extract signals/ask.py [phase I, 7/11]` | Move `signal_ask` + `signal_ask_claude` out. `ask.py` imports `_reserve_claude_signal_budget`, `_finalize_claude_signal_budget`, `_estimate_token_count`, `CLAUDE_API_KEY` from `app.services._claude_budget` and `requests` directly. No new intra-signals cross-submodule deps. `__init__.py` + test patch-path updates including the 4 budget/Claude patches and `requests.post` retargeting from `orchestrator` to `ask`. |
 | 8 | `refactor(be): delete empty signals/orchestrator.py [phase I, 8/11]` | orchestrator.py is empty by now. Delete the file. Rewrite `__init__.py` docstring for final form. |
 
 ### 4.3 Sub-sequence I-D (commits 9-11) — cleanup
@@ -301,7 +312,15 @@ grep -rn 'app\.services\.signals\.orchestrator\.signal_ask' backend/tests/
 
 Each hit is a `mocker.patch(...)` string target that needs to retarget the new submodule home in the same commit as the move.
 
-**Catch-all (run after each commit 4-7, not only commit 8)**: `grep -rn "app\.services\.signals\.orchestrator" backend/` — any non-zero hit means a stale reference slipped through the per-symbol greps above. Catching this per-commit instead of only at commit 8 prevents stragglers from compounding across the I-C sub-sequence.
+**These per-symbol greps cover the moved public functions only — they are NOT the authoritative completeness check.** The catch-all grep below is. Imported symbols that move with their importing function also require retargeting:
+
+- With `search_signals` → `search.py` (commit 5): `_fetch_pinecone_supporting_context` (~7 test patches), plus any other `app.services._retrieval` symbols imported into search_signals' body.
+- With `signal_ask_claude` → `ask.py` (commit 7): `_reserve_claude_signal_budget`, `_finalize_claude_signal_budget`, `_estimate_token_count`, `CLAUDE_API_KEY` (~10 test patches combined), `requests.post` (~2 test patches).
+- With `_generate_signals_batch_impl` → `batch.py` (commit 6): inherits from search's `_retrieval` patches if batch's code path touches them; verify via the catch-all.
+
+Roughly ~16 test patch strings beyond the ~4 public-function patches need retargeting across commits 5-7.
+
+**Catch-all (authoritative, run after each commit 4-7, not only commit 8)**: `grep -rn "app\.services\.signals\.orchestrator" backend/` — any non-zero hit means a stale reference slipped through, whether public-function or imported-symbol. Catching this per-commit instead of only at commit 8 prevents stragglers from compounding across the I-C sub-sequence.
 
 ### 5.5 Post-commit verification
 
@@ -346,3 +365,11 @@ After every commit (1-11):
   - **Medium:** §5.4 extended with a catch-all `grep -rn "app\.services\.signals\.orchestrator" backend/` to run after each I-C commit (4-7), not only commit 8.
   - **Low:** §4 gained a commit-dependency paragraph explaining strict-sequential (1-3 and 4-8) vs independent (9, 11) vs dependent (10 → 2). §3.1 module docstring expanded to document the per-service `escape_keys`/`trim_braces`/`strip_final_answer` conventions (the icp alias doesn't carry its own). §3.3 + §4.2 commit 4 changed from "move fetch_signals" to "rename `_load_signals_for_user` → public `fetch_signals` in persistence" (avoids wrapper-to-a-wrapper).
   - **Severity disagreements (no spec change):** intermediate `__init__.py` docstring drift kept at the §6 R3 mitigation level (rewrite at commit 8 only). Phase H spec header hygiene noted but not a Phase I prerequisite.
+- **2026-05-24, round 2** — applied round-2 spec-review synthesis (`docs/reviews/2026-05-24-backend-modularization-phase-i-design-spec-synthesis-2.md`). Changes:
+  - **High:** §3.3 and §4.2 commit 5 now name `_normalize_search_signals_result` (38 LOC, parsing.py) and its destination (stays in parsing.py, imported by search.py). parsing.py LOC estimate updated "~50" → "~80-90".
+  - **High:** §5.4 reorganized — per-symbol greps explicitly demoted to non-authoritative; catch-all grep marked as the completeness check; added enumeration of ~16 imported-symbol patch targets that move with their importing function (`_fetch_pinecone_supporting_context` with search.py; budget helpers + `CLAUDE_API_KEY` + `requests.post` with ask.py). §4.2 commits 5 and 7 updated to mention these imports.
+  - **Medium:** §3.6 class enumeration corrected — `models/documents.py` has 8 classes, not 5. Added the 2 missing (`UploadDocumentResponse`, `DocumentStatusData`) with a note confirming they're internal-only (no external import sites). §3.2 market_research adapter gained a byte-identity confirmation comment.
+  - **Low:** §3.4 gained an "External (cross-package) imports" note pointing at `_retrieval`, `_claude_budget`, `requests` as the source of the ~16 imported-symbol patches. §3.3 persistence.py LOC estimate widened to "~181-185 (rename + docstring refresh)".
+  - **Deferred (no spec change):** quote-escaping empirical justification — logged as post-Phase-I audit task (30-day production log grep). Trigger: any signals-parsing incident OR routine audit.
+  - **Severity disagreements (no spec change):** test-count "236" already verified by post-merge `pytest -q` (master commit `55a5c3a`); spec status line self-referentially correct and updated naturally.
+  - Status line updated: "Draft — round-2 review applied; ready for implementation". Branch reference notes Phase H merged at `55a5c3a`.
