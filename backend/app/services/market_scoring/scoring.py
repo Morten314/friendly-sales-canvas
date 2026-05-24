@@ -70,8 +70,7 @@ def _run_market_scoring_for_org(driver, mongo, llm2, user_id: str, org_id: str, 
             {"$set": {"status": "processing", "started_at": now_iso, "updated_at": now_iso}},
         )
 
-        leads, _ = get_leads_for_org(driver, org_id=org_id, limit=5000, offset=0)
-        total_leads = len(leads)
+        leads, total_leads = get_leads_for_org(driver, org_id=org_id, limit=5000, offset=0)
         if not leads:
             run_coll.update_one(
                 {"run_id": run_id},

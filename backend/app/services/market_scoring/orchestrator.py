@@ -171,8 +171,7 @@ def get_market_scores_status(
         # Neo4j hiccups. total_leads=0 yields a progress_percent of 0 — UI
         # shows "no progress" rather than a hard 500.
         try:
-            leads, _ = get_leads_for_org(driver, org_id=org_id, limit=5000, offset=0)
-            total_leads = len(leads)
+            leads, total_leads = get_leads_for_org(driver, org_id=org_id, limit=5000, offset=0)
         except Exception as e:
             logger.warning(
                 "Could not fetch leads for scoring status (org_id=%s): %s; defaulting total_leads=0",

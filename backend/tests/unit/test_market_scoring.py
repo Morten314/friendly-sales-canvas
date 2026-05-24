@@ -49,7 +49,7 @@ def test_get_market_scores_status_returns_status(mocker, mock_mongo_client):
     )
     mocker.patch(
         "app.services.market_scoring.orchestrator.get_leads_for_org",
-        return_value=[{"lead_id": "L1"}, {"lead_id": "L2"}],
+        return_value=([{"lead_id": "L1"}, {"lead_id": "L2"}], 2),
     )
 
     result = get_market_scores_status(MagicMock(), mock_mongo_client, TEST_USER_ID, TEST_ORG_ID, None, 10)

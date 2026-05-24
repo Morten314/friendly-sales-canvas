@@ -2,7 +2,7 @@
 
 Running list of debt items the team has consciously accepted. Each entry: what was done, what should be done, why we deferred, and the trigger that should pull it forward.
 
-Numbering is preserved across resolutions — TD-001/002/003 (resolved by Phases E and F) were removed on 2026-05-23; their IDs are not reused so commit/spec references stay traceable.
+Numbering is preserved across resolutions — TD-001/002/003 (resolved by Phases E and F) were removed on 2026-05-23; their IDs are not reused so commit/spec references stay traceable. TD-006 (market_scoring callers recomputing len(leads)) was resolved 2026-05-24 by Phase H Task 4.
 
 ---
 
@@ -72,47 +72,6 @@ Option 1 is one character of code; option 2 is two lines of prose. v1 is being d
 - Any FE bug ticket mentioning "we have N documents in S3 but the dashboard says 500."
 
 **Owner:** TBD (likely whoever wires the FE to v2 first).
-
----
-
-## TD-006 — `market_scoring.py` callers recompute `len(leads)` instead of using the returned `total`
-
-**Date logged:** 2026-05-23
-**Origin:** Phase G code review on Task 7 (`feat(be): add /v2/leads + /v2/leads/by-file paginated endpoints + drop order_by_recent [phase G, commit 7/8]`).
-
-**Current state:**
-Both callers of `get_leads_for_org` in `backend/app/services/market_scoring.py` (lines ~404 and ~690) discard `total` and recompute it from the page:
-
-```python
-leads, _ = get_leads_for_org(driver, org_id=org_id, limit=5000, offset=0)
-total_leads = len(leads)
-```
-
-`get_leads_for_org` already runs a second Cypher query (`MATCH (l:Lead {org_id: $org_id}) RETURN count(l) AS total`) and returns the true count in the tuple. Recomputing via `len(leads)` is identical at ≤5000 leads, but for orgs with >5000 leads it under-reports the total — and even at smaller sizes it forces deserializing every record server-side just to length-check it.
-
-**What it should be:**
-```python
-leads, total_leads = get_leads_for_org(driver, org_id=org_id, limit=5000, offset=0)
-```
-
-Two-character change at each callsite. Eliminates the wasted deserialization at small sizes and the under-reporting at large sizes.
-
-**Why we deferred:**
-- The plan (`plans/modularization-plan-7.md` Task 7 Step 5) specifies the `_; total_leads = len(leads)` form verbatim. Following it preserved review-trace consistency with the plan's text.
-- The semantic difference only matters at orgs >5000 leads, which doesn't exist in MVP-stage data (0 live users).
-- The `len(leads)` form is correct for the immediate use — progress-display denominator in a background scoring task that processes those exact leads. The "real total" wouldn't change the loop's behavior.
-
-**What we lose by staying as-is:**
-- Slight efficiency loss: count is computed twice (once via Cypher inside the service, once via `len()` in the caller).
-- If org-size grows past 5000, `total_leads` becomes misleading — it caps at 5000 while the org has more.
-- Future readers who see the discarded `_` may copy-paste the pattern elsewhere without realizing the total was free.
-
-**Pull-forward triggers:**
-- First org reaching >5000 leads (will require lifting the `limit=5000` cap regardless — fix the tuple-unpack at the same time).
-- Any market-scoring progress-bar UX work that needs a denominator larger than the current page.
-- Routine cleanup pass on `market_scoring.py`.
-
-**Owner:** TBD.
 
 ---
 
