@@ -15,11 +15,11 @@ Phase H converts the five remaining large service files into per-domain packages
 
 The `documents.py` package is renamed to `data_sources/` to disambiguate from project documentation. Routers, test files, and the public-API symbol surface get the same rename. HTTP route paths (`/user-documents`, `/document/*`, `/delete-data-source`) are **unchanged** — they're FE contracts.
 
-This is a pure structural move: zero changes to behavior, signatures, response shapes, route paths, or test assertions. After this phase prompts are isolated to their own modules (paving the way for Option D — prompt externalization), and the codebase has clean seams for future work on JWT/CORS/Cypher hardening.
+This is a structural move: zero changes to behavior, signatures, response shapes, route paths, or test assertions. After this phase prompts are isolated to their own modules (paving the way for Option D — prompt externalization), and the codebase has clean seams for future work on JWT/CORS/Cypher hardening.
 
 Free side-effect: closes TD-006 (`market_scoring.py` callers recomputing `len(leads)` instead of using returned `total`) as a two-character fix folded into the `market_scoring/` extraction commit.
 
-Test count holds at 236 (the Phase G end-state baseline observed post-merge). No new tests this phase; current tests cover the public surface and migrate transparently via `__init__.py` re-exports.
+Test count holds at 236 (the Phase G end-state baseline observed post-merge). No new tests this phase, no tests removed. Test **assertions** are unchanged; test **patch-path strings** (the dotted-path argument to `mocker.patch(...)`) are edited in step with each structural move so the patches keep intercepting the same callsites — see §3.8 for the rationale and §4.2 for where the edits land. (This requirement is a round-3 revision added 2026-05-24 after execution at Task 1 surfaced the mock-semantics gap.)
 
 ---
 
@@ -61,7 +61,8 @@ Test count holds at 236 (the Phase G end-state baseline observed post-merge). No
 
 ### 2.3 Constraints
 
-- **Public API stability.** Every existing `from app.services.<domain> import <symbol>` keeps working byte-for-byte. This is the load-bearing invariant — routers and tests don't change because services migrated.
+- **Public API stability.** Every existing `from app.services.<domain> import <symbol>` keeps working byte-for-byte via `__init__.py` re-exports. This is the load-bearing invariant for non-test importers (routers, lifespan hooks, `customer_profile.py`, manual scripts).
+- **Test patch-path migration is in scope.** The `import` invariant above is necessary but not sufficient for test isolation. Tests that use `mocker.patch("app.services.<domain>.X")` must be edited to follow the symbol to its new submodule (`mocker.patch("app.services.<domain>.<submodule>.X")`) at the same commit that performs the move. This is *patch-where-it's-used* discipline (§3.8), not a behavior change — call counts, return values, and assertions remain identical.
 - **HTTP surface stability.** No route paths, no `response_model` types, no query/body params change.
 - **Per-commit greenness.** `BREWRA_SKIP_DB_INIT=1 python -m pytest -q` passes at every commit on the phase branch. Tests run in ~8s; full-suite per commit is the verification floor.
 - **No new dependencies.** Pure code-shape work.
@@ -233,6 +234,47 @@ The general rule (§2.1 item 4) is that `_`-prefixed helpers stay internal to th
 
 **Pre-flight check before scaffolding any service.** Run `grep -rn "from app.services.<domain> import _" backend/ tests/` for each service (replace `<domain>` with each of `signals`, `icp`, `market_research`, `documents`, `market_scoring`). Any new `_`-prefixed import surfaced gets added to this table before the corresponding service is decomposed.
 
+**Re-exports are about *findability*, not *interception*.** Listing a symbol in `__init__.py` makes `from app.services.<svc> import X` and `getattr(app.services.<svc>, "X")` succeed — which is what `mocker.patch(...)` needs to *locate* a patch target without an `AttributeError`. It does **not** redirect calls that internal package code makes to `X`. Python's function name resolution uses `function.__globals__` (the function's defining module's namespace) at call time, so a function defined in `orchestrator.py` that calls `X()` resolves the name through `orchestrator.py.__dict__` — never through `__init__.py`. A `mocker.patch("app.services.<svc>.X")` replaces the binding in the package's `__init__.py` only, and therefore does not intercept internal calls in `orchestrator.py` / `persistence.py` / etc.
+
+This was a misconception in the round-1 and round-2 spec text and is corrected here. The implication — that tests using `mocker.patch("app.services.<svc>.X")` will fail at scaffold-time even with the symbol re-exported — was confirmed empirically when Phase H execution halted at Task 1 (Sequence A scaffold broke 9 unit tests in `tests/unit/test_market_scoring.py` despite full re-exports). See §3.8 for the required migration pattern.
+
+### 3.8 Test patch-path migration — *patch where it's used*
+
+Concrete rule: at the same commit that moves a function's *definition* (or moves it into a *new* defining module within the package), every `mocker.patch` / `unittest.mock.patch` / `patch.object` string target that names that function via the package path is rewritten to name it via the new submodule path. No test is added; no test is removed; no assertion changes; no `Mock` configuration changes. Only the dotted path inside the patch's string argument moves.
+
+**Two phases of edits per service:**
+
+1. **Scaffold (move `services/<svc>.py` → `services/<svc>/orchestrator.py`).** At this commit, every patched symbol still lives in `orchestrator.py` (no extraction yet). Every `mocker.patch("app.services.<svc>.X")` becomes `mocker.patch("app.services.<svc>.orchestrator.X")`. This is a one-time bulk path-shift driven by the file rename.
+
+2. **Extraction (move N functions from `orchestrator.py` to `services/<svc>/<new-submodule>.py`).** For each symbol that moves at this commit, update its patch path: `mocker.patch("app.services.<svc>.orchestrator.X")` → `mocker.patch("app.services.<svc>.<new-submodule>.X")`. Patches for symbols that didn't move are left alone.
+
+**Symbols that are imported into the package from elsewhere** (e.g., `get_leads_for_org` is `from app.services.leads import get_leads_for_org` inside `market_scoring`'s orchestrator) follow the same rule: tests patch it at the orchestrator's path (`app.services.market_scoring.orchestrator.get_leads_for_org`) because that is the namespace where orchestrator.py looks it up. If the same import moves to a different submodule during an extraction commit, the patch path shifts with it.
+
+**Worked example — Sequence A.**
+
+| Commit | What moves | Test patch-path edits |
+|---|---|---|
+| Scaffold (`market_scoring.py` → `market_scoring/orchestrator.py`) | All 13 patched symbols stay in orchestrator | All `app.services.market_scoring.X` → `app.services.market_scoring.orchestrator.X`. Bulk find-and-replace in `tests/test_market_scoring.py` and `tests/unit/test_market_scoring.py`. |
+| Extract `persistence.py` | `_get_market_score_collections`, `_get_latest_market_score_rows`, `_get_latest_scoring_run`, `_get_lead_identity_from_neo4j`, `get_company_profile_for_org`, `_ensure_market_scoring_indexes` | For the six moved symbols, `app.services.market_scoring.orchestrator.X` → `app.services.market_scoring.persistence.X`. Other patches (e.g., `get_leads_for_org`, `_persist_market_score_for_lead`) stay at `.orchestrator.X`. |
+| Extract `normalization.py` + `scoring.py` | 9 normalization helpers + `_lead_to_score_row`, `_is_stale_queued_run`, `_run_market_scoring_for_org` | For symbols that any test patches, retarget to `.normalization.X` or `.scoring.X`. (Most normalization helpers are not patched in tests; check at execution time and skip the edit when the grep is empty.) |
+| TD-006 fix | No moves | No patch edits. |
+
+**Why edits land in the same commit as the move, not a follow-up commit.** Per-commit greenness (§2.3) is the safety net for the whole phase. If the move and the patch-path edit are split, the move-only commit is red (tests fail because patches don't intercept), violating the invariant. Bundling keeps every commit green; reviewers see the move + the path edits together, which makes the intent obvious. The diff stays small because patch-path changes are mechanical string substitutions, not test logic.
+
+**Pre-flight check before any service.** Run a broader inventory than §3.7's `_`-prefix grep:
+
+```bash
+# Find every string-based patch target across all test files for the service:
+grep -rnE '"app\.services\.<domain>\.' backend/tests/
+# Strip and dedupe to get the symbol list:
+grep -rnE '"app\.services\.<domain>\.' backend/tests/ \
+  | sed -E 's/.*"app\.services\.<domain>\.([^"]+)".*/\1/' | sort -u
+```
+
+The deduped list is the inventory of patch paths that will be edited at scaffold time. Compare against the actual symbol set in the source file to spot any mismatch (e.g., a typo'd patch path that referenced a symbol that doesn't exist).
+
+**Out of scope for §3.8.** Tests that *import* a symbol (`from app.services.<svc> import X` at the top of the test module) continue to work via the `__init__.py` re-export — no edit needed there. Tests that use `patch.object(some_obj, "method_name", ...)` are not affected because they target an object attribute, not a dotted path. Tests in `backend/tests/unit/test_<svc>.py` will receive the majority of the edits; `backend/tests/test_<svc>.py` files may receive a few as well.
+
 ---
 
 ## 4. Migration Strategy
@@ -253,13 +295,20 @@ While Python's import machinery allows both `services/<domain>.py` and `services
 
 ```
 1. Move service file into package: git mv services/<domain>.py services/<domain>/orchestrator.py;
-   create services/<domain>/__init__.py with full public-API re-exports against orchestrator.py.
+   create services/<domain>/__init__.py with full public-API re-exports against orchestrator.py;
+   bulk-rewrite all test patch paths from "app.services.<domain>.X" to
+   "app.services.<domain>.orchestrator.X" (§3.8 step 1).
    Tests must pass. (Use git mv to preserve git log --follow and git blame continuity.)
-2. extract persistence.py from orchestrator.py — lowest coupling, no caller signature changes
-3. extract prompts.py from orchestrator.py — LLM-driven services only; pure data, no behavior
-4. extract llm.py + parsing.py from orchestrator.py — LLM-driven services only
+2. extract persistence.py from orchestrator.py — lowest coupling, no caller signature changes;
+   retarget patches for moved symbols to "app.services.<domain>.persistence.X" (§3.8 step 2)
+3. extract prompts.py from orchestrator.py — LLM-driven services only; pure data, no behavior;
+   retarget any patches for moved symbols (typically none — prompts are constants, not patched)
+4. extract llm.py + parsing.py from orchestrator.py — LLM-driven services only;
+   retarget patches for moved symbols
 5. closeout (per-service variations):
    - data_sources/: rename router files + test files + main.py inclusion in same commit
+                    (test patch paths shift from "app.services.documents.*" to
+                     "app.services.data_sources.<submodule>.*" in the same commit)
    - market_scoring/: fold in TD-006 two-char fix in same commit
    - signals/: final cleanup pass
    - market_research/, icp/: no closeout commit needed
@@ -273,9 +322,9 @@ Each commit message follows the convention used in Phase G: `refactor(be): extra
 
 ### 4.3 Per-commit verification
 
-`cd backend && BREWRA_SKIP_DB_INIT=1 python -m pytest -q` from each commit's checkout. Full suite (~8s). The cost is trivial; full coverage at every commit gives confidence the structural move hasn't broken any caller.
+`cd backend && BREWRA_SKIP_DB_INIT=1 python -m pytest -q` from each commit's checkout. Full suite (~8s). The cost is trivial; full coverage at every commit gives confidence the structural move + patch-path migration hasn't broken any caller.
 
-No test removed unless the commit message explicitly justifies it; total count holds at ≥236 throughout the phase (Phase G end-state observed post-merge).
+No test removed unless the commit message explicitly justifies it; total count holds at ≥236 throughout the phase (Phase G end-state observed post-merge). Test files in `backend/tests/` *will* show diffs at every move commit — those diffs are the patch-path string substitutions described in §3.8. The assertions, fixtures, and mock configurations stay byte-for-byte unchanged.
 
 ---
 
@@ -289,9 +338,15 @@ A parser function may depend on prompt-specific knowledge of LLM output structur
 
 All four leaves (`prompts`, `llm`, `parsing`, `persistence`) are independent of each other; only `orchestrator.py` imports from them. No cycles possible if discipline holds. Risk surfaces only if a submodule reaches sideways. Mitigation: code review check, plus the test suite will fail with `ImportError` immediately on a bad import order.
 
-### 5.3 `__init__.py` re-export drift
+### 5.3 `__init__.py` re-export drift and patch-path drift
 
-Adding a symbol to a submodule but forgetting to re-export it in `__init__.py` produces an `ImportError` at the caller. Mitigation: every commit's diff explicitly lists which symbols re-exported; full test suite runs per commit and imports the public API the same way callers do — broken re-exports fail tests immediately. The §3.7 exception list is the authoritative reference for `_`-prefixed symbols that must be re-exported despite the underscore convention.
+Two related drift modes, both caught by per-commit pytest:
+
+1. **Re-export drift.** Adding a symbol to a submodule but forgetting to re-export it in `__init__.py` produces an `ImportError` at any external caller (router / lifespan / `customer_profile.py` / direct test import). The §3.7 exception list is the authoritative reference for `_`-prefixed symbols that must be re-exported despite the underscore convention.
+
+2. **Patch-path drift.** Moving a function to a new submodule but forgetting to retarget its `mocker.patch(...)` strings produces test failures of the form *"real function ran, mock not called"* (because the patch still names the old location; the patched namespace is no longer where the function actually lives). Symptom: tests assert on mock call counts or return values and fail with `AssertionError` or `TypeError` (real return value of wrong type/shape). The §3.8 patch-path migration discipline catches this — the move and the patch retarget are one commit, so a green commit guarantees both ends are consistent.
+
+Both modes are detected by the `pytest -q` gate at every commit. The §3.7 table covers external re-exports; §3.8 + the per-service pre-flight grep covers patch paths. Together they're the safety net for the structural move.
 
 **Known gap in automated coverage.** Two external consumers are not exercised by `pytest -q`:
 - `backend/tests/capture_fixtures.py` (manual capture script) imports `Research_Market_1..5`, `icp_research_1..4`, and `search_signals` from their service packages (lines 86, 108, 130).
@@ -314,7 +369,18 @@ Expected hit categories:
 - `app/routers/documents.py`, `app/routers/v2/documents.py` — router files (renamed).
 - `app/routers/documents.py:25`, `app/routers/v2/documents.py:8` — `tags=["documents"]` / `tags=["v2", "documents"]` (rename per §2.1 item 2).
 - `tests/test_documents.py`, `tests/test_documents_v2.py`, `tests/unit/test_documents.py` — test files (renamed).
-- Any `mocker.patch("app.services.documents.X")` strings inside test bodies.
+- Any `mocker.patch("app.services.documents.X")` strings inside test bodies — retarget to `app.services.data_sources.orchestrator.X` per §3.8 step 1 at the scaffold commit (atomic rename + scaffold lands all functions in `data_sources/orchestrator.py` first). Subsequent `data_sources/` extraction commits (loaders / pipeline / persistence) then move moved-symbol patches to their final submodule per §3.8 step 2.
+
+For non-renamed services, run the §3.8 broader patch-path inventory before scaffolding so the implementor knows the full list of strings to rewrite at commit-time:
+
+```bash
+# Inventory of all patch targets across both test directories, for each service:
+for svc in signals icp market_research market_scoring; do
+  echo "=== $svc ==="
+  grep -rnE "\"app\\.services\\.$svc\\." backend/tests/ \
+    | sed -E "s/.*\"app\\.services\\.$svc\\.([^\"]+)\".*/\\1/" | sort -u
+done
+```
 
 Verify the Mongo collection name (it's `user_documents`, not `documents` — the rename does not touch any database identifiers). Run full suite after; broken imports fail loud.
 
@@ -335,6 +401,7 @@ Phase F migrated services to receive `driver`, `mongo`, `pc`, `agent_chain` as e
 - HTTP routes, route paths, response models, query/body params: byte-for-byte unchanged.
 - `pytest -q` passes at every commit on the phase branch.
 - Test count holds at ≥236 throughout the phase. No test removed unless the commit message explicitly justifies it.
+- **Test patch-path strings reflect the post-phase module layout.** A post-phase grep `grep -rnE '"app\.services\.(signals|icp|market_research|data_sources|market_scoring)\.[a-zA-Z_]+"' backend/tests/` finds no hits that still target the *package* path — every match names a `<submodule>` (`orchestrator`, `persistence`, `prompts`, `llm`, `parsing`, `scoring`, `normalization`, `loaders`, `pipeline`). The only acceptable bare-package references are `from app.services.<svc> import X` import statements at the top of test modules — those exercise the `__init__.py` re-export and stay.
 - TD-006 is closed in `docs/TECH_DEBT.md` after the `market_scoring/` extraction.
 - No new files in `services/` root other than the four existing shared helpers (`_llm_helpers.py`, `_retrieval.py`, `_neo4j_helpers.py`, `_claude_budget.py`).
 - Each `__init__.py` contains only `from ... import` statements, an `__all__` list, and optionally a docstring — no executable logic. No `_`-prefixed symbol appears in `__all__` outside the §3.7 exception list.

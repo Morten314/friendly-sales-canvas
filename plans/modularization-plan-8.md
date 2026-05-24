@@ -4,7 +4,7 @@
 
 **Goal:** Convert five large service files (`signals.py` 1297 LOC, `icp.py` 1145 LOC, `market_research.py` 1016 LOC, `documents.py` 930 LOC, `market_scoring.py` 854 LOC) into per-domain packages under `services/<domain>/` split by concern (prompts / llm / parsing / persistence / orchestrator, with per-service deviations). Rename `documents/` → `data_sources/` package (including routers and test files; HTTP route paths unchanged). Close TD-006 as a side-effect of the `market_scoring/` decomposition.
 
-**Architecture:** Pure structural move. Every existing import path `from app.services.<domain> import <symbol>` keeps working byte-for-byte via `__init__.py` re-exports. Six `_`-prefixed helpers must be re-exported despite the underscore convention (enumerated in spec §3.7); these are imported by `app/main.py` lifespan, by `customer_profile.py` (lazy imports), and by unit tests. Each per-service decomposition is 3-5 commits: scaffold (`git mv` + `__init__.py`), then extract one submodule per commit. All commits are individually green: the full pytest suite (236 tests) passes at every commit on the branch.
+**Architecture:** Structural move + patch-path migration. Every existing import path `from app.services.<domain> import <symbol>` keeps working byte-for-byte via `__init__.py` re-exports — this covers all non-test importers (routers, lifespan hooks, `customer_profile.py`, manual scripts). Six `_`-prefixed helpers must be re-exported despite the underscore convention (enumerated in spec §3.7); these are imported by `app/main.py` lifespan, by `customer_profile.py` (lazy imports), and by unit tests. **In addition**, tests that use `mocker.patch("app.services.<svc>.X")` are rewritten at the same commit as the move to `mocker.patch("app.services.<svc>.<submodule>.X")` — this is the *patch-where-it's-used* discipline mandated by spec §3.8. Re-exports make patch targets *findable* but do not *intercept* internal calls, so the patch string must follow the function to its defining submodule. Each per-service decomposition is 3-5 commits: scaffold (`git mv` + `__init__.py` + bulk test patch-path rewrite to `.orchestrator.X`), then extract one submodule per commit (with selective patch-path retargeting to the new submodule). All commits are individually green: the full pytest suite (236 tests) passes at every commit on the branch.
 
 **Tech Stack:** Python 3.13, FastAPI, pytest, pytest-mock. No new dependencies. Tooling: `git mv` to preserve `git log --follow` and blame continuity; `BREWRA_SKIP_DB_INIT=1 python -m pytest -q` for per-commit verification.
 
@@ -28,6 +28,7 @@
 
 **Spec deviations from `specs/2026-05-23-backend-service-decomposition-phase-h-design.md`:**
 - `data_sources/` collapses from 4 commits (spec §4.2) to 3, with the spec-defined Step 5 closeout folded into Step 1 as an atomic full-rename. Reason: the generic Step 1 (`git mv` only) leaves router importers referencing the deleted `app.services.documents` path, violating per-commit greenness. The spec §4.2 commit-count line was amended in the same review round to match (20 total instead of 21-22).
+- **Test patch-path migration is bundled into every move commit** per spec §3.8 (added in the round-3 spec revision after the original plan tried scaffold-only on 2026-05-24 and broke 9 unit tests). Each scaffold task includes a bulk find-and-replace of `app.services.<svc>.X` → `app.services.<svc>.orchestrator.X` in the service's test files; each extraction task includes a selective retarget to the new submodule path for symbols that moved. The pytest gate at the end of each task asserts 236 passing because the move and the path edits land together — within a commit, ordering is "move → re-export → patch-rewrite → pytest", and each commit is atomic so there is no intermediate red state. The `__init__.py` re-export list stays at the public surface + spec §3.7 exceptions (no need to inflate it with patch-target symbols, since the patches no longer target the package path after the rewrite).
 
 **Parallelizability:** Sequences B-E (`data_sources/`, `market_research/`, `icp/`, `signals/`) are mutually independent — they touch different service files, different routers, different test files, and don't share mutable state. After Sequence A (`market_scoring/`) validates the pattern, B-E may be dispatched to parallel subagents using the `subagent-driven-development` skill. Within each sequence, tasks must remain serial (scaffold → extraction → extraction). Sequence A must complete first because its outcome decides whether to continue at all (per the plan-level kill criterion).
 
@@ -101,6 +102,28 @@ Expected matches per spec §3.7 table:
 - `market_scoring`: `tests/unit/test_market_scoring.py` (2 sites — `_run_market_scoring_for_org`, `_get_latest_market_score_rows`)
 
 If any new external `_`-prefixed import surfaces that's not in spec §3.7, add it to the table before decomposing that service.
+
+- [ ] **Broad patch-target inventory (spec §3.8 pre-flight)**
+
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence
+for svc in signals icp market_research documents market_scoring; do
+  echo "=== $svc ==="
+  grep -rnE "\"app\\.services\\.$svc\\." backend/tests/ \
+    | sed -E "s/.*\"app\\.services\\.$svc\\.([^\"]+)\".*/\\1/" \
+    | sort -u
+done
+```
+
+Record the per-service deduped symbol lists below at execution time. These are the patch-target strings that will be rewritten at the scaffold-task of each service. They are also the **minimum** set of symbols that the scaffold's `__init__.py` must re-export (super-set of the public + §3.7 exception lists), so the patches stay *findable* even before the bulk path rewrite lands.
+
+- `signals` patch targets: __________
+- `icp` patch targets: __________
+- `market_research` patch targets: __________
+- `documents` patch targets: __________
+- `market_scoring` patch targets: __________
+
+**Plan-writing-time prior observation (2026-05-24, branch wiped after halt):** when this grep was run on `master` HEAD just before halt, `market_scoring` returned `_get_lead_identity_from_neo4j`, `_get_market_score_collections`, `_persist_market_score_for_lead`, `get_company_profile_for_org`, `get_leads_for_org`, `get_market_reports_for_org`, `score_single_lead_against_market`. Use as a sanity check — re-run at execution time and resolve any drift.
 
 - [ ] **`documents` reference inventory (spec §5.4 pre-flight)**
 
@@ -185,6 +208,32 @@ __all__ = [
 ]
 ```
 
+- [ ] **Step 3a: Bulk-rewrite test patch paths (spec §3.8 step 1)**
+
+All `market_scoring` patched symbols still live in `orchestrator.py` at this commit (no extraction yet). Rewrite every `"app.services.market_scoring.X"` patch-target string to `"app.services.market_scoring.orchestrator.X"` so the patches keep intercepting where the functions actually resolve names.
+
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence
+# Two test files for market_scoring; both may contain patch strings:
+sed -i 's/"app\.services\.market_scoring\./"app.services.market_scoring.orchestrator./g' \
+  backend/tests/test_market_scoring.py \
+  backend/tests/unit/test_market_scoring.py
+```
+
+Verify the rewrite didn't catch unintended substrings:
+
+```bash
+grep -nE '"app\.services\.market_scoring\.' backend/tests/test_market_scoring.py backend/tests/unit/test_market_scoring.py
+# expected: every match is now "app.services.market_scoring.orchestrator.X"
+```
+
+**Direct-import lines stay unchanged.** Lines like `from app.services.market_scoring import _get_latest_market_score_rows` continue to resolve through the `__init__.py` re-export — they target the `__init__.py` namespace at import time, not at call time, so they're unaffected by the patch-path issue. Verify none of these were touched:
+
+```bash
+grep -n "from app.services.market_scoring import" backend/tests/test_market_scoring.py backend/tests/unit/test_market_scoring.py
+# expected: no .orchestrator suffix in any of these import lines
+```
+
 - [ ] **Step 4: Run pytest**
 
 ```bash
@@ -193,19 +242,25 @@ BREWRA_SKIP_DB_INIT=1 python -m pytest -q 2>&1 | tail -3
 # expected: 236 passed
 ```
 
-If any test fails: most likely cause is a public function listed above but missing from `orchestrator.py` (run `grep -n "def trigger_or_get_market_scores\|def get_market_scores_status\|def get_lead_market_score_descriptions\|def get_company_profile_for_org\|def _ensure_market_scoring_indexes\|def _run_market_scoring_for_org\|def _get_latest_market_score_rows" backend/app/services/market_scoring/orchestrator.py` — every name must appear exactly once).
+If any test fails: most likely cause is a public function listed above but missing from `orchestrator.py` (run `grep -n "def trigger_or_get_market_scores\|def get_market_scores_status\|def get_lead_market_score_descriptions\|def get_company_profile_for_org\|def _ensure_market_scoring_indexes\|def _run_market_scoring_for_org\|def _get_latest_market_score_rows" backend/app/services/market_scoring/orchestrator.py` — every name must appear exactly once). Second-most-likely cause: a patch string that the sed missed (e.g., line-broken across two source lines) — re-run the verify grep in Step 3a.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence
-git add backend/app/services/market_scoring/
+git add backend/app/services/market_scoring/ backend/tests/test_market_scoring.py backend/tests/unit/test_market_scoring.py
 git commit -m "refactor(be): scaffold market_scoring/ package [phase H, commit 1/M]
 
 git mv services/market_scoring.py → services/market_scoring/orchestrator.py
 Create __init__.py re-exporting full public API plus §3.7 _-prefix
 exceptions (_ensure_market_scoring_indexes, _run_market_scoring_for_org,
 _get_latest_market_score_rows). No code change inside orchestrator.py.
+
+Rewrite test patch paths per spec §3.8 step 1: every
+'app.services.market_scoring.X' patch target retargeted to
+'app.services.market_scoring.orchestrator.X' so patches intercept the
+function where it now resolves names. Direct imports (from app.services.
+market_scoring import X) unchanged — they go through __init__.py.
 
 Per-commit verification: 236 tests passing."
 ```
@@ -276,6 +331,33 @@ from app.services.market_scoring.persistence import (
 
 (`__all__` list is unchanged.)
 
+- [ ] **Step 4a: Retarget test patches for moved symbols (spec §3.8 step 2)**
+
+Of the 6 functions that just moved to `persistence.py`, retarget the ones that any test patches by string. From the plan-writing-time inventory, the patched subset is:
+
+- `_get_market_score_collections` (multiple call sites in `tests/unit/test_market_scoring.py`)
+- `_get_lead_identity_from_neo4j` (`tests/test_market_scoring.py:150`)
+- `get_company_profile_for_org` (`tests/unit/test_market_scoring.py:326`)
+
+Other moved symbols (`_get_latest_market_score_rows`, `_get_latest_scoring_run`, `_ensure_market_scoring_indexes`) are not patched in tests at plan-writing time — re-verify at execution time and add to the substitution if the grep surfaces a new site.
+
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence
+for sym in _get_market_score_collections _get_lead_identity_from_neo4j get_company_profile_for_org; do
+  sed -i "s/\"app\\.services\\.market_scoring\\.orchestrator\\.$sym\"/\"app.services.market_scoring.persistence.$sym\"/g" \
+    backend/tests/test_market_scoring.py \
+    backend/tests/unit/test_market_scoring.py
+done
+```
+
+Verify:
+
+```bash
+grep -nE '"app\.services\.market_scoring\.(orchestrator|persistence)\.' backend/tests/test_market_scoring.py backend/tests/unit/test_market_scoring.py
+# expected: the three retargeted symbols now appear with .persistence.; other patched
+# symbols (e.g., get_leads_for_org, _persist_market_score_for_lead) stay at .orchestrator.
+```
+
 - [ ] **Step 5: Run pytest**
 
 ```bash
@@ -284,12 +366,14 @@ BREWRA_SKIP_DB_INIT=1 python -m pytest -q 2>&1 | tail -3
 # expected: 236 passed
 ```
 
-Common failure: a function in `persistence.py` references an internal helper still in `orchestrator.py` → circular import or `NameError`. Fix: either move the helper to `persistence.py` too, or pass it as a parameter from orchestrator.
+Common failures:
+- A function in `persistence.py` references an internal helper still in `orchestrator.py` → circular import or `NameError`. Fix: either move the helper to `persistence.py` too, or pass it as a parameter from orchestrator.
+- A patch for a moved symbol that the Step 4a sed missed (e.g., a previously-uncatalogued site, or a symbol that was patched but isn't in the three above). Re-run the verify grep in Step 4a and extend the substitution list.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add backend/app/services/market_scoring/
+git add backend/app/services/market_scoring/ backend/tests/test_market_scoring.py backend/tests/unit/test_market_scoring.py
 git commit -m "refactor(be): extract market_scoring/persistence.py [phase H, commit 2/M]
 
 Move 6 Mongo/Neo4j I/O helpers out of orchestrator.py:
@@ -298,7 +382,15 @@ Move 6 Mongo/Neo4j I/O helpers out of orchestrator.py:
 - get_company_profile_for_org (public), _ensure_market_scoring_indexes (lifespan)
 
 __init__.py updated to re-export from persistence for the three exception
-symbols that landed there. 236 tests passing."
+symbols that landed there.
+
+Retarget test patches per spec §3.8 step 2 for the three moved symbols
+that tests patch by string: _get_market_score_collections,
+_get_lead_identity_from_neo4j, get_company_profile_for_org → .persistence.X.
+Other patches (get_leads_for_org, _persist_market_score_for_lead) stay
+at .orchestrator.X since those symbols didn't move.
+
+236 tests passing."
 ```
 
 ### Task 3: Extract `market_scoring/normalization.py` + `scoring.py`
@@ -400,6 +492,23 @@ from app.services.market_scoring.scoring import (
 )
 ```
 
+- [ ] **Step 5a: Retarget test patches for moved symbols (spec §3.8 step 2)**
+
+The 12 moved symbols (9 normalization helpers + 3 scoring functions) are not patched by string at plan-writing time — they're either pure helpers (normalization) called from inside the package, or in the case of `_run_market_scoring_for_org`, only imported directly into the test module (no patch). Verify with grep before pytest:
+
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence
+for sym in _safe_json_to_obj _normalize_non_empty_string _canonicalize_key _build_lookup_maps \
+           _first_non_empty_value_from_keys _extract_company_name _extract_lead_name \
+           _extract_description_preview _parse_iso_datetime \
+           _lead_to_score_row _is_stale_queued_run _run_market_scoring_for_org; do
+  grep -n "\"app\.services\.market_scoring\..*\.$sym\"" backend/tests/test_market_scoring.py backend/tests/unit/test_market_scoring.py 2>/dev/null
+done
+# expected: zero matches
+```
+
+If any hits surface, retarget them with the same `sed` pattern as Task 2 Step 4a (just change the destination submodule to `normalization` or `scoring` per the spec §3.6 table).
+
 - [ ] **Step 6: Run pytest**
 
 ```bash
@@ -412,6 +521,8 @@ BREWRA_SKIP_DB_INIT=1 python -m pytest -q 2>&1 | tail -3
 
 ```bash
 git add backend/app/services/market_scoring/
+# add tests/ only if Step 5a surfaced and retargeted any patches; usually skipped:
+# git add backend/tests/test_market_scoring.py backend/tests/unit/test_market_scoring.py
 git commit -m "refactor(be): extract market_scoring/normalization.py + scoring.py [phase H, commit 3/M]
 
 normalization.py: 9 pure data-shaping helpers (_safe_json_to_obj,
@@ -420,6 +531,9 @@ scoring.py: _lead_to_score_row, _is_stale_queued_run, and the
 _run_market_scoring_for_org background task body.
 
 __init__.py updated to source _run_market_scoring_for_org from scoring.
+No test patch-path retargeting needed: the 12 moved symbols are not
+patched by string in tests (verified per spec §3.8 step 2).
+
 236 tests passing."
 ```
 
@@ -608,16 +722,41 @@ grep -n "documents\|from app.services" backend/app/routers/data_sources.py backe
 
 HTTP route paths (`/user-documents`, `/document/upload-and-process`, `/delete-data-source`, etc.) **stay unchanged** — they're FE contracts (spec §2.1 item 2).
 
-- [ ] **Step 6: Update test files for the rename**
+- [ ] **Step 6: Update test files for the rename + apply spec §3.8 patch-path migration**
 
 In each of the three renamed test files (`test_data_sources.py`, `test_data_sources_v2.py`, `unit/test_data_sources.py`), find and replace:
 - `from app.services.documents` → `from app.services.data_sources`
-- `mocker.patch("app.services.documents...` → `mocker.patch("app.services.data_sources...`
+- `mocker.patch("app.services.documents.X")` → `mocker.patch("app.services.data_sources.orchestrator.X")` — note the `.orchestrator` insertion is the spec §3.8 step 1 patch-path migration; all moved code currently lives in `data_sources/orchestrator.py` at this commit
 - `from app.routers.documents` → `from app.routers.data_sources` (if any)
 - Any string-based test descriptions referring to "documents service" — update to "data_sources service" for consistency.
 
 ```bash
+cd /projects/Brewra/brewra-gtm-intelligence
+# Import lines (use module path, no .orchestrator suffix — these go through __init__.py):
+sed -i 's/from app\.services\.documents/from app.services.data_sources/g' \
+  backend/tests/test_data_sources.py \
+  backend/tests/test_data_sources_v2.py \
+  backend/tests/unit/test_data_sources.py
+# String-based patch targets (combine rename + spec §3.8 step 1):
+sed -i 's/"app\.services\.documents\./"app.services.data_sources.orchestrator./g' \
+  backend/tests/test_data_sources.py \
+  backend/tests/test_data_sources_v2.py \
+  backend/tests/unit/test_data_sources.py
+# Router import paths if present:
+sed -i 's/from app\.routers\.documents/from app.routers.data_sources/g' \
+  backend/tests/test_data_sources.py \
+  backend/tests/test_data_sources_v2.py \
+  backend/tests/unit/test_data_sources.py
+```
+
+Verify:
+
+```bash
 grep -rn "documents" backend/tests/test_data_sources.py backend/tests/test_data_sources_v2.py backend/tests/unit/test_data_sources.py
+# expected: no surviving "documents" string except cosmetic test descriptions (and the
+# Mongo collection name "user_documents" if asserted on, which stays unchanged)
+grep -rnE '"app\.services\.data_sources\.' backend/tests/test_data_sources.py backend/tests/test_data_sources_v2.py backend/tests/unit/test_data_sources.py
+# expected: every match has the .orchestrator. infix
 ```
 
 - [ ] **Step 7: Verify no stragglers**
@@ -716,6 +855,20 @@ from app.services.data_sources.persistence import (
 )
 ```
 
+- [ ] **Step 4a: Verify no test patches retarget needed (spec §3.8 step 2)**
+
+The four moved functions (`list_user_documents`, `get_document_status`, `delete_data_source`, `update_data_source`) are not patched by string at plan-writing time. Verify:
+
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence
+for sym in list_user_documents get_document_status delete_data_source update_data_source; do
+  grep -n "\"app\.services\.data_sources\..*\.$sym\"" backend/tests/test_data_sources.py backend/tests/test_data_sources_v2.py backend/tests/unit/test_data_sources.py 2>/dev/null
+done
+# expected: zero matches
+```
+
+If any hits surface, retarget them from `.orchestrator.X` → `.persistence.X` with the sed pattern from Task 2 Step 4a.
+
 - [ ] **Step 5: Run pytest**
 
 ```bash
@@ -728,11 +881,16 @@ BREWRA_SKIP_DB_INIT=1 python -m pytest -q 2>&1 | tail -3
 
 ```bash
 git add backend/app/services/data_sources/
+# add tests/ only if Step 4a surfaced and retargeted patches; usually skipped:
+# git add backend/tests/test_data_sources*.py backend/tests/unit/test_data_sources.py
 git commit -m "refactor(be): extract data_sources/persistence.py [phase H, commit 6/M]
 
 Move 4 Mongo CRUD functions out of orchestrator.py: list_user_documents,
 get_document_status, delete_data_source, update_data_source. Each is a
 public symbol re-exported from persistence via __init__.py.
+
+No test patch-path retargeting needed: the 4 moved symbols are not
+patched by string in tests (verified per spec §3.8 step 2).
 
 236 tests passing."
 ```
@@ -834,6 +992,39 @@ __all__ = [
 ]
 ```
 
+- [ ] **Step 5a: Retarget remaining `.orchestrator.X` patches (spec §3.8 step 2)**
+
+This commit deletes `data_sources/orchestrator.py`, so every patch still pointing at `app.services.data_sources.orchestrator.X` must move to its final submodule:
+
+- `load_document`, `grapher`, `process_prospect_list` → `.loaders.X` (moved to loaders.py in Step 2 of this task)
+- `PyPDFLoader`, `pd.read_csv` → `.loaders.X` (these are external library imports — they were imported into orchestrator.py; after the extraction they're imported into loaders.py, so patches targeting them follow there)
+- `query` → check where this function lands (likely `loaders.py` or `pipeline.py`; classify at execution time by greping the source for `def query` or `query =`)
+
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence
+# Symbols confirmed to go to loaders:
+for sym in load_document grapher process_prospect_list PyPDFLoader; do
+  sed -i "s/\"app\\.services\\.data_sources\\.orchestrator\\.$sym\"/\"app.services.data_sources.loaders.$sym\"/g" \
+    backend/tests/test_data_sources.py \
+    backend/tests/test_data_sources_v2.py \
+    backend/tests/unit/test_data_sources.py
+done
+# pd.read_csv has a dot inside the symbol name — escape carefully:
+sed -i 's/"app\.services\.data_sources\.orchestrator\.pd\.read_csv"/"app.services.data_sources.loaders.pd.read_csv"/g' \
+  backend/tests/test_data_sources.py \
+  backend/tests/test_data_sources_v2.py \
+  backend/tests/unit/test_data_sources.py
+# query — substitute after confirming its final submodule:
+# sed -i 's/"app\.services\.data_sources\.orchestrator\.query"/"app.services.data_sources.<submodule>.query"/g' ...
+```
+
+After the rewrite, no `.orchestrator.` strings should remain (orchestrator.py is gone):
+
+```bash
+grep -rnE '"app\.services\.data_sources\.orchestrator\.' backend/tests/
+# expected: zero matches
+```
+
 - [ ] **Step 6: Run pytest**
 
 ```bash
@@ -845,7 +1036,7 @@ BREWRA_SKIP_DB_INIT=1 python -m pytest -q 2>&1 | tail -3
 - [ ] **Step 7: Commit**
 
 ```bash
-git add backend/app/services/data_sources/
+git add backend/app/services/data_sources/ backend/tests/test_data_sources.py backend/tests/test_data_sources_v2.py backend/tests/unit/test_data_sources.py
 git commit -m "refactor(be): extract data_sources/loaders.py + pipeline.py [phase H, commit 7/M]
 
 loaders.py: file-loading entry points (load_document, grapher,
@@ -855,6 +1046,12 @@ upload_document_file).
 
 orchestrator.py deleted — data_sources/ has no multi-step compositions left
 to compose. __init__.py re-exports directly from loaders/pipeline/persistence.
+
+Retarget remaining test patches per spec §3.8 step 2: every
+.orchestrator.X patch path moves to its final submodule (.loaders.X for
+load_document, grapher, process_prospect_list, PyPDFLoader, pd.read_csv;
+.<submodule>.query as classified at execution time). No .orchestrator.
+strings remain in any data_sources test file.
 
 236 tests passing."
 ```
@@ -923,6 +1120,24 @@ __all__ = [
 ]
 ```
 
+- [ ] **Step 3a: Bulk-rewrite test patch paths (spec §3.8 step 1)**
+
+From plan-writing-time inventory, `market_research` has 4 patch targets: `COMPONENT_FUNCTIONS`, `COMPONENT_FUNCTIONS_CLAUDE`, `Research_Market_1`, `_fetch_pinecone_supporting_context`. All currently resolve in the monolithic `market_research.py`; after the `git mv` they live in `orchestrator.py`.
+
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence
+sed -i 's/"app\.services\.market_research\./"app.services.market_research.orchestrator./g' \
+  backend/tests/test_market_research.py \
+  backend/tests/unit/test_market_research.py
+```
+
+Verify:
+
+```bash
+grep -nE '"app\.services\.market_research\.' backend/tests/test_market_research.py backend/tests/unit/test_market_research.py
+# expected: every match now has .orchestrator. infix
+```
+
 - [ ] **Step 4: Run pytest**
 
 ```bash
@@ -935,12 +1150,16 @@ BREWRA_SKIP_DB_INIT=1 python -m pytest -q 2>&1 | tail -3
 
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence
-git add backend/app/services/market_research/
+git add backend/app/services/market_research/ backend/tests/test_market_research.py backend/tests/unit/test_market_research.py
 git commit -m "refactor(be): scaffold market_research/ package [phase H, commit 8/M]
 
 git mv services/market_research.py → services/market_research/orchestrator.py
 Create __init__.py re-exporting Research_Market_1..5 and run_market_research.
-No code change inside orchestrator.py. 236 tests passing."
+No code change inside orchestrator.py.
+
+Rewrite test patch paths per spec §3.8 step 1: every
+'app.services.market_research.X' patch target retargeted to
+'app.services.market_research.orchestrator.X'. 236 tests passing."
 ```
 
 ### Task 9: Extract `market_research/persistence.py`
@@ -988,6 +1207,16 @@ from app.services.market_research.persistence import _save_market_research_repor
 _save_market_research_report(mongo, org_id, report)
 ```
 
+- [ ] **Step 3a: Verify no patch retargets needed (spec §3.8 step 2)**
+
+The new helpers in `persistence.py` are extracted from inside `run_market_research`'s body — they didn't exist as named functions before, so they can't have been patched. Verify:
+
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence
+grep -nE '"app\.services\.market_research\.persistence\.' backend/tests/
+# expected: zero matches (no pre-existing tests patch helpers that didn't exist yet)
+```
+
 - [ ] **Step 4: Run pytest**
 
 ```bash
@@ -1003,7 +1232,9 @@ git add backend/app/services/market_research/
 git commit -m "refactor(be): extract market_research/persistence.py [phase H, commit 9/M]
 
 Lift Mongo report-writes out of run_market_research body into new helper(s)
-in persistence.py. Internal-only (no re-export). 236 tests passing."
+in persistence.py. Internal-only (no re-export). No test patch-path
+retargeting needed (helpers are newly named, no pre-existing patches).
+236 tests passing."
 ```
 
 ### Task 10: Extract `market_research/prompts.py`
@@ -1053,6 +1284,16 @@ prompt = RESEARCH_MARKET_1_TEMPLATE.format(company_profile_json=company_profile_
 
 (Top-of-file import; one block, not per-function.)
 
+- [ ] **Step 3a: Verify no patch retargets needed (spec §3.8 step 2)**
+
+Prompt templates are string constants, not patched in any test. Verify:
+
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence
+grep -nE '"app\.services\.market_research\.(orchestrator|prompts)\.(RESEARCH_MARKET_|.*TEMPLATE)' backend/tests/
+# expected: zero matches
+```
+
 - [ ] **Step 4: Run pytest**
 
 ```bash
@@ -1069,7 +1310,9 @@ git commit -m "refactor(be): extract market_research/prompts.py [phase H, commit
 
 Lift 5 Research_Market_N prompt templates out of orchestrator function
 bodies into module-level constants in prompts.py. Templates stay as inline
-Python strings; externalization is Option D scope. 236 tests passing."
+Python strings; externalization is Option D scope. No test patch-path
+retargeting needed (templates are constants, not patched).
+236 tests passing."
 ```
 
 ### Task 11: Extract `market_research/llm.py` + `parsing.py`
@@ -1124,6 +1367,25 @@ from app.services.market_research.parsing import _extract_research_json
 
 Delete the original `_market_research_agent_output` definition; replace inline JSON parsing in each Research_Market_N with `_extract_research_json(response)` calls.
 
+- [ ] **Step 4a: Retarget test patches for moved symbols (spec §3.8 step 2)**
+
+`_market_research_agent_output` and `_fetch_pinecone_supporting_context` are the candidates. `_fetch_pinecone_supporting_context` is patched in tests; classify at execution time whether it lands in `llm.py` (likely, since it's an LLM-input-context fetch) or stays in `orchestrator.py`. `_market_research_agent_output` is not patched in tests at plan-writing time.
+
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence
+# If _fetch_pinecone_supporting_context moves to llm.py:
+sed -i 's/"app\.services\.market_research\.orchestrator\._fetch_pinecone_supporting_context"/"app.services.market_research.llm._fetch_pinecone_supporting_context"/g' \
+  backend/tests/test_market_research.py backend/tests/unit/test_market_research.py
+# If it stays in orchestrator.py: skip this sed.
+```
+
+Verify final state:
+
+```bash
+grep -nE '"app\.services\.market_research\.' backend/tests/test_market_research.py backend/tests/unit/test_market_research.py
+# expected: every match names a submodule, not the bare package path
+```
+
 - [ ] **Step 5: Run pytest**
 
 ```bash
@@ -1135,12 +1397,18 @@ BREWRA_SKIP_DB_INIT=1 python -m pytest -q 2>&1 | tail -3
 - [ ] **Step 6: Commit**
 
 ```bash
-git add backend/app/services/market_research/
+git add backend/app/services/market_research/ backend/tests/test_market_research.py backend/tests/unit/test_market_research.py
 git commit -m "refactor(be): extract market_research/llm.py + parsing.py [phase H, commit 11/M]
 
 llm.py: _market_research_agent_output wrapper (unchanged).
 parsing.py: _extract_research_json — new helper consolidating the JSON
 extraction pattern from all five Research_Market_N bodies.
+
+Test patch-path retargeting per spec §3.8 step 2: if
+_fetch_pinecone_supporting_context moved to llm.py, its patch path moved
+with it (else stayed at .orchestrator.). Other patched symbols
+(COMPONENT_FUNCTIONS, COMPONENT_FUNCTIONS_CLAUDE, Research_Market_1) stay
+at .orchestrator.X since those symbols didn't move.
 
 236 tests passing. market_research/ decomposition complete (4 commits)."
 ```
@@ -1228,17 +1496,44 @@ BREWRA_SKIP_DB_INIT=1 python -m pytest -q 2>&1 | tail -3
 
 **This is the highest-stakes scaffold commit** — if either `_reserve_unique_icp_id` or `_release_icp_id` is missing from `__init__.py`, `customer_profile` tests will fail with `ImportError` at runtime when their tests run. The Critical-finding fix in spec round-2 specifically guards against this.
 
+- [ ] **Step 3a: Bulk-rewrite test patch paths (spec §3.8 step 1)**
+
+From plan-writing-time inventory, `icp` has 6 patch targets across two test directories plus `customer_profile`'s test file: `ICP_FUNCTIONS`, `ICP_generator`, `_ensure_icp_indexes`, `_release_icp_id`, `_reserve_unique_icp_id`, `icp_research_2`. **`tests/unit/test_customer_profile.py` also patches `app.services.icp._ensure_icp_indexes` at 9+ sites** and must be included in the rewrite — this is the load-bearing coverage flagged in Task 13 Step 5.
+
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence
+sed -i 's/"app\.services\.icp\./"app.services.icp.orchestrator./g' \
+  backend/tests/test_icp.py \
+  backend/tests/unit/test_icp.py \
+  backend/tests/unit/test_customer_profile.py
+```
+
+Verify:
+
+```bash
+grep -nE '"app\.services\.icp\.' backend/tests/test_icp.py backend/tests/unit/test_icp.py backend/tests/unit/test_customer_profile.py
+# expected: every match now has .orchestrator. infix
+```
+
 - [ ] **Step 5: Commit**
 
 ```bash
 cd /projects/Brewra/brewra-gtm-intelligence
-git add backend/app/services/icp/
+git add backend/app/services/icp/ backend/tests/test_icp.py backend/tests/unit/test_icp.py backend/tests/unit/test_customer_profile.py
 git commit -m "refactor(be): scaffold icp/ package [phase H, commit 12/M]
 
 git mv services/icp.py → services/icp/orchestrator.py
 __init__.py re-exports full public API plus three §3.7 _-prefix exceptions
 (_ensure_icp_indexes for lifespan; _reserve_unique_icp_id and _release_icp_id
-for customer_profile.py lazy imports). 236 tests passing."
+for customer_profile.py lazy imports).
+
+Rewrite test patch paths per spec §3.8 step 1: every 'app.services.icp.X'
+patch target retargeted to 'app.services.icp.orchestrator.X' across
+test_icp.py, unit/test_icp.py, AND unit/test_customer_profile.py (the
+last one patches _ensure_icp_indexes at 9+ sites — load-bearing coverage
+for the icp/customer_profile lazy-import contract).
+
+236 tests passing."
 ```
 
 ### Task 13: Extract `icp/persistence.py`
@@ -1288,6 +1583,28 @@ Delete the originals.
 
 Move all five symbols from the orchestrator-import block to a new persistence-import block (preserving `__all__`).
 
+- [ ] **Step 4a: Retarget test patches for moved symbols (spec §3.8 step 2)**
+
+Of the 5 moved persistence functions, three are patched extensively: `_ensure_icp_indexes`, `_reserve_unique_icp_id`, `_release_icp_id`. The other two (`list_icps`, `delete_recommended_icp`) are public functions tests typically call directly rather than patch. Retarget across all three test files:
+
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence
+for sym in _ensure_icp_indexes _reserve_unique_icp_id _release_icp_id; do
+  sed -i "s/\"app\\.services\\.icp\\.orchestrator\\.$sym\"/\"app.services.icp.persistence.$sym\"/g" \
+    backend/tests/test_icp.py \
+    backend/tests/unit/test_icp.py \
+    backend/tests/unit/test_customer_profile.py
+done
+```
+
+Verify:
+
+```bash
+grep -nE '"app\.services\.icp\.(orchestrator|persistence)\.' backend/tests/test_icp.py backend/tests/unit/test_icp.py backend/tests/unit/test_customer_profile.py
+# expected: the three retargeted symbols appear with .persistence.; other patched
+# symbols (ICP_FUNCTIONS, ICP_generator, icp_research_2) stay at .orchestrator.
+```
+
 - [ ] **Step 5: Run pytest**
 
 ```bash
@@ -1305,13 +1622,19 @@ BREWRA_SKIP_DB_INIT=1 python -m pytest tests/unit/test_customer_profile.py -v 2>
 - [ ] **Step 6: Commit**
 
 ```bash
-git add backend/app/services/icp/
+git add backend/app/services/icp/ backend/tests/test_icp.py backend/tests/unit/test_icp.py backend/tests/unit/test_customer_profile.py
 git commit -m "refactor(be): extract icp/persistence.py [phase H, commit 13/M]
 
 Move 5 ICP CRUD + ID-registry helpers out of orchestrator.py. Three are §3.7
 exceptions re-exported despite _ prefix: _ensure_icp_indexes (lifespan),
 _reserve_unique_icp_id and _release_icp_id (lazy-imported by
 customer_profile.py at 4 sites).
+
+Retarget test patches per spec §3.8 step 2: the three _-prefix symbols
+move from .orchestrator. to .persistence. across test_icp.py,
+unit/test_icp.py, and unit/test_customer_profile.py. Other patched
+symbols (ICP_FUNCTIONS, ICP_generator, icp_research_2) stay at
+.orchestrator.X since those symbols didn't move.
 
 236 tests passing including test_customer_profile.py (the load-bearing
 coverage for the lazy-import case)."
@@ -1334,6 +1657,20 @@ grep -n "template = " app/services/icp/orchestrator.py
 
 - [ ] **Step 3: Update orchestrator.py imports** to source templates from `prompts.py`. Delete the original inline template assignments.
 
+- [ ] **Step 3a: Retarget test patches if needed (spec §3.8 step 2)**
+
+Templates are string constants and not patched in tests. If `ICP_FUNCTIONS` (a module-level constant) gets moved into `prompts.py` during extraction (classify at execution time), retarget its patches:
+
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence
+# If ICP_FUNCTIONS lands in prompts.py:
+# sed -i 's/"app\.services\.icp\.orchestrator\.ICP_FUNCTIONS"/"app.services.icp.prompts.ICP_FUNCTIONS"/g' \
+#   backend/tests/test_icp.py backend/tests/unit/test_icp.py
+# If ICP_FUNCTIONS stays in orchestrator.py: skip this sed.
+grep -nE '"app\.services\.icp\.prompts\.' backend/tests/
+# expected: appears only for symbols that actually moved to prompts.py
+```
+
 - [ ] **Step 4: Run pytest**
 
 ```bash
@@ -1346,11 +1683,17 @@ BREWRA_SKIP_DB_INIT=1 python -m pytest -q 2>&1 | tail -3
 
 ```bash
 git add backend/app/services/icp/
+# add tests/ only if Step 3a retargeted any patches
 git commit -m "refactor(be): extract icp/prompts.py [phase H, commit 14/M]
 
 Lift ICP_generator + icp_research_1..4 prompt templates out of orchestrator
 function bodies into module-level constants in prompts.py. Templates stay
-as inline Python strings; externalization is Option D scope. 236 tests passing."
+as inline Python strings; externalization is Option D scope.
+
+If ICP_FUNCTIONS landed in prompts.py during extraction, its test patches
+moved with it per spec §3.8 step 2; otherwise no test path changes.
+
+236 tests passing."
 ```
 
 ### Task 15: Extract `icp/llm.py` + `parsing.py`
@@ -1381,6 +1724,16 @@ from app.services.icp.parsing import _extract_icp_json
 
 Delete the original `_icp_research_agent_output` definition; replace inline JSON parsing in each `icp_research_N` with `_extract_icp_json(response)` calls.
 
+- [ ] **Step 4a: Verify no patch retargets needed (spec §3.8 step 2)**
+
+`_icp_research_agent_output` and `_extract_icp_json` are not in the plan-writing-time icp patch inventory. Verify:
+
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence
+grep -nE '"app\.services\.icp\.(llm|parsing)\.' backend/tests/
+# expected: zero matches
+```
+
 - [ ] **Step 5: Run pytest**
 
 ```bash
@@ -1398,6 +1751,9 @@ git commit -m "refactor(be): extract icp/llm.py + parsing.py [phase H, commit 15
 llm.py: _icp_research_agent_output wrapper (unchanged).
 parsing.py: _extract_icp_json — new helper consolidating the JSON
 extraction pattern from icp_research_1..4 bodies.
+
+No test patch-path retargeting needed: moved symbols are not patched
+by string in tests (verified per spec §3.8 step 2).
 
 236 tests passing. icp/ decomposition complete (4 commits)."
 ```
@@ -1474,6 +1830,25 @@ __all__ = [
 ]
 ```
 
+- [ ] **Step 3a: Bulk-rewrite test patch paths (spec §3.8 step 1)**
+
+From plan-writing-time inventory, `signals` has 10 patch targets — the highest count of any service: `CLAUDE_API_KEY`, `_claude_messages_text`, `_estimate_token_count`, `_fetch_pinecone_supporting_context`, `_finalize_claude_signal_budget`, `_generate_signals_batch_impl`, `_reserve_claude_signal_budget`, `_tavily_context_and_urls`, `requests.post`, `search_signals`. All currently live in monolithic `signals.py`; after `git mv` they're in `orchestrator.py`.
+
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence
+sed -i 's/"app\.services\.signals\./"app.services.signals.orchestrator./g' \
+  backend/tests/test_signals.py \
+  backend/tests/test_signals_v2.py \
+  backend/tests/unit/test_signals.py
+```
+
+Verify:
+
+```bash
+grep -nE '"app\.services\.signals\.' backend/tests/test_signals.py backend/tests/test_signals_v2.py backend/tests/unit/test_signals.py
+# expected: every match now has .orchestrator. infix
+```
+
 - [ ] **Step 4: Run pytest**
 
 ```bash
@@ -1485,13 +1860,18 @@ BREWRA_SKIP_DB_INIT=1 python -m pytest -q 2>&1 | tail -3
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/app/services/signals/
+git add backend/app/services/signals/ backend/tests/test_signals.py backend/tests/test_signals_v2.py backend/tests/unit/test_signals.py
 git commit -m "refactor(be): scaffold signals/ package [phase H, commit 16/M]
 
 git mv services/signals.py → services/signals/orchestrator.py
 __init__.py re-exports public API including confirmed-live Claude variants
 (generate_signals_batch_claude, signal_ask_claude — backend-dispatcher
 wrappers covered by tests/unit/test_signals.py).
+
+Rewrite test patch paths per spec §3.8 step 1: 10 patched symbols
+across 3 test files (test_signals.py, test_signals_v2.py,
+unit/test_signals.py) retargeted from 'app.services.signals.X' to
+'app.services.signals.orchestrator.X'.
 
 236 tests passing."
 ```
@@ -1563,6 +1943,16 @@ from app.services.signals.persistence import (
 
 (`__all__` list unchanged.)
 
+- [ ] **Step 4a: Verify no patch retargets needed (spec §3.8 step 2)**
+
+`record_signal_action` is not in the patched-symbols inventory; the new `_`-prefix helpers extracted from `fetch_signals` are newly named and have no pre-existing patches. Verify:
+
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence
+grep -nE '"app\.services\.signals\.persistence\.' backend/tests/
+# expected: zero matches
+```
+
 - [ ] **Step 5: Run pytest**
 
 ```bash
@@ -1582,7 +1972,8 @@ git commit -m "refactor(be): extract signals/persistence.py [phase H, commit 17/
 record_signal_action (public) moved unchanged out of orchestrator.py.
 New internal _-prefix helpers extracted from fetch_signals body for
 the Mongo I/O blocks. __init__.py updated to source record_signal_action
-from persistence. 236 tests passing."
+from persistence. No test patch-path retargeting needed (record_signal_action
+not patched; new helpers are newly named). 236 tests passing."
 ```
 
 ### Task 18: Extract `signals/prompts.py`
@@ -1632,6 +2023,16 @@ Preserve any `{placeholder}` substitution markers — the orchestrator calls `.f
 
 At the top of `orchestrator.py`, add imports for every template constant created in Step 2. Delete the inline template definitions. Replace each f-string-built `prompt = f"""..."""` block with `prompt = TEMPLATE_NAME.format(...)`.
 
+- [ ] **Step 3a: Verify no patch retargets needed (spec §3.8 step 2)**
+
+Prompt templates are string constants and not in the signals patched-symbols inventory. `CLAUDE_API_KEY` is a constant but classifies as config (likely stays in orchestrator unless extracted to a shared config module — out of scope here). Verify:
+
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence
+grep -nE '"app\.services\.signals\.prompts\.' backend/tests/
+# expected: zero matches
+```
+
 - [ ] **Step 4: Run pytest**
 
 ```bash
@@ -1650,7 +2051,8 @@ git commit -m "refactor(be): extract signals/prompts.py [phase H, commit 18/M]
 
 MAIN_PROMPT_TEMPLATE, persona prompts (scout/profiler), and per-operation
 prompt blocks lifted out of orchestrator into prompts.py module-level
-constants. Templates remain inline Python strings. 236 tests passing."
+constants. Templates remain inline Python strings. No test patch-path
+retargeting needed (templates are constants, not patched). 236 tests passing."
 ```
 
 ### Task 19: Extract `signals/llm.py` + `parsing.py`
@@ -1719,6 +2121,34 @@ from app.services.signals.parsing import (
 
 Delete the original `_signals_agent_output` definition. Inside `search_signals` and `_generate_signals_batch_impl`, replace the inline parsing blocks with calls to the new helpers.
 
+- [ ] **Step 5a: Retarget test patches for moved symbols (spec §3.8 step 2)**
+
+Of the 10 signals patched symbols, classify which moved during this commit:
+
+- `_signals_agent_output` → `.llm.` (definitely moves to llm.py per spec §3.2; not in patch inventory but verify)
+- `_claude_messages_text`, `_reserve_claude_signal_budget`, `_finalize_claude_signal_budget`, `_estimate_token_count` — classify at execution time: these look LLM-budget-related, likely move to `.llm.X`; verify by reading the source
+- `_tavily_context_and_urls`, `_fetch_pinecone_supporting_context` — context-gathering helpers; classify as `.llm.X` or stay in `.orchestrator.X` based on what the implementor extracts
+- `requests.post` — external library function; the patch path follows wherever the `requests` import lands (likely orchestrator stays unless llm.py imports requests too)
+- `search_signals`, `_generate_signals_batch_impl`, `CLAUDE_API_KEY` — orchestration/config-level, stay in `.orchestrator.`
+
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence
+# Substitute for each symbol that moved to llm.py (extend the list per classification):
+for sym in _claude_messages_text _reserve_claude_signal_budget _finalize_claude_signal_budget _estimate_token_count; do
+  sed -i "s/\"app\\.services\\.signals\\.orchestrator\\.$sym\"/\"app.services.signals.llm.$sym\"/g" \
+    backend/tests/test_signals.py \
+    backend/tests/test_signals_v2.py \
+    backend/tests/unit/test_signals.py
+done
+```
+
+Verify the rewrite hit only intended symbols and no stragglers remain:
+
+```bash
+grep -nE '"app\.services\.signals\.(orchestrator|llm|parsing)\.' backend/tests/test_signals.py backend/tests/test_signals_v2.py backend/tests/unit/test_signals.py
+# expected: each match points to the submodule where the symbol now resides
+```
+
 - [ ] **Step 6: Run pytest**
 
 ```bash
@@ -1730,13 +2160,18 @@ BREWRA_SKIP_DB_INIT=1 python -m pytest -q 2>&1 | tail -3
 - [ ] **Step 7: Commit**
 
 ```bash
-git add backend/app/services/signals/
+git add backend/app/services/signals/ backend/tests/test_signals.py backend/tests/test_signals_v2.py backend/tests/unit/test_signals.py
 git commit -m "refactor(be): extract signals/llm.py + parsing.py [phase H, commit 19/M]
 
 llm.py: _signals_agent_output wrapper (unchanged body).
 parsing.py: response-normalization helpers extracted from search_signals
 and _generate_signals_batch_impl bodies — _extract_signals_from_response
 plus additional helpers surfaced during extraction.
+
+Retarget test patches per spec §3.8 step 2: budget/context helpers that
+moved to llm.py have their patch paths updated. Symbols that stay in
+orchestrator (search_signals, _generate_signals_batch_impl, CLAUDE_API_KEY,
+requests.post) keep .orchestrator.X paths.
 
 236 tests passing. signals/ structural extraction complete; Task 20 is
 the optional cleanup pass."
@@ -1830,6 +2265,19 @@ git status
 # expected: clean working tree
 ```
 
+- [ ] **Verify spec §6 patch-path acceptance criterion**
+
+```bash
+cd /projects/Brewra/brewra-gtm-intelligence
+grep -rnE '"app\.services\.(signals|icp|market_research|data_sources|market_scoring)\.[a-zA-Z_]+"' backend/tests/
+# expected: every match names a <submodule> (.orchestrator/.persistence/.prompts/.llm/
+# .parsing/.scoring/.normalization/.loaders/.pipeline); no bare-package patch targets remain.
+# Bare-package "from app.services.<svc> import X" lines are NOT matched by this grep
+# (different pattern) and are fine — they exercise the __init__.py re-export.
+```
+
+If any bare-package patch target survives, the corresponding extraction task missed a sed pass — fix forward with the appropriate retarget and amend the relevant commit, OR add a follow-up commit if amending isn't acceptable to the operator.
+
 - [ ] **Optional: manual capture-script run**
 
 If API keys available locally:
@@ -1856,14 +2304,15 @@ This catches re-export breakage for the manually-run script that pytest doesn't 
 - Spec §2.1 #5 (shared helpers stay flat): no task touches `_llm_helpers.py`, `_retrieval.py`, etc. ✓
 - Spec §3.1 dependency direction (no leaf-to-leaf): persistence/loaders/pipeline/normalization/scoring/prompts files don't import from siblings — only orchestrator does ✓
 - Spec §3.7 exception list: Task 1, 12 scaffolds re-export all six entries; Task 13 specifically verifies test_customer_profile.py passes for the lazy-import case ✓
-- Spec §4.2 commit template: every task follows the move/extract/test/commit pattern ✓
+- **Spec §3.8 patch-path migration:** every scaffold task (1, 5, 8, 12, 16) has a Step 3a / Step 6 bulk-rewrite of `.X` → `.orchestrator.X` across all relevant test files; every extraction task has a Step Xa selective retarget or verification grep ✓. Tasks 4, 20 omit the step (no moves to retarget). The §3.8-mandated `__init__.py` policy (public + §3.7 exceptions only, no patch-target inflation) is followed: scaffold tasks list only the original spec-defined re-exports.
+- Spec §4.2 commit template: every task follows the move/extract/test/commit pattern ✓ (updated to include test-edit step per §3.8)
 - Spec §4.3 per-commit verification: every task ends with `BREWRA_SKIP_DB_INIT=1 python -m pytest -q` expecting 236 passed ✓
 - Spec §5.4 rename ripple: Task 5 has the broad grep + manual classification + verify-no-stragglers step ✓
 - Spec §5.6 Phase F DI assumption: pre-flight has the global-scan grep ✓
-- Spec §6 acceptance criteria: post-phase verification covers each ✓
+- Spec §6 acceptance criteria (incl. new patch-path acceptance line): post-phase verification covers each ✓ (new grep verifies no bare-package patch targets remain)
 
-**Placeholder scan:** No "TODO", no "TBD", no "implement later". Tasks 9, 11, 14, 15, 17, 18, 19 use phrases like "name TBD by implementor" and "extracted helpers" — these are explicitly acknowledged in the spec §3 tables as "helper names assigned during implementation" since the new helpers don't exist yet and have to be carved out of orchestrator function bodies during the work. This is intentional and isn't a placeholder failure.
+**Placeholder scan:** No "TODO", no "TBD", no "implement later". Tasks 9, 11, 14, 15, 17, 18, 19 use phrases like "name TBD by implementor" and "extracted helpers" — these are explicitly acknowledged in the spec §3 tables as "helper names assigned during implementation" since the new helpers don't exist yet and have to be carved out of orchestrator function bodies during the work. This is intentional and isn't a placeholder failure. Tasks 7, 11, 14, 15, 19 contain `if X moved to Y, run this sed` conditionals — these reflect implementor classification decisions per spec §3 (the structural-move table lists *most* but not *all* function homes); these are not placeholders but execution-time judgement calls.
 
 **Type consistency:** Public symbol names consistent across spec, scaffold tasks, and re-export blocks. `_run_market_scoring_for_org`, `_get_latest_market_score_rows`, `_reserve_unique_icp_id`, `_release_icp_id`, `_ensure_market_scoring_indexes`, `_ensure_icp_indexes` all spelled identically per spec §3.7.
 
-**Commit count:** Tasks 1-20 = 20 commits, matches the plan's stated "20 commits" target. M=19 or 20 (decided at execution time per Task 20 outcome).
+**Commit count:** Tasks 1-20 = 20 commits, matches the plan's stated "20 commits" target. M=19 or 20 (decided at execution time per Task 20 outcome). Patch-path edits are bundled into the same commit as their corresponding move, so commit count does NOT change despite the §3.8 addition.
