@@ -285,7 +285,7 @@ def test_get_icp_refresh_true_calls_neo4j_and_llm(client, mock_neo4j):
     mock_generator = MagicMock(return_value={"suggestedICPs": []})
 
     with _override_mongo(mc), \
-         patch("app.services.icp.ICP_generator", mock_generator):
+         patch("app.services.icp.orchestrator.ICP_generator", mock_generator):
         response = client.get("/icp", params={"user_id": TEST_USER_ID, "refresh": "true"})
 
     assert response.status_code == 200
