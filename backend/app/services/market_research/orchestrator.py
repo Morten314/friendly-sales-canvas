@@ -4,10 +4,7 @@ unified Groq/Claude worker.
 """
 import asyncio
 import json
-import os
-import re
 from datetime import datetime, timezone
-from typing import List
 
 from app.core.exceptions import (
     BudgetExhaustedError,
@@ -30,6 +27,8 @@ from app.services.market_research.prompts import (
     RESEARCH_MARKET_4_TEMPLATE,
     RESEARCH_MARKET_5_TEMPLATE,
 )
+from app.services.market_research.llm import _market_research_agent_output
+from app.services.market_research.parsing import _extract_research_json
 
 # Re-exported for backward compat (any callsite within this module or
 # external callers that import from market_research directly).
@@ -38,20 +37,6 @@ from app.services._llm_helpers import (  # noqa: F401
     _tavily_context_and_urls,
     _claude_messages_text,
 )
-
-
-def _market_research_agent_output(agent_chain, prompt: str, company_profile_json: str, llm_backend: str) -> str:
-    if llm_backend != "claude":
-        raw_response = agent_chain.invoke({"input": prompt})
-        return raw_response["output"]
-    seed = " ".join(str(company_profile_json).split())[:1200]
-    web_ctx, _ = _tavily_context_and_urls(f"market research industry trends data 2026 {seed}")
-    augmented = f"""{prompt}
-
-WEB SEARCH RESULTS (primary external evidence — synthesize with company profile):
-{web_ctx}
-"""
-    return _claude_messages_text(augmented, max_tokens=CLAUDE_RESEARCH_MAX_TOKENS)
 
 
 # Research Market Functions
@@ -77,13 +62,8 @@ def Research_Market_1(agent_chain, pre_data, llm_backend: str = "default") -> di
     # Step 3: Get LLM response
     response = _market_research_agent_output(agent_chain, prompt, company_profile_json, llm_backend)
 
-    # Clean and escape the JSON string
-    cleaned_str = response.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-    # Escape newline and other control characters within string values
-    cleaned_str = re.sub(r'\"description\": \"(.*?)\"', lambda m: '"description": "' + m.group(1).replace('\n', '\\n').replace('\r', '\\r') + '"', cleaned_str, flags=re.DOTALL)
-
-    # Parse to JSON (Python dict)
-    parsed_json = json.loads(cleaned_str)
+    # Strip code fences, escape embedded newlines in description fields, parse JSON.
+    parsed_json = _extract_research_json(response)
 
     # ✅ Return the Python dict
     return parsed_json
@@ -110,13 +90,8 @@ def Research_Market_2(agent_chain, pre_data, llm_backend: str = "default") -> di
     # Step 3: Get LLM response
     response = _market_research_agent_output(agent_chain, prompt, company_profile_json, llm_backend)
 
-    # Clean and escape the JSON string
-    cleaned_str = response.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-    # Escape newline and other control characters within string values
-    cleaned_str = re.sub(r'\"description\": \"(.*?)\"', lambda m: '"description": "' + m.group(1).replace('\n', '\\n').replace('\r', '\\r') + '"', cleaned_str, flags=re.DOTALL)
-
-    # Parse to JSON (Python dict)
-    parsed_json = json.loads(cleaned_str)
+    # Strip code fences, escape embedded newlines in description fields, parse JSON.
+    parsed_json = _extract_research_json(response)
 
     # ✅ Return the Python dict
     return parsed_json
@@ -143,13 +118,8 @@ def Research_Market_3(agent_chain, pre_data, llm_backend: str = "default") -> di
     # Step 3: Get LLM response
     response = _market_research_agent_output(agent_chain, prompt, company_profile_json, llm_backend)
 
-    # Clean and escape the JSON string
-    cleaned_str = response.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-    # Escape newline and other control characters within string values
-    cleaned_str = re.sub(r'\"description\": \"(.*?)\"', lambda m: '"description": "' + m.group(1).replace('\n', '\\n').replace('\r', '\\r') + '"', cleaned_str, flags=re.DOTALL)
-
-    # Parse to JSON (Python dict)
-    parsed_json = json.loads(cleaned_str)
+    # Strip code fences, escape embedded newlines in description fields, parse JSON.
+    parsed_json = _extract_research_json(response)
 
     # ✅ Return the Python dict
     return parsed_json
@@ -176,13 +146,8 @@ def Research_Market_4(agent_chain, pre_data, llm_backend: str = "default") -> di
     # Step 3: Get LLM response
     response = _market_research_agent_output(agent_chain, prompt, company_profile_json, llm_backend)
 
-    # Clean and escape the JSON string
-    cleaned_str = response.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-    # Escape newline and other control characters within string values
-    cleaned_str = re.sub(r'\"description\": \"(.*?)\"', lambda m: '"description": "' + m.group(1).replace('\n', '\\n').replace('\r', '\\r') + '"', cleaned_str, flags=re.DOTALL)
-
-    # Parse to JSON (Python dict)
-    parsed_json = json.loads(cleaned_str)
+    # Strip code fences, escape embedded newlines in description fields, parse JSON.
+    parsed_json = _extract_research_json(response)
 
     # ✅ Return the Python dict
     return parsed_json
@@ -209,13 +174,8 @@ def Research_Market_5(agent_chain, pre_data, llm_backend: str = "default") -> di
     # Step 3: Get LLM response
     response = _market_research_agent_output(agent_chain, prompt, company_profile_json, llm_backend)
 
-    # Clean and escape the JSON string
-    cleaned_str = response.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-    # Escape newline and other control characters within string values
-    cleaned_str = re.sub(r'\"description\": \"(.*?)\"', lambda m: '"description": "' + m.group(1).replace('\n', '\\n').replace('\r', '\\r') + '"', cleaned_str, flags=re.DOTALL)
-
-    # Parse to JSON (Python dict)
-    parsed_json = json.loads(cleaned_str)
+    # Strip code fences, escape embedded newlines in description fields, parse JSON.
+    parsed_json = _extract_research_json(response)
 
     # ✅ Return the Python dict
     return parsed_json
